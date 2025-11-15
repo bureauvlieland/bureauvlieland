@@ -1,4 +1,5 @@
 import logo from "@/assets/logo.jpg";
+import { Link } from "react-router-dom";
 
 export const Footer = () => {
   return (
@@ -84,12 +85,12 @@ export const Footer = () => {
         <div className="pt-8 border-t border-border">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.</p>
-            <a 
-              href="/algemene-voorwaarden" 
+            <Link 
+              to="/algemene-voorwaarden" 
               className="hover:text-primary transition-colors"
             >
               Algemene Voorwaarden
-            </a>
+            </Link>
           </div>
         </div>
       </div>
