@@ -1,12 +1,12 @@
+import logo from "@/assets/logo.jpg";
+
 export const Footer = () => {
   return (
     <footer className="bg-card border-t border-border py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
-            <h3 className="text-xl font-bold text-primary mb-4 uppercase tracking-wide">
-              Bureau Vlieland
-            </h3>
+            <img src={logo} alt="Bureau Vlieland" className="h-16 w-auto mb-4" />
             <p className="text-sm text-muted-foreground leading-relaxed">
               Professionele evenementenorganisatie op het mooiste Waddeneiland van Nederland.
             </p>
@@ -81,8 +81,16 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.</p>
+        <div className="pt-8 border-t border-border">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.</p>
+            <a 
+              href="/algemene-voorwaarden" 
+              className="hover:text-primary transition-colors"
+            >
+              Algemene Voorwaarden
+            </a>
+          </div>
         </div>
       </div>
     </footer>
