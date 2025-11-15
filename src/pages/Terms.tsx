@@ -1,5 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Terms = () => {
   return (
@@ -7,6 +10,12 @@ export const Terms = () => {
       <Navigation />
       <main className="py-16 sm:py-20 lg:py-24 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+          <Link to="/">
+            <Button variant="ghost" className="mb-8">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Terug naar home
+            </Button>
+          </Link>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-8">
             Algemene Voorwaarden
           </h1>

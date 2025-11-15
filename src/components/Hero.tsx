@@ -58,7 +58,7 @@ export const Hero = () => {
             </Button>
           <Button
             size="lg"
-            onClick={() => scrollToSection("diensten")}
+            onClick={() => scrollToSection("wat-wij-doen")}
             className="bg-background text-primary hover:bg-background/90 shadow-medium text-base px-8"
           >
             Ontdek onze diensten
