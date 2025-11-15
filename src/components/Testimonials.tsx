@@ -3,19 +3,29 @@ import { Quote } from "lucide-react";
 
 const testimonials = [
   {
-    quote: "Erwin heeft voor ons bedrijf een fantastisch driedaags programma op Vlieland georganiseerd. Door zijn lokale kennis en netwerk ervoer ons team het echte eilandleven. Alles was tot in de puntjes geregeld.",
-    author: "Directeur, IT-bedrijf",
+    quote: "Na 6 maanden in het geheim samen een planning maken, dingen regelen en zorgen maken over het weer, was het dan eindelijk zo ver... Vanaf het moment dat wij op onze boot zaten, klaar om richting Vlieland te varen was daar het moment aangebroken om alles los te laten want deze jongens hadden het allemaal onder controle! Alles liep perfect, geweldige hotels, activiteiten en feestavond! Hartelijk dank Bureau Vlieland, wij hebben genoten!",
+    author: "Ilona Norbart",
+    company: "Districon Group 2019"
+  },
+  {
+    quote: "Op het oostelijke buureiland circuleren nog weleens verhalen over 'die Vlielanders' of - erger - 'Vliebiza', maar met Erwin Soolsma en kornuiten van Bureau Vlieland was ik het snel eens over de organisatie van een stoer zakelijk event op de eilanden. Snelle ribs, parachutespringen op de Vliehors en picknicken tussen de tanks - waar kan dat nou anders dan bij ons op de Wadden? Ja, zelfs de Chablis en de oesters waren uitstekend.",
+    author: "Jort Kelder",
     company: "Amsterdam"
   },
   {
-    quote: "Voor onze jaarlijkse managementdag zochten we een bijzondere locatie met goede begeleiding. Bureau Vlieland heeft ons verrast met een professioneel programma waarbij teambuilding en strategische sessies perfect werden gecombineerd.",
-    author: "HR Manager",
-    company: "Rotterdam"
+    quote: "Bureau Vlieland heeft voor ons de meest sprookjesachtige- met festivalgevoel- strand en relaxte bruiloft aller tijden georganiseerd. Erwin voelde precies aan wat wij wilden en creëerde een hele relaxte sfeer van elke locatie waar wij waren. Wij zijn getrouwd tijdens corona maatregelen en daardoor was planning enorm lastig. Ook kwam er net een versoepeling twee weken voor de bruiloft waardoor er meer mogelijk was, maar voor Erwin en zijn crew geen probleem. Gewoon ook een heel avond programma gefixed. Heb er geen woorden voor hoe relaxed de samenwerking was. Mocht je ooit 'iets' willen organiseren op Vlieland. Boek deze gasten, want ze creeren van niks echt alles wat je wilt! Gewoon doen!",
+    author: "Daan en Nine",
+    company: "Bruidspaar"
   },
   {
-    quote: "Als familie wilden we een speciaal weekend voor ons 25-jarig jubileum. Erwin regelde niet alleen een prachtig diner en excursies, maar zorgde ook dat we echt kennismaakten met het eiland en de mensen.",
-    author: "Familiegroep",
-    company: "Utrecht"
+    quote: "Vanaf de allereerste bespreking om invulling te geven aan een culinair, sportief en avontuurlijk weekend op Vlieland, tot en met het afscheid bij de terminal 2 dagen later in Harlingen, heeft het team van Bureau Vlieland dit weekend tot in detail onvergetelijk gemaakt voor een ieder!",
+    author: "Peter-Paul van de Kar",
+    company: "Tradekar International BV"
+  },
+  {
+    quote: "Erwin van Bureau Vlieland heeft een top arrangement voor ons in elkaar gezet. Erg plezierig contact, goede begeleiding en heel ontspannen dag gehad op Vlieland. Aanrader voor groepen die een leuke dag willen hebben met een super sfeertje. Lunch in de natuur, BBQ op strand, rib boot tocht, activiteit op strand en ook lekker een terrasje pakken! Voor herhaling vatbaar zou ik zegge",
+    author: "Rients",
+    company: "Raethuis Accountants Heerenveen"
   }
 ];
 
@@ -32,7 +42,7 @@ export const Testimonials = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {testimonials.map((testimonial, index) => (
             <Card key={index} className="border-border bg-card">
               <CardContent className="pt-6">
