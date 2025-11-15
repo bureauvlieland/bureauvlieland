@@ -1,5 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Quote } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const testimonials = [
   {
@@ -42,22 +49,36 @@ export const Testimonials = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {testimonials.map((testimonial, index) => (
-            <Card key={index} className="border-border bg-card">
-              <CardContent className="pt-6">
-                <Quote className="w-8 h-8 text-primary mb-4 opacity-50" />
-                <blockquote className="text-sm text-foreground leading-relaxed mb-6">
-                  "{testimonial.quote}"
-                </blockquote>
-                <div className="border-t border-border pt-4">
-                  <p className="text-sm font-medium text-foreground">{testimonial.author}</p>
-                  <p className="text-xs text-muted-foreground">{testimonial.company}</p>
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full max-w-6xl mx-auto"
+        >
+          <CarouselContent>
+            {testimonials.map((testimonial, index) => (
+              <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                <div className="p-1">
+                  <Card className="border-border bg-card h-full">
+                    <CardContent className="pt-6 flex flex-col h-full">
+                      <Quote className="w-8 h-8 text-primary mb-4 opacity-50" />
+                      <blockquote className="text-sm text-foreground leading-relaxed mb-6 flex-grow">
+                        "{testimonial.quote}"
+                      </blockquote>
+                      <div className="border-t border-border pt-4 mt-auto">
+                        <p className="text-sm font-medium text-foreground">{testimonial.author}</p>
+                        <p className="text-xs text-muted-foreground">{testimonial.company}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="hidden md:flex" />
+          <CarouselNext className="hidden md:flex" />
+        </Carousel>
       </div>
     </section>
   );
