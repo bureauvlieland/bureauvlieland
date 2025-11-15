@@ -1,9 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import eventImage from "@/assets/event-outdoor.jpg";
 
 export const ForWho = () => {
   return (
     <section id="voor-wie" className="py-16 sm:py-20 lg:py-24 bg-accent-soft relative overflow-hidden">
       <div className="absolute top-10 left-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+      <img
+        src={eventImage}
+        alt="Outdoor teamactiviteit en catering op Vlieland met groepen in bos setting"
+        className="absolute inset-0 w-full h-full object-cover opacity-5"
+      />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
         <div className="mb-12">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">

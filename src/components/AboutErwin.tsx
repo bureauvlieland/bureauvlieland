@@ -1,3 +1,5 @@
+import erwinImage from "@/assets/erwin-profile.jpg";
+
 export const AboutErwin = () => {
   return (
     <section id="over-erwin" className="py-16 sm:py-20 lg:py-24 bg-background">
@@ -12,18 +14,27 @@ export const AboutErwin = () => {
             Vlieland echt te bieden heeft.
           </p>
 
-          <div className="bg-accent-soft rounded-xl border border-border p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-base text-foreground leading-relaxed">
-              <p>
-                Door mijn werk voor ondernemers, de lokale krant, vrijwilligersinitiatieven en projecten rond
-                leefbaarheid heb ik een breed netwerk op Vlieland. Dat gebruik ik om programma's te maken die
-                passen bij het dorp, de natuur en de mensen die hier wonen.
-              </p>
-              <p>
-                Gasten die met Bureau Vlieland werken, dragen direct bij aan de leefbaarheid van het eiland:
-                lokale ondernemers verdienen mee, voorzieningen blijven bestaan en jonge eilanders zien dat er
-                toekomst is in werk en ondernemerschap op Vlieland.
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div className="md:col-span-1">
+              <img
+                src={erwinImage}
+                alt="Erwin Soolsma, oprichter van Bureau Vlieland op het strand van Vlieland"
+                className="w-full h-auto rounded-xl shadow-medium object-cover aspect-[3/4]"
+              />
+            </div>
+            <div className="md:col-span-2 bg-accent-soft rounded-xl border border-border p-8">
+              <div className="grid grid-cols-1 gap-6 text-base text-foreground leading-relaxed">
+                <p>
+                  Door mijn werk voor ondernemers, de lokale krant, vrijwilligersinitiatieven en projecten rond
+                  leefbaarheid heb ik een breed netwerk op Vlieland. Dat gebruik ik om programma's te maken die
+                  passen bij het dorp, de natuur en de mensen die hier wonen.
+                </p>
+                <p>
+                  Gasten die met Bureau Vlieland werken, dragen direct bij aan de leefbaarheid van het eiland:
+                  lokale ondernemers verdienen mee, voorzieningen blijven bestaan en jonge eilanders zien dat er
+                  toekomst is in werk en ondernemerschap op Vlieland.
+                </p>
+              </div>
             </div>
           </div>
         </div>

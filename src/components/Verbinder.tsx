@@ -1,10 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import cyclingImage from "@/assets/cycling-group.jpg";
 
 export const Verbinder = () => {
   return (
     <section id="verbinder" className="py-16 sm:py-20 lg:py-24 bg-accent-soft relative overflow-hidden">
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <img
+        src={cyclingImage}
+        alt="Groepsactiviteit fietsen door de natuur van Vlieland"
+        className="absolute inset-0 w-full h-full object-cover opacity-5"
+      />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
         <div className="mb-12">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
