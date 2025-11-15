@@ -51,6 +51,12 @@ export const Navigation = () => {
             >
               Verbinder
             </button>
+            <button
+              onClick={() => scrollToSection("testimonials")}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Reviews
+            </button>
             <Button
               onClick={() => scrollToSection("contact")}
               variant="default"
@@ -97,6 +103,12 @@ export const Navigation = () => {
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
                 Verbinder
+              </button>
+              <button
+                onClick={() => scrollToSection("testimonials")}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+              >
+                Reviews
               </button>
               <Button
                 onClick={() => scrollToSection("contact")}
