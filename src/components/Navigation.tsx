@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import logo from "@/assets/logo.jpg";
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,9 +20,9 @@ export const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           <button
             onClick={() => scrollToSection("hero")}
-            className="text-xl font-bold tracking-wide uppercase text-primary hover:text-primary/80 transition-colors"
+            className="hover:opacity-80 transition-opacity"
           >
-            Bureau Vlieland
+            <img src={logo} alt="Bureau Vlieland" className="h-12 w-auto" />
           </button>
 
           {/* Desktop Navigation */}
