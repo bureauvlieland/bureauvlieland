@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-event.jpg";
+import heroImage from "@/assets/hero-vlieland.jpg";
 
 export const Hero = () => {
   const scrollToSection = (id: string) => {
@@ -15,7 +15,7 @@ export const Hero = () => {
       <div className="absolute inset-0">
         <img
           src={heroImage}
-          alt="Evenementen en catering op Vlieland"
+          alt="Professionele catering en evenementen op Vlieland met vuurtoren op de achtergrond"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
