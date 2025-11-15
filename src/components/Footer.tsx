@@ -69,7 +69,7 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a href="https://voorondervlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Voor Onder Vlieland
+                  Vooronder Vlieland
                 </a>
               </li>
               <li>
