@@ -8,10 +8,12 @@ import { Testimonials } from "@/components/Testimonials";
 import { ExtraServices } from "@/components/ExtraServices";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
+import { StructuredData } from "@/components/StructuredData";
 
 const Index = () => {
   return (
     <div className="min-h-screen">
+      <StructuredData />
       <Navigation />
       <main>
         <Hero />
