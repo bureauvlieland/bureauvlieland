@@ -37,6 +37,48 @@ export const AboutErwin = () => {
               </div>
             </div>
           </div>
+
+          {/* Lokale betrokkenheid */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card rounded-xl border border-border p-6">
+              <h3 className="text-xl font-semibold text-foreground mb-4">Ondernemen op Vlieland</h3>
+              <ul className="space-y-3 text-sm text-foreground">
+                <li className="flex items-start">
+                  <span className="mr-2 text-primary">•</span>
+                  <span>Oprichter en manager van lokale krant <a href="https://www.geitenbode.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">De Geitenbode</a></span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2 text-primary">•</span>
+                  <span>Mede-eigenaar van <a href="https://olivavlieland.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Trattoria Oliva</a> en <a href="https://cafeboven.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Café Boven</a></span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2 text-primary">•</span>
+                  <span>Eigenaar softwarebedrijf <a href="https://mijnfietsverhuur.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Mijn Fietsverhuur</a> - oplossingen voor fietsverhuurbedrijven</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2 text-primary">•</span>
+                  <span>Bestuurslid / voorzitter Ondernemersvereniging Vlieland</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-card rounded-xl border border-border p-6">
+              <h3 className="text-xl font-semibold text-foreground mb-4">Publieksevenementen</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Bureau Vlieland helpt mee met de organisatie van grote publieksevenementen op het eiland:
+              </p>
+              <ul className="space-y-3 text-sm text-foreground">
+                <li className="flex items-start">
+                  <span className="mr-2 text-primary">•</span>
+                  <span><a href="https://vuurtorenloop.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Vuurtorenloop</a> - Hardloopfeest door de duinen van Vlieland</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2 text-primary">•</span>
+                  <span><a href="https://www.amusetour.nl/destinations/vlieland/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Amusetour Vlieland</a> - Culinaire wandeling langs restaurants op het eiland</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </section>
