@@ -56,14 +56,13 @@ export const Hero = () => {
             >
               Neem contact op
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => scrollToSection("diensten")}
-              className="border-2 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary text-base px-8"
-            >
-              Ontdek onze diensten
-            </Button>
+          <Button
+            size="lg"
+            onClick={() => scrollToSection("diensten")}
+            className="bg-background text-primary hover:bg-background/90 shadow-medium text-base px-8"
+          >
+            Ontdek onze diensten
+          </Button>
           </div>
         </div>
       </div>
