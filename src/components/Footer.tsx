@@ -64,6 +64,20 @@ export const Footer = () => {
                 </a>
               </li>
             </ul>
+            
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Vakantiewoningen</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <a href="https://voorondervlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Voor Onder Vlieland
+                </a>
+              </li>
+              <li>
+                <a href="https://noordkaapvlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Noordkaap Vlieland
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 
