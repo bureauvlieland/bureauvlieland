@@ -27,22 +27,28 @@ export const Navigation = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             <button
-              onClick={() => scrollToSection("diensten")}
+              onClick={() => scrollToSection("wat-wij-doen")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Diensten
+              Wat wij doen
             </button>
             <button
-              onClick={() => scrollToSection("programmas")}
+              onClick={() => scrollToSection("voor-wie")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Programma's
+              Voor wie
             </button>
             <button
-              onClick={() => scrollToSection("over-ons")}
+              onClick={() => scrollToSection("over-erwin")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Over Ons
+              Over Erwin
+            </button>
+            <button
+              onClick={() => scrollToSection("verbinder")}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Verbinder
             </button>
             <Button
               onClick={() => scrollToSection("contact")}
@@ -68,22 +74,28 @@ export const Navigation = () => {
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4">
               <button
-                onClick={() => scrollToSection("diensten")}
+                onClick={() => scrollToSection("wat-wij-doen")}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
-                Diensten
+                Wat wij doen
               </button>
               <button
-                onClick={() => scrollToSection("programmas")}
+                onClick={() => scrollToSection("voor-wie")}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
-                Programma's
+                Voor wie
               </button>
               <button
-                onClick={() => scrollToSection("over-ons")}
+                onClick={() => scrollToSection("over-erwin")}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
-                Over Ons
+                Over Erwin
+              </button>
+              <button
+                onClick={() => scrollToSection("verbinder")}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+              >
+                Verbinder
               </button>
               <Button
                 onClick={() => scrollToSection("contact")}
