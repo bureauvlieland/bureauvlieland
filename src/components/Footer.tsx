@@ -2,7 +2,7 @@ export const Footer = () => {
   return (
     <footer className="bg-card border-t border-border py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
             <h3 className="text-xl font-bold text-primary mb-4 uppercase tracking-wide">
               Bureau Vlieland
@@ -37,6 +37,32 @@ export const Footer = () => {
               <li>Meerdaagse events</li>
               <li>Lokale catering</li>
               <li>Teambuilding activiteiten</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Online Boeken</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <a href="https://verhuur.bureauvlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Materiaalbeheer & verhuur
+                </a>
+              </li>
+              <li>
+                <a href="https://bureauvlieland.fietsreserveren.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Fietsverhuur
+                </a>
+              </li>
+              <li>
+                <a href="https://linnenverhuurvlieland.com/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Linnenverhuur
+                </a>
+              </li>
+              <li>
+                <a href="https://boeking.mijnactiviteitenplanner.nl/activiteiten-vlieland" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Losse activiteiten
+                </a>
+              </li>
             </ul>
           </div>
         </div>
