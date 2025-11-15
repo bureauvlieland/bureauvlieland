@@ -9,11 +9,13 @@ import { ExtraServices } from "@/components/ExtraServices";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
 import { StructuredData } from "@/components/StructuredData";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const Index = () => {
   return (
     <div className="min-h-screen">
       <StructuredData />
+      <CookieConsent />
       <Navigation />
       <main>
         <Hero />
