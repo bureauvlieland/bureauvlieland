@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Target, Users, Brain, TrendingUp } from "lucide-react";
-import teamBeachImage from "@/assets/team-beach.jpg";
-import dunesGroupImage from "@/assets/dunes-group.jpg";
-import cyclingTeamImage from "@/assets/cycling-team.jpg";
+import rmdBeachTraining from "@/assets/rmd-beach-training.jpg";
+import mindset22Indoor from "@/assets/mindset22-indoor.jpg";
+import rmdOutdoorActivity from "@/assets/rmd-outdoor-activity.jpg";
+import vlielandBeachGolf from "@/assets/vlieland-beach-golf.jpg";
 import { Link } from "react-router-dom";
 
 const Programmas = () => {
@@ -59,16 +60,16 @@ const Programmas = () => {
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${teamBeachImage})` }}
+            style={{ backgroundImage: `url(${rmdBeachTraining})` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
           </div>
           <div className="relative z-10 text-center text-white px-4">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              RMD & Mindset 22
+              Transformatieve Programma's
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
-              Bewezen programma's voor teamontwikkeling en prestatieverbetering
+              In samenwerking met onze partners RMD Trainingen en Mindset22
             </p>
           </div>
         </section>
@@ -78,18 +79,13 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Transformatieve programma's op Vlieland
+                Transformatieve programma's met bewezen partners
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
-                Bureau Vlieland brengt twee krachtige partners samen op het inspirerende waddeneiland. 
-                <strong> RMD Trainingen</strong>, onder leiding van Richard Melvin Dijkstra, biedt sinds 1999 
-                ervaringsgerichte programma's op het gebied van persoonlijk leiderschaps- en teamtrainingen, 
-                coaching, counseling en consultancy.
-              </p>
-              <p className="text-lg text-muted-foreground mb-4">
-                <strong> Mindset22</strong>, met Simon Brilstra en Richard Leegte, helpt individuen en groepen 
-                hun volledige talenten te benutten door positieve, op groei gerichte denkpatronen te ontwikkelen. 
-                Beide professionals brengen ervaring mee uit Defensie en topsport.
+                Bureau Vlieland werkt samen met twee gerenommeerde partners die al jarenlang expertise leveren 
+                op het gebied van teamontwikkeling en persoonlijk leiderschap. <strong>RMD Trainingen</strong> biedt 
+                sinds 1999 ervaringsgerichte programma's voor leiderschaps- en teamtrainingen, terwijl <strong>Mindset22</strong> 
+                individuen en groepen helpt hun talenten te benutten door positieve, op groei gerichte denkpatronen te ontwikkelen.
               </p>
               <p className="text-lg text-muted-foreground">
                 De unieke setting van Vlieland versterkt de impact van beide programma's. Bureau Vlieland zorgt 
@@ -112,11 +108,11 @@ const Programmas = () => {
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div>
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                      RMD Trainingen - Ervaring maakt het verschil
+                      Partner: RMD Trainingen
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
-                      Bureau Vlieland werkt samen met <strong>RMD Trainingen</strong>, onder leiding van Richard Melvin Dijkstra. 
-                      Sinds 1999 biedt RMD ervaringsgerichte programma's voor persoonlijke ontwikkeling, leiderschap en 
+                      Onze partner <strong>RMD Trainingen</strong>, onder leiding van Richard Melvin Dijkstra, 
+                      biedt sinds 1999 ervaringsgerichte programma's voor persoonlijke ontwikkeling, leiderschap en 
                       teamontwikkeling. Door gebruik te maken van krachtige metaforen en unieke outdoor locaties ontstaan 
                       veilige situaties waarin deelnemers gespiegeld worden en tot nieuwe inzichten komen.
                     </p>
@@ -150,15 +146,15 @@ const Programmas = () => {
                   <div className="space-y-4">
                     <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
                       <img 
-                        src={cyclingTeamImage} 
-                        alt="Team activiteit op Vlieland" 
+                        src={rmdOutdoorActivity} 
+                        alt="RMD outdoor teamtraining activiteit" 
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
                       <img 
-                        src={dunesGroupImage} 
-                        alt="Groep in de duinen van Vlieland" 
+                        src={vlielandBeachGolf} 
+                        alt="Training activiteit op het strand van Vlieland" 
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -171,22 +167,22 @@ const Programmas = () => {
                   <div className="order-2 md:order-1 space-y-4">
                     <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
                       <img 
-                        src={teamBeachImage} 
-                        alt="Mindset 22 Training op het strand" 
+                        src={mindset22Indoor} 
+                        alt="Mindset22 indoor training sessie" 
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
                       <img 
-                        src={cyclingTeamImage} 
-                        alt="Team op Vlieland" 
+                        src={rmdBeachTraining} 
+                        alt="Teamtraining op het strand van Vlieland" 
                         className="w-full h-full object-cover"
                       />
                     </div>
                   </div>
                   <div className="order-1 md:order-2">
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                      Mindset22 - Groeimentaliteit
+                      Partner: Mindset22
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
                       Hetgeen een mens doet wordt bepaald door de 'mindset' - een vaste set van 
@@ -230,12 +226,12 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Bureau Vlieland: De Verbindende Factor
+                Bureau Vlieland: Jouw Lokale Partner
               </h2>
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Als lokale specialist op Vlieland brengen wij RMD Trainingen en Mindset22 samen 
-                op het eiland. We zorgen voor de perfecte setting waarin deze krachtige programma's 
-                tot hun recht komen: van accommodatie en catering tot unieke eilandactiviteiten.
+                Als lokale specialist op Vlieland verbinden wij de expertise van RMD Trainingen en Mindset22 
+                met de unieke kracht van het eiland. We zorgen voor de perfecte setting waarin deze krachtige 
+                programma's tot hun recht komen: van accommodatie en catering tot unieke eilandactiviteiten.
               </p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -306,11 +302,11 @@ const Programmas = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center text-foreground">
                 Breng jouw team naar een hoger niveau
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Ontdek hoe Bureau Vlieland, samen met RMD Trainingen en Mindset22, jouw team 
+                Ontdek hoe Bureau Vlieland, samen met onze partners RMD Trainingen en Mindset22, jouw team 
                 kan transformeren. Neem contact op voor een vrijblijvend gesprek over de mogelijkheden 
                 en laat je inspireren door onze voorbeeldprogramma's.
               </p>
