@@ -85,6 +85,43 @@ const Voorbeeldprogrammas = () => {
     ]
   };
 
+  const rmdMindsetProgram = {
+    title: "RMD & Mindset22 Programma",
+    subtitle: "Intensieve teamontwikkeling met VAC & Aikido",
+    duration: "2 dagen / 1 nacht",
+    participants: "Teamtraining met ervaren coaches",
+    image: vlielandActivity,
+    highlights: [
+      "Vlieland Adventure Challenge (VAC)",
+      "Wake up Aikido met Richard Dijkstra",
+      "Mindset22 terugkoppeling naar teamvergadering",
+      "Strandgolf en vliegeren",
+      "Transfer met Fenix watertaxi"
+    ],
+    day1: [
+      { time: "06:30-07:30", activity: "Ontbijt en uitchecken", description: "Voorbereiding op intensieve dag" },
+      { time: "07:30-07:45", activity: "Lopen naar SAS steiger", description: "Korte wandeling naar vertrekpunt" },
+      { time: "07:45-08:30", activity: "Transfer naar Vlieland", description: "Met de Fenix van Bazuin naar jachthaven Vlieland" },
+      { time: "08:30-17:00", activity: "Vlieland Adventure Challenge", description: "De VAC 😉 of de VAC you 😅 - intensieve teamchallenge" },
+      { time: "17:00-18:00", activity: "Inchecken Badhotel Bruin", description: "Tijd om te douchen en op te frissen" },
+      { time: "18:00-20:30", activity: "Diner à la carte", description: "Heerlijk diner in het Badhotel" },
+      { time: "20:30-22:00", activity: "Weerwolven", description: "Teamspel in restaurant of kapiteinshut" }
+    ],
+    day2: [
+      { time: "06:30-07:15", activity: "Wake up Aikido", description: "Oefeningen met Richard Dijkstra" },
+      { time: "07:15-08:30", activity: "Ontbijten en uitchecken", description: "Laatste ontbijt in het hotel" },
+      { time: "08:30-09:00", activity: "Wandelen naar Bierbrouwerij", description: "Korte wandeling door het dorp" },
+      { time: "09:00-10:00", activity: "Rondleiding Bierbrouwerij", description: "Kennismaken met lokale bierproductie" },
+      { time: "10:00-12:30", activity: "Mindset22 terugkoppeling", description: "Vertaling naar teamvergadering en praktijk" },
+      { time: "12:00-13:00", activity: "Lunch bij bierbrouwerij", description: "Gezamenlijke lunch" },
+      { time: "13:00-13:15", activity: "Lopen naar strand", description: "Naar Orf bij Paviljoen Oost" },
+      { time: "13:15-15:00", activity: "Strandgolf en vliegeren", description: "Actieve afsluiting met Orf" },
+      { time: "15:00-15:30", activity: "Lopen naar Jachthaven", description: "Terug naar vertrekpunt" },
+      { time: "15:30-16:30", activity: "Watertaxi naar Harlingen", description: "Transfer met Fenix terug" },
+      { time: "16:30-17:00", activity: "Auto ophalen", description: "Einde programma" }
+    ]
+  };
+
   return (
     <div className="min-h-screen">
       <Navigation />
@@ -116,11 +153,13 @@ const Voorbeeldprogrammas = () => {
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
                 Deze voorbeeldprogramma's geven een indruk van de mogelijkheden op Vlieland. 
-                Elk programma is volledig aan te passen aan jullie wensen, groepsgrootte en budget.
+                Van klassieke eilandervaringen tot intensieve teamontwikkeling met RMD Trainingen 
+                en Mindset22. Elk programma is volledig aan te passen aan jullie wensen, groepsgrootte en budget.
               </p>
               <p className="text-lg text-muted-foreground">
                 Van spectaculaire aankomsten met watertaxi's of zeilschip, tot unieke activiteiten 
-                zoals de Vliehors Express en zeehonden spotten. Bureau Vlieland regelt alles van A tot Z.
+                zoals de Vliehors Express, zeehonden spotten en de Vlieland Adventure Challenge. 
+                Bureau Vlieland regelt alles van A tot Z.
               </p>
             </div>
           </div>
@@ -130,9 +169,10 @@ const Voorbeeldprogrammas = () => {
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <Tabs defaultValue="2day" className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12">
+              <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-3 mb-12">
                 <TabsTrigger value="2day" className="text-base">2 Dagen</TabsTrigger>
                 <TabsTrigger value="3day" className="text-base">3 Dagen</TabsTrigger>
+                <TabsTrigger value="rmd" className="text-base">RMD & Mindset22</TabsTrigger>
               </TabsList>
 
               {/* 2-Day Program */}
@@ -330,6 +370,109 @@ const Voorbeeldprogrammas = () => {
                       ))}
                     </div>
                   </Card>
+                </div>
+              </TabsContent>
+
+              {/* RMD & Mindset22 Program */}
+              <TabsContent value="rmd">
+                <div className="max-w-6xl mx-auto">
+                  <div className="grid md:grid-cols-2 gap-8 mb-12">
+                    <div className="relative h-[400px] rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src={rmdMindsetProgram.image} 
+                        alt={rmdMindsetProgram.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-center">
+                      <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                        {rmdMindsetProgram.title}
+                      </h2>
+                      <p className="text-xl text-muted-foreground mb-6">
+                        {rmdMindsetProgram.subtitle}
+                      </p>
+                      <div className="flex flex-wrap gap-4 mb-6">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-5 w-5 text-primary" />
+                          <span>{rmdMindsetProgram.duration}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Users className="h-5 w-5 text-primary" />
+                          <span>{rmdMindsetProgram.participants}</span>
+                        </div>
+                      </div>
+                      <div className="bg-primary/5 rounded-lg p-6">
+                        <h3 className="font-semibold text-lg mb-3 text-foreground">Highlights</h3>
+                        <ul className="space-y-2">
+                          {rmdMindsetProgram.highlights.map((highlight, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-muted-foreground">
+                              <Waves className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                              <span>{highlight}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Day 1 */}
+                  <Card className="p-8 mb-8">
+                    <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-2">
+                      <Calendar className="h-6 w-6 text-primary" />
+                      Dag 1 - Vlieland Adventure Challenge
+                    </h3>
+                    <div className="space-y-4">
+                      {rmdMindsetProgram.day1.map((item, idx) => (
+                        <div key={idx} className="flex gap-4 pb-4 border-b last:border-0 border-border/50">
+                          <div className="flex items-center gap-2 min-w-[100px]">
+                            <Clock className="h-4 w-4 text-primary" />
+                            <span className="font-semibold text-foreground text-sm">{item.time}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground mb-1">{item.activity}</h4>
+                            <p className="text-sm text-muted-foreground">{item.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Day 2 */}
+                  <Card className="p-8">
+                    <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-2">
+                      <Calendar className="h-6 w-6 text-primary" />
+                      Dag 2 - Aikido, Mindset22 & Afsluiting
+                    </h3>
+                    <div className="space-y-4">
+                      {rmdMindsetProgram.day2.map((item, idx) => (
+                        <div key={idx} className="flex gap-4 pb-4 border-b last:border-0 border-border/50">
+                          <div className="flex items-center gap-2 min-w-[100px]">
+                            <Clock className="h-4 w-4 text-primary" />
+                            <span className="font-semibold text-foreground text-sm">{item.time}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground mb-1">{item.activity}</h4>
+                            <p className="text-sm text-muted-foreground">{item.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Info Box */}
+                  <div className="bg-primary/5 rounded-lg p-6 mt-8">
+                    <h3 className="font-semibold text-lg mb-3 text-foreground">Over dit programma</h3>
+                    <p className="text-muted-foreground mb-3">
+                      Dit intensieve 2-daagse programma combineert fysieke uitdagingen met mentale ontwikkeling. 
+                      De Vlieland Adventure Challenge (VAC) test teamwork en doorzettingsvermogen, terwijl de 
+                      Aikido-oefeningen met Richard Dijkstra focus en balans brengen.
+                    </p>
+                    <p className="text-muted-foreground">
+                      De Mindset22 terugkoppeling zorgt ervoor dat alle ervaringen vertaald worden naar concrete 
+                      actiepunten voor jullie team. Een krachtige mix van actie, reflectie en plezier op het 
+                      mooiste waddeneiland van Nederland.
+                    </p>
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
