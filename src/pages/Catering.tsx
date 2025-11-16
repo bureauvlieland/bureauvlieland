@@ -3,10 +3,9 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
-import cateringImage from "@/assets/catering.jpg";
+import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
 import beachEventImage from "@/assets/beach-event.jpg";
 import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
-import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
 import foodPlattersImage from "@/assets/food-platters.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
 import tentSetupImage from "@/assets/tent-setup.jpg";
@@ -51,7 +50,7 @@ const Catering = () => {
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${cateringImage})` }}
+            style={{ backgroundImage: `url(${sunsetDinnerImage})` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
           </div>
