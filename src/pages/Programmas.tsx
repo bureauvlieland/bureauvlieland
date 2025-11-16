@@ -4,33 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Target, Users, Brain, TrendingUp } from "lucide-react";
-import teamActivityImage from "@/assets/team-activity.jpg";
-import cyclingGroupImage from "@/assets/cycling-group.jpg";
+import teamBeachImage from "@/assets/team-beach.jpg";
+import dunesGroupImage from "@/assets/dunes-group.jpg";
+import cyclingTeamImage from "@/assets/cycling-team.jpg";
 import { Link } from "react-router-dom";
 
 const Programmas = () => {
-  const rmdFeatures = [
-    "Bewustwording en inzicht in gedrag en prestaties",
-    "Vergroten van zelfkennis en persoonlijk leiderschap",
-    "Maken van nieuwe en betere keuzes",
-    "Meer plezier in werk, studie of sport",
-    "Optimaliseren van management- en leidinggevende kwaliteiten",
-    "Doelgerichter en pragmatischer werken"
-  ];
-
-  const rmdMetaphors = [
-    "Krijgskunsten: Aikido en Braziliaans Jiu Jitsu",
-    "Dieren als spiegel: paarden, schapen, honden en roofvogels",
-    "Outdoor & reizen: Franse Pyreneeën, Zweden, IJsland en de Sinai",
-    "Organisatieopstellingen, ademwerk, mindfulness en voice dialogue"
-  ];
-
-  const rmdPhases = [
-    { title: "Basis", description: "Ontdek je referentiekader en durf daar uit te stappen" },
-    { title: "Bezinnen", description: "Reflecteren en relativeren" },
-    { title: "Bouwen", description: "Doen, oefenen en ervaren" },
-    { title: "Bewegen", description: "Kom in beweging! Lichaamsbewustzijn, fysiologie en geest zijn verbonden" },
-    { title: "Belonen", description: "Wat werkt voor jou en hoe veranker je dit?" }
+  const rmdResults = [
+    "Verhoogd zelfbewustzijn en persoonlijk leiderschap",
+    "Verbeterde samenwerking en teamdynamiek",
+    "Doelgerichter en pragmatischer werken",
+    "Meer plezier en betrokkenheid in werk en resultaat"
   ];
 
   const mindsetFeatures = [
@@ -75,7 +59,7 @@ const Programmas = () => {
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${teamActivityImage})` }}
+            style={{ backgroundImage: `url(${teamBeachImage})` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
           </div>
@@ -128,72 +112,77 @@ const Programmas = () => {
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div>
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                      RMD Trainingen - Ervaringsgerichte Ontwikkeling
+                      RMD Trainingen - Ervaring maakt het verschil
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
-                      Richard Melvin Dijkstra is sinds 1999 werkzaam in de wereld van ervaringsgerichte trainingen. 
-                      Met zijn expertise in persoonlijke ontwikkeling, leiderschap en teamleiderschap begeleidt hij 
-                      deelnemers om ervaringen op te doen op fysiek, mentaal, emotioneel en spiritueel vlak.
-                    </p>
-                    <p className="text-lg text-muted-foreground mb-6">
-                      RMD maakt gebruik van unieke locaties in de buitenlucht en krachtige metaforen. Een veilige 
-                      manier om gespiegeld te worden en tot nieuwe inzichten te komen. Richard is houder van de 
-                      derde graad zwarte band in Aikido en zwarte band in Braziliaans Jiu Jitsu.
+                      Bureau Vlieland werkt samen met <strong>RMD Trainingen</strong>, onder leiding van Richard Melvin Dijkstra. 
+                      Sinds 1999 biedt RMD ervaringsgerichte programma's voor persoonlijke ontwikkeling, leiderschap en 
+                      teamontwikkeling. Door gebruik te maken van krachtige metaforen en unieke outdoor locaties ontstaan 
+                      veilige situaties waarin deelnemers gespiegeld worden en tot nieuwe inzichten komen.
                     </p>
                     
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">Werkvormen & Metaforen</h3>
+                    <h3 className="font-semibold text-xl mb-4 text-foreground">De Aanpak</h3>
+                    <p className="text-lg text-muted-foreground mb-6">
+                      RMD werkt met ervaringsgerichte methodes zoals krijgskunsten (Aikido, Jiu Jitsu), dieren als 
+                      spiegel, outdoor activiteiten en mindfulness. Deze aanpak zorgt voor bewustwording op fysiek, 
+                      mentaal, emotioneel en spiritueel vlak.
+                    </p>
+
+                    <h3 className="font-semibold text-xl mb-4 text-foreground">Resultaat op Vlieland</h3>
+                    <p className="text-lg text-muted-foreground mb-4">
+                      De combinatie van RMD's ervaringsgerichte trainingen met de inspirerende setting van Vlieland 
+                      zorgt voor duurzame verandering:
+                    </p>
                     <ul className="space-y-3 mb-6">
-                      {rmdMetaphors.map((metaphor, idx) => (
+                      {rmdResults.map((result, idx) => (
                         <li key={idx} className="flex items-start gap-3">
                           <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{metaphor}</span>
+                          <span className="text-muted-foreground">{result}</span>
                         </li>
                       ))}
                     </ul>
 
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">De 5 Fases</h3>
-                    <div className="space-y-3 mb-6">
-                      {rmdPhases.map((phase, idx) => (
-                        <div key={idx} className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <span className="text-sm font-bold text-primary">{idx + 1}</span>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-foreground">{phase.title}</h4>
-                            <p className="text-sm text-muted-foreground">{phase.description}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">Wat levert het op?</h3>
-                    <ul className="space-y-3">
-                      {rmdFeatures.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <p className="text-lg text-muted-foreground italic">
+                      Bureau Vlieland regelt de organisatie, accommodatie en zorgt dat het eiland optimaal bijdraagt 
+                      aan jullie ontwikkeling.
+                    </p>
                   </div>
-                  <div className="relative h-[600px] rounded-lg overflow-hidden shadow-lg">
-                    <img 
-                      src={cyclingGroupImage} 
-                      alt="RMD Team Training" 
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="space-y-4">
+                    <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src={cyclingTeamImage} 
+                        alt="Team activiteit op Vlieland" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src={dunesGroupImage} 
+                        alt="Groep in de duinen van Vlieland" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
                 </div>
               </TabsContent>
 
               <TabsContent value="mindset">
                 <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div className="order-2 md:order-1 relative h-[600px] rounded-lg overflow-hidden shadow-lg">
-                    <img 
-                      src={teamActivityImage} 
-                      alt="Mindset 22 Training" 
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="order-2 md:order-1 space-y-4">
+                    <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src={teamBeachImage} 
+                        alt="Mindset 22 Training op het strand" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src={cyclingTeamImage} 
+                        alt="Team op Vlieland" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
                   <div className="order-1 md:order-2">
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
