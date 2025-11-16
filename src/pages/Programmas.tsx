@@ -10,45 +10,60 @@ import { Link } from "react-router-dom";
 
 const Programmas = () => {
   const rmdFeatures = [
-    "Ervaringsgerichte trainingen op fysiek, mentaal, emotioneel en spiritueel vlak",
-    "Gebruik van krachtige metaforen: Aikido, Braziliaans Jiu Jitsu, paarden, roofvogels",
-    "Unieke locaties in de buitenlucht: van Vlieland tot de Pyreneeën",
     "Bewustwording en inzicht in gedrag en prestaties",
     "Vergroten van zelfkennis en persoonlijk leiderschap",
+    "Maken van nieuwe en betere keuzes",
+    "Meer plezier in werk, studie of sport",
     "Optimaliseren van management- en leidinggevende kwaliteiten",
-    "Coaching, counseling en consultancy op maat"
+    "Doelgerichter en pragmatischer werken"
+  ];
+
+  const rmdMetaphors = [
+    "Krijgskunsten: Aikido en Braziliaans Jiu Jitsu",
+    "Dieren als spiegel: paarden, schapen, honden en roofvogels",
+    "Outdoor & reizen: Franse Pyreneeën, Zweden, IJsland en de Sinai",
+    "Organisatieopstellingen, ademwerk, mindfulness en voice dialogue"
+  ];
+
+  const rmdPhases = [
+    { title: "Basis", description: "Ontdek je referentiekader en durf daar uit te stappen" },
+    { title: "Bezinnen", description: "Reflecteren en relativeren" },
+    { title: "Bouwen", description: "Doen, oefenen en ervaren" },
+    { title: "Bewegen", description: "Kom in beweging! Lichaamsbewustzijn, fysiologie en geest zijn verbonden" },
+    { title: "Belonen", description: "Wat werkt voor jou en hoe veranker je dit?" }
   ];
 
   const mindsetFeatures = [
-    "Ontwikkelen van een growth mindset (groeimentaliteit)",
-    "Bewustwording van vaste sets van gewoontes en overtuigingen",
-    "Positieve, op groei gerichte denkpatronen en gedragingen",
-    "Versterken van mentale weerbaarheid en veerkracht",
+    "Bewustwording van vaste sets van gewoontes en overtuigingen (meestal onbewust)",
+    "Ontwikkelen van positieve, op groei gerichte denkpatronen en gedragingen",
+    "Mogelijk maken van een groeimindset",
     "Inzicht in open versus gesloten mindset",
     "Ondersteuning voor individuen én groepen",
-    "Begeleiding door professionals met ervaring in Defensie en topsport"
+    "Begeleiding door professionals met ervaring in Defensie en topsport (voetbal op hoog niveau)"
   ];
+
+  const mindsetValues = ["SAMENWERKING", "VERTROUWEN", "MOED"];
 
   const combinedBenefits = [
     {
       icon: <Target className="h-8 w-8 text-primary" />,
-      title: "Ervaring + Mindset",
-      description: "RMD's ervaringsgerichte aanpak gecombineerd met Mindset22's focus op groeimentaliteit zorgt voor diepgaande, duurzame verandering."
+      title: "Vlieland als Unieke Setting",
+      description: "Bureau Vlieland combineert beide programma's op het inspirerende waddeneiland, waar rust en ruimte zorgen voor maximale focus."
     },
     {
       icon: <Users className="h-8 w-8 text-primary" />,
-      title: "Team Transformatie",
-      description: "Versterk zowel individuele competenties als de teamdynamiek door bewuste reflectie en gezamenlijke ervaringen."
+      title: "Lokale Expertise",
+      description: "Als lokale partner organiseren wij de perfecte mix van trainingen, accommodatie en eilandactiviteiten voor jouw team."
     },
     {
       icon: <Brain className="h-8 w-8 text-primary" />,
-      title: "Duurzaam Effect",
-      description: "Door ervaringen op te doen op verschillende niveaus (fysiek, mentaal, emotioneel, spiritueel) ontstaat blijvende impact."
+      title: "Ervaring + Mindset",
+      description: "RMD's ervaringsgerichte aanpak gecombineerd met Mindset22's focus op groeimentaliteit zorgt voor duurzame verandering."
     },
     {
       icon: <TrendingUp className="h-8 w-8 text-primary" />,
-      title: "Meetbare Resultaten",
-      description: "Concreet zichtbare verbeteringen in leiderschap, communicatie, samenwerking en prestaties van het team."
+      title: "Maatwerk Programma's",
+      description: "Van eendaagse workshops tot meerdaagse intensieve trajecten, volledig afgestemd op jouw organisatie en doelen."
     }
   ];
 
@@ -79,17 +94,22 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Krachtige combinatie voor maximale impact
+                Transformatieve programma's op Vlieland
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
-                Bureau Vlieland werkt met twee krachtige partners die teams en individuen transformeren. 
-                <strong> RMD Trainingen</strong> (Richard Melvin Dijkstra) biedt ervaringsgerichte programma's 
-                op het gebied van leiderschaps- en teamtrainingen, coaching en counseling. 
-                <strong> Mindset22</strong> (Simon Brilstra en Richard Leegte) helpt individuen en groepen 
-                hun volledige talenten te gebruiken door positieve, op groei gerichte denkpatronen te ontwikkelen.
+                Bureau Vlieland brengt twee krachtige partners samen op het inspirerende waddeneiland. 
+                <strong> RMD Trainingen</strong>, onder leiding van Richard Melvin Dijkstra, biedt sinds 1999 
+                ervaringsgerichte programma's op het gebied van persoonlijk leiderschaps- en teamtrainingen, 
+                coaching, counseling en consultancy.
+              </p>
+              <p className="text-lg text-muted-foreground mb-4">
+                <strong> Mindset22</strong>, met Simon Brilstra en Richard Leegte, helpt individuen en groepen 
+                hun volledige talenten te benutten door positieve, op groei gerichte denkpatronen te ontwikkelen. 
+                Beide professionals brengen ervaring mee uit Defensie en topsport.
               </p>
               <p className="text-lg text-muted-foreground">
-                De combinatie van beide programma's zorgt voor duurzame verandering op zowel individueel als teamniveau.
+                De unieke setting van Vlieland versterkt de impact van beide programma's. Bureau Vlieland zorgt 
+                voor de lokale organisatie en combineert trainingen met de rust en inspiratie van het eiland.
               </p>
             </div>
           </div>
@@ -108,45 +128,44 @@ const Programmas = () => {
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div>
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                      RMD - Gedragsprofielen
+                      RMD Trainingen - Ervaringsgerichte Ontwikkeling
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
-                      RMD is gebaseerd op het DISC model en staat voor Rood, Geel, Groen en 
-                      Blauw - vier verschillende gedragsprofielen die inzicht geven in hoe mensen 
-                      communiceren en gedragen. Het helpt niet om mensen in hokjes te plaatsen, 
-                      maar juist om inzicht te geven in gedragspatronen en hoe je daarop kunt 
-                      afstemmen voor betere communicatie en samenwerking.
+                      Richard Melvin Dijkstra is sinds 1999 werkzaam in de wereld van ervaringsgerichte trainingen. 
+                      Met zijn expertise in persoonlijke ontwikkeling, leiderschap en teamleiderschap begeleidt hij 
+                      deelnemers om ervaringen op te doen op fysiek, mentaal, emotioneel en spiritueel vlak.
                     </p>
-                    <div className="space-y-4 mb-8">
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-red-500 shrink-0 mt-1" />
-                        <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Rood - Dominant</h4>
-                          <p className="text-sm text-muted-foreground">Direct, assertief en doortastend. Vurig en pittig karakter.</p>
+                    <p className="text-lg text-muted-foreground mb-6">
+                      RMD maakt gebruik van unieke locaties in de buitenlucht en krachtige metaforen. Een veilige 
+                      manier om gespiegeld te worden en tot nieuwe inzichten te komen. Richard is houder van de 
+                      derde graad zwarte band in Aikido en zwarte band in Braziliaans Jiu Jitsu.
+                    </p>
+                    
+                    <h3 className="font-semibold text-xl mb-4 text-foreground">Werkvormen & Metaforen</h3>
+                    <ul className="space-y-3 mb-6">
+                      {rmdMetaphors.map((metaphor, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="text-muted-foreground">{metaphor}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <h3 className="font-semibold text-xl mb-4 text-foreground">De 5 Fases</h3>
+                    <div className="space-y-3 mb-6">
+                      {rmdPhases.map((phase, idx) => (
+                        <div key={idx} className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-bold text-primary">{idx + 1}</span>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-foreground">{phase.title}</h4>
+                            <p className="text-sm text-muted-foreground">{phase.description}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-yellow-500 shrink-0 mt-1" />
-                        <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Geel - Invloed</h4>
-                          <p className="text-sm text-muted-foreground">Enthousiast, spontaan en openhartig. Zonnig en stralend karakter.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-green-500 shrink-0 mt-1" />
-                        <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Groen - Stabiliteit</h4>
-                          <p className="text-sm text-muted-foreground">Kalm, stabiel en dienstbaar. Zacht en aards karakter.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-blue-500 shrink-0 mt-1" />
-                        <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Blauw - Conformisme</h4>
-                          <p className="text-sm text-muted-foreground">Nauwkeurig, onderzoekend en analytisch. IJshelder karakter.</p>
-                        </div>
-                      </div>
+                      ))}
                     </div>
+
                     <h3 className="font-semibold text-xl mb-4 text-foreground">Wat levert het op?</h3>
                     <ul className="space-y-3">
                       {rmdFeatures.map((feature, idx) => (
@@ -157,7 +176,7 @@ const Programmas = () => {
                       ))}
                     </ul>
                   </div>
-                  <div className="relative h-[500px] rounded-lg overflow-hidden shadow-lg">
+                  <div className="relative h-[600px] rounded-lg overflow-hidden shadow-lg">
                     <img 
                       src={cyclingGroupImage} 
                       alt="RMD Team Training" 
@@ -169,7 +188,7 @@ const Programmas = () => {
 
               <TabsContent value="mindset">
                 <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div className="order-2 md:order-1 relative h-[500px] rounded-lg overflow-hidden shadow-lg">
+                  <div className="order-2 md:order-1 relative h-[600px] rounded-lg overflow-hidden shadow-lg">
                     <img 
                       src={teamActivityImage} 
                       alt="Mindset 22 Training" 
@@ -178,18 +197,29 @@ const Programmas = () => {
                   </div>
                   <div className="order-1 md:order-2">
                     <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                      Mindset 22 - Mentale Weerbaarheid
+                      Mindset22 - Groeimentaliteit
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
-                      Mindset 22 is een programma dat focust op het ontwikkelen van een 
-                      growth mindset en mentale weerbaarheid. Het helpt teams en individuen 
-                      om effectiever om te gaan met uitdagingen, veranderingen en druk.
+                      Hetgeen een mens doet wordt bepaald door de 'mindset' - een vaste set van 
+                      gewoontes en overtuigingen, meestal onbewust. De manier waarop de mindset 
+                      (open danwel gesloten) is ontwikkeld, bepaalt het handelen. Het goede èn het slechte handelen.
                     </p>
                     <p className="text-lg text-muted-foreground mb-6">
-                      Door bewustwording van denk- en gedragspatronen leer je hoe je je 
-                      mindset kunt verschuiven van limiterende overtuigingen naar een 
-                      groeimentaliteit die kansen ziet in plaats van obstakels.
+                      Simon Brilstra (1976) en Richard Leegte (1970) hebben een individueel als mede een 
+                      gezamenlijk verleden binnen Defensie en de civiele maatschappij. Daarnaast delen ze veel 
+                      ervaringen op sportief vlak (voetbal op hoog niveau). Bij Mindset22 vind je de juiste 
+                      begeleiding van professionals die weten wat het is om doelen fysiek en mentaal te bereiken.
                     </p>
+
+                    <h3 className="font-semibold text-xl mb-4 text-foreground">Kernwaarden</h3>
+                    <div className="flex gap-3 mb-6">
+                      {mindsetValues.map((value, idx) => (
+                        <div key={idx} className="px-4 py-2 bg-primary/10 rounded-lg">
+                          <span className="font-semibold text-primary">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+
                     <h3 className="font-semibold text-xl mb-4 text-foreground">Wat levert het op?</h3>
                     <ul className="space-y-3">
                       {mindsetFeatures.map((feature, idx) => (
@@ -211,12 +241,12 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Waarom de combinatie zo krachtig is
+                Bureau Vlieland: De Verbindende Factor
               </h2>
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                RMD en Mindset 22 versterken elkaar. Waar RMD inzicht geeft in gedrag, 
-                zorgt Mindset 22 voor de mentale basis om dit gedrag ook daadwerkelijk 
-                te kunnen veranderen.
+                Als lokale specialist op Vlieland brengen wij RMD Trainingen en Mindset22 samen 
+                op het eiland. We zorgen voor de perfecte setting waarin deze krachtige programma's 
+                tot hun recht komen: van accommodatie en catering tot unieke eilandactiviteiten.
               </p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -242,36 +272,39 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center text-foreground">
-                Hoe wordt het toegepast?
+                Hoe organiseren wij dit?
               </h2>
               <Card className="p-8">
                 <div className="space-y-6">
                   <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">1. Voorbereiding</h3>
+                    <h3 className="font-semibold text-xl mb-3 text-foreground">1. Kennismakingsgesprek</h3>
                     <p className="text-muted-foreground">
-                      Intake gesprek om doelen en verwachtingen in kaart te brengen. 
-                      Deelnemers vullen vooraf vragenlijsten in voor persoonlijke profielen.
+                      We starten met een gesprek om jouw doelen, teamsamenstelling en wensen te bespreken. 
+                      Op basis daarvan adviseren we welk programma (RMD, Mindset22 of een combinatie) het 
+                      beste past bij jullie organisatie.
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">2. Workshop Dag</h3>
+                    <h3 className="font-semibold text-xl mb-3 text-foreground">2. Maatwerk Programma</h3>
                     <p className="text-muted-foreground">
-                      Interactieve sessies waarin theorie, praktijk en persoonlijke inzichten 
-                      samenkomen. Met concrete oefeningen en groepsopdrachten.
+                      Bureau Vlieland stelt een compleet programma samen: van accommodatie bij Hotel Zeezicht 
+                      tot activiteiten zoals de Vliehors Expres, fietstochten, en RIB-boottouren. Inclusief 
+                      catering en alle logistiek op het eiland.
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">3. Praktijkopdrachten</h3>
+                    <h3 className="font-semibold text-xl mb-3 text-foreground">3. Uitvoering op Vlieland</h3>
                     <p className="text-muted-foreground">
-                      Tijdens outdoor activiteiten worden de geleerde inzichten direct 
-                      toegepast in realistische teamsituaties.
+                      De trainers van RMD en/of Mindset22 verzorgen hun programma in de unieke setting van 
+                      Vlieland. De rust en inspirerende omgeving van het eiland versterken de impact van 
+                      de trainingen.
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">4. Evaluatie & Verankering</h3>
+                    <h3 className="font-semibold text-xl mb-3 text-foreground">4. Nazorg & Follow-up</h3>
                     <p className="text-muted-foreground">
-                      Reflectie op het geleerde en concrete actiepunten voor de praktijk. 
-                      Optioneel: follow-up sessies voor duurzame borging.
+                      Na afloop zorgen we voor evaluatie en mogelijke follow-up sessies. Optioneel kunnen 
+                      deelnemers terugkeren naar Vlieland voor verdiepingssessies of teambuilding.
                     </p>
                   </div>
                 </div>
@@ -285,15 +318,16 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Klaar voor transformatie?
+                Breng jouw team naar een hoger niveau
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Ontdek hoe RMD en Mindset 22 jouw team naar een hoger niveau kunnen tillen. 
-                Plan een vrijblijvend gesprek om de mogelijkheden te bespreken.
+                Ontdek hoe Bureau Vlieland, samen met RMD Trainingen en Mindset22, jouw team 
+                kan transformeren. Neem contact op voor een vrijblijvend gesprek over de mogelijkheden 
+                en laat je inspireren door onze voorbeeldprogramma's.
               </p>
               <Link to="/#contact">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
-                  Plan een gesprek
+                  Neem contact op
                 </Button>
               </Link>
             </div>
