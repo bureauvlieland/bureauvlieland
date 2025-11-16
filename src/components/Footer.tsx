@@ -32,28 +32,32 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Diensten</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Eendaagse programma's</li>
-              <li>Meerdaagse events</li>
-              <li>Lokale catering</li>
-              <li>Teambuilding activiteiten</li>
-            </ul>
-            
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Meer informatie</h4>
+            <h4 className="font-semibold text-foreground mb-4">Meer informatie</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link to="/programmas" className="hover:text-primary transition-colors">
+                <Link 
+                  to="/programmas" 
+                  className="hover:text-primary transition-colors"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
                   RMD & Mindset22 Programma's
                 </Link>
               </li>
               <li>
-                <Link to="/voorbeeldprogrammas" className="hover:text-primary transition-colors">
+                <Link 
+                  to="/voorbeeldprogrammas" 
+                  className="hover:text-primary transition-colors"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
                   Voorbeeldprogramma's
                 </Link>
               </li>
               <li>
-                <Link to="/catering" className="hover:text-primary transition-colors">
+                <Link 
+                  to="/catering" 
+                  className="hover:text-primary transition-colors"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
                   Catering Opties
                 </Link>
               </li>
