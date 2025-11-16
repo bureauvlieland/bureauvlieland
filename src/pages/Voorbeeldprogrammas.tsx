@@ -8,6 +8,15 @@ import vlielandMorning from "@/assets/vlieland-morning.jpg";
 import vlielandBeach from "@/assets/vlieland-beach.jpg";
 import vlielandActivity from "@/assets/vlieland-activity.jpg";
 import vlielandGroup from "@/assets/vlieland-group.jpg";
+import teamBeach from "@/assets/team-beach.jpg";
+import beachActivity from "@/assets/beach-activity.jpg";
+import speedboat from "@/assets/speedboat.jpg";
+import surfActivity from "@/assets/surf-activity.jpg";
+import cyclingTeam from "@/assets/cycling-team.jpg";
+import dunesGroup from "@/assets/dunes-group.jpg";
+import lunchBuffet from "@/assets/lunch-buffet.jpg";
+import kiteFlying from "@/assets/kite-flying.jpg";
+import sealTour from "@/assets/seal-tour.jpg";
 import { Link } from "react-router-dom";
 
 const Voorbeeldprogrammas = () => {
@@ -483,8 +492,104 @@ const Voorbeeldprogrammas = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center text-foreground">
-              Impressie van Vlieland
+              Teambuilding Activiteiten op Vlieland
             </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={teamBeach} 
+                  alt="Team groepsfoto op het strand" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Teamfoto op het strand</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={beachActivity} 
+                  alt="Beach activiteit met groep" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Silent Disco Beach</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={dunesGroup} 
+                  alt="Grote groep in de duinen" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Groepsfoto in de duinen</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={speedboat} 
+                  alt="Speedboot watertocht" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">RescueBoat Adventures</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={sealTour} 
+                  alt="Zeehondentocht" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Zeehondentocht</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={surfActivity} 
+                  alt="Surf en watersport activiteiten" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Surf & Watersport</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={cyclingTeam} 
+                  alt="Team fietstocht" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Fietsen over Vlieland</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={kiteFlying} 
+                  alt="Vliegeren op het strand" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Strandvliegeren</p>
+                </div>
+              </div>
+              <div className="relative h-[280px] rounded-lg overflow-hidden shadow-lg group">
+                <img 
+                  src={lunchBuffet} 
+                  alt="Lunch buffet arrangement" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-semibold text-lg">Heerlijke lunch buffetten</p>
+                </div>
+              </div>
+            </div>
+            
+            <h3 className="text-2xl md:text-3xl font-bold mb-8 text-center text-foreground">
+              Het eiland Vlieland
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg group">
                 <img 
