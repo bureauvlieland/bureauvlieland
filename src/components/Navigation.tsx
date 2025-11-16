@@ -1,8 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.jpg";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -37,24 +43,47 @@ export const Navigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <button
-              onClick={() => scrollToSection("wat-wij-doen")}
+            <Link
+              to="/diensten"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Diensten
-            </button>
-            <button
-              onClick={() => scrollToSection("voor-wie")}
+            </Link>
+            <Link
+              to="/voor-wie"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Voor wie
-            </button>
-            <button
-              onClick={() => scrollToSection("over-erwin")}
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                Programma's <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-card border-border">
+                <DropdownMenuItem asChild>
+                  <Link to="/programmas" className="cursor-pointer">
+                    Transformatieve Programma's
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/voorbeeldprogrammas" className="cursor-pointer">
+                    Voorbeeldprogramma's
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link
+              to="/catering"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Over Erwin
-            </button>
+              Catering
+            </Link>
+            <Link
+              to="/over-ons"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Over ons
+            </Link>
             <Button
               onClick={() => scrollToSection("contact")}
               variant="default"
@@ -78,33 +107,51 @@ export const Navigation = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4">
-              <button
-                onClick={() => {
-                  scrollToSection("wat-wij-doen");
-                  setIsMenuOpen(false);
-                }}
+              <Link
+                to="/diensten"
+                onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
                 Diensten
-              </button>
-              <button
-                onClick={() => {
-                  scrollToSection("voor-wie");
-                  setIsMenuOpen(false);
-                }}
+              </Link>
+              <Link
+                to="/voor-wie"
+                onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
                 Voor wie
-              </button>
-              <button
-                onClick={() => {
-                  scrollToSection("over-erwin");
-                  setIsMenuOpen(false);
-                }}
+              </Link>
+              <div className="px-4 py-2">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Programma's</p>
+                <Link
+                  to="/programmas"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+                >
+                  Transformatieve Programma's
+                </Link>
+                <Link
+                  to="/voorbeeldprogrammas"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+                >
+                  Voorbeeldprogramma's
+                </Link>
+              </div>
+              <Link
+                to="/catering"
+                onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
-                Over Erwin
-              </button>
+                Catering
+              </Link>
+              <Link
+                to="/over-ons"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+              >
+                Over ons
+              </Link>
               <Button
                 onClick={() => {
                   scrollToSection("contact");
