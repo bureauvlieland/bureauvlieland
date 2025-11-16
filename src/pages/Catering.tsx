@@ -5,6 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Check } from "lucide-react";
 import cateringImage from "@/assets/catering.jpg";
 import beachEventImage from "@/assets/beach-event.jpg";
+import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
+import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
+import foodPlattersImage from "@/assets/food-platters.jpg";
+import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
+import tentSetupImage from "@/assets/tent-setup.jpg";
 import { Link } from "react-router-dom";
 
 const Catering = () => {
@@ -119,8 +124,54 @@ const Catering = () => {
           </div>
         </section>
 
-        {/* Beach BBQ Section */}
+        {/* Photo Gallery Section */}
         <section className="py-16 bg-background">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+              Catering Impressies
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={outdoorDiningImage} 
+                  alt="Outdoor dining arrangement" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={foodPlattersImage} 
+                  alt="Delicious food platters" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={outdoorDrinksImage} 
+                  alt="Outdoor drinks arrangement" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg lg:col-span-2">
+                <img 
+                  src={sunsetDinnerImage} 
+                  alt="Sunset dinner event op Vlieland" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
+                <img 
+                  src={tentSetupImage} 
+                  alt="Tent setup voor catering" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Beach BBQ Section */}
+        <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
@@ -163,7 +214,7 @@ const Catering = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-muted/30">
+        <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
