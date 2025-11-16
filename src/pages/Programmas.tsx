@@ -10,12 +10,12 @@ import { Link } from "react-router-dom";
 
 const Programmas = () => {
   const rmdFeatures = [
-    "Inzicht in persoonlijke drijfveren en gedragspatronen",
-    "Verbeteren van onderlinge communicatie",
-    "Effectiever samenwerken in teams",
-    "Herkennen van gedrag onder druk",
-    "Praktische tools voor dagelijks gebruik",
-    "Duurzame gedragsverandering"
+    "Inzicht in je eigen gedragsprofiel en dat van anderen",
+    "Verbeteren van communicatie door bewust afstemmen",
+    "Herkenning van gedragspatronen in verschillende situaties",
+    "Effectiever omgaan met collega's en klanten",
+    "Praktische tools direct toepasbaar in dagelijkse praktijk",
+    "Vergroten van zelfinzicht en begrip voor anderen"
   ];
 
   const mindsetFeatures = [
@@ -80,10 +80,10 @@ const Programmas = () => {
                 Krachtige combinatie voor maximale impact
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
-                Bureau Vlieland werkt met twee bewezen programma's die teams naar een 
-                hoger niveau tillen. RMD (Rood, Geel, Groen, Blauw gedragsprofielen) 
-                geeft inzicht in gedragspatronen, terwijl Mindset 22 focust op mentale 
-                weerbaarheid en groeimentaliteit.
+                Bureau Vlieland werkt met twee krachtige programma's die teams transformeren. 
+                RMD (Rood, Geel, Groen, Blauw) gebaseerd op het DISC model geeft direct 
+                inzicht in gedragspatronen en communicatiestijlen. Mindset 22 focust op 
+                mentale weerbaarheid en groeimentaliteit.
               </p>
               <p className="text-lg text-muted-foreground">
                 De combinatie van beide programma's zorgt voor duurzame verandering 
@@ -109,38 +109,39 @@ const Programmas = () => {
                       RMD - Gedragsprofielen
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
-                      RMD staat voor Rood, Geel, Groen en Blauw - vier verschillende 
-                      gedragsprofielen die helpen om jezelf en anderen beter te begrijpen. 
-                      Deze methodiek maakt gedrag bespreekbaar en biedt handvatten voor 
-                      effectievere communicatie en samenwerking.
+                      RMD is gebaseerd op het DISC model en staat voor Rood, Geel, Groen en 
+                      Blauw - vier verschillende gedragsprofielen die inzicht geven in hoe mensen 
+                      communiceren en gedragen. Het helpt niet om mensen in hokjes te plaatsen, 
+                      maar juist om inzicht te geven in gedragspatronen en hoe je daarop kunt 
+                      afstemmen voor betere communicatie en samenwerking.
                     </p>
                     <div className="space-y-4 mb-8">
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-red-500 shrink-0 mt-1" />
                         <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Rood - Doelgericht</h4>
-                          <p className="text-sm text-muted-foreground">Direct, besluitvaardig en resultaatgericht</p>
+                          <h4 className="font-semibold mb-1 text-foreground">Rood - Dominant</h4>
+                          <p className="text-sm text-muted-foreground">Direct, assertief en doortastend. Vurig en pittig karakter.</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-yellow-500 shrink-0 mt-1" />
                         <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Geel - Inspirerend</h4>
-                          <p className="text-sm text-muted-foreground">Enthousiast, creatief en mensengericht</p>
+                          <h4 className="font-semibold mb-1 text-foreground">Geel - Invloed</h4>
+                          <p className="text-sm text-muted-foreground">Enthousiast, spontaan en openhartig. Zonnig en stralend karakter.</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-green-500 shrink-0 mt-1" />
                         <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Groen - Ondersteunend</h4>
-                          <p className="text-sm text-muted-foreground">Harmonieus, betrouwbaar en teamgericht</p>
+                          <h4 className="font-semibold mb-1 text-foreground">Groen - Stabiliteit</h4>
+                          <p className="text-sm text-muted-foreground">Kalm, stabiel en dienstbaar. Zacht en aards karakter.</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 rounded-full bg-blue-500 shrink-0 mt-1" />
                         <div>
-                          <h4 className="font-semibold mb-1 text-foreground">Blauw - Analytisch</h4>
-                          <p className="text-sm text-muted-foreground">Precies, systematisch en kwaliteitsgericht</p>
+                          <h4 className="font-semibold mb-1 text-foreground">Blauw - Conformisme</h4>
+                          <p className="text-sm text-muted-foreground">Nauwkeurig, onderzoekend en analytisch. IJshelder karakter.</p>
                         </div>
                       </div>
                     </div>
