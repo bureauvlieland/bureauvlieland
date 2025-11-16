@@ -37,24 +37,12 @@ export const Navigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <Link
-              to="/programmas"
+            <button
+              onClick={() => scrollToSection("wat-wij-doen")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Programma's
-            </Link>
-            <Link
-              to="/voorbeeldprogrammas"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Voorbeelden
-            </Link>
-            <Link
-              to="/catering"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Catering
-            </Link>
+              Diensten
+            </button>
             <button
               onClick={() => scrollToSection("voor-wie")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -90,41 +78,38 @@ export const Navigation = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4">
-              <Link
-                to="/programmas"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Programma's
-              </Link>
-              <Link
-                to="/voorbeeldprogrammas"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Voorbeelden
-              </Link>
-              <Link
-                to="/catering"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Catering
-              </Link>
               <button
-                onClick={() => scrollToSection("voor-wie")}
+                onClick={() => {
+                  scrollToSection("wat-wij-doen");
+                  setIsMenuOpen(false);
+                }}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+              >
+                Diensten
+              </button>
+              <button
+                onClick={() => {
+                  scrollToSection("voor-wie");
+                  setIsMenuOpen(false);
+                }}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
                 Voor wie
               </button>
               <button
-                onClick={() => scrollToSection("over-erwin")}
+                onClick={() => {
+                  scrollToSection("over-erwin");
+                  setIsMenuOpen(false);
+                }}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
                 Over Erwin
               </button>
               <Button
-                onClick={() => scrollToSection("contact")}
+                onClick={() => {
+                  scrollToSection("contact");
+                  setIsMenuOpen(false);
+                }}
                 variant="default"
                 className="bg-primary hover:bg-primary/90 mx-4"
               >

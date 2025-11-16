@@ -39,6 +39,25 @@ export const Footer = () => {
               <li>Lokale catering</li>
               <li>Teambuilding activiteiten</li>
             </ul>
+            
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Meer informatie</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link to="/programmas" className="hover:text-primary transition-colors">
+                  RMD & Mindset22 Programma's
+                </Link>
+              </li>
+              <li>
+                <Link to="/voorbeeldprogrammas" className="hover:text-primary transition-colors">
+                  Voorbeeldprogramma's
+                </Link>
+              </li>
+              <li>
+                <Link to="/catering" className="hover:text-primary transition-colors">
+                  Catering Opties
+                </Link>
+              </li>
+            </ul>
           </div>
 
           <div>

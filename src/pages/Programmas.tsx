@@ -10,43 +10,45 @@ import { Link } from "react-router-dom";
 
 const Programmas = () => {
   const rmdFeatures = [
-    "Inzicht in je eigen gedragsprofiel en dat van anderen",
-    "Verbeteren van communicatie door bewust afstemmen",
-    "Herkenning van gedragspatronen in verschillende situaties",
-    "Effectiever omgaan met collega's en klanten",
-    "Praktische tools direct toepasbaar in dagelijkse praktijk",
-    "Vergroten van zelfinzicht en begrip voor anderen"
+    "Ervaringsgerichte trainingen op fysiek, mentaal, emotioneel en spiritueel vlak",
+    "Gebruik van krachtige metaforen: Aikido, Braziliaans Jiu Jitsu, paarden, roofvogels",
+    "Unieke locaties in de buitenlucht: van Vlieland tot de Pyreneeën",
+    "Bewustwording en inzicht in gedrag en prestaties",
+    "Vergroten van zelfkennis en persoonlijk leiderschap",
+    "Optimaliseren van management- en leidinggevende kwaliteiten",
+    "Coaching, counseling en consultancy op maat"
   ];
 
   const mindsetFeatures = [
-    "Bewustwording van denk- en gedragspatronen",
-    "Ontwikkelen van een growth mindset",
-    "Versterken van veerkracht en mentale weerbaarheid",
-    "Effectieve doelstellingstechnieken",
-    "Omgaan met verandering en onzekerheid",
-    "Persoonlijke en team effectiviteit verhogen"
+    "Ontwikkelen van een growth mindset (groeimentaliteit)",
+    "Bewustwording van vaste sets van gewoontes en overtuigingen",
+    "Positieve, op groei gerichte denkpatronen en gedragingen",
+    "Versterken van mentale weerbaarheid en veerkracht",
+    "Inzicht in open versus gesloten mindset",
+    "Ondersteuning voor individuen én groepen",
+    "Begeleiding door professionals met ervaring in Defensie en topsport"
   ];
 
   const combinedBenefits = [
     {
       icon: <Target className="h-8 w-8 text-primary" />,
-      title: "Gedrag + Mindset",
-      description: "De combinatie van RMD en Mindset 22 zorgt voor diepgaande verandering op zowel gedrag als denkwijze niveau."
+      title: "Ervaring + Mindset",
+      description: "RMD's ervaringsgerichte aanpak gecombineerd met Mindset22's focus op groeimentaliteit zorgt voor diepgaande, duurzame verandering."
     },
     {
       icon: <Users className="h-8 w-8 text-primary" />,
       title: "Team Transformatie",
-      description: "Versterk niet alleen individuele competenties maar ook de teamdynamiek en onderlinge samenwerking."
+      description: "Versterk zowel individuele competenties als de teamdynamiek door bewuste reflectie en gezamenlijke ervaringen."
     },
     {
       icon: <Brain className="h-8 w-8 text-primary" />,
       title: "Duurzaam Effect",
-      description: "Door bewustwording en concrete tools zorg je voor blijvende impact op persoonlijk en teamniveau."
+      description: "Door ervaringen op te doen op verschillende niveaus (fysiek, mentaal, emotioneel, spiritueel) ontstaat blijvende impact."
     },
     {
       icon: <TrendingUp className="h-8 w-8 text-primary" />,
       title: "Meetbare Resultaten",
-      description: "Concreet zichtbare verbeteringen in communicatie, samenwerking en prestaties van het team."
+      description: "Concreet zichtbare verbeteringen in leiderschap, communicatie, samenwerking en prestaties van het team."
     }
   ];
 
@@ -80,14 +82,14 @@ const Programmas = () => {
                 Krachtige combinatie voor maximale impact
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
-                Bureau Vlieland werkt met twee krachtige programma's die teams transformeren. 
-                RMD (Rood, Geel, Groen, Blauw) gebaseerd op het DISC model geeft direct 
-                inzicht in gedragspatronen en communicatiestijlen. Mindset 22 focust op 
-                mentale weerbaarheid en groeimentaliteit.
+                Bureau Vlieland werkt met twee krachtige partners die teams en individuen transformeren. 
+                <strong> RMD Trainingen</strong> (Richard Melvin Dijkstra) biedt ervaringsgerichte programma's 
+                op het gebied van leiderschaps- en teamtrainingen, coaching en counseling. 
+                <strong> Mindset22</strong> (Simon Brilstra en Richard Leegte) helpt individuen en groepen 
+                hun volledige talenten te gebruiken door positieve, op groei gerichte denkpatronen te ontwikkelen.
               </p>
               <p className="text-lg text-muted-foreground">
-                De combinatie van beide programma's zorgt voor duurzame verandering 
-                op zowel individueel als teamniveau.
+                De combinatie van beide programma's zorgt voor duurzame verandering op zowel individueel als teamniveau.
               </p>
             </div>
           </div>
