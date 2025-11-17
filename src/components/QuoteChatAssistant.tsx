@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { MessageCircle, Send, X, Loader2 } from "lucide-react";
+import { MessageCircle, Send, X, Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Message {
@@ -10,7 +10,11 @@ interface Message {
   content: string;
 }
 
-export const QuoteChatAssistant = () => {
+interface QuoteChatAssistantProps {
+  onUseForQuote?: (chatSummary: string) => void;
+}
+
+export const QuoteChatAssistant = ({ onUseForQuote }: QuoteChatAssistantProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -112,6 +116,17 @@ export const QuoteChatAssistant = () => {
     streamChat(input);
   };
 
+  const handleUseForQuote = () => {
+    const chatSummary = messages
+      .map((msg) => `${msg.role === "user" ? "Klant" : "Assistent"}: ${msg.content}`)
+      .join("\n\n");
+    
+    if (onUseForQuote) {
+      onUseForQuote(chatSummary);
+      setIsOpen(false);
+    }
+  };
+
   if (!isOpen) {
     return (
       <Button
@@ -163,6 +178,19 @@ export const QuoteChatAssistant = () => {
             </div>
           </div>
         ))}
+        {messages.length > 2 && onUseForQuote && (
+          <div className="flex justify-center pt-2">
+            <Button
+              onClick={handleUseForQuote}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Gebruik voor offerte aanvraag
+            </Button>
+          </div>
+        )}
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-secondary rounded-lg p-3">
