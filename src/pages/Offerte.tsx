@@ -33,7 +33,6 @@ const formSchema = z.object({
   eventType: z.string().min(1, "Selecteer een type evenement"),
   numberOfPeople: z.coerce.number().min(1, "Minimaal 1 persoon").max(1000, "Maximaal 1000 personen"),
   date: z.string().min(1, "Selecteer een datum"),
-  budget: z.string().min(1, "Selecteer een budget indicatie"),
   location: z.string().optional(),
   activities: z.array(z.string()).optional(),
   catering: z.string().optional(),
@@ -53,11 +52,6 @@ const eventTypes = [
   { value: "catering", label: "Catering" },
 ];
 
-const budgetRanges = [
-  { value: "200-300", label: "€200 - €300 per dag p.p." },
-  { value: "300-500", label: "€300 - €500 per dag p.p." },
-  { value: "500+", label: "€500+ per dag p.p." },
-];
 
 const locationOptions = [
   "Vlieland",
@@ -87,7 +81,6 @@ export default function Offerte() {
       eventType: "",
       numberOfPeople: 10,
       date: "",
-      budget: "",
       location: "",
       activities: [],
       catering: "",
@@ -217,39 +210,6 @@ export default function Offerte() {
                         <FormDescription>
                           Vul een specifieke datum of periode in
                         </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Budget */}
-                  <FormField
-                    control={form.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Budget indicatie per dag per persoon *</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                          >
-                            {budgetRanges.map((range) => (
-                              <FormItem
-                                key={range.value}
-                                className="flex items-center space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <RadioGroupItem value={range.value} />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {range.label}
-                                </FormLabel>
-                              </FormItem>
-                            ))}
-                          </RadioGroup>
-                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
