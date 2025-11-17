@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, ExternalLink } from "lucide-react";
 import vuurtorenloopImage from "@/assets/vuurtorenloop.jpg";
 import amuseTourImage from "@/assets/amuse-tour.jpg";
-import bockbiertochtImage from "@/assets/bockbiertocht.jpg";
-import stappenHappenImage from "@/assets/stappen-happen.jpg";
+import bockbiertochtImage from "@/assets/bockbiertocht2.jpg";
+import stappenHappenImage from "@/assets/stappen-en-happen.jpg";
 import { Link } from "react-router-dom";
 
 const Evenementen = () => {
@@ -274,6 +274,9 @@ const Evenementen = () => {
                 waar je telkens wordt verrast met een heerlijk gerecht in proeverijformaat. Geniet van de 
                 sfeervolle herfst op Vlieland, proef de culinaire creaties van lokale chefs en beleef een 
                 middag vol gezelligheid en smaak.
+              </p>
+              <p className="text-muted-foreground mb-8 font-semibold">
+                Stappen & Happen is ook als groepsactiviteit te boeken!
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <a 

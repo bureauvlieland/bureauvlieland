@@ -156,16 +156,29 @@ const Voorbeeldprogrammas = () => {
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${dunesGroup})` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
           </div>
-          <div className="relative z-10 text-center text-white px-4 max-w-5xl">
+
+          {/* Decorative wave patterns */}
+          <div className="absolute top-0 left-0 w-full h-32 opacity-10 pointer-events-none">
+            <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,50 Q300,20 600,50 T1200,50 L1200,0 L0,0 Z" fill="currentColor" className="text-background"/>
+            </svg>
+          </div>
+          <div className="absolute bottom-0 left-0 w-full h-32 opacity-10 pointer-events-none">
+            <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,70 Q300,100 600,70 T1200,70 L1200,120 L0,120 Z" fill="currentColor" className="text-background"/>
+            </svg>
+          </div>
+
+          <div className="relative z-10 text-center text-primary-foreground px-4 max-w-5xl">
             <h1 className="text-5xl md:text-7xl font-bold mb-6">
               Stel je Ideale Programma Samen
             </h1>
             <p className="text-xl md:text-2xl mb-8">
               Kies uit verschillende modules en creëer het perfecte teamuitje voor jouw groep
             </p>
-            <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-3xl mx-auto">
               Wij verzorgen alles - van transfers en accommodatie tot activiteiten en catering
             </p>
           </div>
