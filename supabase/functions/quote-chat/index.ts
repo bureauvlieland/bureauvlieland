@@ -165,16 +165,25 @@ Dag 2:
 **Realistische Prijzen (gebaseerd op recente programma's):**
 
 DAGPROGRAMMA'S:
+- Budget (20 pax): €152 pp - Reguliere boot, fietsen, strandspektakel, lunch strand, zeehondentocht
+- Budget groot (55 pax): €114 pp - Regina Andrea charter, e-bikes, Vliehors Express, rondleiding Kaasbunker
 - Basis (30 pax): €250 pp - Reguliere boot, fietsen, lunch natuur, activiteit, brouwerij rondleiding
 - Actief (13 pax): €338 pp - Reguliere boot, fietsen, strandspektakel, wadlopen, lunch, diner
 - Premium (6 pax): €360 pp - Watertaxi, fietsen begeleiding, zeehondentocht, lunch natuur, Menu Zuiver
+- Compact (10 pax): €121 pp - Vliehors Express, wandeling gids, diner Trattoria Oliva
 
 MEERDAAGS:
+- 2 dagen camping (17 pax): €230 pp - Watertaxi, camping Stortemelk, fietsen, BBQ strand, strandspektakel
 - 2 dagen comfort (9 pax): €638 pp - Hotel Zeezicht, fietsen, vergaderarrangementen, BBQ Vliehors exclusief, brouwerij
 - 2 dagen basis (11 pax): €578 pp - Hotel Zeezicht, fietsen, vergaderingen, restaurant diner, brouwerij
+- 2 dagen Hotel Zeezicht (57 pax): €194 pp - Reguliere boot, fietsen met begeleiding, Vliehors, lunch
 - 3 dagen actief (13 pax): €675 pp - Hotel Zeezicht, fietsen, BBQ strand, paardrijden, wadlopen, lasergamen
 
+MINDSET22 / INTENSIEF:
+- 3 dagen Mindset22 (9 pax): €714 pp - Watertaxi, Badhotel Bruin, intensieve begeleiding 18 uur, materialen, strandspektakel
+
 GROTE GROEPEN:
+- Dagprogramma (43 pax): €116 pp - Vliehors exclusief, zeehondentochten, strandspektakel, brouwerij
 - Dagprogramma (85 pax): €155 pp - Regina Andrea, e-bikes, Vliehors met Speelman, vuurtoren, diner boot
 - Meerdaags (62 pax): €181 pp - Hotel verblijf, zeehondentochten, Vliehors Express, diner
 
