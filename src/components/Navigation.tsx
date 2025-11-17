@@ -15,20 +15,6 @@ export const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const scrollToSection = (id: string) => {
-    // If not on home page, navigate to home first
-    if (location.pathname !== '/') {
-      navigate('/#' + id);
-      setIsMenuOpen(false);
-      return;
-    }
-    
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-      setIsMenuOpen(false);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
@@ -84,13 +70,14 @@ export const Navigation = () => {
             >
               Over ons
             </Link>
-            <Button
-              onClick={() => scrollToSection("contact")}
-              variant="default"
-              className="bg-primary hover:bg-primary/90"
-            >
-              Contact
-            </Button>
+            <Link to="/contact">
+              <Button
+                variant="default"
+                className="bg-primary hover:bg-primary/90"
+              >
+                Contact
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -152,16 +139,18 @@ export const Navigation = () => {
               >
                 Over ons
               </Link>
-              <Button
-                onClick={() => {
-                  scrollToSection("contact");
-                  setIsMenuOpen(false);
-                }}
-                variant="default"
-                className="bg-primary hover:bg-primary/90 mx-4"
+              <Link
+                to="/contact"
+                onClick={() => setIsMenuOpen(false)}
+                className="mx-4"
               >
-                Contact
-              </Button>
+                <Button
+                  variant="default"
+                  className="bg-primary hover:bg-primary/90 w-full"
+                >
+                  Contact
+                </Button>
+              </Link>
             </div>
           </div>
         )}

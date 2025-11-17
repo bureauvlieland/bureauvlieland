@@ -310,7 +310,7 @@ const Programmas = () => {
                 kan transformeren. Neem contact op voor een vrijblijvend gesprek over de mogelijkheden 
                 en laat je inspireren door onze voorbeeldprogramma's.
               </p>
-              <Link to="/#contact">
+              <Link to="/contact">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
                   Neem contact op
                 </Button>
