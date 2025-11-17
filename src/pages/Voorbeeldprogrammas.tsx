@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Compass, Utensils, Users, Sparkles, Ship, Bike, UtensilsCrossed, Sun } from "lucide-react";
-import teamBeach from "@/assets/vandermost-12.jpg";
+import teamBeach from "@/assets/beach-signs.jpg";
 import beachActivity from "@/assets/beach-activity.jpg";
 import speedboat from "@/assets/speedboat.jpg";
 import surfActivity from "@/assets/surf-activity.jpg";

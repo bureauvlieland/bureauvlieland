@@ -4,7 +4,7 @@ import { AboutErwin } from "@/components/AboutErwin";
 import { Verbinder } from "@/components/Verbinder";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import vlielandLandscape from "@/assets/beach-bonfire.jpg";
+import vlielandLandscape from "@/assets/lighthouse-vlieland.jpg";
 
 const OverOns = () => {
   return (
