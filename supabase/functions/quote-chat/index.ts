@@ -162,11 +162,51 @@ Dag 2:
 - Capaciteit 8-80+ personen
 - Van basic tot luxe
 
-**Prijsindicatie (indien gevraagd):**
-- Dagprogramma basis: €150-250 pp (incl. transfers, lunch, 1-2 activiteiten)
-- Dagprogramma premium: €250-400 pp (RescueBoat, premium catering, intensieve begeleiding)
-- Meerdaagse programma's: +€150-300 pp per extra dag (incl. accommodatie, maaltijden)
-- RMD/Mindset22: +€75-150 pp (afhankelijk van intensiteit en duur)
+**Realistische Prijzen (gebaseerd op recente programma's):**
+
+DAGPROGRAMMA'S:
+- Basis (30 pax): €250 pp - Reguliere boot, fietsen, lunch natuur, activiteit, brouwerij rondleiding
+- Actief (13 pax): €338 pp - Reguliere boot, fietsen, strandspektakel, wadlopen, lunch, diner
+- Premium (6 pax): €360 pp - Watertaxi, fietsen begeleiding, zeehondentocht, lunch natuur, Menu Zuiver
+
+MEERDAAGS:
+- 2 dagen comfort (9 pax): €638 pp - Hotel Zeezicht, fietsen, vergaderarrangementen, BBQ Vliehors exclusief, brouwerij
+- 2 dagen basis (11 pax): €578 pp - Hotel Zeezicht, fietsen, vergaderingen, restaurant diner, brouwerij
+- 3 dagen actief (13 pax): €675 pp - Hotel Zeezicht, fietsen, BBQ strand, paardrijden, wadlopen, lasergamen
+
+GROTE GROEPEN:
+- Dagprogramma (85 pax): €155 pp - Regina Andrea, e-bikes, Vliehors met Speelman, vuurtoren, diner boot
+- Meerdaags (62 pax): €181 pp - Hotel verblijf, zeehondentochten, Vliehors Express, diner
+
+ACTIVITEITEN PRIJZEN:
+- Zeehondentocht: €360 per boot (max 12 pax) = €30 pp
+- Vliehors Express: €750 standaard of €32,50 pp grote groep
+- Vliehors exclusief met kampvuur: €750 + BBQ €37,50 pp
+- Brouwerij rondleiding + proef: €18,50-22,50 pp
+- Wadlopen: €17,50 pp
+- Strandspektakel: €30-32,50 pp
+- Paardrijden: €45 pp
+- Lasergamen: €25 pp
+- Expeditie Robinson: vanaf €375 groep
+- Yoga sessie: €211,75 per sessie
+
+TRANSFERS:
+- Reguliere boot: €300-750 retour (groep 10-62 pax)
+- Regina Andrea (charter): €2.950 voor 85 pax
+- Watertaxi: €430-470 per boot enkele reis
+
+ACCOMMODATIE:
+- Hotel Zeezicht comfort 1p: €137-159 pn incl. ontbijt
+- Hotel Zeezicht comfort 2p: €206 pn incl. ontbijt
+
+CATERING:
+- Koffie & gebak: €8,25-9,81 pp
+- Lunch in natuur/picknicklunch: €19-25 pp
+- BBQ strand: €32,50-37,50 pp
+- Restaurant diner: €30-35 pp basis
+- Menu Zuiver: €88 pp
+
+BUREAUKOSTEN: 15% van netto bedrag (minimaal €350)
 
 **Seizoenen:**
 - Maart-Oktober: Alle activiteiten beschikbaar
