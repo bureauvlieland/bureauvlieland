@@ -79,7 +79,7 @@ export default function Offerte() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       eventType: "",
-      numberOfPeople: 10,
+      numberOfPeople: 20,
       date: "",
       location: "",
       activities: [],
