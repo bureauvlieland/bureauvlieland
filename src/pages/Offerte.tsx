@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +41,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function Offerte() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -51,6 +52,21 @@ export default function Offerte() {
       message: "",
     },
   });
+
+  const handleChatToQuote = (chatSummary: string) => {
+    // Pre-fill the message field with chat summary
+    form.setValue("message", chatSummary);
+    
+    // Scroll to form
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+    
+    toast({
+      title: "Chat info overgenomen",
+      description: "Je kunt de gegevens nog aanvullen of aanpassen voordat je verzendt.",
+    });
+  };
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -97,7 +113,7 @@ export default function Offerte() {
 
       <main className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
         <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto" ref={formRef}>
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
                 Offerte Aanvragen
@@ -201,7 +217,7 @@ export default function Offerte() {
         </div>
       </main>
 
-      <QuoteChatAssistant />
+      <QuoteChatAssistant onUseForQuote={handleChatToQuote} />
       <Footer />
     </>
   );
