@@ -34,7 +34,7 @@ const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
   email: z.string().email("Ongeldig email adres").max(255, "Maximaal 255 karakters"),
   phone: z.string().min(10, "Ongeldig telefoonnummer").max(20, "Maximaal 20 karakters"),
-  message: z.string().min(10, "Minimaal 10 karakters").max(1000, "Maximaal 1000 karakters"),
+  message: z.string().min(10, "Minimaal 10 karakters"),
 });
 
 type FormValues = z.infer<typeof formSchema>;

@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email to Bureau Vlieland
     const bureauEmail = await resend.emails.send({
       from: "Bureau Vlieland <onboarding@resend.dev>",
-      to: ["hallo@bureauvlieland.nl"],
+      to: ["erwin@bureauvlieland.nl"],
       subject: `Nieuwe offerteaanvraag - ${requestData.eventType}`,
       html: quoteDetails,
     });
