@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-vlieland.jpg";
+import { useParallax } from "@/hooks/use-parallax";
 
 export const Hero = () => {
+  const parallax = useParallax(0.5);
+  
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -16,7 +19,8 @@ export const Hero = () => {
         <img
           src={heroImage}
           alt="Professionele catering en evenementen op Vlieland met vuurtoren op de achtergrond"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-100"
+          style={parallax}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
       </div>
