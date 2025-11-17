@@ -33,8 +33,6 @@ const formSchema = z.object({
   eventType: z.string().min(1, "Selecteer een type evenement"),
   numberOfPeople: z.coerce.number().min(1, "Minimaal 1 persoon").max(1000, "Maximaal 1000 personen"),
   date: z.string().min(1, "Selecteer een datum"),
-  location: z.string().optional(),
-  activities: z.array(z.string()).optional(),
   catering: z.string().optional(),
   extraWishes: z.string().max(1000, "Maximaal 1000 karakters").optional(),
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
@@ -52,28 +50,8 @@ const eventTypes = [
   { value: "catering", label: "Catering" },
 ];
 
-
-const locationOptions = [
-  "Vlieland",
-  "Strandpaviljoen",
-  "Eigen locatie",
-  "Nog niet bekend",
-];
-
-const activityOptions = [
-  "Strandactiviteiten",
-  "Fietstocht",
-  "Wadlopen",
-  "Zeehondenexcursie",
-  "Silent Disco",
-  "Bbq",
-  "Workshop",
-  "Teambuilding games",
-];
-
 export default function Offerte() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -81,8 +59,6 @@ export default function Offerte() {
       eventType: "",
       numberOfPeople: 20,
       date: "",
-      location: "",
-      activities: [],
       catering: "",
       extraWishes: "",
       name: "",
@@ -101,10 +77,7 @@ export default function Offerte() {
       const { data: result, error } = await supabase.functions.invoke(
         "send-quote-request",
         {
-          body: {
-            ...data,
-            activities: selectedActivities,
-          },
+          body: data,
         }
       );
 
@@ -116,7 +89,6 @@ export default function Offerte() {
       });
 
       form.reset();
-      setSelectedActivities([]);
     } catch (error) {
       console.error("Error submitting quote request:", error);
       toast({
@@ -214,67 +186,6 @@ export default function Offerte() {
                       </FormItem>
                     )}
                   />
-
-                  {/* Conditional Fields based on Event Type */}
-                  {eventType && eventType !== "catering" && (
-                    <>
-                      {/* Location */}
-                      <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Locatie voorkeur</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecteer locatie" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {locationOptions.map((location) => (
-                                  <SelectItem key={location} value={location}>
-                                    {location}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Activities */}
-                      <FormItem>
-                        <FormLabel>Gewenste activiteiten</FormLabel>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                          {activityOptions.map((activity) => (
-                            <div key={activity} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={activity}
-                                checked={selectedActivities.includes(activity)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedActivities([...selectedActivities, activity]);
-                                  } else {
-                                    setSelectedActivities(
-                                      selectedActivities.filter((a) => a !== activity)
-                                    );
-                                  }
-                                }}
-                              />
-                              <label
-                                htmlFor={activity}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                {activity}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </FormItem>
-                    </>
-                  )}
 
                   {/* Catering */}
                   {eventType && (
