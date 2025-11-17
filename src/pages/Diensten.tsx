@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Services } from "@/components/Services";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import eventImage from "@/assets/vandermost-254.jpg";
+import eventImage from "@/assets/districon-vlieland-22.jpg";
 
 const Diensten = () => {
   return (
