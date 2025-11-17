@@ -4,10 +4,10 @@ import { Services } from "@/components/Services";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import eventImage from "@/assets/districon-vlieland-22.jpg";
-import { useParallax } from "@/hooks/use-parallax";
+import { useKenBurns } from "@/hooks/use-ken-burns";
 
 const Diensten = () => {
-  const parallax = useParallax(0.5);
+  const kenBurns = useKenBurns();
   
   return (
     <div className="min-h-screen">
@@ -16,10 +16,10 @@ const Diensten = () => {
         {/* Hero Section */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-100"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ 
               backgroundImage: `url(${eventImage})`,
-              ...parallax
+              ...kenBurns
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
