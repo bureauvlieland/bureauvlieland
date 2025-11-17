@@ -422,7 +422,7 @@ const Voorbeeldprogrammas = () => {
                 perfect bij jullie past - met de juiste mix van activiteit, ontspanning en teamontwikkeling.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
-                <Link to="/#contact">
+                <Link to="/contact">
                   <Button size="lg" className="bg-primary hover:bg-primary/90">
                     Vraag een offerte op maat aan
                   </Button>

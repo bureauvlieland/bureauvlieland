@@ -224,7 +224,7 @@ const Catering = () => {
                 en voorkeuren van jouw groep. Neem contact met ons op voor een 
                 persoonlijk advies en offerte.
               </p>
-              <Link to="/#contact">
+              <Link to="/contact">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
                   Vraag offerte aan
                 </Button>

@@ -5,7 +5,6 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Contact } from "@/components/Contact";
 import { Testimonials } from "@/components/Testimonials";
 import heroImage from "@/assets/hero-vlieland.jpg";
 import { Calendar, Users, Utensils, Target } from "lucide-react";
@@ -85,7 +84,7 @@ const Index = () => {
                 Onder leiding van Erwin Soolsma combineren we professionele inhoud met lokale regie, gidsen en catering.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/#contact">
+                <Link to="/contact">
                   <Button
                     size="lg"
                     className="bg-card text-primary hover:bg-card/90 shadow-medium text-base px-8"
@@ -156,7 +155,7 @@ const Index = () => {
               <p className="text-lg text-muted-foreground mb-8">
                 Neem contact op voor een vrijblijvend gesprek over de mogelijkheden voor jouw groep op Vlieland.
               </p>
-              <Link to="/#contact">
+              <Link to="/contact">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
                   Neem contact op
                 </Button>
@@ -165,7 +164,6 @@ const Index = () => {
           </div>
         </section>
 
-        <Contact />
       </main>
       <Footer />
     </div>

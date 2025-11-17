@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import { Terms } from "./pages/Terms";
 import NotFound from "./pages/NotFound";
@@ -12,6 +13,7 @@ import Programmas from "./pages/Programmas";
 import Diensten from "./pages/Diensten";
 import VoorWie from "./pages/VoorWie";
 import OverOns from "./pages/OverOns";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/diensten" element={<Diensten />} />
@@ -29,6 +32,7 @@ const App = () => (
           <Route path="/voorbeeldprogrammas" element={<Voorbeeldprogrammas />} />
           <Route path="/catering" element={<Catering />} />
           <Route path="/over-ons" element={<OverOns />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/algemene-voorwaarden" element={<Terms />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
