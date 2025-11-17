@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { ForWho } from "@/components/ForWho";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import teamBeachImage from "@/assets/team-beach.jpg";
+import teamBeachImage from "@/assets/vlieland-group.jpg";
 
 const VoorWie = () => {
   return (
@@ -16,9 +16,22 @@ const VoorWie = () => {
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${teamBeachImage})` }}
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
           </div>
-          <div className="relative z-10 text-center text-white px-4">
+
+          {/* Decorative wave patterns */}
+          <div className="absolute top-0 left-0 w-full h-32 opacity-10 pointer-events-none">
+            <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,50 Q300,20 600,50 T1200,50 L1200,0 L0,0 Z" fill="currentColor" className="text-background"/>
+            </svg>
+          </div>
+          <div className="absolute bottom-0 left-0 w-full h-32 opacity-10 pointer-events-none">
+            <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,70 Q300,100 600,70 T1200,70 L1200,120 L0,120 Z" fill="currentColor" className="text-background"/>
+            </svg>
+          </div>
+
+          <div className="relative z-10 text-center text-primary-foreground px-4">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               Voor wie
             </h1>
