@@ -102,6 +102,20 @@ export const Footer = () => {
                 </a>
               </li>
             </ul>
+
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Onze Horeca</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <a href="https://cafeboven.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Café Boven
+                </a>
+              </li>
+              <li>
+                <a href="https://olivavlieland.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Oliva Vlieland
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 
