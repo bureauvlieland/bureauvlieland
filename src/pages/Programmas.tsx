@@ -9,10 +9,10 @@ import mindset22Indoor from "@/assets/mindset22-indoor.jpg";
 import rmdOutdoorActivity from "@/assets/rmd-outdoor-activity.jpg";
 import vlielandBeachGolf from "@/assets/vlieland-beach-golf.jpg";
 import { Link } from "react-router-dom";
-import { useParallax } from "@/hooks/use-parallax";
+import { useKenBurns } from "@/hooks/use-ken-burns";
 
 const Programmas = () => {
-  const parallax = useParallax(0.5);
+  const kenBurns = useKenBurns();
   
   const rmdResults = [
     "Verhoogd zelfbewustzijn en persoonlijk leiderschap",
@@ -62,10 +62,10 @@ const Programmas = () => {
         {/* Hero Section */}
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-100"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ 
               backgroundImage: `url(${rmdBeachTraining})`,
-              ...parallax
+              ...kenBurns
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />

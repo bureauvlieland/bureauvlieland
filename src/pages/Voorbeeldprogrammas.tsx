@@ -14,10 +14,10 @@ import lunchBuffet from "@/assets/lunch-buffet.jpg";
 import kiteFlying from "@/assets/kite-flying.jpg";
 import sealTour from "@/assets/seal-tour.jpg";
 import { Link } from "react-router-dom";
-import { useParallax } from "@/hooks/use-parallax";
+import { useKenBurns } from "@/hooks/use-ken-burns";
 
 const Voorbeeldprogrammas = () => {
-  const parallax = useParallax(0.5);
+  const kenBurns = useKenBurns();
   
   const programModules = [
     {
@@ -157,10 +157,10 @@ const Voorbeeldprogrammas = () => {
         {/* Hero Section */}
         <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-100"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ 
               backgroundImage: `url(${teamBeach})`,
-              ...parallax
+              ...kenBurns
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />

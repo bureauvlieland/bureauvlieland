@@ -5,10 +5,10 @@ import { Verbinder } from "@/components/Verbinder";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import vlielandLandscape from "@/assets/lighthouse-vlieland.jpg";
-import { useParallax } from "@/hooks/use-parallax";
+import { useKenBurns } from "@/hooks/use-ken-burns";
 
 const OverOns = () => {
-  const parallax = useParallax(0.5);
+  const kenBurns = useKenBurns();
   
   return (
     <div className="min-h-screen">
@@ -17,10 +17,10 @@ const OverOns = () => {
         {/* Hero Section */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-100"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ 
               backgroundImage: `url(${vlielandLandscape})`,
-              ...parallax
+              ...kenBurns
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
