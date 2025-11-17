@@ -9,6 +9,7 @@ import speedboat from "@/assets/speedboat.jpg";
 import surfActivity from "@/assets/surf-activity.jpg";
 import cyclingTeam from "@/assets/cycling-team.jpg";
 import dunesGroup from "@/assets/dunes-group.jpg";
+import mindset22Outdoor from "@/assets/mindset22-outdoor.jpg";
 import lunchBuffet from "@/assets/lunch-buffet.jpg";
 import kiteFlying from "@/assets/kite-flying.jpg";
 import sealTour from "@/assets/seal-tour.jpg";
@@ -108,7 +109,7 @@ const Voorbeeldprogrammas = () => {
             "Individuele reflectie - Persoonlijke ontwikkeling",
             "Groepsdynamiek versterken - Duurzame samenwerking"
           ],
-          image: teamBeach
+          image: mindset22Outdoor
         }
       ]
     },
@@ -154,7 +155,7 @@ const Voorbeeldprogrammas = () => {
         <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${dunesGroup})` }}
+            style={{ backgroundImage: `url(${teamBeach})` }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
           </div>
