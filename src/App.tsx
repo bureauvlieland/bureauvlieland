@@ -18,6 +18,8 @@ import Evenementen from "./pages/Evenementen";
 
 const queryClient = new QueryClient();
 
+import Offerte from "./pages/Offerte";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -35,6 +37,7 @@ const App = () => (
           <Route path="/over-ons" element={<OverOns />} />
           <Route path="/evenementen" element={<Evenementen />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/offerte" element={<Offerte />} />
           <Route path="/algemene-voorwaarden" element={<Terms />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

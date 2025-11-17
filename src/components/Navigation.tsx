@@ -84,6 +84,14 @@ export const Navigation = () => {
                 Contact
               </Button>
             </Link>
+            <Link to="/offerte">
+              <Button
+                variant="default"
+                className="bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                Offerte Aanvragen
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -162,6 +170,18 @@ export const Navigation = () => {
                   className="bg-primary hover:bg-primary/90 w-full"
                 >
                   Contact
+                </Button>
+              </Link>
+              <Link
+                to="/offerte"
+                onClick={() => setIsMenuOpen(false)}
+                className="mx-4"
+              >
+                <Button
+                  variant="default"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
+                >
+                  Offerte Aanvragen
                 </Button>
               </Link>
             </div>
