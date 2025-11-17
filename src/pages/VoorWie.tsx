@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { ForWho } from "@/components/ForWho";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import teamBeachImage from "@/assets/vlieland-group.jpg";
+import teamBeachImage from "@/assets/speedboat-group.jpg";
 
 const VoorWie = () => {
   return (
