@@ -1,1 +1,7 @@
 project_id = "blhspuifehausilnzwio"
+
+[functions.send-quote-request]
+verify_jwt = false
+
+[functions.quote-chat]
+verify_jwt = false
