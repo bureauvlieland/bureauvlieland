@@ -4,8 +4,11 @@ import { ForWho } from "@/components/ForWho";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import teamBeachImage from "@/assets/speedboat-group.jpg";
+import { useParallax } from "@/hooks/use-parallax";
 
 const VoorWie = () => {
+  const parallax = useParallax(0.5);
+  
   return (
     <div className="min-h-screen">
       <Navigation />
@@ -13,8 +16,11 @@ const VoorWie = () => {
         {/* Hero Section */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${teamBeachImage})` }}
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-100"
+            style={{ 
+              backgroundImage: `url(${teamBeachImage})`,
+              ...parallax
+            }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
           </div>

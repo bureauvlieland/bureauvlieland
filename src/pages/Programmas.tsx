@@ -9,8 +9,11 @@ import mindset22Indoor from "@/assets/mindset22-indoor.jpg";
 import rmdOutdoorActivity from "@/assets/rmd-outdoor-activity.jpg";
 import vlielandBeachGolf from "@/assets/vlieland-beach-golf.jpg";
 import { Link } from "react-router-dom";
+import { useParallax } from "@/hooks/use-parallax";
 
 const Programmas = () => {
+  const parallax = useParallax(0.5);
+  
   const rmdResults = [
     "Verhoogd zelfbewustzijn en persoonlijk leiderschap",
     "Verbeterde samenwerking en teamdynamiek",
@@ -59,8 +62,11 @@ const Programmas = () => {
         {/* Hero Section */}
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${rmdBeachTraining})` }}
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-100"
+            style={{ 
+              backgroundImage: `url(${rmdBeachTraining})`,
+              ...parallax
+            }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
           </div>
