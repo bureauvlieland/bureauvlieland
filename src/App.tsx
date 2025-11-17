@@ -14,6 +14,7 @@ import Diensten from "./pages/Diensten";
 import VoorWie from "./pages/VoorWie";
 import OverOns from "./pages/OverOns";
 import Contact from "./pages/Contact";
+import Evenementen from "./pages/Evenementen";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/voorbeeldprogrammas" element={<Voorbeeldprogrammas />} />
           <Route path="/catering" element={<Catering />} />
           <Route path="/over-ons" element={<OverOns />} />
+          <Route path="/evenementen" element={<Evenementen />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/algemene-voorwaarden" element={<Terms />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

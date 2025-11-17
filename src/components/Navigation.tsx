@@ -70,6 +70,12 @@ export const Navigation = () => {
             >
               Over ons
             </Link>
+            <Link
+              to="/evenementen"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Evenementen
+            </Link>
             <Link to="/contact">
               <Button
                 variant="default"
@@ -138,6 +144,13 @@ export const Navigation = () => {
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
               >
                 Over ons
+              </Link>
+              <Link
+                to="/evenementen"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
+              >
+                Evenementen
               </Link>
               <Link
                 to="/contact"
