@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -20,6 +21,8 @@ export const QuoteChatAssistant = ({ onUseForQuote }: QuoteChatAssistantProps) =
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,8 +124,13 @@ export const QuoteChatAssistant = ({ onUseForQuote }: QuoteChatAssistantProps) =
       .map((msg) => `${msg.role === "user" ? "Klant" : "Assistent"}: ${msg.content}`)
       .join("\n\n");
     
-    if (onUseForQuote) {
+    if (location.pathname === '/offerte' && onUseForQuote) {
       onUseForQuote(chatSummary);
+      setIsOpen(false);
+    } else {
+      // Navigate to offerte page - the summary could be stored in sessionStorage
+      sessionStorage.setItem('chatSummary', chatSummary);
+      navigate('/offerte');
       setIsOpen(false);
     }
   };
@@ -178,7 +186,7 @@ export const QuoteChatAssistant = ({ onUseForQuote }: QuoteChatAssistantProps) =
             </div>
           </div>
         ))}
-        {messages.length > 2 && onUseForQuote && (
+        {messages.length > 2 && (
           <div className="flex justify-center pt-2">
             <Button
               onClick={handleUseForQuote}

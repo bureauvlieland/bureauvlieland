@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { QuoteChatAssistant } from "@/components/QuoteChatAssistant";
 import Index from "./pages/Index";
 import { Terms } from "./pages/Terms";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <QuoteChatAssistant />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/diensten" element={<Diensten />} />
