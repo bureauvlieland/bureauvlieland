@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
+const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +23,26 @@ interface QuoteRequest {
   phone: string;
   company?: string;
 }
+
+const sendEmailViaMailjet = async (messages: any[]) => {
+  const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
+  
+  const response = await fetch("https://api.mailjet.com/v3.1/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ Messages: messages }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Mailjet API error: ${error}`);
+  }
+
+  return await response.json();
+};
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -53,47 +73,62 @@ const handler = async (req: Request): Promise<Response> => {
       ${requestData.company ? `<p><strong>Bedrijf:</strong> ${requestData.company}</p>` : ''}
     `;
 
-    // Send email to Bureau Vlieland
-    const bureauEmail = await resend.emails.send({
-      from: "Bureau Vlieland <onboarding@resend.dev>",
-      to: ["erwin@bureauvlieland.nl"],
-      subject: `Nieuwe offerteaanvraag - ${requestData.eventType}`,
-      html: quoteDetails,
-    });
+    // Send both emails using Mailjet
+    const emailResponse = await sendEmailViaMailjet([
+      // Email to Bureau Vlieland
+      {
+        From: {
+          Email: "noreply@bureauvlieland.nl",
+          Name: "Bureau Vlieland Website"
+        },
+        To: [
+          {
+            Email: "erwin@bureauvlieland.nl",
+            Name: "Erwin van der Most"
+          }
+        ],
+        Subject: `Nieuwe offerteaanvraag - ${requestData.eventType}`,
+        HTMLPart: quoteDetails,
+      },
+      // Confirmation email to customer
+      {
+        From: {
+          Email: "noreply@bureauvlieland.nl",
+          Name: "Bureau Vlieland"
+        },
+        To: [
+          {
+            Email: requestData.email,
+            Name: requestData.name
+          }
+        ],
+        Subject: "Bevestiging offerte aanvraag - Bureau Vlieland",
+        HTMLPart: `
+          <h2>Beste ${requestData.name},</h2>
+          <p>Bedankt voor je offerteaanvraag bij Bureau Vlieland!</p>
+          <p>We hebben je aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met je opnemen met een passende offerte.</p>
+          
+          <h3>Jouw aanvraag:</h3>
+          ${quoteDetails}
+          
+          <p>Heb je nog vragen? Neem gerust contact met ons op via:</p>
+          <ul>
+            <li>Email: hallo@bureauvlieland.nl</li>
+            <li>Telefoon: +31 (0)562 45 27 00</li>
+          </ul>
+          
+          <p>Met vriendelijke groet,<br>
+          Erwin & Team Bureau Vlieland</p>
+        `,
+      }
+    ]);
 
-    console.log("Email sent to Bureau Vlieland:", bureauEmail);
-
-    // Send confirmation email to customer
-    const customerEmail = await resend.emails.send({
-      from: "Bureau Vlieland <onboarding@resend.dev>",
-      to: [requestData.email],
-      subject: "Bevestiging offerte aanvraag - Bureau Vlieland",
-      html: `
-        <h2>Beste ${requestData.name},</h2>
-        <p>Bedankt voor je offerteaanvraag bij Bureau Vlieland!</p>
-        <p>We hebben je aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met je opnemen met een passende offerte.</p>
-        
-        <h3>Jouw aanvraag:</h3>
-        ${quoteDetails}
-        
-        <p>Heb je nog vragen? Neem gerust contact met ons op via:</p>
-        <ul>
-          <li>Email: hallo@bureauvlieland.nl</li>
-          <li>Telefoon: +31 (0)562 45 27 00</li>
-        </ul>
-        
-        <p>Met vriendelijke groet,<br>
-        Erwin & Team Bureau Vlieland</p>
-      `,
-    });
-
-    console.log("Confirmation email sent to customer:", customerEmail);
+    console.log("Emails sent successfully via Mailjet:", emailResponse);
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        bureauEmailId: bureauEmail.data?.id,
-        customerEmailId: customerEmail.data?.id
+        success: true,
+        message: "Emails sent successfully"
       }), 
       {
         status: 200,
@@ -106,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-quote-request function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Failed to send emails" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
