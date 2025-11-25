@@ -32,9 +32,13 @@ import { QuoteChatAssistant } from "@/components/QuoteChatAssistant";
 
 const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
+  company: z.string().max(100, "Maximaal 100 karakters").optional(),
   email: z.string().email("Ongeldig email adres").max(255, "Maximaal 255 karakters"),
   phone: z.string().min(10, "Ongeldig telefoonnummer").max(20, "Maximaal 20 karakters"),
-  message: z.string().min(10, "Minimaal 10 karakters"),
+  numberOfPeople: z.string().min(1, "Aantal personen is verplicht"),
+  startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
+  numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
+  budgetPerPerson: z.string().min(1, "Budget indicatie is verplicht"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,24 +51,25 @@ export default function Offerte() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      company: "",
       email: "",
       phone: "",
-      message: "",
+      numberOfPeople: "",
+      startDate: "",
+      numberOfDays: "",
+      budgetPerPerson: "",
     },
   });
 
   const handleChatToQuote = (chatSummary: string) => {
-    // Pre-fill the message field with chat summary
-    form.setValue("message", chatSummary);
-    
     // Scroll to form
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
     
     toast({
-      title: "Chat info overgenomen",
-      description: "Je kunt de gegevens nog aanvullen of aanpassen voordat je verzendt.",
+      title: "Chat info beschikbaar",
+      description: "Vul het formulier in met je contactgegevens en evenement details.",
     });
   };
 
@@ -118,79 +123,159 @@ export default function Offerte() {
               <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
                 Offerte Aanvragen
               </h1>
-              <p className="text-lg text-muted-foreground mb-4">
-                Vul onderstaand formulier in voor een snelle aanvraag
-              </p>
-              <p className="text-sm text-muted-foreground">
-                💬 Wil je liever advies over programma's? Chat met onze AI assistent (rechtsonder)
+              <p className="text-lg text-muted-foreground">
+                Vul onderstaand formulier in en ontvang binnen 5 werkdagen een op maat gemaakte offerte
               </p>
             </div>
 
             <div className="bg-card rounded-lg shadow-lg p-6 md:p-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Naam *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Voor- en achternaam" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Naam *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Voor- en achternaam" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email *</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="naam@voorbeeld.nl" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="company"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bedrijfsnaam</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Optioneel" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefoon *</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder="06 12345678" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email *</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="naam@voorbeeld.nl" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="message"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Vertel ons over je evenement *</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Bijv: Teamuitje voor 25 personen, 1 dag in juni, sportief thema..."
-                            className="resize-none min-h-[120px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Aantal personen, datum(s), type evenement, voorkeuren
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefoon *</FormLabel>
+                          <FormControl>
+                            <Input type="tel" placeholder="06 12345678" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4">Evenement Details</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="numberOfPeople"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Aantal personen *</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="Bijv. 25" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gewenste startdatum *</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <FormField
+                        control={form.control}
+                        name="numberOfDays"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Aantal dagen *</FormLabel>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecteer aantal dagen" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1">1 dag</SelectItem>
+                                  <SelectItem value="2">2 dagen</SelectItem>
+                                  <SelectItem value="3">3 dagen</SelectItem>
+                                  <SelectItem value="4">4 dagen</SelectItem>
+                                  <SelectItem value="5+">5+ dagen</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="budgetPerPerson"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Budget indicatie p.p. *</FormLabel>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecteer budget range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="€50-€100">€50 - €100</SelectItem>
+                                  <SelectItem value="€100-€150">€100 - €150</SelectItem>
+                                  <SelectItem value="€150-€200">€150 - €200</SelectItem>
+                                  <SelectItem value="€200-€300">€200 - €300</SelectItem>
+                                  <SelectItem value="€300+">€300+</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
 
                   <Button
                     type="submit"
