@@ -10,18 +10,14 @@ const corsHeaders = {
 };
 
 interface QuoteRequest {
-  eventType: string;
-  numberOfPeople: number;
-  date: string;
-  budget: string;
-  location?: string;
-  activities?: string[];
-  catering?: string;
-  extraWishes?: string;
   name: string;
+  company?: string;
   email: string;
   phone: string;
-  company?: string;
+  numberOfPeople: string;
+  startDate: string;
+  numberOfDays: string;
+  budgetPerPerson: string;
 }
 
 const sendEmailViaMailjet = async (messages: any[]) => {
@@ -57,20 +53,18 @@ const handler = async (req: Request): Promise<Response> => {
     // Format the quote details for the email
     const quoteDetails = `
       <h2>Nieuwe Offerteaanvraag</h2>
-      <p><strong>Type evenement:</strong> ${requestData.eventType}</p>
-      <p><strong>Aantal personen:</strong> ${requestData.numberOfPeople}</p>
-      <p><strong>Gewenste datum:</strong> ${requestData.date}</p>
-      <p><strong>Budget indicatie:</strong> ${requestData.budget}</p>
-      ${requestData.location ? `<p><strong>Locatie voorkeur:</strong> ${requestData.location}</p>` : ''}
-      ${requestData.activities ? `<p><strong>Activiteiten:</strong> ${requestData.activities.join(', ')}</p>` : ''}
-      ${requestData.catering ? `<p><strong>Catering wensen:</strong> ${requestData.catering}</p>` : ''}
-      ${requestData.extraWishes ? `<p><strong>Extra wensen:</strong> ${requestData.extraWishes}</p>` : ''}
       
       <h3>Contactgegevens</h3>
       <p><strong>Naam:</strong> ${requestData.name}</p>
+      ${requestData.company ? `<p><strong>Bedrijf:</strong> ${requestData.company}</p>` : ''}
       <p><strong>Email:</strong> ${requestData.email}</p>
       <p><strong>Telefoon:</strong> ${requestData.phone}</p>
-      ${requestData.company ? `<p><strong>Bedrijf:</strong> ${requestData.company}</p>` : ''}
+      
+      <h3>Evenement Details</h3>
+      <p><strong>Aantal personen:</strong> ${requestData.numberOfPeople}</p>
+      <p><strong>Gewenste startdatum:</strong> ${requestData.startDate}</p>
+      <p><strong>Aantal dagen:</strong> ${requestData.numberOfDays}</p>
+      <p><strong>Budget indicatie p.p.:</strong> ${requestData.budgetPerPerson}</p>
     `;
 
     // Send both emails using Mailjet
@@ -87,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
             Name: "Erwin van der Most"
           }
         ],
-        Subject: `Nieuwe offerteaanvraag - ${requestData.eventType}`,
+        Subject: `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`,
         HTMLPart: quoteDetails,
       },
       // Confirmation email to customer
