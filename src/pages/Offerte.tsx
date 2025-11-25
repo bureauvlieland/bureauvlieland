@@ -259,18 +259,7 @@ export default function Offerte() {
                           <FormItem>
                             <FormLabel>Budget indicatie p.p. *</FormLabel>
                             <FormControl>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecteer budget range" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="€50-€100">€50 - €100</SelectItem>
-                                  <SelectItem value="€100-€150">€100 - €150</SelectItem>
-                                  <SelectItem value="€150-€200">€150 - €200</SelectItem>
-                                  <SelectItem value="€200-€300">€200 - €300</SelectItem>
-                                  <SelectItem value="€300+">€300+</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <Input placeholder="Bijv. €150 per persoon" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
