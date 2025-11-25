@@ -39,6 +39,7 @@ const formSchema = z.object({
   startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
   numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
   budgetPerPerson: z.string().min(1, "Budget indicatie is verplicht"),
+  description: z.string().max(2000, "Maximaal 2000 karakters").optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -58,6 +59,7 @@ export default function Offerte() {
       startDate: "",
       numberOfDays: "",
       budgetPerPerson: "",
+      description: "",
     },
   });
 
@@ -275,6 +277,26 @@ export default function Offerte() {
                         )}
                       />
                     </div>
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Omschrijving / Bijzondere wensen</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Vertel ons meer over jullie evenement, doelstellingen, of bijzondere wensen..." 
+                              className="min-h-[120px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <Button
