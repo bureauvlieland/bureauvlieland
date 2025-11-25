@@ -18,6 +18,7 @@ interface QuoteRequest {
   startDate: string;
   numberOfDays: string;
   budgetPerPerson: string;
+  description?: string;
 }
 
 const sendEmailViaMailjet = async (messages: any[]) => {
@@ -65,6 +66,11 @@ const handler = async (req: Request): Promise<Response> => {
       <p><strong>Gewenste startdatum:</strong> ${requestData.startDate}</p>
       <p><strong>Aantal dagen:</strong> ${requestData.numberOfDays}</p>
       <p><strong>Budget indicatie p.p.:</strong> ${requestData.budgetPerPerson}</p>
+      
+      ${requestData.description ? `
+      <h3>Omschrijving / Bijzondere wensen</h3>
+      <p>${requestData.description.replace(/\n/g, '<br>')}</p>
+      ` : ''}
     `;
 
     // Send both emails using Mailjet
