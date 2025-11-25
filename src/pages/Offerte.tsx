@@ -28,7 +28,6 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { QuoteChatAssistant } from "@/components/QuoteChatAssistant";
 
 const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
@@ -74,6 +73,25 @@ export default function Offerte() {
       description: "Vul het formulier in met je contactgegevens en evenement details.",
     });
   };
+
+  // Check for chat summary from other pages
+  useEffect(() => {
+    const chatSummary = sessionStorage.getItem('chatSummary');
+    if (chatSummary) {
+      // Clear the session storage
+      sessionStorage.removeItem('chatSummary');
+      
+      // Scroll to form
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      
+      toast({
+        title: "Chat info beschikbaar",
+        description: "Vul het formulier in met je contactgegevens en evenement details.",
+      });
+    }
+  }, []);
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -313,7 +331,6 @@ export default function Offerte() {
         </div>
       </main>
 
-      <QuoteChatAssistant onUseForQuote={handleChatToQuote} />
       <Footer />
     </>
   );
