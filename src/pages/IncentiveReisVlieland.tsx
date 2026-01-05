@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,12 @@ const IncentiveReisVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+          { label: "Incentive reis Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -51,7 +58,34 @@ const IncentiveReisVlieland = () => {
                 Waarom een incentive op een eiland?
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Het eilandgevoel maakt de ervaring uniek. Alles draait om samenzijn, beleving en kwaliteit.
+                Het eilandgevoel maakt de ervaring uniek. Alles draait om samenzijn, beleving 
+                en kwaliteit. Een incentive reis combineren met een{" "}
+                <Link to="/meerdaags-bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  meerdaags programma
+                </Link>{" "}
+                zorgt voor een onvergetelijke ervaring.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Exclusief programma */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Exclusief programma op maat
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Of het nu gaat om een beloning voor topperformers of een motiverend event voor 
+                het hele team: wij zorgen voor een passend programma. Lees meer over onze{" "}
+                <Link to="/zakelijk-evenement-vlieland" className="text-primary hover:underline font-medium">
+                  zakelijke evenementen
+                </Link>{" "}
+                of hoe wij{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  bedrijfsuitjes organiseren
+                </Link>.
               </p>
             </div>
           </div>
@@ -97,13 +131,6 @@ const IncentiveReisVlieland = () => {
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Link 
-                  to="/bedrijfsuitje-vlieland" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Bedrijfsuitje Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
                   to="/meerdaags-bedrijfsuitje-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
@@ -118,10 +145,10 @@ const IncentiveReisVlieland = () => {
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 
-                  to="/catering" 
+                  to="/bedrijfsuitje-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
-                  <span className="font-medium text-foreground">Catering</span>
+                  <span className="font-medium text-foreground">Bedrijfsuitje Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>

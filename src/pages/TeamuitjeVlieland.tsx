@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,12 @@ const TeamuitjeVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+          { label: "Teamuitje Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -54,7 +61,11 @@ const TeamuitjeVlieland = () => {
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Door de kleinschaligheid van Vlieland ontstaat rust en focus. Dat maakt 
                 het eiland ideaal voor teamuitjes waarbij vertrouwen, communicatie en 
-                samenwerking centraal staan.
+                samenwerking centraal staan. Bekijk ook onze{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  bedrijfsuitjes op Vlieland
+                </Link>{" "}
+                voor meer mogelijkheden.
               </p>
             </div>
           </div>
@@ -70,7 +81,10 @@ const TeamuitjeVlieland = () => {
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Wij organiseren teamuitjes voor kleine en middelgrote teams, projectgroepen 
                 en afdelingen. Programma's worden altijd afgestemd op de groepsdynamiek en 
-                het doel van het uitje.
+                het doel van het uitje. Op zoek naar inspiratie? Bekijk onze{" "}
+                <Link to="/bedrijfsuitje-ideeen-vlieland" className="text-primary hover:underline font-medium">
+                  ideeën voor bedrijfsuitjes
+                </Link>.
               </p>
             </div>
           </div>
@@ -86,7 +100,10 @@ const TeamuitjeVlieland = () => {
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Een teamuitje bestaat zelden uit één onderdeel. Wij combineren activiteiten 
                 met momenten van reflectie, ontspanning en samenzijn. Inclusief logistiek, 
-                locaties en catering.
+                locaties en catering. Meer tijd nodig? Overweeg een{" "}
+                <Link to="/meerdaags-bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  meerdaags programma met overnachting
+                </Link>.
               </p>
             </div>
           </div>
@@ -154,24 +171,17 @@ const TeamuitjeVlieland = () => {
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 
-                  to="/meerdaags-bedrijfsuitje-vlieland" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Meerdaags bedrijfsuitje Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/heisessie-vlieland" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Heisessie Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
                   to="/bedrijfsuitje-ideeen-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <span className="font-medium text-foreground">Bedrijfsuitje ideeën Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link 
+                  to="/meerdaags-bedrijfsuitje-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Meerdaags bedrijfsuitje Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>

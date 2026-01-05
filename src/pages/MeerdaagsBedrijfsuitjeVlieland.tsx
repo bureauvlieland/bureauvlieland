@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,12 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+          { label: "Meerdaags bedrijfsuitje Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -52,7 +59,14 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Meerdaagse programma's zorgen voor minder haast en meer aandacht. Teams hebben 
-                de tijd om te landen, samen te werken en tot inzichten te komen.
+                de tijd om te landen, samen te werken en tot inzichten te komen. Ideaal voor een{" "}
+                <Link to="/heisessie-vlieland" className="text-primary hover:underline font-medium">
+                  heisessie gericht op strategie
+                </Link>{" "}
+                of een{" "}
+                <Link to="/incentive-reis-vlieland" className="text-primary hover:underline font-medium">
+                  exclusieve incentive reis
+                </Link>.
               </p>
             </div>
           </div>
@@ -67,7 +81,10 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Wij regelen overnachtingen, programma's, activiteiten en catering. Van aankomst 
-                tot vertrek is alles op elkaar afgestemd.
+                tot vertrek is alles op elkaar afgestemd. Lees meer over hoe wij{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  bedrijfsuitjes organiseren
+                </Link>.
               </p>
             </div>
           </div>
@@ -132,13 +149,6 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <span className="font-medium text-foreground">Bedrijfsuitje Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/teamuitje-vlieland" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Teamuitje Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 

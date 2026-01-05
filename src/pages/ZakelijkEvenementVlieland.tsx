@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,12 @@ const ZakelijkEvenementVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+          { label: "Zakelijk evenement Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -40,6 +47,46 @@ const ZakelijkEvenementVlieland = () => {
               Voor congressen, bijeenkomsten en zakelijke evenementen biedt Vlieland een unieke setting. 
               Bureau Vlieland neemt de volledige organisatie uit handen.
             </p>
+          </div>
+        </section>
+
+        {/* Unieke setting */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Een unieke setting voor uw evenement
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Vlieland biedt rust, ruimte en focus – ideaal voor zakelijke bijeenkomsten 
+                die impact moeten maken. Combineer uw evenement met een{" "}
+                <Link to="/heisessie-vlieland" className="text-primary hover:underline font-medium">
+                  heisessie
+                </Link>{" "}
+                of een{" "}
+                <Link to="/incentive-reis-vlieland" className="text-primary hover:underline font-medium">
+                  incentive programma
+                </Link>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Volledige organisatie */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Volledige organisatie
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Van locatie tot logistiek, van catering tot programma: wij verzorgen het complete 
+                traject. Lees meer over hoe wij{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  bedrijfsuitjes en evenementen organiseren
+                </Link>.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -101,13 +148,6 @@ const ZakelijkEvenementVlieland = () => {
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <span className="font-medium text-foreground">Incentive reis Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/evenementen" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Evenementen</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>

@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,12 @@ const BedrijfsuitjeIdeeenVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+          { label: "Bedrijfsuitje ideeën Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -52,7 +59,33 @@ const BedrijfsuitjeIdeeenVlieland = () => {
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Een goed bedrijfsuitje is meer dan een leuk idee. Wij helpen bij het kiezen, 
-                combineren en organiseren van onderdelen tot één logisch geheel.
+                combineren en organiseren van onderdelen tot één logisch geheel. Bekijk hoe wij{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  bedrijfsuitjes organiseren
+                </Link>{" "}
+                of ontdek de mogelijkheden voor een{" "}
+                <Link to="/teamuitje-vlieland" className="text-primary hover:underline font-medium">
+                  teamuitje gericht op samenwerking
+                </Link>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Mogelijkheden */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Mogelijkheden op Vlieland
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Of je nu kiest voor een eendaags programma of een{" "}
+                <Link to="/meerdaags-bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  meerdaags bedrijfsuitje met overnachting
+                </Link>
+                : wij zorgen voor een passend programma. Van actieve outdoor activiteiten 
+                tot inhoudelijke sessies – altijd op maat.
               </p>
             </div>
           </div>
@@ -112,17 +145,10 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 
-                  to="/voorbeeldprogrammas" 
+                  to="/meerdaags-bedrijfsuitje-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
-                  <span className="font-medium text-foreground">Voorbeeldprogramma's</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/diensten" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Onze diensten</span>
+                  <span className="font-medium text-foreground">Meerdaags bedrijfsuitje Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>
