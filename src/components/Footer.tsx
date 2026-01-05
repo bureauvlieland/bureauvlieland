@@ -5,7 +5,7 @@ export const Footer = () => {
   return (
     <footer className="bg-card border-t border-border py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
           <div>
             <img src={logo} alt="Bureau Vlieland" className="h-16 w-auto mb-4" />
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -56,13 +56,58 @@ export const Footer = () => {
           </div>
 
           <div>
+            <h4 className="font-semibold text-foreground mb-4">Zakelijke uitjes</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link 
+                  to="/bedrijfsuitje-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Bedrijfsuitje Vlieland
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/teamuitje-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Teamuitje Vlieland
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/meerdaags-bedrijfsuitje-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Meerdaags bedrijfsuitje
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/heisessie-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Heisessie Vlieland
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/zakelijk-evenement-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Zakelijk evenement
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
             <h4 className="font-semibold text-foreground mb-4">Meer informatie</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link 
                   to="/programmas" 
                   className="hover:text-primary transition-colors"
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 >
                   RMD & Mindset22 Programma's
                 </Link>
@@ -71,7 +116,6 @@ export const Footer = () => {
                 <Link 
                   to="/voorbeeldprogrammas" 
                   className="hover:text-primary transition-colors"
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 >
                   Voorbeeldprogramma's
                 </Link>
@@ -80,7 +124,6 @@ export const Footer = () => {
                 <Link 
                   to="/catering" 
                   className="hover:text-primary transition-colors"
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 >
                   Catering Opties
                 </Link>

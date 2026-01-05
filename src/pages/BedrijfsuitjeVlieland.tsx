@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Helmet } from "react-helmet";
@@ -45,6 +46,7 @@ const BedrijfsuitjeVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb items={[{ label: "Bedrijfsuitje Vlieland" }]} />
 
       <main>
         {/* Hero Section */}
@@ -83,8 +85,11 @@ const BedrijfsuitjeVlieland = () => {
                 Vlieland is overzichtelijk, autoluw en ongedwongen. Juist daardoor ontstaat 
                 ruimte voor echte aandacht. Geen afleiding, geen haast, maar tijd voor 
                 samenwerking, reflectie en ontspanning. Of het nu gaat om een eendaags 
-                programma of een meerdaags bedrijfsuitje met overnachting: het eiland 
-                dwingt tot vertraging – en dat werkt.
+                programma of een{" "}
+                <Link to="/meerdaags-bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  meerdaags bedrijfsuitje met overnachting
+                </Link>
+                : het eiland dwingt tot vertraging – en dat werkt.
               </p>
             </div>
           </div>
@@ -99,7 +104,19 @@ const BedrijfsuitjeVlieland = () => {
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
                 Bureau Vlieland organiseert bedrijfsuitjes voor teams en organisaties 
-                die meer zoeken dan alleen vermaak.
+                die meer zoeken dan alleen vermaak. Denk aan een{" "}
+                <Link to="/teamuitje-vlieland" className="text-primary hover:underline font-medium">
+                  teamuitje gericht op samenwerking
+                </Link>
+                , een{" "}
+                <Link to="/heisessie-vlieland" className="text-primary hover:underline font-medium">
+                  heisessie voor focus en strategie
+                </Link>
+                , of een{" "}
+                <Link to="/zakelijk-evenement-vlieland" className="text-primary hover:underline font-medium">
+                  zakelijk evenement
+                </Link>{" "}
+                op unieke locaties.
               </p>
               
               <div className="space-y-4 mb-8">
@@ -112,7 +129,10 @@ const BedrijfsuitjeVlieland = () => {
               </div>
               
               <p className="text-lg font-medium text-foreground">
-                Altijd op maat, altijd in samenhang.
+                Altijd op maat, altijd in samenhang. Op zoek naar inspiratie? Bekijk onze{" "}
+                <Link to="/bedrijfsuitje-ideeen-vlieland" className="text-primary hover:underline">
+                  ideeën voor een bedrijfsuitje op Vlieland
+                </Link>.
               </p>
             </div>
           </div>
@@ -235,6 +255,13 @@ const BedrijfsuitjeVlieland = () => {
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <span className="font-medium text-foreground">Zakelijk evenement Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link 
+                  to="/bedrijfsuitje-ideeen-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Bedrijfsuitje ideeën Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>

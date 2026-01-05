@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,11 @@ const TrouwenOpVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Trouwen op Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -40,6 +46,43 @@ const TrouwenOpVlieland = () => {
               Een bruiloft op Vlieland vraagt om lokale kennis en goede organisatie. 
               Bureau Vlieland begeleidt het volledige traject, van planning tot uitvoering.
             </p>
+          </div>
+        </section>
+
+        {/* Lokale kennis */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Lokale kennis en ervaring
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Wij kennen Vlieland als geen ander. Van de mooiste locaties tot de beste 
+                leveranciers: wij zorgen dat jullie trouwdag vlekkeloos verloopt. Net zoals 
+                wij dat doen voor{" "}
+                <Link to="/zakelijk-evenement-vlieland" className="text-primary hover:underline font-medium">
+                  zakelijke evenementen
+                </Link>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Volledig ontzorgd */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Volledig ontzorgd
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Van locatie tot logistiek, van catering tot overnachtingen voor jullie gasten: 
+                wij nemen de organisatie uit handen. Lees meer over hoe wij{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  evenementen op Vlieland organiseren
+                </Link>.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -83,31 +126,17 @@ const TrouwenOpVlieland = () => {
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Link 
-                  to="/catering" 
+                  to="/zakelijk-evenement-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
-                  <span className="font-medium text-foreground">Catering</span>
+                  <span className="font-medium text-foreground">Zakelijk evenement Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 
-                  to="/evenementen" 
+                  to="/bedrijfsuitje-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
-                  <span className="font-medium text-foreground">Evenementen</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/diensten" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Onze diensten</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/contact" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Contact</span>
+                  <span className="font-medium text-foreground">Bedrijfsuitje Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>

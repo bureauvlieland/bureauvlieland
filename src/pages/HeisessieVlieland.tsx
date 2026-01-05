@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,12 @@ const HeisessieVlieland = () => {
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb 
+        items={[
+          { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+          { label: "Heisessie Vlieland" }
+        ]} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -52,7 +59,11 @@ const HeisessieVlieland = () => {
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Het eiland dwingt tot vertraging. Geen afleiding, geen verplichtingen tussendoor. 
-                Alleen tijd en aandacht voor de inhoud.
+                Alleen tijd en aandacht voor de inhoud. Een heisessie combineren met een{" "}
+                <Link to="/meerdaags-bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  meerdaags verblijf
+                </Link>{" "}
+                zorgt voor nog meer verdieping.
               </p>
             </div>
           </div>
@@ -67,7 +78,10 @@ const HeisessieVlieland = () => {
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Wij verzorgen locaties, logistiek, overnachtingen en aanvullende programma's. 
-                De inhoud bepalen jullie, de randvoorwaarden regelen wij.
+                De inhoud bepalen jullie, de randvoorwaarden regelen wij. Lees meer over hoe wij{" "}
+                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
+                  bedrijfsuitjes organiseren
+                </Link>.
               </p>
             </div>
           </div>
@@ -124,20 +138,6 @@ const HeisessieVlieland = () => {
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <span className="font-medium text-foreground">Meerdaags bedrijfsuitje Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/teamuitje-vlieland" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Teamuitje Vlieland</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-                <Link 
-                  to="/zakelijk-evenement-vlieland" 
-                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
-                >
-                  <span className="font-medium text-foreground">Zakelijk evenement Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
               </div>
