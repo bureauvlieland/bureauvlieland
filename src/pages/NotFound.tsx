@@ -25,10 +25,10 @@ const getRedirectDestination = (pathname: string): string | null => {
   
   // Voor wie pages - redirect oude URLs naar nieuwe landingspagina's
   if (path === '/bedrijfsuitje-naar-vlieland-2') return '/bedrijfsuitje-vlieland';
-  if (path === '/incentive-op-vlieland-2') return '/#voor-wie';
-  if (path === '/vergaderen-op-vlieland-2') return '/#voor-wie';
-  if (path === '/teambuilding-op-vlieland') return '/#voor-wie';
-  if (path === '/trouwen-op-vlieland') return '/#voor-wie';
+  if (path === '/incentive-op-vlieland-2') return '/incentive-reis-vlieland';
+  if (path === '/vergaderen-op-vlieland-2') return '/heisessie-vlieland';
+  if (path === '/teambuilding-op-vlieland') return '/teamuitje-vlieland';
+  if (path === '/trouwen-op-vlieland-2') return '/trouwen-op-vlieland';
   if (path === '/schoolreis-naar-vlieland') return '/#voor-wie';
   
   // Team/Over ons
