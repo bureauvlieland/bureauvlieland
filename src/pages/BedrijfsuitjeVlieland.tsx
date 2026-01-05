@@ -67,6 +67,9 @@ const BedrijfsuitjeVlieland = () => {
               src={heroImage}
               alt="Team op het strand van Vlieland tijdens een bedrijfsuitje"
               className="w-full h-full object-cover animate-ken-burns"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-primary/70 via-primary/50 to-primary/70" />
           </div>
