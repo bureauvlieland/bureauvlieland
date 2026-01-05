@@ -23,8 +23,8 @@ const getRedirectDestination = (pathname: string): string | null => {
   // Product pages wildcard
   if (path.startsWith('/product')) return '/#wat-wij-doen';
   
-  // Voor wie pages
-  if (path === '/bedrijfsuitje-naar-vlieland-2') return '/#voor-wie';
+  // Voor wie pages - redirect oude URLs naar nieuwe landingspagina's
+  if (path === '/bedrijfsuitje-naar-vlieland-2') return '/bedrijfsuitje-vlieland';
   if (path === '/incentive-op-vlieland-2') return '/#voor-wie';
   if (path === '/vergaderen-op-vlieland-2') return '/#voor-wie';
   if (path === '/teambuilding-op-vlieland') return '/#voor-wie';

@@ -1,0 +1,251 @@
+import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Helmet } from "react-helmet";
+import { Link } from "react-router-dom";
+import { 
+  Users, 
+  MapPin, 
+  Calendar, 
+  Utensils, 
+  Ship, 
+  CheckCircle,
+  ArrowRight
+} from "lucide-react";
+import heroImage from "@/assets/team-beach.jpg";
+
+const BedrijfsuitjeVlieland = () => {
+  const services = [
+    { icon: Ship, text: "Vervoer van en naar het eiland" },
+    { icon: MapPin, text: "Overnachtingen" },
+    { icon: Calendar, text: "Programma-opbouw" },
+    { icon: Users, text: "Activiteiten" },
+    { icon: Utensils, text: "Catering" },
+    { icon: CheckCircle, text: "Planning en begeleiding ter plaatse" },
+  ];
+
+  const voorbeelden = [
+    "Teambuilding met inhoud en begeleiding",
+    "Meerdaagse bedrijfsuitjes met overnachting",
+    "Heisessies en strategiesessies",
+    "Actieve programma's gecombineerd met rustmomenten",
+    "Zakelijke evenementen op unieke locaties",
+  ];
+
+  return (
+    <>
+      <Helmet>
+        <title>Bedrijfsuitje op Vlieland organiseren – Bureau Vlieland</title>
+        <meta 
+          name="description" 
+          content="Een bedrijfsuitje op Vlieland dat klopt van A tot Z. Activiteiten, overnachting, catering en logistiek geregeld door lokale regisseurs." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/bedrijfsuitje-vlieland" />
+      </Helmet>
+
+      <Navigation />
+
+      <main>
+        {/* Hero Section */}
+        <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0">
+            <img
+              src={heroImage}
+              alt="Team op het strand van Vlieland tijdens een bedrijfsuitje"
+              className="w-full h-full object-cover animate-ken-burns"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/70 via-primary/50 to-primary/70" />
+          </div>
+
+          <div className="relative z-10 container mx-auto px-4 py-20 text-center text-primary-foreground">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight">
+              Bedrijfsuitje op Vlieland
+            </h1>
+            <p className="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed opacity-95">
+              Een bedrijfsuitje op Vlieland is geen standaard dagje uit. Het is samen loskomen 
+              van de dagelijkse dynamiek, op een eiland waar rust, ruimte en aandacht vanzelf 
+              ontstaan. Bureau Vlieland organiseert bedrijfsuitjes die verder gaan dan een 
+              losse activiteit: inhoudelijk sterk, logistiek kloppend en volledig afgestemd 
+              op jullie organisatie.
+            </p>
+          </div>
+        </section>
+
+        {/* Waarom Vlieland */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Waarom een bedrijfsuitje op Vlieland?
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Vlieland is overzichtelijk, autoluw en ongedwongen. Juist daardoor ontstaat 
+                ruimte voor echte aandacht. Geen afleiding, geen haast, maar tijd voor 
+                samenwerking, reflectie en ontspanning. Of het nu gaat om een eendaags 
+                programma of een meerdaags bedrijfsuitje met overnachting: het eiland 
+                dwingt tot vertraging – en dat werkt.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Wat voor bedrijfsuitjes */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Wat voor bedrijfsuitjes organiseren wij?
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Bureau Vlieland organiseert bedrijfsuitjes voor teams en organisaties 
+                die meer zoeken dan alleen vermaak.
+              </p>
+              
+              <div className="space-y-4 mb-8">
+                {voorbeelden.map((voorbeeld, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                    <span className="text-foreground">{voorbeeld}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-lg font-medium text-foreground">
+                Altijd op maat, altijd in samenhang.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Alles geregeld */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6 text-center">
+                Van idee tot uitvoering: alles geregeld
+              </h2>
+              <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+                Wij zijn geen aanbieder van losse activiteiten, maar de regisseur van het 
+                totale programma. Dat betekent dat wij het volledige traject verzorgen:
+              </p>
+              
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {services.map((service, index) => (
+                  <Card key={index} className="border-none shadow-sm bg-muted/30">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <service.icon className="w-6 h-6 text-primary" />
+                      </div>
+                      <span className="text-foreground font-medium">{service.text}</span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              <p className="text-center text-lg font-medium text-foreground mt-10">
+                Eén aanspreekpunt, korte lijnen, lokaal georganiseerd.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Waarom Bureau Vlieland */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Waarom Bureau Vlieland?
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed mb-4">
+                Bureau Vlieland is gevestigd op Vlieland en werkt al jaren samen met lokale 
+                partners. We kennen het eiland, de locaties en de logistiek. Daardoor kunnen 
+                we snel schakelen, realistisch plannen en programma's bouwen die daadwerkelijk 
+                uitvoerbaar zijn.
+              </p>
+              <p className="text-lg font-medium text-foreground">
+                Geen standaard pakketten, geen verkooppraatjes, maar ervaring en overzicht.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 md:py-24 bg-primary text-primary-foreground">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
+              Interesse in een bedrijfsuitje op Vlieland?
+            </h2>
+            <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
+              Neem contact met ons op voor een eerste verkenning. We denken graag mee 
+              over een passend programma, afgestemd op jullie team, doelen en beschikbare tijd.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                asChild 
+                size="lg" 
+                variant="secondary"
+                className="text-lg px-8"
+              >
+                <Link to="/contact">Plan een vrijblijvend gesprek</Link>
+              </Button>
+              <Button 
+                asChild 
+                size="lg" 
+                variant="outline"
+                className="text-lg px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <Link to="/offerte">Vraag een voorstel aan</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Interne Links */}
+        <section className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-2xl font-display font-bold text-foreground mb-8 text-center">
+                Bekijk ook
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Link 
+                  to="/teamuitje-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Teamuitje Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link 
+                  to="/meerdaags-bedrijfsuitje-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Meerdaags bedrijfsuitje Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link 
+                  to="/heisessie-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Heisessie Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link 
+                  to="/zakelijk-evenement-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Zakelijk evenement Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </>
+  );
+};
+
+export default BedrijfsuitjeVlieland;
