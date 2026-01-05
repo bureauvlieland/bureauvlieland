@@ -14,6 +14,7 @@ import {
   CheckCircle,
   ArrowRight
 } from "lucide-react";
+import { PositioningBlock } from "@/components/PositioningBlock";
 import heroImage from "@/assets/team-beach.jpg";
 
 const BedrijfsuitjeVlieland = () => {
@@ -189,6 +190,8 @@ const BedrijfsuitjeVlieland = () => {
             </div>
           </div>
         </section>
+
+        <PositioningBlock />
 
         {/* CTA Section */}
         <section className="py-16 md:py-24 bg-primary text-primary-foreground">
