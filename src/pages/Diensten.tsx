@@ -13,7 +13,7 @@ const Diensten = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
           <div 

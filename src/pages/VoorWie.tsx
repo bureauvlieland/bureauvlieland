@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { ForWho } from "@/components/ForWho";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import teamBeachImage from "@/assets/speedboat-group.jpg";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { useEffect } from "react";
@@ -24,8 +25,19 @@ const VoorWie = () => {
   
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>Voor Wie – Bureau Vlieland | Bedrijven, Teams & Organisaties</title>
+        <meta 
+          name="description" 
+          content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en professionele regie centraal stellen. Van MT tot projectgroep." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/voor-wie" />
+        <meta property="og:title" content="Voor Wie – Bureau Vlieland" />
+        <meta property="og:description" content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en professionele regie centraal stellen." />
+        <meta property="og:url" content="https://bureauvlieland.nl/voor-wie" />
+      </Helmet>
       <Navigation />
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
           <div 

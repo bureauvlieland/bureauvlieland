@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
+import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Helmet } from "react-helmet";
@@ -45,6 +46,15 @@ const BedrijfsuitjeVlieland = () => {
         />
         <link rel="canonical" href="https://bureauvlieland.nl/bedrijfsuitje-vlieland" />
       </Helmet>
+      <LandingPageStructuredData
+        serviceName="Bedrijfsuitje op Vlieland"
+        serviceDescription="Een bedrijfsuitje op Vlieland dat klopt van A tot Z. Activiteiten, overnachting, catering en logistiek geregeld door lokale regisseurs."
+        canonicalUrl="https://bureauvlieland.nl/bedrijfsuitje-vlieland"
+        breadcrumbItems={[
+          { name: "Home", url: "https://bureauvlieland.nl" },
+          { name: "Bedrijfsuitje Vlieland", url: "https://bureauvlieland.nl/bedrijfsuitje-vlieland" }
+        ]}
+      />
 
       <Navigation />
       <LandingBreadcrumb items={[{ label: "Bedrijfsuitje Vlieland" }]} />

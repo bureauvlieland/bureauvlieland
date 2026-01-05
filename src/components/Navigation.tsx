@@ -26,6 +26,7 @@ export const Navigation = () => {
     { label: "Heisessie Vlieland", href: "/heisessie-vlieland" },
     { label: "Zakelijk evenement Vlieland", href: "/zakelijk-evenement-vlieland" },
     { label: "Incentive reis Vlieland", href: "/incentive-reis-vlieland" },
+    { label: "Trouwen op Vlieland", href: "/trouwen-op-vlieland" },
   ];
 
   const voorWieItems = [
@@ -42,8 +43,14 @@ export const Navigation = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
-      <nav className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+    <>
+      {/* Skip to main content link for accessibility */}
+      <a href="#main-content" className="skip-to-content">
+        Ga naar hoofdinhoud
+      </a>
+      
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+        <nav className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="flex items-center justify-between h-16">
           <Link
             to="/"
@@ -276,7 +283,8 @@ export const Navigation = () => {
             </div>
           </div>
         )}
-      </nav>
-    </header>
+        </nav>
+      </header>
+    </>
   );
 };

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Testimonials } from "@/components/Testimonials";
+import { Helmet } from "react-helmet";
 import heroImage from "@/assets/hero-vlieland.jpg";
 import { Calendar, Users, Utensils, Target } from "lucide-react";
 
@@ -43,10 +44,22 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>Bureau Vlieland – Professionele evenementen en teamuitjes op Vlieland</title>
+        <meta 
+          name="description" 
+          content="Bureau Vlieland organiseert professionele bedrijfsuitjes, teamdagen en evenementen op Vlieland. Maatwerkprogramma's met lokale regie en catering." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl" />
+        <meta property="og:title" content="Bureau Vlieland – Professionele evenementen op Vlieland" />
+        <meta property="og:description" content="Organiseer uw teamdag, bedrijfsuitje of evenement op Vlieland met Bureau Vlieland. Professionele regie, lokale expertise." />
+        <meta property="og:url" content="https://bureauvlieland.nl" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <StructuredData />
       <CookieConsent />
       <Navigation />
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative min-h-[600px] lg:min-h-[700px] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0">

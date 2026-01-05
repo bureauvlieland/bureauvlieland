@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
+import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,16 @@ const HeisessieVlieland = () => {
         />
         <link rel="canonical" href="https://bureauvlieland.nl/heisessie-vlieland" />
       </Helmet>
+      <LandingPageStructuredData
+        serviceName="Heisessie op Vlieland"
+        serviceDescription="Een heisessie op Vlieland biedt rust en focus. Bureau Vlieland organiseert strategiesessies en MT-dagen op maat."
+        canonicalUrl="https://bureauvlieland.nl/heisessie-vlieland"
+        breadcrumbItems={[
+          { name: "Home", url: "https://bureauvlieland.nl" },
+          { name: "Bedrijfsuitje Vlieland", url: "https://bureauvlieland.nl/bedrijfsuitje-vlieland" },
+          { name: "Heisessie Vlieland", url: "https://bureauvlieland.nl/heisessie-vlieland" }
+        ]}
+      />
 
       <Navigation />
       <LandingBreadcrumb 

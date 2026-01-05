@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -9,16 +10,53 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface QuoteRequest {
-  name: string;
-  company?: string;
-  email: string;
-  phone: string;
-  numberOfPeople: string;
-  startDate: string;
-  numberOfDays: string;
-  budgetPerPerson: string;
-  description?: string;
+// Rate limiting - in-memory store (resets on cold start)
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const requests = rateLimitMap.get(ip) || [];
+  
+  // Filter out requests outside the window
+  const recentRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW_MS);
+  
+  if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+  
+  // Add current request
+  recentRequests.push(now);
+  rateLimitMap.set(ip, recentRequests);
+  
+  return false;
+}
+
+// Zod schema for server-side validation
+const QuoteRequestSchema = z.object({
+  name: z.string().trim().min(2, "Naam moet minimaal 2 karakters zijn").max(100, "Naam mag maximaal 100 karakters zijn"),
+  company: z.string().trim().max(100, "Bedrijfsnaam mag maximaal 100 karakters zijn").optional().or(z.literal("")),
+  email: z.string().trim().email("Ongeldig e-mailadres").max(255, "E-mail mag maximaal 255 karakters zijn"),
+  phone: z.string().trim().min(10, "Telefoonnummer moet minimaal 10 karakters zijn").max(20, "Telefoonnummer mag maximaal 20 karakters zijn"),
+  numberOfPeople: z.string().trim().min(1, "Aantal personen is verplicht").max(10),
+  startDate: z.string().trim().min(1, "Startdatum is verplicht").max(20),
+  numberOfDays: z.string().trim().min(1, "Aantal dagen is verplicht").max(10),
+  budgetPerPerson: z.string().trim().min(1, "Budget is verplicht").max(50),
+  description: z.string().trim().max(2000, "Omschrijving mag maximaal 2000 karakters zijn").optional().or(z.literal("")),
+});
+
+type QuoteRequest = z.infer<typeof QuoteRequestSchema>;
+
+// Sanitize HTML to prevent XSS in emails
+function sanitizeHtml(str: string | undefined): string {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 const sendEmailViaMailjet = async (messages: any[]) => {
@@ -49,28 +87,73 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const requestData: QuoteRequest = await req.json();
-    console.log("Quote request received:", requestData);
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("cf-connecting-ip") || 
+                     "unknown";
+    
+    // Check rate limit
+    if (isRateLimited(clientIp)) {
+      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ error: "Te veel verzoeken. Probeer het over een minuut opnieuw." }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const rawData = await req.json();
+    
+    // Validate with Zod schema
+    const validationResult = QuoteRequestSchema.safeParse(rawData);
+    
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => e.message).join(", ");
+      console.warn("Validation failed:", errors);
+      return new Response(
+        JSON.stringify({ error: `Validatiefout: ${errors}` }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const requestData: QuoteRequest = validationResult.data;
+    console.log("Quote request received and validated for:", requestData.email);
+
+    // Sanitize all string fields for email HTML
+    const safeName = sanitizeHtml(requestData.name);
+    const safeCompany = sanitizeHtml(requestData.company);
+    const safeEmail = sanitizeHtml(requestData.email);
+    const safePhone = sanitizeHtml(requestData.phone);
+    const safeNumberOfPeople = sanitizeHtml(requestData.numberOfPeople);
+    const safeStartDate = sanitizeHtml(requestData.startDate);
+    const safeNumberOfDays = sanitizeHtml(requestData.numberOfDays);
+    const safeBudgetPerPerson = sanitizeHtml(requestData.budgetPerPerson);
+    const safeDescription = sanitizeHtml(requestData.description);
 
     // Format the quote details for the email
     const quoteDetails = `
       <h2>Nieuwe Offerteaanvraag</h2>
       
       <h3>Contactgegevens</h3>
-      <p><strong>Naam:</strong> ${requestData.name}</p>
-      ${requestData.company ? `<p><strong>Bedrijf:</strong> ${requestData.company}</p>` : ''}
-      <p><strong>Email:</strong> ${requestData.email}</p>
-      <p><strong>Telefoon:</strong> ${requestData.phone}</p>
+      <p><strong>Naam:</strong> ${safeName}</p>
+      ${safeCompany ? `<p><strong>Bedrijf:</strong> ${safeCompany}</p>` : ''}
+      <p><strong>Email:</strong> ${safeEmail}</p>
+      <p><strong>Telefoon:</strong> ${safePhone}</p>
       
       <h3>Evenement Details</h3>
-      <p><strong>Aantal personen:</strong> ${requestData.numberOfPeople}</p>
-      <p><strong>Gewenste startdatum:</strong> ${requestData.startDate}</p>
-      <p><strong>Aantal dagen:</strong> ${requestData.numberOfDays}</p>
-      <p><strong>Budget indicatie p.p.:</strong> ${requestData.budgetPerPerson}</p>
+      <p><strong>Aantal personen:</strong> ${safeNumberOfPeople}</p>
+      <p><strong>Gewenste startdatum:</strong> ${safeStartDate}</p>
+      <p><strong>Aantal dagen:</strong> ${safeNumberOfDays}</p>
+      <p><strong>Budget indicatie p.p.:</strong> ${safeBudgetPerPerson}</p>
       
-      ${requestData.description ? `
+      ${safeDescription ? `
       <h3>Omschrijving / Bijzondere wensen</h3>
-      <p>${requestData.description.replace(/\n/g, '<br>')}</p>
+      <p>${safeDescription.replace(/\n/g, '<br>')}</p>
       ` : ''}
     `;
 
@@ -88,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
             Name: "Erwin van der Most"
           }
         ],
-        Subject: `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`,
+        Subject: `Nieuwe offerteaanvraag - ${safeNumberOfPeople} personen`,
         HTMLPart: quoteDetails,
       },
       // Confirmation email to customer
@@ -105,7 +188,7 @@ const handler = async (req: Request): Promise<Response> => {
         ],
         Subject: "Bevestiging offerte aanvraag - Bureau Vlieland",
         HTMLPart: `
-          <h2>Beste ${requestData.name},</h2>
+          <h2>Beste ${safeName},</h2>
           <p>Bedankt voor je offerteaanvraag bij Bureau Vlieland!</p>
           <p>We hebben je aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met je opnemen met een passende offerte.</p>
           
@@ -124,7 +207,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     ]);
 
-    console.log("Emails sent successfully via Mailjet:", emailResponse);
+    console.log("Emails sent successfully via Mailjet");
 
     return new Response(
       JSON.stringify({ 

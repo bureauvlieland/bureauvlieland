@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
+import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -19,6 +20,16 @@ const IncentiveReisVlieland = () => {
         />
         <link rel="canonical" href="https://bureauvlieland.nl/incentive-reis-vlieland" />
       </Helmet>
+      <LandingPageStructuredData
+        serviceName="Incentive reis op Vlieland"
+        serviceDescription="Een incentive reis op Vlieland als beloning of motivatie. Bureau Vlieland organiseert exclusieve programma's op maat."
+        canonicalUrl="https://bureauvlieland.nl/incentive-reis-vlieland"
+        breadcrumbItems={[
+          { name: "Home", url: "https://bureauvlieland.nl" },
+          { name: "Bedrijfsuitje Vlieland", url: "https://bureauvlieland.nl/bedrijfsuitje-vlieland" },
+          { name: "Incentive reis Vlieland", url: "https://bureauvlieland.nl/incentive-reis-vlieland" }
+        ]}
+      />
 
       <Navigation />
       <LandingBreadcrumb 

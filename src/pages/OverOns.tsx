@@ -4,6 +4,7 @@ import { AboutErwin } from "@/components/AboutErwin";
 import { Verbinder } from "@/components/Verbinder";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import vlielandLandscape from "@/assets/lighthouse-vlieland.jpg";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 
@@ -12,8 +13,19 @@ const OverOns = () => {
   
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>Over Ons – Bureau Vlieland | Erwin Soolsma & Team</title>
+        <meta 
+          name="description" 
+          content="Leer Erwin Soolsma en Bureau Vlieland kennen. Lokale expertise en passie voor het organiseren van onvergetelijke evenementen op Vlieland." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/over-ons" />
+        <meta property="og:title" content="Over Ons – Bureau Vlieland" />
+        <meta property="og:description" content="Leer Erwin Soolsma en Bureau Vlieland kennen. Lokale expertise op Vlieland." />
+        <meta property="og:url" content="https://bureauvlieland.nl/over-ons" />
+      </Helmet>
       <Navigation />
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
           <div 
