@@ -119,7 +119,7 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
               <Button 
                 asChild 
                 size="lg" 
-                variant="secondary"
+                variant="heroPrimary"
                 className="text-lg px-8"
               >
                 <Link to="/contact">Plan een vrijblijvend gesprek</Link>
@@ -127,8 +127,8 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
               <Button 
                 asChild 
                 size="lg" 
-                variant="outline"
-                className="text-lg px-8 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+                variant="heroOutline"
+                className="text-lg px-8"
               >
                 <Link to="/offerte">Vraag een voorstel aan</Link>
               </Button>
