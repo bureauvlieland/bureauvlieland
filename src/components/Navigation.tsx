@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import logo from "@/assets/logo.jpg";
 import {
   DropdownMenu,
@@ -12,9 +12,31 @@ import {
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
 
+  const toggleMobileDropdown = (dropdown: string) => {
+    setOpenMobileDropdown(openMobileDropdown === dropdown ? null : dropdown);
+  };
+
+  const dienstenItems = [
+    { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland", highlight: true },
+    { label: "Teamuitje Vlieland", href: "/teamuitje-vlieland" },
+    { label: "Meerdaags bedrijfsuitje", href: "/meerdaags-bedrijfsuitje-vlieland" },
+    { label: "Heisessie Vlieland", href: "/heisessie-vlieland" },
+    { label: "Zakelijk evenement Vlieland", href: "/zakelijk-evenement-vlieland" },
+    { label: "Incentive reis Vlieland", href: "/incentive-reis-vlieland" },
+  ];
+
+  const voorWieItems = [
+    { label: "Bedrijven & teams", href: "/voor-wie#bedrijven" },
+    { label: "Management & directie", href: "/voor-wie#management" },
+    { label: "Organisaties & instellingen", href: "/voor-wie#organisaties" },
+  ];
+
+  const programmaItems = [
+    { label: "Transformatieve programma's", href: "/programmas" },
+    { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
@@ -28,36 +50,58 @@ export const Navigation = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link
-              to="/diensten"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Diensten
-            </Link>
-            <Link
-              to="/voor-wie"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Voor wie
-            </Link>
+          <div className="hidden lg:flex items-center gap-5">
+            {/* Diensten Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                Diensten <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-card border-border min-w-[220px]">
+                {dienstenItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link 
+                      to={item.href} 
+                      className={`cursor-pointer ${item.highlight ? 'font-semibold text-foreground' : ''}`}
+                    >
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Voor wie Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                Voor wie <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-card border-border">
+                {voorWieItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link to={item.href} className="cursor-pointer">
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Programma's Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                 Programma's <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border">
-                <DropdownMenuItem asChild>
-                  <Link to="/programmas" className="cursor-pointer">
-                    Transformatieve Programma's
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/voorbeeldprogrammas" className="cursor-pointer">
-                    Voorbeeldprogramma's
-                  </Link>
-                </DropdownMenuItem>
+                {programmaItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link to={item.href} className="cursor-pointer">
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
             <Link
               to="/catering"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -65,21 +109,21 @@ export const Navigation = () => {
               Catering
             </Link>
             <Link
-              to="/over-ons"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Over ons
-            </Link>
-            <Link
               to="/evenementen"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Evenementen
             </Link>
+            <Link
+              to="/over-ons"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Over ons
+            </Link>
             <Link to="/contact">
               <Button
-                variant="default"
-                className="bg-primary hover:bg-primary/90"
+                variant="outline"
+                size="sm"
               >
                 Contact
               </Button>
@@ -87,9 +131,10 @@ export const Navigation = () => {
             <Link to="/offerte">
               <Button
                 variant="default"
+                size="sm"
                 className="bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                Offerte Aanvragen
+                Offerte aanvragen
               </Button>
             </Link>
           </div>
@@ -97,7 +142,7 @@ export const Navigation = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 text-foreground"
+            className="lg:hidden p-2 text-foreground"
             aria-label="Toggle menu"
           >
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -106,83 +151,124 @@ export const Navigation = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
-            <div className="flex flex-col gap-4">
-              <Link
-                to="/diensten"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Diensten
-              </Link>
-              <Link
-                to="/voor-wie"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Voor wie
-              </Link>
-              <div className="px-4 py-2">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Programma's</p>
-                <Link
-                  to="/programmas"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-                >
-                  Transformatieve Programma's
-                </Link>
-                <Link
-                  to="/voorbeeldprogrammas"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-                >
-                  Voorbeeldprogramma's
-                </Link>
-              </div>
-              <Link
-                to="/catering"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Catering
-              </Link>
-              <Link
-                to="/over-ons"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Over ons
-              </Link>
-              <Link
-                to="/evenementen"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-accent-soft rounded-md transition-colors"
-              >
-                Evenementen
-              </Link>
-              <Link
-                to="/contact"
-                onClick={() => setIsMenuOpen(false)}
-                className="mx-4"
-              >
-                <Button
-                  variant="default"
-                  className="bg-primary hover:bg-primary/90 w-full"
-                >
-                  Contact
-                </Button>
-              </Link>
+          <div className="lg:hidden py-4 border-t border-border">
+            <div className="flex flex-col gap-2">
+              {/* CTA First on Mobile */}
               <Link
                 to="/offerte"
                 onClick={() => setIsMenuOpen(false)}
-                className="mx-4"
+                className="mx-4 mb-4"
               >
                 <Button
                   variant="default"
                   className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
                 >
-                  Offerte Aanvragen
+                  Offerte aanvragen
                 </Button>
+              </Link>
+
+              {/* Diensten Dropdown Mobile */}
+              <div className="px-4">
+                <button
+                  onClick={() => toggleMobileDropdown('diensten')}
+                  className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span>Diensten</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'diensten' ? 'rotate-180' : ''}`} />
+                </button>
+                {openMobileDropdown === 'diensten' && (
+                  <div className="pl-4 pb-2 space-y-1">
+                    {dienstenItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={`block py-2 text-sm transition-colors ${item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Voor wie Dropdown Mobile */}
+              <div className="px-4">
+                <button
+                  onClick={() => toggleMobileDropdown('voorwie')}
+                  className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span>Voor wie</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'voorwie' ? 'rotate-180' : ''}`} />
+                </button>
+                {openMobileDropdown === 'voorwie' && (
+                  <div className="pl-4 pb-2 space-y-1">
+                    {voorWieItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Programma's Dropdown Mobile */}
+              <div className="px-4">
+                <button
+                  onClick={() => toggleMobileDropdown('programmas')}
+                  className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span>Programma's</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'programmas' ? 'rotate-180' : ''}`} />
+                </button>
+                {openMobileDropdown === 'programmas' && (
+                  <div className="pl-4 pb-2 space-y-1">
+                    {programmaItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Link
+                to="/catering"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Catering
+              </Link>
+              <Link
+                to="/evenementen"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Evenementen
+              </Link>
+              <Link
+                to="/over-ons"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Over ons
+              </Link>
+              <Link
+                to="/contact"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Contact
               </Link>
             </div>
           </div>
