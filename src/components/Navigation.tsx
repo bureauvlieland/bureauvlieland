@@ -19,6 +19,7 @@ export const Navigation = () => {
   };
 
   const dienstenItems = [
+    { label: "Overzicht diensten", href: "/diensten", isOverview: true },
     { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland", highlight: true },
     { label: "Teamuitje Vlieland", href: "/teamuitje-vlieland" },
     { label: "Meerdaags bedrijfsuitje", href: "/meerdaags-bedrijfsuitje-vlieland" },
@@ -28,12 +29,14 @@ export const Navigation = () => {
   ];
 
   const voorWieItems = [
+    { label: "Overzicht voor wie", href: "/voor-wie", isOverview: true },
     { label: "Bedrijven & teams", href: "/voor-wie#bedrijven" },
     { label: "Management & directie", href: "/voor-wie#management" },
     { label: "Organisaties & instellingen", href: "/voor-wie#organisaties" },
   ];
 
   const programmaItems = [
+    { label: "Overzicht programma's", href: "/programmas", isOverview: true },
     { label: "Transformatieve programma's", href: "/programmas" },
     { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
   ];
@@ -57,11 +60,11 @@ export const Navigation = () => {
                 Diensten <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border min-w-[220px]">
-                {dienstenItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
+                {dienstenItems.map((item, index) => (
+                  <DropdownMenuItem key={item.href} asChild className={item.isOverview ? 'border-b border-border mb-1' : ''}>
                     <Link 
                       to={item.href} 
-                      className={`cursor-pointer ${item.highlight ? 'font-semibold text-foreground' : ''}`}
+                      className={`cursor-pointer ${item.highlight ? 'font-semibold text-foreground' : ''} ${item.isOverview ? 'text-muted-foreground text-sm' : ''}`}
                     >
                       {item.label}
                     </Link>
@@ -77,8 +80,8 @@ export const Navigation = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border">
                 {voorWieItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link to={item.href} className="cursor-pointer">
+                  <DropdownMenuItem key={item.href} asChild className={item.isOverview ? 'border-b border-border mb-1' : ''}>
+                    <Link to={item.href} className={`cursor-pointer ${item.isOverview ? 'text-muted-foreground text-sm' : ''}`}>
                       {item.label}
                     </Link>
                   </DropdownMenuItem>
@@ -93,8 +96,8 @@ export const Navigation = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border">
                 {programmaItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link to={item.href} className="cursor-pointer">
+                  <DropdownMenuItem key={item.href + item.label} asChild className={item.isOverview ? 'border-b border-border mb-1' : ''}>
+                    <Link to={item.href} className={`cursor-pointer ${item.isOverview ? 'text-muted-foreground text-sm' : ''}`}>
                       {item.label}
                     </Link>
                   </DropdownMenuItem>
@@ -183,7 +186,7 @@ export const Navigation = () => {
                         key={item.href}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`block py-2 text-sm transition-colors ${item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
+                        className={`block py-2 text-sm transition-colors ${item.isOverview ? 'text-muted-foreground border-b border-border pb-3 mb-2' : ''} ${item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
                       >
                         {item.label}
                       </Link>
@@ -208,7 +211,7 @@ export const Navigation = () => {
                         key={item.href}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className={`block py-2 text-sm transition-colors ${item.isOverview ? 'text-muted-foreground border-b border-border pb-3 mb-2' : 'text-muted-foreground hover:text-foreground'}`}
                       >
                         {item.label}
                       </Link>
@@ -230,10 +233,10 @@ export const Navigation = () => {
                   <div className="pl-4 pb-2 space-y-1">
                     {programmaItems.map((item) => (
                       <Link
-                        key={item.href}
+                        key={item.href + item.label}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className={`block py-2 text-sm transition-colors ${item.isOverview ? 'text-muted-foreground border-b border-border pb-3 mb-2' : 'text-muted-foreground hover:text-foreground'}`}
                       >
                         {item.label}
                       </Link>
