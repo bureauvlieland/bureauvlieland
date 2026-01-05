@@ -6,13 +6,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting - in-memory store (resets on cold start)
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 15; // Higher limit for chat
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const requests = rateLimitMap.get(ip) || [];
+  
+  // Filter out requests outside the window
+  const recentRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW_MS);
+  
+  if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+  
+  // Add current request
+  recentRequests.push(now);
+  rateLimitMap.set(ip, recentRequests);
+  
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("cf-connecting-ip") || 
+                     "unknown";
+    
+    // Check rate limit
+    if (isRateLimited(clientIp)) {
+      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ error: 'Te veel verzoeken. Wacht even voordat je verder gaat.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { messages } = await req.json();
+    
+    // Basic validation
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(
+        JSON.stringify({ error: 'Ongeldige aanvraag.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Limit message history to prevent abuse
+    const limitedMessages = messages.slice(-20);
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
@@ -276,6 +325,8 @@ BUREAUKOSTEN: 15% van netto bedrag (minimaal €350)
 - Vraag actief door om wensen te begrijpen
 - Geef inspiratie met voorbeelden`;
 
+    console.log(`Processing chat request from IP: ${clientIp}`);
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -286,7 +337,7 @@ BUREAUKOSTEN: 15% van netto bedrag (minimaal €350)
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          ...messages
+          ...limitedMessages
         ],
         stream: true,
       }),

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, Target, Users, Brain, TrendingUp } from "lucide-react";
+import { Helmet } from "react-helmet";
 import rmdBeachTraining from "@/assets/rmd-beach-training.jpg";
 import mindset22Indoor from "@/assets/mindset22-indoor.jpg";
 import rmdOutdoorActivity from "@/assets/rmd-outdoor-activity.jpg";
@@ -57,8 +58,19 @@ const Programmas = () => {
 
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>Transformatieve Programma's – Bureau Vlieland | RMD & Mindset22</title>
+        <meta 
+          name="description" 
+          content="Teamontwikkeling en persoonlijk leiderschap op Vlieland. In samenwerking met RMD Trainingen en Mindset22 bieden wij transformatieve programma's." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/programmas" />
+        <meta property="og:title" content="Transformatieve Programma's – Bureau Vlieland" />
+        <meta property="og:description" content="Teamontwikkeling en persoonlijk leiderschap op Vlieland met RMD Trainingen en Mindset22." />
+        <meta property="og:url" content="https://bureauvlieland.nl/programmas" />
+      </Helmet>
       <Navigation />
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
