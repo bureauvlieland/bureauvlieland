@@ -20,6 +20,7 @@ import Evenementen from "./pages/Evenementen";
 const queryClient = new QueryClient();
 
 import Offerte from "./pages/Offerte";
+import BedrijfsuitjeVlieland from "./pages/BedrijfsuitjeVlieland";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/offerte" element={<Offerte />} />
           <Route path="/algemene-voorwaarden" element={<Terms />} />
+          <Route path="/bedrijfsuitje-vlieland" element={<BedrijfsuitjeVlieland />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
