@@ -246,6 +246,7 @@ const Voorbeeldprogrammas = () => {
                             src={module.image} 
                             alt={module.title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                         </div>
@@ -341,6 +342,7 @@ const Voorbeeldprogrammas = () => {
                   src={teamBeach} 
                   alt="Team groepsfoto op het strand" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Teamfoto op het strand</p>
@@ -351,6 +353,7 @@ const Voorbeeldprogrammas = () => {
                   src={beachActivity} 
                   alt="Beach activiteit met groep" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Silent Disco Beach</p>
@@ -361,6 +364,7 @@ const Voorbeeldprogrammas = () => {
                   src={dunesGroup} 
                   alt="Grote groep in de duinen" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Groepsfoto in de duinen</p>
@@ -371,6 +375,7 @@ const Voorbeeldprogrammas = () => {
                   src={speedboat} 
                   alt="Speedboot watertocht" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">RescueBoat Adventures</p>
@@ -381,6 +386,7 @@ const Voorbeeldprogrammas = () => {
                   src={sealTour} 
                   alt="Zeehondentocht" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Zeehondentocht</p>
@@ -391,6 +397,7 @@ const Voorbeeldprogrammas = () => {
                   src={surfActivity} 
                   alt="Surf en watersport activiteiten" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Surf & Watersport</p>
@@ -401,6 +408,7 @@ const Voorbeeldprogrammas = () => {
                   src={cyclingTeam} 
                   alt="Team fietstocht" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Fietsen over Vlieland</p>
@@ -411,6 +419,7 @@ const Voorbeeldprogrammas = () => {
                   src={kiteFlying} 
                   alt="Vliegeren op het strand" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Strandvliegeren</p>
@@ -421,6 +430,7 @@ const Voorbeeldprogrammas = () => {
                   src={lunchBuffet} 
                   alt="Lunch buffet arrangement" 
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                   <p className="text-white font-semibold text-lg">Heerlijke lunch buffetten</p>

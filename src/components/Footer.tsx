@@ -1,4 +1,4 @@
-import logo from "@/assets/logo.jpg";
+import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
 
 export const Footer = () => {
@@ -7,7 +7,7 @@ export const Footer = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
           <div>
-            <img src={logo} alt="Bureau Vlieland" className="h-16 w-auto mb-4" />
+            <img src={logo} alt="Bureau Vlieland" className="h-16 w-auto mb-4" loading="lazy" />
             <p className="text-sm text-muted-foreground leading-relaxed">
               Professionele evenementenorganisatie op het mooiste Waddeneiland van Nederland.
             </p>

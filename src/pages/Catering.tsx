@@ -154,6 +154,7 @@ const Catering = () => {
                   src={outdoorDiningImage} 
                   alt="Outdoor dining arrangement" 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
               <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
@@ -161,6 +162,7 @@ const Catering = () => {
                   src={foodPlattersImage} 
                   alt="Delicious food platters" 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
               <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
@@ -168,6 +170,7 @@ const Catering = () => {
                   src={outdoorDrinksImage} 
                   alt="Outdoor drinks arrangement" 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
               <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg lg:col-span-2">
@@ -175,6 +178,7 @@ const Catering = () => {
                   src={sunsetDinnerImage} 
                   alt="Sunset dinner event op Vlieland" 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
               <div className="relative h-[300px] rounded-lg overflow-hidden shadow-lg">
@@ -182,6 +186,7 @@ const Catering = () => {
                   src={tentSetupImage} 
                   alt="Tent setup voor catering" 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
             </div>
@@ -225,6 +230,7 @@ const Catering = () => {
                   src={beachEventImage} 
                   alt="Beach BBQ op Vlieland" 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               </div>
             </div>

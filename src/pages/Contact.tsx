@@ -98,6 +98,7 @@ const Contact = () => {
                     src={erwinImage}
                     alt="Erwin Soolsma, oprichter van Bureau Vlieland"
                     className="w-full h-auto rounded-xl shadow-medium object-cover aspect-[3/4]"
+                    loading="lazy"
                   />
                 </div>
                 <div className="md:col-span-2 bg-accent-soft rounded-xl border border-border p-8">
