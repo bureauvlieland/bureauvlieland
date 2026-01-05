@@ -1,6 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Services } from "@/components/Services";
+import { PositioningBlock } from "@/components/PositioningBlock";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import eventImage from "@/assets/districon-vlieland-22.jpg";
@@ -49,6 +50,9 @@ const Diensten = () => {
 
         {/* Services Content */}
         <Services />
+
+        {/* Positioning Block */}
+        <PositioningBlock />
 
         {/* CTA Section */}
         <section className="py-16 bg-muted/30">
