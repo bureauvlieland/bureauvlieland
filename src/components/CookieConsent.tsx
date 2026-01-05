@@ -3,30 +3,43 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
+import { z } from "zod";
 
-interface CookiePreferences {
-  necessary: boolean;
-  analytics: boolean;
-  marketing: boolean;
-}
+const CookiePreferencesSchema = z.object({
+  necessary: z.boolean(),
+  analytics: z.boolean(),
+  marketing: z.boolean(),
+});
+
+type CookiePreferences = z.infer<typeof CookiePreferencesSchema>;
+
+const defaultPreferences: CookiePreferences = {
+  necessary: true,
+  analytics: false,
+  marketing: false,
+};
 
 export const CookieConsent = () => {
   const [showBanner, setShowBanner] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [preferences, setPreferences] = useState<CookiePreferences>({
-    necessary: true,
-    analytics: false,
-    marketing: false,
-  });
+  const [preferences, setPreferences] = useState<CookiePreferences>(defaultPreferences);
 
   useEffect(() => {
     const consent = localStorage.getItem("cookie-consent");
     if (!consent) {
       setShowBanner(true);
-    } else {
-      const savedPreferences = JSON.parse(consent);
-      setPreferences(savedPreferences);
-      applyCookiePreferences(savedPreferences);
+      return;
+    }
+    
+    try {
+      const parsed = JSON.parse(consent);
+      const validated = CookiePreferencesSchema.parse(parsed);
+      setPreferences(validated);
+      applyCookiePreferences(validated);
+    } catch (error) {
+      console.warn("Invalid cookie preferences, resetting:", error);
+      localStorage.removeItem("cookie-consent");
+      setShowBanner(true);
     }
   }, []);
 
