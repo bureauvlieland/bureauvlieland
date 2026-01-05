@@ -314,7 +314,7 @@ BUREAUKOSTEN: 15% van netto bedrag (minimaal €350)
   } catch (error) {
     console.error('Error in quote-chat:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Er is een fout opgetreden bij het verwerken van je verzoek. Probeer het later opnieuw.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

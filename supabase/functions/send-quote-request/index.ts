@@ -34,8 +34,9 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Mailjet API error: ${error}`);
+    const errorText = await response.text();
+    console.error("Mailjet API error:", errorText);
+    throw new Error("EMAIL_SERVICE_ERROR");
   }
 
   return await response.json();
@@ -141,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-quote-request function:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to send emails" }),
+      JSON.stringify({ error: "Er kon geen email worden verstuurd. Probeer het later opnieuw of neem direct contact met ons op." }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
