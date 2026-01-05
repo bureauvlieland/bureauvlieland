@@ -7,7 +7,7 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { PositioningBlock } from "@/components/PositioningBlock";
-import heroImage from "@/assets/vlieland-beach.jpg";
+import heroImage from "@/assets/wedding-ceremony-vuurtoren.jpg";
 
 const TrouwenOpVlieland = () => {
   return (
@@ -43,8 +43,11 @@ const TrouwenOpVlieland = () => {
           <div className="absolute inset-0">
             <img
               src={heroImage}
-              alt="Trouwen op het strand van Vlieland"
+              alt="Trouwceremonie bij de vuurtoren op Vlieland met uitzicht op de Noordzee"
               className="w-full h-full object-cover animate-ken-burns"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-primary/70 via-primary/50 to-primary/70" />
           </div>
