@@ -94,6 +94,7 @@ const Evenementen = () => {
                 src={vuurtorenloopImage}
                 alt="Vuurtorenloop - hardlopers op het strand van Vlieland"
                 className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
+                loading="lazy"
               />
             </div>
           </div>
@@ -109,6 +110,7 @@ const Evenementen = () => {
                 src={amuseTourImage}
                 alt="Amusetour Vlieland - culinair genieten"
                 className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
+                loading="lazy"
               />
             </div>
             <div>
@@ -225,6 +227,7 @@ const Evenementen = () => {
                 src={bockbiertochtImage}
                 alt="Bockbiertocht - gezellige biertour op Vlieland"
                 className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
+                loading="lazy"
               />
             </div>
           </div>
@@ -240,6 +243,7 @@ const Evenementen = () => {
                 src={stappenHappenImage}
                 alt="Stappen & Happen - culinaire wandelroute op Vlieland"
                 className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
+                loading="lazy"
               />
             </div>
             <div>

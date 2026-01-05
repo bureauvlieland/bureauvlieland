@@ -20,6 +20,7 @@ export const AboutErwin = () => {
                 src={erwinImage}
                 alt="Erwin Soolsma, oprichter van Bureau Vlieland op het strand van Vlieland"
                 className="w-full h-auto rounded-xl shadow-medium object-cover aspect-[3/4]"
+                loading="lazy"
               />
             </div>
             <div className="md:col-span-2 bg-accent-soft rounded-xl border border-border p-8">
