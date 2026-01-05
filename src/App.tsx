@@ -21,6 +21,13 @@ const queryClient = new QueryClient();
 
 import Offerte from "./pages/Offerte";
 import BedrijfsuitjeVlieland from "./pages/BedrijfsuitjeVlieland";
+import TeamuitjeVlieland from "./pages/TeamuitjeVlieland";
+import MeerdaagsBedrijfsuitjeVlieland from "./pages/MeerdaagsBedrijfsuitjeVlieland";
+import HeisessieVlieland from "./pages/HeisessieVlieland";
+import BedrijfsuitjeIdeeenVlieland from "./pages/BedrijfsuitjeIdeeenVlieland";
+import IncentiveReisVlieland from "./pages/IncentiveReisVlieland";
+import ZakelijkEvenementVlieland from "./pages/ZakelijkEvenementVlieland";
+import TrouwenOpVlieland from "./pages/TrouwenOpVlieland";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -43,6 +50,13 @@ const App = () => (
           <Route path="/offerte" element={<Offerte />} />
           <Route path="/algemene-voorwaarden" element={<Terms />} />
           <Route path="/bedrijfsuitje-vlieland" element={<BedrijfsuitjeVlieland />} />
+          <Route path="/teamuitje-vlieland" element={<TeamuitjeVlieland />} />
+          <Route path="/meerdaags-bedrijfsuitje-vlieland" element={<MeerdaagsBedrijfsuitjeVlieland />} />
+          <Route path="/heisessie-vlieland" element={<HeisessieVlieland />} />
+          <Route path="/bedrijfsuitje-ideeen-vlieland" element={<BedrijfsuitjeIdeeenVlieland />} />
+          <Route path="/incentive-reis-vlieland" element={<IncentiveReisVlieland />} />
+          <Route path="/zakelijk-evenement-vlieland" element={<ZakelijkEvenementVlieland />} />
+          <Route path="/trouwen-op-vlieland" element={<TrouwenOpVlieland />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
