@@ -7,7 +7,7 @@ import { WeddingContactForm } from "@/components/WeddingContactForm";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, ExternalLink, Package, Sparkles, Heart, Users } from "lucide-react";
-import heroImage from "@/assets/wedding-ceremony-vuurtoren.jpg";
+import heroImage from "@/assets/wedding-outdoor-dinner.jpg";
 import karlaImage from "@/assets/karla-profile.jpg";
 import reneeImage from "@/assets/renee-profile.jpg";
 import beachCoupleImage from "@/assets/wedding-beach-couple.jpg";
@@ -20,12 +20,17 @@ const TrouwenOpVlieland = () => {
   return (
     <>
       <Helmet>
-        <title>Trouwen op Vlieland – verhuur, faciliteiten en weddingplanning</title>
+        <title>Trouwen op Vlieland | Verhuur & Weddingplanning op het Waddeneiland</title>
         <meta 
           name="description" 
-          content="Trouwen op Vlieland? Bureau Vlieland verzorgt verhuur en faciliteiten. Voor volledige weddingplanning werken wij samen met Karla en Renee." 
+          content="Trouwen op Vlieland? Bureau Vlieland verzorgt verhuur van tenten, stoelen en decoratie. Volledige weddingplanning via Karla en Renee." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/trouwen-op-vlieland" />
+        <meta property="og:title" content="Trouwen op Vlieland | Bureau Vlieland" />
+        <meta property="og:description" content="Jullie droombruiloft op het mooiste Waddeneiland. Verhuur, faciliteiten en professionele weddingplanning." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://bureauvlieland.nl/trouwen-op-vlieland" />
+        <meta name="keywords" content="trouwen Vlieland, bruiloft Waddeneiland, weddingplanner Vlieland, trouwlocatie strand, huwelijk eiland" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Trouwen op Vlieland"
@@ -50,7 +55,7 @@ const TrouwenOpVlieland = () => {
           <div className="absolute inset-0">
             <img
               src={heroImage}
-              alt="Trouwceremonie bij de vuurtoren op Vlieland met uitzicht op de Noordzee"
+              alt="Gezellig bruiloftsdiner buiten op Vlieland met sfeerlichtjes en gasten aan lange tafels"
               className="w-full h-full object-cover animate-ken-burns"
               loading="eager"
               decoding="sync"
