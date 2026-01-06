@@ -5,7 +5,7 @@ export const AboutErwin = () => {
     <section id="over-erwin" className="py-16 sm:py-20 lg:py-24 bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-4">
             Over Erwin Soolsma en Bureau Vlieland
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-3xl leading-relaxed mb-8">

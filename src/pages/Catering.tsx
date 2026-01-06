@@ -74,7 +74,7 @@ const Catering = () => {
           </div>
 
           <div className="relative z-10 text-center text-primary-foreground px-4">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+            <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">
               Catering op Vlieland
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
@@ -94,7 +94,7 @@ const Catering = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                 Culinair genieten tijdens je evenement
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
@@ -114,7 +114,7 @@ const Catering = () => {
         {/* Catering Options */}
         <section id="opties" className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-12 text-foreground">
               Catering Mogelijkheden
             </h2>
             <div className="grid md:grid-cols-2 gap-8">
@@ -145,7 +145,7 @@ const Catering = () => {
         {/* Photo Gallery Section */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-12 text-foreground">
               Catering Impressies
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -198,7 +198,7 @@ const Catering = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+                <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                   Strand BBQ Experience
                 </h2>
                 <p className="text-lg text-muted-foreground mb-6">
@@ -241,7 +241,7 @@ const Catering = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                 Op maat gemaakt voor jouw groep
               </h2>
               <p className="text-lg text-muted-foreground mb-8">

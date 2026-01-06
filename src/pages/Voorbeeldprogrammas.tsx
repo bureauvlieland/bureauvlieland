@@ -179,7 +179,7 @@ const Voorbeeldprogrammas = () => {
           </div>
 
           <div className="relative z-10 text-center text-primary-foreground px-4 max-w-5xl">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6">
+            <h1 className="text-5xl md:text-7xl font-display font-bold mb-6">
               Stel je Ideale Programma Samen
             </h1>
             <p className="text-xl md:text-2xl mb-8">
@@ -195,7 +195,7 @@ const Voorbeeldprogrammas = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
             <div className="text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                 Maatwerk Programma's op Vlieland
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
@@ -214,7 +214,7 @@ const Voorbeeldprogrammas = () => {
         {/* Program Modules */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-foreground">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-4 text-foreground">
               Kies uit Onze Programmamodules
             </h2>
             <p className="text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
@@ -278,7 +278,7 @@ const Voorbeeldprogrammas = () => {
         {/* What We Arrange */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-center mb-12 text-foreground">
               Dit Regelen Wij Voor Jullie
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -333,7 +333,7 @@ const Voorbeeldprogrammas = () => {
         {/* Image Gallery */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center text-foreground">
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-12 text-center text-foreground">
               Impressie van Teamuitjes op Vlieland
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

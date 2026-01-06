@@ -11,7 +11,7 @@ export const ForWho = () => {
         <div className="absolute top-10 left-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
           <div className="mb-12">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-4">
               Voor wie wij werken
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-3xl leading-relaxed">
@@ -95,7 +95,7 @@ export const ForWho = () => {
                 </div>
                 <span className="text-sm font-medium text-primary uppercase tracking-wide">Doelgroep</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-6">
                 Bedrijven & teams
               </h2>
               <p className="text-muted-foreground mb-6 leading-relaxed">
@@ -204,7 +204,7 @@ export const ForWho = () => {
                 </div>
                 <span className="text-sm font-medium text-primary uppercase tracking-wide">Doelgroep</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-6">
                 Management & directie
               </h2>
               <p className="text-muted-foreground mb-6 leading-relaxed">
@@ -258,7 +258,7 @@ export const ForWho = () => {
                 </div>
                 <span className="text-sm font-medium text-primary uppercase tracking-wide">Doelgroep</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-6">
                 Organisaties & instellingen
               </h2>
               <p className="text-muted-foreground mb-6 leading-relaxed">
