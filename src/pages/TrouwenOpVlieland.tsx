@@ -3,12 +3,18 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { WeddingContactForm } from "@/components/WeddingContactForm";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink, Mail } from "lucide-react";
+import { ArrowRight, ExternalLink, Mail, Heart, Utensils, Camera } from "lucide-react";
 import heroImage from "@/assets/wedding-ceremony-vuurtoren.jpg";
 import karlaImage from "@/assets/karla-profile.jpg";
 import reneeImage from "@/assets/renee-profile.jpg";
+import beachCoupleImage from "@/assets/wedding-beach-couple.jpg";
+import forestArchImage from "@/assets/wedding-forest-arch.jpg";
+import ceremonyOceanImage from "@/assets/wedding-ceremony-ocean.jpg";
+import dinnerTableImage from "@/assets/wedding-dinner-table.jpg";
+import ceremonySetupImage from "@/assets/wedding-ceremony-setup.jpg";
 
 const TrouwenOpVlieland = () => {
   return (
@@ -64,9 +70,63 @@ const TrouwenOpVlieland = () => {
           </div>
         </section>
 
-        {/* Weddingplanners sectie - Karla & Renee */}
+        {/* Inspiratie fotogalerij */}
         <section className="py-16 md:py-24 bg-background">
           <div className="container mx-auto px-4">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4 text-center">
+                Jullie droombruiloft op Vlieland
+              </h2>
+              <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+                Van intieme ceremonies in het bos tot feestelijke dinners onder de sterren – 
+                Vlieland biedt de perfecte setting voor jullie bijzondere dag.
+              </p>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="col-span-2 md:col-span-1 aspect-[4/3] overflow-hidden rounded-2xl">
+                  <img 
+                    src={ceremonyOceanImage} 
+                    alt="Ceremonie met uitzicht op zee" 
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="aspect-[4/3] overflow-hidden rounded-2xl">
+                  <img 
+                    src={forestArchImage} 
+                    alt="Bruidsprieel in het bos" 
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="aspect-[4/3] overflow-hidden rounded-2xl">
+                  <img 
+                    src={dinnerTableImage} 
+                    alt="Prachtig gedekte dinertafel" 
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-2 aspect-[21/9] overflow-hidden rounded-2xl">
+                  <img 
+                    src={ceremonySetupImage} 
+                    alt="Ceremonie setup in de duinen" 
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="aspect-[4/3] overflow-hidden rounded-2xl">
+                  <img 
+                    src={beachCoupleImage} 
+                    alt="Bruidspaar op het strand" 
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Weddingplanners sectie - Karla & Renee */}
+        <section className="py-16 md:py-24 bg-primary/5 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+          <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6 text-center">
                 Weddingplanning op Vlieland
@@ -78,15 +138,15 @@ const TrouwenOpVlieland = () => {
               
               <div className="grid md:grid-cols-2 gap-8">
                 {/* Karla */}
-                <div className="bg-muted/30 rounded-2xl p-6 text-center">
-                  <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden">
+                <div className="bg-background rounded-2xl p-8 text-center shadow-lg border border-border/50">
+                  <div className="w-36 h-36 mx-auto mb-6 rounded-full overflow-hidden ring-4 ring-primary/20">
                     <img 
                       src={karlaImage} 
                       alt="Karla - Weddingplanner Vlieland" 
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <h3 className="text-xl font-display font-bold text-foreground mb-2">Karla</h3>
+                  <h3 className="text-2xl font-display font-bold text-foreground mb-2">Karla</h3>
                   <p className="text-muted-foreground mb-4">Weddingplanner</p>
                   <a 
                     href="mailto:karla@bureauvlieland.nl" 
@@ -98,15 +158,15 @@ const TrouwenOpVlieland = () => {
                 </div>
 
                 {/* Renee */}
-                <div className="bg-muted/30 rounded-2xl p-6 text-center">
-                  <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden">
+                <div className="bg-background rounded-2xl p-8 text-center shadow-lg border border-border/50">
+                  <div className="w-36 h-36 mx-auto mb-6 rounded-full overflow-hidden ring-4 ring-primary/20">
                     <img 
                       src={reneeImage} 
                       alt="Renee - Weddingplanner Vlieland" 
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <h3 className="text-xl font-display font-bold text-foreground mb-2">Renee</h3>
+                  <h3 className="text-2xl font-display font-bold text-foreground mb-2">Renee</h3>
                   <p className="text-muted-foreground mb-4">Weddingplanner</p>
                 </div>
               </div>
@@ -114,101 +174,89 @@ const TrouwenOpVlieland = () => {
           </div>
         </section>
 
-        {/* Inspiratie & Advies */}
-        <section className="py-16 md:py-24 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Inspiratie & advies
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Wij kennen Vlieland als geen ander. Van de mooiste trouwlocaties tot de beste 
-                momenten voor foto's: wij delen graag onze kennis van het eiland en de mogelijkheden 
-                voor jullie bruiloft. Neem gerust contact op voor advies en inspiratie.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Faciliteiten & Verhuur */}
+        {/* Wat wij bieden - 3 kolommen */}
         <section className="py-16 md:py-24 bg-background">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Faciliteiten & verhuur
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-12 text-center">
+                Hoe wij helpen
               </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                Alles wat je nodig hebt voor een bruiloft op Vlieland huur je eenvoudig via 
-                Bureau Vlieland. Van tenten en meubilair tot decoratie en audiovisuele 
-                apparatuur – wij zorgen dat alles op locatie staat.
-              </p>
-              <Button asChild size="lg" className="gap-2">
-                <a 
-                  href="https://verhuur.bureauvlieland.nl/?categorie=bruiloft" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  Bekijk verhuurmogelijkheden
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </Button>
+              
+              <div className="grid md:grid-cols-3 gap-8">
+                {/* Inspiratie & Advies */}
+                <div className="bg-muted/30 rounded-2xl p-8 text-center border border-border/30 hover:shadow-lg transition-shadow">
+                  <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Heart className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-foreground mb-4">
+                    Inspiratie & advies
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Wij kennen Vlieland als geen ander. Van de mooiste trouwlocaties tot de beste 
+                    momenten voor foto's – wij delen graag onze kennis van het eiland.
+                  </p>
+                </div>
+
+                {/* Faciliteiten & Verhuur */}
+                <div className="bg-muted/30 rounded-2xl p-8 text-center border border-border/30 hover:shadow-lg transition-shadow">
+                  <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Utensils className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-foreground mb-4">
+                    Faciliteiten & verhuur
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-6">
+                    Alles wat je nodig hebt voor een bruiloft op Vlieland huur je eenvoudig via ons. 
+                    Van tenten en meubilair tot decoratie.
+                  </p>
+                  <Button asChild variant="outline" size="sm" className="gap-2">
+                    <a 
+                      href="https://verhuur.bureauvlieland.nl/?categorie=bruiloft" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      Bekijk verhuur
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                </div>
+
+                {/* Partners */}
+                <div className="bg-muted/30 rounded-2xl p-8 text-center border border-border/30 hover:shadow-lg transition-shadow">
+                  <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-foreground mb-4">
+                    Partners
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Voor catering, muziek en fotografie werken wij met zorgvuldig geselecteerde partners. 
+                    Jullie zijn zelf opdrachtgever.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Partners */}
-        <section className="py-16 md:py-24 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Partners
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Voor catering, muziek en fotografie werken wij samen met zorgvuldig geselecteerde 
-                partners op Vlieland. Wij brengen jullie graag in contact met de juiste partijen. 
-                Jullie zijn zelf opdrachtgever en maken direct afspraken met deze partners.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Jullie bruiloft op Vlieland?
-            </h2>
-            <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
-              Voor weddingplanning neem je contact op met Karla. Voor verhuur en advies 
-              over het eiland helpt Bureau Vlieland je graag verder.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                asChild 
-                size="lg" 
-                variant="heroPrimary"
-                className="text-lg px-8 gap-2"
-              >
-                <a href="mailto:karla@bureauvlieland.nl">
-                  <Mail className="w-5 h-5" />
-                  Mail Karla
-                </a>
-              </Button>
-              <Button 
-                asChild 
-                size="lg" 
-                variant="heroOutline"
-                className="text-lg px-8 gap-2"
-              >
-                <a 
-                  href="https://verhuur.bureauvlieland.nl/?categorie=bruiloft" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  Bekijk verhuur
-                  <ExternalLink className="w-5 h-5" />
-                </a>
-              </Button>
+        {/* Contactformulier */}
+        <section className="py-16 md:py-24 bg-muted/50 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent" />
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-2xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
+                  Neem contact op met Karla
+                </h2>
+                <p className="text-lg text-muted-foreground">
+                  Vul onderstaand formulier in en Karla neemt zo snel mogelijk contact met jullie op 
+                  om de mogelijkheden te bespreken.
+                </p>
+              </div>
+              
+              <div className="bg-background rounded-2xl p-8 md:p-10 shadow-lg border border-border/50">
+                <WeddingContactForm />
+              </div>
             </div>
           </div>
         </section>
