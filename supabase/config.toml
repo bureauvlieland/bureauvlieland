@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.quote-chat]
 verify_jwt = false
+
+[functions.send-wedding-inquiry]
+verify_jwt = false
