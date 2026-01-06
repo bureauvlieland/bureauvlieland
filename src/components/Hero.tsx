@@ -43,7 +43,7 @@ export const Hero = () => {
           <p className="text-xs sm:text-sm uppercase tracking-[0.18em] text-primary-foreground/80 mb-3 font-medium">
             Professionele evenementen op Vlieland
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-foreground mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-primary-foreground mb-6 leading-tight">
             Onvergetelijke ervaringen op het eiland
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-primary-foreground/90 mb-4 leading-relaxed max-w-2xl">

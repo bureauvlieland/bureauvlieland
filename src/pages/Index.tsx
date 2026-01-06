@@ -87,7 +87,7 @@ const Index = () => {
               <p className="text-xs sm:text-sm uppercase tracking-[0.18em] text-primary-foreground/80 mb-3 font-medium">
                 Professionele evenementen op Vlieland
               </p>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-foreground mb-6 leading-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-primary-foreground mb-6 leading-tight">
                 Onvergetelijke ervaringen op het eiland
               </h1>
               <p className="text-base sm:text-lg lg:text-xl text-primary-foreground/90 mb-4 leading-relaxed max-w-2xl">
@@ -122,7 +122,7 @@ const Index = () => {
         <section className="py-16 sm:py-20 lg:py-24 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-4">
                 Wat wij bieden
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto">
@@ -162,7 +162,7 @@ const Index = () => {
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                 Klaar voor een onvergetelijk programma?
               </h2>
               <p className="text-lg text-muted-foreground mb-8">

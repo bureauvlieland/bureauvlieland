@@ -20,7 +20,7 @@ const Contact = () => {
         <section className="relative py-16 sm:py-20 lg:py-24 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12 lg:mb-16">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold mb-6">
                 Neem Contact Op
               </h1>
               <p className="text-lg sm:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
@@ -88,7 +88,7 @@ const Contact = () => {
         <section className="py-16 sm:py-20 lg:py-24 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-8 text-center">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-8 text-center">
                 Je hebt te maken met Erwin
               </h2>
               

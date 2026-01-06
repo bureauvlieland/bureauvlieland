@@ -96,7 +96,7 @@ const Programmas = () => {
           </div>
 
           <div className="relative z-10 text-center text-white px-4">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+            <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">
               Transformatieve Programma's
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
@@ -109,7 +109,7 @@ const Programmas = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                 Transformatieve programma's met bewezen partners
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
@@ -138,7 +138,7 @@ const Programmas = () => {
               <TabsContent value="rmd">
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div>
-                    <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+                    <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                       Partner: RMD Trainingen
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
@@ -212,7 +212,7 @@ const Programmas = () => {
                     </div>
                   </div>
                   <div className="order-1 md:order-2">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+                    <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                       Partner: Mindset22
                     </h2>
                     <p className="text-lg text-muted-foreground mb-6">
@@ -256,7 +256,7 @@ const Programmas = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
                 Bureau Vlieland: Jouw Lokale Partner
               </h2>
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
@@ -287,7 +287,7 @@ const Programmas = () => {
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-center text-foreground">
                 Hoe organiseren wij dit?
               </h2>
               <Card className="p-8">
@@ -333,7 +333,7 @@ const Programmas = () => {
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center text-foreground">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-center text-foreground">
                 Breng jouw team naar een hoger niveau
               </h2>
               <p className="text-lg text-muted-foreground mb-8">

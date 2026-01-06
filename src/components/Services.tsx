@@ -44,7 +44,7 @@ export const Services = () => {
       <div className="absolute bottom-20 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
         <div className="mb-12">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-4">
             Wat wij doen voor groepen op Vlieland
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-3xl leading-relaxed">

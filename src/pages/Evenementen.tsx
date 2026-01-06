@@ -25,7 +25,7 @@ const Evenementen = () => {
       {/* Hero Section */}
       <section className="relative min-h-[40vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-accent-soft/30 to-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-20 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
+          <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground mb-6">
             Evenementen op Vlieland
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -43,7 +43,7 @@ const Evenementen = () => {
               <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
                 <span className="text-sm font-semibold text-primary">19 april 2026</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
                 Vuurtorenloop Vlieland
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
@@ -117,7 +117,7 @@ const Evenementen = () => {
               <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
                 <span className="text-sm font-semibold text-primary">26 september 2026</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
                 Amusetour Vlieland
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
@@ -175,7 +175,7 @@ const Evenementen = () => {
               <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
                 <span className="text-sm font-semibold text-primary">Herfstvakantie t/m eind december</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
                 Bockbiertocht Vlieland
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
@@ -250,7 +250,7 @@ const Evenementen = () => {
               <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
                 <span className="text-sm font-semibold text-primary">Donderdag & Zondag in de herfst</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
                 Stappen & Happen
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
@@ -307,7 +307,7 @@ const Evenementen = () => {
       {/* CTA Section */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+          <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
             Wilt u deelnemen aan een evenement?
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
