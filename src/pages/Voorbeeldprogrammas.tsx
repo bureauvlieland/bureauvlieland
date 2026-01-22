@@ -15,6 +15,7 @@ import lunchBuffet from "@/assets/lunch-buffet.jpg";
 import kiteFlying from "@/assets/kite-flying.jpg";
 import sealTour from "@/assets/seal-tour.jpg";
 import lighthouseVlieland from "@/assets/lighthouse-vlieland.jpg";
+import sunsetDinner from "@/assets/sunset-dinner.jpg";
 import { Link } from "react-router-dom";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 
@@ -82,7 +83,7 @@ const Voorbeeldprogrammas = () => {
             "Walking dinner - Culinaire route door het dorp",
             "Thema-avonden - Van oesterbar tot bierproeverij"
           ],
-          image: dunesGroup
+          image: sunsetDinner
         }
       ]
     },
