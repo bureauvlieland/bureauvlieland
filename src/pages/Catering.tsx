@@ -78,7 +78,7 @@ const Catering = () => {
               Catering op Vlieland
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
-              Heerlijke maaltijden en hapjes voor elk evenement
+              Bureau Vlieland & Zuiver Traiteur: culinaire verzorging voor elk zakelijk evenement
             </p>
             <Button 
               size="lg" 
@@ -95,17 +95,18 @@ const Catering = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Culinair genieten tijdens je evenement
+                Bureau Vlieland & Zuiver Traiteur
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
-                Bij Bureau Vlieland werken we samen met de beste lokale cateraars en 
-                restaurants om je evenement culinair tot een succes te maken. Of je nu 
-                kiest voor een eenvoudige lunch of een uitgebreid diner, wij zorgen voor 
-                de perfecte catering passend bij jouw programma.
+                Bureau Vlieland en Zuiver Traiteur slaan de handen ineen als de cateraar 
+                op Vlieland. Samen verzorgen wij de volledige culinaire beleving voor jouw 
+                zakelijke evenement — van lunch tot diner, van borrel tot BBQ op het strand.
               </p>
               <p className="text-lg text-muted-foreground">
-                Alle arrangementen kunnen worden aangepast aan specifieke dieetwensen 
-                en voorkeuren van jouw groep.
+                Met lokale kennis, verse ingrediënten en oog voor detail zorgen wij voor 
+                een culinaire ervaring die past bij de unieke sfeer van Vlieland. Of je nu 
+                kiest voor een eenvoudige lunch of een uitgebreid walking dinner, wij 
+                regelen het vanuit eigen huis.
               </p>
             </div>
           </div>
@@ -202,9 +203,10 @@ const Catering = () => {
                   Strand BBQ Experience
                 </h2>
                 <p className="text-lg text-muted-foreground mb-6">
-                  Een absolute aanrader is onze strand BBQ ervaring. Met je voeten in 
-                  het zand, het geluid van de zee op de achtergrond en een heerlijke 
-                  barbecue. Deze unieke setting maakt je teamuitje onvergetelijk.
+                  Een absolute aanrader is onze strand BBQ experience. Samen met Zuiver 
+                  Traiteur verzorgen wij een complete barbecue op het strand — met je 
+                  voeten in het zand en het geluid van de zee op de achtergrond. Deze 
+                  unieke setting maakt jouw evenement onvergetelijk.
                 </p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-start gap-3">
@@ -242,12 +244,12 @@ const Catering = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Op maat gemaakt voor jouw groep
+                Op maat samengesteld
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Elk catering arrangement kan volledig worden aangepast aan de wensen 
-                en voorkeuren van jouw groep. Neem contact met ons op voor een 
-                persoonlijk advies en offerte.
+                Elk arrangement wordt op maat samengesteld door Bureau Vlieland en 
+                Zuiver Traiteur. Van menusamenstelling tot dieetwensen: wij stemmen 
+                alles af op jouw groep.
               </p>
               <Link to="/contact">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
