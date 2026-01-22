@@ -49,8 +49,7 @@ export const Services = () => {
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-3xl leading-relaxed">
             We helpen groepen die meer nodig hebben dan een paar losse reserveringen. Samen bouwen we aan een dag of weekend
-            dat klopt: in inhoud, logistiek, beleving en rust. Of het nu gaat om een teamdag, heidag, retreat of een
-            bijzonder programma voor een familie- of vriendengroep.
+            dat klopt: in inhoud, logistiek, beleving en rust. Of het nu gaat om een teamdag, heidag, retreat of zakelijk evenement.
           </p>
         </div>
 
