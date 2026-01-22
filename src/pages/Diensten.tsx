@@ -72,7 +72,7 @@ const Diensten = () => {
                 </Button>
               </Link>
               <Link to="/voor-wie">
-                <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+                <Button size="lg" variant="heroOutline">
                   Voor wie werken wij
                 </Button>
               </Link>
