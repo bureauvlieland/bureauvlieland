@@ -314,7 +314,7 @@ const Programmas = () => {
                   </Button>
                 </Link>
                 <Link to="/bouwstenen">
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                  <Button size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white hover:text-primary">
                     Bekijk onze bouwstenen
                   </Button>
                 </Link>
