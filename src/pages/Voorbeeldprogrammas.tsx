@@ -14,6 +14,7 @@ import mindset22Outdoor from "@/assets/mindset22-outdoor.jpg";
 import lunchBuffet from "@/assets/lunch-buffet.jpg";
 import kiteFlying from "@/assets/kite-flying.jpg";
 import sealTour from "@/assets/seal-tour.jpg";
+import lighthouseVlieland from "@/assets/lighthouse-vlieland.jpg";
 import { Link } from "react-router-dom";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 
@@ -145,7 +146,7 @@ const Voorbeeldprogrammas = () => {
             "Lokale kennismaking - Verhalen van eilanders",
             "Terrasjes & uitgaan - Avondentertainment"
           ],
-          image: surfActivity
+          image: lighthouseVlieland
         }
       ]
     }
