@@ -106,18 +106,18 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link 
-                  to="/programmas" 
+                  to="/samenwerken" 
                   className="hover:text-primary transition-colors"
                 >
-                  RMD & Mindset22 Programma's
+                  Samenwerken
                 </Link>
               </li>
               <li>
                 <Link 
-                  to="/voorbeeldprogrammas" 
+                  to="/bouwstenen" 
                   className="hover:text-primary transition-colors"
                 >
-                  Voorbeeldprogramma's
+                  Bouwstenen
                 </Link>
               </li>
               <li>
@@ -125,7 +125,15 @@ export const Footer = () => {
                   to="/catering" 
                   className="hover:text-primary transition-colors"
                 >
-                  Catering Opties
+                  Catering
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/evenementen" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Evenementen
                 </Link>
               </li>
             </ul>

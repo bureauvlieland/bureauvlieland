@@ -114,12 +114,6 @@ export const Navigation = () => {
               Catering
             </Link>
             <Link
-              to="/evenementen"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Evenementen
-            </Link>
-            <Link
               to="/over-ons"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -246,13 +240,6 @@ export const Navigation = () => {
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 Catering
-              </Link>
-              <Link
-                to="/evenementen"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Evenementen
               </Link>
               <Link
                 to="/over-ons"
