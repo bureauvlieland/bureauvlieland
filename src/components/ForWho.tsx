@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Users, Briefcase, Building2, ArrowRight, Handshake } from "lucide-react";
+import { Users, Briefcase, Building2, ArrowRight, Handshake, Target, Sparkles, Shield, Compass, CheckCircle2, Info } from "lucide-react";
 
 export const ForWho = () => {
   return (
@@ -9,73 +9,87 @@ export const ForWho = () => {
       {/* Intro Section */}
       <section className="py-16 sm:py-20 lg:py-24 bg-accent-soft relative overflow-hidden">
         <div className="absolute top-10 left-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl relative z-10">
-          <div className="mb-12">
+          <div className="mb-12 text-center">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-4">
               Voor wie wij werken
             </h2>
-            <p className="text-base sm:text-lg text-muted-foreground max-w-3xl leading-relaxed">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               We werken voor groepen die begrijpen dat een goede dag of een goed weekend op Vlieland ontstaat door regie,
-              ervaring en lokale kennis. Niet voor iedereen – wel voor groepen waarbij kwaliteit centraal staat.
+              ervaring en lokale kennis. Groepen waarbij kwaliteit centraal staat.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-xl mb-3">Groepen waar wij goed bij passen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Zakelijke teams (teamdagen, heidagen, meerdaagse retreats)
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Organisaties met een duidelijk doel of thema voor hun programma
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Groepen die één regiepartij willen voor programma, regie en catering
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Programma's met een realistisch budget waarin een bureaufee logisch past
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-xl mb-3">Wat wij bewust niet doen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 mb-3">
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Losse excursies of standaard dagjes uit
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Alleen "even wat leuks regelen" zonder regierol
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Jacht op de laagste prijs zonder oog voor kwaliteit
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
-                    Massaprogramma's die niet passen bij de schaal van Vlieland
-                  </li>
-                </ul>
-                <p className="text-sm text-muted-foreground">
-                  In die gevallen is het sneller en voordeliger om rechtstreeks te boeken bij ondernemers op Vlieland.
-                  Dat adviseren we dan ook gewoon.
+          {/* Positief blok - prominent */}
+          <div className="mb-8">
+            <Card className="border-primary/20 bg-gradient-to-br from-background via-background to-primary/5 shadow-lg">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl sm:text-2xl">Dit is waar wij goed in zijn</CardTitle>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  Wij werken het beste met groepen die deze waarden delen
                 </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-background/80 border border-border/50 hover:border-primary/30 transition-colors">
+                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Zakelijke teams</h4>
+                      <p className="text-sm text-muted-foreground">Teamdagen, heidagen en meerdaagse retreats met een helder doel</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-background/80 border border-border/50 hover:border-primary/30 transition-colors">
+                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                      <Compass className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Duidelijke doelen</h4>
+                      <p className="text-sm text-muted-foreground">Organisaties met een helder thema of doel voor hun programma</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-background/80 border border-border/50 hover:border-primary/30 transition-colors">
+                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                      <Shield className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Volledige ontzorging</h4>
+                      <p className="text-sm text-muted-foreground">Eén regiepartij voor programma, begeleiding én catering</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-background/80 border border-border/50 hover:border-primary/30 transition-colors">
+                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Kwaliteitsbewust</h4>
+                      <p className="text-sm text-muted-foreground">Een realistisch budget waarin professionele regie past</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Negatief blok - compact en subtiel */}
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border border-border/30">
+            <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Goed om te weten:</span> Wij nemen bewust geen losse excursies of standaard dagjes uit aan. 
+                Voor eenvoudige arrangementen of als budget leidend is, adviseren wij rechtstreeks contact op te nemen met ondernemers op Vlieland.
+              </p>
+            </div>
           </div>
         </div>
       </section>
