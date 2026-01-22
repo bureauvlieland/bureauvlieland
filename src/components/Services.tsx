@@ -31,7 +31,7 @@ const services = [
     pill: "Lokaal netwerk",
     icon: Utensils,
     title: "Kennis van het eiland",
-    description: "Anders dan bureaus van buiten kennen wij elke horecapartner, locatie en gids persoonlijk. We weten wat werkt en kunnen snel schakelen – ook als plannen veranderen.",
+    description: "Anders dan bureaus van buiten kennen wij elke horecapartner, locatie en gids persoonlijk. We weten wat werkt en kunnen snel schakelen – ook als plannen veranderen. Of het weer omslaat.",
     items: [
       "Catering op bijzondere locaties op het eiland",
       "Lokale gidsen voor natuur en buitenactiviteiten",
