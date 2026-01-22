@@ -1,7 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Services } from "@/components/Services";
-import { PositioningBlock } from "@/components/PositioningBlock";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -14,8 +13,8 @@ const Diensten = () => {
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>Diensten - Bureau Vlieland | Bedrijfsuitjes en Events</title>
-        <meta name="description" content="Bureau Vlieland biedt maatwerkprogramma's voor bedrijfsuitjes, teamdagen en evenementen op Vlieland. Professionele regie, lokale expertise." />
+        <title>Onze diensten – Bureau Vlieland | Programma, regie & catering</title>
+        <meta name="description" content="Bureau Vlieland verzorgt complete programma's voor teams en organisaties op Vlieland: van inhoudelijke sessies tot catering en lokale begeleiding." />
         <link rel="canonical" href="https://bureauvlieland.nl/diensten" />
       </Helmet>
       <Navigation />
@@ -46,10 +45,10 @@ const Diensten = () => {
 
           <div className="relative z-10 text-center text-primary-foreground px-4">
             <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">
-              Wat wij doen
+              Onze diensten
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Maatwerkprogramma's met professionele regie op Vlieland
+              Eén partij voor programma, regie en uitvoering op Vlieland
             </p>
           </div>
         </section>
@@ -57,50 +56,27 @@ const Diensten = () => {
         {/* Services Content */}
         <Services />
 
-        {/* Positioning Block */}
-        <PositioningBlock />
-
-        {/* CTA Section */}
-        <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Ontdek onze programma's
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Bekijk onze voorbeeldprogramma's of ontdek de transformatieve programma's 
-                die we organiseren samen met onze partners RMD Trainingen en Mindset22.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/bouwstenen">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Bekijk bouwstenen
-                  </Button>
-                </Link>
-                <Link to="/samenwerken">
-                  <Button size="lg" variant="outline">
-                    Over samenwerken
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA naar Contact */}
+        {/* CTA naar Offerte */}
         <section className="py-16 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-center">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Klaar om jouw evenement te plannen?
+              Benieuwd wat wij voor jullie kunnen betekenen?
             </h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
-              Neem contact op voor een vrijblijvend gesprek over de mogelijkheden
+              Vertel ons over jullie groep en wensen – wij denken graag mee over een passend programma
             </p>
-            <Link to="/contact">
-              <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                Neem contact op
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/offerte">
+                <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+                  Offerte aanvragen
+                </Button>
+              </Link>
+              <Link to="/voor-wie">
+                <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+                  Voor wie werken wij
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
       </main>
