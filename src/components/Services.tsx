@@ -21,8 +21,8 @@ const services = [
     title: "Jullie inhoud, onze uitvoering",
     description: "Hebben jullie een eigen trainer, coach of spreker? Wij ondersteunen met de lokale logistiek zodat zij zich kunnen focussen op de inhoud. Geen eigen trainer? We verbinden jullie met ervaren partners.",
     items: [
-      "Ondersteuning voor externe trainers en coaches",
-      "Samenwerking met RMD Trainingen en Mindset22",
+      "Ondersteuning voor externe trainers, coaches en sprekers",
+      "Wij regelen de logistiek, jullie focussen op de inhoud",
       "Locaties en faciliteiten afgestemd op jullie programma",
       "De ideale omgeving voor reflectie én actie",
     ],
