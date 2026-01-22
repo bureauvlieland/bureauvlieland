@@ -18,12 +18,12 @@ const services = [
   {
     pill: "Samenwerking",
     icon: Users,
-    title: "Jullie inhoud, onze uitvoering",
-    description: "Hebben jullie een eigen trainer, coach of spreker? Wij ondersteunen met de lokale logistiek zodat zij zich kunnen focussen op de inhoud. Geen eigen trainer? We verbinden jullie met ervaren partners.",
+    title: "Jullie regie, onze uitvoering",
+    description: "Werken jullie met een eigen bureau, trainer of organisator? Wij verzorgen de lokale uitvoering zodat zij zich kunnen focussen op hun rol. Naadloze samenwerking, zonder dubbel werk.",
     items: [
-      "Ondersteuning voor externe trainers, coaches en sprekers",
-      "Wij regelen de logistiek, jullie focussen op de inhoud",
-      "Locaties en faciliteiten afgestemd op jullie programma",
+      "Lokale uitvoering voor externe bureaus en organisatoren",
+      "Jullie houden de regie, wij regelen het eiland",
+      "Korte lijnen en flexibel schakelen",
       "De ideale omgeving voor reflectie én actie",
     ],
   },
