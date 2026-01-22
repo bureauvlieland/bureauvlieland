@@ -37,10 +37,6 @@ export const ForWho = () => {
                   </li>
                   <li className="text-sm text-foreground pl-4 relative">
                     <span className="absolute left-0">–</span>
-                    Familie- en vriendengroepen die kwaliteit boven "zo goedkoop mogelijk" zetten
-                  </li>
-                  <li className="text-sm text-foreground pl-4 relative">
-                    <span className="absolute left-0">–</span>
                     Groepen die één regiepartij willen voor programma, regie en catering
                   </li>
                   <li className="text-sm text-foreground pl-4 relative">

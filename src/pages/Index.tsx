@@ -22,7 +22,7 @@ const Index = () => {
     {
       icon: <Users className="h-10 w-10 text-primary" />,
       title: "Voor wie",
-      description: "Voor zakelijke teams, familie- en vriendengroepen die kwaliteit en professionele organisatie centraal stellen.",
+      description: "Voor zakelijke teams en organisaties die kwaliteit en professionele organisatie centraal stellen.",
       link: "/voor-wie",
       cta: "Lees meer"
     },
