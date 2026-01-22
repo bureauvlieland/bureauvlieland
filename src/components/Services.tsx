@@ -19,10 +19,10 @@ const services = [
     pill: "Samenwerking",
     icon: Users,
     title: "Jullie regie, onze uitvoering",
-    description: "Werken jullie met een eigen bureau, trainer of organisator? Wij verzorgen de lokale uitvoering zodat zij zich kunnen focussen op hun rol. Naadloze samenwerking, zonder dubbel werk.",
+    description: "Of je nu een bureau, trainer of organisator bent: wij verzorgen de lokale uitvoering op Vlieland. Jullie houden de regie over het programma, wij regelen alles op het eiland.",
     items: [
-      "Lokale uitvoering voor externe bureaus en organisatoren",
-      "Jullie houden de regie, wij regelen het eiland",
+      "Lokale partner voor bureaus en organisatoren",
+      "White-label uitvoering onder jullie vlag",
       "Korte lijnen en flexibel schakelen",
       "De ideale omgeving voor reflectie én actie",
     ],
