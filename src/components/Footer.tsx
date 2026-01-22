@@ -136,6 +136,22 @@ export const Footer = () => {
                   Evenementen
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/over-ons" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Over ons
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/contact" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Contact
+                </Link>
+              </li>
             </ul>
 
             <h4 className="font-semibold text-foreground mb-4 mt-6">Onze Horeca</h4>

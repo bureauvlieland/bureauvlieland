@@ -4,6 +4,7 @@ import { Services } from "@/components/Services";
 import { PositioningBlock } from "@/components/PositioningBlock";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import eventImage from "@/assets/districon-vlieland-22.jpg";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 
@@ -12,6 +13,11 @@ const Diensten = () => {
   
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>Diensten - Bureau Vlieland | Bedrijfsuitjes en Events</title>
+        <meta name="description" content="Bureau Vlieland biedt maatwerkprogramma's voor bedrijfsuitjes, teamdagen en evenementen op Vlieland. Professionele regie, lokale expertise." />
+        <link rel="canonical" href="https://bureauvlieland.nl/diensten" />
+      </Helmet>
       <Navigation />
       <main id="main-content">
         {/* Hero Section */}
@@ -66,14 +72,14 @@ const Diensten = () => {
                 die we organiseren samen met onze partners RMD Trainingen en Mindset22.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/voorbeeldprogrammas">
+                <Link to="/bouwstenen">
                   <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Voorbeeldprogramma's
+                    Bekijk bouwstenen
                   </Button>
                 </Link>
-                <Link to="/programmas">
+                <Link to="/samenwerken">
                   <Button size="lg" variant="outline">
-                    Transformatieve Programma's
+                    Over samenwerken
                   </Button>
                 </Link>
               </div>
