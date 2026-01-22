@@ -139,7 +139,7 @@ export const QuoteChatAssistant = ({ onUseForQuote }: QuoteChatAssistantProps) =
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 rounded-full h-14 w-14 shadow-lg"
+        className="fixed bottom-8 right-8 rounded-full h-14 w-14 shadow-lg z-50"
         size="icon"
       >
         <MessageCircle className="h-6 w-6" />
@@ -148,7 +148,7 @@ export const QuoteChatAssistant = ({ onUseForQuote }: QuoteChatAssistantProps) =
   }
 
   return (
-    <Card className="fixed bottom-8 right-8 w-96 h-[600px] flex flex-col shadow-2xl">
+    <Card className="fixed bottom-8 right-8 w-96 h-[600px] flex flex-col shadow-2xl z-50">
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-primary" />
