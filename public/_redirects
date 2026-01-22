@@ -1,29 +1,32 @@
 # 301 Redirects voor oude website URLs naar nieuwe website
-# Alle oude URLs redirecten naar de homepage met relevante anchors
+# Alle oude URLs redirecten naar de nieuwe URLs
 
 /contact/                                    /#contact                301
-/voorbeeldprogrammas/                        /#wat-wij-doen           301
-/duurzame-zakenevents/                       /#wat-wij-doen           301
-/bedrijfsuitje-naar-vlieland-2/              /#voor-wie               301
-/incentive-op-vlieland-2/                    /#voor-wie               301
-/vergaderen-op-vlieland-2/                   /#voor-wie               301
-/teambuilding-op-vlieland/                   /#voor-wie               301
-/trouwen-op-vlieland/                        /#voor-wie               301
-/activiteiten/                               /#wat-wij-doen           301
+/voorbeeldprogrammas/                        /bouwstenen              301
+/voorbeeldprogrammas                         /bouwstenen              301
+/programmas/                                 /samenwerken             301
+/programmas                                  /samenwerken             301
+/duurzame-zakenevents/                       /samenwerken             301
+/bedrijfsuitje-naar-vlieland-2/              /bedrijfsuitje-vlieland  301
+/incentive-op-vlieland-2/                    /incentive-reis-vlieland 301
+/vergaderen-op-vlieland-2/                   /heisessie-vlieland      301
+/teambuilding-op-vlieland/                   /teamuitje-vlieland      301
+/trouwen-op-vlieland/                        /trouwen-op-vlieland     301
+/activiteiten/                               /bouwstenen              301
 /schoolreis-naar-vlieland/                   /#voor-wie               301
-/catering-op-vlieland/                       /#wat-wij-doen           301
-/culinaire-ontdekkingen/                     /#wat-wij-doen           301
-/overnachten/                                /#wat-wij-doen           301
+/catering-op-vlieland/                       /catering                301
+/culinaire-ontdekkingen/                     /bouwstenen              301
+/overnachten/                                /bouwstenen              301
 /team/                                       /#over-erwin             301
 /klanten-aan-het-woord/                      /#testimonials           301
-/offerteformulier/                           /#contact                301
+/offerteformulier/                           /offerte                 301
 /algemene-voorwaarden/                       /algemene-voorwaarden    301
 
 # Activiteiten redirects
-/activiteiten-op-vlieland/*                  /#wat-wij-doen           301
+/activiteiten-op-vlieland/*                  /bouwstenen              301
 
 # Product pages redirects
-/product/*                                   /#wat-wij-doen           301
+/product/*                                   /bouwstenen              301
 
 # Catch-all: redirect any other old URL to homepage
 /*                                           /                        200

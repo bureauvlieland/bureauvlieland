@@ -34,12 +34,7 @@ export const Navigation = () => {
     { label: "Bedrijven & teams", href: "/voor-wie#bedrijven" },
     { label: "Management & directie", href: "/voor-wie#management" },
     { label: "Organisaties & instellingen", href: "/voor-wie#organisaties" },
-  ];
-
-  const programmaItems = [
-    { label: "Overzicht programma's", href: "/programmas", isOverview: true },
-    { label: "Transformatieve programma's", href: "/programmas" },
-    { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
+    { label: "Evenementenbureaus & trainers", href: "/voor-wie#partners" },
   ];
 
   return (
@@ -96,21 +91,21 @@ export const Navigation = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Programma's Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-                Programma's <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-card border-border">
-                {programmaItems.map((item) => (
-                  <DropdownMenuItem key={item.href + item.label} asChild className={item.isOverview ? 'border-b border-border mb-1' : ''}>
-                    <Link to={item.href} className={`cursor-pointer ${item.isOverview ? 'text-muted-foreground text-sm' : ''}`}>
-                      {item.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Samenwerken - direct link */}
+            <Link
+              to="/samenwerken"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Samenwerken
+            </Link>
+
+            {/* Bouwstenen - direct link */}
+            <Link
+              to="/bouwstenen"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Bouwstenen
+            </Link>
 
             <Link
               to="/catering"
@@ -227,30 +222,23 @@ export const Navigation = () => {
                 )}
               </div>
 
-              {/* Programma's Dropdown Mobile */}
-              <div className="px-4">
-                <button
-                  onClick={() => toggleMobileDropdown('programmas')}
-                  className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span>Programma's</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'programmas' ? 'rotate-180' : ''}`} />
-                </button>
-                {openMobileDropdown === 'programmas' && (
-                  <div className="pl-4 pb-2 space-y-1">
-                    {programmaItems.map((item) => (
-                      <Link
-                        key={item.href + item.label}
-                        to={item.href}
-                        onClick={() => setIsMenuOpen(false)}
-                        className={`block py-2 text-sm transition-colors ${item.isOverview ? 'text-muted-foreground border-b border-border pb-3 mb-2' : 'text-muted-foreground hover:text-foreground'}`}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Samenwerken - direct link Mobile */}
+              <Link
+                to="/samenwerken"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Samenwerken
+              </Link>
+
+              {/* Bouwstenen - direct link Mobile */}
+              <Link
+                to="/bouwstenen"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Bouwstenen
+              </Link>
 
               <Link
                 to="/catering"

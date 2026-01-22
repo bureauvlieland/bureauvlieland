@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Compass, Utensils, Users, Sparkles, Ship, Bike, UtensilsCrossed, Sun } from "lucide-react";
+import { Helmet } from "react-helmet";
 import teamBeach from "@/assets/beach-signs.jpg";
 import beachActivity from "@/assets/beach-activity.jpg";
 import speedboat from "@/assets/speedboat.jpg";
@@ -152,6 +153,17 @@ const Voorbeeldprogrammas = () => {
 
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>Bouwstenen voor jouw programma | Bureau Vlieland</title>
+        <meta 
+          name="description" 
+          content="Stel jouw ideale programma samen uit onze bouwstenen: activiteiten, catering, teamontwikkeling en ontspanning op Vlieland." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/bouwstenen" />
+        <meta property="og:title" content="Bouwstenen voor jouw programma | Bureau Vlieland" />
+        <meta property="og:description" content="Stel jouw ideale programma samen uit onze bouwstenen: activiteiten, catering, teamontwikkeling en ontspanning op Vlieland." />
+        <meta property="og:url" content="https://bureauvlieland.nl/bouwstenen" />
+      </Helmet>
       <Navigation />
       <main>
         {/* Hero Section */}
@@ -180,10 +192,10 @@ const Voorbeeldprogrammas = () => {
 
           <div className="relative z-10 text-center text-primary-foreground px-4 max-w-5xl">
             <h1 className="text-5xl md:text-7xl font-display font-bold mb-6">
-              Stel je Ideale Programma Samen
+              Bouwstenen voor jouw programma
             </h1>
             <p className="text-xl md:text-2xl mb-8">
-              Kies uit verschillende modules en creëer het perfecte teamuitje voor jouw groep
+              Kies uit verschillende modules en creëer het perfecte programma voor jouw groep
             </p>
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-3xl mx-auto">
               Wij verzorgen alles - van transfers en accommodatie tot activiteiten en catering
@@ -196,16 +208,16 @@ const Voorbeeldprogrammas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
             <div className="text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Maatwerk Programma's op Vlieland
+                Maatwerk uit modulaire bouwstenen
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                Elk teamuitje is uniek. Daarom bieden wij geen standaard pakketten, maar werken wij met 
-                flexibele <strong>programmamodules</strong> die je kunt combineren naar wens. Kies wat bij jouw team past 
+                Elk programma is uniek. Daarom bieden wij geen standaard pakketten, maar werken wij met 
+                flexibele <strong>bouwstenen</strong> die je kunt combineren naar wens. Kies wat bij jouw groep past 
                 en wij regelen de rest.
               </p>
               <p className="text-lg text-muted-foreground">
                 <strong>Complete ontzorging:</strong> Transfers, accommodatie, fietsen, activiteiten, catering - 
-                alles uit één hand. Jullie hoeven alleen maar te genieten en te focussen op het team.
+                alles uit één hand. Jullie hoeven alleen maar te genieten en te focussen op het doel.
               </p>
             </div>
           </div>
@@ -445,11 +457,11 @@ const Voorbeeldprogrammas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Laten We Samen Jouw Ideale Programma Creëren
+                Laten we samen jouw ideale programma creëren
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Vertel ons over je team, doelen en wensen. Wij stellen een programma samen dat 
-                perfect bij jullie past - met de juiste mix van activiteit, ontspanning en teamontwikkeling.
+                Vertel ons over je groep, doelen en wensen. Wij stellen een programma samen dat 
+                perfect bij jullie past - met de juiste mix van activiteit, ontspanning en inhoud.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Link to="/contact">
@@ -457,9 +469,9 @@ const Voorbeeldprogrammas = () => {
                     Vraag een offerte op maat aan
                   </Button>
                 </Link>
-                <Link to="/programmas">
+                <Link to="/samenwerken">
                   <Button size="lg" variant="outline">
-                    Bekijk RMD & Mindset22
+                    Bekijk samenwerkingsmogelijkheden
                   </Button>
                 </Link>
               </div>

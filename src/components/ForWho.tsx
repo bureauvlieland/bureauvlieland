@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Users, Briefcase, Building2, ArrowRight } from "lucide-react";
+import { Users, Briefcase, Building2, ArrowRight, Handshake } from "lucide-react";
 
 export const ForWho = () => {
   return (
@@ -321,6 +321,89 @@ export const ForWho = () => {
                   </p>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Evenementenbureaus & Trainers Section */}
+      <section id="partners" className="py-16 sm:py-20 lg:py-24 bg-accent-soft scroll-mt-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="order-2 lg:order-1 space-y-4">
+              <Card className="border-border">
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold text-foreground mb-2">Lokale logistiek</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Accommodatiebeheer, reserveringen, transport op het eiland, 
+                    fietsen en materiaalverhuur – wij regelen het.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-border">
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold text-foreground mb-2">Catering & horeca</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Van ontbijt tot diner, van strandborrel tot walking dinner. 
+                    Onze cateringpartners kennen het eiland en leveren kwaliteit.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-border">
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold text-foreground mb-2">White-label uitvoering</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Jullie naam, onze handen. Wij werken op de achtergrond 
+                    zodat jullie relatie met de klant centraal blijft.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Handshake className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-sm font-medium text-primary uppercase tracking-wide">Samenwerking</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-6">
+                Evenementenbureaus & trainers
+              </h2>
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                Wil je als evenementenbureau, trainer of coach jouw klanten of deelnemers naar 
+                Vlieland brengen? Bureau Vlieland is je betrouwbare lokale partner. Wij leveren 
+                de kennis, logistiek en uitvoering – jullie de inhoud en de klant.
+              </p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-3">
+                  <ArrowRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Lokale kennis van locaties, leveranciers en mogelijkheden</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <ArrowRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Coördinatie en begeleiding op de dag zelf</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <ArrowRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Geen overhead van eigen kantoor op het eiland nodig</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <ArrowRight className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Flexibele samenwerking: per project of structureel</span>
+                </li>
+              </ul>
+              <div className="flex flex-wrap gap-4">
+                <Link to="/samenwerken">
+                  <Button>
+                    Ontdek samenwerking
+                  </Button>
+                </Link>
+                <Link to="/contact">
+                  <Button variant="outline">
+                    Neem contact op
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
