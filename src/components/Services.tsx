@@ -6,37 +6,37 @@ const services = [
   {
     pill: "Programma & regie",
     icon: Calendar,
-    title: "Complete programma's met één regisseur",
-    description: "Wij ontwerpen jullie programma van A tot Z en houden op de dag zelf de regie. Zo loopt alles soepel en kunnen jullie je focussen op de inhoud.",
+    title: "Eén aanspreekpunt, volledig ontzorgd",
+    description: "Waar activiteitenaanbieders losse onderdelen leveren, regelen wij het complete plaatje. Van planning tot uitvoering – jullie hebben één contactpersoon die alles coördineert.",
     items: [
-      { text: "Eendaagse en meerdaagse programma's op maat", highlight: true },
-      { text: "Heldere draaiboeken voor iedereen betrokken", highlight: false },
-      { text: "Afstemming met locaties, activiteiten en vervoer", highlight: false },
-      { text: "Professionele begeleiding op de dag zelf", highlight: true },
+      "Eendaagse en meerdaagse programma's op maat",
+      "Coördinatie van alle betrokken partijen op het eiland",
+      "Professionele begeleiding op de dag zelf",
+      "Flexibel schakelen bij veranderend weer of wensen",
     ],
   },
   {
-    pill: "Inhoud & ontwikkeling",
+    pill: "Samenwerking",
     icon: Users,
-    title: "Trainingen en teamontwikkeling",
-    description: "Voor inhoudelijke programma's werken we samen met ervaren trainers. Zo combineren we de unieke setting van Vlieland met professionele leer- en ontwikkeltrajecten.",
+    title: "Jullie inhoud, onze uitvoering",
+    description: "Hebben jullie een eigen trainer, coach of spreker? Wij ondersteunen met de lokale logistiek zodat zij zich kunnen focussen op de inhoud. Geen eigen trainer? We verbinden jullie met ervaren partners.",
     items: [
-      { text: "Leiderschaps- en teamtrainingen met RMD Trainingen", highlight: true },
-      { text: "Mindset- en talentprogramma's met Mindset22", highlight: true },
-      { text: "Koppeling tussen inhoud en programma-opbouw", highlight: false },
-      { text: "Een omgeving die uitnodigt tot reflectie én actie", highlight: false },
+      "Ondersteuning voor externe trainers en coaches",
+      "Samenwerking met RMD Trainingen en Mindset22",
+      "Locaties en faciliteiten afgestemd op jullie programma",
+      "De ideale omgeving voor reflectie én actie",
     ],
   },
   {
-    pill: "Catering & begeleiding",
+    pill: "Lokaal netwerk",
     icon: Utensils,
-    title: "Lokale partners, goede plekken",
-    description: "Met ons netwerk van horecapartners en eilandgidsen zorgen we dat eten, locaties en activiteiten naadloos in het programma passen.",
+    title: "Kennis van het eiland",
+    description: "Anders dan bureaus van buiten kennen wij elke horecapartner, locatie en gids persoonlijk. We weten wat werkt en kunnen snel schakelen – ook als plannen veranderen.",
     items: [
-      { text: "Catering op bijzondere locaties op het eiland", highlight: true },
-      { text: "Lokale gidsen voor natuur en buitenactiviteiten", highlight: false },
-      { text: "Flexibel inspelen op weer en groepsdynamiek", highlight: false },
-      { text: "Altijd afgestemd op seizoen en capaciteit", highlight: false },
+      "Catering op bijzondere locaties op het eiland",
+      "Lokale gidsen voor natuur en buitenactiviteiten",
+      "Directe lijnen met alle eilandpartners",
+      "Altijd afgestemd op seizoen en capaciteit",
     ],
   },
 ];
@@ -78,9 +78,9 @@ export const Services = () => {
                   <ul className="space-y-3">
                     {service.items.map((item, idx) => (
                       <li key={idx} className="flex items-start gap-3">
-                        <CheckCircle2 className={`h-5 w-5 flex-shrink-0 mt-0.5 ${item.highlight ? 'text-primary' : 'text-muted-foreground/50'}`} />
-                        <span className={`text-sm ${item.highlight ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                          {item.text}
+                        <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5 text-primary" />
+                        <span className="text-sm text-foreground">
+                          {item}
                         </span>
                       </li>
                     ))}
