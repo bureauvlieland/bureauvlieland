@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import { Testimonials } from "@/components/Testimonials";
 import { Helmet } from "react-helmet";
 import heroImage from "@/assets/hero-vlieland.jpg";
-import { Calendar, Users, Utensils, Target } from "lucide-react";
+import { Handshake, Users, Utensils, Target } from "lucide-react";
 
 const Index = () => {
   const services = [
@@ -27,11 +27,11 @@ const Index = () => {
       cta: "Lees meer"
     },
     {
-      icon: <Calendar className="h-10 w-10 text-primary" />,
-      title: "Programma's",
-      description: "Transformatieve programma's met onze partners RMD Trainingen en Mindset22 voor teamontwikkeling en persoonlijk leiderschap.",
-      link: "/programmas",
-      cta: "Bekijk programma's"
+      icon: <Handshake className="h-10 w-10 text-primary" />,
+      title: "Samenwerking",
+      description: "Lokale partner voor evenementenbureaus, trainers en coaches. Wij verzorgen logistiek, catering en coördinatie op Vlieland.",
+      link: "/samenwerken",
+      cta: "Bekijk samenwerking"
     },
     {
       icon: <Utensils className="h-10 w-10 text-primary" />,

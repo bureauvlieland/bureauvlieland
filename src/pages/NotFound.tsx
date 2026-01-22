@@ -10,18 +10,21 @@ const getRedirectDestination = (pathname: string): string | null => {
   if (path === '/offerteformulier') return '/#contact';
   
   // Voorbeeldprogrammas & diensten
-  if (path === '/voorbeeldprogrammas') return '/#wat-wij-doen';
-  if (path === '/duurzame-zakenevents') return '/#wat-wij-doen';
-  if (path === '/activiteiten') return '/#wat-wij-doen';
-  if (path === '/catering-op-vlieland') return '/#wat-wij-doen';
-  if (path === '/culinaire-ontdekkingen') return '/#wat-wij-doen';
-  if (path === '/overnachten') return '/#wat-wij-doen';
+  if (path === '/voorbeeldprogrammas') return '/bouwstenen';
+  if (path === '/duurzame-zakenevents') return '/samenwerken';
+  if (path === '/activiteiten') return '/bouwstenen';
+  if (path === '/catering-op-vlieland') return '/catering';
+  if (path === '/culinaire-ontdekkingen') return '/bouwstenen';
+  if (path === '/overnachten') return '/bouwstenen';
+  
+  // Oude programmas URL redirect
+  if (path === '/programmas') return '/samenwerken';
   
   // Activiteiten wildcard
-  if (path.startsWith('/activiteiten-op-vlieland')) return '/#wat-wij-doen';
+  if (path.startsWith('/activiteiten-op-vlieland')) return '/bouwstenen';
   
   // Product pages wildcard
-  if (path.startsWith('/product')) return '/#wat-wij-doen';
+  if (path.startsWith('/product')) return '/bouwstenen';
   
   // Voor wie pages - redirect oude URLs naar nieuwe landingspagina's
   if (path === '/bedrijfsuitje-naar-vlieland-2') return '/bedrijfsuitje-vlieland';

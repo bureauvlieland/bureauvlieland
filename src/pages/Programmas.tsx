@@ -1,9 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Target, Users, Brain, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, Handshake, MapPin, Users, Utensils, Truck, Package, UserCheck } from "lucide-react";
 import { Helmet } from "react-helmet";
 import rmdBeachTraining from "@/assets/rmd-beach-training.jpg";
 import mindset22Indoor from "@/assets/mindset22-indoor.jpg";
@@ -15,59 +14,75 @@ import { useKenBurns } from "@/hooks/use-ken-burns";
 const Programmas = () => {
   const kenBurns = useKenBurns();
   
-  const rmdResults = [
-    "Verhoogd zelfbewustzijn en persoonlijk leiderschap",
-    "Verbeterde samenwerking en teamdynamiek",
-    "Doelgerichter en pragmatischer werken",
-    "Meer plezier en betrokkenheid in werk en resultaat"
+  const partnerServices = [
+    {
+      icon: <MapPin className="h-8 w-8 text-primary" />,
+      title: "Lokale kennis",
+      description: "Wij kennen alle locaties, leveranciers en mogelijkheden op Vlieland. Van vergaderruimtes tot strandlocaties."
+    },
+    {
+      icon: <Truck className="h-8 w-8 text-primary" />,
+      title: "Logistiek & transport",
+      description: "Transfers, fietsen, busjes en materiaalvervoer. Alles geregeld zonder dat jullie je zorgen hoeven te maken."
+    },
+    {
+      icon: <Utensils className="h-8 w-8 text-primary" />,
+      title: "Catering",
+      description: "Van ontbijt tot diner, van strandborrel tot walking dinner. Onze cateringpartners leveren topkwaliteit."
+    },
+    {
+      icon: <Package className="h-8 w-8 text-primary" />,
+      title: "Materiaal & faciliteiten",
+      description: "Tenten, meubilair, AV-apparatuur, flipovers – alles wat jullie nodig hebben voor een geslaagd programma."
+    },
+    {
+      icon: <UserCheck className="h-8 w-8 text-primary" />,
+      title: "Begeleiding",
+      description: "Lokale gidsen en coördinatie op de dag zelf. Wij zijn de ogen en handen op het eiland."
+    },
+    {
+      icon: <Handshake className="h-8 w-8 text-primary" />,
+      title: "White-label",
+      description: "Jullie naam, onze handen. Wij werken op de achtergrond zodat jullie relatie met de klant centraal blijft."
+    }
   ];
 
-  const mindsetFeatures = [
-    "Bewustwording van vaste sets van gewoontes en overtuigingen (meestal onbewust)",
-    "Ontwikkelen van positieve, op groei gerichte denkpatronen en gedragingen",
-    "Mogelijk maken van een groeimindset",
-    "Inzicht in open versus gesloten mindset",
-    "Ondersteuning voor individuen én groepen",
-    "Begeleiding door professionals met ervaring in Defensie en topsport (voetbal op hoog niveau)"
+  const partnerBenefits = [
+    "Geen overhead van een eigen kantoor op Vlieland",
+    "Toegang tot ons netwerk van betrouwbare leveranciers",
+    "Flexibele samenwerking: per project of structureel",
+    "Transparante prijsopbouw voor doorberekening",
+    "Snelle respons en korte lijnen",
+    "Ervaring met groepen van 10 tot 150 personen"
   ];
 
-  const mindsetValues = ["SAMENWERKING", "VERTROUWEN", "MOED"];
-
-  const combinedBenefits = [
+  const targetGroups = [
     {
-      icon: <Target className="h-8 w-8 text-primary" />,
-      title: "Vlieland als Unieke Setting",
-      description: "Bureau Vlieland combineert beide programma's op het inspirerende waddeneiland, waar rust en ruimte zorgen voor maximale focus."
+      title: "Evenementenbureaus",
+      description: "Je hebt een klant die naar Vlieland wil, maar geen lokale kennis. Wij zijn je verlengstuk op het eiland."
     },
     {
-      icon: <Users className="h-8 w-8 text-primary" />,
-      title: "Lokale Expertise",
-      description: "Als lokale partner organiseren wij de perfecte mix van trainingen, accommodatie en eilandactiviteiten voor jouw team."
+      title: "Trainers & coaches",
+      description: "Jij levert de inhoud, wij de setting. Focus op je training terwijl wij alles eromheen regelen."
     },
     {
-      icon: <Brain className="h-8 w-8 text-primary" />,
-      title: "Ervaring + Mindset",
-      description: "RMD's ervaringsgerichte aanpak gecombineerd met Mindset22's focus op groeimentaliteit zorgt voor duurzame verandering."
-    },
-    {
-      icon: <TrendingUp className="h-8 w-8 text-primary" />,
-      title: "Maatwerk Programma's",
-      description: "Van eendaagse workshops tot meerdaagse intensieve trajecten, volledig afgestemd op jouw organisatie en doelen."
+      title: "Incentive-bureaus",
+      description: "Een bijzondere beloning voor een team? Wij maken van Vlieland een onvergetelijke ervaring."
     }
   ];
 
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>Transformatieve Programma's – Bureau Vlieland | RMD & Mindset22</title>
+        <title>Samenwerken met Bureau Vlieland | Lokale Partner op Vlieland</title>
         <meta 
           name="description" 
-          content="Teamontwikkeling en persoonlijk leiderschap op Vlieland. In samenwerking met RMD Trainingen en Mindset22 bieden wij transformatieve programma's." 
+          content="Lokale partner voor evenementenbureaus, trainers en coaches op Vlieland. Wij verzorgen logistiek, catering en coördinatie. Jullie de inhoud, wij de uitvoering." 
         />
-        <link rel="canonical" href="https://bureauvlieland.nl/programmas" />
-        <meta property="og:title" content="Transformatieve Programma's – Bureau Vlieland" />
-        <meta property="og:description" content="Teamontwikkeling en persoonlijk leiderschap op Vlieland met RMD Trainingen en Mindset22." />
-        <meta property="og:url" content="https://bureauvlieland.nl/programmas" />
+        <link rel="canonical" href="https://bureauvlieland.nl/samenwerken" />
+        <meta property="og:title" content="Samenwerken met Bureau Vlieland | Lokale Partner" />
+        <meta property="og:description" content="Lokale partner voor evenementenbureaus, trainers en coaches op Vlieland. Logistiek, catering en coördinatie uit één hand." />
+        <meta property="og:url" content="https://bureauvlieland.nl/samenwerken" />
       </Helmet>
       <Navigation />
       <main id="main-content">
@@ -96,11 +111,12 @@ const Programmas = () => {
           </div>
 
           <div className="relative z-10 text-center text-white px-4">
+            <p className="text-sm uppercase tracking-widest mb-4 text-white/80">Voor professionals</p>
             <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">
-              Transformatieve Programma's
+              Samenwerken met Bureau Vlieland
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-8">
-              In samenwerking met onze partners RMD Trainingen en Mindset22
+              Lokale partner voor evenementenbureaus, trainers en coaches
             </p>
           </div>
         </section>
@@ -110,172 +126,43 @@ const Programmas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Transformatieve programma's met bewezen partners
+                Jullie de inhoud, wij de uitvoering
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
-                Bureau Vlieland werkt samen met twee gerenommeerde partners die al jarenlang expertise leveren 
-                op het gebied van teamontwikkeling en persoonlijk leiderschap. <strong>RMD Trainingen</strong> biedt 
-                sinds 1999 ervaringsgerichte programma's voor leiderschaps- en teamtrainingen, terwijl <strong>Mindset22</strong> 
-                individuen en groepen helpt hun talenten te benutten door positieve, op groei gerichte denkpatronen te ontwikkelen.
+                Bureau Vlieland werkt samen met professionals die hun klanten of deelnemers naar 
+                Vlieland willen brengen. Als lokale partner leveren wij de kennis, logistiek en 
+                uitvoering op het eiland – zodat jullie je kunnen focussen op wat jullie het beste doen.
               </p>
               <p className="text-lg text-muted-foreground">
-                De unieke setting van Vlieland versterkt de impact van beide programma's. Bureau Vlieland zorgt 
-                voor de lokale organisatie en combineert trainingen met de rust en inspiratie van het eiland.
+                Of het nu gaat om een eenmalig project of een structurele samenwerking: wij zijn 
+                jullie betrouwbare verlengstuk op Vlieland.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Programs Tabs */}
+        {/* Partner Services */}
         <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <Tabs defaultValue="rmd" className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12">
-                <TabsTrigger value="rmd" className="text-base">RMD Programma</TabsTrigger>
-                <TabsTrigger value="mindset" className="text-base">Mindset 22</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="rmd">
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                      Partner: RMD Trainingen
-                    </h2>
-                    <p className="text-lg text-muted-foreground mb-6">
-                      Onze partner <strong>RMD Trainingen</strong>, onder leiding van Richard Melvin Dijkstra, 
-                      biedt sinds 1999 ervaringsgerichte programma's voor persoonlijke ontwikkeling, leiderschap en 
-                      teamontwikkeling. Door gebruik te maken van krachtige metaforen en unieke outdoor locaties ontstaan 
-                      veilige situaties waarin deelnemers gespiegeld worden en tot nieuwe inzichten komen.
-                    </p>
-                    
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">De Aanpak</h3>
-                    <p className="text-lg text-muted-foreground mb-6">
-                      RMD werkt met ervaringsgerichte methodes zoals krijgskunsten (Aikido, Jiu Jitsu), dieren als 
-                      spiegel, outdoor activiteiten en mindfulness. Deze aanpak zorgt voor bewustwording op fysiek, 
-                      mentaal, emotioneel en spiritueel vlak.
-                    </p>
-
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">Resultaat op Vlieland</h3>
-                    <p className="text-lg text-muted-foreground mb-4">
-                      De combinatie van RMD's ervaringsgerichte trainingen met de inspirerende setting van Vlieland 
-                      zorgt voor duurzame verandering:
-                    </p>
-                    <ul className="space-y-3 mb-6">
-                      {rmdResults.map((result, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{result}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <p className="text-lg text-muted-foreground italic">
-                      Bureau Vlieland regelt de organisatie, accommodatie en zorgt dat het eiland optimaal bijdraagt 
-                      aan jullie ontwikkeling.
-                    </p>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
-                      <img 
-                        src={rmdOutdoorActivity} 
-                        alt="RMD outdoor teamtraining activiteit" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
-                      <img 
-                        src={vlielandBeachGolf} 
-                        alt="Training activiteit op het strand van Vlieland" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="mindset">
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div className="order-2 md:order-1 space-y-4">
-                    <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
-                      <img 
-                        src={mindset22Indoor} 
-                        alt="Mindset22 indoor training sessie" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
-                      <img 
-                        src={rmdBeachTraining} 
-                        alt="Teamtraining op het strand van Vlieland" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className="order-1 md:order-2">
-                    <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                      Partner: Mindset22
-                    </h2>
-                    <p className="text-lg text-muted-foreground mb-6">
-                      Hetgeen een mens doet wordt bepaald door de 'mindset' - een vaste set van 
-                      gewoontes en overtuigingen, meestal onbewust. De manier waarop de mindset 
-                      (open danwel gesloten) is ontwikkeld, bepaalt het handelen. Het goede èn het slechte handelen.
-                    </p>
-                    <p className="text-lg text-muted-foreground mb-6">
-                      Simon Brilstra (1976) en Richard Leegte (1970) hebben een individueel als mede een 
-                      gezamenlijk verleden binnen Defensie en de civiele maatschappij. Daarnaast delen ze veel 
-                      ervaringen op sportief vlak (voetbal op hoog niveau). Bij Mindset22 vind je de juiste 
-                      begeleiding van professionals die weten wat het is om doelen fysiek en mentaal te bereiken.
-                    </p>
-
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">Kernwaarden</h3>
-                    <div className="flex gap-3 mb-6">
-                      {mindsetValues.map((value, idx) => (
-                        <div key={idx} className="px-4 py-2 bg-primary/10 rounded-lg">
-                          <span className="font-semibold text-primary">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <h3 className="font-semibold text-xl mb-4 text-foreground">Wat levert het op?</h3>
-                    <ul className="space-y-3">
-                      {mindsetFeatures.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
-
-        {/* Combined Benefits */}
-        <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Bureau Vlieland: Jouw Lokale Partner
+                Wat wij voor partners betekenen
               </h2>
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Als lokale specialist op Vlieland verbinden wij de expertise van RMD Trainingen en Mindset22 
-                met de unieke kracht van het eiland. We zorgen voor de perfecte setting waarin deze krachtige 
-                programma's tot hun recht komen: van accommodatie en catering tot unieke eilandactiviteiten.
+                Van accommodatie tot catering, van transport tot begeleiding – wij ontzorgen volledig
               </p>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {combinedBenefits.map((benefit, index) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {partnerServices.map((service, index) => (
                 <Card key={index} className="text-center p-6 hover:shadow-lg transition-shadow">
                   <div className="flex justify-center mb-4">
-                    {benefit.icon}
+                    {service.icon}
                   </div>
                   <h3 className="font-semibold text-xl mb-3 text-foreground">
-                    {benefit.title}
+                    {service.title}
                   </h3>
                   <p className="text-muted-foreground">
-                    {benefit.description}
+                    {service.description}
                   </p>
                 </Card>
               ))}
@@ -283,69 +170,155 @@ const Programmas = () => {
           </div>
         </section>
 
-        {/* Implementation */}
+        {/* Benefits */}
+        <section className="py-16 bg-background">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
+                  Voordelen van samenwerking
+                </h2>
+                <p className="text-lg text-muted-foreground mb-8">
+                  Waarom kiezen evenementenbureaus, trainers en coaches voor Bureau Vlieland als lokale partner?
+                </p>
+                <ul className="space-y-4">
+                  {partnerBenefits.map((benefit, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <span className="text-foreground">{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-4">
+                <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
+                  <img 
+                    src={rmdOutdoorActivity} 
+                    alt="Samenwerking met Bureau Vlieland" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="relative h-[230px] rounded-lg overflow-hidden shadow-lg">
+                  <img 
+                    src={vlielandBeachGolf} 
+                    alt="Activiteit op het strand van Vlieland" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Target Groups */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-center text-foreground">
-                Hoe organiseren wij dit?
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
+                Voor wie is dit interessant?
               </h2>
-              <Card className="p-8">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">1. Kennismakingsgesprek</h3>
-                    <p className="text-muted-foreground">
-                      We starten met een gesprek om jouw doelen, teamsamenstelling en wensen te bespreken. 
-                      Op basis daarvan adviseren we welk programma (RMD, Mindset22 of een combinatie) het 
-                      beste past bij jullie organisatie.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">2. Maatwerk Programma</h3>
-                    <p className="text-muted-foreground">
-                      Bureau Vlieland stelt een compleet programma samen: van accommodatie bij Hotel Zeezicht 
-                      tot activiteiten zoals de Vliehors Expres, fietstochten, en RIB-boottouren. Inclusief 
-                      catering en alle logistiek op het eiland.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">3. Uitvoering op Vlieland</h3>
-                    <p className="text-muted-foreground">
-                      De trainers van RMD en/of Mindset22 verzorgen hun programma in de unieke setting van 
-                      Vlieland. De rust en inspirerende omgeving van het eiland versterken de impact van 
-                      de trainingen.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">4. Nazorg & Follow-up</h3>
-                    <p className="text-muted-foreground">
-                      Na afloop zorgen we voor evaluatie en mogelijke follow-up sessies. Optioneel kunnen 
-                      deelnemers terugkeren naar Vlieland voor verdiepingssessies of teambuilding.
-                    </p>
-                  </div>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              {targetGroups.map((group, index) => (
+                <Card key={index} className="p-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl">{group.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-muted-foreground">{group.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Examples Section */}
+        <section className="py-16 bg-background">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
+                Voorbeelden van samenwerkingen
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                Bureau Vlieland werkt al jaren samen met trainers en coaches. Hier zijn twee voorbeelden van hoe zo'n samenwerking eruitziet.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-8">
+              <Card className="overflow-hidden">
+                <div className="relative h-[250px]">
+                  <img 
+                    src={rmdOutdoorActivity} 
+                    alt="RMD Trainingen op Vlieland" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
+                <CardHeader>
+                  <CardTitle className="text-2xl">RMD Trainingen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-4">
+                    RMD Trainingen biedt ervaringsgerichte programma's voor leiderschaps- en teamtrainingen. 
+                    Bureau Vlieland verzorgt de lokale organisatie: accommodatie, catering, transport en 
+                    eilandactiviteiten. RMD levert de inhoud, wij de setting.
+                  </p>
+                  <p className="text-sm text-muted-foreground italic">
+                    "De samenwerking met Bureau Vlieland zorgt ervoor dat wij ons volledig kunnen focussen 
+                    op de training. De logistiek is in vertrouwde handen."
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="overflow-hidden">
+                <div className="relative h-[250px]">
+                  <img 
+                    src={mindset22Indoor} 
+                    alt="Mindset22 sessie op Vlieland" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-2xl">Mindset22</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-4">
+                    Mindset22 helpt teams en individuen hun talenten te benutten door positieve, op groei 
+                    gerichte denkpatronen te ontwikkelen. Vlieland biedt de perfecte setting voor focus en 
+                    verdieping, Bureau Vlieland regelt de rest.
+                  </p>
+                  <p className="text-sm text-muted-foreground italic">
+                    "Op Vlieland is er ruimte om écht na te denken. Bureau Vlieland maakt het praktisch mogelijk."
+                  </p>
+                </CardContent>
               </Card>
             </div>
           </div>
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-background">
+        <section className="py-16 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-center text-foreground">
-                Breng jouw team naar een hoger niveau
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
+                Laten we kennismaken
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Ontdek hoe Bureau Vlieland, samen met onze partners RMD Trainingen en Mindset22, jouw team 
-                kan transformeren. Neem contact op voor een vrijblijvend gesprek over de mogelijkheden 
-                en laat je inspireren door onze voorbeeldprogramma's.
+              <p className="text-lg mb-8 text-primary-foreground/90">
+                Wil je verkennen hoe Bureau Vlieland jouw lokale partner kan zijn? 
+                Neem contact op voor een vrijblijvend gesprek over de mogelijkheden.
               </p>
-              <Link to="/contact">
-                <Button size="lg" className="bg-primary hover:bg-primary/90">
-                  Neem contact op
-                </Button>
-              </Link>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Link to="/contact">
+                  <Button size="lg" className="bg-white text-primary hover:bg-white/90">
+                    Neem contact op
+                  </Button>
+                </Link>
+                <Link to="/bouwstenen">
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                    Bekijk onze bouwstenen
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
