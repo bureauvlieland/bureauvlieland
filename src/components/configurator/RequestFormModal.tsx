@@ -10,13 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -46,7 +39,6 @@ export const RequestFormModal = ({
     email: "",
     phone: "",
     company: "",
-    numberOfDays: "1",
     notes: "",
   });
 
@@ -77,7 +69,6 @@ export const RequestFormModal = ({
         email: "",
         phone: "",
         company: "",
-        numberOfDays: "1",
         notes: "",
       });
       onClose();
@@ -121,12 +112,11 @@ export const RequestFormModal = ({
 
         {/* Process explanation */}
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Zo werkt de facturatie:</p>
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• <strong>Bureau Vlieland</strong> factureert de handling fee en catering</li>
                 <li>• <strong>Activiteiten</strong> worden apart gefactureerd door de betreffende aanbieders</li>
                 <li>• Elke aanbieder bevestigt apart – je ontvangt dus mogelijk meerdere facturen</li>
               </ul>
@@ -255,25 +245,6 @@ export const RequestFormModal = ({
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="numberOfDays">Aantal dagen</Label>
-            <Select
-              value={formData.numberOfDays}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, numberOfDays: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer aantal dagen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 dag (dagtocht)</SelectItem>
-                <SelectItem value="2">2 dagen (1 overnachting)</SelectItem>
-                <SelectItem value="3">3 dagen (2 overnachtingen)</SelectItem>
-                <SelectItem value="4+">4+ dagen</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           <div>
             <Label htmlFor="notes">Opmerkingen / Wensen</Label>
