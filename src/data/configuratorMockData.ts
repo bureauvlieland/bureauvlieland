@@ -16,6 +16,12 @@ import strandBBQ from "@/assets/outdoor-dining.jpg";
 
 export type BlockCategory = "activiteiten" | "catering" | "vervoer";
 
+// BlockType determines who invoices the customer
+// "bureau" - Bureau Vlieland invoices (own activities + Zuiver catering)
+// "partner" - Partner invoices customer directly (Bureau gets 10% commission)
+// "self_arranged" - Customer arranges and pays themselves (Doeksen, bike rental)
+export type BlockType = "bureau" | "partner" | "self_arranged";
+
 export interface BuildingBlock {
   id: string;
   name: string;
@@ -26,7 +32,8 @@ export interface BuildingBlock {
   image: string;
   provider: string;
   providerId: string;
-  externalUrl?: string;
+  blockType: BlockType;
+  externalUrl?: string; // Only shown after request is submitted
   duration?: string;
   minPeople?: number;
   maxPeople?: number;
@@ -130,6 +137,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: sealTour,
     provider: "Zeehondentochten Vlieland",
     providerId: "zeehonden",
+    blockType: "partner",
     duration: "2-3 uur",
     minPeople: 10,
     maxPeople: 40,
@@ -144,6 +152,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: speedboat,
     provider: "Vlieland Outdoor Center",
     providerId: "outdoor",
+    blockType: "partner",
     duration: "30 min",
     minPeople: 8,
     maxPeople: 24,
@@ -158,6 +167,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: dunesGroup,
     provider: "Vliehors Expres",
     providerId: "vliehors",
+    blockType: "partner",
     duration: "2 uur",
     minPeople: 15,
     maxPeople: 50,
@@ -172,6 +182,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: surfActivity,
     provider: "Vlieland Outdoor Center",
     providerId: "outdoor",
+    blockType: "partner",
     duration: "2,5 uur",
     minPeople: 6,
     maxPeople: 20,
@@ -186,6 +197,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: cyclingTeam,
     provider: "Vlieland Outdoor Center",
     providerId: "outdoor",
+    blockType: "partner",
     duration: "3 uur",
     minPeople: 8,
     maxPeople: 30,
@@ -200,6 +212,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: kiteFlying,
     provider: "Vlieland Outdoor Center",
     providerId: "outdoor",
+    blockType: "partner",
     duration: "1,5 uur",
     minPeople: 10,
     maxPeople: 40,
@@ -214,6 +227,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: silentDisco,
     provider: "Fortuna Vlieland",
     providerId: "fortuna",
+    blockType: "partner",
     duration: "2-3 uur",
     minPeople: 20,
     maxPeople: 150,
@@ -228,6 +242,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: beachActivity,
     provider: "Vlieland Outdoor Center",
     providerId: "outdoor",
+    blockType: "partner",
     duration: "2 uur",
     minPeople: 12,
     maxPeople: 60,
@@ -242,6 +257,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: lighthouseVlieland,
     provider: "Fortuna Vlieland",
     providerId: "fortuna",
+    blockType: "partner",
     duration: "1 uur",
     minPeople: 1,
     maxPeople: 25,
@@ -258,6 +274,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: strandBBQ,
     provider: "Zuiver Traiteur",
     providerId: "zuiver",
+    blockType: "bureau", // Bureau Vlieland invoices Zuiver catering
     duration: "3 uur",
     minPeople: 20,
     maxPeople: 100,
@@ -272,6 +289,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: lunchBuffet,
     provider: "Zuiver Traiteur",
     providerId: "zuiver",
+    blockType: "bureau", // Bureau Vlieland invoices Zuiver catering
     duration: "1,5 uur",
     minPeople: 15,
     maxPeople: 80,
@@ -286,6 +304,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: sunsetDinner,
     provider: "Trattoria Oliva",
     providerId: "oliva",
+    blockType: "partner",
     duration: "2,5 uur",
     minPeople: 20,
     maxPeople: 50,
@@ -300,6 +319,7 @@ export const buildingBlocks: BuildingBlock[] = [
     image: sunsetDinner,
     provider: "Café Boven",
     providerId: "cafeboven",
+    blockType: "partner",
     duration: "2 uur",
     minPeople: 15,
     maxPeople: 60,
@@ -309,27 +329,29 @@ export const buildingBlocks: BuildingBlock[] = [
   {
     id: "boot-retour",
     name: "Doeksen Boot Retour",
-    description: "Reguliere veerdienst Harlingen-Vlieland v.v. Reservering en betaling rechtstreeks bij Doeksen.",
+    description: "Reguliere veerdienst Harlingen-Vlieland v.v. Je regelt dit zelf rechtstreeks bij Doeksen.",
     category: "vervoer",
     priceIndication: "€ 24",
-    priceNote: "p.p. retour",
+    priceNote: "p.p. retour (indicatief)",
     image: speedboat,
     provider: "Rederij Doeksen",
     providerId: "doeksen",
-    externalUrl: "https://www.doeksen.nl",
+    blockType: "self_arranged",
+    externalUrl: "https://www.doeksen.nl", // Shown after request is submitted
     duration: "1,5 uur enkele reis",
   },
   {
     id: "fiets-huur",
     name: "Fietshuur",
-    description: "Standaard fiets of e-bike voor de duur van jullie verblijf. Ophalen bij de haven.",
+    description: "Standaard fiets of e-bike voor de duur van jullie verblijf. Je regelt dit zelf bij de fietsverhuurder.",
     category: "vervoer",
     priceIndication: "€ 12",
-    priceNote: "p.p. per dag",
+    priceNote: "p.p. per dag (indicatief)",
     image: cyclingTeam,
     provider: "Fietsverhuur Vlieland",
     providerId: "fietsen",
-    externalUrl: "https://www.fietsverhuurvlieland.nl",
+    blockType: "self_arranged",
+    externalUrl: "https://www.fietsverhuurvlieland.nl", // Shown after request is submitted
   },
 ];
 
@@ -372,4 +394,20 @@ export const categoryIcons: Record<BlockCategory, string> = {
   activiteiten: "Compass",
   catering: "Utensils",
   vervoer: "Ship",
+};
+
+// Block type labels for display
+export const blockTypeLabels: Record<BlockType, string> = {
+  bureau: "Gefactureerd door Bureau Vlieland",
+  partner: "Gefactureerd door aanbieder",
+  self_arranged: "Zelf te regelen",
+};
+
+// Helper function to group blocks by block type
+export const groupBlocksByType = (blocks: BuildingBlock[]) => {
+  return {
+    bureau: blocks.filter((b) => b.blockType === "bureau"),
+    partner: blocks.filter((b) => b.blockType === "partner"),
+    self_arranged: blocks.filter((b) => b.blockType === "self_arranged"),
+  };
 };
