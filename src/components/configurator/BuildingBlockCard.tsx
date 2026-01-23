@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ExternalLink, Clock, Users } from "lucide-react";
+import { Plus, Clock, Users, Info } from "lucide-react";
 import type { BuildingBlock } from "@/data/configuratorMockData";
 
 interface BuildingBlockCardProps {
@@ -10,7 +10,7 @@ interface BuildingBlockCardProps {
 }
 
 export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardProps) => {
-  const isExternal = !!block.externalUrl;
+  const isSelfArranged = block.blockType === "self_arranged";
 
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-shadow duration-300">
@@ -33,10 +33,16 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
         </div>
 
         {/* Category badge */}
-        <div className="absolute bottom-3 left-3">
+        <div className="absolute bottom-3 left-3 flex gap-2">
           <span className="bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded-full capitalize">
             {block.category}
           </span>
+          {isSelfArranged && (
+            <span className="bg-amber-500/90 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              Zelf te regelen
+            </span>
+          )}
         </div>
       </div>
 
@@ -68,31 +74,22 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
           Door: <span className="font-medium">{block.provider}</span>
         </p>
 
-        {/* Action button */}
-        {isExternal ? (
-          <a href={block.externalUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" className="w-full">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Zelf boeken
-            </Button>
-          </a>
-        ) : (
-          <Button
-            onClick={() => onAdd(block.id)}
-            variant={isInCart ? "secondary" : "default"}
-            className="w-full"
-            disabled={isInCart}
-          >
-            {isInCart ? (
-              "Toegevoegd ✓"
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Toevoegen
-              </>
-            )}
-          </Button>
-        )}
+        {/* Action button - all items can now be added to cart */}
+        <Button
+          onClick={() => onAdd(block.id)}
+          variant={isInCart ? "secondary" : "default"}
+          className="w-full"
+          disabled={isInCart}
+        >
+          {isInCart ? (
+            "Toegevoegd ✓"
+          ) : (
+            <>
+              <Plus className="h-4 w-4 mr-2" />
+              {isSelfArranged ? "Toevoegen als reminder" : "Toevoegen"}
+            </>
+          )}
+        </Button>
       </div>
     </Card>
   );

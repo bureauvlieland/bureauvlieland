@@ -20,8 +20,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { getBlockById, calculateBureauFee } from "@/data/configuratorMockData";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock } from "@/data/configuratorMockData";
+import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle } from "lucide-react";
 
 interface RequestFormModalProps {
   isOpen: boolean;
@@ -50,8 +50,9 @@ export const RequestFormModal = ({
     notes: "",
   });
 
-  const blocks = cartItems.map((id) => getBlockById(id)).filter(Boolean);
+  const blocks = cartItems.map((id) => getBlockById(id)).filter(Boolean) as BuildingBlock[];
   const bureauFee = calculateBureauFee(numberOfPeople);
+  const groupedBlocks = groupBlocksByType(blocks);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,10 +119,75 @@ export const RequestFormModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Summary */}
+        {/* Process explanation */}
+        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Zo werkt de facturatie:</p>
+              <ul className="text-blue-800 dark:text-blue-200 space-y-1">
+                <li>• <strong>Bureau Vlieland</strong> factureert de handling fee en catering</li>
+                <li>• <strong>Activiteiten</strong> worden apart gefactureerd door de betreffende aanbieders</li>
+                <li>• Elke aanbieder bevestigt apart – je ontvangt dus mogelijk meerdere facturen</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary grouped by invoice type */}
         <div className="bg-muted/50 rounded-lg p-4 mb-4">
-          <h4 className="font-medium mb-2">Samenvatting</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <h4 className="font-medium mb-3">Je aanvraag wordt verstuurd naar:</h4>
+          
+          <div className="space-y-3 text-sm">
+            {/* Bureau Vlieland */}
+            {(groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0) && (
+              <div className="flex items-start gap-2">
+                <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-medium">Bureau Vlieland factureert:</span>
+                  <ul className="text-muted-foreground mt-1">
+                    {groupedBlocks.bureau.map((block) => (
+                      <li key={block.id}>• {block.name} ({block.provider})</li>
+                    ))}
+                    <li>• Handling fee + coördinatie (€ {bureauFee})</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Partners */}
+            {groupedBlocks.partner.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Users2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-medium">Wordt aangevraagd bij aanbieders:</span>
+                  <ul className="text-muted-foreground mt-1">
+                    {groupedBlocks.partner.map((block) => (
+                      <li key={block.id}>• {block.name} → {block.provider}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Self-arranged */}
+            {groupedBlocks.self_arranged.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-medium text-amber-700 dark:text-amber-500">Zelf te regelen (links volgen in bevestigingsmail):</span>
+                  <ul className="text-muted-foreground mt-1">
+                    {groupedBlocks.self_arranged.map((block) => (
+                      <li key={block.id}>• {block.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Meta info */}
+          <div className="grid grid-cols-2 gap-2 text-sm mt-4 pt-3 border-t">
             <div>
               <span className="text-muted-foreground">Datum: </span>
               <span className="font-medium">
@@ -133,16 +199,6 @@ export const RequestFormModal = ({
             <div>
               <span className="text-muted-foreground">Aantal personen: </span>
               <span className="font-medium">{numberOfPeople}</span>
-            </div>
-            <div className="col-span-2">
-              <span className="text-muted-foreground">Geselecteerd: </span>
-              <span className="font-medium">
-                {blocks.map((b) => b?.name).join(", ")}
-              </span>
-            </div>
-            <div className="col-span-2">
-              <span className="text-muted-foreground">Bureau fee: </span>
-              <span className="font-medium">€ {bureauFee}</span>
             </div>
           </div>
         </div>
