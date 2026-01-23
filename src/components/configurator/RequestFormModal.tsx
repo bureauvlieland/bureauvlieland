@@ -14,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock } from "@/data/configuratorMockData";
-import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle } from "lucide-react";
+import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RequestFormModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const RequestFormModal = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [successBlocks, setSuccessBlocks] = useState<BuildingBlock[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -50,29 +52,49 @@ export const RequestFormModal = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call (will be replaced with actual edge function)
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    setIsSubmitting(false);
-    setIsSuccess(true);
-
-    toast({
-      title: "Aanvraag verzonden!",
-      description: "We nemen binnen 24 uur contact met je op.",
-    });
-
-    // Reset after showing success
-    setTimeout(() => {
-      setIsSuccess(false);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
-        notes: "",
+    try {
+      const { data, error } = await supabase.functions.invoke("send-program-request", {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          notes: formData.notes,
+          numberOfPeople,
+          selectedDate: selectedDate ? format(selectedDate, "d MMMM yyyy", { locale: nl }) : undefined,
+          bureauFee,
+          blocks: blocks.map((block) => ({
+            id: block.id,
+            name: block.name,
+            category: block.category,
+            provider: block.provider,
+            priceIndication: block.priceIndication,
+            priceNote: block.priceNote,
+            blockType: block.blockType,
+            externalUrl: block.externalUrl,
+          })),
+        },
       });
-      onClose();
-    }, 2000);
+
+      if (error) throw error;
+
+      setSuccessBlocks(blocks);
+      setIsSuccess(true);
+
+      toast({
+        title: "Aanvraag verzonden!",
+        description: "Check je inbox voor de bevestigingsmail.",
+      });
+    } catch (error: any) {
+      console.error("Error sending program request:", error);
+      toast({
+        title: "Er ging iets mis",
+        description: error.message || "Probeer het later opnieuw of neem direct contact met ons op.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (
@@ -84,16 +106,71 @@ export const RequestFormModal = ({
     }));
   };
 
+  const handleClose = () => {
+    if (isSuccess) {
+      setIsSuccess(false);
+      setSuccessBlocks([]);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        company: "",
+        notes: "",
+      });
+    }
+    onClose();
+  };
+
+  // Success screen with external links for self-arranged items
   if (isSuccess) {
+    const selfArrangedBlocks = successBlocks.filter((b) => b.blockType === "self_arranged");
+    
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-6 text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
             <h3 className="text-2xl font-semibold mb-2">Aanvraag verzonden!</h3>
-            <p className="text-muted-foreground">
-              We nemen binnen 24 uur contact met je op om de details te bespreken.
+            <p className="text-muted-foreground mb-4">
+              Check je inbox voor de bevestigingsmail met alle details.
             </p>
+            
+            {selfArrangedBlocks.length > 0 && (
+              <div className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4 mt-2 text-left">
+                <p className="font-medium text-amber-900 dark:text-amber-100 mb-2 flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Zelf te regelen
+                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                  Onderstaande onderdelen regel je zelf:
+                </p>
+                <ul className="space-y-2">
+                  {selfArrangedBlocks.map((block) => (
+                    <li key={block.id}>
+                      {block.externalUrl ? (
+                        <a
+                          href={block.externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          → {block.name} ({block.provider})
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          → {block.name} ({block.provider})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            <Button onClick={handleClose} className="mt-6">
+              Sluiten
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
