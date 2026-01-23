@@ -110,12 +110,13 @@ const ProgrammaSamenstellen = () => {
             <div className="bg-muted/50 border border-border rounded-lg p-4 mb-8 flex items-start gap-3">
               <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Hoe werkt het?</p>
-                <p>
-                  1. Kies bouwstenen en voeg ze toe aan je programma. 2. Vul het
-                  aantal personen en gewenste datum in. 3. Verstuur je aanvraag
-                  en wij nemen contact op om de details te bespreken.
-                </p>
+                <p className="font-medium text-foreground mb-2">Hoe werkt het?</p>
+                <ol className="space-y-1 list-decimal list-inside">
+                  <li>Kies bouwstenen en voeg ze toe aan je programma.</li>
+                  <li>Vul het aantal personen en gewenste datum in.</li>
+                  <li>Aanvragen worden door de betreffende aanbieders behandeld en bevestigd. Eventueel wordt er contact opgenomen om details te bespreken.</li>
+                  <li>U betaalt pas na bevestiging en ontvangt hiervan een factuur van de aanbieder.</li>
+                </ol>
               </div>
             </div>
 
