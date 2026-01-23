@@ -112,12 +112,13 @@ export const RequestFormModal = ({
 
         {/* Process explanation */}
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4 mb-4">
-            <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Zo werkt de facturatie:</p>
+              <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Dit is een vrijblijvende aanvraag</p>
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• <strong>Activiteiten</strong> worden apart gefactureerd door de betreffende aanbieders</li>
+                <li>• Je betaalt nu nog niets – facturatie volgt pas na bevestiging van een activiteit</li>
+                <li>• Prijzen zijn indicatief (per persoon of per activiteit, afhankelijk van de aanbieder)</li>
                 <li>• Elke aanbieder bevestigt apart – je ontvangt dus mogelijk meerdere facturen</li>
               </ul>
             </div>
