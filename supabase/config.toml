@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.send-wedding-inquiry]
 verify_jwt = false
+
+[functions.send-program-request]
+verify_jwt = false
