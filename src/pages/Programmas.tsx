@@ -6,7 +6,7 @@ import { Check, Handshake, MapPin, Users, Utensils, Truck, Package, UserCheck } 
 import { Helmet } from "react-helmet";
 import rmdBeachTraining from "@/assets/rmd-beach-training.jpg";
 import mindset22Indoor from "@/assets/mindset22-indoor.jpg";
-import rmdOutdoorActivity from "@/assets/rmd-outdoor-activity.jpg";
+import rmdBeachGroup from "@/assets/rmd-beach-group.jpg";
 import vlielandBeachGolf from "@/assets/vlieland-beach-golf.jpg";
 import { Link } from "react-router-dom";
 import { useKenBurns } from "@/hooks/use-ken-burns";
@@ -193,7 +193,7 @@ const Programmas = () => {
               <div className="space-y-4">
                 <div className="relative h-[350px] rounded-lg overflow-hidden shadow-lg">
                   <img 
-                    src={rmdOutdoorActivity} 
+                    src={rmdBeachGroup} 
                     alt="Samenwerking met Bureau Vlieland" 
                     className="w-full h-full object-cover"
                   />
@@ -248,7 +248,7 @@ const Programmas = () => {
               <Card className="overflow-hidden">
                 <div className="relative h-[250px]">
                   <img 
-                    src={rmdOutdoorActivity} 
+                    src={rmdBeachGroup} 
                     alt="RMD Trainingen op Vlieland" 
                     className="w-full h-full object-cover"
                   />
