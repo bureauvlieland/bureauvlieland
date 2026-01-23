@@ -199,9 +199,14 @@ const Voorbeeldprogrammas = () => {
             <p className="text-xl md:text-2xl mb-8">
               Kies uit verschillende modules en creëer het perfecte programma voor jouw groep
             </p>
-            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-3xl mx-auto mb-8">
               Wij verzorgen alles - van transfers en accommodatie tot activiteiten en catering
             </p>
+            <Link to="/programma-samenstellen">
+              <Button variant="heroPrimary" size="lg" className="text-lg px-8">
+                Start met samenstellen
+              </Button>
+            </Link>
           </div>
         </section>
 
