@@ -1,22 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
+import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerDashboardHeader } from "@/components/partner-portal/PartnerDashboardHeader";
 import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { StatusUpdateDialog } from "@/components/partner-portal/StatusUpdateDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, LogOut } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
 
-const PartnerDashboard = () => {
+const PartnerDashboardContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [data, setData] = useState<PartnerDashboardData | null>(null);
@@ -26,91 +25,26 @@ const PartnerDashboard = () => {
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
 
-  // Check auth and fetch dashboard data
-  useEffect(() => {
-    const checkAuthAndFetch = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/partner/login");
-        return;
-      }
-
-      // Get partner data using auth user id
-      const { data: partner, error: partnerError } = await supabase
-        .from("partners")
-        .select("*")
-        .eq("auth_user_id", session.user.id)
-        .eq("is_active", true)
-        .single();
-
-      if (partnerError || !partner) {
-        setError("Je account is niet gekoppeld aan een partner.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch dashboard data using partner token
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${partner.partner_token}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Kon dashboard niet laden");
-        }
-
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      } catch (err) {
-        console.error("Error fetching dashboard:", err);
-        setError("Er is een fout opgetreden bij het laden van je dashboard.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuthAndFetch();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        navigate("/partner/login");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "Uitgelogd",
-      description: "Je bent succesvol uitgelogd.",
-    });
-    navigate("/partner/login");
-  };
-
-  const refetchDashboard = async () => {
-    if (!data) return;
-    
+  const fetchDashboard = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    
+    if (!session) {
+      navigate("/partner/login");
+      return;
+    }
 
-    const { data: partner } = await supabase
+    const { data: partner, error: partnerError } = await supabase
       .from("partners")
-      .select("partner_token")
+      .select("*")
       .eq("auth_user_id", session.user.id)
+      .eq("is_active", true)
       .single();
 
-    if (!partner) return;
+    if (partnerError || !partner) {
+      setError("Je account is niet gekoppeld aan een partner.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -124,13 +58,27 @@ const PartnerDashboard = () => {
         }
       );
 
-      if (response.ok) {
-        const dashboardData = await response.json();
-        setData(dashboardData);
+      if (!response.ok) {
+        throw new Error("Kon dashboard niet laden");
       }
+
+      const dashboardData = await response.json();
+      setData(dashboardData);
     } catch (err) {
-      console.error("Error refetching dashboard:", err);
+      console.error("Error fetching dashboard:", err);
+      setError("Er is een fout opgetreden bij het laden van je dashboard.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [navigate]);
+
+  const refetchDashboard = async () => {
+    setIsLoading(true);
+    await fetchDashboard();
   };
 
   const updateItemStatus = async (
@@ -141,8 +89,6 @@ const PartnerDashboard = () => {
     quotedPrice?: number,
     quotedNotes?: string
   ): Promise<boolean> => {
-    if (!data) return false;
-    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return false;
 
@@ -200,8 +146,6 @@ const PartnerDashboard = () => {
     invoicedDate: string,
     notes?: string
   ): Promise<{ success: boolean; commission?: { percentage: number; amount: number } }> => {
-    if (!data) return { success: false };
-    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { success: false };
 
@@ -278,33 +222,21 @@ const PartnerDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-4 py-8 max-w-5xl">
-          <Skeleton className="h-32 w-full mb-6" />
-          <Skeleton className="h-64 w-full" />
-        </main>
-        <Footer />
+      <div className="p-6">
+        <Skeleton className="h-32 w-full mb-6" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-4 py-16 max-w-2xl text-center">
-          <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Fout</h1>
-          <p className="text-muted-foreground mb-6">
-            {error || "Er is een fout opgetreden."}
-          </p>
-          <Button onClick={handleLogout} variant="outline">
-            <LogOut className="h-4 w-4 mr-2" />
-            Uitloggen
-          </Button>
-        </main>
-        <Footer />
+      <div className="p-6 text-center py-16">
+        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Fout</h1>
+        <p className="text-muted-foreground mb-6">
+          {error || "Er is een fout opgetreden."}
+        </p>
       </div>
     );
   }
@@ -316,19 +248,13 @@ const PartnerDashboard = () => {
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Partner Dashboard | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <Navigation />
-
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+    <>
+      <div className="p-6">
         <div className="flex justify-between items-start mb-6">
           <PartnerDashboardHeader partner={data.partner} summary={data.summary} />
-          <Button onClick={handleLogout} variant="outline" size="sm">
-            <LogOut className="h-4 w-4 mr-2" />
-            Uitloggen
+          <Button onClick={refetchDashboard} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Vernieuwen
           </Button>
         </div>
 
@@ -406,7 +332,14 @@ const PartnerDashboard = () => {
               </Card>
             ) : (
               waitingItems.map((item) => (
-                <PartnerItemCard key={item.id} item={item} />
+                <PartnerItemCard
+                  key={item.id}
+                  item={item}
+                  onEditProposal={() => {
+                    setSelectedItem(item);
+                    setShowStatusDialog(true);
+                  }}
+                />
               ))
             )}
           </TabsContent>
@@ -460,9 +393,7 @@ const PartnerDashboard = () => {
             )}
           </TabsContent>
         </Tabs>
-      </main>
-
-      <Footer />
+      </div>
 
       {/* Dialogs */}
       <StatusUpdateDialog
@@ -485,7 +416,19 @@ const PartnerDashboard = () => {
         item={selectedItem}
         commissionPercentage={data.partner.commission_percentage}
       />
-    </div>
+    </>
+  );
+};
+
+const PartnerDashboard = () => {
+  return (
+    <PartnerLayout>
+      <Helmet>
+        <title>Dashboard | Partner Portal | Bureau Vlieland</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+      <PartnerDashboardContent />
+    </PartnerLayout>
   );
 };
 
