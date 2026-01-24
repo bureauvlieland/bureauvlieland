@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn, Mail, Lock } from "lucide-react";
+import { Loader2, LogIn, Mail, Lock, ArrowLeft } from "lucide-react";
 import { z } from "zod";
+import { Link } from "react-router-dom";
+import logo from "@/assets/logo.png";
 
 const loginSchema = z.object({
   email: z.string().email("Vul een geldig emailadres in"),
@@ -141,95 +141,113 @@ const PartnerLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30 flex flex-col">
       <Helmet>
         <title>Partner Login | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
-      <Navigation />
 
-      <main className="container mx-auto px-4 py-16 max-w-md">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Partner Portal</CardTitle>
-            <CardDescription>
-              Log in om je aanvragen te beheren
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Emailadres
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="partner@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
+      {/* Minimal header */}
+      <header className="border-b bg-background">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm">Terug naar website</span>
+          </Link>
+          <img src={logo} alt="Bureau Vlieland" className="h-10" />
+        </div>
+      </header>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Wachtwoord
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  className={errors.password ? "border-destructive" : ""}
-                />
-                {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password}</p>
-                )}
-              </div>
+      {/* Login form centered */}
+      <main className="flex-1 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Partner Portal</CardTitle>
+              <CardDescription>
+                Log in om je aanvragen te beheren
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Emailadres
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="partner@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className={errors.email ? "border-destructive" : ""}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <LogIn className="h-4 w-4 mr-2" />
-                )}
-                Inloggen
-              </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Wachtwoord
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className={errors.password ? "border-destructive" : ""}
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
 
-              <div className="text-center">
                 <Button
-                  type="button"
-                  variant="link"
-                  onClick={handleForgotPassword}
+                  type="submit"
+                  className="w-full"
                   disabled={isLoading}
-                  className="text-sm"
                 >
-                  Wachtwoord vergeten?
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <LogIn className="h-4 w-4 mr-2" />
+                  )}
+                  Inloggen
                 </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Heb je nog geen account? Neem contact op met Bureau Vlieland.
-        </p>
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={handleForgotPassword}
+                    disabled={isLoading}
+                    className="text-sm"
+                  >
+                    Wachtwoord vergeten?
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Heb je nog geen account? Neem contact op met Bureau Vlieland.
+          </p>
+        </div>
       </main>
 
-      <Footer />
+      {/* Minimal footer */}
+      <footer className="border-t bg-background py-4">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.
+        </div>
+      </footer>
     </div>
   );
 };
