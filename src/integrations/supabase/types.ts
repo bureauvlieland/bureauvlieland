@@ -14,6 +14,182 @@ export type Database = {
   }
   public: {
     Tables: {
+      program_request_history: {
+        Row: {
+          action: string
+          actor: string
+          actor_name: string | null
+          created_at: string
+          id: string
+          item_id: string | null
+          new_value: Json | null
+          notes: string | null
+          old_value: Json | null
+          request_id: string
+        }
+        Insert: {
+          action: string
+          actor: string
+          actor_name?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          new_value?: Json | null
+          notes?: string | null
+          old_value?: Json | null
+          request_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          actor_name?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          new_value?: Json | null
+          notes?: string | null
+          old_value?: Json | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_request_history_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_request_history_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_request_items: {
+        Row: {
+          block_category: string
+          block_id: string
+          block_name: string
+          block_type: string
+          created_at: string
+          customer_notes: string | null
+          day_index: number
+          id: string
+          preferred_time: string | null
+          price_indication: string | null
+          provider_email: string | null
+          provider_id: string
+          provider_name: string
+          request_id: string
+          status: string
+          status_note: string | null
+          status_updated_at: string | null
+          status_updated_by: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          block_category: string
+          block_id: string
+          block_name: string
+          block_type: string
+          created_at?: string
+          customer_notes?: string | null
+          day_index?: number
+          id?: string
+          preferred_time?: string | null
+          price_indication?: string | null
+          provider_email?: string | null
+          provider_id: string
+          provider_name: string
+          request_id: string
+          status?: string
+          status_note?: string | null
+          status_updated_at?: string | null
+          status_updated_by?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          block_category?: string
+          block_id?: string
+          block_name?: string
+          block_type?: string
+          created_at?: string
+          customer_notes?: string | null
+          day_index?: number
+          id?: string
+          preferred_time?: string | null
+          price_indication?: string | null
+          provider_email?: string | null
+          provider_id?: string
+          provider_name?: string
+          request_id?: string
+          status?: string
+          status_note?: string | null
+          status_updated_at?: string | null
+          status_updated_by?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_requests: {
+        Row: {
+          created_at: string
+          customer_company: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          customer_token: string
+          expires_at: string
+          general_notes: string | null
+          id: string
+          number_of_people: number
+          selected_dates: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_company?: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          customer_token: string
+          expires_at?: string
+          general_notes?: string | null
+          id?: string
+          number_of_people?: number
+          selected_dates?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          customer_token?: string
+          expires_at?: string
+          general_notes?: string | null
+          id?: string
+          number_of_people?: number
+          selected_dates?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shared_programs: {
         Row: {
           cart_items: Json

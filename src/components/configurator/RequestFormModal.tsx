@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { getBlockById, getProviderById, calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
-import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink, Clock, MessageSquare } from "lucide-react";
+import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink, Clock, MessageSquare, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { generateCustomerToken } from "@/types/programRequest";
 
 interface RequestFormModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export const RequestFormModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successBlocks, setSuccessBlocks] = useState<BuildingBlock[]>([]);
+  const [customerToken, setCustomerToken] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -62,6 +65,9 @@ export const RequestFormModal = ({
     setIsSubmitting(true);
 
     try {
+      // Generate customer token
+      const token = generateCustomerToken();
+      
       const blocksWithDetails = cartItems.map((item) => {
         const block = getBlockById(item.blockId);
         const provider = getProviderById(block?.providerId || "");
@@ -78,14 +84,67 @@ export const RequestFormModal = ({
           externalUrl: block?.externalUrl,
           preferredTime: item.preferredTime,
           itemNotes: item.notes,
+          dayIndex: item.dayIndex ?? 0,
         };
       });
 
       // Format dates for the request
       const effectiveDates = selectedDates.length > 0 ? selectedDates : (selectedDate ? [selectedDate] : []);
       const formattedDates = effectiveDates.map(d => format(d, "d MMMM yyyy", { locale: nl }));
+      const isoDates = effectiveDates.map(d => d.toISOString().split('T')[0]);
       
-      const { data, error } = await supabase.functions.invoke("send-program-request", {
+      // Create program request in database
+      const { data: requestData, error: insertError } = await supabase
+        .from("program_requests")
+        .insert({
+          customer_token: token,
+          customer_name: formData.name,
+          customer_email: formData.email,
+          customer_phone: formData.phone,
+          customer_company: formData.company || null,
+          number_of_people: numberOfPeople,
+          selected_dates: isoDates,
+          general_notes: formData.notes || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Create program request items
+      const itemsToInsert = blocksWithDetails.map((block) => ({
+        request_id: requestData.id,
+        block_id: block.id,
+        block_name: block.name,
+        block_category: block.category,
+        provider_name: block.provider,
+        provider_id: block.providerId,
+        provider_email: block.providerEmail || null,
+        block_type: block.blockType,
+        price_indication: block.priceIndication || null,
+        day_index: block.dayIndex,
+        preferred_time: block.preferredTime || null,
+        customer_notes: block.itemNotes || null,
+        status: "pending",
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("program_request_items")
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      // Log creation in history
+      await supabase.from("program_request_history").insert({
+        request_id: requestData.id,
+        action: "created",
+        actor: "customer",
+        actor_name: formData.name,
+        new_value: { items_count: blocksWithDetails.length },
+      });
+
+      // Send emails via edge function
+      const { error } = await supabase.functions.invoke("send-program-request", {
         body: {
           name: formData.name,
           email: formData.email,
@@ -98,12 +157,14 @@ export const RequestFormModal = ({
           numberOfDays: effectiveDates.length,
           bureauFee,
           blocks: blocksWithDetails,
+          customerToken: token,
         },
       });
 
       if (error) throw error;
 
       setSuccessBlocks(blocks);
+      setCustomerToken(token);
       setIsSuccess(true);
 
       toast({
@@ -135,6 +196,7 @@ export const RequestFormModal = ({
     if (isSuccess) {
       setIsSuccess(false);
       setSuccessBlocks([]);
+      setCustomerToken(null);
       setFormData({
         name: "",
         email: "",
@@ -183,8 +245,27 @@ export const RequestFormModal = ({
               Check je inbox voor de bevestigingsmail met alle details.
             </p>
             
+            {/* Customer portal link */}
+            {customerToken && (
+              <div className="w-full bg-primary/10 border border-primary/20 rounded-lg p-4 mt-2 text-left">
+                <p className="font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  Volg je aanvraag
+                </p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Bekijk de status van je activiteiten en voer eventuele wijzigingen door:
+                </p>
+                <Link to={`/mijn-programma/${customerToken}`} onClick={handleClose}>
+                  <Button className="w-full">
+                    Bekijk je programma
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            )}
+            
             {selfArrangedBlocks.length > 0 && (
-              <div className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4 mt-2 text-left">
+              <div className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4 mt-4 text-left">
                 <p className="font-medium text-amber-900 dark:text-amber-100 mb-2 flex items-center gap-2">
                   <ExternalLink className="h-4 w-4" />
                   Zelf te regelen
@@ -216,7 +297,7 @@ export const RequestFormModal = ({
               </div>
             )}
             
-            <Button onClick={handleClose} className="mt-6">
+            <Button onClick={handleClose} variant="outline" className="mt-6">
               Sluiten
             </Button>
           </div>
