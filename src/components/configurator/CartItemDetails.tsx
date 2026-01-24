@@ -50,8 +50,8 @@ export const CartItemDetails = ({
       <div className="flex items-center gap-2">
         <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
         <Select
-          value={item.preferredTime || ""}
-          onValueChange={(value) => onUpdate({ preferredTime: value || null })}
+          value={item.preferredTime || "flexibel"}
+          onValueChange={(value) => onUpdate({ preferredTime: value === "flexibel" ? null : value })}
         >
           <SelectTrigger className="h-8 text-xs flex-1">
             <SelectValue placeholder="Gewenste tijd" />
