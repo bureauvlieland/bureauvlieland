@@ -34,6 +34,10 @@ import PartnerLogin from "./pages/PartnerLogin";
 import PartnerDashboard from "./pages/PartnerDashboard";
 import PartnerSettings from "./pages/PartnerSettings";
 import PartnerResetPassword from "./pages/PartnerResetPassword";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCRM from "./pages/admin/AdminCRM";
+import AdminRequests from "./pages/admin/AdminRequests";
+import AdminPartners from "./pages/admin/AdminPartners";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +78,11 @@ const App = () => (
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
             <Route path="/partner/instellingen" element={<PartnerSettings />} />
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
+            {/* Admin routes */}
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/crm" element={<AdminCRM />} />
+            <Route path="/admin/aanvragen" element={<AdminRequests />} />
+            <Route path="/admin/partners" element={<AdminPartners />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
