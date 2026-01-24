@@ -1,257 +1,88 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { usePartnerDashboard } from "@/hooks/usePartnerDashboard";
-import { PartnerDashboardHeader } from "@/components/partner-portal/PartnerDashboardHeader";
-import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
-import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
-import { StatusUpdateDialog } from "@/components/partner-portal/StatusUpdateDialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
-import type { PartnerItem } from "@/types/partner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Info } from "lucide-react";
+import { Link } from "react-router-dom";
+import logo from "@/assets/logo.png";
 
+/**
+ * This component handles the deprecated token-based partner access.
+ * It redirects partners to the new login-based system.
+ */
 const PartnerPortal = () => {
+  const navigate = useNavigate();
   const { token } = useParams<{ token: string }>();
-  const { data, isLoading, error, updateItemStatus, registerInvoice } = usePartnerDashboard(token || "");
 
-  const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
-  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  // Auto-redirect after a few seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      navigate("/partner/login");
+    }, 5000);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-4 py-8 max-w-5xl">
-          <Skeleton className="h-32 w-full mb-6" />
-          <Skeleton className="h-64 w-full" />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="container mx-auto px-4 py-16 max-w-2xl text-center">
-          <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Partner portal niet gevonden</h1>
-          <p className="text-muted-foreground">
-            {error || "De opgegeven link is ongeldig of verlopen."}
-          </p>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  const pendingItems = data.items.filter((i) => i.status === "pending");
-  const waitingItems = data.items.filter((i) => i.status === "alternative");
-  const confirmedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
-  const processedItems = data.items.filter((i) => ["unavailable", "cancelled"].includes(i.status));
-  const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
-
-  const handleStatusUpdate = async (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => {
-    if (!selectedItem) return;
-    const success = await updateItemStatus(selectedItem.id, status, note, undefined, quotedPrice, quotedNotes);
-    if (success) {
-      setShowStatusDialog(false);
-      setSelectedItem(null);
-    }
-  };
-
-  const handleInvoiceRegister = async (
-    amount: number,
-    invoiceNumber: string,
-    date: string,
-    notes?: string
-  ) => {
-    if (!selectedItem) return { success: false };
-    const result = await registerInvoice(selectedItem.id, amount, invoiceNumber, date, notes);
-    if (result.success) {
-      setShowInvoiceDialog(false);
-      setSelectedItem(null);
-    }
-    return result;
-  };
+    return () => clearTimeout(timer);
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30 flex flex-col">
       <Helmet>
         <title>Partner Portal | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
-      <Navigation />
 
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <PartnerDashboardHeader partner={data.partner} summary={data.summary} />
+      {/* Minimal header */}
+      <header className="border-b bg-background">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-center">
+          <img src={logo} alt="Bureau Vlieland" className="h-10" />
+        </div>
+      </header>
 
-        <Tabs defaultValue="pending" className="mt-8">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="pending" className="relative">
-              Te bevestigen
-              {pendingItems.length > 0 && (
-                <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                  {pendingItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="waiting">
-              Wacht op klant
-              {waitingItems.length > 0 && (
-                <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {waitingItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="confirmed">
-              Bevestigd
-              {confirmedItems.length > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {confirmedItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="processed">
-              Afgehandeld
-              {processedItems.length > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {processedItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="invoiced">
-              Gefactureerd
-              {invoicedItems.length > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {invoicedItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+      {/* Redirect message centered */}
+      <main className="flex-1 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Info className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Toegang gewijzigd</CardTitle>
+              <CardDescription>
+                De Partner Portal werkt nu met een beveiligde login
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Voor extra veiligheid hebben we de toegang tot de Partner Portal aangepast. 
+                Je kunt nu inloggen met je emailadres en wachtwoord.
+              </p>
+              
+              <p className="text-sm text-muted-foreground text-center">
+                Je wordt automatisch doorgestuurd naar de login pagina...
+              </p>
 
-          <TabsContent value="pending" className="mt-6 space-y-4">
-            {pendingItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen activiteiten om te bevestigen.
-                </CardContent>
-              </Card>
-            ) : (
-              pendingItems.map((item) => (
-                <PartnerItemCard
-                  key={item.id}
-                  item={item}
-                  onConfirm={() => {
-                    setSelectedItem(item);
-                    setShowStatusDialog(true);
-                  }}
-                />
-              ))
-            )}
-          </TabsContent>
+              <Button
+                className="w-full"
+                onClick={() => navigate("/partner/login")}
+              >
+                Naar login pagina
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
 
-          <TabsContent value="waiting" className="mt-6 space-y-4">
-            {waitingItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen alternatieve voorstellen die wachten op klantreactie.
-                </CardContent>
-              </Card>
-            ) : (
-              waitingItems.map((item) => (
-                <PartnerItemCard
-                  key={item.id}
-                  item={item}
-                  onEditProposal={() => {
-                    setSelectedItem(item);
-                    setShowStatusDialog(true);
-                  }}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="confirmed" className="mt-6 space-y-4">
-            {confirmedItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen bevestigde activiteiten die nog gefactureerd moeten worden.
-                </CardContent>
-              </Card>
-            ) : (
-              confirmedItems.map((item) => (
-                <PartnerItemCard
-                  key={item.id}
-                  item={item}
-                  onRegisterInvoice={() => {
-                    setSelectedItem(item);
-                    setShowInvoiceDialog(true);
-                  }}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="processed" className="mt-6 space-y-4">
-            {processedItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen niet-beschikbare of geannuleerde activiteiten.
-                </CardContent>
-              </Card>
-            ) : (
-              processedItems.map((item) => (
-                <PartnerItemCard key={item.id} item={item} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="invoiced" className="mt-6 space-y-4">
-            {invoicedItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nog geen gefactureerde activiteiten.
-                </CardContent>
-              </Card>
-            ) : (
-              invoicedItems.map((item) => (
-                <PartnerItemCard key={item.id} item={item} showInvoiceDetails />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+              <p className="text-xs text-muted-foreground text-center">
+                Heb je nog geen inloggegevens ontvangen? Neem contact op met Bureau Vlieland.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
-      <Footer />
-
-      {/* Dialogs */}
-      <StatusUpdateDialog
-        isOpen={showStatusDialog}
-        onClose={() => {
-          setShowStatusDialog(false);
-          setSelectedItem(null);
-        }}
-        onSubmit={handleStatusUpdate}
-        item={selectedItem}
-      />
-
-      <InvoiceRegistrationDialog
-        isOpen={showInvoiceDialog}
-        onClose={() => {
-          setShowInvoiceDialog(false);
-          setSelectedItem(null);
-        }}
-        onSubmit={handleInvoiceRegister}
-        item={selectedItem}
-        commissionPercentage={data.partner.commission_percentage}
-      />
+      {/* Minimal footer */}
+      <footer className="border-t bg-background py-4">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.
+        </div>
+      </footer>
     </div>
   );
 };
