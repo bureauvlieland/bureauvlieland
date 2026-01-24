@@ -127,6 +127,26 @@ export const PartnerItemCard = ({
           </div>
         )}
 
+        {/* Alternative proposal / Status note */}
+        {item.status_note && (item.status === "alternative" || item.status === "unavailable") && (
+          <div className={`rounded-lg p-3 text-sm ${
+            item.status === "alternative" 
+              ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900" 
+              : "bg-muted/50 border border-muted"
+          }`}>
+            <p className={`font-medium mb-1 ${
+              item.status === "alternative" 
+                ? "text-amber-800 dark:text-amber-300" 
+                : "text-muted-foreground"
+            }`}>
+              {item.status === "alternative" ? "Jouw voorstel:" : "Reden:"}
+            </p>
+            <p className={item.status === "alternative" ? "text-amber-700 dark:text-amber-400" : ""}>
+              {item.status_note}
+            </p>
+          </div>
+        )}
+
         {/* Customer notes */}
         {item.customer_notes && (
           <div className="bg-muted/30 rounded-lg p-3 text-sm">

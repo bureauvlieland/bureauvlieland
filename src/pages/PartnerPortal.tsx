@@ -52,8 +52,9 @@ const PartnerPortal = () => {
   }
 
   const pendingItems = data.items.filter((i) => i.status === "pending");
+  const waitingItems = data.items.filter((i) => i.status === "alternative");
   const confirmedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
-  const processedItems = data.items.filter((i) => ["alternative", "unavailable", "cancelled"].includes(i.status));
+  const processedItems = data.items.filter((i) => ["unavailable", "cancelled"].includes(i.status));
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
 
   const handleStatusUpdate = async (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => {
@@ -92,12 +93,20 @@ const PartnerPortal = () => {
         <PartnerDashboardHeader partner={data.partner} summary={data.summary} />
 
         <Tabs defaultValue="pending" className="mt-8">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="pending" className="relative">
               Te bevestigen
               {pendingItems.length > 0 && (
                 <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                   {pendingItems.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="waiting">
+              Wacht op klant
+              {waitingItems.length > 0 && (
+                <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {waitingItems.length}
                 </span>
               )}
             </TabsTrigger>
@@ -148,6 +157,20 @@ const PartnerPortal = () => {
             )}
           </TabsContent>
 
+          <TabsContent value="waiting" className="mt-6 space-y-4">
+            {waitingItems.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Geen alternatieve voorstellen die wachten op klantreactie.
+                </CardContent>
+              </Card>
+            ) : (
+              waitingItems.map((item) => (
+                <PartnerItemCard key={item.id} item={item} />
+              ))
+            )}
+          </TabsContent>
+
           <TabsContent value="confirmed" className="mt-6 space-y-4">
             {confirmedItems.length === 0 ? (
               <Card>
@@ -173,7 +196,7 @@ const PartnerPortal = () => {
             {processedItems.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen afgehandelde aanvragen.
+                  Geen niet-beschikbare of geannuleerde activiteiten.
                 </CardContent>
               </Card>
             ) : (
