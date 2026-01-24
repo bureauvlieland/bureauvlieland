@@ -5,7 +5,7 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useKenBurns } from "@/hooks/use-ken-burns";
-import { buildingBlocks, type BlockCategory } from "@/data/configuratorMockData";
+import { buildingBlocks, type BlockCategory, type CartItemDetail } from "@/data/configuratorMockData";
 import { BuildingBlockCard } from "@/components/configurator/BuildingBlockCard";
 import { ConfiguratorCart } from "@/components/configurator/ConfiguratorCart";
 import { CategoryFilter } from "@/components/configurator/CategoryFilter";
@@ -19,7 +19,7 @@ const ProgrammaSamenstellen = () => {
   const { toast } = useToast();
 
   // State
-  const [cartItems, setCartItems] = useState<string[]>([]);
+  const [cartItems, setCartItems] = useState<CartItemDetail[]>([]);
   const [numberOfPeople, setNumberOfPeople] = useState(20);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<BlockCategory | "all">("all");
@@ -32,8 +32,12 @@ const ProgrammaSamenstellen = () => {
 
   // Cart handlers
   const handleAddToCart = (blockId: string) => {
-    if (!cartItems.includes(blockId)) {
-      setCartItems((prev) => [...prev, blockId]);
+    if (!cartItems.find(item => item.blockId === blockId)) {
+      setCartItems((prev) => [...prev, {
+        blockId,
+        preferredTime: null,
+        notes: "",
+      }]);
       toast({
         title: "Toegevoegd aan programma",
         description: "Je kunt het item verwijderen uit het winkelmandje rechts.",
@@ -42,7 +46,15 @@ const ProgrammaSamenstellen = () => {
   };
 
   const handleRemoveFromCart = (blockId: string) => {
-    setCartItems((prev) => prev.filter((id) => id !== blockId));
+    setCartItems((prev) => prev.filter((item) => item.blockId !== blockId));
+  };
+
+  const handleUpdateItem = (blockId: string, updates: Partial<CartItemDetail>) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.blockId === blockId ? { ...item, ...updates } : item
+      )
+    );
   };
 
   const handleSubmit = () => {
@@ -55,6 +67,11 @@ const ProgrammaSamenstellen = () => {
       return;
     }
     setIsModalOpen(true);
+  };
+
+  // Check if a block is in the cart
+  const isInCart = (blockId: string) => {
+    return cartItems.some(item => item.blockId === blockId);
   };
 
   return (
@@ -141,7 +158,7 @@ const ProgrammaSamenstellen = () => {
                       key={block.id}
                       block={block}
                       onAdd={handleAddToCart}
-                      isInCart={cartItems.includes(block.id)}
+                      isInCart={isInCart(block.id)}
                     />
                   ))}
                 </div>
@@ -161,6 +178,7 @@ const ProgrammaSamenstellen = () => {
                     numberOfPeople={numberOfPeople}
                     selectedDate={selectedDate}
                     onRemoveItem={handleRemoveFromCart}
+                    onUpdateItem={handleUpdateItem}
                     onPeopleChange={setNumberOfPeople}
                     onDateChange={setSelectedDate}
                     onSubmit={handleSubmit}

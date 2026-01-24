@@ -4,17 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { X, CalendarIcon, ShoppingCart, ArrowRight, Building2, Users2, Info } from "lucide-react";
+import { CalendarIcon, ShoppingCart, ArrowRight, Building2, Users2, Info } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock } from "@/data/configuratorMockData";
+import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { CartItemDetails } from "./CartItemDetails";
 
 interface ConfiguratorCartProps {
-  cartItems: string[];
+  cartItems: CartItemDetail[];
   numberOfPeople: number;
   selectedDate: Date | undefined;
   onRemoveItem: (blockId: string) => void;
+  onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onPeopleChange: (count: number) => void;
   onDateChange: (date: Date | undefined) => void;
   onSubmit: () => void;
@@ -25,13 +27,21 @@ export const ConfiguratorCart = ({
   numberOfPeople,
   selectedDate,
   onRemoveItem,
+  onUpdateItem,
   onPeopleChange,
   onDateChange,
   onSubmit,
 }: ConfiguratorCartProps) => {
-  const blocks = cartItems.map((id) => getBlockById(id)).filter(Boolean) as BuildingBlock[];
+  const blocks = cartItems
+    .map((item) => getBlockById(item.blockId))
+    .filter(Boolean) as BuildingBlock[];
   const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
+
+  // Helper to get cart item detail by blockId
+  const getCartItem = (blockId: string): CartItemDetail | undefined => {
+    return cartItems.find((item) => item.blockId === blockId);
+  };
 
   // Calculate indicative total - exclude self_arranged items
   const calculateTotal = () => {
@@ -72,27 +82,22 @@ export const ConfiguratorCart = ({
     );
   }
 
-  const renderBlockItem = (block: BuildingBlock) => (
-    <div
-      key={block.id}
-      className="flex items-center justify-between py-2 px-3 bg-background rounded-lg"
-    >
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{block.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {block.priceIndication} {block.priceNote}
-        </p>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={() => onRemoveItem(block.id)}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  );
+  const renderBlockGroup = (blockList: BuildingBlock[]) => {
+    return blockList.map((block) => {
+      const cartItem = getCartItem(block.id);
+      if (!cartItem) return null;
+      
+      return (
+        <CartItemDetails
+          key={block.id}
+          block={block}
+          item={cartItem}
+          onUpdate={(updates) => onUpdateItem(block.id, updates)}
+          onRemove={() => onRemoveItem(block.id)}
+        />
+      );
+    });
+  };
 
   return (
     <Card className="p-6">
@@ -113,8 +118,8 @@ export const ConfiguratorCart = ({
               <Building2 className="h-4 w-4 text-primary" />
               <span>Gefactureerd door Bureau Vlieland</span>
             </div>
-            <div className="space-y-1 ml-6 bg-muted/50 rounded-lg p-2">
-              {groupedBlocks.bureau.map(renderBlockItem)}
+            <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
+              {renderBlockGroup(groupedBlocks.bureau)}
             </div>
           </div>
         )}
@@ -126,8 +131,8 @@ export const ConfiguratorCart = ({
               <Users2 className="h-4 w-4 text-primary" />
               <span>Gefactureerd door aanbieders</span>
             </div>
-            <div className="space-y-1 ml-6 bg-muted/50 rounded-lg p-2">
-              {groupedBlocks.partner.map(renderBlockItem)}
+            <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
+              {renderBlockGroup(groupedBlocks.partner)}
             </div>
           </div>
         )}
@@ -139,8 +144,8 @@ export const ConfiguratorCart = ({
               <Info className="h-4 w-4" />
               <span>Zelf te regelen</span>
             </div>
-            <div className="space-y-1 ml-6 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2">
-              {groupedBlocks.self_arranged.map(renderBlockItem)}
+            <div className="space-y-2 ml-6 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2">
+              {renderBlockGroup(groupedBlocks.self_arranged)}
             </div>
             <p className="text-xs text-muted-foreground ml-6">
               Links ontvang je na het versturen van je aanvraag
@@ -194,7 +199,7 @@ export const ConfiguratorCart = ({
                   : "Selecteer datum"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 bg-background z-50" align="start">
               <Calendar
                 mode="single"
                 selected={selectedDate}

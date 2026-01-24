@@ -1,0 +1,115 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { X, Clock, Plus, Minus, MessageSquare } from "lucide-react";
+import { timeSlots, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+
+interface CartItemDetailsProps {
+  block: BuildingBlock;
+  item: CartItemDetail;
+  onUpdate: (updates: Partial<CartItemDetail>) => void;
+  onRemove: () => void;
+}
+
+export const CartItemDetails = ({
+  block,
+  item,
+  onUpdate,
+  onRemove,
+}: CartItemDetailsProps) => {
+  const [showNotes, setShowNotes] = useState(item.notes.length > 0);
+
+  return (
+    <div className="py-3 px-3 bg-background rounded-lg space-y-3">
+      {/* Header with name and remove button */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{block.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {block.priceIndication} {block.priceNote}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={onRemove}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Time selector */}
+      <div className="flex items-center gap-2">
+        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+        <Select
+          value={item.preferredTime || ""}
+          onValueChange={(value) => onUpdate({ preferredTime: value || null })}
+        >
+          <SelectTrigger className="h-8 text-xs flex-1">
+            <SelectValue placeholder="Gewenste tijd" />
+          </SelectTrigger>
+          <SelectContent className="bg-background z-50">
+            {timeSlots.map((slot) => (
+              <SelectItem key={slot.value} value={slot.value} className="text-xs">
+                {slot.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Notes toggle and field */}
+      {!showNotes ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+          onClick={() => setShowNotes(true)}
+        >
+          <Plus className="h-3 w-3" />
+          <MessageSquare className="h-3 w-3" />
+          Opmerking toevoegen
+        </Button>
+      ) : (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              Opmerking
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1 px-1"
+              onClick={() => {
+                if (!item.notes) {
+                  setShowNotes(false);
+                }
+              }}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+          </div>
+          <Textarea
+            value={item.notes}
+            onChange={(e) => onUpdate({ notes: e.target.value })}
+            placeholder="Bijv. Engelstalige gids gewenst..."
+            className="text-xs min-h-[60px] resize-none"
+            maxLength={500}
+          />
+          <p className="text-[10px] text-muted-foreground text-right">
+            {item.notes.length}/500
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
