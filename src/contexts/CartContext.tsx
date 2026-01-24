@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { type CartItemDetail } from "@/data/configuratorMockData";
 import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
 
@@ -8,6 +8,7 @@ interface CartContextType {
   selectedDate: Date | undefined;
   manualOrder: boolean;
   lastSaved: Date | null;
+  itemJustAdded: boolean;
   addToCart: (blockId: string) => boolean;
   removeFromCart: (blockId: string) => void;
   updateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
@@ -33,6 +34,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [manualOrder, setManualOrder] = useState(false);
   const [hasPendingDraft, setHasPendingDraft] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [itemJustAdded, setItemJustAdded] = useState(false);
+  const addAnimationTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -88,6 +91,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       preferredTime: null,
       notes: "",
     }]);
+    
+    // Trigger animation
+    if (addAnimationTimeoutRef.current) {
+      clearTimeout(addAnimationTimeoutRef.current);
+    }
+    setItemJustAdded(true);
+    addAnimationTimeoutRef.current = setTimeout(() => {
+      setItemJustAdded(false);
+    }, 600);
+    
     return true;
   }, [cartItems]);
 
@@ -127,6 +140,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         selectedDate,
         manualOrder,
         lastSaved,
+        itemJustAdded,
         addToCart,
         removeFromCart,
         updateItem,

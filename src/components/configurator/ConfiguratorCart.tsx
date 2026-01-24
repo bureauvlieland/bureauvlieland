@@ -1,11 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ShoppingCart, ArrowRight, Building2, Users2, Info } from "lucide-react";
+import { CalendarIcon, ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucide-react";
+import { ShareProgramDialog } from "./ShareProgramDialog";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,8 @@ export const ConfiguratorCart = ({
   onReorderItems,
   isInDrawer = false,
 }: ConfiguratorCartProps) => {
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -371,19 +374,39 @@ export const ConfiguratorCart = ({
         </div>
       )}
 
-      {/* Submit button */}
-      <Button
-        onClick={onSubmit}
-        className="w-full mt-4"
-        size="lg"
-        disabled={!selectedDate || numberOfPeople < 1 || !hasBillableItems}
-      >
-        Controleren en aanvragen
-        <ArrowRight className="ml-2 h-4 w-4" />
-      </Button>
+      {/* Action buttons */}
+      <div className="mt-4 space-y-2">
+        <Button
+          onClick={onSubmit}
+          className="w-full"
+          size="lg"
+          disabled={!selectedDate || numberOfPeople < 1 || !hasBillableItems}
+        >
+          Controleren en aanvragen
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+        <Button
+          onClick={() => setIsShareDialogOpen(true)}
+          variant="outline"
+          className="w-full"
+          size="sm"
+        >
+          <Share2 className="mr-2 h-4 w-4" />
+          Deel programma
+        </Button>
+      </div>
       <p className="text-xs text-center text-muted-foreground mt-2">
         Je kunt alles nog controleren en je gegevens invullen
       </p>
+
+      {/* Share Dialog */}
+      <ShareProgramDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        cartItems={cartItems}
+        numberOfPeople={numberOfPeople}
+        selectedDate={selectedDate}
+      />
     </Card>
   );
 };
