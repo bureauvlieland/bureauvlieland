@@ -84,6 +84,23 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
   added: "Toegevoegd",
 };
 
+// Test mode configuration
+const TEST_EMAIL = "erwin@bureauvlieland.nl";
+const PRODUCTION_DOMAINS = ["bureauvlieland.nl", "bureauvlieland.lovable.app"];
+
+const isTestMode = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
+};
+
+const getRecipientEmail = (originalEmail: string, origin: string | undefined): string => {
+  return isTestMode(origin) ? TEST_EMAIL : originalEmail;
+};
+
+const getSubjectPrefix = (origin: string | undefined): string => {
+  return isTestMode(origin) ? "[TEST] " : "";
+};
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -91,12 +108,20 @@ serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails } = await req.json() as {
+    const { token, changes, items, programDetails, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
       programDetails?: ProgramDetailsUpdate;
+      origin?: string;
     };
+    
+    const testMode = isTestMode(origin);
+    const subjectPrefix = getSubjectPrefix(origin);
+    
+    if (testMode) {
+      console.log(`[TEST MODE] All partner emails will be redirected to ${TEST_EMAIL}`);
+    }
 
     if (!token) {
       return new Response(
@@ -200,12 +225,12 @@ serve(async (req) => {
           .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
           .join(", ");
         
-        // Email providers about date change
+        // Email providers about date change (redirected in test mode)
         for (const [, provider] of providerItems) {
           emailMessages.push({
             From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
-            To: [{ Email: provider.email, Name: provider.name }],
-            Subject: `Datumwijziging aanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+            To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+            Subject: `${subjectPrefix}Datumwijziging aanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
             HTMLPart: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Datumwijziging</h2>
@@ -223,10 +248,11 @@ serve(async (req) => {
         }
         
         // Customer confirmation for date change
+        // Customer confirmation (always to real customer email)
         emailMessages.push({
           From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
           To: [{ Email: program.customer_email, Name: program.customer_name }],
-          Subject: `Datumwijziging bevestigd`,
+          Subject: `${subjectPrefix}Datumwijziging bevestigd`,
           HTMLPart: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Datumwijziging bevestigd</h2>
@@ -318,13 +344,14 @@ serve(async (req) => {
           .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
           .join(", ");
 
+        // Provider emails (redirected in test mode)
         emailMessages.push({
           From: {
             Email: "noreply@bureauvlieland.nl",
             Name: "Bureau Vlieland",
           },
-          To: [{ Email: provider.email, Name: provider.providerName }],
-          Subject: `Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`,
+          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.providerName }],
+          Subject: `${subjectPrefix}Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`,
           HTMLPart: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Wijziging in programma-aanvraag</h2>
@@ -369,13 +396,14 @@ serve(async (req) => {
         })
         .join("");
 
+      // Customer confirmation (always to real customer email)
       emailMessages.push({
         From: {
           Email: "noreply@bureauvlieland.nl",
           Name: "Bureau Vlieland",
         },
         To: [{ Email: program.customer_email, Name: program.customer_name }],
-        Subject: `Wijzigingen in je programma bevestigd`,
+        Subject: `${subjectPrefix}Wijzigingen in je programma bevestigd`,
         HTMLPart: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Wijzigingen bevestigd</h2>

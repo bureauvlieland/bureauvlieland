@@ -58,7 +58,25 @@ const ProgramRequestSchema = z.object({
   blocks: z.array(BlockItemSchema),
   bureauFee: z.number(),
   customerToken: z.string().min(8).max(32).optional(),
+  origin: z.string().optional(), // For test mode detection
 });
+
+// Test mode configuration
+const TEST_EMAIL = "erwin@bureauvlieland.nl";
+const PRODUCTION_DOMAINS = ["bureauvlieland.nl", "bureauvlieland.lovable.app"];
+
+const isTestMode = (origin: string | undefined): boolean => {
+  if (!origin) return true; // Safe default: if unknown, treat as test
+  return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
+};
+
+const getRecipientEmail = (originalEmail: string, origin: string | undefined): string => {
+  return isTestMode(origin) ? TEST_EMAIL : originalEmail;
+};
+
+const getSubjectPrefix = (origin: string | undefined): string => {
+  return isTestMode(origin) ? "[TEST] " : "";
+};
 
 type ProgramRequest = z.infer<typeof ProgramRequestSchema>;
 type BlockItem = z.infer<typeof BlockItemSchema>;
@@ -267,7 +285,14 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const requestData: ProgramRequest = validationResult.data;
-    console.log("Program request received for:", requestData.email);
+    const origin = requestData.origin;
+    const testMode = isTestMode(origin);
+    const subjectPrefix = getSubjectPrefix(origin);
+    
+    console.log(`Program request received for: ${requestData.email} [Test mode: ${testMode}]`);
+    if (testMode) {
+      console.log(`[TEST MODE] All partner emails will be redirected to ${TEST_EMAIL}`);
+    }
 
     // Sanitize all string fields
     const safeName = sanitizeHtml(requestData.name);
@@ -417,7 +442,7 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Generate partner emails
+    // Generate partner emails (redirected to test email in test mode)
     const providerGroups = groupBlocksByProvider(requestData.blocks);
     const partnerEmails = providerGroups.map(group => ({
       From: {
@@ -425,10 +450,10 @@ const handler = async (req: Request): Promise<Response> => {
         Name: "Bureau Vlieland"
       },
       To: [{
-        Email: group.providerEmail,
+        Email: getRecipientEmail(group.providerEmail, origin),
         Name: group.providerName
       }],
-      Subject: `Nieuwe aanvraag via Bureau Vlieland - ${group.blocks.map(b => b.name).join(', ')}`,
+      Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland - ${group.blocks.map(b => b.name).join(', ')}`,
       HTMLPart: generatePartnerEmailHtml(group, {
         name: safeName,
         company: safeCompany,
@@ -440,7 +465,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
     }));
 
-    console.log(`Sending emails: 1 to bureau, 1 to customer, ${partnerEmails.length} to partners`);
+    console.log(`Sending emails: 1 to bureau, 1 to customer, ${partnerEmails.length} to partners ${testMode ? "(TEST MODE - partners redirected)" : ""}`);
 
     // Send all emails in one batch
     const emailResponse = await sendEmailViaMailjet([
@@ -455,7 +480,7 @@ const handler = async (req: Request): Promise<Response> => {
             Name: "Erwin van der Most"
           }
         ],
-        Subject: `Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`,
+        Subject: `${subjectPrefix}Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`,
         HTMLPart: bureauEmailHtml,
       },
       {
@@ -469,7 +494,7 @@ const handler = async (req: Request): Promise<Response> => {
             Name: requestData.name
           }
         ],
-        Subject: "Bevestiging programma aanvraag - Bureau Vlieland",
+        Subject: `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`,
         HTMLPart: customerEmailHtml,
       },
       ...partnerEmails
