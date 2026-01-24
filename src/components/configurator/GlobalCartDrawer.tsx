@@ -37,7 +37,16 @@ export const GlobalCartDrawer = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Don't show on the programma-samenstellen page (it has its own implementation)
+  // Also hide on partner, customer, and admin pages
   const isOnConfiguratorPage = location.pathname === "/programma-samenstellen";
+  const isOnPortalPage = location.pathname.startsWith("/partner") || 
+                         location.pathname.startsWith("/admin") || 
+                         location.pathname.startsWith("/programma/");
+
+  // Don't render on portal pages
+  if (isOnPortalPage) {
+    return null;
+  }
 
   const handleSubmit = () => {
     if (cartItems.length === 0) {
