@@ -1,18 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useKenBurns } from "@/hooks/use-ken-burns";
-import { buildingBlocks, type BlockCategory, type CartItemDetail } from "@/data/configuratorMockData";
+import { buildingBlocks, type BlockCategory } from "@/data/configuratorMockData";
 import { BuildingBlockCard } from "@/components/configurator/BuildingBlockCard";
 import { ConfiguratorCart } from "@/components/configurator/ConfiguratorCart";
 import { CategoryFilter } from "@/components/configurator/CategoryFilter";
 import { RequestFormModal } from "@/components/configurator/RequestFormModal";
-import { CartDrawer } from "@/components/configurator/CartDrawer";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
-import { useProgramDraft } from "@/hooks/useProgramDraft";
+import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Info, Save } from "lucide-react";
 import heroImage from "@/assets/beach-signs.jpg";
@@ -22,62 +21,50 @@ import { nl } from "date-fns/locale";
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
   const { toast } = useToast();
-  const { draft, hasDraft, saveDraft, clearDraft, lastSaved } = useProgramDraft();
+  
+  const {
+    cartItems,
+    numberOfPeople,
+    selectedDate,
+    lastSaved,
+    addToCart,
+    removeFromCart,
+    updateItem,
+    reorderItems,
+    setNumberOfPeople,
+    setSelectedDate,
+    isInCart,
+    hasPendingDraft,
+    pendingDraft,
+    restoreDraft,
+    dismissDraft,
+    clearCart,
+  } = useCart();
 
   // State
-  const [cartItems, setCartItems] = useState<CartItemDetail[]>([]);
-  const [numberOfPeople, setNumberOfPeople] = useState(20);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<BlockCategory | "all">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
-  const [manualOrder, setManualOrder] = useState(false);
 
   // Check for existing draft on mount
   useEffect(() => {
-    if (hasDraft && draft) {
+    if (hasPendingDraft) {
       setShowDraftDialog(true);
     }
-  }, []);
-
-  // Auto-save draft when cart changes
-  const saveCurrentDraft = useCallback(() => {
-    if (cartItems.length > 0) {
-      saveDraft({
-        cartItems,
-        numberOfPeople,
-        selectedDate: selectedDate?.toISOString() || null,
-        manualOrder,
-      });
-    }
-  }, [cartItems, numberOfPeople, selectedDate, manualOrder, saveDraft]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      saveCurrentDraft();
-    }, 1000); // Debounce 1 second
-
-    return () => clearTimeout(timeoutId);
-  }, [cartItems, numberOfPeople, selectedDate, saveCurrentDraft]);
+  }, [hasPendingDraft]);
 
   // Restore draft
   const handleRestoreDraft = () => {
-    if (draft) {
-      setCartItems(draft.cartItems);
-      setNumberOfPeople(draft.numberOfPeople);
-      setSelectedDate(draft.selectedDate ? new Date(draft.selectedDate) : undefined);
-      setManualOrder(draft.manualOrder);
-      toast({
-        title: "Concept hersteld",
-        description: "Je eerder opgeslagen programma is geladen.",
-      });
-    }
+    restoreDraft();
+    toast({
+      title: "Concept hersteld",
+      description: "Je eerder opgeslagen programma is geladen.",
+    });
     setShowDraftDialog(false);
   };
 
   const handleDiscardDraft = () => {
-    clearDraft();
+    dismissDraft();
     setShowDraftDialog(false);
   };
 
@@ -88,34 +75,13 @@ const ProgrammaSamenstellen = () => {
 
   // Cart handlers
   const handleAddToCart = (blockId: string) => {
-    if (!cartItems.find(item => item.blockId === blockId)) {
-      setCartItems((prev) => [...prev, {
-        blockId,
-        preferredTime: null,
-        notes: "",
-      }]);
+    const added = addToCart(blockId);
+    if (added) {
       toast({
         title: "Toegevoegd aan programma",
         description: "Je kunt het item bekijken in je winkelmandje.",
       });
     }
-  };
-
-  const handleRemoveFromCart = (blockId: string) => {
-    setCartItems((prev) => prev.filter((item) => item.blockId !== blockId));
-  };
-
-  const handleUpdateItem = (blockId: string, updates: Partial<CartItemDetail>) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.blockId === blockId ? { ...item, ...updates } : item
-      )
-    );
-  };
-
-  const handleReorderItems = (newItems: CartItemDetail[]) => {
-    setCartItems(newItems);
-    setManualOrder(true);
   };
 
   const handleSubmit = () => {
@@ -131,14 +97,8 @@ const ProgrammaSamenstellen = () => {
   };
 
   const handleRequestSuccess = () => {
-    clearDraft();
-    setCartItems([]);
+    clearCart();
     setIsModalOpen(false);
-  };
-
-  // Check if a block is in the cart
-  const isInCart = (blockId: string) => {
-    return cartItems.some(item => item.blockId === blockId);
   };
 
   return (
@@ -198,7 +158,7 @@ const ProgrammaSamenstellen = () => {
         </div>
 
         {/* Main Content */}
-        <section className="pb-16 lg:pb-16 pb-32">
+        <section className="pb-32 lg:pb-16">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             {/* Info banner */}
             <div className="bg-muted/50 border border-border rounded-lg p-4 mb-8 flex items-start gap-3">
@@ -254,12 +214,12 @@ const ProgrammaSamenstellen = () => {
                     cartItems={cartItems}
                     numberOfPeople={numberOfPeople}
                     selectedDate={selectedDate}
-                    onRemoveItem={handleRemoveFromCart}
-                    onUpdateItem={handleUpdateItem}
+                    onRemoveItem={removeFromCart}
+                    onUpdateItem={updateItem}
                     onPeopleChange={setNumberOfPeople}
                     onDateChange={setSelectedDate}
                     onSubmit={handleSubmit}
-                    onReorderItems={handleReorderItems}
+                    onReorderItems={reorderItems}
                   />
                 </div>
               </div>
@@ -270,30 +230,14 @@ const ProgrammaSamenstellen = () => {
 
       <Footer />
 
-      {/* Mobile/Tablet Cart Drawer */}
-      <CartDrawer
-        cartItems={cartItems}
-        numberOfPeople={numberOfPeople}
-        selectedDate={selectedDate}
-        onRemoveItem={handleRemoveFromCart}
-        onUpdateItem={handleUpdateItem}
-        onPeopleChange={setNumberOfPeople}
-        onDateChange={setSelectedDate}
-        onSubmit={handleSubmit}
-        onReorderItems={handleReorderItems}
-        isOpen={isDrawerOpen}
-        onOpenChange={setIsDrawerOpen}
-        lastSaved={lastSaved}
-      />
-
       {/* Draft Recovery Dialog */}
-      {draft && (
+      {pendingDraft && (
         <DraftRecoveryDialog
           isOpen={showDraftDialog}
           onRestore={handleRestoreDraft}
           onDiscard={handleDiscardDraft}
-          itemCount={draft.cartItems.length}
-          savedAt={new Date(draft.savedAt)}
+          itemCount={pendingDraft.cartItems.length}
+          savedAt={new Date(pendingDraft.savedAt)}
         />
       )}
 
