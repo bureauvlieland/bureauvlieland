@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -102,12 +102,24 @@ export const CustomerProgramItem = ({
                 ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
                 : "Flexibel"}
             </span>
-            {item.price_indication && (
+            {/* Show quoted price if available (confirmed by partner), otherwise show price indication */}
+            {item.quoted_price ? (
+              <span className="font-semibold text-green-700 dark:text-green-500">
+                €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            ) : item.price_indication && (
               <span className="font-medium text-foreground">
                 {item.price_indication}
               </span>
             )}
           </div>
+          
+          {/* Quoted price notes from partner */}
+          {item.quoted_price && item.quoted_notes && (
+            <p className="mt-1 text-xs text-muted-foreground italic">
+              {item.quoted_notes}
+            </p>
+          )}
           
           {/* Status note from provider */}
           {item.status_note && (

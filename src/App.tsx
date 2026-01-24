@@ -30,6 +30,9 @@ import ProgrammaSamenstellen from "./pages/ProgrammaSamenstellen";
 import SharedProgram from "./pages/SharedProgram";
 import CustomerProgram from "./pages/CustomerProgram";
 import PartnerPortal from "./pages/PartnerPortal";
+import PartnerLogin from "./pages/PartnerLogin";
+import PartnerDashboard from "./pages/PartnerDashboard";
+import PartnerResetPassword from "./pages/PartnerResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +69,9 @@ const App = () => (
             <Route path="/programma/:shareCode" element={<SharedProgram />} />
             <Route path="/mijn-programma/:token" element={<CustomerProgram />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
+            <Route path="/partner/login" element={<PartnerLogin />} />
+            <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

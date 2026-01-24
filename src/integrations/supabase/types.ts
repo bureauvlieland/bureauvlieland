@@ -19,6 +19,7 @@ export type Database = {
           address_city: string | null
           address_postal: string | null
           address_street: string | null
+          auth_user_id: string | null
           commission_percentage: number
           created_at: string
           email: string
@@ -34,6 +35,7 @@ export type Database = {
           address_city?: string | null
           address_postal?: string | null
           address_street?: string | null
+          auth_user_id?: string | null
           commission_percentage?: number
           created_at?: string
           email: string
@@ -49,6 +51,7 @@ export type Database = {
           address_city?: string | null
           address_postal?: string | null
           address_street?: string | null
+          auth_user_id?: string | null
           commission_percentage?: number
           created_at?: string
           email?: string
@@ -141,6 +144,9 @@ export type Database = {
           provider_email: string | null
           provider_id: string
           provider_name: string
+          quoted_at: string | null
+          quoted_notes: string | null
+          quoted_price: number | null
           request_id: string
           status: string
           status_note: string | null
@@ -173,6 +179,9 @@ export type Database = {
           provider_email?: string | null
           provider_id: string
           provider_name: string
+          quoted_at?: string | null
+          quoted_notes?: string | null
+          quoted_price?: number | null
           request_id: string
           status?: string
           status_note?: string | null
@@ -205,6 +214,9 @@ export type Database = {
           provider_email?: string | null
           provider_id?: string
           provider_name?: string
+          quoted_at?: string | null
+          quoted_notes?: string | null
+          quoted_price?: number | null
           request_id?: string
           status?: string
           status_note?: string | null
@@ -345,7 +357,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_partner_id: { Args: { _user_id: string }; Returns: string }
+      is_partner: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
