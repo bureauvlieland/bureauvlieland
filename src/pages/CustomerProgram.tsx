@@ -14,6 +14,7 @@ import { BillingDetailsCard } from "@/components/customer-portal/BillingDetailsC
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { AcceptTermsCard } from "@/components/customer-portal/AcceptTermsCard";
 import { ProgramHistoryTimeline } from "@/components/customer-portal/ProgramHistoryTimeline";
+import { InvoiceProvidersCard } from "@/components/customer-portal/InvoiceProvidersCard";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useToast } from "@/hooks/use-toast";
@@ -328,6 +329,10 @@ const CustomerProgram = () => {
           program={program as any} 
           onEdit={() => setShowBillingDialog(true)} 
         />
+
+        {/* Invoice providers info */}
+        <InvoiceProvidersCard items={program.items} className="mb-6" />
+
         {/* Program details card */}
         <Card className="mb-6">
           <CardHeader className="pb-3">
