@@ -37,10 +37,14 @@ const BlockItemSchema = z.object({
   name: z.string(),
   category: z.string(),
   provider: z.string(),
+  providerId: z.string(),
+  providerEmail: z.string().email().optional().or(z.literal("")),
   priceIndication: z.string(),
   priceNote: z.string().optional(),
   blockType: z.enum(["bureau", "partner", "self_arranged"]),
   externalUrl: z.string().optional(),
+  preferredTime: z.string().nullable().optional(),
+  itemNotes: z.string().max(500).optional().or(z.literal("")),
 });
 
 const ProgramRequestSchema = z.object({
@@ -56,9 +60,10 @@ const ProgramRequestSchema = z.object({
 });
 
 type ProgramRequest = z.infer<typeof ProgramRequestSchema>;
+type BlockItem = z.infer<typeof BlockItemSchema>;
 
 // Sanitize HTML to prevent XSS in emails
-function sanitizeHtml(str: string | undefined): string {
+function sanitizeHtml(str: string | undefined | null): string {
   if (!str) return "";
   return str
     .replace(/&/g, "&amp;")
@@ -90,12 +95,137 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 };
 
 // Group blocks by type for email formatting
-function groupBlocksByType(blocks: z.infer<typeof BlockItemSchema>[]) {
+function groupBlocksByType(blocks: BlockItem[]) {
   return {
     bureau: blocks.filter((b) => b.blockType === "bureau"),
     partner: blocks.filter((b) => b.blockType === "partner"),
     self_arranged: blocks.filter((b) => b.blockType === "self_arranged"),
   };
+}
+
+// Group blocks by provider for partner emails (excludes self_arranged)
+interface ProviderGroup {
+  providerId: string;
+  providerName: string;
+  providerEmail: string;
+  blocks: BlockItem[];
+}
+
+function groupBlocksByProvider(blocks: BlockItem[]): ProviderGroup[] {
+  // Filter out self_arranged blocks - they don't get emails
+  const billableBlocks = blocks.filter(b => b.blockType !== "self_arranged");
+  
+  const grouped = new Map<string, ProviderGroup>();
+  
+  for (const block of billableBlocks) {
+    if (!block.providerEmail) continue; // Skip if no email
+    
+    if (!grouped.has(block.providerId)) {
+      grouped.set(block.providerId, {
+        providerId: block.providerId,
+        providerName: block.provider,
+        providerEmail: block.providerEmail,
+        blocks: []
+      });
+    }
+    grouped.get(block.providerId)!.blocks.push(block);
+  }
+  
+  return Array.from(grouped.values());
+}
+
+// Generate partner email HTML
+function generatePartnerEmailHtml(
+  group: ProviderGroup,
+  customerData: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    date: string;
+    numberOfPeople: number;
+    notes: string;
+  }
+): string {
+  const activitiesHtml = group.blocks.map(block => {
+    const timeInfo = block.preferredTime 
+      ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(block.preferredTime)}</span>` 
+      : '';
+    const notesInfo = block.itemNotes 
+      ? `<br><span style="color: #666; font-size: 13px;">💬 Opmerking: ${sanitizeHtml(block.itemNotes)}</span>` 
+      : '';
+    return `<li style="margin-bottom: 12px;">
+      <strong>${sanitizeHtml(block.name)}</strong> — ${sanitizeHtml(block.priceIndication)}${block.priceNote ? ` ${sanitizeHtml(block.priceNote)}` : ''}
+      ${timeInfo}
+      ${notesInfo}
+    </li>`;
+  }).join('');
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+      <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
+        Nieuwe aanvraag via Bureau Vlieland
+      </h2>
+      
+      <p>Beste ${sanitizeHtml(group.providerName)},</p>
+      
+      <p>Er is een nieuwe <strong>vrijblijvende aanvraag</strong> binnengekomen via Bureau Vlieland.</p>
+      
+      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #2d3748;">📋 Klantgegevens</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 5px 0; color: #666;">Naam:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(customerData.name)}</strong></td></tr>
+          ${customerData.company ? `<tr><td style="padding: 5px 0; color: #666;">Bedrijf:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(customerData.company)}</strong></td></tr>` : ''}
+          <tr><td style="padding: 5px 0; color: #666;">Email:</td><td style="padding: 5px 0;"><a href="mailto:${sanitizeHtml(customerData.email)}" style="color: #0066cc;">${sanitizeHtml(customerData.email)}</a></td></tr>
+          <tr><td style="padding: 5px 0; color: #666;">Telefoon:</td><td style="padding: 5px 0;"><a href="tel:${sanitizeHtml(customerData.phone)}" style="color: #0066cc;">${sanitizeHtml(customerData.phone)}</a></td></tr>
+        </table>
+      </div>
+      
+      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #2d3748;">📅 Aanvraag details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 5px 0; color: #666;">Datum:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(customerData.date) || 'Nog niet gekozen'}</strong></td></tr>
+          <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${customerData.numberOfPeople}</strong></td></tr>
+        </table>
+      </div>
+      
+      <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
+        <h3 style="margin-top: 0; color: #276749;">🎯 Aangevraagde activiteiten bij jullie</h3>
+        <ul style="padding-left: 20px; margin-bottom: 0;">
+          ${activitiesHtml}
+        </ul>
+      </div>
+      
+      ${customerData.notes ? `
+      <div style="background: #fff8e6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f6ad55;">
+        <h3 style="margin-top: 0; color: #c05621;">💬 Algemene opmerkingen van de klant</h3>
+        <p style="margin-bottom: 0; white-space: pre-line;">${sanitizeHtml(customerData.notes)}</p>
+      </div>
+      ` : ''}
+      
+      <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
+        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partner Portal</h3>
+        <p style="margin-bottom: 0;">
+          Binnenkort kun je al je aanvragen terugvinden in de Partner Portal. 
+          Je ontvangt hiervoor een persoonlijke toegangslink.
+        </p>
+      </div>
+      
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+      
+      <p style="color: #666; font-size: 14px;">
+        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met de klant om 
+        beschikbaarheid te bevestigen en verdere details te bespreken.
+      </p>
+      
+      <p style="margin-top: 30px;">
+        Met vriendelijke groet,<br>
+        <strong>Bureau Vlieland</strong><br>
+        📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a><br>
+        📞 +31 (0)562 45 27 00
+      </p>
+    </div>
+  `;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -149,13 +279,23 @@ const handler = async (req: Request): Promise<Response> => {
     const groupedBlocks = groupBlocksByType(requestData.blocks);
     const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
 
-    // Build blocks HTML for emails
-    const buildBlocksListHtml = (blocks: z.infer<typeof BlockItemSchema>[], showExternal = false) => {
+    // Build blocks HTML for emails (with time and notes)
+    const buildBlocksListHtml = (blocks: BlockItem[], showExternal = false) => {
       return blocks.map(block => {
         const externalLink = showExternal && block.externalUrl 
           ? ` — <a href="${sanitizeHtml(block.externalUrl)}" style="color: #0066cc;">${sanitizeHtml(block.externalUrl)}</a>`
           : '';
-        return `<li><strong>${sanitizeHtml(block.name)}</strong> (${sanitizeHtml(block.provider)}) — ${sanitizeHtml(block.priceIndication)}${block.priceNote ? ` ${sanitizeHtml(block.priceNote)}` : ''}${externalLink}</li>`;
+        const timeInfo = block.preferredTime 
+          ? `<br><span style="color: #666; font-size: 12px;">⏰ Gewenste tijd: ${sanitizeHtml(block.preferredTime)}</span>` 
+          : '';
+        const notesInfo = block.itemNotes 
+          ? `<br><span style="color: #666; font-size: 12px;">💬 ${sanitizeHtml(block.itemNotes)}</span>` 
+          : '';
+        return `<li style="margin-bottom: 8px;">
+          <strong>${sanitizeHtml(block.name)}</strong> (${sanitizeHtml(block.provider)}) — ${sanitizeHtml(block.priceIndication)}${block.priceNote ? ` ${sanitizeHtml(block.priceNote)}` : ''}${externalLink}
+          ${timeInfo}
+          ${notesInfo}
+        </li>`;
       }).join('');
     };
 
@@ -180,7 +320,7 @@ const handler = async (req: Request): Promise<Response> => {
       ` : ''}
       
       ${groupedBlocks.partner.length > 0 ? `
-      <h3>Door te zetten naar partners</h3>
+      <h3>Door te zetten naar partners (email wordt automatisch verstuurd)</h3>
       <ul>${buildBlocksListHtml(groupedBlocks.partner)}</ul>
       ` : ''}
       
@@ -190,7 +330,7 @@ const handler = async (req: Request): Promise<Response> => {
       ` : ''}
       
       ${safeNotes ? `
-      <h3>Opmerkingen / Wensen</h3>
+      <h3>Algemene opmerkingen / Wensen</h3>
       <p>${safeNotes.replace(/\n/g, '<br>')}</p>
       ` : ''}
     `;
@@ -256,7 +396,32 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Send both emails
+    // Generate partner emails
+    const providerGroups = groupBlocksByProvider(requestData.blocks);
+    const partnerEmails = providerGroups.map(group => ({
+      From: {
+        Email: "noreply@bureauvlieland.nl",
+        Name: "Bureau Vlieland"
+      },
+      To: [{
+        Email: group.providerEmail,
+        Name: group.providerName
+      }],
+      Subject: `Nieuwe aanvraag via Bureau Vlieland - ${group.blocks.map(b => b.name).join(', ')}`,
+      HTMLPart: generatePartnerEmailHtml(group, {
+        name: safeName,
+        company: safeCompany,
+        email: safeEmail,
+        phone: safePhone,
+        date: safeDate,
+        numberOfPeople: requestData.numberOfPeople,
+        notes: safeNotes,
+      }),
+    }));
+
+    console.log(`Sending emails: 1 to bureau, 1 to customer, ${partnerEmails.length} to partners`);
+
+    // Send all emails in one batch
     const emailResponse = await sendEmailViaMailjet([
       {
         From: {
@@ -285,7 +450,8 @@ const handler = async (req: Request): Promise<Response> => {
         ],
         Subject: "Bevestiging programma aanvraag - Bureau Vlieland",
         HTMLPart: customerEmailHtml,
-      }
+      },
+      ...partnerEmails
     ]);
 
     console.log("Program request emails sent successfully");

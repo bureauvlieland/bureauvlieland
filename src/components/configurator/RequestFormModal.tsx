@@ -13,14 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock } from "@/data/configuratorMockData";
-import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink } from "lucide-react";
+import { getBlockById, getProviderById, calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink, Clock, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface RequestFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  cartItems: string[];
+  cartItems: CartItemDetail[];
   numberOfPeople: number;
   selectedDate: Date | undefined;
 }
@@ -44,15 +44,41 @@ export const RequestFormModal = ({
     notes: "",
   });
 
-  const blocks = cartItems.map((id) => getBlockById(id)).filter(Boolean) as BuildingBlock[];
+  const blocks = cartItems
+    .map((item) => getBlockById(item.blockId))
+    .filter(Boolean) as BuildingBlock[];
   const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
+
+  // Helper to get cart item detail by blockId
+  const getCartItem = (blockId: string): CartItemDetail | undefined => {
+    return cartItems.find((item) => item.blockId === blockId);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      const blocksWithDetails = cartItems.map((item) => {
+        const block = getBlockById(item.blockId);
+        const provider = getProviderById(block?.providerId || "");
+        return {
+          id: block?.id || "",
+          name: block?.name || "",
+          category: block?.category || "",
+          provider: block?.provider || "",
+          providerId: block?.providerId || "",
+          providerEmail: provider?.email || "",
+          priceIndication: block?.priceIndication || "",
+          priceNote: block?.priceNote,
+          blockType: block?.blockType || "partner",
+          externalUrl: block?.externalUrl,
+          preferredTime: item.preferredTime,
+          itemNotes: item.notes,
+        };
+      });
+
       const { data, error } = await supabase.functions.invoke("send-program-request", {
         body: {
           name: formData.name,
@@ -63,16 +89,7 @@ export const RequestFormModal = ({
           numberOfPeople,
           selectedDate: selectedDate ? format(selectedDate, "d MMMM yyyy", { locale: nl }) : undefined,
           bureauFee,
-          blocks: blocks.map((block) => ({
-            id: block.id,
-            name: block.name,
-            category: block.category,
-            provider: block.provider,
-            priceIndication: block.priceIndication,
-            priceNote: block.priceNote,
-            blockType: block.blockType,
-            externalUrl: block.externalUrl,
-          })),
+          blocks: blocksWithDetails,
         },
       });
 
@@ -119,6 +136,29 @@ export const RequestFormModal = ({
       });
     }
     onClose();
+  };
+
+  // Render block with time/notes
+  const renderBlockDetail = (block: BuildingBlock) => {
+    const cartItem = getCartItem(block.id);
+    return (
+      <li key={block.id} className="py-1">
+        <span className="font-medium">{block.name}</span>
+        <span className="text-muted-foreground"> → {block.provider}</span>
+        {cartItem?.preferredTime && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+            <Clock className="h-3 w-3" />
+            Gewenste tijd: {cartItem.preferredTime}
+          </span>
+        )}
+        {cartItem?.notes && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+            <MessageSquare className="h-3 w-3" />
+            {cartItem.notes.length > 50 ? cartItem.notes.substring(0, 50) + "..." : cartItem.notes}
+          </span>
+        )}
+      </li>
+    );
   };
 
   // Success screen with external links for self-arranged items
@@ -214,9 +254,7 @@ export const RequestFormModal = ({
                 <div>
                   <span className="font-medium">Bureau Vlieland factureert:</span>
                   <ul className="text-muted-foreground mt-1">
-                    {groupedBlocks.bureau.map((block) => (
-                      <li key={block.id}>• {block.name} ({block.provider})</li>
-                    ))}
+                    {groupedBlocks.bureau.map((block) => renderBlockDetail(block))}
                     <li>• Handling fee + coördinatie (€ {bureauFee})</li>
                   </ul>
                 </div>
@@ -230,9 +268,7 @@ export const RequestFormModal = ({
                 <div>
                   <span className="font-medium">Wordt aangevraagd bij aanbieders:</span>
                   <ul className="text-muted-foreground mt-1">
-                    {groupedBlocks.partner.map((block) => (
-                      <li key={block.id}>• {block.name} → {block.provider}</li>
-                    ))}
+                    {groupedBlocks.partner.map((block) => renderBlockDetail(block))}
                   </ul>
                 </div>
               </div>
