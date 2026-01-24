@@ -66,6 +66,23 @@ const PartnerLogin = () => {
       }
 
       if (data.user) {
+        // Check if user has admin role first
+        const { data: adminRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (adminRole) {
+          toast({
+            title: "Welkom Admin!",
+            description: "Je bent succesvol ingelogd.",
+          });
+          navigate("/admin/dashboard");
+          return;
+        }
+
         // Check if this user is linked to a partner
         const { data: partner, error: partnerError } = await supabase
           .from("partners")
