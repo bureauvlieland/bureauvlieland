@@ -20,6 +20,7 @@ import type { PartnerItem } from "@/types/partner";
 interface PartnerItemCardProps {
   item: PartnerItem;
   onConfirm?: () => void;
+  onEditProposal?: () => void;
   onRegisterInvoice?: () => void;
   showInvoiceDetails?: boolean;
 }
@@ -35,6 +36,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 export const PartnerItemCard = ({
   item,
   onConfirm,
+  onEditProposal,
   onRegisterInvoice,
   showInvoiceDetails = false,
 }: PartnerItemCardProps) => {
@@ -195,12 +197,17 @@ export const PartnerItemCard = ({
         {/* Actions */}
         <div className="flex gap-2 pt-2">
           {onConfirm && item.status === "pending" && (
-            <>
-              <Button onClick={onConfirm} className="flex-1">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Reageren
-              </Button>
-            </>
+            <Button onClick={onConfirm} className="flex-1">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Reageren
+            </Button>
+          )}
+
+          {onEditProposal && item.status === "alternative" && (
+            <Button onClick={onEditProposal} variant="outline" className="flex-1">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Voorstel aanpassen
+            </Button>
           )}
 
           {onRegisterInvoice && item.status === "confirmed" && !item.invoiced_number && (
