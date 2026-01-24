@@ -311,6 +311,7 @@ const PartnerDashboard = () => {
 
   const pendingItems = data.items.filter((i) => i.status === "pending");
   const confirmedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
+  const processedItems = data.items.filter((i) => ["alternative", "unavailable", "cancelled"].includes(i.status));
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
 
   return (
@@ -331,7 +332,7 @@ const PartnerDashboard = () => {
         </div>
 
         <Tabs defaultValue="pending" className="mt-8">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending" className="relative">
               Te bevestigen
               {pendingItems.length > 0 && (
@@ -345,6 +346,14 @@ const PartnerDashboard = () => {
               {confirmedItems.length > 0 && (
                 <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
                   {confirmedItems.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="processed">
+              Afgehandeld
+              {processedItems.length > 0 && (
+                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                  {processedItems.length}
                 </span>
               )}
             </TabsTrigger>
@@ -396,6 +405,20 @@ const PartnerDashboard = () => {
                     setShowInvoiceDialog(true);
                   }}
                 />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="processed" className="mt-6 space-y-4">
+            {processedItems.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Geen afgehandelde aanvragen.
+                </CardContent>
+              </Card>
+            ) : (
+              processedItems.map((item) => (
+                <PartnerItemCard key={item.id} item={item} />
               ))
             )}
           </TabsContent>

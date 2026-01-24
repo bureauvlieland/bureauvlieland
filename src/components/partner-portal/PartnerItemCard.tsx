@@ -82,6 +82,14 @@ export const PartnerItemCard = ({
           </div>
         </div>
 
+        {/* Price indication from customer */}
+        {item.price_indication && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 text-sm">
+            <span className="text-muted-foreground">Indicatieve prijs (klant zag):</span>{" "}
+            <span className="font-medium text-blue-700 dark:text-blue-400">{item.price_indication}</span>
+          </div>
+        )}
+
         {/* Activity details */}
         <div className="grid sm:grid-cols-2 gap-4 text-sm">
           <div className="flex items-center gap-2">
