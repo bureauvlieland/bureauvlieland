@@ -166,7 +166,14 @@ const PartnerPortal = () => {
               </Card>
             ) : (
               waitingItems.map((item) => (
-                <PartnerItemCard key={item.id} item={item} />
+                <PartnerItemCard
+                  key={item.id}
+                  item={item}
+                  onEditProposal={() => {
+                    setSelectedItem(item);
+                    setShowStatusDialog(true);
+                  }}
+                />
               ))
             )}
           </TabsContent>
