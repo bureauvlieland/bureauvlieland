@@ -66,7 +66,7 @@ export const GlobalCartDrawer = () => {
           </Button>
         </DrawerTrigger>
         <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-left pb-0">
+          <DrawerHeader className="text-left pb-2 border-b">
             <DrawerTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
               Jouw Programma
@@ -82,12 +82,12 @@ export const GlobalCartDrawer = () => {
               </p>
             )}
           </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-4">
+          <div className="overflow-y-auto px-4 pb-6 pt-4">
             {cartItems.length === 0 ? (
-              <div className="py-12 text-center">
-                <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="font-medium text-foreground mb-2">Je programma is nog leeg</p>
-                <p className="text-sm text-muted-foreground mb-6">
+              <div className="py-8 text-center">
+                <ShoppingCart className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="font-medium text-foreground mb-1.5">Je programma is nog leeg</p>
+                <p className="text-sm text-muted-foreground mb-4">
                   Stel je eigen programma samen uit activiteiten, catering en vervoer.
                 </p>
                 <Link to="/programma-samenstellen" onClick={() => setIsOpen(false)}>

@@ -38,16 +38,16 @@ export const SortableCartItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-start gap-1"
+      className="flex items-start gap-2"
     >
       <button
-        className="mt-4 p-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+        className="mt-3 p-1.5 rounded-md cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <CartItemDetails
           block={block}
           item={item}

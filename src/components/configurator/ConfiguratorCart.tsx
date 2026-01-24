@@ -130,9 +130,9 @@ export const ConfiguratorCart = ({
 
   if (cartItems.length === 0) {
     return (
-      <Card className={cn("p-6 bg-muted/30 border-dashed", isInDrawer && "border-0 shadow-none bg-transparent")}>
+      <Card className={cn("p-5 bg-muted/30 border-dashed", isInDrawer && "border-0 shadow-none bg-transparent")}>
         <div className="text-center text-muted-foreground">
-          <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
           <p className="font-medium">Je programma is nog leeg</p>
           <p className="text-sm mt-1">Voeg bouwstenen toe om te beginnen</p>
         </div>
@@ -204,9 +204,9 @@ export const ConfiguratorCart = ({
   };
 
   return (
-    <Card className={cn("p-6", isInDrawer && "border-0 shadow-none p-0")}>
+    <Card className={cn("p-5", isInDrawer && "border-0 shadow-none px-1 py-2")}>
       {!isInDrawer && (
-        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
           <ShoppingCart className="h-5 w-5" />
           Jouw Programma
           <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full ml-auto">
@@ -215,16 +215,76 @@ export const ConfiguratorCart = ({
         </h3>
       )}
 
+      {/* Intro text */}
+      <p className="text-sm text-muted-foreground mb-4">
+        Begin met het invullen van je groepsgrootte en gewenste datum.
+      </p>
+
+      {/* People and date inputs - MOVED TO TOP */}
+      <div className="space-y-3 mb-5">
+        <div>
+          <Label htmlFor="numberOfPeople" className="text-sm font-medium">
+            Hoeveel personen?
+          </Label>
+          <p className="text-xs text-muted-foreground mb-1.5">
+            Dit bepaalt de indicatieve prijs per activiteit
+          </p>
+          <Input
+            id="numberOfPeople"
+            type="number"
+            min={1}
+            max={500}
+            value={numberOfPeople}
+            onChange={(e) => onPeopleChange(parseInt(e.target.value, 10) || 1)}
+          />
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">Wanneer willen jullie komen?</Label>
+          <p className="text-xs text-muted-foreground mb-1.5">
+            Aanbieders controleren de beschikbaarheid
+          </p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate
+                  ? format(selectedDate, "d MMMM yyyy", { locale: nl })
+                  : "Selecteer datum"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-background z-50 pointer-events-auto" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={onDateChange}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+                disabled={(date) => date < new Date()}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {/* Separator and activities header */}
+      <div className="border-t pt-4 mb-3">
+        <h4 className="font-medium text-sm mb-1">Gekozen activiteiten</h4>
+        <p className="text-xs text-muted-foreground mb-3">
+          Sleep activiteiten in de gewenste dagvolgorde
+        </p>
+      </div>
+
       {/* All items sortable in drawer mode, grouped otherwise */}
-      <div className="space-y-4 mb-6">
+      <div className="space-y-3">
         {isInDrawer ? (
-          <>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Info className="h-3 w-3" />
-              Sleep items om de volgorde aan te passen
-            </p>
-            {renderAllItemsSortable()}
-          </>
+          renderAllItemsSortable()
         ) : (
           <>
             {/* Bureau Vlieland items */}
@@ -273,80 +333,32 @@ export const ConfiguratorCart = ({
 
         {/* Bureau fee - always shown when there are billable items */}
         {hasBillableItems && (
-          <div className="flex items-center justify-between py-2 px-3 bg-primary/10 rounded-lg">
+          <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10 rounded-lg">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Handling fee</p>
-              <p className="text-xs text-muted-foreground">Bureau Vlieland coördinatie</p>
+              <p className="font-medium text-sm">Coördinatiefee</p>
+              <p className="text-xs text-muted-foreground">Wij regelen de communicatie met alle aanbieders</p>
             </div>
             <span className="text-sm font-medium">€ {bureauFee}</span>
           </div>
         )}
       </div>
 
-      {/* People and date inputs */}
-      <div className="space-y-4 mb-6">
-        <div>
-          <Label htmlFor="numberOfPeople" className="text-sm">
-            Aantal personen
-          </Label>
-          <Input
-            id="numberOfPeople"
-            type="number"
-            min={1}
-            max={500}
-            value={numberOfPeople}
-            onChange={(e) => onPeopleChange(parseInt(e.target.value, 10) || 1)}
-            className="mt-1"
-          />
-        </div>
-
-        <div>
-          <Label className="text-sm">Gewenste datum</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal mt-1",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate
-                  ? format(selectedDate, "d MMMM yyyy", { locale: nl })
-                  : "Selecteer datum"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-background z-50 pointer-events-auto" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={onDateChange}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-                disabled={(date) => date < new Date()}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
       {/* Pricing summary */}
       {hasBillableItems && (
-        <div className="border-t pt-4 space-y-2 text-sm">
+        <div className="border-t pt-3 mt-4 space-y-1.5 text-sm">
           <div className="flex justify-between text-muted-foreground">
             <span>Indicatief subtotaal</span>
             <span>€ {indicativeTotal.toLocaleString("nl-NL")}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Bureau fee ({numberOfPeople} pers.)</span>
+            <span>Coördinatiefee ({numberOfPeople} pers.)</span>
             <span>€ {bureauFee}</span>
           </div>
           <div className="flex justify-between font-semibold text-foreground pt-2 border-t">
             <span>Indicatief totaal</span>
             <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground mt-1">
             * Prijzen zijn indicatief. Exacte prijzen na overleg met aanbieders.
           </p>
         </div>
@@ -354,7 +366,7 @@ export const ConfiguratorCart = ({
 
       {/* Self-arranged only message */}
       {!hasBillableItems && groupedBlocks.self_arranged.length > 0 && (
-        <div className="border-t pt-4 text-sm text-muted-foreground">
+        <div className="border-t pt-3 mt-4 text-sm text-muted-foreground">
           <p>Je hebt alleen "zelf te regelen" items geselecteerd. Voeg activiteiten of catering toe voor een complete aanvraag.</p>
         </div>
       )}
@@ -362,13 +374,16 @@ export const ConfiguratorCart = ({
       {/* Submit button */}
       <Button
         onClick={onSubmit}
-        className="w-full mt-6"
+        className="w-full mt-4"
         size="lg"
         disabled={!selectedDate || numberOfPeople < 1 || !hasBillableItems}
       >
-        Aanvraag versturen
+        Controleren en aanvragen
         <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
+      <p className="text-xs text-center text-muted-foreground mt-2">
+        Je kunt alles nog controleren en je gegevens invullen
+      </p>
     </Card>
   );
 };
