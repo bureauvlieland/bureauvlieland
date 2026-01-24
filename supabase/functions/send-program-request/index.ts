@@ -57,6 +57,7 @@ const ProgramRequestSchema = z.object({
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
   blocks: z.array(BlockItemSchema),
   bureauFee: z.number(),
+  customerToken: z.string().min(8).max(32).optional(),
 });
 
 type ProgramRequest = z.infer<typeof ProgramRequestSchema>;
@@ -275,6 +276,8 @@ const handler = async (req: Request): Promise<Response> => {
     const safePhone = sanitizeHtml(requestData.phone);
     const safeNotes = sanitizeHtml(requestData.notes);
     const safeDate = sanitizeHtml(requestData.selectedDate);
+    const customerToken = requestData.customerToken || null;
+    const portalUrl = customerToken ? `https://bureauvlieland.nl/mijn-programma/${customerToken}` : null;
 
     const groupedBlocks = groupBlocksByType(requestData.blocks);
     const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
@@ -381,6 +384,24 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="margin: 20px 0;">
           <h3 style="color: #2d3748;">Jouw opmerkingen</h3>
           <p style="color: #4a5568; background: #f7fafc; padding: 15px; border-radius: 8px;">${safeNotes.replace(/\n/g, '<br>')}</p>
+        </div>
+        ` : ''}
+        
+        ${portalUrl ? `
+        <div style="background-color: #edf2f7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+          <h3 style="margin-top: 0; color: #2d3748;">📊 Volg je programma</h3>
+          <p style="color: #4a5568;">
+            Bekijk de status van je aanvraag en voer eventuele wijzigingen door in je persoonlijke klantomgeving:
+          </p>
+          <a href="${portalUrl}" 
+             style="display: inline-block; background-color: #1a365d; color: white; 
+                    padding: 12px 24px; border-radius: 6px; text-decoration: none; 
+                    font-weight: bold; margin-top: 10px;">
+            Bekijk je programma →
+          </a>
+          <p style="color: #718096; font-size: 12px; margin-top: 15px;">
+            Deze link is persoonlijk en 90 dagen geldig.
+          </p>
         </div>
         ` : ''}
         
