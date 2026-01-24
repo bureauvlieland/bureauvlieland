@@ -3,12 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   type ProgramRequest,
   type ProgramRequestItem,
+  type ProgramRequestHistory,
   type ProgramRequestWithItems,
   calculateStatusSummary,
 } from "@/types/programRequest";
 
 interface UseCustomerProgramReturn {
   program: ProgramRequestWithItems | null;
+  history: ProgramRequestHistory[];
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -16,6 +18,8 @@ interface UseCustomerProgramReturn {
   removeItem: (itemId: string) => void;
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
+  updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
+  cancelRequest: (reason?: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
 }
 
@@ -31,6 +35,7 @@ export interface PendingChange {
 
 export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [program, setProgram] = useState<ProgramRequestWithItems | null>(null);
+  const [history, setHistory] = useState<ProgramRequestHistory[]>([]);
   const [originalItems, setOriginalItems] = useState<ProgramRequestItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +77,13 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
 
       if (itemsError) throw itemsError;
 
+      // Fetch history
+      const { data: historyData } = await supabase
+        .from("program_request_history")
+        .select("*")
+        .eq("request_id", requestData.id)
+        .order("created_at", { ascending: false });
+
       const programWithItems: ProgramRequestWithItems = {
         ...requestData,
         selected_dates: requestData.selected_dates as string[],
@@ -80,6 +92,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
 
       setProgram(programWithItems);
       setOriginalItems(JSON.parse(JSON.stringify(itemsData || [])));
+      setHistory((historyData || []) as ProgramRequestHistory[]);
     } catch (err) {
       console.error("Error fetching program:", err);
       setError("Er ging iets mis bij het ophalen van je programma");
@@ -193,12 +206,69 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, getPendingChanges, fetchProgram]);
 
+  const updateProgramDetails = useCallback(async (updates: { 
+    selectedDates?: Date[]; 
+    numberOfPeople?: number 
+  }): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const programDetails: { selectedDates?: string[]; numberOfPeople?: number } = {};
+      
+      if (updates.selectedDates) {
+        programDetails.selectedDates = updates.selectedDates.map(d => d.toISOString().split("T")[0]);
+      }
+      if (updates.numberOfPeople) {
+        programDetails.numberOfPeople = updates.numberOfPeople;
+      }
+
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token: token,
+          programDetails,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error updating program details:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
+  const cancelRequest = useCallback(async (reason?: string): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("cancel-program-request", {
+        body: {
+          token: token,
+          reason,
+        },
+      });
+
+      if (error) throw error;
+
+      // Set program to null to show cancelled state
+      setProgram(null);
+      setError("Deze aanvraag is geannuleerd");
+      return true;
+    } catch (err) {
+      console.error("Error cancelling request:", err);
+      return false;
+    }
+  }, [program, token]);
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, progress: 0 };
 
   return {
     program,
+    history,
     isLoading,
     error,
     refetch: fetchProgram,
@@ -206,6 +276,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     removeItem,
     getPendingChanges,
     submitChanges,
+    updateProgramDetails,
+    cancelRequest,
     statusSummary,
   };
 };
