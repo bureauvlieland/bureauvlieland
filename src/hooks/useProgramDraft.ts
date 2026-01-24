@@ -7,9 +7,23 @@ const DRAFT_EXPIRY_DAYS = 30;
 export interface DraftProgram {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
+  selectedDates: string[]; // Array of ISO date strings
+  savedAt: string;
+  manualOrder: boolean;
+}
+
+// Legacy draft format for migration
+interface LegacyDraftProgram {
+  cartItems: Array<{
+    blockId: string;
+    preferredTime: string | null;
+    notes: string;
+    dayIndex?: number;
+  }>;
+  numberOfPeople: number;
   selectedDate: string | null;
   savedAt: string;
-  manualOrder: boolean; // True if user has manually reordered items
+  manualOrder: boolean;
 }
 
 interface UseProgramDraftReturn {
@@ -20,6 +34,37 @@ interface UseProgramDraftReturn {
   lastSaved: Date | null;
 }
 
+// Migrate legacy single-date format to multi-date format
+const migrateDraft = (stored: LegacyDraftProgram | DraftProgram): DraftProgram => {
+  // Check if it's already the new format
+  if ('selectedDates' in stored && Array.isArray(stored.selectedDates)) {
+    // Ensure all cart items have dayIndex
+    const migratedItems = stored.cartItems.map(item => ({
+      ...item,
+      dayIndex: item.dayIndex ?? 0,
+    }));
+    return {
+      ...stored,
+      cartItems: migratedItems,
+    };
+  }
+
+  // Migrate from legacy format
+  const legacy = stored as LegacyDraftProgram;
+  const migratedItems = legacy.cartItems.map(item => ({
+    ...item,
+    dayIndex: item.dayIndex ?? 0,
+  }));
+
+  return {
+    cartItems: migratedItems,
+    numberOfPeople: legacy.numberOfPeople,
+    selectedDates: legacy.selectedDate ? [legacy.selectedDate] : [],
+    savedAt: legacy.savedAt,
+    manualOrder: legacy.manualOrder,
+  };
+};
+
 export const useProgramDraft = (): UseProgramDraftReturn => {
   const [draft, setDraft] = useState<DraftProgram | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -29,10 +74,11 @@ export const useProgramDraft = (): UseProgramDraftReturn => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed: DraftProgram = JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        const migrated = migrateDraft(parsed);
         
         // Check if draft has expired
-        const savedDate = new Date(parsed.savedAt);
+        const savedDate = new Date(migrated.savedAt);
         const now = new Date();
         const daysDiff = (now.getTime() - savedDate.getTime()) / (1000 * 60 * 60 * 24);
         
@@ -41,7 +87,7 @@ export const useProgramDraft = (): UseProgramDraftReturn => {
           return;
         }
         
-        setDraft(parsed);
+        setDraft(migrated);
         setLastSaved(savedDate);
       }
     } catch (error) {

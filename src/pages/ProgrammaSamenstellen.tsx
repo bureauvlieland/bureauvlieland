@@ -26,6 +26,7 @@ const ProgrammaSamenstellen = () => {
     cartItems,
     numberOfPeople,
     selectedDate,
+    selectedDates,
     lastSaved,
     addToCart,
     removeFromCart,
@@ -33,6 +34,8 @@ const ProgrammaSamenstellen = () => {
     reorderItems,
     setNumberOfPeople,
     setSelectedDate,
+    addDate,
+    removeDate,
     isInCart,
     hasPendingDraft,
     pendingDraft,
@@ -207,11 +210,14 @@ const ProgrammaSamenstellen = () => {
                   <ConfiguratorCart
                     cartItems={cartItems}
                     numberOfPeople={numberOfPeople}
+                    selectedDates={selectedDates}
                     selectedDate={selectedDate}
                     onRemoveItem={removeFromCart}
                     onUpdateItem={updateItem}
                     onPeopleChange={setNumberOfPeople}
                     onDateChange={setSelectedDate}
+                    onAddDate={addDate}
+                    onRemoveDate={removeDate}
                     onSubmit={handleSubmit}
                     onReorderItems={reorderItems}
                   />
@@ -242,6 +248,7 @@ const ProgrammaSamenstellen = () => {
         cartItems={cartItems}
         numberOfPeople={numberOfPeople}
         selectedDate={selectedDate}
+        selectedDates={selectedDates}
       />
     </div>
   );

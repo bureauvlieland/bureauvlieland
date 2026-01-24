@@ -90,7 +90,8 @@ const SharedProgram = () => {
     // Clear existing and import
     let addedCount = 0;
     program.cart_items.forEach((item) => {
-      const added = addToCart(item.blockId);
+      // Pass dayIndex if available
+      const added = addToCart(item.blockId, item.dayIndex ?? 0);
       if (added) addedCount++;
     });
 

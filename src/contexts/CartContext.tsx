@@ -2,25 +2,32 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, ty
 import { type CartItemDetail } from "@/data/configuratorMockData";
 import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
 
+const MAX_DAYS = 7;
+
 interface CartContextType {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
-  selectedDate: Date | undefined;
+  selectedDates: Date[];
   manualOrder: boolean;
   lastSaved: Date | null;
   itemJustAdded: boolean;
-  addToCart: (blockId: string) => boolean;
+  addToCart: (blockId: string, dayIndex?: number) => boolean;
   removeFromCart: (blockId: string) => void;
   updateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   reorderItems: (items: CartItemDetail[]) => void;
   setNumberOfPeople: (count: number) => void;
-  setSelectedDate: (date: Date | undefined) => void;
+  addDate: (date: Date) => boolean;
+  removeDate: (dateIndex: number) => void;
+  updateItemDay: (blockId: string, newDayIndex: number) => void;
   clearCart: () => void;
   isInCart: (blockId: string) => boolean;
   restoreDraft: () => void;
   hasPendingDraft: boolean;
   pendingDraft: DraftProgram | null;
   dismissDraft: () => void;
+  // Legacy compatibility
+  selectedDate: Date | undefined;
+  setSelectedDate: (date: Date | undefined) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -30,7 +37,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const [cartItems, setCartItems] = useState<CartItemDetail[]>([]);
   const [numberOfPeople, setNumberOfPeople] = useState(20);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [manualOrder, setManualOrder] = useState(false);
   const [hasPendingDraft, setHasPendingDraft] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -51,11 +58,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       saveDraft({
         cartItems,
         numberOfPeople,
-        selectedDate: selectedDate?.toISOString() || null,
+        selectedDates: selectedDates.map(d => d.toISOString()),
         manualOrder,
       });
     }
-  }, [cartItems, numberOfPeople, selectedDate, manualOrder, saveDraft, isInitialized]);
+  }, [cartItems, numberOfPeople, selectedDates, manualOrder, saveDraft, isInitialized]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -65,13 +72,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [cartItems, numberOfPeople, selectedDate, saveCurrentDraft, isInitialized]);
+  }, [cartItems, numberOfPeople, selectedDates, saveCurrentDraft, isInitialized]);
 
   const restoreDraft = useCallback(() => {
     if (draft) {
       setCartItems(draft.cartItems);
       setNumberOfPeople(draft.numberOfPeople);
-      setSelectedDate(draft.selectedDate ? new Date(draft.selectedDate) : undefined);
+      setSelectedDates(draft.selectedDates.map(d => new Date(d)));
       setManualOrder(draft.manualOrder);
     }
     setHasPendingDraft(false);
@@ -82,7 +89,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setHasPendingDraft(false);
   }, [clearDraft]);
 
-  const addToCart = useCallback((blockId: string): boolean => {
+  const addToCart = useCallback((blockId: string, dayIndex: number = 0): boolean => {
     if (cartItems.find(item => item.blockId === blockId)) {
       return false;
     }
@@ -90,6 +97,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       blockId,
       preferredTime: null,
       notes: "",
+      dayIndex,
     }]);
     
     // Trigger animation
@@ -116,14 +124,66 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
+  const updateItemDay = useCallback((blockId: string, newDayIndex: number) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.blockId === blockId ? { ...item, dayIndex: newDayIndex } : item
+      )
+    );
+  }, []);
+
   const reorderItems = useCallback((newItems: CartItemDetail[]) => {
     setCartItems(newItems);
     setManualOrder(true);
   }, []);
 
+  const addDate = useCallback((date: Date): boolean => {
+    // Check max days limit
+    if (selectedDates.length >= MAX_DAYS) {
+      return false;
+    }
+    // Check if date already exists
+    const dateStr = date.toDateString();
+    if (selectedDates.some(d => d.toDateString() === dateStr)) {
+      return false;
+    }
+    // Add and sort by date
+    setSelectedDates(prev => [...prev, date].sort((a, b) => a.getTime() - b.getTime()));
+    return true;
+  }, [selectedDates]);
+
+  const removeDate = useCallback((dateIndex: number) => {
+    // Check if there are items on this day
+    const itemsOnDay = cartItems.filter(item => item.dayIndex === dateIndex);
+    
+    // Remove items or reassign to day 0
+    if (itemsOnDay.length > 0) {
+      // Move items to previous day or day 0
+      setCartItems(prev => prev.map(item => {
+        if (item.dayIndex === dateIndex) {
+          return { ...item, dayIndex: Math.max(0, dateIndex - 1) };
+        }
+        if (item.dayIndex > dateIndex) {
+          return { ...item, dayIndex: item.dayIndex - 1 };
+        }
+        return item;
+      }));
+    } else {
+      // Shift dayIndex for items on later days
+      setCartItems(prev => prev.map(item => {
+        if (item.dayIndex > dateIndex) {
+          return { ...item, dayIndex: item.dayIndex - 1 };
+        }
+        return item;
+      }));
+    }
+    
+    setSelectedDates(prev => prev.filter((_, i) => i !== dateIndex));
+  }, [cartItems]);
+
   const clearCart = useCallback(() => {
     setCartItems([]);
-    setSelectedDate(undefined);
+    setSelectedDates([]);
     setManualOrder(false);
     clearDraft();
   }, [clearDraft]);
@@ -132,12 +192,28 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return cartItems.some(item => item.blockId === blockId);
   }, [cartItems]);
 
+  // Legacy compatibility: first date as selectedDate
+  const selectedDate = selectedDates.length > 0 ? selectedDates[0] : undefined;
+  
+  const setSelectedDate = useCallback((date: Date | undefined) => {
+    if (date) {
+      if (selectedDates.length === 0) {
+        setSelectedDates([date]);
+      } else {
+        // Replace first date
+        setSelectedDates(prev => [date, ...prev.slice(1)].sort((a, b) => a.getTime() - b.getTime()));
+      }
+    } else {
+      setSelectedDates([]);
+    }
+  }, [selectedDates]);
+
   return (
     <CartContext.Provider
       value={{
         cartItems,
         numberOfPeople,
-        selectedDate,
+        selectedDates,
         manualOrder,
         lastSaved,
         itemJustAdded,
@@ -146,13 +222,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         updateItem,
         reorderItems,
         setNumberOfPeople,
-        setSelectedDate,
+        addDate,
+        removeDate,
+        updateItemDay,
         clearCart,
         isInCart,
         restoreDraft,
         hasPendingDraft,
         pendingDraft: draft,
         dismissDraft,
+        // Legacy
+        selectedDate,
+        setSelectedDate,
       }}
     >
       {children}

@@ -21,13 +21,16 @@ export const GlobalCartDrawer = () => {
     cartItems,
     numberOfPeople,
     selectedDate,
+    selectedDates,
+    lastSaved,
+    itemJustAdded,
     removeFromCart,
     updateItem,
     setNumberOfPeople,
     setSelectedDate,
+    addDate,
+    removeDate,
     reorderItems,
-    lastSaved,
-    itemJustAdded,
   } = useCart();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -102,11 +105,14 @@ export const GlobalCartDrawer = () => {
               <ConfiguratorCart
                 cartItems={cartItems}
                 numberOfPeople={numberOfPeople}
+                selectedDates={selectedDates}
                 selectedDate={selectedDate}
                 onRemoveItem={removeFromCart}
                 onUpdateItem={updateItem}
                 onPeopleChange={setNumberOfPeople}
                 onDateChange={setSelectedDate}
+                onAddDate={addDate}
+                onRemoveDate={removeDate}
                 onSubmit={() => {
                   handleSubmit();
                   setIsOpen(false);
