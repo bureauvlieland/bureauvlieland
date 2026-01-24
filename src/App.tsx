@@ -29,6 +29,7 @@ import TrouwenOpVlieland from "./pages/TrouwenOpVlieland";
 import ProgrammaSamenstellen from "./pages/ProgrammaSamenstellen";
 import SharedProgram from "./pages/SharedProgram";
 import CustomerProgram from "./pages/CustomerProgram";
+import PartnerPortal from "./pages/PartnerPortal";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/programma-samenstellen" element={<ProgrammaSamenstellen />} />
             <Route path="/programma/:shareCode" element={<SharedProgram />} />
             <Route path="/mijn-programma/:token" element={<CustomerProgram />} />
+            <Route path="/partner/:token" element={<PartnerPortal />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
