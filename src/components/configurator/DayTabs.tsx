@@ -3,12 +3,14 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ShoppingCart } from "lucide-react";
 import { type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface DayTabsProps {
   selectedDates: Date[];
   activeDay: number;
   onDayChange: (dayIndex: number) => void;
   itemCountPerDay: number[];
+  highlightedDay?: number | null;
   children: (dayIndex: number) => ReactNode;
 }
 
@@ -17,6 +19,7 @@ export const DayTabs = ({
   activeDay,
   onDayChange,
   itemCountPerDay,
+  highlightedDay,
   children,
 }: DayTabsProps) => {
   if (selectedDates.length <= 1) {
@@ -35,7 +38,10 @@ export const DayTabs = ({
           <TabsTrigger
             key={date.toISOString()}
             value={String(index)}
-            className="flex-1 min-w-[100px] text-xs sm:text-sm gap-1.5 data-[state=active]:bg-background"
+            className={cn(
+              "flex-1 min-w-[100px] text-xs sm:text-sm gap-1.5 data-[state=active]:bg-background",
+              highlightedDay === index && "animate-tab-highlight"
+            )}
           >
             <span className="font-medium">Dag {index + 1}</span>
             <span className="hidden sm:inline text-muted-foreground">

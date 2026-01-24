@@ -113,12 +113,21 @@ export default {
             transform: "scale(1)",
           },
         },
+        "tab-highlight": {
+          "0%, 100%": {
+            backgroundColor: "hsl(var(--primary) / 0.1)",
+          },
+          "50%": {
+            backgroundColor: "hsl(var(--primary) / 0.25)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "cart-pulse": "cart-pulse 0.4s ease-in-out",
         "badge-pop": "badge-pop 0.3s ease-out",
+        "tab-highlight": "tab-highlight 0.6s ease-in-out",
       },
     },
   },

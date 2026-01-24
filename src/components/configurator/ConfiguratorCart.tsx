@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { ShareProgramDialog } from "./ShareProgramDialog";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import {
   DndContext,
   closestCenter,
@@ -61,7 +63,10 @@ export const ConfiguratorCart = ({
 }: ConfiguratorCartProps) => {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [activeDay, setActiveDay] = useState(0);
-  
+  const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
+  const prevItemsRef = useRef<CartItemDetail[]>(cartItems);
+  const { toast } = useToast();
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -77,6 +82,48 @@ export const ConfiguratorCart = ({
   const effectiveDates = selectedDates.length > 0 
     ? selectedDates 
     : (selectedDate ? [selectedDate] : []);
+
+  // Detect day changes and show feedback
+  useEffect(() => {
+    if (prevItemsRef.current.length === 0) {
+      prevItemsRef.current = cartItems;
+      return;
+    }
+
+    // Find item that changed day
+    const changedItem = cartItems.find((item) => {
+      const prevItem = prevItemsRef.current.find(p => p.blockId === item.blockId);
+      return prevItem && prevItem.dayIndex !== item.dayIndex;
+    });
+
+    if (changedItem && effectiveDates.length > 1) {
+      const block = getBlockById(changedItem.blockId);
+      const newDayIndex = changedItem.dayIndex ?? 0;
+      const targetDate = effectiveDates[newDayIndex];
+      
+      // Show toast with action to navigate
+      toast({
+        title: `"${block?.name}" verplaatst`,
+        description: targetDate 
+          ? `Nu op Dag ${newDayIndex + 1}` 
+          : `Verplaatst naar dag ${newDayIndex + 1}`,
+        action: (
+          <ToastAction altText="Bekijk" onClick={() => setActiveDay(newDayIndex)}>
+            Bekijk
+          </ToastAction>
+        ),
+      });
+
+      // Highlight the target tab
+      setHighlightedDay(newDayIndex);
+      setTimeout(() => setHighlightedDay(null), 800);
+
+      // Auto-switch to the new day
+      setActiveDay(newDayIndex);
+    }
+
+    prevItemsRef.current = cartItems;
+  }, [cartItems, effectiveDates, toast]);
 
   const blocks = cartItems
     .map((item) => getBlockById(item.blockId))
@@ -389,6 +436,7 @@ export const ConfiguratorCart = ({
             activeDay={activeDay}
             onDayChange={setActiveDay}
             itemCountPerDay={itemCountPerDay}
+            highlightedDay={highlightedDay}
           >
             {(dayIndex) => renderDayItems(dayIndex)}
           </DayTabs>
