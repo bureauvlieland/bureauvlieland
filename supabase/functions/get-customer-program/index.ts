@@ -1,0 +1,73 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "Token is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch program request
+    const { data: program, error: programError } = await supabase
+      .from("program_requests")
+      .select("*")
+      .eq("customer_token", token)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (programError || !program) {
+      return new Response(
+        JSON.stringify({ error: "Program not found or expired" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch items
+    const { data: items, error: itemsError } = await supabase
+      .from("program_request_items")
+      .select("*")
+      .eq("request_id", program.id)
+      .order("day_index", { ascending: true })
+      .order("preferred_time", { ascending: true, nullsFirst: false });
+
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    return new Response(
+      JSON.stringify({
+        program: {
+          ...program,
+          items: items || [],
+        },
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error fetching customer program:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
