@@ -30,6 +30,11 @@ export interface PartnerItem {
   status_note: string | null;
   status_updated_at: string | null;
   executed_at: string | null;
+  // Quoted price fields (set when partner confirms)
+  quoted_price: number | null;
+  quoted_at: string | null;
+  quoted_notes: string | null;
+  // Invoice fields
   invoiced_amount: number | null;
   invoiced_number: string | null;
   invoiced_date: string | null;

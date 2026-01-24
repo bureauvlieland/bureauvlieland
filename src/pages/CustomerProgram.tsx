@@ -15,6 +15,7 @@ import { BillingDetailsDialog, type BillingDetails } from "@/components/customer
 import { AcceptTermsCard } from "@/components/customer-portal/AcceptTermsCard";
 import { ProgramHistoryTimeline } from "@/components/customer-portal/ProgramHistoryTimeline";
 import { InvoiceProvidersCard } from "@/components/customer-portal/InvoiceProvidersCard";
+import { PriceSummaryCard } from "@/components/customer-portal/PriceSummaryCard";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useToast } from "@/hooks/use-toast";
@@ -332,6 +333,9 @@ const CustomerProgram = () => {
 
         {/* Invoice providers info */}
         <InvoiceProvidersCard items={program.items} className="mb-6" />
+
+        {/* Price summary */}
+        <PriceSummaryCard items={program.items} />
 
         {/* Program details card */}
         <Card className="mb-6">

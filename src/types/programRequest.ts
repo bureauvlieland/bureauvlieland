@@ -84,6 +84,11 @@ export interface ProgramRequestItem {
   version: number;
   created_at: string;
   updated_at: string;
+  executed_at: string | null;
+  // Quoted price fields (set when partner confirms)
+  quoted_price: number | null;
+  quoted_at: string | null;
+  quoted_notes: string | null;
 }
 
 export interface ProgramRequestHistory {

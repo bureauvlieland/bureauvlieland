@@ -100,6 +100,25 @@ export const PartnerItemCard = ({
           )}
         </div>
 
+        {/* Quoted price (shown when confirmed) */}
+        {item.quoted_price && (
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-green-700 dark:text-green-400">
+                Bevestigd voor €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              {item.quoted_at && (
+                <span className="text-xs text-muted-foreground">
+                  {format(parseISO(item.quoted_at), "d MMM yyyy", { locale: nl })}
+                </span>
+              )}
+            </div>
+            {item.quoted_notes && (
+              <p className="text-muted-foreground mt-1">{item.quoted_notes}</p>
+            )}
+          </div>
+        )}
+
         {/* Customer notes */}
         {item.customer_notes && (
           <div className="bg-muted/30 rounded-lg p-3 text-sm">

@@ -55,9 +55,9 @@ const PartnerPortal = () => {
   const confirmedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
 
-  const handleStatusUpdate = async (status: string, note?: string) => {
+  const handleStatusUpdate = async (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => {
     if (!selectedItem) return;
-    const success = await updateItemStatus(selectedItem.id, status, note);
+    const success = await updateItemStatus(selectedItem.id, status, note, undefined, quotedPrice, quotedNotes);
     if (success) {
       setShowStatusDialog(false);
       setSelectedItem(null);

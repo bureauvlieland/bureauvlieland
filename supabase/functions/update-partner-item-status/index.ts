@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, status, statusNote, executedAt } = await req.json();
+    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes } = await req.json();
 
     if (!partnerToken || !itemId || !status) {
       return new Response(
@@ -25,6 +25,14 @@ serve(async (req) => {
     if (!validStatuses.includes(status)) {
       return new Response(
         JSON.stringify({ error: "Invalid status" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate quoted price is required for confirmed status
+    if (status === "confirmed" && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
+      return new Response(
+        JSON.stringify({ error: "Quoted price is required when confirming" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -75,6 +83,13 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
+    // If marking as confirmed with a quoted price
+    if (status === "confirmed" && quotedPrice !== undefined) {
+      updateData.quoted_price = quotedPrice;
+      updateData.quoted_at = new Date().toISOString();
+      updateData.quoted_notes = quotedNotes || null;
+    }
+
     // If marking as executed
     if (executedAt) {
       updateData.executed_at = executedAt;
@@ -94,6 +109,10 @@ serve(async (req) => {
     }
 
     // Log to history
+    const historyNotes = status === "confirmed" && quotedPrice
+      ? `Partner heeft bevestigd voor €${quotedPrice.toFixed(2)}${quotedNotes ? ` - ${quotedNotes}` : ""}`
+      : `Partner heeft status gewijzigd naar ${status}${statusNote ? `: ${statusNote}` : ""}`;
+
     await supabase.from("program_request_history").insert({
       request_id: item.request_id,
       item_id: itemId,
@@ -101,14 +120,14 @@ serve(async (req) => {
       actor: "partner",
       actor_name: partner.name,
       old_value: { status: oldStatus },
-      new_value: { status, status_note: statusNote },
-      notes: `Partner heeft status gewijzigd naar ${status}${statusNote ? `: ${statusNote}` : ""}`,
+      new_value: { status, status_note: statusNote, quoted_price: quotedPrice, quoted_notes: quotedNotes },
+      notes: historyNotes,
     });
 
     // TODO: Send notification email to customer
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, quotedPrice }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

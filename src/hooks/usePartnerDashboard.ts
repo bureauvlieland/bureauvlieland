@@ -65,7 +65,9 @@ export const usePartnerDashboard = (token: string) => {
     itemId: string,
     status: string,
     statusNote?: string,
-    executedAt?: string
+    executedAt?: string,
+    quotedPrice?: number,
+    quotedNotes?: string
   ): Promise<boolean> => {
     try {
       const response = await fetch(
@@ -82,6 +84,8 @@ export const usePartnerDashboard = (token: string) => {
             status,
             statusNote,
             executedAt,
+            quotedPrice,
+            quotedNotes,
           }),
         }
       );
