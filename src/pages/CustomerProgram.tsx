@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusSummary } from "@/components/customer-portal/StatusSummary";
 import { CustomerProgramItem } from "@/components/customer-portal/CustomerProgramItem";
 import { ChangeConfirmationDialog, type PendingChange } from "@/components/customer-portal/ChangeConfirmationDialog";
+import { EditProgramDetailsDialog } from "@/components/customer-portal/EditProgramDetailsDialog";
+import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
+import { ProgramHistoryTimeline } from "@/components/customer-portal/ProgramHistoryTimeline";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +25,9 @@ import {
   Phone, 
   AlertCircle,
   Send,
-  RefreshCw
+  RefreshCw,
+  Pencil,
+  Ban
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 
@@ -33,6 +37,7 @@ const CustomerProgram = () => {
   
   const {
     program,
+    history,
     isLoading,
     error,
     refetch,
@@ -40,12 +45,17 @@ const CustomerProgram = () => {
     removeItem,
     getPendingChanges,
     submitChanges,
+    updateProgramDetails,
+    cancelRequest,
     statusSummary,
   } = useCustomerProgram(token || "");
 
   const [activeDay, setActiveDay] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const pendingChanges = getPendingChanges();
   const hasChanges = pendingChanges.length > 0;
@@ -83,6 +93,16 @@ const CustomerProgram = () => {
       });
   };
 
+  // Calculate provider count for cancellation dialog
+  const uniqueProviders = useMemo(() => {
+    if (!program?.items) return new Set<string>();
+    return new Set(
+      program.items
+        .filter(item => item.status !== "cancelled" && item.block_type !== "self_arranged" && item.provider_email)
+        .map(item => item.provider_id)
+    );
+  }, [program?.items]);
+
   const handleSubmitChanges = async () => {
     setIsSubmitting(true);
     const success = await submitChanges();
@@ -103,11 +123,58 @@ const CustomerProgram = () => {
     }
   };
 
+  const handleSaveDetails = async (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => {
+    const success = await updateProgramDetails(updates);
+
+    if (success) {
+      toast({
+        title: "Details bijgewerkt",
+        description: updates.selectedDates 
+          ? "Alle aanbieders zijn op de hoogte gesteld van de datumwijziging."
+          : "Je wijzigingen zijn opgeslagen.",
+      });
+    } else {
+      toast({
+        title: "Er ging iets mis",
+        description: "Probeer het later opnieuw of neem contact met ons op.",
+        variant: "destructive",
+      });
+    }
+
+    return success;
+  };
+
+  const handleCancelRequest = async (reason?: string) => {
+    setIsCancelling(true);
+    const success = await cancelRequest(reason);
+    setIsCancelling(false);
+    setShowCancelDialog(false);
+
+    if (success) {
+      toast({
+        title: "Aanvraag geannuleerd",
+        description: "Alle betrokken aanbieders zijn op de hoogte gesteld.",
+      });
+    } else {
+      toast({
+        title: "Er ging iets mis",
+        description: "Probeer het later opnieuw of neem contact met ons op.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
+            </Link>
+          </div>
+        </header>
         <main className="container mx-auto px-4 py-12 max-w-4xl">
           <Skeleton className="h-8 w-48 mb-4" />
           <Skeleton className="h-4 w-64 mb-8" />
@@ -123,7 +190,13 @@ const CustomerProgram = () => {
   if (error || !program) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
+            </Link>
+          </div>
+        </header>
         <main className="container mx-auto px-4 py-12 max-w-2xl text-center">
           <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Programma niet gevonden</h1>
@@ -141,6 +214,13 @@ const CustomerProgram = () => {
       </div>
     );
   }
+
+  // Date range for display
+  const dateRange = selectedDates.length > 0
+    ? selectedDates.length === 1
+      ? format(selectedDates[0], "d MMMM yyyy", { locale: nl })
+      : `${format(selectedDates[0], "d MMM", { locale: nl })} - ${format(selectedDates[selectedDates.length - 1], "d MMM yyyy", { locale: nl })}`
+    : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -185,7 +265,13 @@ const CustomerProgram = () => {
         {/* Program details card */}
         <Card className="mb-6">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Programma details</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Programma details</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setShowEditDialog(true)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Bewerken
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
@@ -233,6 +319,16 @@ const CustomerProgram = () => {
                 <div>
                   <p className="text-muted-foreground">Telefoon</p>
                   <p className="font-medium">{program.customer_phone}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Aantal personen</p>
+                  <p className="font-medium">{program.number_of_people}</p>
                 </div>
               </div>
             </div>
@@ -290,7 +386,7 @@ const CustomerProgram = () => {
 
         {/* Submit changes button */}
         {hasChanges && (
-          <div className="sticky bottom-4 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg">
+          <div className="sticky bottom-4 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mb-8">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-medium">
@@ -308,8 +404,37 @@ const CustomerProgram = () => {
           </div>
         )}
 
+        {/* History timeline */}
+        {history.length > 0 && (
+          <ProgramHistoryTimeline history={history} className="mb-8" />
+        )}
+
+        {/* Cancel request section */}
+        <Card className="mb-8 border-destructive/20">
+          <CardContent className="py-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-medium mb-1 flex items-center gap-2">
+                  <Ban className="h-4 w-4 text-destructive" />
+                  Aanvraag annuleren
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Wil je de hele aanvraag annuleren? Alle aanbieders worden automatisch op de hoogte gesteld.
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                onClick={() => setShowCancelDialog(true)}
+              >
+                Annuleren
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Contact section */}
-        <Card className="mt-8 bg-muted/30">
+        <Card className="bg-muted/30">
           <CardContent className="py-6">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -342,13 +467,31 @@ const CustomerProgram = () => {
 
       <Footer />
 
-      {/* Change confirmation dialog */}
+      {/* Dialogs */}
       <ChangeConfirmationDialog
         isOpen={showConfirmDialog}
         onConfirm={handleSubmitChanges}
         onCancel={() => setShowConfirmDialog(false)}
         changes={pendingChanges as PendingChange[]}
         isSubmitting={isSubmitting}
+      />
+
+      <EditProgramDetailsDialog
+        isOpen={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        selectedDates={selectedDates}
+        numberOfPeople={program.number_of_people}
+        onSave={handleSaveDetails}
+      />
+
+      <CancelRequestDialog
+        isOpen={showCancelDialog}
+        onConfirm={handleCancelRequest}
+        onCancel={() => setShowCancelDialog(false)}
+        itemCount={program.items.filter(i => i.status !== "cancelled").length}
+        providerCount={uniqueProviders.size}
+        dateRange={dateRange}
+        isSubmitting={isCancelling}
       />
     </div>
   );

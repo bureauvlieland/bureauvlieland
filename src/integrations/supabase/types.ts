@@ -147,6 +147,8 @@ export type Database = {
       }
       program_requests: {
         Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
           created_at: string
           customer_company: string | null
           customer_email: string
@@ -158,9 +160,12 @@ export type Database = {
           id: string
           number_of_people: number
           selected_dates: Json
+          status: string
           updated_at: string
         }
         Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           customer_company?: string | null
           customer_email: string
@@ -172,9 +177,12 @@ export type Database = {
           id?: string
           number_of_people?: number
           selected_dates?: Json
+          status?: string
           updated_at?: string
         }
         Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           created_at?: string
           customer_company?: string | null
           customer_email?: string
@@ -186,6 +194,7 @@ export type Database = {
           id?: string
           number_of_people?: number
           selected_dates?: Json
+          status?: string
           updated_at?: string
         }
         Relationships: []
