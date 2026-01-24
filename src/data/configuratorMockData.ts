@@ -68,7 +68,7 @@ export interface ProgramRequest {
 
 // Time slots for preferred time selector
 export const timeSlots = [
-  { value: "", label: "Flexibel" },
+  { value: "flexibel", label: "Flexibel" },
   { value: "08:00", label: "08:00" },
   { value: "08:30", label: "08:30" },
   { value: "09:00", label: "09:00" },
