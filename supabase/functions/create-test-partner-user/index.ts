@@ -23,11 +23,80 @@ Deno.serve(async (req) => {
       },
     });
 
-    const { partnerId, email, password } = await req.json();
+    const { partnerId, email, password, assignAdminRole } = await req.json();
 
-    if (!partnerId || !email || !password) {
+    if (!email || !password) {
       return new Response(
-        JSON.stringify({ error: "partnerId, email, and password are required" }),
+        JSON.stringify({ error: "email and password are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If creating admin-only user (no partner)
+    if (assignAdminRole && !partnerId) {
+      // Check if user already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(u => u.email === email);
+      
+      let authUserId: string;
+      
+      if (existingUser) {
+        authUserId = existingUser.id;
+      } else {
+        // Create auth user
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+        });
+
+        if (authError) {
+          return new Response(
+            JSON.stringify({ error: `Failed to create auth user: ${authError.message}` }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        authUserId = authData.user.id;
+      }
+
+      // Check if already has admin role
+      const { data: existingRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", authUserId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!existingRole) {
+        // Assign admin role
+        const { error: roleError } = await supabaseAdmin
+          .from("user_roles")
+          .insert({ user_id: authUserId, role: "admin" });
+
+        if (roleError) {
+          return new Response(
+            JSON.stringify({ error: `Failed to assign admin role: ${roleError.message}` }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Admin user created/updated: ${email}`,
+          authUserId,
+          email,
+          isAdmin: true,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Partner user creation flow
+    if (!partnerId) {
+      return new Response(
+        JSON.stringify({ error: "partnerId is required for partner users" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -57,7 +126,7 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: true,
     });
 
     if (authError) {
