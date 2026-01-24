@@ -192,6 +192,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
           token: token,
           changes: changes,
           items: program.items,
+          origin: window.location.origin, // For test mode detection
         },
       });
 
@@ -226,6 +227,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         body: {
           token: token,
           programDetails,
+          origin: window.location.origin, // For test mode detection
         },
       });
 
@@ -247,6 +249,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         body: {
           token: token,
           reason,
+          origin: window.location.origin, // For test mode detection
         },
       });
 

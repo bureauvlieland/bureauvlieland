@@ -12,7 +12,25 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 interface CancelRequest {
   token: string;
   reason?: string;
+  origin?: string;
 }
+
+// Test mode configuration
+const TEST_EMAIL = "erwin@bureauvlieland.nl";
+const PRODUCTION_DOMAINS = ["bureauvlieland.nl", "bureauvlieland.lovable.app"];
+
+const isTestMode = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
+};
+
+const getRecipientEmail = (originalEmail: string, origin: string | undefined): string => {
+  return isTestMode(origin) ? TEST_EMAIL : originalEmail;
+};
+
+const getSubjectPrefix = (origin: string | undefined): string => {
+  return isTestMode(origin) ? "[TEST] " : "";
+};
 
 const sanitizeHtml = (str: string | undefined | null): string => {
   if (!str) return "";
@@ -43,7 +61,14 @@ serve(async (req) => {
   }
 
   try {
-    const { token, reason }: CancelRequest = await req.json();
+    const { token, reason, origin }: CancelRequest = await req.json();
+    
+    const testMode = isTestMode(origin);
+    const subjectPrefix = getSubjectPrefix(origin);
+    
+    if (testMode) {
+      console.log(`[TEST MODE] All partner emails will be redirected to ${TEST_EMAIL}`);
+    }
 
     if (!token) {
       return new Response(
@@ -145,12 +170,13 @@ serve(async (req) => {
     const emails: any[] = [];
 
     // Provider emails
+    // Provider cancellation emails (redirected in test mode)
     for (const [, provider] of providers) {
       const safeReason = reason ? sanitizeHtml(reason) : null;
       emails.push({
         From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: provider.email, Name: provider.name }],
-        Subject: `Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+        To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+        Subject: `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
         HTMLPart: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
@@ -180,11 +206,11 @@ serve(async (req) => {
       });
     }
 
-    // Customer confirmation email
+    // Customer confirmation email (always to real customer)
     emails.push({
       From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: program.customer_email, Name: program.customer_name }],
-      Subject: "Bevestiging: Jouw aanvraag is geannuleerd",
+      Subject: `${subjectPrefix}Bevestiging: Jouw aanvraag is geannuleerd`,
       HTMLPart: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>

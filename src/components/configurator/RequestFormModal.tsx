@@ -158,6 +158,7 @@ export const RequestFormModal = ({
           bureauFee,
           blocks: blocksWithDetails,
           customerToken: token,
+          origin: window.location.origin, // For test mode detection
         },
       });
 
