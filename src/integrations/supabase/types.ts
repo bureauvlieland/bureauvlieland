@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      partners: {
+        Row: {
+          address_city: string | null
+          address_postal: string | null
+          address_street: string | null
+          commission_percentage: number
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          kvk_number: string | null
+          name: string
+          partner_token: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_city?: string | null
+          address_postal?: string | null
+          address_street?: string | null
+          commission_percentage?: number
+          created_at?: string
+          email: string
+          id: string
+          is_active?: boolean
+          kvk_number?: string | null
+          name: string
+          partner_token?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_city?: string | null
+          address_postal?: string | null
+          address_street?: string | null
+          commission_percentage?: number
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          kvk_number?: string | null
+          name?: string
+          partner_token?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       program_request_history: {
         Row: {
           action: string
@@ -74,10 +122,20 @@ export type Database = {
           block_id: string
           block_name: string
           block_type: string
+          commission_amount: number | null
+          commission_invoiced_at: string | null
+          commission_notes: string | null
+          commission_percentage: number | null
+          commission_status: string | null
           created_at: string
           customer_notes: string | null
           day_index: number
+          executed_at: string | null
           id: string
+          invoiced_amount: number | null
+          invoiced_date: string | null
+          invoiced_file_path: string | null
+          invoiced_number: string | null
           preferred_time: string | null
           price_indication: string | null
           provider_email: string | null
@@ -96,10 +154,20 @@ export type Database = {
           block_id: string
           block_name: string
           block_type: string
+          commission_amount?: number | null
+          commission_invoiced_at?: string | null
+          commission_notes?: string | null
+          commission_percentage?: number | null
+          commission_status?: string | null
           created_at?: string
           customer_notes?: string | null
           day_index?: number
+          executed_at?: string | null
           id?: string
+          invoiced_amount?: number | null
+          invoiced_date?: string | null
+          invoiced_file_path?: string | null
+          invoiced_number?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           provider_email?: string | null
@@ -118,10 +186,20 @@ export type Database = {
           block_id?: string
           block_name?: string
           block_type?: string
+          commission_amount?: number | null
+          commission_invoiced_at?: string | null
+          commission_notes?: string | null
+          commission_percentage?: number | null
+          commission_status?: string | null
           created_at?: string
           customer_notes?: string | null
           day_index?: number
+          executed_at?: string | null
           id?: string
+          invoiced_amount?: number | null
+          invoiced_date?: string | null
+          invoiced_file_path?: string | null
+          invoiced_number?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           provider_email?: string | null
