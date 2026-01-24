@@ -23,6 +23,7 @@ interface RequestFormModalProps {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
   selectedDate: Date | undefined;
+  selectedDates?: Date[];
 }
 
 export const RequestFormModal = ({
@@ -31,6 +32,7 @@ export const RequestFormModal = ({
   cartItems,
   numberOfPeople,
   selectedDate,
+  selectedDates = [],
 }: RequestFormModalProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +81,10 @@ export const RequestFormModal = ({
         };
       });
 
+      // Format dates for the request
+      const effectiveDates = selectedDates.length > 0 ? selectedDates : (selectedDate ? [selectedDate] : []);
+      const formattedDates = effectiveDates.map(d => format(d, "d MMMM yyyy", { locale: nl }));
+      
       const { data, error } = await supabase.functions.invoke("send-program-request", {
         body: {
           name: formData.name,
@@ -87,7 +93,9 @@ export const RequestFormModal = ({
           company: formData.company,
           notes: formData.notes,
           numberOfPeople,
-          selectedDate: selectedDate ? format(selectedDate, "d MMMM yyyy", { locale: nl }) : undefined,
+          selectedDate: formattedDates[0], // For backwards compatibility
+          selectedDates: formattedDates,
+          numberOfDays: effectiveDates.length,
           bureauFee,
           blocks: blocksWithDetails,
         },
@@ -293,12 +301,24 @@ export const RequestFormModal = ({
           {/* Meta info */}
           <div className="grid grid-cols-2 gap-2 text-sm mt-4 pt-3 border-t">
             <div>
-              <span className="text-muted-foreground">Datum: </span>
+              <span className="text-muted-foreground">Datum(s): </span>
               <span className="font-medium">
-                {selectedDate
-                  ? format(selectedDate, "d MMMM yyyy", { locale: nl })
-                  : "Nog niet gekozen"}
+                {selectedDates.length > 0 
+                  ? selectedDates.map((d, i) => (
+                      <span key={i}>
+                        {i > 0 && ", "}
+                        {format(d, "d MMM", { locale: nl })}
+                      </span>
+                    ))
+                  : selectedDate
+                    ? format(selectedDate, "d MMMM yyyy", { locale: nl })
+                    : "Nog niet gekozen"}
               </span>
+              {selectedDates.length > 1 && (
+                <span className="text-muted-foreground ml-1">
+                  ({selectedDates.length} dagen)
+                </span>
+              )}
             </div>
             <div>
               <span className="text-muted-foreground">Aantal personen: </span>

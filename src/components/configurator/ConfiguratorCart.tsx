@@ -3,12 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucide-react";
+import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucide-react";
 import { ShareProgramDialog } from "./ShareProgramDialog";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
+import { MultiDatePicker } from "./MultiDatePicker";
+import { DayTabs } from "./DayTabs";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -31,29 +29,38 @@ import { SortableCartItem } from "./SortableCartItem";
 interface ConfiguratorCartProps {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
-  selectedDate: Date | undefined;
+  selectedDates: Date[];
   onRemoveItem: (blockId: string) => void;
   onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onPeopleChange: (count: number) => void;
-  onDateChange: (date: Date | undefined) => void;
+  onAddDate: (date: Date) => boolean;
+  onRemoveDate: (dateIndex: number) => void;
   onSubmit: () => void;
   onReorderItems?: (items: CartItemDetail[]) => void;
   isInDrawer?: boolean;
+  // Legacy compatibility
+  selectedDate?: Date | undefined;
+  onDateChange?: (date: Date | undefined) => void;
 }
 
 export const ConfiguratorCart = ({
   cartItems,
   numberOfPeople,
-  selectedDate,
+  selectedDates,
   onRemoveItem,
   onUpdateItem,
   onPeopleChange,
-  onDateChange,
+  onAddDate,
+  onRemoveDate,
   onSubmit,
   onReorderItems,
   isInDrawer = false,
+  // Legacy fallback
+  selectedDate,
+  onDateChange,
 }: ConfiguratorCartProps) => {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [activeDay, setActiveDay] = useState(0);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -65,6 +72,11 @@ export const ConfiguratorCart = ({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Use selectedDates if available, otherwise fall back to legacy selectedDate
+  const effectiveDates = selectedDates.length > 0 
+    ? selectedDates 
+    : (selectedDate ? [selectedDate] : []);
 
   const blocks = cartItems
     .map((item) => getBlockById(item.blockId))
@@ -104,18 +116,31 @@ export const ConfiguratorCart = ({
   const indicativeTotal = calculateTotal();
   const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
 
-  // Sort items by time (keeping manual order if set)
-  const sortedCartItems = useMemo(() => {
-    return [...cartItems].sort((a, b) => {
-      // Both flexible? Keep original order
-      if (!a.preferredTime && !b.preferredTime) return 0;
-      // Flexible to bottom
-      if (!a.preferredTime) return 1;
-      if (!b.preferredTime) return -1;
-      // Sort by time
-      return a.preferredTime.localeCompare(b.preferredTime);
+  // Count items per day
+  const itemCountPerDay = useMemo(() => {
+    const counts: number[] = effectiveDates.map(() => 0);
+    cartItems.forEach(item => {
+      const dayIdx = item.dayIndex ?? 0;
+      if (dayIdx < counts.length) {
+        counts[dayIdx]++;
+      } else if (counts.length > 0) {
+        counts[0]++;
+      }
     });
-  }, [cartItems]);
+    return counts;
+  }, [cartItems, effectiveDates]);
+
+  // Get items for a specific day, sorted by time
+  const getItemsForDay = (dayIndex: number) => {
+    return cartItems
+      .filter(item => (item.dayIndex ?? 0) === dayIndex)
+      .sort((a, b) => {
+        if (!a.preferredTime && !b.preferredTime) return 0;
+        if (!a.preferredTime) return 1;
+        if (!b.preferredTime) return -1;
+        return a.preferredTime.localeCompare(b.preferredTime);
+      });
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -131,6 +156,28 @@ export const ConfiguratorCart = ({
     }
   };
 
+  // Handle legacy date change
+  const handleAddDate = (date: Date): boolean => {
+    if (onAddDate) {
+      return onAddDate(date);
+    }
+    // Legacy fallback
+    if (onDateChange) {
+      onDateChange(date);
+      return true;
+    }
+    return false;
+  };
+
+  const handleRemoveDate = (dateIndex: number) => {
+    if (onRemoveDate) {
+      onRemoveDate(dateIndex);
+    } else if (onDateChange) {
+      // Legacy fallback
+      onDateChange(undefined);
+    }
+  };
+
   if (cartItems.length === 0) {
     return (
       <Card className={cn("p-5 bg-muted/30 border-dashed", isInDrawer && "border-0 shadow-none bg-transparent")}>
@@ -143,11 +190,21 @@ export const ConfiguratorCart = ({
     );
   }
 
-  const renderBlockGroup = (blockList: BuildingBlock[], groupId: string) => {
-    const groupItems = blockList.map((block) => {
+  const renderBlockGroup = (blockList: BuildingBlock[], groupId: string, dayIndex?: number) => {
+    // Filter by day if specified
+    const filteredBlocks = dayIndex !== undefined
+      ? blockList.filter(block => {
+          const cartItem = getCartItem(block.id);
+          return cartItem && (cartItem.dayIndex ?? 0) === dayIndex;
+        })
+      : blockList;
+
+    const groupItems = filteredBlocks.map((block) => {
       const cartItem = getCartItem(block.id);
       return cartItem ? { block, cartItem } : null;
     }).filter(Boolean) as { block: BuildingBlock; cartItem: CartItemDetail }[];
+
+    if (groupItems.length === 0) return null;
 
     const itemIds = groupItems.map((item) => item.cartItem.blockId);
 
@@ -166,6 +223,8 @@ export const ConfiguratorCart = ({
               item={cartItem}
               onUpdate={(updates) => onUpdateItem(block.id, updates)}
               onRemove={() => onRemoveItem(block.id)}
+              selectedDates={effectiveDates}
+              showDaySelector={effectiveDates.length > 1}
             />
           ))}
         </SortableContext>
@@ -173,9 +232,21 @@ export const ConfiguratorCart = ({
     );
   };
 
-  // For simplified view with all items sortable together
+  // For drawer mode: render all items sortable together with day selector
   const renderAllItemsSortable = () => {
-    const allItems = sortedCartItems.map((item) => {
+    const sortedItems = [...cartItems].sort((a, b) => {
+      // First sort by day
+      const dayA = a.dayIndex ?? 0;
+      const dayB = b.dayIndex ?? 0;
+      if (dayA !== dayB) return dayA - dayB;
+      // Then by time
+      if (!a.preferredTime && !b.preferredTime) return 0;
+      if (!a.preferredTime) return 1;
+      if (!b.preferredTime) return -1;
+      return a.preferredTime.localeCompare(b.preferredTime);
+    });
+
+    const allItems = sortedItems.map((item) => {
       const block = getBlock(item.blockId);
       return block ? { block, cartItem: item } : null;
     }).filter(Boolean) as { block: BuildingBlock; cartItem: CartItemDetail }[];
@@ -198,6 +269,45 @@ export const ConfiguratorCart = ({
                 item={cartItem}
                 onUpdate={(updates) => onUpdateItem(block.id, updates)}
                 onRemove={() => onRemoveItem(block.id)}
+                selectedDates={effectiveDates}
+                showDaySelector={effectiveDates.length > 1}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  };
+
+  // Render items for a specific day (used in tabbed view)
+  const renderDayItems = (dayIndex: number) => {
+    const dayItems = getItemsForDay(dayIndex);
+    
+    const allItems = dayItems.map((item) => {
+      const block = getBlock(item.blockId);
+      return block ? { block, cartItem: item } : null;
+    }).filter(Boolean) as { block: BuildingBlock; cartItem: CartItemDetail }[];
+
+    const itemIds = allItems.map((item) => item.cartItem.blockId);
+
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {allItems.map(({ block, cartItem }) => (
+              <SortableCartItem
+                key={block.id}
+                id={block.id}
+                block={block}
+                item={cartItem}
+                onUpdate={(updates) => onUpdateItem(block.id, updates)}
+                onRemove={() => onRemoveItem(block.id)}
+                selectedDates={effectiveDates}
+                showDaySelector={effectiveDates.length > 1}
               />
             ))}
           </div>
@@ -220,10 +330,10 @@ export const ConfiguratorCart = ({
 
       {/* Intro text */}
       <p className="text-sm text-muted-foreground mb-4">
-        Begin met het invullen van je groepsgrootte en gewenste datum.
+        Begin met het invullen van je groepsgrootte en gewenste datum(s).
       </p>
 
-      {/* People and date inputs - MOVED TO TOP */}
+      {/* People and date inputs */}
       <div className="space-y-3 mb-5">
         <div>
           <Label htmlFor="numberOfPeople" className="text-sm font-medium">
@@ -245,34 +355,15 @@ export const ConfiguratorCart = ({
         <div>
           <Label className="text-sm font-medium">Wanneer willen jullie komen?</Label>
           <p className="text-xs text-muted-foreground mb-1.5">
-            Aanbieders controleren de beschikbaarheid
+            {effectiveDates.length === 0 
+              ? "Selecteer één of meerdere dagen (max 7)"
+              : "Aanbieders controleren de beschikbaarheid"}
           </p>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate
-                  ? format(selectedDate, "d MMMM yyyy", { locale: nl })
-                  : "Selecteer datum"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-background z-50 pointer-events-auto" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={onDateChange}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-                disabled={(date) => date < new Date()}
-              />
-            </PopoverContent>
-          </Popover>
+          <MultiDatePicker
+            selectedDates={effectiveDates}
+            onAddDate={handleAddDate}
+            onRemoveDate={handleRemoveDate}
+          />
         </div>
       </div>
 
@@ -280,15 +371,29 @@ export const ConfiguratorCart = ({
       <div className="border-t pt-4 mb-3">
         <h4 className="font-medium text-sm mb-1">Gekozen activiteiten</h4>
         <p className="text-xs text-muted-foreground mb-3">
-          Sleep activiteiten in de gewenste dagvolgorde
+          {effectiveDates.length > 1 
+            ? "Activiteiten zijn ingedeeld per dag. Verplaats ze via de dag-selector."
+            : "Sleep activiteiten in de gewenste dagvolgorde"}
         </p>
       </div>
 
-      {/* All items sortable in drawer mode, grouped otherwise */}
+      {/* Activities list */}
       <div className="space-y-3">
         {isInDrawer ? (
+          // Drawer mode: show all items with day selector
           renderAllItemsSortable()
+        ) : effectiveDates.length > 1 ? (
+          // Multi-day mode: show tabs
+          <DayTabs
+            selectedDates={effectiveDates}
+            activeDay={activeDay}
+            onDayChange={setActiveDay}
+            itemCountPerDay={itemCountPerDay}
+          >
+            {(dayIndex) => renderDayItems(dayIndex)}
+          </DayTabs>
         ) : (
+          // Single day mode: show grouped by type
           <>
             {/* Bureau Vlieland items */}
             {groupedBlocks.bureau.length > 0 && (
@@ -380,7 +485,7 @@ export const ConfiguratorCart = ({
           onClick={onSubmit}
           className="w-full"
           size="lg"
-          disabled={!selectedDate || numberOfPeople < 1 || !hasBillableItems}
+          disabled={effectiveDates.length === 0 || numberOfPeople < 1 || !hasBillableItems}
         >
           Controleren en aanvragen
           <ArrowRight className="ml-2 h-4 w-4" />
@@ -405,7 +510,8 @@ export const ConfiguratorCart = ({
         onClose={() => setIsShareDialogOpen(false)}
         cartItems={cartItems}
         numberOfPeople={numberOfPeople}
-        selectedDate={selectedDate}
+        selectedDate={effectiveDates[0]}
+        selectedDates={effectiveDates}
       />
     </Card>
   );

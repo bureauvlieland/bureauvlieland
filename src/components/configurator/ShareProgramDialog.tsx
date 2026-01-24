@@ -34,6 +34,7 @@ interface ShareProgramDialogProps {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
   selectedDate: Date | undefined;
+  selectedDates?: Date[];
 }
 
 function generateShareCode(): string {
@@ -51,6 +52,7 @@ export const ShareProgramDialog = ({
   cartItems,
   numberOfPeople,
   selectedDate,
+  selectedDates = [],
 }: ShareProgramDialogProps) => {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -62,12 +64,16 @@ export const ShareProgramDialog = ({
     try {
       const shareCode = generateShareCode();
       
+      // Use selectedDates if available, otherwise fall back to selectedDate
+      const effectiveDates = selectedDates.length > 0 ? selectedDates : (selectedDate ? [selectedDate] : []);
+      
       // Use type assertion to handle the JSONB field properly
       const insertData = {
         share_code: shareCode,
         cart_items: cartItems,
         number_of_people: numberOfPeople,
-        selected_date: selectedDate?.toISOString().split('T')[0] || null,
+        // Store the first date for backwards compatibility (selected_date column)
+        selected_date: effectiveDates.length > 0 ? effectiveDates[0].toISOString().split('T')[0] : null,
       };
       
       const { error } = await supabase

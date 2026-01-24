@@ -47,11 +47,12 @@ export interface Provider {
   commissionPercentage: number;
 }
 
-// Cart item with preferred time and notes
+// Cart item with preferred time, notes, and day assignment
 export interface CartItemDetail {
   blockId: string;
   preferredTime: string | null; // e.g., "10:00" or null for "Flexibel"
   notes: string;
+  dayIndex: number; // 0-based index: 0 = first date, 1 = second date, etc.
 }
 
 export interface ProgramRequest {

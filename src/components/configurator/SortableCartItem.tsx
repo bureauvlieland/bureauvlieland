@@ -10,6 +10,8 @@ interface SortableCartItemProps {
   item: CartItemDetail;
   onUpdate: (updates: Partial<CartItemDetail>) => void;
   onRemove: () => void;
+  selectedDates?: Date[];
+  showDaySelector?: boolean;
 }
 
 export const SortableCartItem = ({
@@ -18,6 +20,8 @@ export const SortableCartItem = ({
   item,
   onUpdate,
   onRemove,
+  selectedDates = [],
+  showDaySelector = false,
 }: SortableCartItemProps) => {
   const {
     attributes,
@@ -53,6 +57,8 @@ export const SortableCartItem = ({
           item={item}
           onUpdate={onUpdate}
           onRemove={onRemove}
+          selectedDates={selectedDates}
+          showDaySelector={showDaySelector}
         />
       </div>
     </div>

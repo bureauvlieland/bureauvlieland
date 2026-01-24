@@ -8,14 +8,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Clock, Plus, Minus, MessageSquare } from "lucide-react";
+import { X, Clock, Plus, Minus, MessageSquare, Calendar } from "lucide-react";
 import { timeSlots, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 
 interface CartItemDetailsProps {
   block: BuildingBlock;
   item: CartItemDetail;
   onUpdate: (updates: Partial<CartItemDetail>) => void;
   onRemove: () => void;
+  selectedDates?: Date[];
+  showDaySelector?: boolean;
 }
 
 export const CartItemDetails = ({
@@ -23,8 +27,12 @@ export const CartItemDetails = ({
   item,
   onUpdate,
   onRemove,
+  selectedDates = [],
+  showDaySelector = false,
 }: CartItemDetailsProps) => {
   const [showNotes, setShowNotes] = useState(item.notes.length > 0);
+
+  const hasMultipleDays = selectedDates.length > 1;
 
   return (
     <div className="py-2.5 px-3 bg-background rounded-lg space-y-2">
@@ -65,6 +73,28 @@ export const CartItemDetails = ({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Day selector - only show when there are multiple days and showDaySelector is true */}
+      {showDaySelector && hasMultipleDays && (
+        <div className="flex items-center gap-2">
+          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Select
+            value={String(item.dayIndex)}
+            onValueChange={(value) => onUpdate({ dayIndex: Number(value) })}
+          >
+            <SelectTrigger className="h-7 text-xs flex-1">
+              <SelectValue placeholder="Selecteer dag" />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50">
+              {selectedDates.map((date, index) => (
+                <SelectItem key={index} value={String(index)} className="text-xs">
+                  Dag {index + 1} - {format(date, "d MMM", { locale: nl })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Notes toggle and field */}
       {!showNotes ? (
