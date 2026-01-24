@@ -27,19 +27,19 @@ export const CartItemDetails = ({
   const [showNotes, setShowNotes] = useState(item.notes.length > 0);
 
   return (
-    <div className="py-3 px-3 bg-background rounded-lg space-y-3">
+    <div className="py-2.5 px-3 bg-background rounded-lg space-y-2">
       {/* Header with name and remove button */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{block.name}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="font-medium text-sm leading-tight truncate">{block.name}</p>
+          <p className="text-xs text-muted-foreground leading-tight">
             {block.priceIndication} {block.priceNote}
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="h-7 w-7 shrink-0"
           onClick={onRemove}
         >
           <X className="h-4 w-4" />
@@ -48,12 +48,12 @@ export const CartItemDetails = ({
 
       {/* Time selector */}
       <div className="flex items-center gap-2">
-        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+        <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         <Select
           value={item.preferredTime || "flexibel"}
           onValueChange={(value) => onUpdate({ preferredTime: value === "flexibel" ? null : value })}
         >
-          <SelectTrigger className="h-8 text-xs flex-1">
+          <SelectTrigger className="h-7 text-xs flex-1">
             <SelectValue placeholder="Gewenste tijd" />
           </SelectTrigger>
           <SelectContent className="bg-background z-50">
@@ -71,7 +71,7 @@ export const CartItemDetails = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+          className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1 px-1.5"
           onClick={() => setShowNotes(true)}
         >
           <Plus className="h-3 w-3" />
@@ -88,7 +88,7 @@ export const CartItemDetails = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1 px-1"
+              className="h-5 text-xs text-muted-foreground hover:text-foreground gap-1 px-1"
               onClick={() => {
                 if (!item.notes) {
                   setShowNotes(false);
@@ -102,7 +102,7 @@ export const CartItemDetails = ({
             value={item.notes}
             onChange={(e) => onUpdate({ notes: e.target.value })}
             placeholder="Bijv. Engelstalige gids gewenst..."
-            className="text-xs min-h-[60px] resize-none"
+            className="text-xs min-h-[50px] resize-none"
             maxLength={500}
           />
           <p className="text-[10px] text-muted-foreground text-right">
