@@ -21,6 +21,18 @@ interface ProgramDetailsUpdate {
   numberOfPeople?: number;
 }
 
+interface BillingDetailsUpdate {
+  billing_company_name: string;
+  billing_kvk_number: string;
+  billing_vat_number: string;
+  billing_address_street: string;
+  billing_address_postal: string;
+  billing_address_city: string;
+  billing_contact_name: string;
+  billing_contact_email: string;
+  billing_reference: string;
+}
+
 interface ProgramRequestItem {
   id: string;
   request_id: string;
@@ -108,11 +120,13 @@ serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, acceptTerms, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
       programDetails?: ProgramDetailsUpdate;
+      billingDetails?: BillingDetailsUpdate;
+      acceptTerms?: boolean;
       origin?: string;
     };
     
@@ -130,8 +144,8 @@ serve(async (req) => {
       );
     }
     
-    // Must have either item changes or program details changes
-    if ((!changes || !items) && !programDetails) {
+    // Must have at least one type of update
+    if ((!changes || !items) && !programDetails && !billingDetails && !acceptTerms) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -269,6 +283,168 @@ serve(async (req) => {
           `,
         });
       }
+    }
+
+    // Handle billing details update
+    if (billingDetails) {
+      await supabase
+        .from("program_requests")
+        .update({
+          billing_company_name: billingDetails.billing_company_name,
+          billing_kvk_number: billingDetails.billing_kvk_number,
+          billing_vat_number: billingDetails.billing_vat_number,
+          billing_address_street: billingDetails.billing_address_street,
+          billing_address_postal: billingDetails.billing_address_postal,
+          billing_address_city: billingDetails.billing_address_city,
+          billing_contact_name: billingDetails.billing_contact_name,
+          billing_contact_email: billingDetails.billing_contact_email,
+          billing_reference: billingDetails.billing_reference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", program.id);
+
+      // Log to history
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        action: "billing_updated",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: "Facturatiegegevens bijgewerkt",
+      });
+    }
+
+    // Handle terms acceptance
+    if (acceptTerms) {
+      const termsVersion = "2025-01"; // Version identifier for tracking
+
+      await supabase
+        .from("program_requests")
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          terms_version: termsVersion,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", program.id);
+
+      // Log to history
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        action: "terms_accepted",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Algemene voorwaarden geaccepteerd (versie ${termsVersion})`,
+      });
+
+      // Get billing details for partner notification
+      const { data: updatedProgram } = await supabase
+        .from("program_requests")
+        .select("*")
+        .eq("id", program.id)
+        .single();
+
+      // Get confirmed items to notify partners about definitive booking
+      const { data: confirmedItems } = await supabase
+        .from("program_request_items")
+        .select("*")
+        .eq("request_id", program.id)
+        .eq("status", "confirmed");
+
+      // Group by provider for billing details email
+      const providerItems = new Map<string, { name: string; email: string; items: any[] }>();
+      (confirmedItems || []).forEach((item) => {
+        if (item.provider_email && item.block_type !== "self_arranged") {
+          if (!providerItems.has(item.provider_id)) {
+            providerItems.set(item.provider_id, { name: item.provider_name, email: item.provider_email, items: [] });
+          }
+          providerItems.get(item.provider_id)!.items.push(item);
+        }
+      });
+
+      const selectedDates = (program.selected_dates as string[])
+        .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
+        .join(", ");
+
+      // Email to partners with billing details
+      for (const [, provider] of providerItems) {
+        const itemsList = provider.items.map(i => 
+          `<li>${sanitizeHtml(i.block_name)}${i.preferred_time ? ` (${i.preferred_time})` : ""}</li>`
+        ).join("");
+
+        emailMessages.push({
+          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+          Subject: `${subjectPrefix}Definitieve boeking - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+          HTMLPart: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2>Definitieve boeking bevestigd</h2>
+              <p>Beste ${sanitizeHtml(provider.name)},</p>
+              <p>De klant heeft de boeking definitief bevestigd. Hieronder de facturatiegegevens:</p>
+              
+              <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <h3 style="margin-top: 0;">Facturatiegegevens</h3>
+                <table style="width: 100%;">
+                  <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_company_name || "-")}</td></tr>
+                  <tr><td style="padding: 4px 0;"><strong>KvK:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_kvk_number || "-")}</td></tr>
+                  <tr><td style="padding: 4px 0;"><strong>BTW:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_vat_number || "-")}</td></tr>
+                  <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}</td></tr>
+                  <tr><td style="padding: 4px 0;"><strong>Contactpersoon:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_name || "-")}</td></tr>
+                  <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_email || program.customer_email)}</td></tr>
+                  ${updatedProgram?.billing_reference ? `<tr><td style="padding: 4px 0;"><strong>Referentie:</strong></td><td>${sanitizeHtml(updatedProgram.billing_reference)}</td></tr>` : ""}
+                </table>
+              </div>
+              
+              <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <h3 style="margin-top: 0;">Geboekte activiteit(en)</h3>
+                <ul>${itemsList}</ul>
+                <p><strong>Datum:</strong> ${selectedDates}</p>
+                <p><strong>Aantal personen:</strong> ${program.number_of_people}</p>
+              </div>
+              
+              <p style="color: #666; font-size: 14px;">
+                Let op: Uw eigen algemene voorwaarden zijn van toepassing op deze boeking. 
+                De klant is hiervan op de hoogte gesteld.
+              </p>
+              
+              <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+            </div>
+          `,
+        });
+      }
+
+      // Customer confirmation email
+      emailMessages.push({
+        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        To: [{ Email: program.customer_email, Name: program.customer_name }],
+        Subject: `${subjectPrefix}Boeking definitief bevestigd`,
+        HTMLPart: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Je boeking is definitief!</h2>
+            <p>Beste ${sanitizeHtml(program.customer_name)},</p>
+            <p>Bedankt voor je boeking bij Bureau Vlieland. Alle activiteiten zijn bevestigd en je akkoord op de algemene voorwaarden is geregistreerd.</p>
+            
+            <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <h3 style="margin-top: 0;">Boekingsoverzicht</h3>
+              <p><strong>Datum:</strong> ${selectedDates}</p>
+              <p><strong>Aantal personen:</strong> ${program.number_of_people}</p>
+              <p><strong>Aantal activiteiten:</strong> ${confirmedItems?.length || 0}</p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">
+              Let op: Voor de activiteiten van partners zijn hun eigen algemene voorwaarden van toepassing. 
+              Je ontvangt hierover bericht van de betreffende aanbieders.
+            </p>
+            
+            <p>
+              <a href="https://bureauvlieland.nl/mijn-programma/${token}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+                Bekijk je programma
+              </a>
+            </p>
+            
+            <p>Heb je vragen? Neem gerust contact met ons op.</p>
+            <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+          </div>
+        `,
+      });
     }
 
     // Handle item changes
