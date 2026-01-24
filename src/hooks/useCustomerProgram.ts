@@ -8,6 +8,18 @@ import {
   calculateStatusSummary,
 } from "@/types/programRequest";
 
+export interface BillingDetails {
+  billing_company_name: string;
+  billing_kvk_number: string;
+  billing_vat_number: string;
+  billing_address_street: string;
+  billing_address_postal: string;
+  billing_address_city: string;
+  billing_contact_name: string;
+  billing_contact_email: string;
+  billing_reference: string;
+}
+
 interface UseCustomerProgramReturn {
   program: ProgramRequestWithItems | null;
   history: ProgramRequestHistory[];
@@ -19,6 +31,8 @@ interface UseCustomerProgramReturn {
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
+  updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
+  acceptTerms: () => Promise<boolean>;
   cancelRequest: (reason?: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
 }
@@ -241,6 +255,50 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  const updateBillingDetails = useCallback(async (details: BillingDetails): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token: token,
+          billingDetails: details,
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error updating billing details:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
+  const acceptTerms = useCallback(async (): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token: token,
+          acceptTerms: true,
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error accepting terms:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const cancelRequest = useCallback(async (reason?: string): Promise<boolean> => {
     if (!program) return false;
 
@@ -280,6 +338,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     getPendingChanges,
     submitChanges,
     updateProgramDetails,
+    updateBillingDetails,
+    acceptTerms,
     cancelRequest,
     statusSummary,
   };

@@ -89,19 +89,19 @@ export const CustomerProgramItem = ({
           </div>
           
           {/* Meta row */}
-          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
             {currentDate && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
               </span>
             )}
-            {item.preferred_time && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time}
-              </span>
-            )}
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {item.preferred_time 
+                ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
+                : "Flexibel"}
+            </span>
             {item.price_indication && (
               <span className="font-medium text-foreground">
                 {item.price_indication}

@@ -147,6 +147,15 @@ export type Database = {
       }
       program_requests: {
         Row: {
+          billing_address_city: string | null
+          billing_address_postal: string | null
+          billing_address_street: string | null
+          billing_company_name: string | null
+          billing_contact_email: string | null
+          billing_contact_name: string | null
+          billing_kvk_number: string | null
+          billing_reference: string | null
+          billing_vat_number: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           created_at: string
@@ -161,9 +170,20 @@ export type Database = {
           number_of_people: number
           selected_dates: Json
           status: string
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
         }
         Insert: {
+          billing_address_city?: string | null
+          billing_address_postal?: string | null
+          billing_address_street?: string | null
+          billing_company_name?: string | null
+          billing_contact_email?: string | null
+          billing_contact_name?: string | null
+          billing_kvk_number?: string | null
+          billing_reference?: string | null
+          billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           created_at?: string
@@ -178,9 +198,20 @@ export type Database = {
           number_of_people?: number
           selected_dates?: Json
           status?: string
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
         }
         Update: {
+          billing_address_city?: string | null
+          billing_address_postal?: string | null
+          billing_address_street?: string | null
+          billing_company_name?: string | null
+          billing_contact_email?: string | null
+          billing_contact_name?: string | null
+          billing_kvk_number?: string | null
+          billing_reference?: string | null
+          billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           created_at?: string
@@ -195,6 +226,8 @@ export type Database = {
           number_of_people?: number
           selected_dates?: Json
           status?: string
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
         }
         Relationships: []

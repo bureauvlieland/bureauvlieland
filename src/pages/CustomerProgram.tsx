@@ -10,6 +10,9 @@ import { CustomerProgramItem } from "@/components/customer-portal/CustomerProgra
 import { ChangeConfirmationDialog, type PendingChange } from "@/components/customer-portal/ChangeConfirmationDialog";
 import { EditProgramDetailsDialog } from "@/components/customer-portal/EditProgramDetailsDialog";
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
+import { BillingDetailsCard } from "@/components/customer-portal/BillingDetailsCard";
+import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
+import { AcceptTermsCard } from "@/components/customer-portal/AcceptTermsCard";
 import { ProgramHistoryTimeline } from "@/components/customer-portal/ProgramHistoryTimeline";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
@@ -46,6 +49,8 @@ const CustomerProgram = () => {
     getPendingChanges,
     submitChanges,
     updateProgramDetails,
+    updateBillingDetails,
+    acceptTerms,
     cancelRequest,
     statusSummary,
   } = useCustomerProgram(token || "");
@@ -54,6 +59,7 @@ const CustomerProgram = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showBillingDialog, setShowBillingDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -132,6 +138,44 @@ const CustomerProgram = () => {
         description: updates.selectedDates 
           ? "Alle aanbieders zijn op de hoogte gesteld van de datumwijziging."
           : "Je wijzigingen zijn opgeslagen.",
+      });
+    } else {
+      toast({
+        title: "Er ging iets mis",
+        description: "Probeer het later opnieuw of neem contact met ons op.",
+        variant: "destructive",
+      });
+    }
+
+    return success;
+  };
+
+  const handleSaveBillingDetails = async (details: BillingDetails) => {
+    const success = await updateBillingDetails(details);
+
+    if (success) {
+      toast({
+        title: "Facturatiegegevens opgeslagen",
+        description: "Je gegevens zijn bijgewerkt.",
+      });
+    } else {
+      toast({
+        title: "Er ging iets mis",
+        description: "Probeer het later opnieuw of neem contact met ons op.",
+        variant: "destructive",
+      });
+    }
+
+    return success;
+  };
+
+  const handleAcceptTerms = async () => {
+    const success = await acceptTerms();
+
+    if (success) {
+      toast({
+        title: "Voorwaarden geaccepteerd",
+        description: "Je boeking is nu definitief bevestigd. Je ontvangt een bevestigingsmail.",
       });
     } else {
       toast({
@@ -262,6 +306,28 @@ const CustomerProgram = () => {
           className="mb-6"
         />
 
+        {/* Accept terms card - shows when all confirmed and terms not yet accepted */}
+        {statusSummary.pending === 0 && 
+         statusSummary.confirmed > 0 && 
+         !(program as any).terms_accepted_at && (
+          <AcceptTermsCard
+            onAccept={handleAcceptTerms}
+            isBillingComplete={!!(
+              (program as any).billing_company_name &&
+              (program as any).billing_address_street &&
+              (program as any).billing_address_postal &&
+              (program as any).billing_address_city &&
+              (program as any).billing_contact_name
+            )}
+            onOpenBilling={() => setShowBillingDialog(true)}
+          />
+        )}
+
+        {/* Billing details card */}
+        <BillingDetailsCard 
+          program={program as any} 
+          onEdit={() => setShowBillingDialog(true)} 
+        />
         {/* Program details card */}
         <Card className="mb-6">
           <CardHeader className="pb-3">
@@ -492,6 +558,23 @@ const CustomerProgram = () => {
         providerCount={uniqueProviders.size}
         dateRange={dateRange}
         isSubmitting={isCancelling}
+      />
+
+      <BillingDetailsDialog
+        isOpen={showBillingDialog}
+        onClose={() => setShowBillingDialog(false)}
+        onSave={handleSaveBillingDetails}
+        initialValues={{
+          billing_company_name: (program as any).billing_company_name || "",
+          billing_kvk_number: (program as any).billing_kvk_number || "",
+          billing_vat_number: (program as any).billing_vat_number || "",
+          billing_address_street: (program as any).billing_address_street || "",
+          billing_address_postal: (program as any).billing_address_postal || "",
+          billing_address_city: (program as any).billing_address_city || "",
+          billing_contact_name: (program as any).billing_contact_name || "",
+          billing_contact_email: (program as any).billing_contact_email || "",
+          billing_reference: (program as any).billing_reference || "",
+        }}
       />
     </div>
   );
