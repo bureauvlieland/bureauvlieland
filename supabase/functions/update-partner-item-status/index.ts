@@ -58,19 +58,48 @@ const sendEmailViaMailjet = async (
   }
 };
 
-const generateConfirmationEmailHtml = (
+const generateStatusEmailHtml = (
   customerName: string,
   activityName: string,
   partnerName: string,
-  quotedPrice: number,
-  quotedNotes: string | null,
+  status: "confirmed" | "unavailable" | "alternative",
+  quotedPrice: number | null,
+  statusNote: string | null,
   customerToken: string
 ) => {
   const portalUrl = `https://bureauvlieland.lovable.app/programma/${customerToken}`;
-  const formattedPrice = new Intl.NumberFormat("nl-NL", {
-    style: "currency",
-    currency: "EUR",
-  }).format(quotedPrice);
+  
+  const statusConfig = {
+    confirmed: {
+      title: "Activiteit bevestigd",
+      color: "#38a169",
+      bgColor: "#f0fff4",
+      borderColor: "#9ae6b4",
+      icon: "✓",
+      message: "is bevestigd door de partner",
+    },
+    unavailable: {
+      title: "Activiteit niet beschikbaar",
+      color: "#e53e3e",
+      bgColor: "#fff5f5",
+      borderColor: "#feb2b2",
+      icon: "✕",
+      message: "is helaas niet beschikbaar op de gewenste datum",
+    },
+    alternative: {
+      title: "Alternatief voorgesteld",
+      color: "#dd6b20",
+      bgColor: "#fffaf0",
+      borderColor: "#fbd38d",
+      icon: "↻",
+      message: "heeft een alternatief voorstel ontvangen",
+    },
+  };
+
+  const config = statusConfig[status];
+  const formattedPrice = quotedPrice
+    ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(quotedPrice)
+    : null;
 
   return `
 <!DOCTYPE html>
@@ -78,7 +107,7 @@ const generateConfirmationEmailHtml = (
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Activiteit bevestigd</title>
+  <title>${config.title}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -95,36 +124,59 @@ const generateConfirmationEmailHtml = (
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
-              <h2 style="margin: 0 0 20px; color: #1a365d; font-size: 20px;">Goed nieuws, ${customerName}!</h2>
+              <h2 style="margin: 0 0 20px; color: #1a365d; font-size: 20px;">
+                ${status === "confirmed" ? "Goed nieuws" : "Update"}, ${customerName}!
+              </h2>
               
               <p style="margin: 0 0 20px; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                Een activiteit uit uw programma is bevestigd door de partner:
+                Een activiteit uit uw programma ${config.message}:
               </p>
               
               <!-- Activity Card -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f7fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: ${config.bgColor}; border-radius: 8px; border: 1px solid ${config.borderColor};">
                 <tr>
                   <td style="padding: 20px;">
+                    <div style="display: inline-block; width: 32px; height: 32px; background-color: ${config.color}; color: white; border-radius: 50%; text-align: center; line-height: 32px; font-size: 18px; margin-bottom: 12px;">${config.icon}</div>
+                    
                     <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Activiteit</p>
                     <p style="margin: 0 0 16px; color: #1a365d; font-size: 18px; font-weight: 600;">${activityName}</p>
                     
                     <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Partner</p>
                     <p style="margin: 0 0 16px; color: #2d3748; font-size: 16px;">${partnerName}</p>
                     
-                    <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Bevestigde prijs</p>
-                    <p style="margin: 0; color: #38a169; font-size: 24px; font-weight: 700;">${formattedPrice}</p>
-                    ${quotedNotes ? `
-                    <p style="margin: 16px 0 0; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #4a5568; font-size: 14px; font-style: italic;">
-                      "${quotedNotes}"
+                    <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Status</p>
+                    <p style="margin: 0; color: ${config.color}; font-size: 16px; font-weight: 600;">${config.title}</p>
+                    
+                    ${formattedPrice ? `
+                    <p style="margin: 16px 0 0; padding-top: 16px; border-top: 1px solid ${config.borderColor};">
+                      <span style="color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Bevestigde prijs</span>
+                      <span style="color: ${config.color}; font-size: 24px; font-weight: 700;">${formattedPrice}</span>
+                    </p>
+                    ` : ""}
+                    
+                    ${statusNote ? `
+                    <p style="margin: 16px 0 0; padding-top: 16px; border-top: 1px solid ${config.borderColor}; color: #4a5568; font-size: 14px;">
+                      <strong>Toelichting van partner:</strong><br/>
+                      "${statusNote}"
                     </p>
                     ` : ""}
                   </td>
                 </tr>
               </table>
               
+              ${status === "unavailable" ? `
+              <p style="margin: 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                Wij helpen u graag met het vinden van een geschikt alternatief. Neem contact op of bekijk uw programma in de portal.
+              </p>
+              ` : status === "alternative" ? `
+              <p style="margin: 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                Bekijk het voorgestelde alternatief in uw persoonlijke portal en laat ons weten of dit bij uw wensen past.
+              </p>
+              ` : `
               <p style="margin: 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
                 Bekijk alle details en de voortgang van uw programma in uw persoonlijke portal:
               </p>
+              `}
               
               <!-- CTA Button -->
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -277,30 +329,38 @@ serve(async (req) => {
       notes: historyNotes,
     });
 
-    // Send notification email to customer when status is confirmed
-    if (status === "confirmed" && quotedPrice) {
+    // Send notification email to customer for all status changes
+    const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
+    if (validEmailStatuses.includes(status)) {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
       
-      const emailHtml = generateConfirmationEmailHtml(
+      const subjectMap: Record<string, string> = {
+        confirmed: `Activiteit bevestigd: ${item.block_name}`,
+        unavailable: `Activiteit niet beschikbaar: ${item.block_name}`,
+        alternative: `Alternatief voorgesteld: ${item.block_name}`,
+      };
+      
+      const emailHtml = generateStatusEmailHtml(
         programRequest.customer_name,
         item.block_name,
         partner.name,
-        quotedPrice,
-        quotedNotes || null,
+        status as "confirmed" | "unavailable" | "alternative",
+        quotedPrice || null,
+        statusNote || quotedNotes || null,
         programRequest.customer_token
       );
 
       const emailSent = await sendEmailViaMailjet(
         programRequest.customer_email,
         programRequest.customer_name,
-        `Activiteit bevestigd: ${item.block_name}`,
+        subjectMap[status],
         emailHtml
       );
 
       if (!emailSent) {
-        console.warn("Failed to send confirmation email to customer, but status update succeeded");
+        console.warn(`Failed to send ${status} email to customer, but status update succeeded`);
       } else {
-        console.log(`Confirmation email sent to ${programRequest.customer_email}`);
+        console.log(`Status email (${status}) sent to ${programRequest.customer_email}`);
       }
     }
 
