@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      shared_programs: {
+        Row: {
+          cart_items: Json
+          created_at: string
+          expires_at: string
+          id: string
+          number_of_people: number
+          selected_date: string | null
+          share_code: string
+        }
+        Insert: {
+          cart_items: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          number_of_people?: number
+          selected_date?: string | null
+          share_code: string
+        }
+        Update: {
+          cart_items?: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          number_of_people?: number
+          selected_date?: string | null
+          share_code?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

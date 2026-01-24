@@ -27,6 +27,7 @@ export const GlobalCartDrawer = () => {
     setSelectedDate,
     reorderItems,
     lastSaved,
+    itemJustAdded,
   } = useCart();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -54,12 +55,12 @@ export const GlobalCartDrawer = () => {
         <DrawerTrigger asChild>
           <Button
             size="lg"
-            className={`fixed bottom-4 right-4 z-40 shadow-lg gap-2 ${isOnConfiguratorPage ? 'lg:hidden' : ''}`}
+            className={`fixed bottom-4 right-4 z-40 shadow-lg gap-2 transition-transform ${isOnConfiguratorPage ? 'lg:hidden' : ''} ${itemJustAdded ? 'animate-cart-pulse' : ''}`}
           >
             <ShoppingCart className="h-5 w-5" />
             <span className="hidden sm:inline">Jouw programma</span>
             {cartItems.length > 0 && (
-              <span className="bg-white text-primary text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className={`bg-white text-primary text-xs font-bold px-2 py-0.5 rounded-full ${itemJustAdded ? 'animate-badge-pop' : ''}`}>
                 {cartItems.length}
               </span>
             )}

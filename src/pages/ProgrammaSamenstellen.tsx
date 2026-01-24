@@ -75,13 +75,7 @@ const ProgrammaSamenstellen = () => {
 
   // Cart handlers
   const handleAddToCart = (blockId: string) => {
-    const added = addToCart(blockId);
-    if (added) {
-      toast({
-        title: "Toegevoegd aan programma",
-        description: "Je kunt het item bekijken in je winkelmandje.",
-      });
-    }
+    addToCart(blockId);
   };
 
   const handleSubmit = () => {
