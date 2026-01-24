@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,23 @@ import { CalendarIcon, ShoppingCart, ArrowRight, Building2, Users2, Info } from 
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
-import { CartItemDetails } from "./CartItemDetails";
+import { SortableCartItem } from "./SortableCartItem";
 
 interface ConfiguratorCartProps {
   cartItems: CartItemDetail[];
@@ -20,6 +36,8 @@ interface ConfiguratorCartProps {
   onPeopleChange: (count: number) => void;
   onDateChange: (date: Date | undefined) => void;
   onSubmit: () => void;
+  onReorderItems?: (items: CartItemDetail[]) => void;
+  isInDrawer?: boolean;
 }
 
 export const ConfiguratorCart = ({
@@ -31,7 +49,20 @@ export const ConfiguratorCart = ({
   onPeopleChange,
   onDateChange,
   onSubmit,
+  onReorderItems,
+  isInDrawer = false,
 }: ConfiguratorCartProps) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const blocks = cartItems
     .map((item) => getBlockById(item.blockId))
     .filter(Boolean) as BuildingBlock[];
@@ -43,18 +74,20 @@ export const ConfiguratorCart = ({
     return cartItems.find((item) => item.blockId === blockId);
   };
 
+  // Get block by id from the blocks array
+  const getBlock = (blockId: string): BuildingBlock | undefined => {
+    return blocks.find((block) => block.id === blockId);
+  };
+
   // Calculate indicative total - exclude self_arranged items
   const calculateTotal = () => {
     let total = 0;
     blocks.forEach((block) => {
-      // Skip self_arranged items in price calculation
       if (block.blockType === "self_arranged") return;
       
-      // Extract number from price indication (e.g., "€ 35" -> 35)
       const priceMatch = block.priceIndication.match(/\d+/);
       if (priceMatch) {
         const price = parseInt(priceMatch[0], 10);
-        // If price is per person, multiply
         if (block.priceNote?.includes("p.p.")) {
           total += price * numberOfPeople;
         } else {
@@ -66,13 +99,38 @@ export const ConfiguratorCart = ({
   };
 
   const indicativeTotal = calculateTotal();
-
-  // Check if there are any billable items (excluding self_arranged)
   const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
+
+  // Sort items by time (keeping manual order if set)
+  const sortedCartItems = useMemo(() => {
+    return [...cartItems].sort((a, b) => {
+      // Both flexible? Keep original order
+      if (!a.preferredTime && !b.preferredTime) return 0;
+      // Flexible to bottom
+      if (!a.preferredTime) return 1;
+      if (!b.preferredTime) return -1;
+      // Sort by time
+      return a.preferredTime.localeCompare(b.preferredTime);
+    });
+  }, [cartItems]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = cartItems.findIndex((item) => item.blockId === active.id);
+      const newIndex = cartItems.findIndex((item) => item.blockId === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1 && onReorderItems) {
+        const newItems = arrayMove(cartItems, oldIndex, newIndex);
+        onReorderItems(newItems);
+      }
+    }
+  };
 
   if (cartItems.length === 0) {
     return (
-      <Card className="p-6 bg-muted/30 border-dashed">
+      <Card className={cn("p-6 bg-muted/30 border-dashed", isInDrawer && "border-0 shadow-none bg-transparent")}>
         <div className="text-center text-muted-foreground">
           <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p className="font-medium">Je programma is nog leeg</p>
@@ -82,80 +140,140 @@ export const ConfiguratorCart = ({
     );
   }
 
-  const renderBlockGroup = (blockList: BuildingBlock[]) => {
-    return blockList.map((block) => {
+  const renderBlockGroup = (blockList: BuildingBlock[], groupId: string) => {
+    const groupItems = blockList.map((block) => {
       const cartItem = getCartItem(block.id);
-      if (!cartItem) return null;
-      
-      return (
-        <CartItemDetails
-          key={block.id}
-          block={block}
-          item={cartItem}
-          onUpdate={(updates) => onUpdateItem(block.id, updates)}
-          onRemove={() => onRemoveItem(block.id)}
-        />
-      );
-    });
+      return cartItem ? { block, cartItem } : null;
+    }).filter(Boolean) as { block: BuildingBlock; cartItem: CartItemDetail }[];
+
+    const itemIds = groupItems.map((item) => item.cartItem.blockId);
+
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          {groupItems.map(({ block, cartItem }) => (
+            <SortableCartItem
+              key={block.id}
+              id={block.id}
+              block={block}
+              item={cartItem}
+              onUpdate={(updates) => onUpdateItem(block.id, updates)}
+              onRemove={() => onRemoveItem(block.id)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+    );
+  };
+
+  // For simplified view with all items sortable together
+  const renderAllItemsSortable = () => {
+    const allItems = sortedCartItems.map((item) => {
+      const block = getBlock(item.blockId);
+      return block ? { block, cartItem: item } : null;
+    }).filter(Boolean) as { block: BuildingBlock; cartItem: CartItemDetail }[];
+
+    const itemIds = allItems.map((item) => item.cartItem.blockId);
+
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {allItems.map(({ block, cartItem }) => (
+              <SortableCartItem
+                key={block.id}
+                id={block.id}
+                block={block}
+                item={cartItem}
+                onUpdate={(updates) => onUpdateItem(block.id, updates)}
+                onRemove={() => onRemoveItem(block.id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-        <ShoppingCart className="h-5 w-5" />
-        Jouw Programma
-        <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full ml-auto">
-          {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
-        </span>
-      </h3>
+    <Card className={cn("p-6", isInDrawer && "border-0 shadow-none p-0")}>
+      {!isInDrawer && (
+        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+          <ShoppingCart className="h-5 w-5" />
+          Jouw Programma
+          <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full ml-auto">
+            {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
+          </span>
+        </h3>
+      )}
 
-      {/* Grouped items */}
+      {/* All items sortable in drawer mode, grouped otherwise */}
       <div className="space-y-4 mb-6">
-        {/* Bureau Vlieland items */}
-        {groupedBlocks.bureau.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Building2 className="h-4 w-4 text-primary" />
-              <span>Gefactureerd door Bureau Vlieland</span>
-            </div>
-            <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
-              {renderBlockGroup(groupedBlocks.bureau)}
-            </div>
-          </div>
-        )}
-
-        {/* Partner items */}
-        {groupedBlocks.partner.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Users2 className="h-4 w-4 text-primary" />
-              <span>Gefactureerd door aanbieders</span>
-            </div>
-            <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
-              {renderBlockGroup(groupedBlocks.partner)}
-            </div>
-          </div>
-        )}
-
-        {/* Self-arranged items */}
-        {groupedBlocks.self_arranged.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
-              <Info className="h-4 w-4" />
-              <span>Zelf te regelen</span>
-            </div>
-            <div className="space-y-2 ml-6 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2">
-              {renderBlockGroup(groupedBlocks.self_arranged)}
-            </div>
-            <p className="text-xs text-muted-foreground ml-6">
-              Links ontvang je na het versturen van je aanvraag
+        {isInDrawer ? (
+          <>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              Sleep items om de volgorde aan te passen
             </p>
-          </div>
+            {renderAllItemsSortable()}
+          </>
+        ) : (
+          <>
+            {/* Bureau Vlieland items */}
+            {groupedBlocks.bureau.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span>Gefactureerd door Bureau Vlieland</span>
+                </div>
+                <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
+                  {renderBlockGroup(groupedBlocks.bureau, "bureau")}
+                </div>
+              </div>
+            )}
+
+            {/* Partner items */}
+            {groupedBlocks.partner.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Users2 className="h-4 w-4 text-primary" />
+                  <span>Gefactureerd door aanbieders</span>
+                </div>
+                <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
+                  {renderBlockGroup(groupedBlocks.partner, "partner")}
+                </div>
+              </div>
+            )}
+
+            {/* Self-arranged items */}
+            {groupedBlocks.self_arranged.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
+                  <Info className="h-4 w-4" />
+                  <span>Zelf te regelen</span>
+                </div>
+                <div className="space-y-2 ml-6 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2">
+                  {renderBlockGroup(groupedBlocks.self_arranged, "self")}
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  Links ontvang je na het versturen van je aanvraag
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Bureau fee - always shown when there are billable items */}
         {hasBillableItems && (
-          <div className="flex items-center justify-between py-2 px-3 bg-primary/10 rounded-lg ml-6">
+          <div className="flex items-center justify-between py-2 px-3 bg-primary/10 rounded-lg">
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm">Handling fee</p>
               <p className="text-xs text-muted-foreground">Bureau Vlieland coördinatie</p>
@@ -199,7 +317,7 @@ export const ConfiguratorCart = ({
                   : "Selecteer datum"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-background z-50" align="start">
+            <PopoverContent className="w-auto p-0 bg-background z-50 pointer-events-auto" align="start">
               <Calendar
                 mode="single"
                 selected={selectedDate}
