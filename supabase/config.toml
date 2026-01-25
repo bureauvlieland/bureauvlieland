@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-program-request]
 verify_jwt = false
+
+[functions.invite-partner]
+verify_jwt = false

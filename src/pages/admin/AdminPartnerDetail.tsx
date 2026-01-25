@@ -221,12 +221,15 @@ const AdminPartnerDetail = () => {
 
     setIsInviting(true);
     try {
-      // Use the edge function to create the partner user
-      const { error } = await supabase.functions.invoke("create-test-partner-user", {
+      const { data, error } = await supabase.functions.invoke("invite-partner", {
         body: { partnerId: partner.id },
       });
 
       if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       await logAdminActivity({
         action: AdminActions.PARTNER_INVITED,
@@ -235,11 +238,14 @@ const AdminPartnerDetail = () => {
         details: { email: partner.email },
       });
 
-      toast.success("Partner uitnodiging verstuurd");
+      toast.success("Uitnodiging verstuurd!", {
+        description: `Er is een uitnodigingsmail verzonden naar ${partner.email}`,
+      });
       fetchPartner();
     } catch (error) {
       console.error("Error inviting partner:", error);
-      toast.error("Fout bij versturen uitnodiging");
+      const message = error instanceof Error ? error.message : "Fout bij versturen uitnodiging";
+      toast.error("Uitnodiging mislukt", { description: message });
     } finally {
       setIsInviting(false);
     }
