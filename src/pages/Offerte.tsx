@@ -28,6 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { trackQuoteRequestSubmitted } from "@/lib/analytics";
 
 const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
@@ -105,6 +106,13 @@ export default function Offerte() {
       );
 
       if (error) throw error;
+
+      // Track conversion event
+      trackQuoteRequestSubmitted({
+        numberOfPeople: parseInt(data.numberOfPeople, 10) || 0,
+        numberOfDays: data.numberOfDays,
+        budgetPerPerson: data.budgetPerPerson,
+      });
 
       toast({
         title: "Offerte aanvraag verstuurd!",
