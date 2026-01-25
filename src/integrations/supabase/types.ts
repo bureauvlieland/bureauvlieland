@@ -110,6 +110,128 @@ export type Database = {
           },
         ]
       }
+      building_blocks: {
+        Row: {
+          block_type: Database["public"]["Enums"]["building_block_type"]
+          category: Database["public"]["Enums"]["building_block_category"]
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          duration: string | null
+          external_url: string | null
+          id: string
+          image_asset: string | null
+          image_url: string | null
+          is_active: boolean | null
+          is_from_price: boolean | null
+          is_published: boolean | null
+          max_people: number | null
+          min_people: number | null
+          name: string
+          price_adult: number | null
+          price_adult_note: string | null
+          price_child: number | null
+          price_child_max_age: number | null
+          price_child_min_age: number | null
+          price_child_note: string | null
+          price_display_override: string | null
+          price_extras: Json | null
+          price_pet: number | null
+          price_pet_note: string | null
+          price_type:
+            | Database["public"]["Enums"]["building_block_price_type"]
+            | null
+          provider_id: string | null
+          seasonal_notes: string | null
+          short_description: string | null
+          sort_order: number | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          block_type?: Database["public"]["Enums"]["building_block_type"]
+          category: Database["public"]["Enums"]["building_block_category"]
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          external_url?: string | null
+          id: string
+          image_asset?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          is_from_price?: boolean | null
+          is_published?: boolean | null
+          max_people?: number | null
+          min_people?: number | null
+          name: string
+          price_adult?: number | null
+          price_adult_note?: string | null
+          price_child?: number | null
+          price_child_max_age?: number | null
+          price_child_min_age?: number | null
+          price_child_note?: string | null
+          price_display_override?: string | null
+          price_extras?: Json | null
+          price_pet?: number | null
+          price_pet_note?: string | null
+          price_type?:
+            | Database["public"]["Enums"]["building_block_price_type"]
+            | null
+          provider_id?: string | null
+          seasonal_notes?: string | null
+          short_description?: string | null
+          sort_order?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          block_type?: Database["public"]["Enums"]["building_block_type"]
+          category?: Database["public"]["Enums"]["building_block_category"]
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          external_url?: string | null
+          id?: string
+          image_asset?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          is_from_price?: boolean | null
+          is_published?: boolean | null
+          max_people?: number | null
+          min_people?: number | null
+          name?: string
+          price_adult?: number | null
+          price_adult_note?: string | null
+          price_child?: number | null
+          price_child_max_age?: number | null
+          price_child_min_age?: number | null
+          price_child_note?: string | null
+          price_display_override?: string | null
+          price_extras?: Json | null
+          price_pet?: number | null
+          price_pet_note?: string | null
+          price_type?:
+            | Database["public"]["Enums"]["building_block_price_type"]
+            | null
+          provider_id?: string | null
+          seasonal_notes?: string | null
+          short_description?: string | null
+          sort_order?: number | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_blocks_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           address_city: string | null
@@ -487,6 +609,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "partner"
+      building_block_category: "activiteiten" | "catering" | "vervoer"
+      building_block_price_type:
+        | "per_person"
+        | "total"
+        | "per_hour"
+        | "per_day"
+        | "on_request"
+      building_block_type: "bureau" | "partner" | "self_arranged"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -615,6 +745,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "partner"],
+      building_block_category: ["activiteiten", "catering", "vervoer"],
+      building_block_price_type: [
+        "per_person",
+        "total",
+        "per_hour",
+        "per_day",
+        "on_request",
+      ],
+      building_block_type: ["bureau", "partner", "self_arranged"],
     },
   },
 } as const

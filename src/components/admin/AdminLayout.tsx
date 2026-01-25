@@ -28,6 +28,7 @@ import {
   Shield,
   Activity,
   Euro,
+  Blocks,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -45,6 +46,7 @@ const menuItems = [
   { title: "CRM", url: "/admin/crm", icon: Users },
   { title: "Aanvragen", url: "/admin/aanvragen", icon: FileText },
   { title: "Partners", url: "/admin/partners", icon: Building2 },
+  { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
   { title: "Commissies", url: "/admin/commissies", icon: Euro },
   { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
   { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },
