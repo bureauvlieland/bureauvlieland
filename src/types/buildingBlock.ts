@@ -19,6 +19,7 @@ export interface BuildingBlock {
   provider?: {
     id: string;
     name: string;
+    email?: string;
   } | null;
   
   // Capacity
@@ -99,6 +100,96 @@ export interface BuildingBlockFormData {
   tags: string[];
   seasonal_notes: string;
 }
+
+// Cart item with preferred time, notes, and day assignment
+export interface CartItemDetail {
+  blockId: string;
+  preferredTime: string | null; // e.g., "10:00" or null for "Flexibel"
+  notes: string;
+  dayIndex: number; // 0-based index: 0 = first date, 1 = second date, etc.
+}
+
+// Time slots for preferred time selector
+export const timeSlots = [
+  { value: "flexibel", label: "Flexibel" },
+  { value: "08:00", label: "08:00" },
+  { value: "08:30", label: "08:30" },
+  { value: "09:00", label: "09:00" },
+  { value: "09:30", label: "09:30" },
+  { value: "10:00", label: "10:00" },
+  { value: "10:30", label: "10:30" },
+  { value: "11:00", label: "11:00" },
+  { value: "11:30", label: "11:30" },
+  { value: "12:00", label: "12:00" },
+  { value: "12:30", label: "12:30" },
+  { value: "13:00", label: "13:00" },
+  { value: "13:30", label: "13:30" },
+  { value: "14:00", label: "14:00" },
+  { value: "14:30", label: "14:30" },
+  { value: "15:00", label: "15:00" },
+  { value: "15:30", label: "15:30" },
+  { value: "16:00", label: "16:00" },
+  { value: "16:30", label: "16:30" },
+  { value: "17:00", label: "17:00" },
+  { value: "17:30", label: "17:30" },
+  { value: "18:00", label: "18:00" },
+  { value: "18:30", label: "18:30" },
+  { value: "19:00", label: "19:00" },
+  { value: "19:30", label: "19:30" },
+  { value: "20:00", label: "20:00" },
+  { value: "20:30", label: "20:30" },
+  { value: "21:00", label: "21:00" },
+];
+
+// Fee tiers based on group size
+export const bureauFeeTiers = [
+  { minPeople: 1, maxPeople: 20, feeAmount: 75 },
+  { minPeople: 21, maxPeople: 40, feeAmount: 125 },
+  { minPeople: 41, maxPeople: 60, feeAmount: 175 },
+  { minPeople: 61, maxPeople: 100, feeAmount: 225 },
+  { minPeople: 101, maxPeople: 9999, feeAmount: 275 },
+];
+
+// Helper function to calculate bureau fee
+export const calculateBureauFee = (numberOfPeople: number): number => {
+  const tier = bureauFeeTiers.find(
+    (t) => numberOfPeople >= t.minPeople && numberOfPeople <= t.maxPeople
+  );
+  return tier?.feeAmount || 275;
+};
+
+// Helper function to format price for display
+export const formatBlockPrice = (block: BuildingBlock): string => {
+  if (block.price_display_override) return block.price_display_override;
+  if (block.price_adult === null) return "Op aanvraag";
+  
+  const prefix = block.is_from_price ? "vanaf " : "";
+  const price = `€ ${block.price_adult.toFixed(0).replace(".", ",")}`;
+  
+  return `${prefix}${price}`;
+};
+
+// Helper function to format price note
+export const formatPriceNote = (block: BuildingBlock): string => {
+  if (block.price_adult_note) return block.price_adult_note;
+  
+  switch (block.price_type) {
+    case "per_person": return "p.p.";
+    case "per_day": return "per dag";
+    case "per_hour": return "per uur";
+    case "total": return "totaal";
+    default: return "";
+  }
+};
+
+// Helper function to group blocks by block type
+export const groupBlocksByType = (blocks: BuildingBlock[]) => {
+  return {
+    bureau: blocks.filter((b) => b.block_type === "bureau"),
+    partner: blocks.filter((b) => b.block_type === "partner"),
+    self_arranged: blocks.filter((b) => b.block_type === "self_arranged"),
+  };
+};
 
 // Category labels for display
 export const categoryLabels: Record<BuildingBlockCategory, string> = {

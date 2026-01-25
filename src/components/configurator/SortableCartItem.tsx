@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { CartItemDetails } from "./CartItemDetails";
-import { type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 
 interface SortableCartItemProps {
   id: string;

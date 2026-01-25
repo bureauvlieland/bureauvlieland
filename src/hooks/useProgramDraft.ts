@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { type CartItemDetail } from "@/data/configuratorMockData";
+import { type CartItemDetail } from "@/types/buildingBlock";
 
 const STORAGE_KEY = "bureauvlieland_program_draft";
 const DRAFT_EXPIRY_DAYS = 30;

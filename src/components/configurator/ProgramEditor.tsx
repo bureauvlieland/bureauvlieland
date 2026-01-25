@@ -6,7 +6,7 @@ import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucid
 import { ShareProgramDialog } from "./ShareProgramDialog";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
-import { cn } from "@/lib/utils";
+
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import {
@@ -24,7 +24,8 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { getBlockById, calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { SortableCartItem } from "./SortableCartItem";
 
 export interface ProgramEditorProps {
@@ -63,6 +64,9 @@ export const ProgramEditor = ({
   const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
   const prevItemsRef = useRef<CartItemDetail[]>(cartItems);
   const { toast } = useToast();
+  
+  // Fetch blocks from database
+  const { data: allBlocks = [] } = usePublishedBuildingBlocks();
 
   const isExpanded = mode === "expanded";
   const isReadOnly = (field: string) => readOnlyFields.includes(field);
@@ -93,7 +97,7 @@ export const ProgramEditor = ({
     });
 
     if (changedItem && effectiveDates.length > 1) {
-      const block = getBlockById(changedItem.blockId);
+      const block = getBlockById(allBlocks, changedItem.blockId);
       const newDayIndex = changedItem.dayIndex ?? 0;
       const targetDate = effectiveDates[newDayIndex];
       
@@ -118,7 +122,7 @@ export const ProgramEditor = ({
   }, [cartItems, effectiveDates, toast]);
 
   const blocks = cartItems
-    .map((item) => getBlockById(item.blockId))
+    .map((item) => getBlockById(allBlocks, item.blockId))
     .filter(Boolean) as BuildingBlock[];
   const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
@@ -134,12 +138,12 @@ export const ProgramEditor = ({
   const calculateTotal = () => {
     let total = 0;
     blocks.forEach((block) => {
-      if (block.blockType === "self_arranged") return;
+      if (block.block_type === "self_arranged") return;
       
-      const priceMatch = block.priceIndication.match(/\d+/);
-      if (priceMatch) {
-        const price = parseInt(priceMatch[0], 10);
-        if (block.priceNote?.includes("p.p.")) {
+      // Use the new price fields
+      if (block.price_adult !== null) {
+        const price = block.price_adult;
+        if (block.price_type === "per_person") {
           total += price * numberOfPeople;
         } else {
           total += price;

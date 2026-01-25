@@ -14,7 +14,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { getBlockById, getProviderById, calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { 
+  calculateBureauFee, 
+  groupBlocksByType, 
+  formatBlockPrice, 
+  formatPriceNote,
+  type BuildingBlock, 
+  type CartItemDetail 
+} from "@/types/buildingBlock";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink, Clock, MessageSquare, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
@@ -49,8 +57,11 @@ export const RequestFormModal = ({
     notes: "",
   });
 
+  // Fetch blocks from database
+  const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+
   const blocks = cartItems
-    .map((item) => getBlockById(item.blockId))
+    .map((item) => getBlockById(allBlocks, item.blockId))
     .filter(Boolean) as BuildingBlock[];
   const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
@@ -69,19 +80,18 @@ export const RequestFormModal = ({
       const token = generateCustomerToken();
       
       const blocksWithDetails = cartItems.map((item) => {
-        const block = getBlockById(item.blockId);
-        const provider = getProviderById(block?.providerId || "");
+        const block = getBlockById(allBlocks, item.blockId);
         return {
           id: block?.id || "",
           name: block?.name || "",
           category: block?.category || "",
-          provider: block?.provider || "",
-          providerId: block?.providerId || "",
-          providerEmail: provider?.email || "",
-          priceIndication: block?.priceIndication || "",
-          priceNote: block?.priceNote,
-          blockType: block?.blockType || "partner",
-          externalUrl: block?.externalUrl,
+          provider: block?.provider?.name || "Bureau Vlieland",
+          providerId: block?.provider_id || "",
+          providerEmail: block?.provider?.email || "",
+          priceIndication: block ? formatBlockPrice(block) : "",
+          priceNote: block ? formatPriceNote(block) : "",
+          blockType: block?.block_type || "partner",
+          externalUrl: block?.external_url,
           preferredTime: item.preferredTime,
           itemNotes: item.notes,
           dayIndex: item.dayIndex ?? 0,
@@ -215,7 +225,7 @@ export const RequestFormModal = ({
     return (
       <li key={block.id} className="py-1">
         <span className="font-medium">{block.name}</span>
-        <span className="text-muted-foreground"> → {block.provider}</span>
+        <span className="text-muted-foreground"> → {block.provider?.name || "Bureau Vlieland"}</span>
         {cartItem?.preferredTime && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
             <Clock className="h-3 w-3" />
@@ -234,7 +244,7 @@ export const RequestFormModal = ({
 
   // Success screen with external links for self-arranged items
   if (isSuccess) {
-    const selfArrangedBlocks = successBlocks.filter((b) => b.blockType === "self_arranged");
+    const selfArrangedBlocks = successBlocks.filter((b) => b.block_type === "self_arranged");
     
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -277,19 +287,19 @@ export const RequestFormModal = ({
                 <ul className="space-y-2">
                   {selfArrangedBlocks.map((block) => (
                     <li key={block.id}>
-                      {block.externalUrl ? (
+                      {block.external_url ? (
                         <a
-                          href={block.externalUrl}
+                          href={block.external_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-primary hover:underline flex items-center gap-1"
                         >
-                          → {block.name} ({block.provider})
+                          → {block.name} ({block.provider?.name || "Externe aanbieder"})
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       ) : (
                         <span className="text-sm text-muted-foreground">
-                          → {block.name} ({block.provider})
+                          → {block.name} ({block.provider?.name || "Externe aanbieder"})
                         </span>
                       )}
                     </li>
@@ -469,26 +479,25 @@ export const RequestFormModal = ({
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              placeholder="Bijzonderheden, dieetwensen, speciale verzoeken..."
-              rows={4}
+              placeholder="Specifieke wensen, dieetwensen, toegankelijkheid, etc."
+              className="min-h-[80px]"
+              maxLength={2000}
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Annuleren
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verzenden...
-                </>
-              ) : (
-                "Aanvraag versturen"
-              )}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verzenden...
+              </>
+            ) : (
+              <>
+                Aanvraag versturen
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

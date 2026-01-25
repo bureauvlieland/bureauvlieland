@@ -5,7 +5,8 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useKenBurns } from "@/hooks/use-ken-burns";
-import { buildingBlocks, type BlockCategory } from "@/data/configuratorMockData";
+import { type BuildingBlockCategory } from "@/types/buildingBlock";
+import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockCard } from "@/components/configurator/BuildingBlockCard";
 import { ConfiguratorCart } from "@/components/configurator/ConfiguratorCart";
 import { CategoryFilter } from "@/components/configurator/CategoryFilter";
@@ -13,7 +14,7 @@ import { RequestFormModal } from "@/components/configurator/RequestFormModal";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Info, Save } from "lucide-react";
+import { ArrowLeft, Info, Save, Loader2 } from "lucide-react";
 import heroImage from "@/assets/beach-signs.jpg";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -22,6 +23,8 @@ const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
   const { toast } = useToast();
   
+  // Fetch building blocks from database
+  const { data: buildingBlocks = [], isLoading: isLoadingBlocks } = usePublishedBuildingBlocks();
   const {
     cartItems,
     numberOfPeople,
@@ -45,7 +48,7 @@ const ProgrammaSamenstellen = () => {
   } = useCart();
 
   // State
-  const [selectedCategory, setSelectedCategory] = useState<BlockCategory | "all">("all");
+  const [selectedCategory, setSelectedCategory] = useState<BuildingBlockCategory | "all">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
 
@@ -186,21 +189,30 @@ const ProgrammaSamenstellen = () => {
                 </div>
 
                 {/* Blocks grid */}
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {filteredBlocks.map((block) => (
-                    <BuildingBlockCard
-                      key={block.id}
-                      block={block}
-                      onAdd={handleAddToCart}
-                      isInCart={isInCart(block.id)}
-                    />
-                  ))}
-                </div>
-
-                {filteredBlocks.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    Geen bouwstenen gevonden in deze categorie.
+                {isLoadingBlocks ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-2 text-muted-foreground">Bouwstenen laden...</span>
                   </div>
+                ) : (
+                  <>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      {filteredBlocks.map((block) => (
+                        <BuildingBlockCard
+                          key={block.id}
+                          block={block}
+                          onAdd={handleAddToCart}
+                          isInCart={isInCart(block.id)}
+                        />
+                      ))}
+                    </div>
+
+                    {filteredBlocks.length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        Geen bouwstenen gevonden in deze categorie.
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

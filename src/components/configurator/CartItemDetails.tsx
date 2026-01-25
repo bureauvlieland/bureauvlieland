@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X, Clock, Plus, Minus, MessageSquare, Calendar } from "lucide-react";
-import { timeSlots, type BuildingBlock, type CartItemDetail } from "@/data/configuratorMockData";
+import { timeSlots, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -41,7 +41,7 @@ export const CartItemDetails = ({
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm leading-tight truncate">{block.name}</p>
           <p className="text-xs text-muted-foreground leading-tight">
-            {block.priceIndication} {block.priceNote}
+            {block.price_display_override || (block.price_adult !== null ? `€ ${block.price_adult}` : "Op aanvraag")} {block.price_adult_note || ""}
           </p>
         </div>
         <Button

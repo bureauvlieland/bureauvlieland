@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ShoppingCart, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type CartItemDetail } from "@/data/configuratorMockData";
+import { type CartItemDetail } from "@/types/buildingBlock";
 import { ProgramEditor } from "./ProgramEditor";
 import { ProgramEditorSheet } from "./ProgramEditorSheet";
 
