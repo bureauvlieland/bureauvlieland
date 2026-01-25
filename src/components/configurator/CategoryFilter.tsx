@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Compass, Utensils, Ship } from "lucide-react";
-import type { BlockCategory } from "@/data/configuratorMockData";
+import type { BuildingBlockCategory } from "@/types/buildingBlock";
 
 interface CategoryFilterProps {
-  selectedCategory: BlockCategory | "all";
-  onCategoryChange: (category: BlockCategory | "all") => void;
+  selectedCategory: BuildingBlockCategory | "all";
+  onCategoryChange: (category: BuildingBlockCategory | "all") => void;
 }
 
 const categories = [

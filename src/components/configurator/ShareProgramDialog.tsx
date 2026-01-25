@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, Share2, Printer, Loader2 } from "lucide-react";
-import { type CartItemDetail } from "@/data/configuratorMockData";
+import { type CartItemDetail } from "@/types/buildingBlock";
 
 // WhatsApp icon as inline SVG
 const WhatsAppIcon = () => (

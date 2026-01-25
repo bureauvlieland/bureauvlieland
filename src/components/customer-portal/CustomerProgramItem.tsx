@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
-import { timeSlots } from "@/data/configuratorMockData";
+import { timeSlots } from "@/types/buildingBlock";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;

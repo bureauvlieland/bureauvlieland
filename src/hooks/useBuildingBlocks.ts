@@ -11,7 +11,7 @@ export const usePublishedBuildingBlocks = () => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners(id, name)
+          provider:partners(id, name, email)
         `)
         .eq("is_published", true)
         .eq("is_active", true)
@@ -22,6 +22,11 @@ export const usePublishedBuildingBlocks = () => {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
+};
+
+// Get a single block by ID from an array
+export const getBlockById = (blocks: BuildingBlock[], id: string): BuildingBlock | undefined => {
+  return blocks.find((block) => block.id === id);
 };
 
 // Fetch all building blocks (for admin)

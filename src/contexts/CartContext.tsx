@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
-import { type CartItemDetail } from "@/data/configuratorMockData";
+import { type CartItemDetail } from "@/types/buildingBlock";
 import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
 
 const MAX_DAYS = 7;

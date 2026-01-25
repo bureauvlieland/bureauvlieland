@@ -6,7 +6,8 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { getBlockById, type CartItemDetail, type BuildingBlock } from "@/data/configuratorMockData";
+import { type CartItemDetail, type BuildingBlock, formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Users, Clock, ArrowRight, Loader2, AlertCircle, Printer, Download } from "lucide-react";
@@ -29,8 +30,14 @@ const SharedProgram = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [program, setProgram] = useState<SharedProgramData | null>(null);
-  const [blocks, setBlocks] = useState<BuildingBlock[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
+  
+  // Fetch blocks from database
+  const { data: allBlocks = [], isLoading: isLoadingBlocks } = usePublishedBuildingBlocks();
+
+  // Resolve blocks from cart items
+  const blocks = program?.cart_items
+    .map((item) => getBlockById(allBlocks, item.blockId))
+    .filter(Boolean) as BuildingBlock[] || [];
 
   useEffect(() => {
     const fetchProgram = async () => {
@@ -65,12 +72,6 @@ const SharedProgram = () => {
           created_at: data.created_at,
           expires_at: data.expires_at,
         });
-
-        // Resolve blocks
-        const resolvedBlocks = cartItemsData
-          .map((item) => getBlockById(item.blockId))
-          .filter(Boolean) as BuildingBlock[];
-        setBlocks(resolvedBlocks);
       } catch (err) {
         console.error('Error fetching shared program:', err);
         setError("Er ging iets mis bij het laden van het programma");
@@ -85,8 +86,6 @@ const SharedProgram = () => {
   const handleImportToCart = () => {
     if (!program) return;
     
-    setIsImporting(true);
-    
     // Clear existing and import
     let addedCount = 0;
     program.cart_items.forEach((item) => {
@@ -100,8 +99,6 @@ const SharedProgram = () => {
       setSelectedDate(new Date(program.selected_date));
     }
 
-    setIsImporting(false);
-
     toast({
       title: "Programma geladen",
       description: `${addedCount} items toegevoegd aan je programma.`,
@@ -112,7 +109,7 @@ const SharedProgram = () => {
     window.print();
   };
 
-  if (loading) {
+  if (loading || isLoadingBlocks) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
@@ -218,12 +215,12 @@ const SharedProgram = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-medium">{block.name}</h3>
-                        <p className="text-sm text-muted-foreground">{block.provider}</p>
+                        <p className="text-sm text-muted-foreground">{block.provider?.name || "Bureau Vlieland"}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-medium">{block.priceIndication}</p>
-                        {block.priceNote && (
-                          <p className="text-xs text-muted-foreground">{block.priceNote}</p>
+                        <p className="text-sm font-medium">{formatBlockPrice(block)}</p>
+                        {formatPriceNote(block) && (
+                          <p className="text-xs text-muted-foreground">{formatPriceNote(block)}</p>
                         )}
                       </div>
                     </div>
@@ -247,12 +244,8 @@ const SharedProgram = () => {
 
         {/* Actions - hidden in print */}
         <div className="flex flex-col sm:flex-row gap-3 print:hidden">
-          <Button onClick={handleImportToCart} disabled={isImporting} className="flex-1">
-            {isImporting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
+          <Button onClick={handleImportToCart} className="flex-1">
+            <Download className="mr-2 h-4 w-4" />
             Laad in mijn programma
           </Button>
           <Button variant="outline" onClick={handlePrint}>
