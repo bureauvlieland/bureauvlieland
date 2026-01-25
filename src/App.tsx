@@ -42,6 +42,7 @@ import AdminPartners from "./pages/admin/AdminPartners";
 import AdminPartnerDetail from "./pages/admin/AdminPartnerDetail";
 import AdminTodos from "./pages/admin/AdminTodos";
 import AdminLogs from "./pages/admin/AdminLogs";
+import AdminCommissions from "./pages/admin/AdminCommissions";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
             <Route path="/admin/todos" element={<AdminTodos />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
+            <Route path="/admin/commissies" element={<AdminCommissions />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -6,9 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple admin key check - in production use proper auth
-const ADMIN_KEY = Deno.env.get("LOVABLE_API_KEY");
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -16,22 +13,63 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("authorization");
-    if (!authHeader || authHeader !== `Bearer ${ADMIN_KEY}`) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const url = new URL(req.url);
-    const statusFilter = url.searchParams.get("status") || "pending";
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user is admin
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: claimsError } = await userClient.auth.getClaims(token);
+    
+    if (claimsError || !claims?.claims?.sub) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claims.claims.sub;
+
+    // Check admin role
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: roleData } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!roleData) {
+      return new Response(
+        JSON.stringify({ error: "Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse request body for status filter
+    let statusFilter = "pending";
+    try {
+      const body = await req.json();
+      if (body.status) {
+        statusFilter = body.status;
+      }
+    } catch {
+      // No body or invalid JSON, use default
+    }
 
     // Get all items with commission
-    const { data: items, error: itemsError } = await supabase
+    const { data: items, error: itemsError } = await adminClient
       .from("program_request_items")
       .select(`
         *,
@@ -56,7 +94,7 @@ serve(async (req) => {
     }
 
     // Get partners for additional info
-    const { data: partners } = await supabase
+    const { data: partners } = await adminClient
       .from("partners")
       .select("id, name, email, kvk_number, address_street, address_postal, address_city");
 
