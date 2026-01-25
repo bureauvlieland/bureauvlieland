@@ -37,8 +37,11 @@ import PartnerResetPassword from "./pages/PartnerResetPassword";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCRM from "./pages/admin/AdminCRM";
 import AdminRequests from "./pages/admin/AdminRequests";
+import AdminRequestDetail from "./pages/admin/AdminRequestDetail";
 import AdminPartners from "./pages/admin/AdminPartners";
+import AdminPartnerDetail from "./pages/admin/AdminPartnerDetail";
 import AdminTodos from "./pages/admin/AdminTodos";
+import AdminLogs from "./pages/admin/AdminLogs";
 
 const queryClient = new QueryClient();
 
@@ -83,8 +86,11 @@ const App = () => (
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
             <Route path="/admin/aanvragen" element={<AdminRequests />} />
+            <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
             <Route path="/admin/partners" element={<AdminPartners />} />
+            <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
             <Route path="/admin/todos" element={<AdminTodos />} />
+            <Route path="/admin/logs" element={<AdminLogs />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
