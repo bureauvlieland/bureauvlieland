@@ -59,6 +59,11 @@ export const AdminActions = {
   ITEM_STATUS_CHANGED: "item_status_changed",
   ITEM_COMMISSION_UPDATED: "item_commission_updated",
   
+  // Commission actions
+  COMMISSION_STATUS_CHANGED: "commission_status_changed",
+  COMMISSION_INVOICED: "commission_invoiced",
+  COMMISSION_PAID: "commission_paid",
+  
   // Todo actions
   TODO_CREATED: "todo_created",
   TODO_UPDATED: "todo_updated",
@@ -74,6 +79,7 @@ export const EntityTypes = {
   PARTNER: "partner",
   REQUEST: "program_request",
   ITEM: "program_request_item",
+  COMMISSION: "commission",
   TODO: "admin_todo",
   USER: "user",
 } as const;
