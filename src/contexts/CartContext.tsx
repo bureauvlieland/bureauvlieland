@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { type CartItemDetail } from "@/types/buildingBlock";
 import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
-
+import { trackAddToCart, trackRemoveFromCart } from "@/lib/analytics";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 const MAX_DAYS = 7;
 
 interface CartContextType {
@@ -34,6 +35,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { draft, hasDraft, saveDraft, clearDraft, lastSaved } = useProgramDraft();
+  const { data: allBlocks = [] } = usePublishedBuildingBlocks();
 
   const [cartItems, setCartItems] = useState<CartItemDetail[]>([]);
   const [numberOfPeople, setNumberOfPeople] = useState(20);
@@ -93,6 +95,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (cartItems.find(item => item.blockId === blockId)) {
       return false;
     }
+    
+    // Track add to cart event
+    const block = getBlockById(allBlocks, blockId);
+    if (block) {
+      trackAddToCart({
+        id: block.id,
+        name: block.name,
+        category: block.category,
+        price: block.price_adult ?? undefined,
+        provider: block.provider?.name,
+      });
+    }
+    
     setCartItems((prev) => [...prev, {
       blockId,
       preferredTime: null,
@@ -110,11 +125,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }, 600);
     
     return true;
-  }, [cartItems]);
+  }, [cartItems, allBlocks]);
 
   const removeFromCart = useCallback((blockId: string) => {
+    // Track remove from cart event
+    const block = getBlockById(allBlocks, blockId);
+    if (block) {
+      trackRemoveFromCart({
+        id: block.id,
+        name: block.name,
+        category: block.category,
+      });
+    }
+    
     setCartItems((prev) => prev.filter((item) => item.blockId !== blockId));
-  }, []);
+  }, [allBlocks]);
 
   const updateItem = useCallback((blockId: string, updates: Partial<CartItemDetail>) => {
     setCartItems((prev) =>

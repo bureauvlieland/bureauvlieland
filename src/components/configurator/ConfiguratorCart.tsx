@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ShoppingCart, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type CartItemDetail } from "@/types/buildingBlock";
+import { type CartItemDetail, calculateIndicativeTotal } from "@/types/buildingBlock";
 import { ProgramEditor } from "./ProgramEditor";
 import { ProgramEditorSheet } from "./ProgramEditorSheet";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
+import { trackBeginCheckout } from "@/lib/analytics";
 
 interface ConfiguratorCartProps {
   cartItems: CartItemDetail[];
@@ -41,11 +43,32 @@ export const ConfiguratorCart = ({
   onDateChange,
 }: ConfiguratorCartProps) => {
   const [isEditorSheetOpen, setIsEditorSheetOpen] = useState(false);
+  const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+  
 
   // Use selectedDates if available, otherwise fall back to legacy selectedDate
   const effectiveDates = selectedDates.length > 0 
     ? selectedDates 
     : (selectedDate ? [selectedDate] : []);
+
+  // Track begin_checkout when modal is about to open
+  const handleSubmit = () => {
+    // Get blocks for value calculation
+    const blocks = cartItems
+      .map(item => getBlockById(allBlocks, item.blockId))
+      .filter(Boolean);
+    
+    const indicativeValue = calculateIndicativeTotal(blocks as any[], numberOfPeople);
+    
+    trackBeginCheckout({
+      itemsCount: cartItems.length,
+      value: indicativeValue,
+      numberOfPeople,
+      numberOfDays: effectiveDates.length || 1,
+    });
+    
+    onSubmit();
+  };
 
   // Handle legacy date change
   const handleAddDate = (date: Date): boolean => {
@@ -115,7 +138,7 @@ export const ConfiguratorCart = ({
           onPeopleChange={onPeopleChange}
           onAddDate={handleAddDate}
           onRemoveDate={handleRemoveDate}
-          onSubmit={onSubmit}
+          onSubmit={handleSubmit}
           onReorderItems={onReorderItems}
         />
       </Card>
@@ -132,7 +155,7 @@ export const ConfiguratorCart = ({
         onPeopleChange={onPeopleChange}
         onAddDate={handleAddDate}
         onRemoveDate={handleRemoveDate}
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit}
         onReorderItems={onReorderItems}
       />
     </>

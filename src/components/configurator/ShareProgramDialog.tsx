@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, Share2, Printer, Loader2 } from "lucide-react";
 import { type CartItemDetail } from "@/types/buildingBlock";
+import { trackShareProgram } from "@/lib/analytics";
 
 // WhatsApp icon as inline SVG
 const WhatsAppIcon = () => (
@@ -101,6 +102,7 @@ export const ShareProgramDialog = ({
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
+      trackShareProgram('link');
       setTimeout(() => setCopied(false), 2000);
       toast({
         title: "Link gekopieerd",
@@ -116,12 +118,14 @@ export const ShareProgramDialog = ({
   };
 
   const shareViaWhatsApp = () => {
+    trackShareProgram('whatsapp');
     if (!shareUrl) return;
     const text = `Bekijk mijn Vlieland programma: ${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const shareViaEmail = () => {
+    trackShareProgram('email');
     if (!shareUrl) return;
     const subject = 'Mijn Vlieland programma';
     const body = `Bekijk mijn samengestelde programma voor Vlieland:\n\n${shareUrl}\n\nAantal personen: ${numberOfPeople}${selectedDate ? `\nDatum: ${selectedDate.toLocaleDateString('nl-NL')}` : ''}`;
@@ -129,6 +133,7 @@ export const ShareProgramDialog = ({
   };
 
   const openPrintView = () => {
+    trackShareProgram('print');
     if (!shareUrl) return;
     window.open(shareUrl, '_blank');
   };

@@ -19,6 +19,7 @@ import {
   groupBlocksByType, 
   formatBlockPrice, 
   formatPriceNote,
+  calculateIndicativeTotal,
   type BuildingBlock, 
   type CartItemDetail 
 } from "@/types/buildingBlock";
@@ -26,6 +27,7 @@ import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlo
 import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink, Clock, MessageSquare, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
+import { trackProgramRequestSubmitted } from "@/lib/analytics";
 
 interface RequestFormModalProps {
   isOpen: boolean;
@@ -173,6 +175,20 @@ export const RequestFormModal = ({
       });
 
       if (error) throw error;
+
+      // Track conversion event
+      const indicativeValue = calculateIndicativeTotal(blocks, numberOfPeople);
+      trackProgramRequestSubmitted({
+        value: indicativeValue,
+        numberOfPeople,
+        numberOfDays: effectiveDates.length,
+        items: blocksWithDetails.map(b => ({
+          id: b.id,
+          name: b.name,
+          category: b.category,
+          provider: b.provider,
+        })),
+      });
 
       setSuccessBlocks(blocks);
       setCustomerToken(token);

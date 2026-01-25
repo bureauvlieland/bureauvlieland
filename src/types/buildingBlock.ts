@@ -182,6 +182,28 @@ export const formatPriceNote = (block: BuildingBlock): string => {
   }
 };
 
+// Helper function to calculate indicative total for a list of blocks
+export const calculateIndicativeTotal = (blocks: BuildingBlock[], numberOfPeople: number): number => {
+  return blocks.reduce((total, block) => {
+    // Skip self_arranged blocks (user pays externally)
+    if (block.block_type === "self_arranged") return total;
+    // Skip blocks without a price
+    if (block.price_adult === null) return total;
+    
+    // Calculate based on price type
+    switch (block.price_type) {
+      case "per_person":
+        return total + (block.price_adult * numberOfPeople);
+      case "total":
+      case "per_day":
+      case "per_hour":
+        return total + block.price_adult;
+      default:
+        return total;
+    }
+  }, 0);
+};
+
 // Helper function to group blocks by block type
 export const groupBlocksByType = (blocks: BuildingBlock[]) => {
   return {
