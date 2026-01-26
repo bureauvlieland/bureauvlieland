@@ -81,27 +81,37 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         return;
       }
 
-      // Fetch the items with building block image data
+      // Fetch the items
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select(`
-          *,
-          building_block:block_id (
-            image_url,
-            image_asset
-          )
-        `)
+        .select("*")
         .eq("request_id", requestData.id)
         .order("day_index", { ascending: true })
         .order("preferred_time", { ascending: true, nullsFirst: false });
+
+      if (itemsError) throw itemsError;
+
+      // Get unique block IDs to fetch images
+      const blockIds = [...new Set((itemsData || []).map((item: any) => item.block_id))];
       
-      // Flatten the building_block data onto each item
-      const itemsWithImages = (itemsData || []).map((item: any) => ({
-        ...item,
-        image_url: item.building_block?.image_url || null,
-        image_asset: item.building_block?.image_asset || null,
-        building_block: undefined, // Remove nested object
-      }));
+      // Fetch building block images
+      const { data: blocksData } = await supabase
+        .from("building_blocks")
+        .select("id, image_url, image_asset")
+        .in("id", blockIds);
+      
+      // Create a lookup map for images
+      const imageMap = new Map((blocksData || []).map((b: any) => [b.id, { image_url: b.image_url, image_asset: b.image_asset }]));
+      
+      // Merge image data onto items
+      const itemsWithImages = (itemsData || []).map((item: any) => {
+        const imageData = imageMap.get(item.block_id);
+        return {
+          ...item,
+          image_url: imageData?.image_url || null,
+          image_asset: imageData?.image_asset || null,
+        };
+      });
 
       if (itemsError) throw itemsError;
 
