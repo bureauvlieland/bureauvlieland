@@ -33,6 +33,7 @@ import {
 import { useAdminBuildingBlocks, useTogglePublishBlock } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockSheet } from "@/components/admin/BuildingBlockSheet";
 import { categoryLabels, blockTypeLabels } from "@/types/buildingBlock";
+import { getBlockImage } from "@/lib/buildingBlockUtils";
 import type { BuildingBlock, BuildingBlockCategory, BuildingBlockType } from "@/types/buildingBlock";
 
 const AdminBuildingBlocks = () => {
@@ -202,15 +203,13 @@ const AdminBuildingBlocks = () => {
                   <TableRow key={block.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {(block.image_url || block.image_asset) && (
-                          <div className="h-10 w-14 rounded overflow-hidden bg-muted flex-shrink-0">
-                            <img
-                              src={block.image_url || `/assets/${block.image_asset}`}
-                              alt={block.name}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        )}
+                        <div className="h-10 w-14 rounded overflow-hidden bg-muted flex-shrink-0">
+                          <img
+                            src={getBlockImage(block)}
+                            alt={block.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
                         <div>
                           <p className="font-medium">{block.name}</p>
                           {block.short_description && (
