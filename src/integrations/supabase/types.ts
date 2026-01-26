@@ -312,6 +312,8 @@ export type Database = {
           name: string
           partner_token: string
           phone: string | null
+          terms_pdf_path: string | null
+          terms_uploaded_at: string | null
           updated_at: string
         }
         Insert: {
@@ -328,6 +330,8 @@ export type Database = {
           name: string
           partner_token?: string
           phone?: string | null
+          terms_pdf_path?: string | null
+          terms_uploaded_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -344,6 +348,8 @@ export type Database = {
           name?: string
           partner_token?: string
           phone?: string | null
+          terms_pdf_path?: string | null
+          terms_uploaded_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -543,6 +549,10 @@ export type Database = {
           id: string
           number_of_people: number
           selected_dates: Json
+          signature_id: string | null
+          signature_ip: string | null
+          signature_name: string | null
+          signature_user_agent: string | null
           status: string
           terms_accepted_at: string | null
           terms_version: string | null
@@ -572,6 +582,10 @@ export type Database = {
           id?: string
           number_of_people?: number
           selected_dates?: Json
+          signature_id?: string | null
+          signature_ip?: string | null
+          signature_name?: string | null
+          signature_user_agent?: string | null
           status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null
@@ -601,6 +615,10 @@ export type Database = {
           id?: string
           number_of_people?: number
           selected_dates?: Json
+          signature_id?: string | null
+          signature_ip?: string | null
+          signature_name?: string | null
+          signature_user_agent?: string | null
           status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null

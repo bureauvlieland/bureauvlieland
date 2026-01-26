@@ -32,7 +32,7 @@ interface UseCustomerProgramReturn {
   submitChanges: () => Promise<boolean>;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
-  acceptTerms: () => Promise<boolean>;
+  acceptTerms: (signatureName?: string) => Promise<boolean>;
   cancelRequest: (reason?: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
 }
@@ -299,7 +299,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
-  const acceptTerms = useCallback(async (): Promise<boolean> => {
+  const acceptTerms = useCallback(async (signatureName?: string): Promise<boolean> => {
     if (!program) return false;
 
     try {
@@ -307,6 +307,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         body: {
           token: token,
           acceptTerms: true,
+          signatureName: signatureName || null,
           origin: window.location.origin,
         },
       });

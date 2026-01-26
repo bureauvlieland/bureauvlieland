@@ -64,7 +64,7 @@ interface DesktopProgramViewProps {
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
   onRefresh: () => void;
-  onAcceptTerms: () => Promise<boolean>;
+  onAcceptTerms: (signatureName: string) => Promise<boolean>;
 }
 
 export const DesktopProgramView = ({
@@ -115,6 +115,7 @@ export const DesktopProgramView = ({
             onAccept={onAcceptTerms}
             isBillingComplete={billingComplete}
             onOpenBilling={onOpenBilling}
+            items={program.items}
           />
         )}
 

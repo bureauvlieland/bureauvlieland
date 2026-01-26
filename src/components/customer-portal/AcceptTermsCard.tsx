@@ -1,35 +1,84 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, ExternalLink, Loader2, AlertCircle, FileText, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import type { ProgramRequestItem } from "@/types/programRequest";
+
+interface PartnerTermsInfo {
+  id: string;
+  name: string;
+  terms_pdf_path: string | null;
+}
 
 interface AcceptTermsCardProps {
-  onAccept: () => Promise<boolean>;
+  onAccept: (signatureName: string) => Promise<boolean>;
   isBillingComplete: boolean;
   onOpenBilling: () => void;
+  items: ProgramRequestItem[];
 }
 
 export const AcceptTermsCard = ({
   onAccept,
   isBillingComplete,
   onOpenBilling,
+  items,
 }: AcceptTermsCardProps) => {
   const [isChecked, setIsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [signatureName, setSignatureName] = useState("");
+  const [partnerTerms, setPartnerTerms] = useState<PartnerTermsInfo[]>([]);
+  const [isLoadingPartners, setIsLoadingPartners] = useState(true);
+
+  // Get unique partner IDs from items (excluding self_arranged and bureau types)
+  useEffect(() => {
+    const fetchPartnerTerms = async () => {
+      const uniquePartnerIds = [...new Set(
+        items
+          .filter(item => item.block_type === "partner" && item.status !== "cancelled")
+          .map(item => item.provider_id)
+      )];
+
+      if (uniquePartnerIds.length === 0) {
+        setIsLoadingPartners(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, name, terms_pdf_path")
+        .in("id", uniquePartnerIds);
+
+      if (!error && data) {
+        setPartnerTerms(data);
+      }
+      setIsLoadingPartners(false);
+    };
+
+    fetchPartnerTerms();
+  }, [items]);
+
+  const getPublicUrl = (path: string) => {
+    const { data } = supabase.storage.from("partner-terms").getPublicUrl(path);
+    return data.publicUrl;
+  };
 
   const handleAccept = async () => {
-    if (!isChecked || !isBillingComplete) return;
+    if (!isChecked || !isBillingComplete || !signatureName.trim()) return;
 
     setIsSubmitting(true);
     try {
-      await onAccept();
+      await onAccept(signatureName.trim());
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const canSubmit = isChecked && isBillingComplete && signatureName.trim().length >= 2;
 
   return (
     <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
@@ -44,7 +93,7 @@ export const AcceptTermsCard = ({
               <h3 className="font-semibold text-lg">Alle activiteiten zijn bevestigd!</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 De aanbieders hebben alle activiteiten in je programma bevestigd. 
-                Voordat de definitieve boeking ingaat, vragen we je akkoord op onze voorwaarden.
+                Voordat de definitieve boeking ingaat, vragen we je akkoord op de voorwaarden.
               </p>
             </div>
 
@@ -64,6 +113,38 @@ export const AcceptTermsCard = ({
                     Facturatiegegevens invullen →
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Partner Terms Section */}
+            {!isLoadingPartners && partnerTerms.length > 0 && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium">
+                  Let op: voor de activiteiten in je programma zijn ook de voorwaarden van de volgende aanbieders van toepassing:
+                </p>
+                <ul className="space-y-2">
+                  {partnerTerms.map((partner) => (
+                    <li key={partner.id} className="flex items-center gap-2 text-sm">
+                      <span>•</span>
+                      <span className="font-medium">{partner.name}</span>
+                      {partner.terms_pdf_path ? (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-primary"
+                          onClick={() => window.open(getPublicUrl(partner.terms_pdf_path!), "_blank")}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          Bekijken
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">
+                          (geen voorwaarden beschikbaar)
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -94,22 +175,58 @@ export const AcceptTermsCard = ({
                     algemene voorwaarden van Bureau Vlieland
                     <ExternalLink className="h-3 w-3" />
                   </a>
+                  {partnerTerms.length > 0 && " en de voorwaarden van bovenstaande aanbieders"}
                 </Label>
               </div>
 
-              <p className="text-xs text-muted-foreground pl-6">
-                Let op: voor de activiteiten van partners zijn hun eigen algemene voorwaarden van toepassing. 
-                Deze ontvang je bij de bevestigingsmail van de betreffende aanbieder.
-              </p>
+              {partnerTerms.length === 0 && (
+                <p className="text-xs text-muted-foreground pl-6">
+                  Let op: voor de activiteiten van partners zijn hun eigen algemene voorwaarden van toepassing. 
+                  Deze ontvang je bij de bevestigingsmail van de betreffende aanbieder.
+                </p>
+              )}
+            </div>
+
+            {/* Digital Signature Section */}
+            <div className={cn(
+              "border rounded-lg p-4 space-y-3",
+              !isChecked ? "opacity-50 bg-muted/30" : "bg-background"
+            )}>
+              <div className="flex items-center gap-2">
+                <PenLine className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Digitale ondertekening</span>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signature-name" className="text-sm">
+                  Volledige naam
+                </Label>
+                <Input
+                  id="signature-name"
+                  value={signatureName}
+                  onChange={(e) => setSignatureName(e.target.value)}
+                  placeholder="Typ hier je volledige naam"
+                  disabled={!isChecked || !isBillingComplete}
+                  className={cn(!isChecked && "opacity-50")}
+                />
+              </div>
+
+              <ul className="text-xs text-muted-foreground space-y-1 pl-4">
+                <li>• Je bent bevoegd namens de organisatie</li>
+                <li>• Je hebt de voorwaarden gelezen en gaat akkoord</li>
+                <li>• Reserveringen worden definitief bevestigd</li>
+                <li>• Annuleringsvoorwaarden zijn van toepassing</li>
+              </ul>
             </div>
 
             <Button
               onClick={handleAccept}
-              disabled={!isChecked || !isBillingComplete || isSubmitting}
+              disabled={!canSubmit || isSubmitting}
               className="w-full sm:w-auto"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Akkoord & Definitief bevestigen
+              <PenLine className="h-4 w-4 mr-2" />
+              Ondertekenen & Definitief boeken
             </Button>
           </div>
         </div>
