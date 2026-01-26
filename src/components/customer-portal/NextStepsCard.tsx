@@ -48,19 +48,31 @@ export const NextStepsCard = ({
   variant = "default",
 }: NextStepsCardProps) => {
   const steps = useMemo((): Step[] => {
-    const allConfirmed = statusSummary.pending === 0 && statusSummary.confirmed > 0;
+    const hasAlternatives = statusSummary.alternative > 0;
+    const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.confirmed > 0;
     
-    // Step 1: Wait for confirmations
+    // Step 1: Wait for confirmations (includes alternatives that need action)
+    const step1Status: Step["status"] = 
+      statusSummary.pending > 0 ? "active" : 
+      hasAlternatives ? "active" : 
+      "completed";
+    
+    const step1Description = statusSummary.pending > 0 
+      ? `Nog ${statusSummary.pending} activiteit${statusSummary.pending > 1 ? "en" : ""} wachtend op bevestiging`
+      : hasAlternatives
+        ? `${statusSummary.alternative} alternatief${statusSummary.alternative > 1 ? "en" : ""} - actie vereist`
+        : "Alle activiteiten zijn bevestigd!";
+
     const step1: Step = {
       id: "confirmations",
       title: "Bevestigingen aanbieders",
-      description: statusSummary.pending > 0 
-        ? `Nog ${statusSummary.pending} activiteit${statusSummary.pending > 1 ? "en" : ""} wachtend op bevestiging`
-        : "Alle activiteiten zijn bevestigd!",
-      icon: statusSummary.pending > 0 
-        ? <Clock className="h-5 w-5 text-amber-600" />
-        : <CheckCircle className="h-5 w-5 text-green-600" />,
-      status: statusSummary.pending > 0 ? "active" : "completed",
+      description: step1Description,
+      icon: step1Status === "completed"
+        ? <CheckCircle className="h-5 w-5 text-green-600" />
+        : hasAlternatives
+          ? <AlertCircle className="h-5 w-5 text-blue-600" />
+          : <Clock className="h-5 w-5 text-amber-600" />,
+      status: step1Status,
     };
 
     // Step 2: Fill billing details
@@ -74,7 +86,7 @@ export const NextStepsCard = ({
         ? <CheckCircle className="h-5 w-5 text-green-600" />
         : <FileText className="h-5 w-5 text-muted-foreground" />,
       status: billingComplete ? "completed" : (allConfirmed ? "active" : "waiting"),
-      action: !billingComplete ? {
+      action: !billingComplete && allConfirmed ? {
         label: "Invullen",
         onClick: onOpenBilling,
       } : undefined,

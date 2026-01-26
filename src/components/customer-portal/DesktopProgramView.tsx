@@ -7,6 +7,7 @@ import { BillingDetailsCard } from "./BillingDetailsCard";
 import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { AcceptTermsCard } from "./AcceptTermsCard";
+import { NextStepsCard } from "./NextStepsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
@@ -100,6 +101,14 @@ export const DesktopProgramView = ({
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
+        {/* Next steps card - always visible, shows full workflow */}
+        <NextStepsCard
+          statusSummary={statusSummary}
+          termsAccepted={termsAccepted}
+          billingComplete={billingComplete}
+          onOpenBilling={onOpenBilling}
+        />
+
         {/* Accept terms card - shows when all confirmed */}
         {allConfirmed && !termsAccepted && (
           <AcceptTermsCard

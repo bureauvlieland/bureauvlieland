@@ -1,5 +1,4 @@
 import { StatusSummary } from "./StatusSummary";
-import { NextStepsCard } from "./NextStepsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban } from "lucide-react";
@@ -27,8 +26,6 @@ interface ProgramSidebarProps {
 export const ProgramSidebar = ({
   statusSummary,
   termsAccepted,
-  billingComplete,
-  onOpenBilling,
   onRefresh,
   onCancel,
   items,
@@ -50,15 +47,6 @@ export const ProgramSidebar = ({
         alternative={statusSummary.alternative}
         progress={statusSummary.progress}
         variant="compact"
-      />
-
-      {/* Next steps - sidebar variant */}
-      <NextStepsCard
-        statusSummary={statusSummary}
-        termsAccepted={termsAccepted}
-        billingComplete={billingComplete}
-        onOpenBilling={onOpenBilling}
-        variant="sidebar"
       />
 
       {/* Price summary - compact */}
