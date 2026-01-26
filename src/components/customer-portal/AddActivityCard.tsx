@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, Clock } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { formatBlockPrice, formatPriceNote, categoryLabels } from "@/types/buildingBlock";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
@@ -43,6 +43,14 @@ export const AddActivityCard = ({ block, onAdd, isLoading }: AddActivityCardProp
             {categoryLabels[block.category]}
           </Badge>
         </div>
+        
+        {/* Duration */}
+        {block.duration && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+            <Clock className="h-3 w-3" />
+            <span>{block.duration}</span>
+          </div>
+        )}
         
         {block.short_description && (
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
