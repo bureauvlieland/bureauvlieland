@@ -1,164 +1,109 @@
 
 
-# Plan: Activiteiten Toevoegen in Klantportaal
+# Plan: Terminologie & Optimalisaties Klantportaal
 
 ## Overzicht
 
-Klanten kunnen momenteel alleen activiteiten verwijderen/annuleren, maar niet toevoegen. Deze functionaliteit is nodig wanneer een activiteit niet door kan gaan en er iets anders voor in de plaats moet komen.
+Dit plan bevat verbeteringen aan de "Jouw Programma" pagina om consistentie in terminologie te waarborgen, dubbele informatie te verminderen en de gebruikerservaring te optimaliseren.
 
-## Huidige situatie
+## Wijzigingen
 
-- De `PendingChange` interface heeft al een `"added"` type (regel 41 in `useCustomerProgram.ts`)
-- De edge function heeft een label voor `"added"` (regel 96-97), maar geen INSERT logica
-- De `usePublishedBuildingBlocks` hook is beschikbaar voor het ophalen van beschikbare bouwstenen
-- Er zijn geen UI-componenten voor het toevoegen van activiteiten
+### 1. Terminologie Consistentie
 
-## Voorwaarden voor toevoegen
+**Bestand: `DesktopProgramView.tsx` & `MobileProgramView.tsx`**
+- Wijzig "Je Programma" naar "Jouw Programma" voor consistentie met de rest van de applicatie
 
-Klanten kunnen alleen activiteiten toevoegen als:
-- De voorwaarden nog niet zijn geaccepteerd (`terms_accepted_at === null`)
-- Het programma niet is geannuleerd
-- Het programma niet is verlopen
+**Bestand: `PriceSummaryCard.tsx`**
+- Wijzig "Partner activiteiten" naar "Activiteiten aanbieders" voor duidelijkheid
 
-## Technische wijzigingen
+**Bestand: `StatusSummary.tsx`**
+- Voeg meervoudsvorm toe: "1 alternatief" vs "2 alternatieven"
+- Voeg meervoudsvorm toe: "1 bevestigd" vs "2 bevestigd" (blijft "bevestigd")
+- Voeg meervoudsvorm toe: "1 wachtend" vs "2 wachtend" (blijft "wachtend")
 
-### 1. Nieuw component: `AddActivitySheet.tsx`
+**Bestand: `AcceptTermsCard.tsx`**
+- Verwijder de generieke tekst "Let op: voor de activiteiten van partners zijn hun eigen algemene voorwaarden van toepassing..." wanneer er daadwerkelijk specifieke partner voorwaarden zijn gevonden en getoond
 
-Een sheet-component waarmee klanten kunnen zoeken en selecteren uit beschikbare bouwstenen:
+### 2. "Nieuw" Badge voor Toegevoegde Items
 
-- Zoekfunctionaliteit op naam
-- Categoriefilters (Activiteiten, Catering, Vervoer)
-- Lijst met beschikbare bouwstenen (die nog niet in het programma zitten)
-- Per bouwsteen: afbeelding, naam, prijs, aanbieder, "Toevoegen" knop
-- Bij toevoegen: keuze voor dag (als meerdaags programma) en optionele tijd/opmerking
+**Bestand: `CustomerProgramItem.tsx`**
+- Voeg een "Nieuw" badge toe voor items die door de klant zijn toegevoegd maar nog pending zijn
+- Badge wordt getoond wanneer het item status "pending" heeft én recent is aangemaakt (binnen afgelopen 24 uur of via een `isNewlyAdded` flag)
 
-### 2. Nieuw component: `AddActivityCard.tsx`
+**Bestand: `ItemStatusBadge.tsx`**
+- Voeg optioneel een "new" variant toe of gebruik een aparte badge naast de status
 
-Een compacte kaart voor weergave van een bouwsteen in de AddActivitySheet:
+### 3. Mobile UX Optimalisatie
 
-- Afbeelding (klein)
-- Naam en korte beschrijving
-- Prijs-indicatie
-- Aanbieder naam
-- "Toevoegen" knop
-
-### 3. Hook uitbreiden: `useCustomerProgram.ts`
-
-Nieuwe functies toevoegen:
-
-- `addItem(blockId, dayIndex, preferredTime?, notes?)` - voegt een nieuw item toe aan lokale state
-- `addedItems` state - houdt nieuwe items bij die nog niet in de database staan
-- `getPendingChanges()` uitbreiden - detecteert ook nieuwe items (items die niet in `originalItems` voorkomen)
-
-### 4. Views aanpassen: `DesktopProgramView.tsx` en `MobileProgramView.tsx`
-
-- "Activiteit toevoegen" knop toevoegen naast de "X activiteiten" badge
-- Knop alleen tonen als `!termsAccepted`
-- Knop opent de `AddActivitySheet`
-
-### 5. Edge function uitbreiden: `update-customer-program/index.ts`
-
-Logica toevoegen voor `"added"` change type:
-
-- Bouwsteen data ophalen uit `building_blocks` tabel
-- Nieuw item inserten in `program_request_items` met:
-  - `status: 'pending'`
-  - `version: 1`
-  - Alle block-informatie gekopieerd (naam, categorie, prijs, aanbieder, etc.)
-- E-mail sturen naar de betreffende aanbieder
-- Historie-record aanmaken
+**Bestand: `MobileProgramView.tsx`**
+- Verwijder de standalone `StatusSummary` component op mobile
+- De status-informatie is al aanwezig in de `NextStepsCard` en wordt dus dubbel getoond
+- Houd alleen de `NextStepsCard` die de volledige flow begeleidt
 
 ---
 
 ## Bestandsoverzicht
 
-| Bestand | Actie |
-|---------|-------|
-| `src/components/customer-portal/AddActivitySheet.tsx` | Nieuw |
-| `src/components/customer-portal/AddActivityCard.tsx` | Nieuw |
-| `src/hooks/useCustomerProgram.ts` | Uitbreiden met `addItem` en state |
-| `src/components/customer-portal/DesktopProgramView.tsx` | "Toevoegen" knop toevoegen |
-| `src/components/customer-portal/MobileProgramView.tsx` | "Toevoegen" knop toevoegen |
-| `supabase/functions/update-customer-program/index.ts` | INSERT logica voor nieuwe items |
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/components/customer-portal/DesktopProgramView.tsx` | "Je Programma" → "Jouw Programma" |
+| `src/components/customer-portal/MobileProgramView.tsx` | "Je Programma" → "Jouw Programma", verwijder dubbele StatusSummary |
+| `src/components/customer-portal/PriceSummaryCard.tsx` | "Partner activiteiten" → "Activiteiten aanbieders" |
+| `src/components/customer-portal/StatusSummary.tsx` | Meervoudsvorm voor "alternatief" |
+| `src/components/customer-portal/AcceptTermsCard.tsx` | Verwijder dubbele voorwaarden-tekst |
+| `src/components/customer-portal/CustomerProgramItem.tsx` | "Nieuw" badge voor toegevoegde items |
 
 ---
 
-## UI-ontwerp
+## Voorbeelden
 
-### "Toevoegen" knop in programma-header
+### StatusSummary met meervoud
+
+```text
+Huidige situatie:
+"2 alternatief"
+
+Na wijziging:
+"2 alternatieven"
+```
+
+### CustomerProgramItem met "Nieuw" badge
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│ 📅 Je Programma                                         │
-│                                      [+ Toevoegen]  [5] │
+│ [img] Zeehondensafari                    [Nieuw] [⏳]   │
+│       10:00 • 2 uur                                     │
+│       Rederij Vlieland                                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### AddActivitySheet
+### Mobile zonder dubbele StatusSummary
 
 ```text
-┌──────────────────────────────────────────────────────────┐
-│ Activiteit toevoegen                                  X  │
-├──────────────────────────────────────────────────────────┤
-│ [🔍 Zoeken...]                                           │
-│                                                          │
-│ [Alle] [Activiteiten] [Catering] [Vervoer]              │
-├──────────────────────────────────────────────────────────┤
-│ ┌────────────────────────────────────────────────────┐   │
-│ │ [img] Zeehondensafari                              │   │
-│ │       €25 p.p. • Door: Rederij Vlieland           │   │
-│ │       Spot zeehonden in hun natuurlijke habitat   │   │
-│ │                                    [+ Toevoegen]  │   │
-│ └────────────────────────────────────────────────────┘   │
-│                                                          │
-│ ┌────────────────────────────────────────────────────┐   │
-│ │ [img] Strandactiviteiten                           │   │
-│ │       €15 p.p. • Door: Vlieland Outdoor            │   │
-│ │       Teambuilding op het strand                   │   │
-│ │                                    [+ Toevoegen]  │   │
-│ └────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
-```
+Huidige situatie:
+┌─────────────────────────┐
+│ StatusSummary           │  ← Dubbel
+├─────────────────────────┤
+│ NextStepsCard           │  ← Bevat ook status
+├─────────────────────────┤
+│ Program content...      │
+└─────────────────────────┘
 
-### Bij toevoegen (als meerdaags programma)
-
-```text
-┌──────────────────────────────────────────────────────────┐
-│ Zeehondensafari toevoegen                                │
-├──────────────────────────────────────────────────────────┤
-│ Op welke dag?                                            │
-│ [○ Dag 1 - 15 maart] [○ Dag 2 - 16 maart]               │
-│                                                          │
-│ Voorkeurstijd (optioneel)                                │
-│ [___:___]                                                │
-│                                                          │
-│ Opmerking (optioneel)                                    │
-│ [_________________________________]                      │
-│                                                          │
-│ [Annuleren]                         [Toevoegen]          │
-└──────────────────────────────────────────────────────────┘
+Na wijziging:
+┌─────────────────────────┐
+│ NextStepsCard           │  ← Enige status weergave
+├─────────────────────────┤
+│ Program content...      │
+└─────────────────────────┘
 ```
 
 ---
 
-## Workflow
+## Volgorde van Implementatie
 
-1. Klant klikt op "+ Toevoegen" in programma-sectie
-2. Sheet opent met beschikbare bouwstenen (gefilterd op items die nog niet in programma zitten)
-3. Klant zoekt/filtert en selecteert een bouwsteen
-4. (Bij meerdaags) Klant kiest dag en optioneel tijd/opmerking
-5. Item wordt lokaal toegevoegd aan de items-lijst met status "nieuw"
-6. Item verschijnt in het programma met "Nieuw" badge
-7. "Wijzigingen doorvoeren" balk toont het nieuwe item
-8. Bij bevestigen: edge function insert het item en e-mailt de aanbieder
-
----
-
-## Volgorde van implementatie
-
-1. **AddActivityCard.tsx** - Compacte bouwsteen-kaart component
-2. **AddActivitySheet.tsx** - Sheet met zoeken, filteren en selecteren
-3. **useCustomerProgram.ts** - `addItem` functie en state-logica
-4. **DesktopProgramView.tsx & MobileProgramView.tsx** - "Toevoegen" knop
-5. **update-customer-program/index.ts** - INSERT logica voor nieuwe items
+1. **Terminologie** - Alle tekstuele wijzigingen doorvoeren
+2. **AcceptTermsCard** - Dubbele voorwaarden-tekst verwijderen
+3. **StatusSummary** - Meervoudsvormen implementeren
+4. **CustomerProgramItem** - "Nieuw" badge toevoegen
+5. **MobileProgramView** - Dubbele StatusSummary verwijderen
 
