@@ -259,10 +259,10 @@ const AdminPartnersContent = () => {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
-                            onClick={() => window.open(`/partner/${partner.partner_token}`, "_blank")}
+                            onClick={() => navigate(`/partner/dashboard?impersonate=${partner.id}`)}
                           >
                             <ExternalLink className="h-4 w-4 mr-2" />
-                            Bekijk portal
+                            Bekijk als partner
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

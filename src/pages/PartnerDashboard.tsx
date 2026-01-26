@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
@@ -17,6 +17,7 @@ import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
 
 const PartnerDashboardContent = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [data, setData] = useState<PartnerDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +25,7 @@ const PartnerDashboardContent = () => {
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [partnerToken, setPartnerToken] = useState<string | null>(null);
 
   const fetchDashboard = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -33,22 +35,50 @@ const PartnerDashboardContent = () => {
       return;
     }
 
-    const { data: partner, error: partnerError } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("auth_user_id", session.user.id)
-      .eq("is_active", true)
-      .single();
+    // Check if admin is impersonating
+    const impersonatePartnerId = searchParams.get("impersonate");
+    let token: string | null = null;
 
-    if (partnerError || !partner) {
-      setError("Je account is niet gekoppeld aan een partner.");
-      setIsLoading(false);
-      return;
+    if (impersonatePartnerId) {
+      // Verify user is an admin
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
+      
+      if (isAdmin) {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("partner_token")
+          .eq("id", impersonatePartnerId)
+          .single();
+
+        if (partner) {
+          token = partner.partner_token;
+        }
+      }
     }
+
+    // Regular partner flow
+    if (!token) {
+      const { data: partner, error: partnerError } = await supabase
+        .from("partners")
+        .select("*")
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .single();
+
+      if (partnerError || !partner) {
+        setError("Je account is niet gekoppeld aan een partner.");
+        setIsLoading(false);
+        return;
+      }
+
+      token = partner.partner_token;
+    }
+
+    setPartnerToken(token);
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${partner.partner_token}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
         {
           method: "GET",
           headers: {
@@ -74,7 +104,7 @@ const PartnerDashboardContent = () => {
 
   useEffect(() => {
     fetchDashboard();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   const refetchDashboard = async () => {
     setIsLoading(true);
@@ -89,16 +119,7 @@ const PartnerDashboardContent = () => {
     quotedPrice?: number,
     quotedNotes?: string
   ): Promise<boolean> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return false;
-
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("partner_token")
-      .eq("auth_user_id", session.user.id)
-      .single();
-
-    if (!partner) return false;
+    if (!partnerToken) return false;
 
     try {
       const response = await fetch(
@@ -110,7 +131,7 @@ const PartnerDashboardContent = () => {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({
-            partnerToken: partner.partner_token,
+            partnerToken: partnerToken,
             itemId,
             status,
             statusNote,
@@ -146,16 +167,7 @@ const PartnerDashboardContent = () => {
     invoicedDate: string,
     notes?: string
   ): Promise<{ success: boolean; commission?: { percentage: number; amount: number } }> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return { success: false };
-
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("partner_token")
-      .eq("auth_user_id", session.user.id)
-      .single();
-
-    if (!partner) return { success: false };
+    if (!partnerToken) return { success: false };
 
     try {
       const response = await fetch(
@@ -167,7 +179,7 @@ const PartnerDashboardContent = () => {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({
-            partnerToken: partner.partner_token,
+            partnerToken: partnerToken,
             itemId,
             invoicedAmount,
             invoicedNumber,
