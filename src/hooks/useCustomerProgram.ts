@@ -113,8 +113,6 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         };
       });
 
-      if (itemsError) throw itemsError;
-
       // Fetch history
       const { data: historyData } = await supabase
         .from("program_request_history")
