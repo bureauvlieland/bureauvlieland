@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgramSection } from "./ProgramSection";
-import { StatusSummary } from "./StatusSummary";
+
 import { NextStepsCard } from "./NextStepsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { BillingDetailsCard } from "./BillingDetailsCard";
@@ -107,15 +107,6 @@ export const MobileProgramView = ({
 
   return (
     <div className="space-y-4">
-      {/* Status summary */}
-      <StatusSummary
-        total={statusSummary.total}
-        confirmed={statusSummary.confirmed}
-        pending={statusSummary.pending}
-        alternative={statusSummary.alternative}
-        progress={statusSummary.progress}
-      />
-
       {/* Next steps - always open */}
       <NextStepsCard
         statusSummary={statusSummary}
@@ -137,7 +128,7 @@ export const MobileProgramView = ({
       {/* Program section - always open */}
       <ProgramSection
         id="program"
-        title="Je Programma"
+        title="Jouw Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
         badge={
           <div className="flex items-center gap-2 ml-auto">

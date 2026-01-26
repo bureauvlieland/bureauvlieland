@@ -179,12 +179,6 @@ export const AcceptTermsCard = ({
                 </Label>
               </div>
 
-              {partnerTerms.length === 0 && (
-                <p className="text-xs text-muted-foreground pl-6">
-                  Let op: voor de activiteiten van partners zijn hun eigen algemene voorwaarden van toepassing. 
-                  Deze ontvang je bij de bevestigingsmail van de betreffende aanbieder.
-                </p>
-              )}
             </div>
 
             {/* Digital Signature Section */}

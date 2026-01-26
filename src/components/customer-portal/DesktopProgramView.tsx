@@ -132,7 +132,7 @@ export const DesktopProgramView = ({
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
-                  Je Programma
+                  Jouw Programma
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   {!termsAccepted && (

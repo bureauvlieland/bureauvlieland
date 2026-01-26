@@ -80,7 +80,7 @@ export const StatusSummary = ({
           <MessageSquare className="h-4 w-4 text-blue-600" />
           <span>
             <span className="font-medium">{alternative}</span>{" "}
-            <span className="text-muted-foreground">alternatief</span>
+            <span className="text-muted-foreground">{alternative === 1 ? "alternatief" : "alternatieven"}</span>
           </span>
         </div>
       </div>
