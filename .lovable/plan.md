@@ -1,244 +1,164 @@
 
 
-# Plan: Digitale Handtekening, Partner Voorwaarden PDF & Wijzigingsnotificaties
+# Plan: Activiteiten Toevoegen in Klantportaal
 
 ## Overzicht
 
-Dit plan omvat drie samenhangende verbeteringen:
+Klanten kunnen momenteel alleen activiteiten verwijderen/annuleren, maar niet toevoegen. Deze functionaliteit is nodig wanneer een activiteit niet door kan gaan en er iets anders voor in de plaats moet komen.
 
-1. **Digitale handtekening** voor eindklanten bij acceptatie van algemene voorwaarden
-2. **Partner PDF-voorwaarden** - partners kunnen hun eigen algemene voorwaarden uploaden
-3. **Volledige wijzigingsnotificaties** - alle klantwijzigingen worden gemeld aan partners en zijn zichtbaar in de partner portal
+## Huidige situatie
+
+- De `PendingChange` interface heeft al een `"added"` type (regel 41 in `useCustomerProgram.ts`)
+- De edge function heeft een label voor `"added"` (regel 96-97), maar geen INSERT logica
+- De `usePublishedBuildingBlocks` hook is beschikbaar voor het ophalen van beschikbare bouwstenen
+- Er zijn geen UI-componenten voor het toevoegen van activiteiten
+
+## Voorwaarden voor toevoegen
+
+Klanten kunnen alleen activiteiten toevoegen als:
+- De voorwaarden nog niet zijn geaccepteerd (`terms_accepted_at === null`)
+- Het programma niet is geannuleerd
+- Het programma niet is verlopen
+
+## Technische wijzigingen
+
+### 1. Nieuw component: `AddActivitySheet.tsx`
+
+Een sheet-component waarmee klanten kunnen zoeken en selecteren uit beschikbare bouwstenen:
+
+- Zoekfunctionaliteit op naam
+- Categoriefilters (Activiteiten, Catering, Vervoer)
+- Lijst met beschikbare bouwstenen (die nog niet in het programma zitten)
+- Per bouwsteen: afbeelding, naam, prijs, aanbieder, "Toevoegen" knop
+- Bij toevoegen: keuze voor dag (als meerdaags programma) en optionele tijd/opmerking
+
+### 2. Nieuw component: `AddActivityCard.tsx`
+
+Een compacte kaart voor weergave van een bouwsteen in de AddActivitySheet:
+
+- Afbeelding (klein)
+- Naam en korte beschrijving
+- Prijs-indicatie
+- Aanbieder naam
+- "Toevoegen" knop
+
+### 3. Hook uitbreiden: `useCustomerProgram.ts`
+
+Nieuwe functies toevoegen:
+
+- `addItem(blockId, dayIndex, preferredTime?, notes?)` - voegt een nieuw item toe aan lokale state
+- `addedItems` state - houdt nieuwe items bij die nog niet in de database staan
+- `getPendingChanges()` uitbreiden - detecteert ook nieuwe items (items die niet in `originalItems` voorkomen)
+
+### 4. Views aanpassen: `DesktopProgramView.tsx` en `MobileProgramView.tsx`
+
+- "Activiteit toevoegen" knop toevoegen naast de "X activiteiten" badge
+- Knop alleen tonen als `!termsAccepted`
+- Knop opent de `AddActivitySheet`
+
+### 5. Edge function uitbreiden: `update-customer-program/index.ts`
+
+Logica toevoegen voor `"added"` change type:
+
+- Bouwsteen data ophalen uit `building_blocks` tabel
+- Nieuw item inserten in `program_request_items` met:
+  - `status: 'pending'`
+  - `version: 1`
+  - Alle block-informatie gekopieerd (naam, categorie, prijs, aanbieder, etc.)
+- E-mail sturen naar de betreffende aanbieder
+- Historie-record aanmaken
 
 ---
 
-## Deel 1: Digitale Handtekening bij Voorwaarden Acceptatie
+## Bestandsoverzicht
 
-### Huidige situatie
+| Bestand | Actie |
+|---------|-------|
+| `src/components/customer-portal/AddActivitySheet.tsx` | Nieuw |
+| `src/components/customer-portal/AddActivityCard.tsx` | Nieuw |
+| `src/hooks/useCustomerProgram.ts` | Uitbreiden met `addItem` en state |
+| `src/components/customer-portal/DesktopProgramView.tsx` | "Toevoegen" knop toevoegen |
+| `src/components/customer-portal/MobileProgramView.tsx` | "Toevoegen" knop toevoegen |
+| `supabase/functions/update-customer-program/index.ts` | INSERT logica voor nieuwe items |
 
-- Klant klikt op checkbox + "Akkoord & Definitief bevestigen" knop
-- Er wordt alleen `terms_accepted_at` en `terms_version` opgeslagen
-- Geen formele digitale handtekening
+---
 
-### Voorgestelde oplossing
+## UI-ontwerp
 
-Een digitale handtekening implementeren met:
+### "Toevoegen" knop in programma-header
 
-1. **Handtekeningveld**: Klant typt volledige naam als bevestiging
-2. **Timestamp + IP-logging**: Juridische audit trail
-3. **E-mail verificatie**: Bevestigingsmail met handtekening-ID
-4. **Visuele bevestiging**: "Ondertekend door [naam] op [datum]"
+```text
+┌─────────────────────────────────────────────────────────┐
+│ 📅 Je Programma                                         │
+│                                      [+ Toevoegen]  [5] │
+└─────────────────────────────────────────────────────────┘
+```
 
-### Database wijzigingen
-
-Nieuwe kolommen in `program_requests`:
-
-| Kolom | Type | Omschrijving |
-|-------|------|--------------|
-| `signature_name` | text | Volledige naam zoals getypt door klant |
-| `signature_ip` | text | IP-adres bij ondertekening |
-| `signature_user_agent` | text | Browser info voor audit |
-| `signature_id` | text | Unieke handtekening-ID (bijv. "SIG-2026-001234") |
-
-### UI wijzigingen (`AcceptTermsCard.tsx`)
+### AddActivitySheet
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ ✓ Alle activiteiten zijn bevestigd!                      │
+│ Activiteit toevoegen                                  X  │
 ├──────────────────────────────────────────────────────────┤
-│ De aanbieders hebben alle activiteiten bevestigd.        │
-│ Voordat de definitieve boeking ingaat, vragen we je      │
-│ akkoord op de voorwaarden.                               │
+│ [🔍 Zoeken...]                                           │
 │                                                          │
+│ [Alle] [Activiteiten] [Catering] [Vervoer]              │
+├──────────────────────────────────────────────────────────┤
 │ ┌────────────────────────────────────────────────────┐   │
-│ │ Let op: voor de activiteiten in je programma zijn  │   │
-│ │ ook de voorwaarden van de volgende aanbieders van  │   │
-│ │ toepassing:                                        │   │
-│ │                                                    │   │
-│ │ • Rederij Vlieland [📄 Bekijken]                   │   │
-│ │ • Strandpaviljoen de Zeester [📄 Bekijken]        │   │
-│ │ • Fietsverhuur Vlieland                            │   │
-│ │   (geen voorwaarden beschikbaar)                   │   │
+│ │ [img] Zeehondensafari                              │   │
+│ │       €25 p.p. • Door: Rederij Vlieland           │   │
+│ │       Spot zeehonden in hun natuurlijke habitat   │   │
+│ │                                    [+ Toevoegen]  │   │
 │ └────────────────────────────────────────────────────┘   │
 │                                                          │
-│ [✓] Ik ga akkoord met de algemene voorwaarden van        │
-│     Bureau Vlieland en de bovenstaande aanbieders.       │
-│                                                          │
-│ ┌──────────────────────────────────────────────────────┐ │
-│ │ Digitale ondertekening                               │ │
-│ │                                                      │ │
-│ │ Volledige naam: [_____________________________]     │ │
-│ │                                                      │ │
-│ │ Door te ondertekenen bevestig je dat:               │ │
-│ │ • Je bevoegd bent namens de organisatie             │ │
-│ │ • Je de voorwaarden hebt gelezen en akkoord gaat    │ │
-│ │ • Reserveringen definitief worden bevestigd         │ │
-│ │ • Annuleringsvoorwaarden van toepassing zijn        │ │
-│ └──────────────────────────────────────────────────────┘ │
-│                                                          │
-│ [🖊️ Ondertekenen & Definitief boeken]                    │
+│ ┌────────────────────────────────────────────────────┐   │
+│ │ [img] Strandactiviteiten                           │   │
+│ │       €15 p.p. • Door: Vlieland Outdoor            │   │
+│ │       Teambuilding op het strand                   │   │
+│ │                                    [+ Toevoegen]  │   │
+│ └────────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────┘
 ```
 
-### Backend wijzigingen (`update-customer-program/index.ts`)
-
-- Nieuwe velden toevoegen: `signatureName`, `signatureIp`, `signatureUserAgent`
-- Genereren van unieke `signature_id` (bijv. "SIG-2026-001234")
-- Uitgebreidere e-mail met handtekeningbewijs:
-  - Naam zoals ondertekend
-  - Tijdstip van ondertekening
-  - Unieke handtekening-ID
-  - Vermelding van geaccepteerde voorwaarden (Bureau Vlieland + partners)
-
----
-
-## Deel 2: Partner PDF-voorwaarden Upload
-
-### Database wijzigingen
-
-Nieuwe kolommen in `partners`:
-
-| Kolom | Type | Omschrijving |
-|-------|------|--------------|
-| `terms_pdf_path` | text | Pad naar PDF in storage |
-| `terms_uploaded_at` | timestamptz | Laatste upload datum |
-
-### Storage
-
-Nieuwe bucket: `partner-terms` (public)
-
-RLS policies:
-- Partners kunnen alleen eigen bestanden uploaden/overschrijven/verwijderen
-- Iedereen kan lezen (nodig voor klanten om PDF's te downloaden)
-
-### Partner Portal wijzigingen (`PartnerSettingsForm.tsx`)
-
-Nieuwe sectie "Algemene Voorwaarden":
+### Bij toevoegen (als meerdaags programma)
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ 📄 Algemene Voorwaarden                                  │
+│ Zeehondensafari toevoegen                                │
 ├──────────────────────────────────────────────────────────┤
-│ Upload je algemene voorwaarden zodat klanten deze        │
-│ kunnen inzien voordat ze een boeking definitief maken.   │
+│ Op welke dag?                                            │
+│ [○ Dag 1 - 15 maart] [○ Dag 2 - 16 maart]               │
 │                                                          │
-│ ┌────────────────────────────────────────────────────┐   │
-│ │ 📄 Algemene-voorwaarden-2026.pdf                   │   │
-│ │    Geüpload op 24 januari 2026                     │   │
-│ │    [👁️ Bekijken]  [🗑️ Verwijderen]                 │   │
-│ └────────────────────────────────────────────────────┘   │
+│ Voorkeurstijd (optioneel)                                │
+│ [___:___]                                                │
 │                                                          │
-│ [📤 Nieuwe PDF uploaden]                                 │
+│ Opmerking (optioneel)                                    │
+│ [_________________________________]                      │
 │                                                          │
-│ Maximale bestandsgrootte: 5MB                            │
+│ [Annuleren]                         [Toevoegen]          │
 └──────────────────────────────────────────────────────────┘
 ```
 
-### Klant weergave (`AcceptTermsCard.tsx`)
+---
 
-- Ophalen van unieke partners uit program items
-- Per partner controleren op `terms_pdf_path`
-- Links tonen naar beschikbare PDF's
-- Indicatie tonen als partner geen voorwaarden heeft geüpload
+## Workflow
+
+1. Klant klikt op "+ Toevoegen" in programma-sectie
+2. Sheet opent met beschikbare bouwstenen (gefilterd op items die nog niet in programma zitten)
+3. Klant zoekt/filtert en selecteert een bouwsteen
+4. (Bij meerdaags) Klant kiest dag en optioneel tijd/opmerking
+5. Item wordt lokaal toegevoegd aan de items-lijst met status "nieuw"
+6. Item verschijnt in het programma met "Nieuw" badge
+7. "Wijzigingen doorvoeren" balk toont het nieuwe item
+8. Bij bevestigen: edge function insert het item en e-mailt de aanbieder
 
 ---
 
-## Deel 3: Volledige Wijzigingsnotificaties naar Partners
+## Volgorde van implementatie
 
-### Huidige situatie
-
-De edge function `update-customer-program/index.ts` stuurt al e-mails naar partners bij:
-- Datumwijzigingen (alle partners)
-- Item wijzigingen (tijd, dag, annulering)
-
-Dit werkt al correct. Wat ontbreekt:
-- **Realtime zichtbaarheid** in de partner portal van wijzigingen
-- **Notificaties voor nieuwe items** (nog niet geïmplementeerd)
-
-### Partner Portal wijzigingen
-
-**1. Wijzigingsindicatie in `PartnerItemCard.tsx`:**
-
-Wanneer een item recentelijk is gewijzigd (reset naar `pending` met nieuwe `version`), dit visueel markeren:
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ 🔔 GEWIJZIGD                          [Aangevraagd]   │
-│                                                        │
-│ Zeehondensafari                                        │
-│ Activiteit                                             │
-│ ──────────────────────────────────────────────────     │
-│ ⚠️ Klant heeft wijzigingen doorgevoerd:                │
-│    • Dag gewijzigd: Dag 1 → Dag 2                      │
-│    • Tijd gewijzigd: 10:00 → 14:00                     │
-│                                                        │
-│ [Reageren]                                             │
-└────────────────────────────────────────────────────────┘
-```
-
-**2. Notificatie badge in Partner Dashboard:**
-
-Een "Nieuw" of "Gewijzigd" badge tonen bij items die recent zijn gewijzigd.
-
-**3. Wijzigingsgeschiedenis in Partner Portal:**
-
-Optioneel: een mini-timeline tonen per item met recente wijzigingen.
-
-### Edge function uitbreiding (`update-customer-program/index.ts`)
-
-Toevoegen van `added` change type:
-- Nieuwe items inserten in database
-- E-mail sturen naar betreffende partner
-- Historie record aanmaken
-
----
-
-## Technisch overzicht
-
-### Nieuwe/gewijzigde bestanden
-
-| Bestand | Wijzigingen |
-|---------|-------------|
-| **Database migratie** | +`signature_name`, `signature_ip`, `signature_user_agent`, `signature_id` in `program_requests` |
-| **Database migratie** | +`terms_pdf_path`, `terms_uploaded_at` in `partners` |
-| **Database migratie** | Nieuwe bucket `partner-terms` met RLS |
-| `AcceptTermsCard.tsx` | Digitale handtekening UI + partner voorwaarden links |
-| `PartnerSettingsForm.tsx` | PDF upload sectie |
-| `useCustomerProgram.ts` | Nieuwe parameters voor handtekening + addItem functie |
-| `update-customer-program/index.ts` | Handtekening verwerking, uitgebreidere e-mail, added items |
-| `PartnerItemCard.tsx` | Wijzigingsindicatie badge |
-
-### Implementatievolgorde
-
-1. **Database & Storage**
-   - Nieuwe kolommen toevoegen aan `program_requests` en `partners`
-   - Storage bucket aanmaken met RLS policies
-
-2. **Partner PDF upload**
-   - `PartnerSettingsForm.tsx` uitbreiden met upload sectie
-   - Upload/delete logica implementeren
-
-3. **Digitale handtekening**
-   - `AcceptTermsCard.tsx` uitbreiden met naam-invoer en partner links
-   - `useCustomerProgram.ts` uitbreiden met handtekening parameters
-   - Edge function uitbreiden voor handtekening opslag en e-mail
-
-4. **Wijzigingsnotificaties**
-   - `PartnerItemCard.tsx` uitbreiden met wijzigingsbadge
-   - Edge function uitbreiden voor `added` items
-   - `useCustomerProgram.ts` uitbreiden met `addItem` functie
-
----
-
-## Juridische overwegingen
-
-De digitale handtekening-implementatie biedt:
-
-1. **Identificatie**: Volledige naam + e-mailadres van klant
-2. **Authenticatie**: Unieke token-based toegang tot klantportaal
-3. **Integriteit**: Timestamp + IP + User Agent gelogd
-4. **Audit trail**: Unieke handtekening-ID + historie record
-5. **Bevestiging**: E-mail met alle details naar klant
-
-Dit is vergelijkbaar met een "geavanceerde elektronische handtekening" en biedt voldoende rechtsgeldigheid voor B2B-overeenkomsten in Nederland.
+1. **AddActivityCard.tsx** - Compacte bouwsteen-kaart component
+2. **AddActivitySheet.tsx** - Sheet met zoeken, filteren en selecteren
+3. **useCustomerProgram.ts** - `addItem` functie en state-logica
+4. **DesktopProgramView.tsx & MobileProgramView.tsx** - "Toevoegen" knop
+5. **update-customer-program/index.ts** - INSERT logica voor nieuwe items
 
