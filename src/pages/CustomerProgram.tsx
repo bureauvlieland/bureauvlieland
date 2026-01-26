@@ -36,6 +36,7 @@ const CustomerProgram = () => {
     refetch,
     updateItem,
     removeItem,
+    addItem,
     getPendingChanges,
     submitChanges,
     updateProgramDetails,
@@ -276,6 +277,7 @@ const CustomerProgram = () => {
     onSubmitChanges: () => setShowConfirmDialog(true),
     onRefresh: refetch,
     onAcceptTerms: handleAcceptTerms,
+    onAddActivity: addItem,
   };
 
   return (

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  type ProgramRequest,
   type ProgramRequestItem,
   type ProgramRequestHistory,
   type ProgramRequestWithItems,
@@ -28,6 +27,7 @@ interface UseCustomerProgramReturn {
   refetch: () => Promise<void>;
   updateItem: (itemId: string, updates: Partial<ProgramRequestItem>) => void;
   removeItem: (itemId: string) => void;
+  addItem: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
@@ -45,12 +45,35 @@ export interface PendingChange {
   providerEmail?: string;
   oldValue?: string;
   newValue?: string;
+  // For added items
+  blockId?: string;
+  dayIndex?: number;
+  preferredTime?: string | null;
+  notes?: string;
 }
+
+// Temporary ID prefix for locally added items (before submission)
+const TEMP_ID_PREFIX = "temp-";
 
 export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [program, setProgram] = useState<ProgramRequestWithItems | null>(null);
   const [history, setHistory] = useState<ProgramRequestHistory[]>([]);
   const [originalItems, setOriginalItems] = useState<ProgramRequestItem[]>([]);
+  const [addedItems, setAddedItems] = useState<Array<{
+    tempId: string;
+    blockId: string;
+    blockName: string;
+    blockCategory: string;
+    providerName: string;
+    providerId: string;
+    providerEmail: string | null;
+    blockType: string;
+    dayIndex: number;
+    preferredTime: string | null;
+    notes: string;
+    imageUrl: string | null;
+    imageAsset: string | null;
+  }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,6 +177,20 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   }, []);
 
   const removeItem = useCallback((itemId: string) => {
+    // If it's a temp item (added but not submitted), remove from addedItems
+    if (itemId.startsWith(TEMP_ID_PREFIX)) {
+      setAddedItems((prev) => prev.filter((item) => item.tempId !== itemId));
+      setProgram((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.filter((item) => item.id !== itemId),
+        };
+      });
+      return;
+    }
+    
+    // For existing items, mark as cancelled
     setProgram((prev) => {
       if (!prev) return prev;
       return {
@@ -165,12 +202,115 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     });
   }, []);
 
+  const addItem = useCallback(async (
+    blockId: string, 
+    dayIndex: number, 
+    preferredTime: string | null, 
+    notes: string
+  ) => {
+    if (!program) return;
+
+    // Fetch the block details
+    const { data: block, error } = await supabase
+      .from("building_blocks")
+      .select(`
+        *,
+        provider:partners(id, name, email)
+      `)
+      .eq("id", blockId)
+      .single();
+
+    if (error || !block) {
+      console.error("Error fetching block:", error);
+      return;
+    }
+
+    const tempId = `${TEMP_ID_PREFIX}${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Add to addedItems state
+    const newAddedItem = {
+      tempId,
+      blockId: block.id,
+      blockName: block.name,
+      blockCategory: block.category,
+      providerName: block.provider?.name || "Bureau Vlieland",
+      providerId: block.provider?.id || "bureau",
+      providerEmail: block.provider?.email || null,
+      blockType: block.block_type,
+      dayIndex,
+      preferredTime,
+      notes,
+      imageUrl: block.image_url,
+      imageAsset: block.image_asset,
+    };
+    
+    setAddedItems((prev) => [...prev, newAddedItem]);
+
+    // Also add to program items for display
+    const newProgramItem: ProgramRequestItem = {
+      id: tempId,
+      request_id: program.id,
+      block_id: block.id,
+      block_name: block.name,
+      block_category: block.category,
+      provider_name: block.provider?.name || "Bureau Vlieland",
+      provider_id: block.provider?.id || "bureau",
+      provider_email: block.provider?.email || null,
+      block_type: block.block_type,
+      price_indication: block.price_adult ? `€${block.price_adult}` : null,
+      day_index: dayIndex,
+      preferred_time: preferredTime,
+      customer_notes: notes,
+      status: "pending",
+      status_note: null,
+      status_updated_at: null,
+      status_updated_by: null,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      executed_at: null,
+      quoted_price: null,
+      quoted_at: null,
+      quoted_notes: null,
+      // Image data for display
+      image_url: block.image_url,
+      image_asset: block.image_asset,
+    };
+
+    setProgram((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: [...prev.items, newProgramItem],
+      };
+    });
+  }, [program]);
+
   const getPendingChanges = useCallback((): PendingChange[] => {
     if (!program) return [];
 
     const changes: PendingChange[] = [];
 
     program.items.forEach((item) => {
+      // Check if this is a newly added item (temp ID)
+      if (item.id.startsWith(TEMP_ID_PREFIX)) {
+        const addedItem = addedItems.find((a) => a.tempId === item.id);
+        if (addedItem) {
+          changes.push({
+            type: "added",
+            itemId: item.id,
+            itemName: item.block_name,
+            providerName: item.provider_name,
+            providerEmail: item.provider_email || undefined,
+            blockId: addedItem.blockId,
+            dayIndex: addedItem.dayIndex,
+            preferredTime: addedItem.preferredTime,
+            notes: addedItem.notes,
+          });
+        }
+        return;
+      }
+
       const original = originalItems.find((o) => o.id === item.id);
       if (!original) return;
 
@@ -213,7 +353,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     });
 
     return changes;
-  }, [program, originalItems]);
+  }, [program, originalItems, addedItems]);
 
   const submitChanges = useCallback(async (): Promise<boolean> => {
     if (!program) return false;
@@ -358,6 +498,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     refetch: fetchProgram,
     updateItem,
     removeItem,
+    addItem,
     getPendingChanges,
     submitChanges,
     updateProgramDetails,

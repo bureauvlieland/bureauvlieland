@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
+import { AddActivitySheet } from "./AddActivitySheet";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -23,6 +25,7 @@ import {
   Ban,
   Building2,
   Send,
+  Plus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -65,6 +68,7 @@ interface MobileProgramViewProps {
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
+  onAddActivity: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
 }
 
 export const MobileProgramView = ({
@@ -85,7 +89,9 @@ export const MobileProgramView = ({
   onOpenCancel,
   onSubmitChanges,
   onAcceptTerms,
+  onAddActivity,
 }: MobileProgramViewProps) => {
+  const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const termsAccepted = !!program.terms_accepted_at;
   const billingComplete = !!(
     program.billing_company_name &&
@@ -134,9 +140,25 @@ export const MobileProgramView = ({
         title="Je Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
         badge={
-          <Badge variant="secondary" className="ml-auto">
-            {statusSummary.total} activiteiten
-          </Badge>
+          <div className="flex items-center gap-2 ml-auto">
+            {!termsAccepted && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAddActivityOpen(true);
+                }}
+                className="h-7 text-xs"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Toevoegen
+              </Button>
+            )}
+            <Badge variant="secondary">
+              {statusSummary.total} activiteiten
+            </Badge>
+          </div>
         }
         defaultOpen
       >
@@ -366,6 +388,15 @@ export const MobileProgramView = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Activity Sheet */}
+      <AddActivitySheet
+        open={isAddActivityOpen}
+        onOpenChange={setIsAddActivityOpen}
+        selectedDates={selectedDates}
+        existingBlockIds={program.items.map((item) => item.block_id)}
+        onAddActivity={onAddActivity}
+      />
     </div>
   );
 };
