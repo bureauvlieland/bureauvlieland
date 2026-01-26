@@ -433,14 +433,17 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Partner</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)} 
+                          value={field.value || "__none__"}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecteer partner..." />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Geen partner</SelectItem>
+                            <SelectItem value="__none__">Geen partner</SelectItem>
                             {partners?.map((partner) => (
                               <SelectItem key={partner.id} value={partner.id}>
                                 {partner.name}
