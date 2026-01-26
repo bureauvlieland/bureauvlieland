@@ -1,44 +1,96 @@
 
 
-# Plan: Terminologie & Optimalisaties Klantportaal
+# Plan: Partner Portal Uitbreiding & Optimalisatie
 
 ## Overzicht
 
-Dit plan bevat verbeteringen aan de "Jouw Programma" pagina om consistentie in terminologie te waarborgen, dubbele informatie te verminderen en de gebruikerservaring te optimaliseren.
+Dit plan bevat uitbreidingen en optimalisaties voor de Partner Portal om deze beter aan te laten sluiten bij de verbeteringen in het klantportaal en de werkbaarheid te verbeteren.
+
+---
 
 ## Wijzigingen
 
-### 1. Terminologie Consistentie
+### 1. "Nieuw" Badge voor Partner Items
 
-**Bestand: `DesktopProgramView.tsx` & `MobileProgramView.tsx`**
-- Wijzig "Je Programma" naar "Jouw Programma" voor consistentie met de rest van de applicatie
+**Bestand: `PartnerItemCard.tsx`**
+- Voeg een "Nieuw" badge toe voor items die recent zijn toegevoegd en nog pending zijn (binnen 24 uur aangemaakt)
+- Dit helpt partners om snel te zien welke aanvragen nieuw binnengekomen zijn
 
-**Bestand: `PriceSummaryCard.tsx`**
-- Wijzig "Partner activiteiten" naar "Activiteiten aanbieders" voor duidelijkheid
+**Implementatie:**
+- Check of `item.status === "pending"` EN `created_at` binnen laatste 24 uur
+- Toon een paarse/blauwe "Nieuw" badge naast de status badge
+- Vergelijkbaar met de CustomerProgramItem implementatie
 
-**Bestand: `StatusSummary.tsx`**
-- Voeg meervoudsvorm toe: "1 alternatief" vs "2 alternatieven"
-- Voeg meervoudsvorm toe: "1 bevestigd" vs "2 bevestigd" (blijft "bevestigd")
-- Voeg meervoudsvorm toe: "1 wachtend" vs "2 wachtend" (blijft "wachtend")
+---
 
-**Bestand: `AcceptTermsCard.tsx`**
-- Verwijder de generieke tekst "Let op: voor de activiteiten van partners zijn hun eigen algemene voorwaarden van toepassing..." wanneer er daadwerkelijk specifieke partner voorwaarden zijn gevonden en getoond
+### 2. Duur Weergave in PartnerItemCard
 
-### 2. "Nieuw" Badge voor Toegevoegde Items
+**Bestand: `PartnerItemCard.tsx`**
+- Voeg de activiteitsduur toe aan de activity details sectie
+- Geeft partners context over de tijdsduur van de activiteit
 
-**Bestand: `CustomerProgramItem.tsx`**
-- Voeg een "Nieuw" badge toe voor items die door de klant zijn toegevoegd maar nog pending zijn
-- Badge wordt getoond wanneer het item status "pending" heeft én recent is aangemaakt (binnen afgelopen 24 uur of via een `isNewlyAdded` flag)
+**Implementatie:**
+- Toon `item.duration` met een Timer icon naast de datum/tijd informatie
+- Vergelijkbaar met CustomerProgramItem
 
-**Bestand: `ItemStatusBadge.tsx`**
-- Voeg optioneel een "new" variant toe of gebruik een aparte badge naast de status
+---
 
-### 3. Mobile UX Optimalisatie
+### 3. Terminologie Review & Consistentie
 
-**Bestand: `MobileProgramView.tsx`**
-- Verwijder de standalone `StatusSummary` component op mobile
-- De status-informatie is al aanwezig in de `NextStepsCard` en wordt dus dubbel getoond
-- Houd alleen de `NextStepsCard` die de volledige flow begeleidt
+**Bestand: `PartnerItemCard.tsx`**
+- Review statuslabels voor consistentie:
+  - "Aangevraagd" (pending) - consistent met klantportaal
+  - "Bevestigd" (confirmed) - consistent
+  - "Alternatief" (alternative) - consistent
+  - "Niet beschikbaar" (unavailable) - consistent
+
+**Bestand: `PartnerDashboard.tsx`**
+- Tab labels zijn al goed benoemd, geen wijzigingen nodig
+
+---
+
+### 4. Uitgebreide Navigatie
+
+**Bestand: `PartnerLayout.tsx`**
+- Breid de sidebar navigatie uit met meer opties:
+  - "Overzicht" (huidige dashboard - `/partner/dashboard`)
+  - "Facturatie" (nieuwe pagina - `/partner/facturatie`)
+  - "Instellingen" (bestaand - `/partner/instellingen`)
+
+**Nieuwe pagina: `PartnerFinance.tsx`**
+- Dedicated pagina voor financiële gegevens
+- Uitgebreider overzicht van gefactureerde items
+- Commissie-overzicht en -status
+- Historische data (YTD, per kwartaal)
+
+**Route toevoegen in `App.tsx`:**
+```typescript
+<Route path="/partner/facturatie" element={<PartnerFinance />} />
+```
+
+---
+
+### 5. Partner Workflow Card (Optioneel)
+
+**Nieuwe component: `PartnerWorkflowCard.tsx`**
+- Een compacte "Volgende stappen" indicator vergelijkbaar met NextStepsCard
+- Toont de partner hun huidige workflow status:
+  1. Nieuwe aanvragen bevestigen
+  2. Activiteit uitvoeren
+  3. Factuur registreren
+  4. Commissie afhandeling
+
+**Alternatief:** Dit kan ook als onderdeel van de bestaande header stats worden verwerkt in plaats van een aparte component.
+
+---
+
+### 6. Mobiele Tab Optimalisatie
+
+**Bestand: `PartnerDashboard.tsx`**
+- Optimaliseer de tabs voor mobile weergave:
+  - Horizontaal scrollbare tabs met overflow
+  - Of: Dropdown/select voor tab keuze op mobile
+  - Badge counts duidelijker op kleine schermen
 
 ---
 
@@ -46,64 +98,115 @@ Dit plan bevat verbeteringen aan de "Jouw Programma" pagina om consistentie in t
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/components/customer-portal/DesktopProgramView.tsx` | "Je Programma" → "Jouw Programma" |
-| `src/components/customer-portal/MobileProgramView.tsx` | "Je Programma" → "Jouw Programma", verwijder dubbele StatusSummary |
-| `src/components/customer-portal/PriceSummaryCard.tsx` | "Partner activiteiten" → "Activiteiten aanbieders" |
-| `src/components/customer-portal/StatusSummary.tsx` | Meervoudsvorm voor "alternatief" |
-| `src/components/customer-portal/AcceptTermsCard.tsx` | Verwijder dubbele voorwaarden-tekst |
-| `src/components/customer-portal/CustomerProgramItem.tsx` | "Nieuw" badge voor toegevoegde items |
+| `src/components/partner-portal/PartnerItemCard.tsx` | "Nieuw" badge, duur weergave |
+| `src/components/partner-portal/PartnerLayout.tsx` | Uitgebreide navigatie (3 items) |
+| `src/pages/PartnerFinance.tsx` | **Nieuw** - Dedicated financiële pagina |
+| `src/pages/PartnerDashboard.tsx` | Mobile tab optimalisatie |
+| `src/App.tsx` | Nieuwe route toevoegen |
 
 ---
 
 ## Voorbeelden
 
-### StatusSummary met meervoud
-
-```text
-Huidige situatie:
-"2 alternatief"
-
-Na wijziging:
-"2 alternatieven"
-```
-
-### CustomerProgramItem met "Nieuw" badge
+### PartnerItemCard met "Nieuw" badge en duur
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│ [img] Zeehondensafari                    [Nieuw] [⏳]   │
-│       10:00 • 2 uur                                     │
-│       Rederij Vlieland                                  │
+│ ⚠️ Gewijzigd door klant                    Versie 2     │
+├─────────────────────────────────────────────────────────┤
+│ Zeehondensafari                   [Nieuw] [Aangevraagd] │
+│ Watersport                                              │
+├─────────────────────────────────────────────────────────┤
+│ 🏢 Bedrijf XYZ                                          │
+│    📧 info@xyz.nl  📞 06-12345678  👥 25 personen       │
+├─────────────────────────────────────────────────────────┤
+│ 📅 Vrijdag 14 maart 2025                                │
+│ 🕐 10:00                                                │
+│ ⏱️ 2 uur                          ← NIEUW              │
+├─────────────────────────────────────────────────────────┤
+│ [          Reageren          ]                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Mobile zonder dubbele StatusSummary
+### Uitgebreide Sidebar Navigatie
 
 ```text
-Huidige situatie:
 ┌─────────────────────────┐
-│ StatusSummary           │  ← Dubbel
+│ [Logo Bureau Vlieland]  │
 ├─────────────────────────┤
-│ NextStepsCard           │  ← Bevat ook status
+│ 🏢 Partner Naam         │
+│    partner@email.nl     │
 ├─────────────────────────┤
-│ Program content...      │
+│ 📊 Overzicht      [3]   │  ← Badge voor pending items
+│ 💶 Facturatie           │  ← NIEUW
+│ ⚙️ Instellingen         │
+├─────────────────────────┤
+│ [Uitloggen]             │
 └─────────────────────────┘
+```
 
-Na wijziging:
-┌─────────────────────────┐
-│ NextStepsCard           │  ← Enige status weergave
-├─────────────────────────┤
-│ Program content...      │
-└─────────────────────────┘
+### Partner Facturatie Pagina
+
+```text
+┌───────────────────────────────────────────────────────────┐
+│ Facturatie Overzicht                                      │
+├───────────────────────────────────────────────────────────┤
+│                                                           │
+│  📊 Financieel Overzicht (uitgebreid)                     │
+│  ┌─────────────┬─────────────┬─────────────┐              │
+│  │ Gefact. YTD │ Te facturen │ Commissie   │              │
+│  │ €12.500     │ €2.340      │ €1.875      │              │
+│  └─────────────┴─────────────┴─────────────┘              │
+│                                                           │
+│  📋 Gefactureerde Items                                   │
+│  ┌─────────────────────────────────────────┐              │
+│  │ Zeehondensafari - XYZ B.V.              │              │
+│  │ FA-2025-042 | €450 | 15 jan 2025        │              │
+│  │ Commissie: €67,50 (15%) - Betaald ✓     │              │
+│  └─────────────────────────────────────────┘              │
+│  ┌─────────────────────────────────────────┐              │
+│  │ Surfles - ABC Corp                      │              │
+│  │ FA-2025-038 | €280 | 10 jan 2025        │              │
+│  │ Commissie: €42,00 (15%) - In afwachting │              │
+│  └─────────────────────────────────────────┘              │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Volgorde van Implementatie
 
-1. **Terminologie** - Alle tekstuele wijzigingen doorvoeren
-2. **AcceptTermsCard** - Dubbele voorwaarden-tekst verwijderen
-3. **StatusSummary** - Meervoudsvormen implementeren
-4. **CustomerProgramItem** - "Nieuw" badge toevoegen
-5. **MobileProgramView** - Dubbele StatusSummary verwijderen
+1. **PartnerItemCard uitbreiden** - "Nieuw" badge + duur weergave
+2. **PartnerLayout navigatie** - Extra menu item toevoegen
+3. **PartnerFinance pagina** - Nieuwe dedicated pagina maken
+4. **App.tsx route** - Route registreren
+5. **Mobile optimalisatie** - Tabs verbeteren voor kleinere schermen
+
+---
+
+## Technische Details
+
+### "Nieuw" Badge Logica (PartnerItemCard)
+
+```typescript
+// Check if item is newly added (within last 24 hours and pending)
+const isNewlyAdded = item.status === "pending" && 
+  new Date(item.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+```
+
+### Navigatie Badge voor Pending Items (PartnerLayout)
+
+De sidebar kan een badge tonen met het aantal pending items. Dit vereist dat we de summary data doorgeven aan de layout, of deze ophalen in de layout zelf.
+
+**Optie A:** Context/prop drilling
+**Optie B:** Aparte API call in PartnerLayout (minder efficiënt)
+**Aanbevolen:** Een simpele implementatie zonder badge in eerste instantie, later toe te voegen als gewenst.
+
+### PartnerFinance Data Requirements
+
+Deze pagina hergebruikt de bestaande `usePartnerDashboard` hook data maar toont:
+- Uitgebreider financieel overzicht
+- Lijst van alle gefactureerde items met commissie status
+- Filter opties per periode (maand, kwartaal, jaar)
 
