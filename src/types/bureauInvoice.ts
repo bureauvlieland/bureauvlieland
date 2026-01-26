@@ -63,3 +63,12 @@ export const calculateVatFromExclusive = (priceExcl: number, vatRate: number): {
   const incl = priceExcl + vat;
   return { incl: Math.round(incl * 100) / 100, vat: Math.round(vat * 100) / 100 };
 };
+
+// Simple VAT calculation helpers
+export const calculateVatAmount = (amountExclVat: number, vatRate: number): number => {
+  return Math.round(amountExclVat * (vatRate / 100) * 100) / 100;
+};
+
+export const calculateTotalInclVat = (amountExclVat: number, vatRate: number): number => {
+  return Math.round((amountExclVat * (1 + vatRate / 100)) * 100) / 100;
+};

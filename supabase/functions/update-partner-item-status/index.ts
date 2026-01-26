@@ -329,6 +329,66 @@ serve(async (req) => {
       notes: historyNotes,
     });
 
+    // Resolve any pending partner_reminder todos for this item
+    if (status === "confirmed" || status === "unavailable" || status === "alternative") {
+      await supabase
+        .from("admin_todos")
+        .update({
+          status: "done",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("auto_type", "partner_reminder")
+        .eq("auto_entity_id", itemId)
+        .neq("status", "done");
+      
+      console.log(`Resolved partner_reminder todo for item ${itemId}`);
+    }
+
+    // Check if all items are now confirmed for terms_reminder
+    if (status === "confirmed") {
+      const { data: allItems } = await supabase
+        .from("program_request_items")
+        .select("id, status, block_type")
+        .eq("request_id", item.request_id);
+      
+      const relevantItems = (allItems || []).filter(i => i.block_type !== "self_arranged");
+      const allConfirmed = relevantItems.every(i => i.status === "confirmed");
+      
+      if (allConfirmed) {
+        // Get request to check terms
+        const { data: request } = await supabase
+          .from("program_requests")
+          .select("terms_accepted_at, customer_name, customer_company")
+          .eq("id", item.request_id)
+          .single();
+        
+        if (request && !request.terms_accepted_at) {
+          // Check if todo already exists
+          const { data: existingTodo } = await supabase
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "terms_reminder")
+            .eq("auto_entity_id", item.request_id)
+            .neq("status", "done")
+            .maybeSingle();
+          
+          if (!existingTodo) {
+            const customerName = request.customer_company || request.customer_name;
+            await supabase.from("admin_todos").insert({
+              title: `Klant ${customerName} moet voorwaarden accepteren`,
+              description: `Alle activiteiten zijn bevestigd. Wachtend op acceptatie van de algemene voorwaarden door de klant.`,
+              priority: "normal",
+              status: "todo",
+              related_request_id: item.request_id,
+              auto_type: "terms_reminder",
+              auto_entity_id: item.request_id,
+            });
+            console.log(`Created terms_reminder todo for request ${item.request_id}`);
+          }
+        }
+      }
+    }
+
     // Send notification email to customer for all status changes
     const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
     if (validEmailStatuses.includes(status)) {

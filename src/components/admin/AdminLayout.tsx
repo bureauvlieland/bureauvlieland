@@ -47,6 +47,7 @@ const menuItems = [
   { title: "Aanvragen", url: "/admin/aanvragen", icon: FileText },
   { title: "Partners", url: "/admin/partners", icon: Building2 },
   { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+  { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
   { title: "Commissies", url: "/admin/commissies", icon: Euro },
   { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
   { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },

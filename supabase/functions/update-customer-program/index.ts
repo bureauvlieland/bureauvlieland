@@ -335,6 +335,48 @@ serve(async (req) => {
         notes: `Algemene voorwaarden geaccepteerd (versie ${termsVersion})`,
       });
 
+      // Resolve any terms_reminder todos
+      await supabase
+        .from("admin_todos")
+        .update({
+          status: "done",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("auto_type", "terms_reminder")
+        .eq("auto_entity_id", program.id)
+        .neq("status", "done");
+      
+      console.log(`Resolved terms_reminder todo for request ${program.id}`);
+
+      // Update completion status to ready_for_invoice and create todo
+      await supabase
+        .from("program_requests")
+        .update({ completion_status: "ready_for_invoice" })
+        .eq("id", program.id);
+
+      // Create invoicing_ready todo
+      const { data: existingInvoiceTodo } = await supabase
+        .from("admin_todos")
+        .select("id")
+        .eq("auto_type", "invoicing_ready")
+        .eq("auto_entity_id", program.id)
+        .neq("status", "done")
+        .maybeSingle();
+      
+      if (!existingInvoiceTodo) {
+        const customerName = program.customer_company || program.customer_name;
+        await supabase.from("admin_todos").insert({
+          title: `Facturatie: ${customerName}`,
+          description: `Klant heeft de voorwaarden geaccepteerd. Programma is klaar voor facturatie.`,
+          priority: "normal",
+          status: "todo",
+          related_request_id: program.id,
+          auto_type: "invoicing_ready",
+          auto_entity_id: program.id,
+        });
+        console.log(`Created invoicing_ready todo for request ${program.id}`);
+      }
+
       // Get billing details for partner notification
       const { data: updatedProgram } = await supabase
         .from("program_requests")
