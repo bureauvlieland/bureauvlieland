@@ -19,8 +19,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
@@ -31,9 +42,11 @@ import {
   Mail,
   Phone,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { logAdminActivity } from "@/lib/adminLogger";
 
 interface Customer {
   id: string;
@@ -68,6 +81,9 @@ const AdminCRMContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("customers");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [partnerToDelete, setPartnerToDelete] = useState<Partner | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,6 +193,80 @@ const AdminCRMContent = () => {
     // Since we removed token access, navigate to partner dashboard
     // For now, open the legacy token URL which redirects to login
     window.open(`/partner/${token}`, "_blank");
+  };
+
+  const handleDeletePartner = async () => {
+    if (!partnerToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // Check if partner has linked building blocks
+      const { data: blocks } = await supabase
+        .from("building_blocks")
+        .select("id")
+        .eq("provider_id", partnerToDelete.id)
+        .limit(1);
+      
+      if (blocks && blocks.length > 0) {
+        toast({
+          title: "Kan partner niet verwijderen",
+          description: "Deze partner heeft nog gekoppelde bouwstenen. Verwijder eerst de bouwstenen of wijs ze toe aan een andere partner.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if partner has program request items
+      const { data: items } = await supabase
+        .from("program_request_items")
+        .select("id")
+        .eq("provider_id", partnerToDelete.id)
+        .limit(1);
+      
+      if (items && items.length > 0) {
+        toast({
+          title: "Kan partner niet verwijderen",
+          description: "Deze partner heeft nog gekoppelde aanvragen. Verwijder eerst de aanvraag-items of wijs ze toe aan een andere partner.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Delete the partner
+      const { error } = await supabase
+        .from("partners")
+        .delete()
+        .eq("id", partnerToDelete.id);
+
+      if (error) throw error;
+
+      // Log the activity
+      await logAdminActivity({
+        action: "delete",
+        entityType: "partner",
+        entityId: partnerToDelete.id,
+        details: { partner_name: partnerToDelete.name },
+      });
+
+      // Update local state
+      setPartners((prev) => prev.filter((p) => p.id !== partnerToDelete.id));
+
+      toast({
+        title: "Partner verwijderd",
+        description: `${partnerToDelete.name} is succesvol verwijderd.`,
+      });
+    } catch (error) {
+      console.error("Error deleting partner:", error);
+      toast({
+        title: "Fout",
+        description: "Kon partner niet verwijderen",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setPartnerToDelete(null);
+    }
   };
 
   if (isLoading) {
@@ -395,6 +485,17 @@ const AdminCRMContent = () => {
                                 <LogIn className="h-4 w-4 mr-2" />
                                 Bekijk portal
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  setPartnerToDelete(partner);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Verwijderen
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -407,6 +508,29 @@ const AdminCRMContent = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Partner verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Weet je zeker dat je <strong>{partnerToDelete?.name}</strong> wilt verwijderen? 
+              Dit kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePartner}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Verwijderen..." : "Verwijderen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
