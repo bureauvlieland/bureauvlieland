@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Euro, CheckCircle, Clock, HelpCircle, Building2 } from "lucide-react";
+import { Euro, CheckCircle, Clock, HelpCircle, Building2, FileText, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
 
@@ -9,6 +9,7 @@ interface PriceSummaryCardProps {
   numberOfPeople?: number;
   className?: string;
   variant?: "default" | "compact";
+  termsAccepted?: boolean;
 }
 
 // Coordination fee tiers based on group size
@@ -20,7 +21,20 @@ const getCoordinationFee = (numberOfPeople: number): number => {
   return 500;
 };
 
-export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, variant = "default" }: PriceSummaryCardProps) => {
+// Calculate VAT breakdown (assuming 21% VAT rate for most items)
+const calculateVatBreakdown = (amountInclVat: number, vatRate: number = 21) => {
+  const exclVat = amountInclVat / (1 + vatRate / 100);
+  const vatAmount = amountInclVat - exclVat;
+  return { exclVat, vatAmount };
+};
+
+export const PriceSummaryCard = ({ 
+  items, 
+  numberOfPeople = 20, 
+  className, 
+  variant = "default",
+  termsAccepted = false 
+}: PriceSummaryCardProps) => {
   const summary = useMemo(() => {
     // Filter out self-arranged and cancelled items
     const relevantItems = items.filter(
@@ -57,8 +71,16 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, varian
 
     const confirmedTotal = bureauTotal + partnerTotal;
 
-    // Coordination fee
+    // Coordination fee (includes VAT)
     const coordinationFee = getCoordinationFee(numberOfPeople);
+
+    // Calculate VAT breakdown
+    const bureauVat = calculateVatBreakdown(bureauTotal);
+    const partnerVat = calculateVatBreakdown(partnerTotal);
+    const feeVat = calculateVatBreakdown(coordinationFee);
+
+    const totalExclVat = bureauVat.exclVat + partnerVat.exclVat + feeVat.exclVat;
+    const totalVatAmount = bureauVat.vatAmount + partnerVat.vatAmount + feeVat.vatAmount;
 
     return {
       confirmedTotal,
@@ -66,6 +88,12 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, varian
       partnerTotal,
       coordinationFee,
       grandTotal: bureauTotal + coordinationFee, // Only bureau items + fee are invoiced by Bureau Vlieland
+      bureauExclVat: bureauVat.exclVat + feeVat.exclVat,
+      bureauVatAmount: bureauVat.vatAmount + feeVat.vatAmount,
+      partnerExclVat: partnerVat.exclVat,
+      partnerVatAmount: partnerVat.vatAmount,
+      totalExclVat,
+      totalVatAmount,
       confirmedCount: confirmedItems.length,
       pendingCount: pendingItems.length,
       hasConfirmedPrices: confirmedItems.length > 0,
@@ -95,15 +123,15 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, varian
         </div>
         <div className="space-y-1 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Bevestigd</span>
-            <span className="font-medium">€{formatPrice(summary.confirmedTotal)}</span>
+            <span className="text-muted-foreground">Bevestigd excl. BTW</span>
+            <span>€{formatPrice(summary.totalExclVat)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Coördinatiefee</span>
-            <span>€{formatPrice(summary.coordinationFee)}</span>
+            <span className="text-muted-foreground">BTW (21%)</span>
+            <span>€{formatPrice(summary.totalVatAmount)}</span>
           </div>
           <div className="flex items-center justify-between pt-1 border-t">
-            <span className="font-medium">Totaal</span>
+            <span className="font-medium">Totaal incl. BTW</span>
             <span className="font-semibold text-primary">€{formatPrice(summary.confirmedTotal + summary.coordinationFee)}</span>
           </div>
           {summary.pendingCount > 0 && (
@@ -172,9 +200,21 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, varian
                 <span className="text-muted-foreground">Coördinatie & handling fee</span>
                 <span>€{formatPrice(summary.coordinationFee)}</span>
               </div>
+
+              {/* VAT breakdown for Bureau */}
+              <div className="border-t border-primary/10 pt-2 mt-2 space-y-1 pl-6">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Subtotaal excl. BTW</span>
+                  <span>€{formatPrice(summary.bureauExclVat)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>BTW (21%)</span>
+                  <span>€{formatPrice(summary.bureauVatAmount)}</span>
+                </div>
+              </div>
               
               <div className="flex items-center justify-between font-medium pt-2 border-t border-primary/10 pl-6">
-                <span>Subtotaal Bureau Vlieland</span>
+                <span>Subtotaal incl. BTW</span>
                 <span className="text-primary">€{formatPrice(summary.bureauTotal + summary.coordinationFee)}</span>
               </div>
             </div>
@@ -192,17 +232,39 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, varian
                 <span className="text-muted-foreground">Partner activiteiten</span>
                 <span>€{formatPrice(summary.partnerTotal)}</span>
               </div>
+
+              {/* VAT breakdown for Partners */}
+              <div className="border-t pt-2 mt-2 space-y-1 pl-6">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Subtotaal excl. BTW</span>
+                  <span>€{formatPrice(summary.partnerExclVat)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>BTW (21%)</span>
+                  <span>€{formatPrice(summary.partnerVatAmount)}</span>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Grand total */}
-          <div className="flex items-center justify-between pt-2">
-            <span className="font-medium">
-              {summary.pendingCount > 0 ? "Bevestigd totaal" : "Totaal programma"}
-            </span>
-            <span className="font-bold text-xl text-primary">
-              €{formatPrice(summary.confirmedTotal + summary.coordinationFee)}
-            </span>
+          {/* Grand total with VAT */}
+          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Totaal excl. BTW</span>
+              <span>€{formatPrice(summary.totalExclVat)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Totaal BTW (21%)</span>
+              <span>€{formatPrice(summary.totalVatAmount)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="font-medium">
+                {summary.pendingCount > 0 ? "Bevestigd totaal incl. BTW" : "Totaal programma incl. BTW"}
+              </span>
+              <span className="font-bold text-xl text-primary">
+                €{formatPrice(summary.confirmedTotal + summary.coordinationFee)}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -216,6 +278,33 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, varian
             </p>
           </div>
         )}
+
+        {/* Workflow explanation */}
+        <div className="border-t pt-3 space-y-2">
+          <div className="flex items-start gap-2 text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200 rounded-lg p-3">
+            <FileText className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-medium">Wanneer wordt er gefactureerd?</p>
+              <p>
+                {termsAccepted 
+                  ? "Je hebt de voorwaarden geaccepteerd. De facturen worden binnenkort verstuurd."
+                  : "Facturatie vindt pas plaats nadat je akkoord gaat met de algemene voorwaarden. Op dat moment worden de reserveringen definitief en is kosteloos annuleren niet meer mogelijk."}
+              </p>
+            </div>
+          </div>
+
+          {!termsAccepted && (
+            <div className="flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 rounded-lg p-3">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-medium">Let op: meerdere voorwaarden van toepassing</p>
+                <p>
+                  Naast de algemene voorwaarden van Bureau Vlieland zijn ook de voorwaarden van de individuele aanbieders van toepassing op hun activiteiten.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Fee explanation */}
         <div className="text-xs text-muted-foreground border-t pt-3">

@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucide-react";
+import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2, FileCheck } from "lucide-react";
 import { ShareProgramDialog } from "./ShareProgramDialog";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
@@ -332,24 +332,42 @@ export const ProgramEditor = ({
             {/* Pricing summary */}
             {hasBillableItems && (
               <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-                <h4 className="font-medium text-sm mb-2">Prijsoverzicht</h4>
+                <h4 className="font-medium text-sm mb-2">Indicatief prijsoverzicht</h4>
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Indicatief subtotaal</span>
-                    <span>€ {indicativeTotal.toLocaleString("nl-NL")}</span>
+                    <span>Subtotaal excl. BTW</span>
+                    <span>€ {Math.round(indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>BTW (21%)</span>
+                    <span>€ {Math.round(indicativeTotal - indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Coördinatiefee ({numberOfPeople} pers.)</span>
                     <span>€ {bureauFee}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-foreground pt-2 border-t">
-                    <span>Indicatief totaal</span>
+                    <span>Indicatief totaal incl. BTW</span>
                     <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  * Prijzen zijn indicatief. Exacte prijzen na overleg met aanbieders.
+                  * Prijzen zijn indicatief incl. 21% BTW. Exacte prijzen na bevestiging door aanbieders.
                 </p>
+                
+                {/* Workflow explanation */}
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 mt-3 text-xs text-blue-800 dark:text-blue-200">
+                  <div className="flex items-start gap-2">
+                    <FileCheck className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium mb-1">Hoe werkt het?</p>
+                      <p>
+                        Deze aanvraag is vrijblijvend. Aanbieders bevestigen beschikbaarheid en definitieve prijzen. 
+                        Pas wanneer je akkoord gaat met de voorwaarden worden reserveringen definitief en ontvang je facturen.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -587,20 +605,40 @@ export const ProgramEditor = ({
       {hasBillableItems && (
         <div className="border-t pt-3 space-y-1.5 text-sm">
           <div className="flex justify-between text-muted-foreground">
-            <span>Indicatief subtotaal</span>
-            <span>€ {indicativeTotal.toLocaleString("nl-NL")}</span>
+            <span>Subtotaal excl. BTW</span>
+            <span>€ {Math.round(indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>BTW (21%)</span>
+            <span>€ {Math.round(indicativeTotal - indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
             <span>Coördinatiefee ({numberOfPeople} pers.)</span>
             <span>€ {bureauFee}</span>
           </div>
           <div className="flex justify-between font-semibold text-foreground pt-2 border-t">
-            <span>Indicatief totaal</span>
+            <span>Indicatief totaal incl. BTW</span>
             <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            * Prijzen zijn indicatief. Exacte prijzen na overleg met aanbieders.
+            * Prijzen zijn indicatief incl. 21% BTW. Exacte prijzen na bevestiging door aanbieders.
           </p>
+        </div>
+      )}
+
+      {/* Workflow explanation */}
+      {hasBillableItems && (
+        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-200">
+          <div className="flex items-start gap-2">
+            <FileCheck className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium mb-1">Hoe werkt het?</p>
+              <p>
+                Deze aanvraag is vrijblijvend. Aanbieders bevestigen beschikbaarheid en definitieve prijzen. 
+                Pas wanneer je akkoord gaat met de voorwaarden worden reserveringen definitief en ontvang je facturen.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
