@@ -50,6 +50,10 @@ export interface BuildingBlock {
   // Self-arranged specific
   external_url: string | null;
   
+  // BTW information
+  price_includes_vat: boolean | null;
+  vat_rate: number | null;
+  
   // Images
   image_url: string | null;
   image_asset: string | null;
@@ -92,6 +96,8 @@ export interface BuildingBlockFormData {
   is_from_price: boolean;
   price_display_override: string;
   external_url: string;
+  price_includes_vat: boolean;
+  vat_rate: number;
   image_url: string;
   image_asset: string;
   is_published: boolean;
@@ -141,13 +147,13 @@ export const timeSlots = [
   { value: "21:00", label: "21:00" },
 ];
 
-// Fee tiers based on group size
+// Fee tiers based on group size (Coordinatiefee)
 export const bureauFeeTiers = [
-  { minPeople: 1, maxPeople: 20, feeAmount: 75 },
-  { minPeople: 21, maxPeople: 40, feeAmount: 125 },
-  { minPeople: 41, maxPeople: 60, feeAmount: 175 },
-  { minPeople: 61, maxPeople: 100, feeAmount: 225 },
-  { minPeople: 101, maxPeople: 9999, feeAmount: 275 },
+  { minPeople: 1, maxPeople: 10, feeAmount: 50 },
+  { minPeople: 11, maxPeople: 25, feeAmount: 100 },
+  { minPeople: 26, maxPeople: 100, feeAmount: 250 },
+  { minPeople: 101, maxPeople: 150, feeAmount: 350 },
+  { minPeople: 151, maxPeople: 9999, feeAmount: 500 },
 ];
 
 // Helper function to calculate bureau fee

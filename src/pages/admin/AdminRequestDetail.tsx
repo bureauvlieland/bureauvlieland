@@ -48,6 +48,12 @@ import {
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { itemStatusConfig, type ItemStatus } from "@/types/programRequest";
+import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
+import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
+import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
+import { calculateBureauFee } from "@/types/buildingBlock";
+import type { BureauInvoice } from "@/types/bureauInvoice";
+import type { CompletionStatus } from "@/types/bureauInvoice";
 
 interface ProgramRequest {
   id: string;
@@ -59,6 +65,8 @@ interface ProgramRequest {
   selected_dates: string[];
   general_notes: string | null;
   status: string;
+  completion_status: CompletionStatus | null;
+  terms_accepted_at: string | null;
   created_at: string;
   updated_at: string;
   expires_at: string;
@@ -71,6 +79,7 @@ interface ProgramRequestItem {
   id: string;
   block_name: string;
   block_category: string;
+  block_type: string;
   provider_name: string;
   provider_id: string;
   day_index: number;
@@ -109,8 +118,10 @@ const AdminRequestDetail = () => {
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramRequestItem[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [bureauInvoices, setBureauInvoices] = useState<BureauInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -163,6 +174,16 @@ const AdminRequestDetail = () => {
 
       if (historyError) throw historyError;
       setHistory(historyData as HistoryEntry[]);
+
+      // Fetch bureau invoices
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from("bureau_invoices")
+        .select("*")
+        .eq("request_id", id)
+        .order("invoice_date", { ascending: false });
+
+      if (invoicesError) throw invoicesError;
+      setBureauInvoices(invoicesData as BureauInvoice[]);
     } catch (error) {
       console.error("Error fetching request:", error);
       toast.error("Fout bij ophalen aanvraag");
@@ -219,6 +240,26 @@ const AdminRequestDetail = () => {
       }
     });
     return summary;
+  };
+
+  const calculateOutstandingAmount = () => {
+    // Calculate items to be invoiced by Bureau Vlieland
+    const bureauItems = items.filter(
+      (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price
+    );
+    const itemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
+    const coordinationFee = calculateBureauFee(request?.number_of_people || 0);
+    const totalInclVat = itemsTotal + coordinationFee;
+
+    // Calculate invoiced amounts
+    const invoicedInclVat = bureauInvoices
+      .filter((inv) => inv.invoice_type !== "credit")
+      .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
+    const creditedInclVat = bureauInvoices
+      .filter((inv) => inv.invoice_type === "credit")
+      .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
+
+    return Math.max(0, totalInclVat - (invoicedInclVat - creditedInclVat));
   };
 
   if (isLoading) {
@@ -416,6 +457,23 @@ const AdminRequestDetail = () => {
             </Card>
           </div>
 
+          {/* Completion Status and Financial Overview */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <RequestCompletionStatus
+              status={request.status}
+              completionStatus={request.completion_status}
+              termsAcceptedAt={request.terms_accepted_at}
+              items={items}
+              outstandingAmount={calculateOutstandingAmount()}
+            />
+            <FinancialOverviewCard
+              numberOfPeople={request.number_of_people}
+              items={items}
+              invoices={bureauInvoices}
+              onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+            />
+          </div>
+
           {/* Items table */}
           <Card>
             <CardHeader>
@@ -577,6 +635,15 @@ const AdminRequestDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Invoice registration dialog */}
+      <RegisterBureauInvoiceDialog
+        isOpen={invoiceDialogOpen}
+        onClose={() => setInvoiceDialogOpen(false)}
+        requestId={request?.id || ""}
+        suggestedAmount={calculateOutstandingAmount()}
+        onSuccess={fetchRequestData}
+      />
     </>
   );
 };

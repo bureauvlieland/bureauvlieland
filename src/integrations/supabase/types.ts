@@ -136,6 +136,7 @@ export type Database = {
           price_child_note: string | null
           price_display_override: string | null
           price_extras: Json | null
+          price_includes_vat: boolean | null
           price_pet: number | null
           price_pet_note: string | null
           price_type:
@@ -147,6 +148,7 @@ export type Database = {
           sort_order: number | null
           tags: string[] | null
           updated_at: string | null
+          vat_rate: number | null
         }
         Insert: {
           block_type?: Database["public"]["Enums"]["building_block_type"]
@@ -173,6 +175,7 @@ export type Database = {
           price_child_note?: string | null
           price_display_override?: string | null
           price_extras?: Json | null
+          price_includes_vat?: boolean | null
           price_pet?: number | null
           price_pet_note?: string | null
           price_type?:
@@ -184,6 +187,7 @@ export type Database = {
           sort_order?: number | null
           tags?: string[] | null
           updated_at?: string | null
+          vat_rate?: number | null
         }
         Update: {
           block_type?: Database["public"]["Enums"]["building_block_type"]
@@ -210,6 +214,7 @@ export type Database = {
           price_child_note?: string | null
           price_display_override?: string | null
           price_extras?: Json | null
+          price_includes_vat?: boolean | null
           price_pet?: number | null
           price_pet_note?: string | null
           price_type?:
@@ -221,6 +226,7 @@ export type Database = {
           sort_order?: number | null
           tags?: string[] | null
           updated_at?: string | null
+          vat_rate?: number | null
         }
         Relationships: [
           {
@@ -228,6 +234,59 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bureau_invoices: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          invoice_type: string
+          request_id: string
+          updated_at: string
+          vat_amount: number
+        }
+        Insert: {
+          amount_excl_vat: number
+          amount_incl_vat?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          invoice_type?: string
+          request_id: string
+          updated_at?: string
+          vat_amount: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          invoice_type?: string
+          request_id?: string
+          updated_at?: string
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bureau_invoices_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -466,6 +525,7 @@ export type Database = {
           billing_vat_number: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          completion_status: string | null
           created_at: string
           customer_company: string | null
           customer_email: string
@@ -494,6 +554,7 @@ export type Database = {
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          completion_status?: string | null
           created_at?: string
           customer_company?: string | null
           customer_email: string
@@ -522,6 +583,7 @@ export type Database = {
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          completion_status?: string | null
           created_at?: string
           customer_company?: string | null
           customer_email?: string

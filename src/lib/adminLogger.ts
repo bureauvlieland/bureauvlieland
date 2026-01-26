@@ -54,6 +54,7 @@ export const AdminActions = {
   REQUEST_VIEWED: "request_viewed",
   REQUEST_STATUS_CHANGED: "request_status_changed",
   REQUEST_CANCELLED: "request_cancelled",
+  INVOICE_REGISTERED: "invoice_registered",
   
   // Item actions
   ITEM_STATUS_CHANGED: "item_status_changed",
