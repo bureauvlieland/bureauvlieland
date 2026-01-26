@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, CheckCircle, Clock, FileText, Receipt } from "lucide-react";
+import { Building2, Bell, MessageSquare, CheckCircle, Receipt } from "lucide-react";
 
 interface PartnerDashboardHeaderProps {
   partner: {
@@ -9,10 +9,11 @@ interface PartnerDashboardHeaderProps {
     commission_percentage: number;
   };
   summary: {
-    pendingConfirmation: number;
+    pending: number;
+    alternative: number;
     confirmed: number;
-    executed: number;
-    pendingInvoice: number;
+    closed: number;
+    readyForInvoice: number;
     invoiced: number;
     total: number;
   };
@@ -37,17 +38,31 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
         </div>
       </div>
 
-      {/* Stats cards */}
+      {/* Stats cards - action-focused */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-950 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.pendingConfirmation}</p>
-                <p className="text-xs text-muted-foreground">Te bevestigen</p>
+                <p className="text-2xl font-bold">{summary.pending}</p>
+                <p className="text-xs text-muted-foreground">Nieuw</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{summary.alternative}</p>
+                <p className="text-xs text-muted-foreground">In behandeling</p>
               </div>
             </div>
           </CardContent>
@@ -70,26 +85,12 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.pendingInvoice}</p>
+                <p className="text-2xl font-bold">{summary.readyForInvoice}</p>
                 <p className="text-xs text-muted-foreground">Te factureren</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                <Receipt className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{summary.invoiced}</p>
-                <p className="text-xs text-muted-foreground">Gefactureerd</p>
               </div>
             </div>
           </CardContent>
