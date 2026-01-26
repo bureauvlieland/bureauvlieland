@@ -218,9 +218,11 @@ const Voorbeeldprogrammas = () => {
                 Maatwerk uit modulaire bouwstenen
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                Elk programma is uniek. Daarom bieden wij geen standaard pakketten, maar werken wij met 
-                flexibele <strong>bouwstenen</strong> die je kunt combineren naar wens. Kies wat bij jouw groep past 
-                en wij regelen de rest.
+                Elk programma is uniek. Bekijk de mogelijkheden hieronder of{" "}
+                <Link to="/programma-samenstellen" className="text-primary hover:underline font-medium">
+                  ga direct naar de configurator
+                </Link>{" "}
+                om je programma samen te stellen.
               </p>
               <p className="text-lg text-muted-foreground">
                 <strong>Complete ontzorging:</strong> Transfers, accommodatie, fietsen, activiteiten, catering - 

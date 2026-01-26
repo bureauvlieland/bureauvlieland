@@ -91,14 +91,6 @@ export const Navigation = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Samenwerken - direct link */}
-            <Link
-              to="/samenwerken"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Samenwerken
-            </Link>
-
             {/* Bouwstenen - direct link */}
             <Link
               to="/bouwstenen"
@@ -121,13 +113,13 @@ export const Navigation = () => {
                 Contact
               </Button>
             </Link>
-            <Link to="/offerte">
+            <Link to="/programma-samenstellen">
               <Button
                 variant="default"
                 size="sm"
                 className="bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                Offerte aanvragen
+                Programma samenstellen
               </Button>
             </Link>
           </div>
@@ -148,7 +140,7 @@ export const Navigation = () => {
             <div className="flex flex-col gap-2">
               {/* CTA First on Mobile */}
               <Link
-                to="/offerte"
+                to="/programma-samenstellen"
                 onClick={() => setIsMenuOpen(false)}
                 className="mx-4 mb-4"
               >
@@ -156,7 +148,7 @@ export const Navigation = () => {
                   variant="default"
                   className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
                 >
-                  Offerte aanvragen
+                  Programma samenstellen
                 </Button>
               </Link>
 
@@ -209,15 +201,6 @@ export const Navigation = () => {
                   </div>
                 )}
               </div>
-
-              {/* Samenwerken - direct link Mobile */}
-              <Link
-                to="/samenwerken"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Samenwerken
-              </Link>
 
               {/* Bouwstenen - direct link Mobile */}
               <Link

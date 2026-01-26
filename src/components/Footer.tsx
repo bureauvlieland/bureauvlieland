@@ -102,7 +102,35 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Meer informatie</h4>
+            <h4 className="font-semibold text-foreground mb-4">Direct aan de slag</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link 
+                  to="/programma-samenstellen" 
+                  className="hover:text-primary transition-colors font-medium text-foreground"
+                >
+                  Programma samenstellen
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/bouwstenen" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Bouwstenen bekijken
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/offerte" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Maatwerkofferte aanvragen
+                </Link>
+              </li>
+            </ul>
+
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Meer informatie</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link 
@@ -114,26 +142,10 @@ export const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/bouwstenen" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Bouwstenen
-                </Link>
-              </li>
-              <li>
-                <Link 
                   to="/catering" 
                   className="hover:text-primary transition-colors"
                 >
                   Catering
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/evenementen" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Evenementen
                 </Link>
               </li>
               <li>
