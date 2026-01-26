@@ -91,18 +91,18 @@ const Index = () => {
                 Onvergetelijke ervaringen op het eiland
               </h1>
               <p className="text-base sm:text-lg lg:text-xl text-primary-foreground/90 mb-4 leading-relaxed max-w-2xl">
-                Bureau Vlieland organiseert eendaagse en meerdaagse programma's, teamdagen en events voor groepen op Vlieland.
+                Stel in 5 minuten je eigen programma samen. Kies uit activiteiten, catering en vervoer – wij regelen de rest.
               </p>
               <p className="text-sm sm:text-base text-primary-foreground/80 mb-8 max-w-xl">
                 Onder leiding van Erwin Soolsma combineren we professionele inhoud met lokale regie, gidsen en catering.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/contact">
+                <Link to="/programma-samenstellen">
                   <Button
                     size="lg"
                     className="bg-card text-primary hover:bg-card/90 shadow-medium text-base px-8"
                   >
-                    Neem contact op
+                    Stel je programma samen
                   </Button>
                 </Link>
                 <Link to="/diensten">
@@ -110,7 +110,7 @@ const Index = () => {
                     size="lg"
                     className="bg-background text-primary hover:bg-background/90 shadow-medium text-base px-8"
                   >
-                    Ontdek onze diensten
+                    Bekijk onze diensten
                   </Button>
                 </Link>
               </div>
@@ -163,16 +163,23 @@ const Index = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Klaar voor een onvergetelijk programma?
+                Begin vandaag nog met je programma
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Neem contact op voor een vrijblijvend gesprek over de mogelijkheden voor jouw groep op Vlieland.
+                Kies je bouwstenen, geef je wensen door, en ontvang binnen 5 werkdagen bevestiging. Je aanvraag is vrijblijvend.
               </p>
-              <Link to="/contact">
-                <Button size="lg" className="bg-primary hover:bg-primary/90">
-                  Neem contact op
-                </Button>
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link to="/programma-samenstellen">
+                  <Button size="lg" className="bg-primary hover:bg-primary/90">
+                    Stel je programma samen
+                  </Button>
+                </Link>
+                <Link to="/contact">
+                  <Button size="lg" variant="outline">
+                    Liever persoonlijk advies?
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </section>

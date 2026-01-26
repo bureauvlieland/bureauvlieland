@@ -128,11 +128,11 @@ const ProgrammaSamenstellen = () => {
 
           <div className="relative z-10 text-center text-primary-foreground px-4 max-w-4xl">
             <h1 className="text-4xl md:text-6xl font-display font-bold mb-4">
-              Stel je programma samen
+              Bouw je eigen programma in 5 minuten
             </h1>
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
-              Kies uit activiteiten, catering en vervoer. Wij regelen de rest en
-              zorgen voor een onvergetelijk uitje.
+              Selecteer je favoriete bouwstenen, kies je datum en groepsgrootte. 
+              Je aanvraag is vrijblijvend – je betaalt pas na bevestiging.
             </p>
           </div>
         </section>
@@ -164,12 +164,11 @@ const ProgrammaSamenstellen = () => {
             <div className="bg-muted/50 border border-border rounded-lg p-4 mb-8 flex items-start gap-3">
               <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-2">Hoe werkt het?</p>
+                <p className="font-medium text-foreground mb-2">Zo werkt het – 3 eenvoudige stappen</p>
                 <ol className="space-y-1 list-decimal list-inside">
-                  <li>Kies bouwstenen en voeg ze toe aan je programma.</li>
-                  <li>Vul het aantal personen en gewenste datum in.</li>
-                  <li>Aanvragen worden door de betreffende aanbieders behandeld en bevestigd. Eventueel wordt er contact opgenomen om details te bespreken.</li>
-                  <li>U betaalt pas na bevestiging en ontvangt hiervan een factuur van de aanbieder.</li>
+                  <li><strong>Kies bouwstenen</strong> – Voeg activiteiten, catering en vervoer toe aan je programma</li>
+                  <li><strong>Vul je gegevens in</strong> – Datum, groepsgrootte en contactinfo</li>
+                  <li><strong>Ontvang bevestiging</strong> – Aanbieders bevestigen binnen 5 werkdagen</li>
                 </ol>
               </div>
             </div>
