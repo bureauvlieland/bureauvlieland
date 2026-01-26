@@ -41,7 +41,8 @@ export const GlobalCartDrawer = () => {
   const isOnConfiguratorPage = location.pathname === "/programma-samenstellen";
   const isOnPortalPage = location.pathname.startsWith("/partner") || 
                          location.pathname.startsWith("/admin") || 
-                         location.pathname.startsWith("/programma/");
+                         location.pathname.startsWith("/programma/") ||
+                         location.pathname.startsWith("/mijn-programma/");
 
   // Don't render on portal pages
   if (isOnPortalPage) {
