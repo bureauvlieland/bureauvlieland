@@ -226,7 +226,8 @@ serve(async (req) => {
       );
     }
 
-    const validStatuses = ["confirmed", "unavailable", "alternative"];
+    // Valid statuses in the new flow
+    const validStatuses = ["confirmed", "unavailable", "executed"];
     if (!validStatuses.includes(status)) {
       return new Response(
         JSON.stringify({ error: "Invalid status" }),
@@ -234,7 +235,7 @@ serve(async (req) => {
       );
     }
 
-    // Validate quoted price is required for confirmed status
+    // Validate quoted price is required for confirmed status (but not for executed)
     if (status === "confirmed" && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
       return new Response(
         JSON.stringify({ error: "Quoted price is required when confirming" }),
@@ -296,8 +297,8 @@ serve(async (req) => {
     }
 
     // If marking as executed
-    if (executedAt) {
-      updateData.executed_at = executedAt;
+    if (status === "executed") {
+      updateData.executed_at = new Date().toISOString();
     }
 
     const { error: updateError } = await supabase
@@ -316,6 +317,8 @@ serve(async (req) => {
     // Log to history
     const historyNotes = status === "confirmed" && quotedPrice
       ? `Partner heeft bevestigd voor €${quotedPrice.toFixed(2)}${quotedNotes ? ` - ${quotedNotes}` : ""}`
+      : status === "executed"
+      ? `Partner heeft gemarkeerd als uitgevoerd`
       : `Partner heeft status gewijzigd naar ${status}${statusNote ? `: ${statusNote}` : ""}`;
 
     await supabase.from("program_request_history").insert({
@@ -329,8 +332,8 @@ serve(async (req) => {
       notes: historyNotes,
     });
 
-    // Resolve any pending partner_reminder todos for this item
-    if (status === "confirmed" || status === "unavailable" || status === "alternative") {
+    // Resolve any pending partner_reminder todos for this item (on any status change except executed)
+    if (status === "confirmed" || status === "unavailable") {
       await supabase
         .from("admin_todos")
         .update({
@@ -389,15 +392,14 @@ serve(async (req) => {
       }
     }
 
-    // Send notification email to customer for all status changes
-    const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
+    // Send notification email to customer for confirmed/unavailable status changes (not executed)
+    const validEmailStatuses = ["confirmed", "unavailable"];
     if (validEmailStatuses.includes(status)) {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
       
       const subjectMap: Record<string, string> = {
-        confirmed: `Activiteit bevestigd: ${item.block_name}`,
+        confirmed: `Activiteit bevestigd: ${item.block_name} - Jouw akkoord gevraagd`,
         unavailable: `Activiteit niet beschikbaar: ${item.block_name}`,
-        alternative: `Alternatief voorgesteld: ${item.block_name}`,
       };
       
       const emailHtml = generateStatusEmailHtml(

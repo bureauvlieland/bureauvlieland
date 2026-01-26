@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerDashboardHeader } from "@/components/partner-portal/PartnerDashboardHeader";
-import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
+import { PartnerItemRow } from "@/components/partner-portal/PartnerItemRow";
+import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
-import { StatusUpdateDialog } from "@/components/partner-portal/StatusUpdateDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, RefreshCw, Bell } from "lucide-react";
@@ -24,8 +25,8 @@ const PartnerDashboardContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
+  const [showSheet, setShowSheet] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
 
   const fetchDashboard = async () => {
@@ -41,7 +42,6 @@ const PartnerDashboardContent = () => {
     let token: string | null = null;
 
     if (impersonatePartnerId) {
-      // Verify user is an admin
       const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
       
       if (isAdmin) {
@@ -57,7 +57,6 @@ const PartnerDashboardContent = () => {
       }
     }
 
-    // Regular partner flow
     if (!token) {
       const { data: partner, error: partnerError } = await supabase
         .from("partners")
@@ -113,14 +112,12 @@ const PartnerDashboardContent = () => {
   };
 
   const updateItemStatus = async (
-    itemId: string,
     status: string,
     statusNote?: string,
-    executedAt?: string,
     quotedPrice?: number,
     quotedNotes?: string
   ): Promise<boolean> => {
-    if (!partnerToken) return false;
+    if (!partnerToken || !selectedItem) return false;
 
     try {
       const response = await fetch(
@@ -133,10 +130,9 @@ const PartnerDashboardContent = () => {
           },
           body: JSON.stringify({
             partnerToken: partnerToken,
-            itemId,
+            itemId: selectedItem.id,
             status,
             statusNote,
-            executedAt,
             quotedPrice,
             quotedNotes,
           }),
@@ -147,6 +143,15 @@ const PartnerDashboardContent = () => {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to update status");
       }
+
+      toast({
+        title: "Status bijgewerkt",
+        description: status === "confirmed" 
+          ? "Activiteit bevestigd. De klant is op de hoogte gesteld."
+          : status === "executed"
+          ? "Activiteit gemarkeerd als uitgevoerd."
+          : "Status is bijgewerkt.",
+      });
 
       await refetchDashboard();
       return true;
@@ -162,13 +167,12 @@ const PartnerDashboardContent = () => {
   };
 
   const registerInvoice = async (
-    itemId: string,
-    invoicedAmount: number,
-    invoicedNumber: string,
-    invoicedDate: string,
+    amount: number,
+    invoiceNumber: string,
+    date: string,
     notes?: string
   ): Promise<{ success: boolean; commission?: { percentage: number; amount: number } }> => {
-    if (!partnerToken) return { success: false };
+    if (!partnerToken || !selectedItem) return { success: false };
 
     try {
       const response = await fetch(
@@ -181,10 +185,10 @@ const PartnerDashboardContent = () => {
           },
           body: JSON.stringify({
             partnerToken: partnerToken,
-            itemId,
-            invoicedAmount,
-            invoicedNumber,
-            invoicedDate,
+            itemId: selectedItem.id,
+            invoicedAmount: amount,
+            invoicedNumber: invoiceNumber,
+            invoicedDate: date,
             notes,
           }),
         }
@@ -209,23 +213,13 @@ const PartnerDashboardContent = () => {
     }
   };
 
-  const handleStatusUpdate = async (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => {
-    if (!selectedItem) return;
-    const success = await updateItemStatus(selectedItem.id, status, note, undefined, quotedPrice, quotedNotes);
-    if (success) {
-      setShowStatusDialog(false);
-      setSelectedItem(null);
-    }
-  };
-
   const handleInvoiceRegister = async (
     amount: number,
     invoiceNumber: string,
     date: string,
     notes?: string
   ) => {
-    if (!selectedItem) return { success: false };
-    const result = await registerInvoice(selectedItem.id, amount, invoiceNumber, date, notes);
+    const result = await registerInvoice(amount, invoiceNumber, date, notes);
     if (result.success) {
       setShowInvoiceDialog(false);
       setSelectedItem(null);
@@ -254,11 +248,54 @@ const PartnerDashboardContent = () => {
     );
   }
 
-  // Simplified tab structure: Nieuw, In behandeling, Bevestigd, Afgesloten
+  // Tab filtering with new status flow
   const pendingItems = data.items.filter((i) => i.status === "pending");
-  const alternativeItems = data.items.filter((i) => i.status === "alternative");
-  const confirmedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
-  const closedItems = data.items.filter((i) => ["unavailable", "cancelled"].includes(i.status));
+  const waitingItems = data.items.filter((i) => i.status === "confirmed"); // Waiting for customer
+  const acceptedItems = data.items.filter((i) => i.status === "accepted" || i.status === "executed");
+  const closedItems = data.items.filter((i) => 
+    ["invoiced", "unavailable", "cancelled"].includes(i.status)
+  );
+
+  const renderItemsTable = (items: PartnerItem[], emptyMessage: string) => {
+    if (items.length === 0) {
+      return (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            {emptyMessage}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Activiteit</TableHead>
+              <TableHead className="hidden sm:table-cell">Klant</TableHead>
+              <TableHead className="hidden md:table-cell">Datum</TableHead>
+              <TableHead className="hidden lg:table-cell text-center">Pers.</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <PartnerItemRow
+                key={item.id}
+                item={item}
+                onClick={() => {
+                  setSelectedItem(item);
+                  setShowSheet(true);
+                }}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+    );
+  };
 
   return (
     <>
@@ -279,7 +316,7 @@ const PartnerDashboardContent = () => {
           </div>
         </div>
 
-        {/* Simplified 4-tab structure */}
+        {/* 4-tab structure */}
         <Tabs defaultValue="pending" className="mt-8">
           <ScrollArea className="w-full">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
@@ -291,119 +328,64 @@ const PartnerDashboardContent = () => {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="alternative" className="whitespace-nowrap">
-                In behandeling
-                {alternativeItems.length > 0 && (
+              <TabsTrigger value="waiting" className="whitespace-nowrap">
+                Wacht op klant
+                {waitingItems.length > 0 && (
                   <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {alternativeItems.length}
+                    {waitingItems.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="confirmed" className="whitespace-nowrap">
-                Bevestigd
-                {confirmedItems.length > 0 && (
+              <TabsTrigger value="accepted" className="whitespace-nowrap">
+                Akkoord
+                {acceptedItems.length > 0 && (
                   <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {confirmedItems.length}
+                    {acceptedItems.length}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger value="closed" className="whitespace-nowrap">
-                Afgesloten
+                Afgerond
               </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
 
-          <TabsContent value="pending" className="mt-6 space-y-4">
-            {pendingItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen nieuwe aanvragen.
-                </CardContent>
-              </Card>
-            ) : (
-              pendingItems.map((item) => (
-                <PartnerItemCard
-                  key={item.id}
-                  item={item}
-                  onConfirm={() => {
-                    setSelectedItem(item);
-                    setShowStatusDialog(true);
-                  }}
-                />
-              ))
-            )}
+          <TabsContent value="pending" className="mt-6">
+            {renderItemsTable(pendingItems, "Geen nieuwe aanvragen.")}
           </TabsContent>
 
-          <TabsContent value="alternative" className="mt-6 space-y-4">
-            {alternativeItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen voorstellen in behandeling.
-                </CardContent>
-              </Card>
-            ) : (
-              alternativeItems.map((item) => (
-                <PartnerItemCard
-                  key={item.id}
-                  item={item}
-                  onEditProposal={() => {
-                    setSelectedItem(item);
-                    setShowStatusDialog(true);
-                  }}
-                />
-              ))
-            )}
+          <TabsContent value="waiting" className="mt-6">
+            {renderItemsTable(waitingItems, "Geen activiteiten wachtend op klant.")}
           </TabsContent>
 
-          <TabsContent value="confirmed" className="mt-6 space-y-4">
-            {confirmedItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen bevestigde activiteiten.
-                </CardContent>
-              </Card>
-            ) : (
-              confirmedItems.map((item) => (
-                <PartnerItemCard
-                  key={item.id}
-                  item={item}
-                  onRegisterInvoice={() => {
-                    setSelectedItem(item);
-                    setShowInvoiceDialog(true);
-                  }}
-                />
-              ))
-            )}
+          <TabsContent value="accepted" className="mt-6">
+            {renderItemsTable(acceptedItems, "Geen activiteiten met klantakkoord.")}
           </TabsContent>
 
-          <TabsContent value="closed" className="mt-6 space-y-4">
-            {closedItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen afgesloten activiteiten.
-                </CardContent>
-              </Card>
-            ) : (
-              closedItems.map((item) => (
-                <PartnerItemCard key={item.id} item={item} />
-              ))
-            )}
+          <TabsContent value="closed" className="mt-6">
+            {renderItemsTable(closedItems, "Geen afgeronde activiteiten.")}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Dialogs */}
-      <StatusUpdateDialog
-        isOpen={showStatusDialog}
+      {/* Item detail sheet */}
+      <PartnerItemSheet
+        item={selectedItem}
+        isOpen={showSheet}
         onClose={() => {
-          setShowStatusDialog(false);
+          setShowSheet(false);
           setSelectedItem(null);
         }}
-        onSubmit={handleStatusUpdate}
-        item={selectedItem}
+        onStatusUpdate={updateItemStatus}
+        onRegisterInvoice={() => {
+          setShowSheet(false);
+          setShowInvoiceDialog(true);
+        }}
+        commissionPercentage={data.partner.commission_percentage}
       />
 
+      {/* Invoice dialog */}
       <InvoiceRegistrationDialog
         isOpen={showInvoiceDialog}
         onClose={() => {
