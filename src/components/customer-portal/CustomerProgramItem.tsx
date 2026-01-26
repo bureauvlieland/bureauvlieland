@@ -16,7 +16,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ItemStatusBadge } from "./ItemStatusBadge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -47,6 +48,10 @@ export const CustomerProgramItem = ({
   
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
+  
+  // Check if item is newly added (pending status and created within last 24 hours)
+  const isNewlyAdded = item.status === "pending" && 
+    new Date(item.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
   
   // Get image URL using the utility function
   const imageUrl = getBlockImage({
@@ -88,6 +93,12 @@ export const CustomerProgramItem = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-medium">{item.block_name}</h4>
+                {isNewlyAdded && (
+                  <Badge variant="secondary" className="gap-1 bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400 border-0">
+                    <Sparkles className="h-3 w-3" />
+                    Nieuw
+                  </Badge>
+                )}
                 <ItemStatusBadge status={item.status as ItemStatus} />
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">

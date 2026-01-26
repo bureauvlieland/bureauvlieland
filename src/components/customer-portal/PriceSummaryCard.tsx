@@ -229,7 +229,7 @@ export const PriceSummaryCard = ({
               </div>
               
               <div className="flex items-center justify-between text-sm pl-6">
-                <span className="text-muted-foreground">Partner activiteiten</span>
+                <span className="text-muted-foreground">Activiteiten aanbieders</span>
                 <span>€{formatPrice(summary.partnerTotal)}</span>
               </div>
 
