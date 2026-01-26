@@ -24,6 +24,7 @@ import {
   Menu,
   ShieldCheck,
   Receipt,
+  Package,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -52,11 +53,15 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
 
   const menuItems = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    { title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package },
     { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
     { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
   ];
 
-  const isActive = (path: string) => location.pathname + location.search === path;
+  const isActive = (path: string) => {
+    const currentPath = location.pathname + location.search;
+    return currentPath === path || location.pathname === path.split("?")[0];
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r">

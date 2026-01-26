@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Timer,
   Sparkles,
+  Hourglass,
 } from "lucide-react";
 import { format, parseISO, differenceInHours } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -40,7 +41,6 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 const isRecentlyModified = (item: PartnerItem): boolean => {
   if (item.status !== "pending" || item.version <= 1) return false;
   
-  // Check if updated within last 48 hours
   if (item.updated_at) {
     const hoursSinceUpdate = differenceInHours(new Date(), parseISO(item.updated_at));
     return hoursSinceUpdate < 48;
@@ -59,6 +59,20 @@ const isNewlyAdded = (item: PartnerItem): boolean => {
   return false;
 };
 
+// Check if ready for invoicing (customer has accepted terms)
+const isReadyForInvoice = (item: PartnerItem): boolean => {
+  return item.status === "confirmed" && 
+         !item.invoiced_number && 
+         item.program_requests?.terms_accepted_at !== null;
+};
+
+// Check if waiting for customer to accept terms
+const isAwaitingCustomerTerms = (item: PartnerItem): boolean => {
+  return item.status === "confirmed" && 
+         !item.invoiced_number && 
+         item.program_requests?.terms_accepted_at === null;
+};
+
 export const PartnerItemCard = ({
   item,
   onConfirm,
@@ -72,7 +86,10 @@ export const PartnerItemCard = ({
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
   const recentlyModified = isRecentlyModified(item);
   const newlyAdded = isNewlyAdded(item);
+  const readyForInvoice = isReadyForInvoice(item);
+  const awaitingTerms = isAwaitingCustomerTerms(item);
   const duration = item.duration;
+
   return (
     <Card className={recentlyModified ? "border-amber-300 dark:border-amber-700" : ""}>
       <CardHeader className="pb-3">
@@ -186,6 +203,19 @@ export const PartnerItemCard = ({
           </div>
         )}
 
+        {/* Awaiting customer terms notice */}
+        {awaitingTerms && (
+          <div className="bg-muted/50 border border-muted rounded-lg p-3 text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Hourglass className="h-4 w-4" />
+              <span>Wacht op klantbevestiging</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              De klant moet eerst de voorwaarden accepteren voordat je kunt factureren.
+            </p>
+          </div>
+        )}
+
         {/* Alternative proposal / Status note */}
         {item.status_note && (item.status === "alternative" || item.status === "unavailable") && (
           <div className={`rounded-lg p-3 text-sm ${
@@ -256,21 +286,21 @@ export const PartnerItemCard = ({
           {onConfirm && item.status === "pending" && (
             <Button onClick={onConfirm} className="flex-1">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Reageren
+              Bevestigen
             </Button>
           )}
 
           {onEditProposal && item.status === "alternative" && (
             <Button onClick={onEditProposal} variant="outline" className="flex-1">
               <MessageSquare className="h-4 w-4 mr-2" />
-              Voorstel aanpassen
+              Aanpassen
             </Button>
           )}
 
-          {onRegisterInvoice && item.status === "confirmed" && !item.invoiced_number && (
+          {onRegisterInvoice && readyForInvoice && (
             <Button onClick={onRegisterInvoice} variant="outline" className="flex-1">
               <FileText className="h-4 w-4 mr-2" />
-              Facturatie registreren
+              Factuur registreren
             </Button>
           )}
         </div>

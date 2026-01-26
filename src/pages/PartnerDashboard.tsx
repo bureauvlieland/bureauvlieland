@@ -4,12 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerDashboardHeader } from "@/components/partner-portal/PartnerDashboardHeader";
-import { PartnerFinancialSummary } from "@/components/partner-portal/PartnerFinancialSummary";
 import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { StatusUpdateDialog } from "@/components/partner-portal/StatusUpdateDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, RefreshCw, Bell } from "lucide-react";
@@ -255,11 +254,11 @@ const PartnerDashboardContent = () => {
     );
   }
 
+  // Simplified tab structure: Nieuw, In behandeling, Bevestigd, Afgesloten
   const pendingItems = data.items.filter((i) => i.status === "pending");
-  const waitingItems = data.items.filter((i) => i.status === "alternative");
+  const alternativeItems = data.items.filter((i) => i.status === "alternative");
   const confirmedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
-  const processedItems = data.items.filter((i) => ["unavailable", "cancelled"].includes(i.status));
-  const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
+  const closedItems = data.items.filter((i) => ["unavailable", "cancelled"].includes(i.status));
 
   return (
     <>
@@ -270,7 +269,7 @@ const PartnerDashboardContent = () => {
             {pendingItems.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 <Bell className="h-4 w-4" />
-                <span>{pendingItems.length} nieuwe aanvra{pendingItems.length === 1 ? "ag" : "gen"}</span>
+                <span>{pendingItems.length} nieuw</span>
               </div>
             )}
             <Button onClick={refetchDashboard} variant="outline" size="sm">
@@ -280,32 +279,27 @@ const PartnerDashboardContent = () => {
           </div>
         </div>
 
-        {/* Financial Summary */}
-        <PartnerFinancialSummary
-          items={data.items}
-          commissionPercentage={data.partner.commission_percentage}
-        />
-
+        {/* Simplified 4-tab structure */}
         <Tabs defaultValue="pending" className="mt-8">
-          <ScrollArea className="w-full whitespace-nowrap">
-            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5">
-              <TabsTrigger value="pending" className="relative">
-                Te bevestigen
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
+              <TabsTrigger value="pending" className="relative whitespace-nowrap">
+                Nieuw
                 {pendingItems.length > 0 && (
                   <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                     {pendingItems.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="waiting">
-                Wacht op klant
-                {waitingItems.length > 0 && (
+              <TabsTrigger value="alternative" className="whitespace-nowrap">
+                In behandeling
+                {alternativeItems.length > 0 && (
                   <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {waitingItems.length}
+                    {alternativeItems.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="confirmed">
+              <TabsTrigger value="confirmed" className="whitespace-nowrap">
                 Bevestigd
                 {confirmedItems.length > 0 && (
                   <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
@@ -313,30 +307,18 @@ const PartnerDashboardContent = () => {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="processed">
-                Afgehandeld
-                {processedItems.length > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {processedItems.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="invoiced">
-                Gefactureerd
-                {invoicedItems.length > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {invoicedItems.length}
-                  </span>
-                )}
+              <TabsTrigger value="closed" className="whitespace-nowrap">
+                Afgesloten
               </TabsTrigger>
             </TabsList>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
 
           <TabsContent value="pending" className="mt-6 space-y-4">
             {pendingItems.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen activiteiten om te bevestigen.
+                  Geen nieuwe aanvragen.
                 </CardContent>
               </Card>
             ) : (
@@ -353,15 +335,15 @@ const PartnerDashboardContent = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="waiting" className="mt-6 space-y-4">
-            {waitingItems.length === 0 ? (
+          <TabsContent value="alternative" className="mt-6 space-y-4">
+            {alternativeItems.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen alternatieve voorstellen die wachten op klantreactie.
+                  Geen voorstellen in behandeling.
                 </CardContent>
               </Card>
             ) : (
-              waitingItems.map((item) => (
+              alternativeItems.map((item) => (
                 <PartnerItemCard
                   key={item.id}
                   item={item}
@@ -378,7 +360,7 @@ const PartnerDashboardContent = () => {
             {confirmedItems.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen bevestigde activiteiten die nog gefactureerd moeten worden.
+                  Geen bevestigde activiteiten.
                 </CardContent>
               </Card>
             ) : (
@@ -395,30 +377,16 @@ const PartnerDashboardContent = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="processed" className="mt-6 space-y-4">
-            {processedItems.length === 0 ? (
+          <TabsContent value="closed" className="mt-6 space-y-4">
+            {closedItems.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Geen niet-beschikbare of geannuleerde activiteiten.
+                  Geen afgesloten activiteiten.
                 </CardContent>
               </Card>
             ) : (
-              processedItems.map((item) => (
+              closedItems.map((item) => (
                 <PartnerItemCard key={item.id} item={item} />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="invoiced" className="mt-6 space-y-4">
-            {invoicedItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nog geen gefactureerde activiteiten.
-                </CardContent>
-              </Card>
-            ) : (
-              invoicedItems.map((item) => (
-                <PartnerItemCard key={item.id} item={item} showInvoiceDetails />
               ))
             )}
           </TabsContent>

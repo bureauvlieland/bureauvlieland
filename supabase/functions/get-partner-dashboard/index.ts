@@ -55,7 +55,8 @@ serve(async (req) => {
           number_of_people,
           selected_dates,
           status,
-          cancelled_at
+          cancelled_at,
+          terms_accepted_at
         )
       `)
       .eq("provider_id", partner.id)
@@ -77,10 +78,15 @@ serve(async (req) => {
 
     // Group items by status for easy display
     const pendingConfirmation = activeItems.filter((i) => i.status === "pending");
+    const alternative = activeItems.filter((i) => i.status === "alternative");
     const confirmed = activeItems.filter((i) => i.status === "confirmed");
-    const executed = activeItems.filter((i) => i.executed_at !== null);
-    const pendingInvoice = activeItems.filter(
-      (i) => i.status === "confirmed" && i.executed_at !== null && !i.invoiced_number
+    const closed = activeItems.filter((i) => ["unavailable", "cancelled"].includes(i.status));
+    
+    // Items ready for invoice: confirmed AND customer has accepted terms
+    const readyForInvoice = activeItems.filter(
+      (i) => i.status === "confirmed" && 
+             !i.invoiced_number && 
+             i.program_requests?.terms_accepted_at !== null
     );
     const invoiced = activeItems.filter((i) => i.invoiced_number !== null);
 
@@ -94,10 +100,11 @@ serve(async (req) => {
         },
         items: activeItems,
         summary: {
-          pendingConfirmation: pendingConfirmation.length,
+          pending: pendingConfirmation.length,
+          alternative: alternative.length,
           confirmed: confirmed.length,
-          executed: executed.length,
-          pendingInvoice: pendingInvoice.length,
+          closed: closed.length,
+          readyForInvoice: readyForInvoice.length,
           invoiced: invoiced.length,
           total: activeItems.length,
         },

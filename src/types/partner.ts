@@ -55,7 +55,26 @@ export interface PartnerItem {
     number_of_people: number;
     selected_dates: string[];
     status: string;
+    terms_accepted_at: string | null;
   };
+}
+
+export interface PartnerBuildingBlock {
+  id: string;
+  name: string;
+  description: string | null;
+  short_description: string | null;
+  category: string;
+  block_type: string;
+  duration: string | null;
+  price_adult: number | null;
+  price_type: string | null;
+  min_people: number | null;
+  max_people: number | null;
+  is_published: boolean;
+  is_active: boolean;
+  image_url: string | null;
+  image_asset: string | null;
 }
 
 export interface PartnerDashboardData {
@@ -67,10 +86,11 @@ export interface PartnerDashboardData {
   };
   items: PartnerItem[];
   summary: {
-    pendingConfirmation: number;
+    pending: number;
+    alternative: number;
     confirmed: number;
-    executed: number;
-    pendingInvoice: number;
+    closed: number;
+    readyForInvoice: number;
     invoiced: number;
     total: number;
   };
