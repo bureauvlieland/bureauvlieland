@@ -571,6 +571,7 @@ serve(async (req) => {
               provider_email: block.provider?.email || null,
               block_type: block.block_type,
               price_indication: block.price_adult ? `€${block.price_adult}` : null,
+              duration: block.duration || null,
               day_index: change.dayIndex || 0,
               preferred_time: change.preferredTime || null,
               customer_notes: change.notes || null,

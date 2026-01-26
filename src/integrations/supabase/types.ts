@@ -422,6 +422,7 @@ export type Database = {
           created_at: string
           customer_notes: string | null
           day_index: number
+          duration: string | null
           executed_at: string | null
           id: string
           invoiced_amount: number | null
@@ -457,6 +458,7 @@ export type Database = {
           created_at?: string
           customer_notes?: string | null
           day_index?: number
+          duration?: string | null
           executed_at?: string | null
           id?: string
           invoiced_amount?: number | null
@@ -492,6 +494,7 @@ export type Database = {
           created_at?: string
           customer_notes?: string | null
           day_index?: number
+          duration?: string | null
           executed_at?: string | null
           id?: string
           invoiced_amount?: number | null

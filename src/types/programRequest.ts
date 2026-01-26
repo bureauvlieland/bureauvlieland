@@ -74,6 +74,7 @@ export interface ProgramRequestItem {
   provider_email: string | null;
   block_type: string;
   price_indication: string | null;
+  duration: string | null;
   day_index: number;
   preferred_time: string | null;
   customer_notes: string | null;
