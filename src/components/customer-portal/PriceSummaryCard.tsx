@@ -8,6 +8,7 @@ interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
   numberOfPeople?: number;
   className?: string;
+  variant?: "default" | "compact";
 }
 
 // Coordination fee tiers based on group size
@@ -19,7 +20,7 @@ const getCoordinationFee = (numberOfPeople: number): number => {
   return 500;
 };
 
-export const PriceSummaryCard = ({ items, numberOfPeople = 20, className }: PriceSummaryCardProps) => {
+export const PriceSummaryCard = ({ items, numberOfPeople = 20, className, variant = "default" }: PriceSummaryCardProps) => {
   const summary = useMemo(() => {
     // Filter out self-arranged and cancelled items
     const relevantItems = items.filter(
@@ -84,6 +85,36 @@ export const PriceSummaryCard = ({ items, numberOfPeople = 20, className }: Pric
       maximumFractionDigits: 2 
     });
   };
+
+  // Compact variant for sidebar
+  if (variant === "compact") {
+    return (
+      <div className={cn("bg-muted/50 rounded-lg p-3", className)}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">Prijsoverzicht</span>
+        </div>
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Bevestigd</span>
+            <span className="font-medium">€{formatPrice(summary.confirmedTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Coördinatiefee</span>
+            <span>€{formatPrice(summary.coordinationFee)}</span>
+          </div>
+          <div className="flex items-center justify-between pt-1 border-t">
+            <span className="font-medium">Totaal</span>
+            <span className="font-semibold text-primary">€{formatPrice(summary.confirmedTotal + summary.coordinationFee)}</span>
+          </div>
+          {summary.pendingCount > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              +{summary.pendingCount} activiteit{summary.pendingCount > 1 ? "en" : ""} nog te bevestigen
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className={cn("mb-6", className)}>
