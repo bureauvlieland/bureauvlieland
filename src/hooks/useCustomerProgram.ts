@@ -81,13 +81,27 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         return;
       }
 
-      // Fetch the items
+      // Fetch the items with building block image data
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select("*")
+        .select(`
+          *,
+          building_block:block_id (
+            image_url,
+            image_asset
+          )
+        `)
         .eq("request_id", requestData.id)
         .order("day_index", { ascending: true })
         .order("preferred_time", { ascending: true, nullsFirst: false });
+      
+      // Flatten the building_block data onto each item
+      const itemsWithImages = (itemsData || []).map((item: any) => ({
+        ...item,
+        image_url: item.building_block?.image_url || null,
+        image_asset: item.building_block?.image_asset || null,
+        building_block: undefined, // Remove nested object
+      }));
 
       if (itemsError) throw itemsError;
 
@@ -101,7 +115,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       const programWithItems: ProgramRequestWithItems = {
         ...requestData,
         selected_dates: requestData.selected_dates as string[],
-        items: (itemsData || []) as ProgramRequestItem[],
+        items: itemsWithImages as ProgramRequestItem[],
       };
 
       setProgram(programWithItems);

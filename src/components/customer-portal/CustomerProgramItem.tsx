@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -23,6 +22,8 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 import { timeSlots } from "@/types/buildingBlock";
+import { getBlockImage } from "@/lib/buildingBlockUtils";
+import type { BuildingBlock } from "@/types/buildingBlock";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -47,6 +48,12 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   
+  // Get image URL using the utility function
+  const imageUrl = getBlockImage({
+    image_url: item.image_url,
+    image_asset: item.image_asset,
+  } as BuildingBlock);
+  
   // Get available alternative times from status note (if any)
   const getAlternativeTimes = () => {
     if (item.status !== "alternative" || !item.status_note) return [];
@@ -65,8 +72,19 @@ export const CustomerProgramItem = ({
     )}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CardContent className="p-4">
-          {/* Header row */}
-          <div className="flex items-start justify-between gap-3">
+          {/* Header row with image */}
+          <div className="flex items-start gap-3">
+            {/* Thumbnail */}
+            <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+              <img
+                src={imageUrl}
+                alt={item.block_name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            
+            {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-medium">{item.block_name}</h4>
@@ -88,8 +106,8 @@ export const CustomerProgramItem = ({
             </CollapsibleTrigger>
           </div>
           
-          {/* Meta row */}
-          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+          {/* Meta row - offset to align with content (after image) */}
+          <div className="flex items-center gap-4 mt-2 ml-[76px] text-sm text-muted-foreground flex-wrap">
             {currentDate && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
