@@ -24,6 +24,7 @@ interface NextStepsCardProps {
   billingComplete: boolean;
   onOpenBilling: () => void;
   className?: string;
+  variant?: "default" | "sidebar";
 }
 
 type Step = {
@@ -44,6 +45,7 @@ export const NextStepsCard = ({
   billingComplete,
   onOpenBilling,
   className,
+  variant = "default",
 }: NextStepsCardProps) => {
   const steps = useMemo((): Step[] => {
     const allConfirmed = statusSummary.pending === 0 && statusSummary.confirmed > 0;
@@ -132,6 +134,36 @@ export const NextStepsCard = ({
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Sidebar variant - more compact
+  if (variant === "sidebar") {
+    const activeStep = steps.find((s) => s.status === "active");
+    const completedCount = steps.filter((s) => s.status === "completed").length;
+
+    return (
+      <div className={cn("bg-muted/50 rounded-lg p-3", className)}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">Volgende stap</span>
+          <span className="text-xs text-muted-foreground">
+            {completedCount}/{steps.length}
+          </span>
+        </div>
+        {activeStep && (
+          <div className="flex items-center gap-2 p-2 bg-primary/5 rounded border border-primary/20">
+            {activeStep.icon}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{activeStep.title}</p>
+            </div>
+            {activeStep.action && (
+              <Button size="sm" variant="ghost" onClick={activeStep.action.onClick} className="shrink-0 h-7 text-xs">
+                {activeStep.action.label}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 

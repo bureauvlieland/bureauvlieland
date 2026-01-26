@@ -9,6 +9,7 @@ interface StatusSummaryProps {
   alternative: number;
   progress: number;
   className?: string;
+  variant?: "default" | "compact";
 }
 
 export const StatusSummary = ({
@@ -18,7 +19,37 @@ export const StatusSummary = ({
   alternative,
   progress,
   className,
+  variant = "default",
 }: StatusSummaryProps) => {
+  // Compact variant for sidebar
+  if (variant === "compact") {
+    return (
+      <div className={cn("bg-muted/50 rounded-lg p-3", className)}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">Status</span>
+          <span className="text-xs text-muted-foreground">
+            {confirmed}/{total}
+          </span>
+        </div>
+        <Progress value={progress} className="h-2" />
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3 text-green-600" />
+            {confirmed}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3 text-amber-600" />
+            {pending}
+          </span>
+          <span className="flex items-center gap-1">
+            <MessageSquare className="h-3 w-3 text-blue-600" />
+            {alternative}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("bg-muted/50 rounded-lg p-4", className)}>
       <div className="flex items-center justify-between mb-3">

@@ -30,6 +30,7 @@ import type { ProgramRequestHistory } from "@/types/programRequest";
 interface ProgramHistoryTimelineProps {
   history: ProgramRequestHistory[];
   className?: string;
+  variant?: "default" | "embedded";
 }
 
 const actionConfig: Record<string, { icon: typeof Clock; label: string; color: string; bgColor: string }> = {
@@ -53,8 +54,8 @@ const getActionDetails = (action: string) => {
   return actionConfig[action] || { icon: History, label: action, color: "text-muted-foreground", bgColor: "bg-muted" };
 };
 
-export const ProgramHistoryTimeline = ({ history, className = "" }: ProgramHistoryTimelineProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const ProgramHistoryTimeline = ({ history, className = "", variant = "default" }: ProgramHistoryTimelineProps) => {
+  const [isOpen, setIsOpen] = useState(variant === "embedded");
 
   if (history.length === 0) return null;
 
@@ -71,6 +72,51 @@ export const ProgramHistoryTimeline = ({ history, className = "" }: ProgramHisto
   const recentCount = sortedHistory.filter(
     item => new Date(item.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   ).length;
+
+  // Embedded variant - no card wrapper, simpler layout
+  if (variant === "embedded") {
+    return (
+      <div className={cn("", className)}>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-4 top-2 bottom-2 w-px bg-border" />
+
+            {/* Preview items (always visible) */}
+            <div className="space-y-4">
+              {previewItems.map((item, index) => (
+                <TimelineItem key={item.id} item={item} isFirst={index === 0} />
+              ))}
+            </div>
+
+            {/* Collapsible items */}
+            <CollapsibleContent className="space-y-4 mt-4">
+              {sortedHistory.slice(3).map((item) => (
+                <TimelineItem key={item.id} item={item} />
+              ))}
+            </CollapsibleContent>
+          </div>
+
+          {hasMore && (
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="mt-3 w-full">
+                {isOpen ? "Minder tonen" : `Toon alles (${sortedHistory.length})`}
+                <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
+          )}
+
+          {/* Summary */}
+          <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm text-muted-foreground">
+            <span>{sortedHistory.length} gebeurtenissen</span>
+            <span>
+              Aangemaakt op {format(new Date(sortedHistory[sortedHistory.length - 1].created_at), "d MMMM yyyy", { locale: nl })}
+            </span>
+          </div>
+        </Collapsible>
+      </div>
+    );
+  }
 
   return (
     <Card className={cn("", className)}>
