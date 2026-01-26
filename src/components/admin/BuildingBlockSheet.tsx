@@ -75,6 +75,8 @@ const formSchema = z.object({
   price_pet_note: z.string().optional(),
   is_from_price: z.boolean(),
   price_display_override: z.string().optional(),
+  price_includes_vat: z.boolean(),
+  vat_rate: z.coerce.number(),
   external_url: z.string().url().optional().or(z.literal("")),
   image_url: z.string().optional(),
   image_asset: z.string().optional(),
@@ -139,6 +141,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       price_pet_note: "",
       is_from_price: false,
       price_display_override: "",
+      price_includes_vat: true,
+      vat_rate: 21,
       external_url: "",
       image_url: "",
       image_asset: "",
@@ -173,6 +177,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         price_pet_note: block.price_pet_note || "",
         is_from_price: block.is_from_price ?? false,
         price_display_override: block.price_display_override || "",
+        price_includes_vat: block.price_includes_vat ?? true,
+        vat_rate: block.vat_rate ?? 21,
         external_url: block.external_url || "",
         image_url: block.image_url || "",
         image_asset: block.image_asset || "",
@@ -203,6 +209,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         price_pet_note: "",
         is_from_price: false,
         price_display_override: "",
+        price_includes_vat: true,
+        vat_rate: 21,
         external_url: "",
         image_url: "",
         image_asset: "",
@@ -588,6 +596,58 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                       </FormItem>
                     )}
                   />
+                  
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">BTW Instellingen</h4>
+                    <FormField
+                      control={form.control}
+                      name="price_includes_vat"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <FormLabel>Prijs is inclusief BTW</FormLabel>
+                            <FormDescription>
+                              Typisch voor partnerprijzen
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="vat_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>BTW Tarief</FormLabel>
+                          <Select 
+                            onValueChange={(val) => field.onChange(Number(val))} 
+                            value={String(field.value)}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="21">21% (standaard)</SelectItem>
+                              <SelectItem value="9">9% (voedsel/boeken)</SelectItem>
+                              <SelectItem value="0">0% (vrijgesteld)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   <Separator />
                   
