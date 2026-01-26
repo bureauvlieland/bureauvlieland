@@ -22,7 +22,8 @@ import {
   LogOut, 
   Building2,
   Menu,
-  ShieldCheck
+  ShieldCheck,
+  Receipt,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -50,7 +51,8 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   const urlSuffix = impersonateParam ? `?impersonate=${impersonateParam}` : "";
 
   const menuItems = [
-    { title: "Dashboard", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
     { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
   ];
 

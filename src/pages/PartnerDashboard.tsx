@@ -9,6 +9,7 @@ import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { StatusUpdateDialog } from "@/components/partner-portal/StatusUpdateDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, RefreshCw, Bell } from "lucide-react";
@@ -286,48 +287,50 @@ const PartnerDashboardContent = () => {
         />
 
         <Tabs defaultValue="pending" className="mt-8">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="pending" className="relative">
-              Te bevestigen
-              {pendingItems.length > 0 && (
-                <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                  {pendingItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="waiting">
-              Wacht op klant
-              {waitingItems.length > 0 && (
-                <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {waitingItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="confirmed">
-              Bevestigd
-              {confirmedItems.length > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {confirmedItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="processed">
-              Afgehandeld
-              {processedItems.length > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {processedItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="invoiced">
-              Gefactureerd
-              {invoicedItems.length > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {invoicedItems.length}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-5">
+              <TabsTrigger value="pending" className="relative">
+                Te bevestigen
+                {pendingItems.length > 0 && (
+                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                    {pendingItems.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="waiting">
+                Wacht op klant
+                {waitingItems.length > 0 && (
+                  <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {waitingItems.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="confirmed">
+                Bevestigd
+                {confirmedItems.length > 0 && (
+                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                    {confirmedItems.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="processed">
+                Afgehandeld
+                {processedItems.length > 0 && (
+                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                    {processedItems.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="invoiced">
+                Gefactureerd
+                {invoicedItems.length > 0 && (
+                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                    {invoicedItems.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </ScrollArea>
 
           <TabsContent value="pending" className="mt-6 space-y-4">
             {pendingItems.length === 0 ? (

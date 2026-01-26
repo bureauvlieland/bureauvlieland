@@ -10,10 +10,11 @@ import {
   Phone,
   FileText,
   CheckCircle,
-  XCircle,
   MessageSquare,
   Bell,
   RefreshCw,
+  Timer,
+  Sparkles,
 } from "lucide-react";
 import { format, parseISO, differenceInHours } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -47,6 +48,17 @@ const isRecentlyModified = (item: PartnerItem): boolean => {
   return false;
 };
 
+// Check if item is newly added (within last 24 hours and pending)
+const isNewlyAdded = (item: PartnerItem): boolean => {
+  if (item.status !== "pending" || item.version > 1) return false;
+  
+  if (item.created_at) {
+    const hoursSinceCreation = differenceInHours(new Date(), parseISO(item.created_at));
+    return hoursSinceCreation < 24;
+  }
+  return false;
+};
+
 export const PartnerItemCard = ({
   item,
   onConfirm,
@@ -59,7 +71,8 @@ export const PartnerItemCard = ({
   const activityDate = dates[item.day_index];
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
   const recentlyModified = isRecentlyModified(item);
-
+  const newlyAdded = isNewlyAdded(item);
+  const duration = item.duration;
   return (
     <Card className={recentlyModified ? "border-amber-300 dark:border-amber-700" : ""}>
       <CardHeader className="pb-3">
@@ -78,6 +91,12 @@ export const PartnerItemCard = ({
             <p className="text-sm text-muted-foreground mt-1">{item.block_category}</p>
           </div>
           <div className="flex items-center gap-2">
+            {newlyAdded && !recentlyModified && (
+              <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 border-purple-300">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Nieuw
+              </Badge>
+            )}
             {recentlyModified && (
               <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border-amber-300">
                 <Bell className="h-3 w-3 mr-1" />
@@ -138,6 +157,12 @@ export const PartnerItemCard = ({
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span>{item.preferred_time}</span>
+            </div>
+          )}
+          {duration && (
+            <div className="flex items-center gap-2">
+              <Timer className="h-4 w-4 text-muted-foreground" />
+              <span>{duration}</span>
             </div>
           )}
         </div>

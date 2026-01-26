@@ -33,6 +33,7 @@ export interface PartnerItem {
   version: number;
   created_at: string;
   updated_at: string;
+  duration: string | null;
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;
