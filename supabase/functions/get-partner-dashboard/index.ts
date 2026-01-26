@@ -76,19 +76,20 @@ serve(async (req) => {
       (item) => item.program_requests?.status !== "cancelled"
     ) || [];
 
-    // Group items by status for easy display
+    // Group items by status for easy display (new status flow)
     const pendingConfirmation = activeItems.filter((i) => i.status === "pending");
-    const alternative = activeItems.filter((i) => i.status === "alternative");
-    const confirmed = activeItems.filter((i) => i.status === "confirmed");
+    const confirmed = activeItems.filter((i) => i.status === "confirmed"); // Waiting for customer acceptance
+    const accepted = activeItems.filter((i) => i.status === "accepted");
+    const executed = activeItems.filter((i) => i.status === "executed");
+    const invoiced = activeItems.filter((i) => i.status === "invoiced" || i.invoiced_number !== null);
     const closed = activeItems.filter((i) => ["unavailable", "cancelled"].includes(i.status));
     
-    // Items ready for invoice: confirmed AND customer has accepted terms
+    // Items ready for invoice: executed AND customer has accepted terms
     const readyForInvoice = activeItems.filter(
-      (i) => i.status === "confirmed" && 
+      (i) => i.status === "executed" && 
              !i.invoiced_number && 
              i.program_requests?.terms_accepted_at !== null
     );
-    const invoiced = activeItems.filter((i) => i.invoiced_number !== null);
 
     return new Response(
       JSON.stringify({
@@ -101,8 +102,9 @@ serve(async (req) => {
         items: activeItems,
         summary: {
           pending: pendingConfirmation.length,
-          alternative: alternative.length,
           confirmed: confirmed.length,
+          accepted: accepted.length,
+          executed: executed.length,
           closed: closed.length,
           readyForInvoice: readyForInvoice.length,
           invoiced: invoiced.length,

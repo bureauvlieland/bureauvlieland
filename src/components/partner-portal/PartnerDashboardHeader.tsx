@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Bell, MessageSquare, CheckCircle, Receipt } from "lucide-react";
+import { Building2, Bell, CheckCircle, Receipt, Play } from "lucide-react";
 
 interface PartnerDashboardHeaderProps {
   partner: {
@@ -10,8 +10,9 @@ interface PartnerDashboardHeaderProps {
   };
   summary: {
     pending: number;
-    alternative: number;
     confirmed: number;
+    accepted: number;
+    executed: number;
     closed: number;
     readyForInvoice: number;
     invoiced: number;
@@ -30,11 +31,6 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
         <div>
           <h1 className="text-2xl font-bold">{partner.name}</h1>
           <p className="text-muted-foreground">{partner.email}</p>
-          {partner.commission_percentage > 0 && (
-            <p className="text-sm text-muted-foreground">
-              Commissie: {partner.commission_percentage}%
-            </p>
-          )}
         </div>
       </div>
 
@@ -58,11 +54,11 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.alternative}</p>
-                <p className="text-xs text-muted-foreground">In behandeling</p>
+                <p className="text-2xl font-bold">{summary.confirmed}</p>
+                <p className="text-xs text-muted-foreground">Wacht op klant</p>
               </div>
             </div>
           </CardContent>
@@ -72,11 +68,11 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-950 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <Play className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.confirmed}</p>
-                <p className="text-xs text-muted-foreground">Bevestigd</p>
+                <p className="text-2xl font-bold">{summary.accepted + summary.executed}</p>
+                <p className="text-xs text-muted-foreground">Akkoord</p>
               </div>
             </div>
           </CardContent>

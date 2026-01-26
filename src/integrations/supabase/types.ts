@@ -420,6 +420,7 @@ export type Database = {
           commission_percentage: number | null
           commission_status: string | null
           created_at: string
+          customer_accepted_at: string | null
           customer_notes: string | null
           day_index: number
           duration: string | null
@@ -456,6 +457,7 @@ export type Database = {
           commission_percentage?: number | null
           commission_status?: string | null
           created_at?: string
+          customer_accepted_at?: string | null
           customer_notes?: string | null
           day_index?: number
           duration?: string | null
@@ -492,6 +494,7 @@ export type Database = {
           commission_percentage?: number | null
           commission_status?: string | null
           created_at?: string
+          customer_accepted_at?: string | null
           customer_notes?: string | null
           day_index?: number
           duration?: string | null

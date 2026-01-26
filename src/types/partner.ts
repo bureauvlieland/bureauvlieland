@@ -26,10 +26,11 @@ export interface PartnerItem {
   day_index: number;
   preferred_time: string | null;
   customer_notes: string | null;
-  status: string;
+  status: string; // pending | confirmed | accepted | executed | invoiced | unavailable | cancelled
   status_note: string | null;
   status_updated_at: string | null;
   executed_at: string | null;
+  customer_accepted_at: string | null; // When customer accepted the partner's proposal
   version: number;
   created_at: string;
   updated_at: string;
@@ -87,8 +88,9 @@ export interface PartnerDashboardData {
   items: PartnerItem[];
   summary: {
     pending: number;
-    alternative: number;
     confirmed: number;
+    accepted: number;
+    executed: number;
     closed: number;
     readyForInvoice: number;
     invoiced: number;
