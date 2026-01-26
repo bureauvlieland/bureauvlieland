@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Building2, Save, KeyRound, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PartnerTermsUpload } from "./PartnerTermsUpload";
 
 interface PartnerDetails {
   id: string;
@@ -19,6 +19,8 @@ interface PartnerDetails {
   address_postal: string | null;
   address_city: string | null;
   commission_percentage: number;
+  terms_pdf_path: string | null;
+  terms_uploaded_at: string | null;
 }
 
 export const PartnerSettingsForm = () => {
@@ -47,65 +49,65 @@ export const PartnerSettingsForm = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const fetchPartner = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+  const fetchPartner = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
-      // Check if admin is impersonating
-      const impersonatePartnerId = searchParams.get("impersonate");
+    // Check if admin is impersonating
+    const impersonatePartnerId = searchParams.get("impersonate");
+    
+    if (impersonatePartnerId) {
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
       
-      if (impersonatePartnerId) {
-        const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        
-        if (isAdmin) {
-          const { data, error } = await supabase
-            .from("partners")
-            .select("*")
-            .eq("id", impersonatePartnerId)
-            .single();
+      if (isAdmin) {
+        const { data, error } = await supabase
+          .from("partners")
+          .select("*")
+          .eq("id", impersonatePartnerId)
+          .single();
 
-          if (data && !error) {
-            setPartner(data);
-            setFormData({
-              name: data.name || "",
-              phone: data.phone || "",
-              kvk_number: data.kvk_number || "",
-              address_street: data.address_street || "",
-              address_postal: data.address_postal || "",
-              address_city: data.address_city || "",
-            });
-            setIsImpersonating(true);
-          }
-          setIsLoading(false);
-          return;
+        if (data && !error) {
+          setPartner(data);
+          setFormData({
+            name: data.name || "",
+            phone: data.phone || "",
+            kvk_number: data.kvk_number || "",
+            address_street: data.address_street || "",
+            address_postal: data.address_postal || "",
+            address_city: data.address_city || "",
+          });
+          setIsImpersonating(true);
         }
+        setIsLoading(false);
+        return;
       }
+    }
 
-      // Regular partner flow
-      const { data, error } = await supabase
-        .from("partners")
-        .select("*")
-        .eq("auth_user_id", session.user.id)
-        .eq("is_active", true)
-        .single();
+    // Regular partner flow
+    const { data, error } = await supabase
+      .from("partners")
+      .select("*")
+      .eq("auth_user_id", session.user.id)
+      .eq("is_active", true)
+      .single();
 
-      if (data && !error) {
-        setPartner(data);
-        setFormData({
-          name: data.name || "",
-          phone: data.phone || "",
-          kvk_number: data.kvk_number || "",
-          address_street: data.address_street || "",
-          address_postal: data.address_postal || "",
-          address_city: data.address_city || "",
-        });
-      }
-      setIsLoading(false);
-    };
-
-    fetchPartner();
+    if (data && !error) {
+      setPartner(data);
+      setFormData({
+        name: data.name || "",
+        phone: data.phone || "",
+        kvk_number: data.kvk_number || "",
+        address_street: data.address_street || "",
+        address_postal: data.address_postal || "",
+        address_city: data.address_city || "",
+      });
+    }
+    setIsLoading(false);
   }, [searchParams]);
+
+  useEffect(() => {
+    fetchPartner();
+  }, [fetchPartner]);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -340,6 +342,14 @@ export const PartnerSettingsForm = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Partner Terms PDF Upload */}
+      <PartnerTermsUpload
+        partnerId={partner.id}
+        termsPdfPath={partner.terms_pdf_path}
+        termsUploadedAt={partner.terms_uploaded_at}
+        onUpdate={fetchPartner}
+      />
 
       {/* Password change - only show for non-impersonating */}
       {!isImpersonating && (

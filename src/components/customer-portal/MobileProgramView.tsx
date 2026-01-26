@@ -64,7 +64,7 @@ interface MobileProgramViewProps {
   onOpenEdit: () => void;
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
-  onAcceptTerms: () => Promise<boolean>;
+  onAcceptTerms: (signatureName: string) => Promise<boolean>;
 }
 
 export const MobileProgramView = ({
@@ -124,6 +124,7 @@ export const MobileProgramView = ({
           onAccept={onAcceptTerms}
           isBillingComplete={billingComplete}
           onOpenBilling={onOpenBilling}
+          items={program.items}
         />
       )}
 

@@ -159,12 +159,12 @@ const CustomerProgram = () => {
     return success;
   };
 
-  const handleAcceptTerms = async () => {
-    const success = await acceptTerms();
+  const handleAcceptTerms = async (signatureName: string) => {
+    const success = await acceptTerms(signatureName);
 
     if (success) {
       toast({
-        title: "Voorwaarden geaccepteerd",
+        title: "Boeking ondertekend",
         description: "Je boeking is nu definitief bevestigd. Je ontvangt een bevestigingsmail.",
       });
     } else {

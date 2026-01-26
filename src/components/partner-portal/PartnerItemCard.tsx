@@ -12,8 +12,10 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
+  Bell,
+  RefreshCw,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
 
@@ -33,6 +35,18 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   cancelled: { label: "Geannuleerd", variant: "destructive" },
 };
 
+// Check if item was recently modified (reset to pending with new version)
+const isRecentlyModified = (item: PartnerItem): boolean => {
+  if (item.status !== "pending" || item.version <= 1) return false;
+  
+  // Check if updated within last 48 hours
+  if (item.updated_at) {
+    const hoursSinceUpdate = differenceInHours(new Date(), parseISO(item.updated_at));
+    return hoursSinceUpdate < 48;
+  }
+  return false;
+};
+
 export const PartnerItemCard = ({
   item,
   onConfirm,
@@ -44,16 +58,34 @@ export const PartnerItemCard = ({
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
+  const recentlyModified = isRecentlyModified(item);
 
   return (
-    <Card>
+    <Card className={recentlyModified ? "border-amber-300 dark:border-amber-700" : ""}>
       <CardHeader className="pb-3">
+        {recentlyModified && (
+          <div className="flex items-center gap-2 mb-2 px-3 py-2 -mx-2 -mt-2 rounded-t-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+            <RefreshCw className="h-4 w-4" />
+            <span className="text-sm font-medium">Gewijzigd door klant</span>
+            <Badge variant="outline" className="ml-auto text-xs border-amber-300 dark:border-amber-700">
+              Versie {item.version}
+            </Badge>
+          </div>
+        )}
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-lg">{item.block_name}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">{item.block_category}</p>
           </div>
-          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+          <div className="flex items-center gap-2">
+            {recentlyModified && (
+              <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border-amber-300">
+                <Bell className="h-3 w-3 mr-1" />
+                Actie vereist
+              </Badge>
+            )}
+            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+          </div>
         </div>
       </CardHeader>
 

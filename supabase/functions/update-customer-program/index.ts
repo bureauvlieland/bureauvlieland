@@ -120,15 +120,22 @@ serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, acceptTerms, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, acceptTerms, signatureName, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
       programDetails?: ProgramDetailsUpdate;
       billingDetails?: BillingDetailsUpdate;
       acceptTerms?: boolean;
+      signatureName?: string;
       origin?: string;
     };
+    
+    // Get client IP and user agent for signature audit
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("x-real-ip") || 
+                     "unknown";
+    const userAgent = req.headers.get("user-agent") || "unknown";
     
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
@@ -313,26 +320,39 @@ serve(async (req) => {
       });
     }
 
-    // Handle terms acceptance
+    // Handle terms acceptance with digital signature
     if (acceptTerms) {
-      const termsVersion = "2025-01"; // Version identifier for tracking
+      const termsVersion = "2026-01"; // Version identifier for tracking
+      
+      // Generate unique signature ID
+      const signatureId = `SIG-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, "0")}`;
 
       await supabase
         .from("program_requests")
         .update({
           terms_accepted_at: new Date().toISOString(),
           terms_version: termsVersion,
+          signature_name: signatureName || null,
+          signature_ip: clientIp,
+          signature_user_agent: userAgent,
+          signature_id: signatureId,
           updated_at: new Date().toISOString(),
         })
         .eq("id", program.id);
 
-      // Log to history
+      // Log to history with signature details
       await supabase.from("program_request_history").insert({
         request_id: program.id,
         action: "terms_accepted",
         actor: "customer",
-        actor_name: program.customer_name,
-        notes: `Algemene voorwaarden geaccepteerd (versie ${termsVersion})`,
+        actor_name: signatureName || program.customer_name,
+        notes: `Digitaal ondertekend (${signatureId}) - Voorwaarden versie ${termsVersion}`,
+        new_value: {
+          signature_id: signatureId,
+          signature_name: signatureName,
+          signature_ip: clientIp,
+          terms_version: termsVersion,
+        },
       });
 
       // Resolve any terms_reminder todos
@@ -453,7 +473,15 @@ serve(async (req) => {
         });
       }
 
-      // Customer confirmation email
+      // Customer confirmation email with signature details
+      const signatureDate = new Date().toLocaleDateString("nl-NL", { 
+        day: "numeric", 
+        month: "long", 
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
       emailMessages.push({
         From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: program.customer_email, Name: program.customer_name }],
@@ -469,6 +497,20 @@ serve(async (req) => {
               <p><strong>Datum:</strong> ${selectedDates}</p>
               <p><strong>Aantal personen:</strong> ${program.number_of_people}</p>
               <p><strong>Aantal activiteiten:</strong> ${confirmedItems?.length || 0}</p>
+            </div>
+
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #2563eb;">
+              <h3 style="margin-top: 0;">Digitale handtekening</h3>
+              <table style="width: 100%; font-size: 14px;">
+                <tr><td style="padding: 4px 0;"><strong>Handtekening-ID:</strong></td><td>${signatureId}</td></tr>
+                <tr><td style="padding: 4px 0;"><strong>Ondertekend door:</strong></td><td>${sanitizeHtml(signatureName || program.customer_name)}</td></tr>
+                <tr><td style="padding: 4px 0;"><strong>Datum/tijd:</strong></td><td>${signatureDate}</td></tr>
+                <tr><td style="padding: 4px 0;"><strong>Voorwaarden versie:</strong></td><td>${termsVersion}</td></tr>
+              </table>
+              <p style="font-size: 12px; color: #666; margin-top: 12px; margin-bottom: 0;">
+                Dit document dient als bewijs van je digitale akkoord op de algemene voorwaarden van Bureau Vlieland
+                ${providerItems.size > 0 ? ` en de voorwaarden van ${providerItems.size} betrokken partner(s)` : ""}.
+              </p>
             </div>
             
             <p style="color: #666; font-size: 14px;">

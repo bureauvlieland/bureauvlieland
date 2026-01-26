@@ -30,6 +30,9 @@ export interface PartnerItem {
   status_note: string | null;
   status_updated_at: string | null;
   executed_at: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;
@@ -42,8 +45,6 @@ export interface PartnerItem {
   commission_percentage: number | null;
   commission_amount: number | null;
   commission_status: string | null;
-  created_at: string;
-  updated_at: string;
   program_requests: {
     id: string;
     customer_name: string;
