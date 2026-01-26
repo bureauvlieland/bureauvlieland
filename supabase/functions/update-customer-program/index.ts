@@ -14,6 +14,11 @@ interface PendingChange {
   providerEmail?: string;
   oldValue?: string;
   newValue?: string;
+  // For added items
+  blockId?: string;
+  dayIndex?: number;
+  preferredTime?: string | null;
+  notes?: string;
 }
 
 interface ProgramDetailsUpdate {
@@ -533,9 +538,112 @@ serve(async (req) => {
 
     // Handle item changes
     if (changes && items && changes.length > 0) {
-      for (const item of items) {
-        const change = changes.find((c) => c.itemId === item.id);
-        if (!change) continue;
+      for (const change of changes) {
+        const item = items.find((i) => i.id === change.itemId);
+        
+        // Handle newly added items
+        if (change.type === "added" && change.blockId) {
+          // Fetch block data for the new item
+          const { data: block, error: blockError } = await supabase
+            .from("building_blocks")
+            .select(`
+              *,
+              provider:partners(id, name, email)
+            `)
+            .eq("id", change.blockId)
+            .single();
+          
+          if (blockError || !block) {
+            console.error("Error fetching block for added item:", blockError);
+            continue;
+          }
+          
+          // Insert new item into program_request_items
+          const { data: newItem, error: insertError } = await supabase
+            .from("program_request_items")
+            .insert({
+              request_id: program.id,
+              block_id: block.id,
+              block_name: block.name,
+              block_category: block.category,
+              provider_name: block.provider?.name || "Bureau Vlieland",
+              provider_id: block.provider?.id || "bureau",
+              provider_email: block.provider?.email || null,
+              block_type: block.block_type,
+              price_indication: block.price_adult ? `€${block.price_adult}` : null,
+              day_index: change.dayIndex || 0,
+              preferred_time: change.preferredTime || null,
+              customer_notes: change.notes || null,
+              status: "pending",
+              version: 1,
+            })
+            .select()
+            .single();
+          
+          if (insertError) {
+            console.error("Error inserting new item:", insertError);
+            continue;
+          }
+          
+          // Log to history
+          await supabase.from("program_request_history").insert({
+            request_id: program.id,
+            item_id: newItem.id,
+            action: "added",
+            actor: "customer",
+            actor_name: program.customer_name,
+            new_value: { block_name: block.name, day_index: change.dayIndex },
+            notes: `Activiteit toegevoegd: ${block.name}`,
+          });
+          
+          // Send email to provider if applicable
+          if (block.provider?.email && block.block_type !== "self_arranged") {
+            const selectedDates = (program.selected_dates as string[])
+              .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
+              .join(", ");
+            
+            emailMessages.push({
+              From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+              To: [{ Email: getRecipientEmail(block.provider.email, origin), Name: block.provider.name }],
+              Subject: `${subjectPrefix}Nieuwe activiteit toegevoegd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+              HTMLPart: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2>Nieuwe activiteit toegevoegd</h2>
+                  <p>Beste ${sanitizeHtml(block.provider.name)},</p>
+                  <p>De klant heeft een nieuwe activiteit aan hun programma toegevoegd:</p>
+                  
+                  <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                    <h3 style="margin-top: 0;">${sanitizeHtml(block.name)}</h3>
+                    <p><strong>Datum:</strong> ${selectedDates}</p>
+                    <p><strong>Personen:</strong> ${program.number_of_people}</p>
+                    ${change.preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${change.preferredTime}</p>` : ""}
+                    ${change.notes ? `<p><strong>Opmerking:</strong> ${sanitizeHtml(change.notes)}</p>` : ""}
+                  </div>
+                  
+                  <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
+                  
+                  <h3>Klantgegevens</h3>
+                  <table style="width: 100%;">
+                    <tr><td style="padding: 4px 0;"><strong>Naam:</strong></td><td>${sanitizeHtml(program.customer_name)}</td></tr>
+                    <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(program.customer_company || "-")}</td></tr>
+                    <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(program.customer_email)}</td></tr>
+                    <tr><td style="padding: 4px 0;"><strong>Telefoon:</strong></td><td>${sanitizeHtml(program.customer_phone)}</td></tr>
+                  </table>
+                  
+                  <p style="margin-top: 24px; color: #666;">
+                    Reageer via de Partner Portal of neem direct contact op met de klant.
+                  </p>
+                  
+                  <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+                </div>
+              `,
+            });
+          }
+          
+          continue;
+        }
+        
+        if (!item) continue;
 
         // For cancelled items, update status
         if (change.type === "removed") {

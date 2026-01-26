@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { AcceptTermsCard } from "./AcceptTermsCard";
 import { NextStepsCard } from "./NextStepsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
+import { AddActivitySheet } from "./AddActivitySheet";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -22,6 +24,7 @@ import {
   Pencil,
   Building2,
   Send,
+  Plus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -65,6 +68,7 @@ interface DesktopProgramViewProps {
   onSubmitChanges: () => void;
   onRefresh: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
+  onAddActivity: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
 }
 
 export const DesktopProgramView = ({
@@ -86,7 +90,9 @@ export const DesktopProgramView = ({
   onSubmitChanges,
   onRefresh,
   onAcceptTerms,
+  onAddActivity,
 }: DesktopProgramViewProps) => {
+  const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const termsAccepted = !!program.terms_accepted_at;
   const billingComplete = !!(
     program.billing_company_name &&
@@ -128,9 +134,21 @@ export const DesktopProgramView = ({
                   <Calendar className="h-5 w-5 text-primary" />
                   Je Programma
                 </CardTitle>
-                <Badge variant="secondary">
-                  {statusSummary.total} activiteiten
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {!termsAccepted && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddActivityOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Toevoegen
+                    </Button>
+                  )}
+                  <Badge variant="secondary">
+                    {statusSummary.total} activiteiten
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -350,6 +368,15 @@ export const DesktopProgramView = ({
         onCancel={onOpenCancel}
         items={program.items}
         numberOfPeople={program.number_of_people}
+      />
+
+      {/* Add Activity Sheet */}
+      <AddActivitySheet
+        open={isAddActivityOpen}
+        onOpenChange={setIsAddActivityOpen}
+        selectedDates={selectedDates}
+        existingBlockIds={program.items.map((item) => item.block_id)}
+        onAddActivity={onAddActivity}
       />
     </div>
   );
