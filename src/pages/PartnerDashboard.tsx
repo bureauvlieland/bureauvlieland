@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerDashboardHeader } from "@/components/partner-portal/PartnerDashboardHeader";
+import { PartnerFinancialSummary } from "@/components/partner-portal/PartnerFinancialSummary";
 import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { StatusUpdateDialog } from "@/components/partner-portal/StatusUpdateDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
@@ -264,11 +265,25 @@ const PartnerDashboardContent = () => {
       <div className="p-6">
         <div className="flex justify-between items-start mb-6">
           <PartnerDashboardHeader partner={data.partner} summary={data.summary} />
-          <Button onClick={refetchDashboard} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Vernieuwen
-          </Button>
+          <div className="flex items-center gap-2">
+            {pendingItems.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                <Bell className="h-4 w-4" />
+                <span>{pendingItems.length} nieuwe aanvra{pendingItems.length === 1 ? "ag" : "gen"}</span>
+              </div>
+            )}
+            <Button onClick={refetchDashboard} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Vernieuwen
+            </Button>
+          </div>
         </div>
+
+        {/* Financial Summary */}
+        <PartnerFinancialSummary
+          items={data.items}
+          commissionPercentage={data.partner.commission_percentage}
+        />
 
         <Tabs defaultValue="pending" className="mt-8">
           <TabsList className="grid w-full grid-cols-5">

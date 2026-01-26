@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Collapsible, 
   CollapsibleContent, 
   CollapsibleTrigger 
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   ChevronDown, 
   Clock, 
@@ -18,8 +20,11 @@ import {
   Calendar,
   Users,
   Ban,
-  History
+  History,
+  FileText,
+  CreditCard
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ProgramRequestHistory } from "@/types/programRequest";
 
 interface ProgramHistoryTimelineProps {
@@ -27,23 +32,25 @@ interface ProgramHistoryTimelineProps {
   className?: string;
 }
 
-const actionConfig: Record<string, { icon: typeof Clock; label: string; color: string }> = {
-  created: { icon: Send, label: "Aanvraag ingediend", color: "text-primary" },
-  status_changed: { icon: CheckCircle, label: "Status gewijzigd", color: "text-green-600" },
-  confirmed: { icon: CheckCircle, label: "Bevestigd door aanbieder", color: "text-green-600" },
-  unavailable: { icon: XCircle, label: "Niet beschikbaar", color: "text-red-600" },
-  alternative: { icon: MessageSquare, label: "Alternatief voorgesteld", color: "text-blue-600" },
-  time_changed: { icon: Clock, label: "Tijd gewijzigd", color: "text-amber-600" },
-  day_changed: { icon: Calendar, label: "Dag gewijzigd", color: "text-amber-600" },
-  notes_changed: { icon: Edit, label: "Opmerking gewijzigd", color: "text-muted-foreground" },
-  removed: { icon: Ban, label: "Activiteit verwijderd", color: "text-red-600" },
-  cancelled: { icon: Ban, label: "Geannuleerd", color: "text-red-600" },
-  people_changed: { icon: Users, label: "Aantal personen gewijzigd", color: "text-amber-600" },
-  dates_changed: { icon: Calendar, label: "Datums gewijzigd", color: "text-amber-600" },
+const actionConfig: Record<string, { icon: typeof Clock; label: string; color: string; bgColor: string }> = {
+  created: { icon: Send, label: "Aanvraag ingediend", color: "text-primary", bgColor: "bg-primary/10" },
+  status_changed: { icon: CheckCircle, label: "Status gewijzigd", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
+  confirmed: { icon: CheckCircle, label: "Bevestigd door aanbieder", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
+  unavailable: { icon: XCircle, label: "Niet beschikbaar", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900" },
+  alternative: { icon: MessageSquare, label: "Alternatief voorgesteld", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900" },
+  time_changed: { icon: Clock, label: "Tijd gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  day_changed: { icon: Calendar, label: "Dag gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  notes_changed: { icon: Edit, label: "Opmerking gewijzigd", color: "text-muted-foreground", bgColor: "bg-muted" },
+  removed: { icon: Ban, label: "Activiteit verwijderd", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900" },
+  cancelled: { icon: Ban, label: "Geannuleerd", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900" },
+  people_changed: { icon: Users, label: "Aantal personen gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  dates_changed: { icon: Calendar, label: "Datums gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  billing_updated: { icon: FileText, label: "Facturatiegegevens bijgewerkt", color: "text-muted-foreground", bgColor: "bg-muted" },
+  terms_accepted: { icon: CreditCard, label: "Voorwaarden geaccepteerd", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
 };
 
 const getActionDetails = (action: string) => {
-  return actionConfig[action] || { icon: History, label: action, color: "text-muted-foreground" };
+  return actionConfig[action] || { icon: History, label: action, color: "text-muted-foreground", bgColor: "bg-muted" };
 };
 
 export const ProgramHistoryTimeline = ({ history, className = "" }: ProgramHistoryTimelineProps) => {
@@ -60,44 +67,66 @@ export const ProgramHistoryTimeline = ({ history, className = "" }: ProgramHisto
   const previewItems = sortedHistory.slice(0, 3);
   const hasMore = sortedHistory.length > 3;
 
+  // Count recent activity (last 7 days)
+  const recentCount = sortedHistory.filter(
+    item => new Date(item.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  ).length;
+
   return (
-    <div className={className}>
+    <Card className={cn("", className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Geschiedenis
-          </h3>
-          {hasMore && (
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm">
-                {isOpen ? "Minder tonen" : `Toon alles (${sortedHistory.length})`}
-                <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-              </Button>
-            </CollapsibleTrigger>
-          )}
-        </div>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Geschiedenis
+              {recentCount > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {recentCount} recent
+                </Badge>
+              )}
+            </CardTitle>
+            {hasMore && (
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {isOpen ? "Minder tonen" : `Toon alles (${sortedHistory.length})`}
+                  <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+            )}
+          </div>
+        </CardHeader>
 
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-4 top-2 bottom-2 w-px bg-border" />
+        <CardContent>
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-4 top-2 bottom-2 w-px bg-border" />
 
-          {/* Preview items (always visible) */}
-          <div className="space-y-4">
-            {previewItems.map((item, index) => (
-              <TimelineItem key={item.id} item={item} isFirst={index === 0} />
-            ))}
+            {/* Preview items (always visible) */}
+            <div className="space-y-4">
+              {previewItems.map((item, index) => (
+                <TimelineItem key={item.id} item={item} isFirst={index === 0} />
+              ))}
+            </div>
+
+            {/* Collapsible items */}
+            <CollapsibleContent className="space-y-4 mt-4">
+              {sortedHistory.slice(3).map((item) => (
+                <TimelineItem key={item.id} item={item} />
+              ))}
+            </CollapsibleContent>
           </div>
 
-          {/* Collapsible items */}
-          <CollapsibleContent className="space-y-4 mt-4">
-            {sortedHistory.slice(3).map((item) => (
-              <TimelineItem key={item.id} item={item} />
-            ))}
-          </CollapsibleContent>
-        </div>
+          {/* Summary */}
+          <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm text-muted-foreground">
+            <span>{sortedHistory.length} gebeurtenissen</span>
+            <span>
+              Aangemaakt op {format(new Date(sortedHistory[sortedHistory.length - 1].created_at), "d MMMM yyyy", { locale: nl })}
+            </span>
+          </div>
+        </CardContent>
       </Collapsible>
-    </div>
+    </Card>
   );
 };
 
@@ -107,7 +136,7 @@ interface TimelineItemProps {
 }
 
 const TimelineItem = ({ item, isFirst = false }: TimelineItemProps) => {
-  const { icon: Icon, label, color } = getActionDetails(item.action);
+  const { icon: Icon, label, color, bgColor } = getActionDetails(item.action);
   const date = new Date(item.created_at);
 
   // Format the change details
@@ -138,17 +167,27 @@ const TimelineItem = ({ item, isFirst = false }: TimelineItemProps) => {
   return (
     <div className="relative pl-10">
       {/* Icon circle */}
-      <div className={`absolute left-0 w-8 h-8 rounded-full bg-background border-2 flex items-center justify-center ${isFirst ? "border-primary" : "border-muted"}`}>
-        <Icon className={`h-4 w-4 ${isFirst ? "text-primary" : color}`} />
+      <div className={cn(
+        "absolute left-0 w-8 h-8 rounded-full flex items-center justify-center border-2",
+        isFirst ? "border-primary bg-primary/10" : "border-muted bg-background",
+        bgColor
+      )}>
+        <Icon className={cn("h-4 w-4", isFirst ? "text-primary" : color)} />
       </div>
 
       {/* Content */}
-      <div className="bg-muted/30 rounded-lg p-3">
+      <div className={cn(
+        "rounded-lg p-3 transition-colors",
+        isFirst ? "bg-primary/5 border border-primary/20" : "bg-muted/30"
+      )}>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="font-medium">{label}</span>
           <span className="text-muted-foreground">
             {format(date, "d MMM yyyy, HH:mm", { locale: nl })}
           </span>
+          {isFirst && (
+            <Badge variant="outline" className="text-xs">Nieuwste</Badge>
+          )}
         </div>
 
         {getChangeDescription() && (
