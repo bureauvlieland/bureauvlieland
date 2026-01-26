@@ -16,6 +16,7 @@ import { AcceptTermsCard } from "@/components/customer-portal/AcceptTermsCard";
 import { ProgramHistoryTimeline } from "@/components/customer-portal/ProgramHistoryTimeline";
 import { InvoiceProvidersCard } from "@/components/customer-portal/InvoiceProvidersCard";
 import { PriceSummaryCard } from "@/components/customer-portal/PriceSummaryCard";
+import { NextStepsCard } from "@/components/customer-portal/NextStepsCard";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useToast } from "@/hooks/use-toast";
@@ -308,6 +309,20 @@ const CustomerProgram = () => {
           className="mb-6"
         />
 
+        {/* Next steps card */}
+        <NextStepsCard
+          statusSummary={statusSummary}
+          termsAccepted={!!(program as any).terms_accepted_at}
+          billingComplete={!!(
+            (program as any).billing_company_name &&
+            (program as any).billing_address_street &&
+            (program as any).billing_address_postal &&
+            (program as any).billing_address_city &&
+            (program as any).billing_contact_name
+          )}
+          onOpenBilling={() => setShowBillingDialog(true)}
+        />
+
         {/* Accept terms card - shows when all confirmed and terms not yet accepted */}
         {statusSummary.pending === 0 && 
          statusSummary.confirmed > 0 && 
@@ -335,7 +350,7 @@ const CustomerProgram = () => {
         <InvoiceProvidersCard items={program.items} className="mb-6" />
 
         {/* Price summary */}
-        <PriceSummaryCard items={program.items} />
+        <PriceSummaryCard items={program.items} numberOfPeople={program.number_of_people} />
 
         {/* Program details card */}
         <Card className="mb-6">
