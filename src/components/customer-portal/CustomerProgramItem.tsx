@@ -16,7 +16,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ItemStatusBadge } from "./ItemStatusBadge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2 } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -120,6 +120,12 @@ export const CustomerProgramItem = ({
                 ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
                 : "Flexibel"}
             </span>
+            {item.duration && (
+              <span className="flex items-center gap-1">
+                <Timer className="h-3.5 w-3.5" />
+                {item.duration}
+              </span>
+            )}
             {/* Show quoted price if available (confirmed by partner), otherwise show price indication */}
             {item.quoted_price ? (
               <span className="font-semibold text-green-700 dark:text-green-500">
