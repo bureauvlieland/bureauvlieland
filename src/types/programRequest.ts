@@ -89,6 +89,9 @@ export interface ProgramRequestItem {
   quoted_price: number | null;
   quoted_at: string | null;
   quoted_notes: string | null;
+  // Image fields (joined from building_blocks)
+  image_url: string | null;
+  image_asset: string | null;
 }
 
 export interface ProgramRequestHistory {
