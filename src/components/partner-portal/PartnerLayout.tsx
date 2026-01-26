@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   SidebarProvider, 
@@ -15,12 +15,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { 
   LayoutDashboard, 
   Settings, 
   LogOut, 
   Building2,
-  Menu
+  Menu,
+  ShieldCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -37,22 +39,27 @@ interface PartnerInfo {
   commission_percentage: number;
 }
 
-const PartnerSidebar = ({ partner, onLogout }: { partner: PartnerInfo; onLogout: () => void }) => {
+const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
+  // Preserve impersonate param in URLs
+  const impersonateParam = searchParams.get("impersonate");
+  const urlSuffix = impersonateParam ? `?impersonate=${impersonateParam}` : "";
+
   const menuItems = [
-    { title: "Dashboard", url: "/partner/dashboard", icon: LayoutDashboard },
-    { title: "Instellingen", url: "/partner/instellingen", icon: Settings },
+    { title: "Dashboard", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname + location.search === path;
 
   return (
     <Sidebar collapsible="icon" className="border-r">
       <div className="p-4 border-b">
-        <Link to="/partner/dashboard" className="flex items-center gap-2">
+        <Link to={`/partner/dashboard${urlSuffix}`} className="flex items-center gap-2">
           {!collapsed && <img src={logoImage} alt="Bureau Vlieland" className="h-8" />}
           {collapsed && (
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -63,6 +70,16 @@ const PartnerSidebar = ({ partner, onLogout }: { partner: PartnerInfo; onLogout:
       </div>
 
       <SidebarContent className="flex flex-col h-[calc(100vh-65px)]">
+        {/* Admin impersonation banner */}
+        {isImpersonating && !collapsed && (
+          <div className="p-3 bg-amber-50 border-b border-amber-200">
+            <div className="flex items-center gap-2 text-amber-800">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="text-xs font-medium">Admin weergave</span>
+            </div>
+          </div>
+        )}
+
         {/* Partner info */}
         {!collapsed && (
           <div className="p-4 border-b">
@@ -99,7 +116,7 @@ const PartnerSidebar = ({ partner, onLogout }: { partner: PartnerInfo; onLogout:
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Logout button at bottom */}
+        {/* Logout/Back button at bottom */}
         <div className="p-4 border-t mt-auto">
           <Button 
             onClick={onLogout} 
@@ -107,7 +124,7 @@ const PartnerSidebar = ({ partner, onLogout }: { partner: PartnerInfo; onLogout:
             className={collapsed ? "w-full p-2" : "w-full justify-start"}
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed && <span className="ml-2">Uitloggen</span>}
+            {!collapsed && <span className="ml-2">{isImpersonating ? "Terug naar admin" : "Uitloggen"}</span>}
           </Button>
         </div>
       </SidebarContent>
@@ -117,9 +134,11 @@ const PartnerSidebar = ({ partner, onLogout }: { partner: PartnerInfo; onLogout:
 
 export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -130,6 +149,39 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
         return;
       }
 
+      // Check if admin is impersonating a partner
+      const impersonatePartnerId = searchParams.get("impersonate");
+      
+      if (impersonatePartnerId) {
+        // Verify user is an admin
+        const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
+        
+        if (isAdmin) {
+          // Fetch the impersonated partner
+          const { data: partnerData, error } = await supabase
+            .from("partners")
+            .select("id, name, email, partner_token, commission_percentage")
+            .eq("id", impersonatePartnerId)
+            .single();
+
+          if (error || !partnerData) {
+            toast({
+              title: "Partner niet gevonden",
+              description: "Deze partner bestaat niet of is niet toegankelijk.",
+              variant: "destructive",
+            });
+            navigate("/admin/partners");
+            return;
+          }
+
+          setPartner(partnerData);
+          setIsImpersonating(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Regular partner login flow
       const { data: partnerData, error } = await supabase
         .from("partners")
         .select("id, name, email, partner_token, commission_percentage")
@@ -155,9 +207,15 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, searchParams, toast]);
 
   const handleLogout = async () => {
+    if (isImpersonating) {
+      // Admin impersonating - just go back to admin
+      navigate("/admin/partners");
+      return;
+    }
+    
     await supabase.auth.signOut();
     toast({
       title: "Uitgelogd",
@@ -184,11 +242,17 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <PartnerSidebar partner={partner} onLogout={handleLogout} />
+        <PartnerSidebar partner={partner} onLogout={handleLogout} isImpersonating={isImpersonating} />
         
         <div className="flex-1 flex flex-col">
           {/* Mobile header */}
           <header className="h-14 border-b flex items-center px-4 lg:hidden">
+            {isImpersonating && (
+              <Badge variant="outline" className="mr-2 bg-amber-50 text-amber-800 border-amber-200">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Admin
+              </Badge>
+            )}
             <SidebarTrigger>
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />

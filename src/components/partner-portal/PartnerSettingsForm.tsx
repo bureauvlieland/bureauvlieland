@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Building2, Save, KeyRound } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Building2, Save, KeyRound, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,10 +23,12 @@ interface PartnerDetails {
 
 export const PartnerSettingsForm = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [partner, setPartner] = useState<PartnerDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -48,6 +52,37 @@ export const PartnerSettingsForm = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Check if admin is impersonating
+      const impersonatePartnerId = searchParams.get("impersonate");
+      
+      if (impersonatePartnerId) {
+        const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
+        
+        if (isAdmin) {
+          const { data, error } = await supabase
+            .from("partners")
+            .select("*")
+            .eq("id", impersonatePartnerId)
+            .single();
+
+          if (data && !error) {
+            setPartner(data);
+            setFormData({
+              name: data.name || "",
+              phone: data.phone || "",
+              kvk_number: data.kvk_number || "",
+              address_street: data.address_street || "",
+              address_postal: data.address_postal || "",
+              address_city: data.address_city || "",
+            });
+            setIsImpersonating(true);
+          }
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Regular partner flow
       const { data, error } = await supabase
         .from("partners")
         .select("*")
@@ -70,7 +105,7 @@ export const PartnerSettingsForm = () => {
     };
 
     fetchPartner();
-  }, []);
+  }, [searchParams]);
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -171,6 +206,19 @@ export const PartnerSettingsForm = () => {
 
   return (
     <div className="space-y-6">
+      {/* Admin impersonation notice */}
+      {isImpersonating && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-amber-800">
+            <ShieldCheck className="h-5 w-5" />
+            <span className="font-medium">Je bekijkt dit als admin</span>
+          </div>
+          <p className="text-sm text-amber-700 mt-1">
+            Wijzigingen die je maakt worden direct opgeslagen voor deze partner.
+          </p>
+        </div>
+      )}
+
       {/* Company details */}
       <Card>
         <CardHeader>
@@ -293,8 +341,9 @@ export const PartnerSettingsForm = () => {
         </CardContent>
       </Card>
 
-      {/* Password change */}
-      <Card>
+      {/* Password change - only show for non-impersonating */}
+      {!isImpersonating && (
+        <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <KeyRound className="h-5 w-5 text-primary" />
@@ -348,8 +397,9 @@ export const PartnerSettingsForm = () => {
               Wachtwoord wijzigen
             </Button>
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
