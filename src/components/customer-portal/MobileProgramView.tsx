@@ -200,7 +200,7 @@ export const MobileProgramView = ({
         <div className="space-y-4">
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
           <InvoiceProvidersCard items={program.items} />
-          <PriceSummaryCard items={program.items} numberOfPeople={program.number_of_people} />
+          <PriceSummaryCard items={program.items} numberOfPeople={program.number_of_people} termsAccepted={termsAccepted} />
         </div>
       </ProgramSection>
 

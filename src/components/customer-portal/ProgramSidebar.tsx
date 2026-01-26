@@ -66,6 +66,7 @@ export const ProgramSidebar = ({
         items={items}
         numberOfPeople={numberOfPeople}
         variant="compact"
+        termsAccepted={termsAccepted}
       />
 
       {/* Quick actions */}
