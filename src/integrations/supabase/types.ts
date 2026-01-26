@@ -50,6 +50,8 @@ export type Database = {
       admin_todos: {
         Row: {
           assigned_to: string | null
+          auto_entity_id: string | null
+          auto_type: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
@@ -65,6 +67,8 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          auto_entity_id?: string | null
+          auto_type?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -80,6 +84,8 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          auto_entity_id?: string | null
+          auto_type?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null

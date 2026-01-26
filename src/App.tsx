@@ -44,6 +44,7 @@ import AdminTodos from "./pages/admin/AdminTodos";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminBuildingBlocks from "./pages/admin/AdminBuildingBlocks";
+import AdminInvoicing from "./pages/admin/AdminInvoicing";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/admin/todos" element={<AdminTodos />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
             <Route path="/admin/commissies" element={<AdminCommissions />} />
+            <Route path="/admin/facturatie" element={<AdminInvoicing />} />
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -148,6 +148,31 @@ serve(async (req) => {
       notes: `Partner heeft factuur ${invoicedNumber} geregistreerd (€${invoicedAmount})`,
     });
 
+    // Create auto todo for commission handling if commission > 0
+    if (commissionPercentage > 0 && commissionAmount > 0) {
+      const { data: existingTodo } = await supabase
+        .from("admin_todos")
+        .select("id")
+        .eq("auto_type", "commission_pending")
+        .eq("auto_entity_id", itemId)
+        .neq("status", "done")
+        .maybeSingle();
+      
+      if (!existingTodo) {
+        await supabase.from("admin_todos").insert({
+          title: `Commissie factureren: ${partner.name} - €${commissionAmount.toFixed(2)}`,
+          description: `Partner ${partner.name} heeft factuur ${invoicedNumber} geregistreerd voor activiteit "${item.block_name}". Commissie van ${commissionPercentage}% moet worden gefactureerd.`,
+          priority: "normal",
+          status: "todo",
+          related_request_id: item.request_id,
+          related_partner_id: partner.id,
+          auto_type: "commission_pending",
+          auto_entity_id: itemId,
+        });
+        console.log(`Created commission_pending todo for item ${itemId}`);
+      }
+    }
+
     // Send notification email to Bureau Vlieland
     const customerName = item.program_requests.customer_company || item.program_requests.customer_name;
     const activityDate = item.program_requests.selected_dates?.[item.day_index] || "Onbekend";
