@@ -1,9 +1,8 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { AccommodationWizardData } from "@/types/accommodation";
-import { LOCATION_PREFERENCES, FACILITIES, BUDGET_RANGES } from "@/types/accommodation";
+import { LOCATION_PREFERENCES, BUDGET_RANGES } from "@/types/accommodation";
 
 interface StepWishesProps {
   formData: AccommodationWizardData;
@@ -19,13 +18,6 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
     updateFormData({ location_preference: updated });
   };
 
-  const toggleFacility = (value: string) => {
-    const current = formData.facilities_required;
-    const updated = current.includes(value)
-      ? current.filter((f) => f !== value)
-      : [...current, value];
-    updateFormData({ facilities_required: updated });
-  };
 
   return (
     <div className="space-y-6">
@@ -52,24 +44,6 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
         </div>
       </div>
 
-      {/* Facilities */}
-      <div className="space-y-3">
-        <Label>Gewenste faciliteiten</Label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {FACILITIES.map((facility) => (
-            <label
-              key={facility.value}
-              className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted/50 transition-colors"
-            >
-              <Checkbox
-                checked={formData.facilities_required.includes(facility.value)}
-                onCheckedChange={() => toggleFacility(facility.value)}
-              />
-              <span className="text-sm">{facility.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
 
       {/* Budget */}
       <div className="space-y-3">

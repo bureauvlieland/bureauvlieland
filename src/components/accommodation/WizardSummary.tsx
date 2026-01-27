@@ -99,24 +99,6 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
           </div>
         )}
 
-        {/* Facilities */}
-        {currentStep >= 4 && formData.facilities_required.length > 0 && (
-          <div className="pt-2 border-t">
-            <p className="text-xs text-muted-foreground mb-2">Gewenste faciliteiten:</p>
-            <div className="flex flex-wrap gap-1">
-              {formData.facilities_required.slice(0, 4).map((facility, i) => (
-                <Badge key={i} variant="outline" className="text-xs">
-                  {facility}
-                </Badge>
-              ))}
-              {formData.facilities_required.length > 4 && (
-                <Badge variant="outline" className="text-xs">
-                  +{formData.facilities_required.length - 4}
-                </Badge>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Contact info preview */}
         {currentStep >= 5 && formData.customer_name && (
