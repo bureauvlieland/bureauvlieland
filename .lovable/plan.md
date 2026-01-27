@@ -1,239 +1,268 @@
 
-# Plan: Testfase Voorbereiding, Data Opschoning & Content Optimalisatie voor Self-Service
 
-## Deel 1: Demo Data Opschonen
+# Plan: Klant Frontend voor Logies Offertes
 
-### Database Cleanup Script
-De volgende test/demo data moet worden verwijderd uit de **Live** database voor productie:
+## Overzicht
 
-**Te verwijderen tabellen/records:**
-- `program_requests` - 4 test aanvragen
-- `program_request_items` - gekoppelde items
-- `program_request_history` - gekoppelde historie
-- `shared_programs` - eventuele test shares
+Dit plan beschrijft de implementatie van een klantgerichte pagina waar klanten hun logies aanvraag kunnen volgen, ontvangen offertes kunnen bekijken en vergelijken, en een offerte kunnen accepteren. De pagina volgt dezelfde patronen als de bestaande Customer Program portal (`/mijn-programma/:token`).
 
-**SQL Cleanup (uit te voeren in Cloud View > Run SQL met Live geselecteerd):**
-```sql
--- Eerst history verwijderen (foreign key constraint)
-DELETE FROM program_request_history 
-WHERE request_id IN (SELECT id FROM program_requests);
+---
 
--- Dan items verwijderen
-DELETE FROM program_request_items 
-WHERE request_id IN (SELECT id FROM program_requests);
+## Workflow voor de Klant
 
--- Dan requests zelf
-DELETE FROM program_requests;
-
--- Eventuele test shared programs
-DELETE FROM shared_programs 
-WHERE expires_at < NOW() OR share_code LIKE 'TEST%';
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                    KLANT LOGIES FLOW                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. AANVRAAG INGEDIEND                                         │
+│     Klant ontvangt email met link naar trackingpagina           │
+│                                                                 │
+│  2. WACHTEN OP OFFERTES                                        │
+│     Pagina toont "We verzamelen offertes voor je"               │
+│     Status indicator: X van Y partners benaderd                 │
+│                                                                 │
+│  3. OFFERTES ONTVANGEN                                         │
+│     Klant ziet kaarten met alle ontvangen offertes              │
+│     Vergelijking op prijs, faciliteiten, locatie                │
+│                                                                 │
+│  4. OFFERTE SELECTEREN                                         │
+│     Klant kiest gewenste offerte                                │
+│     Bevestigingsflow met contactgegevens                        │
+│                                                                 │
+│  5. PROGRAMMA UITBREIDEN (optioneel)                           │
+│     Link naar activiteiten configurator als gewenst             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Deel 2: Content Optimalisatie voor Self-Service
+## Technische Implementatie
 
-### Kernboodschap Verschuiving
+### 1. Nieuwe Route
 
-| Huidige focus | Nieuwe focus |
-|---------------|--------------|
-| "Neem contact op" | "Stel zelf samen" |
-| "Offerte aanvragen" | "Start met je programma" |
-| Passief (wij regelen) | Actief (jij kiest) |
+| Route | Component | Beschrijving |
+|-------|-----------|--------------|
+| `/mijn-logies/:token` | `AccommodationQuotes.tsx` | Klant logies portal |
 
-### Wijzigingen per Pagina
+### 2. Nieuwe Pagina: `AccommodationQuotes.tsx`
 
-#### 1. Homepage (Index.tsx)
+**Locatie:** `src/pages/AccommodationQuotes.tsx`
 
-**Hero sectie - Nieuwe CTA's:**
-```
-Primair:  "Stel je programma samen" → /programma-samenstellen
-Secundair: "Bekijk onze diensten" → /diensten
-```
+**Functionaliteiten:**
+- Ophalen van `accommodation_requests` via `customer_token`
+- Weergave van aanvraagstatus en details
+- Lijst van ontvangen `accommodation_quotes` met status `submitted` of `selected`
+- Mogelijkheid om een offerte te selecteren
+- Doorlink naar activiteiten configurator indien gewenst
 
-**Hero tekst aanpassing:**
-```
-Huidige: "Bureau Vlieland organiseert eendaagse en meerdaagse programma's..."
-Nieuw:   "Stel in 5 minuten je eigen programma samen. Kies uit activiteiten, 
-         catering en vervoer – wij regelen de rest."
-```
-
-**CTA sectie onderaan:**
-```
-Huidige: "Neem contact op voor een vrijblijvend gesprek..."
-Nieuw:   "Begin vandaag nog met je programma. Kies je bouwstenen, 
-         geef je wensen door, en ontvang binnen 5 werkdagen bevestiging."
-```
-
-#### 2. Navigatie (Navigation.tsx)
-
-**Desktop navigatie aanpassen:**
-```
-Huidige volgorde:
-[Diensten ▼] [Voor wie ▼] [Samenwerken] [Bouwstenen] [Catering] [Contact] [Offerte aanvragen]
-
-Nieuwe volgorde:
-[Diensten ▼] [Voor wie ▼] [Bouwstenen] [Catering] [Contact] [Programma samenstellen ★]
-```
-
-**Wijzigingen:**
-- "Offerte aanvragen" knop → "Programma samenstellen" (primaire CTA)
-- "Samenwerken" verplaatsen naar footer of onder "Diensten" dropdown
-- Accent kleur behouden voor primaire CTA
-
-#### 3. Diensten pagina (Diensten.tsx)
-
-**CTA sectie onderaan:**
-```
-Huidige: "Offerte aanvragen" + "Voor wie werken wij"
-Nieuw:   "Stel je programma samen" + "Of vraag een op-maat offerte aan"
-```
-
-**Nieuwe tekst:**
-```
-"Weet je al wat je wilt? Stel direct je programma samen uit onze bouwstenen.
- Liever persoonlijk advies? Vraag een maatwerkofferte aan."
-```
-
-#### 4. Bouwstenen pagina (Voorbeeldprogrammas.tsx)
-
-**Hero CTA is al goed:** "Start met samenstellen"
-
-**Toevoegen: Directe link in intro:**
-```
-"Elk programma is uniek. Bekijk de mogelijkheden hieronder of 
- ga direct naar de configurator om je programma samen te stellen."
+**Structuur:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  [Logo]                                      [Vernieuwen]   │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Jouw Logies Aanvraag                                       │
+│  [Bedrijfsnaam] • 25 personen • 3 nachten                   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  📅 15-18 mei 2026                                   │   │
+│  │  🏨 Hotel of vakantiewoning                         │   │
+│  │  👥 25 gasten                                       │   │
+│  │  📍 In het dorp of aan het strand                   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ─────────────────────────────────────────────────────────  │
+│                                                             │
+│  STATUS: Offertes ontvangen (2 van 3 partners)              │
+│  ████████████░░░░ 66%                                       │
+│                                                             │
+│  ─────────────────────────────────────────────────────────  │
+│                                                             │
+│  BESCHIKBARE OFFERTES                                       │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  🏨 Hotel Zeezicht                                  │   │
+│  │                                                      │   │
+│  │  €85 per persoon per nacht                          │   │
+│  │  Totaal: €6.375 (excl. BTW)                         │   │
+│  │                                                      │   │
+│  │  ✓ Ontbijt inbegrepen                              │   │
+│  │  ✓ Gratis WiFi                                     │   │
+│  │  ✓ Parkeren                                        │   │
+│  │                                                      │   │
+│  │  Geldig tot: 1 feb 2026                            │   │
+│  │                                                      │   │
+│  │  [Bekijk details]        [Deze offerte kiezen ✓]   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  🏨 Strandhotel Vlieland                            │   │
+│  │  ...                                                 │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ─────────────────────────────────────────────────────────  │
+│                                                             │
+│  Wil je ook activiteiten toevoegen?                         │
+│  [Naar programma samenstellen →]                            │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-#### 5. Footer (Footer.tsx)
+### 3. Custom Hook: `useAccommodationQuotes.ts`
 
-**Nieuwe sectie "Direct aan de slag":**
-```
-h4: "Direct aan de slag"
-- Programma samenstellen → /programma-samenstellen  ← PROMINENT
-- Bouwstenen bekijken → /bouwstenen
-- Offerte aanvragen → /offerte
+**Locatie:** `src/hooks/useAccommodationQuotes.ts`
+
+**Functionaliteiten:**
+- Fetch accommodation request via token
+- Fetch bijbehorende quotes
+- Select quote functie (roept Edge Function aan)
+- Status berekening (hoeveel offertes ontvangen vs verwacht)
+
+**Interface:**
+```typescript
+interface UseAccommodationQuotesReturn {
+  request: AccommodationRequest | null;
+  quotes: AccommodationQuote[];
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  selectQuote: (quoteId: string) => Promise<boolean>;
+  quotesSummary: {
+    total: number;      // Aantal partners benaderd
+    received: number;   // Aantal offertes ontvangen
+    selected: number;   // 0 of 1 (geselecteerde offerte)
+  };
+}
 ```
 
-#### 6. Configurator pagina (ProgrammaSamenstellen.tsx)
+### 4. Nieuwe Componenten
 
-**Hero tekst versterken:**
-```
-Huidige: "Stel je programma samen"
-Nieuw:   "Bouw je eigen programma in 5 minuten"
+| Component | Locatie | Beschrijving |
+|-----------|---------|--------------|
+| `AccommodationRequestSummary` | `src/components/accommodation-portal/AccommodationRequestSummary.tsx` | Toont aanvraag samenvatting (data, gasten, type) |
+| `AccommodationQuoteCard` | `src/components/accommodation-portal/AccommodationQuoteCard.tsx` | Enkele offerte kaart met details en selectie knop |
+| `AccommodationQuoteComparison` | `src/components/accommodation-portal/AccommodationQuoteComparison.tsx` | Vergelijkingstabel voor meerdere offertes |
+| `AccommodationStatusBanner` | `src/components/accommodation-portal/AccommodationStatusBanner.tsx` | Status indicator (wachtend/offertes ontvangen/geselecteerd) |
+| `AccommodationQuoteDetailSheet` | `src/components/accommodation-portal/AccommodationQuoteDetailSheet.tsx` | Sheet met volledige offerte details |
+| `SelectQuoteDialog` | `src/components/accommodation-portal/SelectQuoteDialog.tsx` | Bevestigingsdialoog voor offerte selectie |
 
-Subtekst:
-Huidige: "Kies uit activiteiten, catering en vervoer. Wij regelen de rest..."
-Nieuw:   "Selecteer je favoriete bouwstenen, kies je datum en groepsgrootte. 
-         Je aanvraag is vrijblijvend – je betaalt pas na bevestiging."
+### 5. Edge Function: `select-accommodation-quote`
+
+**Locatie:** `supabase/functions/select-accommodation-quote/index.ts`
+
+**Functionaliteiten:**
+- Validatie van customer token
+- Update quote status naar `selected`
+- Update request status naar `accepted`
+- Automatisch afwijzen van andere quotes
+- Email notificatie naar geselecteerde partner
+- Email notificatie naar klant (bevestiging)
+- Optioneel: Email naar admin
+
+**Request body:**
+```typescript
+{
+  token: string;
+  quoteId: string;
+}
 ```
 
-**Info banner vereenvoudigen:**
-```
-Huidige: 4 stappen met details
-Nieuw:   3 eenvoudige stappen:
-1. Kies bouwstenen → Voeg activiteiten, catering en vervoer toe
-2. Vul je gegevens in → Datum, groepsgrootte en contactinfo  
-3. Ontvang bevestiging → Aanbieders bevestigen binnen 5 werkdagen
+### 6. Email Templates
+
+| Trigger | Ontvanger | Onderwerp |
+|---------|-----------|-----------|
+| Quote geselecteerd | Partner | "Uw offerte voor [klant] is geaccepteerd" |
+| Quote geselecteerd | Klant | "Bevestiging van uw logies reservering" |
+| Quote afgewezen | Partner | "Update over uw offerte" |
+
+---
+
+## Component Details
+
+### AccommodationQuoteCard
+
+Visuele kaart voor een enkele offerte met:
+- Accommodatienaam en type icoon
+- Prijs per persoon per nacht + totaalprijs
+- Inbegrepen faciliteiten (badges)
+- Kamerconfiguratie samenvatting
+- Geldigheidsdatum
+- Status badge (als geselecteerd)
+- "Bekijk details" en "Selecteren" knoppen
+
+### AccommodationStatusBanner
+
+Dynamische banner die de huidige status toont:
+- **Wachtend**: "We zijn offertes aan het verzamelen..." met progress indicator
+- **Offertes beschikbaar**: "Je hebt X offertes ontvangen. Bekijk en kies hieronder."
+- **Geselecteerd**: "Je hebt een keuze gemaakt! De accommodatie neemt contact met je op."
+
+### SelectQuoteDialog
+
+Bevestigingsdialoog met:
+- Offerte samenvatting
+- Waarschuwing dat keuze definitief is
+- Optie om opmerking toe te voegen
+- Bevestigingsknop
+
+---
+
+## Database Aanpassingen
+
+Geen nieuwe tabellen nodig. De bestaande structuur ondersteunt deze functionaliteit:
+- `accommodation_requests.customer_token` → toegang voor klant
+- `accommodation_quotes.status` → `selected` wanneer klant kiest
+- `accommodation_requests.status` → `accepted` na selectie
+
+---
+
+## Route Toevoegingen
+
+**In `App.tsx`:**
+```tsx
+import AccommodationQuotes from "./pages/AccommodationQuotes";
+
+// In Routes:
+<Route path="/mijn-logies/:token" element={<AccommodationQuotes />} />
 ```
 
 ---
 
-## Deel 3: Structurele Route Wijzigingen
+## Bestandenlijst
 
-### URL Structuur Vereenvoudigen
-
-| Route | Doel | Wijziging |
-|-------|------|-----------|
-| `/bouwstenen` | Inspiratie/overzicht modules | Behouden als informatief |
-| `/programma-samenstellen` | Actieve configurator | Promoveren naar primaire CTA |
-| `/offerte` | Traditioneel formulier | Behouden als alternatief |
-
-**Geen URL wijzigingen nodig** - alleen de navigatie en messaging aanpassen.
-
----
-
-## Deel 4: Checklist voor Testfase
-
-### Functionele Tests
-
-**Configurator Flow:**
-- [ ] Bouwstenen toevoegen aan cart
-- [ ] Datum en personen selecteren
-- [ ] Meerdere dagen programma
-- [ ] Aanvraag versturen
-- [ ] Bevestigingsmail ontvangen
-
-**Klantportaal:**
-- [ ] Toegang via token link
-- [ ] Items bekijken per dag
-- [ ] Partner bevestigingen zien
-- [ ] Voorstel accepteren (nieuwe flow)
-- [ ] Voorwaarden accepteren
-- [ ] Facturatiegegevens invullen
-
-**Partner Portal:**
-- [ ] Inloggen als partner
-- [ ] Nieuwe aanvragen zien
-- [ ] Bevestigen met prijs
-- [ ] Niet beschikbaar melden
-- [ ] "Mijn Aanbod" beheren
-- [ ] Factuur registreren (na klant akkoord + uitvoering)
-
-**Admin Dashboard:**
-- [ ] Alle aanvragen zien
-- [ ] Details bekijken
-- [ ] Financieel overzicht
-- [ ] Bureau factuur registreren
-
-### Data Invoer Checklist
-
-**Partners controleren:**
-- [ ] Alle partners hebben correct email adres
-- [ ] Partners zijn gekoppeld aan juiste bouwstenen
-- [ ] Commissiepercentage correct (default 15%)
-
-**Bouwstenen controleren:**
-- [ ] Alle prijzen ingevuld
-- [ ] Afbeeldingen beschikbaar
-- [ ] Beschrijvingen compleet
-- [ ] BTW instellingen correct
+| Bestand | Actie |
+|---------|-------|
+| `src/pages/AccommodationQuotes.tsx` | Nieuw |
+| `src/hooks/useAccommodationQuotes.ts` | Nieuw |
+| `src/components/accommodation-portal/AccommodationRequestSummary.tsx` | Nieuw |
+| `src/components/accommodation-portal/AccommodationQuoteCard.tsx` | Nieuw |
+| `src/components/accommodation-portal/AccommodationStatusBanner.tsx` | Nieuw |
+| `src/components/accommodation-portal/AccommodationQuoteDetailSheet.tsx` | Nieuw |
+| `src/components/accommodation-portal/SelectQuoteDialog.tsx` | Nieuw |
+| `supabase/functions/select-accommodation-quote/index.ts` | Nieuw |
+| `src/App.tsx` | Bijwerken (route toevoegen) |
 
 ---
 
-## Technisch Overzicht
+## UX Overwegingen
 
-### Bestanden te Wijzigen
-
-| Bestand | Wijziging |
-|---------|-----------|
-| `src/pages/Index.tsx` | Hero CTA's, messaging |
-| `src/components/Navigation.tsx` | "Programma samenstellen" als primaire knop |
-| `src/components/Footer.tsx` | "Direct aan de slag" sectie toevoegen |
-| `src/pages/Diensten.tsx` | CTA sectie aanpassen |
-| `src/pages/ProgrammaSamenstellen.tsx` | Hero tekst en info banner |
-| `src/pages/Voorbeeldprogrammas.tsx` | Intro tekst met directe link |
-
-### Geen Database Wijzigingen
-Alle wijzigingen zijn front-end content updates.
+1. **Mobiel-eerst ontwerp**: De pagina moet goed werken op telefoons aangezien klanten mogelijk de link vanuit email openen
+2. **Duidelijke status communicatie**: Klanten moeten direct zien waar ze staan in het proces
+3. **Vergelijkbaarheid**: Offertes moeten makkelijk naast elkaar te vergelijken zijn
+4. **Urgentie indicatie**: Geldigheidsdatum van offertes prominent tonen
+5. **Doorlink naar activiteiten**: Als klant aangaf ook activiteiten te willen, prominente CTA om door te gaan naar configurator
 
 ---
 
-## Samenvatting Prioriteiten
+## Fasering
 
-**Fase 1 - Nu:**
-1. Demo data opschonen (Live database)
-2. Partners en bouwstenen verifiëren
-3. Basis functionaliteit testen
+Dit plan kan in één implementatieronde worden uitgevoerd:
 
-**Fase 2 - Content:**
-4. Navigatie CTA wijzigen
-5. Homepage hero en CTA's
-6. Footer "Direct aan de slag"
-7. Diensten pagina CTA's
+1. **Hook en pagina structuur** - Data ophalen en basisweergave
+2. **Quote cards en vergelijking** - Visuele offerte weergave
+3. **Selectie flow** - Dialog en edge function
+4. **Email notificaties** - Bevestigingsmails
+5. **Doorlink naar programma** - Integratie met activiteiten configurator
 
-**Fase 3 - Finetuning:**
-8. Configurator messaging
-9. Bouwstenen pagina tekst
-10. Verdere A/B tests op basis van gebruik
