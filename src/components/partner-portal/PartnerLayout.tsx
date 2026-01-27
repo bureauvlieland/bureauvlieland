@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Receipt,
   Package,
+  BedDouble,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -39,6 +40,7 @@ interface PartnerInfo {
   email: string;
   partner_token: string;
   commission_percentage: number;
+  partner_type: string | null;
 }
 
 const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
@@ -51,9 +53,13 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   const impersonateParam = searchParams.get("impersonate");
   const urlSuffix = impersonateParam ? `?impersonate=${impersonateParam}` : "";
 
+  // Check if partner handles accommodation
+  const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
+
   const menuItems = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
     { title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package },
+    ...(isAccommodationPartner ? [{ title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble }] : []),
     { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
     { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
   ];
@@ -167,7 +173,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
           // Fetch the impersonated partner
           const { data: partnerData, error } = await supabase
             .from("partners")
-            .select("id, name, email, partner_token, commission_percentage")
+            .select("id, name, email, partner_token, commission_percentage, partner_type")
             .eq("id", impersonatePartnerId)
             .single();
 
@@ -191,7 +197,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
       // Regular partner login flow
       const { data: partnerData, error } = await supabase
         .from("partners")
-        .select("id, name, email, partner_token, commission_percentage")
+        .select("id, name, email, partner_token, commission_percentage, partner_type")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .single();

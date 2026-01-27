@@ -35,6 +35,7 @@ import PartnerDashboard from "./pages/PartnerDashboard";
 import PartnerFinance from "./pages/PartnerFinance";
 import PartnerBlocks from "./pages/PartnerBlocks";
 import PartnerSettings from "./pages/PartnerSettings";
+import PartnerAccommodation from "./pages/PartnerAccommodation";
 import PartnerResetPassword from "./pages/PartnerResetPassword";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCRM from "./pages/admin/AdminCRM";
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/partner/aanbod" element={<PartnerBlocks />} />
             <Route path="/partner/facturatie" element={<PartnerFinance />} />
             <Route path="/partner/instellingen" element={<PartnerSettings />} />
+            <Route path="/partner/logies" element={<PartnerAccommodation />} />
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* Admin routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
