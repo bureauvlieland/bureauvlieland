@@ -50,6 +50,7 @@ import AdminInvoicing from "./pages/admin/AdminInvoicing";
 import AdminAccommodation from "./pages/admin/AdminAccommodation";
 import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
+import AccommodationQuotes from "./pages/AccommodationQuotes";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/logies-aanvragen" element={<LogiesAanvragen />} />
             <Route path="/programma/:shareCode" element={<SharedProgram />} />
             <Route path="/mijn-programma/:token" element={<CustomerProgram />} />
+            <Route path="/mijn-logies/:token" element={<AccommodationQuotes />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
             <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />

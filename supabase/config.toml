@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.invite-partner]
 verify_jwt = false
+
+[functions.select-accommodation-quote]
+verify_jwt = false
