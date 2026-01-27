@@ -14,6 +14,200 @@ export type Database = {
   }
   public: {
     Tables: {
+      accommodation_quotes: {
+        Row: {
+          accommodation_name: string
+          commission_amount: number | null
+          commission_invoiced_at: string | null
+          commission_percentage: number | null
+          commission_status: string | null
+          conditions: string | null
+          created_at: string
+          description: string | null
+          id: string
+          includes: Json | null
+          invoiced_amount: number | null
+          invoiced_date: string | null
+          invoiced_file_path: string | null
+          invoiced_number: string | null
+          partner_id: string
+          partner_notes: string | null
+          price_includes_vat: boolean | null
+          price_per_person_per_night: number | null
+          price_total: number
+          request_id: string
+          room_configuration: Json | null
+          selected_at: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          valid_until: string
+          vat_rate: number | null
+        }
+        Insert: {
+          accommodation_name: string
+          commission_amount?: number | null
+          commission_invoiced_at?: string | null
+          commission_percentage?: number | null
+          commission_status?: string | null
+          conditions?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          includes?: Json | null
+          invoiced_amount?: number | null
+          invoiced_date?: string | null
+          invoiced_file_path?: string | null
+          invoiced_number?: string | null
+          partner_id: string
+          partner_notes?: string | null
+          price_includes_vat?: boolean | null
+          price_per_person_per_night?: number | null
+          price_total: number
+          request_id: string
+          room_configuration?: Json | null
+          selected_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          valid_until: string
+          vat_rate?: number | null
+        }
+        Update: {
+          accommodation_name?: string
+          commission_amount?: number | null
+          commission_invoiced_at?: string | null
+          commission_percentage?: number | null
+          commission_status?: string | null
+          conditions?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          includes?: Json | null
+          invoiced_amount?: number | null
+          invoiced_date?: string | null
+          invoiced_file_path?: string | null
+          invoiced_number?: string | null
+          partner_id?: string
+          partner_notes?: string | null
+          price_includes_vat?: boolean | null
+          price_per_person_per_night?: number | null
+          price_total?: number
+          request_id?: string
+          room_configuration?: Json | null
+          selected_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          valid_until?: string
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_quotes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accommodation_quotes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accommodation_requests: {
+        Row: {
+          accommodation_type: string
+          admin_notes: string | null
+          arrival_date: string
+          budget_range: string | null
+          created_at: string
+          customer_company: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          customer_token: string
+          departure_date: string
+          expires_at: string
+          facilities_required: Json | null
+          id: string
+          linked_program_id: string | null
+          location_preference: Json | null
+          number_of_guests: number
+          room_count: number | null
+          room_occupancy: string | null
+          room_types: Json | null
+          special_requests: string | null
+          status: string
+          updated_at: string
+          wants_activities: boolean | null
+        }
+        Insert: {
+          accommodation_type?: string
+          admin_notes?: string | null
+          arrival_date: string
+          budget_range?: string | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          customer_token?: string
+          departure_date: string
+          expires_at?: string
+          facilities_required?: Json | null
+          id?: string
+          linked_program_id?: string | null
+          location_preference?: Json | null
+          number_of_guests: number
+          room_count?: number | null
+          room_occupancy?: string | null
+          room_types?: Json | null
+          special_requests?: string | null
+          status?: string
+          updated_at?: string
+          wants_activities?: boolean | null
+        }
+        Update: {
+          accommodation_type?: string
+          admin_notes?: string | null
+          arrival_date?: string
+          budget_range?: string | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          customer_token?: string
+          departure_date?: string
+          expires_at?: string
+          facilities_required?: Json | null
+          id?: string
+          linked_program_id?: string | null
+          location_preference?: Json | null
+          number_of_guests?: number
+          room_count?: number | null
+          room_occupancy?: string | null
+          room_types?: Json | null
+          special_requests?: string | null
+          status?: string
+          updated_at?: string
+          wants_activities?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_requests_linked_program_id_fkey"
+            columns: ["linked_program_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_activity_log: {
         Row: {
           action: string
@@ -299,6 +493,8 @@ export type Database = {
       }
       partners: {
         Row: {
+          accommodation_commission_percentage: number | null
+          accommodation_types: Json | null
           address_city: string | null
           address_postal: string | null
           address_street: string | null
@@ -311,12 +507,15 @@ export type Database = {
           kvk_number: string | null
           name: string
           partner_token: string
+          partner_type: string | null
           phone: string | null
           terms_pdf_path: string | null
           terms_uploaded_at: string | null
           updated_at: string
         }
         Insert: {
+          accommodation_commission_percentage?: number | null
+          accommodation_types?: Json | null
           address_city?: string | null
           address_postal?: string | null
           address_street?: string | null
@@ -329,12 +528,15 @@ export type Database = {
           kvk_number?: string | null
           name: string
           partner_token?: string
+          partner_type?: string | null
           phone?: string | null
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
         }
         Update: {
+          accommodation_commission_percentage?: number | null
+          accommodation_types?: Json | null
           address_city?: string | null
           address_postal?: string | null
           address_street?: string | null
@@ -347,6 +549,7 @@ export type Database = {
           kvk_number?: string | null
           name?: string
           partner_token?: string
+          partner_type?: string | null
           phone?: string | null
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null

@@ -47,6 +47,7 @@ import AdminLogs from "./pages/admin/AdminLogs";
 import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminBuildingBlocks from "./pages/admin/AdminBuildingBlocks";
 import AdminInvoicing from "./pages/admin/AdminInvoicing";
+import LogiesAanvragen from "./pages/LogiesAanvragen";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/zakelijk-evenement-vlieland" element={<ZakelijkEvenementVlieland />} />
             <Route path="/trouwen-op-vlieland" element={<TrouwenOpVlieland />} />
             <Route path="/programma-samenstellen" element={<ProgrammaSamenstellen />} />
+            <Route path="/logies-aanvragen" element={<LogiesAanvragen />} />
             <Route path="/programma/:shareCode" element={<SharedProgram />} />
             <Route path="/mijn-programma/:token" element={<CustomerProgram />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
