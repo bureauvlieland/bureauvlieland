@@ -45,6 +45,7 @@ const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "CRM", url: "/admin/crm", icon: Users },
   { title: "Aanvragen", url: "/admin/aanvragen", icon: FileText },
+  { title: "Logies", url: "/admin/logies", icon: Building2 },
   { title: "Partners", url: "/admin/partners", icon: Building2 },
   { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
   { title: "Facturatie", url: "/admin/facturatie", icon: Euro },

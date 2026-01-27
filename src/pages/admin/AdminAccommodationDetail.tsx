@@ -1,0 +1,734 @@
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
+import {
+  ArrowLeft,
+  Building2,
+  Calendar,
+  Users,
+  Mail,
+  Phone,
+  MapPin,
+  Euro,
+  Clock,
+  Send,
+  Check,
+  X,
+  Hotel,
+  Home,
+  Tent,
+  HelpCircle,
+  FileText,
+  ChevronRight,
+} from "lucide-react";
+import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
+
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  submitted: { label: "Nieuw", variant: "default" },
+  processing: { label: "In behandeling", variant: "secondary" },
+  quoted: { label: "Offertes verstuurd", variant: "outline" },
+  accepted: { label: "Geaccepteerd", variant: "default" },
+  cancelled: { label: "Geannuleerd", variant: "destructive" },
+  expired: { label: "Verlopen", variant: "destructive" },
+};
+
+const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  pending: { label: "Wacht op reactie", variant: "secondary" },
+  submitted: { label: "Offerte ontvangen", variant: "default" },
+  selected: { label: "Geselecteerd", variant: "default" },
+  rejected: { label: "Afgewezen", variant: "destructive" },
+  expired: { label: "Verlopen", variant: "destructive" },
+};
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  hotel: <Hotel className="h-5 w-5" />,
+  vacation_home: <Home className="h-5 w-5" />,
+  group_accommodation: <Building2 className="h-5 w-5" />,
+  camping: <Tent className="h-5 w-5" />,
+  no_preference: <HelpCircle className="h-5 w-5" />,
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  hotel: "Hotel",
+  vacation_home: "Vakantiewoning",
+  group_accommodation: "Groepsaccommodatie",
+  camping: "Camping",
+  no_preference: "Geen voorkeur",
+};
+
+export default function AdminAccommodationDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedPartners, setSelectedPartners] = useState<string[]>([]);
+  const [adminNotes, setAdminNotes] = useState("");
+
+  // Fetch accommodation request
+  const { data: request, isLoading: requestLoading } = useQuery({
+    queryKey: ["admin-accommodation-request", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("accommodation_requests")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      setAdminNotes(data.admin_notes || "");
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch accommodation partners
+  const { data: partners, isLoading: partnersLoading } = useQuery({
+    queryKey: ["accommodation-partners"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("*")
+        .eq("is_active", true)
+        .or("partner_type.eq.accommodation,partner_type.eq.both");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch existing quotes for this request
+  const { data: quotes, isLoading: quotesLoading } = useQuery({
+    queryKey: ["admin-accommodation-quotes", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("accommodation_quotes")
+        .select("*, partner:partners(id, name, email)")
+        .eq("request_id", id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Update request status
+  const updateStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      const { error } = await supabase
+        .from("accommodation_requests")
+        .update({ status: newStatus, admin_notes: adminNotes })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      toast({ title: "Status bijgewerkt" });
+    },
+    onError: () => {
+      toast({ title: "Fout bij bijwerken", variant: "destructive" });
+    },
+  });
+
+  // Create quote requests for selected partners
+  const createQuotesMutation = useMutation({
+    mutationFn: async () => {
+      const quotesToCreate = selectedPartners.map((partnerId) => ({
+        request_id: id,
+        partner_id: partnerId,
+        accommodation_name: "",
+        price_total: 0,
+        valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        status: "pending",
+      }));
+
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .insert(quotesToCreate);
+
+      if (error) throw error;
+
+      // Update request status to processing
+      await supabase
+        .from("accommodation_requests")
+        .update({ status: "processing" })
+        .eq("id", id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      setSelectedPartners([]);
+      toast({ title: "Offerteaanvragen verstuurd naar partners" });
+    },
+    onError: () => {
+      toast({ title: "Fout bij versturen", variant: "destructive" });
+    },
+  });
+
+  // Select a quote
+  const selectQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      // First, reject all other quotes
+      await supabase
+        .from("accommodation_quotes")
+        .update({ status: "rejected" })
+        .eq("request_id", id)
+        .neq("id", quoteId);
+
+      // Select this quote
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({ status: "selected", selected_at: new Date().toISOString() })
+        .eq("id", quoteId);
+
+      if (error) throw error;
+
+      // Update request status
+      await supabase
+        .from("accommodation_requests")
+        .update({ status: "accepted" })
+        .eq("id", id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      toast({ title: "Offerte geaccepteerd" });
+    },
+    onError: () => {
+      toast({ title: "Fout bij accepteren", variant: "destructive" });
+    },
+  });
+
+  const togglePartner = (partnerId: string) => {
+    setSelectedPartners((prev) =>
+      prev.includes(partnerId)
+        ? prev.filter((id) => id !== partnerId)
+        : [...prev, partnerId]
+    );
+  };
+
+  // Get already requested partner IDs
+  const requestedPartnerIds = quotes?.map((q) => q.partner_id) || [];
+
+  // Helper to get label from value
+  const getLabel = (options: readonly { value: string; label: string }[], value: string) => {
+    return options.find((o) => o.value === value)?.label || value;
+  };
+
+  if (requestLoading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <div className="grid md:grid-cols-2 gap-6">
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!request) {
+    return (
+      <AdminLayout>
+        <div className="p-6">
+          <p>Aanvraag niet gevonden</p>
+          <Button asChild className="mt-4">
+            <Link to="/admin/logies">Terug naar overzicht</Link>
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const nights = Math.ceil(
+    (new Date(request.departure_date).getTime() - new Date(request.arrival_date).getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+
+  const statusConfig = STATUS_CONFIG[request.status] || STATUS_CONFIG.submitted;
+  const roomTypes = (request.room_types as string[]) || [];
+  const locationPrefs = (request.location_preference as string[]) || [];
+  const facilities = (request.facilities_required as string[]) || [];
+
+  return (
+    <AdminLayout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/admin/logies">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Terug
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">{request.customer_name}</h1>
+              <p className="text-slate-600">{request.customer_company || request.customer_email}</p>
+            </div>
+          </div>
+          <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">
+            {statusConfig.label}
+          </Badge>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Request Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {TYPE_ICONS[request.accommodation_type]}
+                  {TYPE_LABELS[request.accommodation_type]}
+                </CardTitle>
+                <CardDescription>Aanvraagdetails</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Dates and guests */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <Calendar className="h-5 w-5 text-slate-500" />
+                    <div>
+                      <p className="text-sm text-slate-500">Periode</p>
+                      <p className="font-medium">
+                        {format(new Date(request.arrival_date), "d MMM", { locale: nl })} -{" "}
+                        {format(new Date(request.departure_date), "d MMM yyyy", { locale: nl })}
+                      </p>
+                      <p className="text-sm text-slate-500">{nights} nachten</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <Users className="h-5 w-5 text-slate-500" />
+                    <div>
+                      <p className="text-sm text-slate-500">Gasten</p>
+                      <p className="font-medium">{request.number_of_guests} personen</p>
+                    </div>
+                  </div>
+                  {request.room_count && (
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                      <Building2 className="h-5 w-5 text-slate-500" />
+                      <div>
+                        <p className="text-sm text-slate-500">Kamers</p>
+                        <p className="font-medium">
+                          {request.room_count} ({request.room_occupancy || "?"} p.p.k.)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Preferences */}
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {roomTypes.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Kamervoorkeur</p>
+                      <div className="flex flex-wrap gap-2">
+                        {roomTypes.map((type) => (
+                          <Badge key={type} variant="outline">
+                            {getLabel(ROOM_TYPES, type)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {locationPrefs.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Locatievoorkeur</p>
+                      <div className="flex flex-wrap gap-2">
+                        {locationPrefs.map((pref) => (
+                          <Badge key={pref} variant="outline">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {getLabel(LOCATION_PREFERENCES, pref)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {facilities.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Gevraagde faciliteiten</p>
+                      <div className="flex flex-wrap gap-2">
+                        {facilities.map((fac) => (
+                          <Badge key={fac} variant="outline">
+                            {getLabel(FACILITIES, fac)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {request.budget_range && (
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Budgetindicatie</p>
+                      <Badge variant="outline">
+                        <Euro className="h-3 w-3 mr-1" />
+                        {getLabel(BUDGET_RANGES, request.budget_range)}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {request.special_requests && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Speciale wensen</p>
+                      <p className="text-slate-600 whitespace-pre-wrap">{request.special_requests}</p>
+                    </div>
+                  </>
+                )}
+
+                {request.wants_activities && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center gap-2 text-green-600">
+                      <Check className="h-5 w-5" />
+                      <span className="font-medium">Klant wil ook activiteiten boeken</span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Partner Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Partners selecteren</CardTitle>
+                <CardDescription>
+                  Selecteer de logiesverstrekkers voor een offerteaanvraag
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {partnersLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : partners?.length === 0 ? (
+                  <p className="text-slate-500 text-center py-4">
+                    Geen logiesverstrekkers gevonden. Voeg eerst partners toe met type "accommodation".
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {partners?.map((partner) => {
+                      const alreadyRequested = requestedPartnerIds.includes(partner.id);
+                      const isSelected = selectedPartners.includes(partner.id);
+
+                      return (
+                        <div
+                          key={partner.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            alreadyRequested
+                              ? "bg-slate-50 border-slate-200 opacity-60"
+                              : isSelected
+                              ? "bg-primary/5 border-primary"
+                              : "bg-white border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => togglePartner(partner.id)}
+                            disabled={alreadyRequested}
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium">{partner.name}</p>
+                            <p className="text-sm text-slate-500">{partner.email}</p>
+                          </div>
+                          {alreadyRequested && (
+                            <Badge variant="secondary">Reeds aangevraagd</Badge>
+                          )}
+                          <span className="text-sm text-slate-500">
+                            {partner.accommodation_commission_percentage || 10}% commissie
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {selectedPartners.length > 0 && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <p className="text-sm text-slate-600">
+                      {selectedPartners.length} partner(s) geselecteerd
+                    </p>
+                    <Button onClick={() => createQuotesMutation.mutate()} disabled={createQuotesMutation.isPending}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Offerteaanvraag versturen
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quotes Comparison */}
+            {quotes && quotes.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ontvangen offertes</CardTitle>
+                  <CardDescription>
+                    Vergelijk en selecteer de beste offerte
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Partner</TableHead>
+                        <TableHead>Accommodatie</TableHead>
+                        <TableHead>Prijs totaal</TableHead>
+                        <TableHead>P.p.p.n.</TableHead>
+                        <TableHead>Geldig tot</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actie</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {quotes.map((quote) => {
+                        const quoteStatus = QUOTE_STATUS_CONFIG[quote.status] || QUOTE_STATUS_CONFIG.pending;
+                        const partner = quote.partner as { id: string; name: string; email: string } | null;
+
+                        return (
+                          <TableRow key={quote.id}>
+                            <TableCell>
+                              <p className="font-medium">{partner?.name || "Onbekend"}</p>
+                            </TableCell>
+                            <TableCell>
+                              {quote.accommodation_name || (
+                                <span className="text-slate-400">Wacht op reactie</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {quote.price_total > 0 ? (
+                                <span className="font-medium">€{quote.price_total.toLocaleString()}</span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {quote.price_per_person_per_night ? (
+                                <span>€{quote.price_per_person_per_night}</span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">
+                                {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={quoteStatus.variant}>{quoteStatus.label}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {quote.status === "submitted" && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      <Check className="h-4 w-4 mr-1" />
+                                      Selecteren
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Offerte selecteren</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Weet je zeker dat je deze offerte wilt selecteren? Andere offertes worden automatisch afgewezen.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => selectQuoteMutation.mutate(quote.id)}>
+                                        Bevestigen
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                              {quote.status === "selected" && (
+                                <Badge variant="default" className="bg-green-600">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Geselecteerd
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Contact Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Contactgegevens</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <a href={`mailto:${request.customer_email}`} className="text-sm text-primary hover:underline">
+                    {request.customer_email}
+                  </a>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-slate-400" />
+                  <a href={`tel:${request.customer_phone}`} className="text-sm hover:underline">
+                    {request.customer_phone}
+                  </a>
+                </div>
+                {request.customer_company && (
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm">{request.customer_company}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Status Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Status beheren</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Select
+                  value={request.status}
+                  onValueChange={(value) => updateStatusMutation.mutate(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="submitted">Nieuw</SelectItem>
+                    <SelectItem value="processing">In behandeling</SelectItem>
+                    <SelectItem value="quoted">Offertes verstuurd</SelectItem>
+                    <SelectItem value="accepted">Geaccepteerd</SelectItem>
+                    <SelectItem value="cancelled">Geannuleerd</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Admin notities</p>
+                  <Textarea
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Interne notities..."
+                    rows={4}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => updateStatusMutation.mutate(request.status)}
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    Notities opslaan
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Timeline */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Tijdlijn</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div>
+                      <p className="font-medium">Aanvraag ontvangen</p>
+                      <p className="text-slate-500">
+                        {format(new Date(request.created_at), "d MMM yyyy HH:mm", { locale: nl })}
+                      </p>
+                    </div>
+                  </div>
+                  {quotes && quotes.length > 0 && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                      <div>
+                        <p className="font-medium">
+                          {quotes.length} partner(s) benaderd
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {quotes?.filter((q) => q.status === "submitted").length > 0 && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                      <div>
+                        <p className="font-medium">
+                          {quotes.filter((q) => q.status === "submitted").length} offerte(s) ontvangen
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {request.status === "accepted" && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-green-600" />
+                      <div>
+                        <p className="font-medium">Offerte geaccepteerd</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}
