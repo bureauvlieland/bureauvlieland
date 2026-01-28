@@ -1,331 +1,161 @@
 
-# Plan: Pro Forma Commissie Workflow met BTW-Berekening
+# Plan: Verwachte Commissie Tonen in Partner Facturatie Overzicht
 
-## Samenvatting
+## Probleem
 
-Automatische commissie-opvolging waarbij:
-1. Na afronding van activiteit/logies wordt commissie berekend over bedrag **excl. BTW**
-2. Partner krijgt pro forma email met 7 dagen om afwijkingen te melden
-3. Geen reactie = akkoord, commissie wordt definitief
-4. Bureau Vlieland kan dan commissiefactuur versturen
+In het Partner Portal "Facturatie Overzicht" wordt bij items "Nog te factureren" alleen het offertebedrag getoond (€3.750,00), maar **niet de verwachte commissie**. Dit maakt het voor partners onduidelijk hoeveel commissie ze uiteindelijk moeten betalen.
 
----
+De commissie wordt momenteel pas zichtbaar nadat:
+1. Het verblijf is afgerond (departure_date verstreken)
+2. De pro forma workflow heeft gedraaid
+3. Of na handmatige factuurregistratie
 
-## BTW-Berekening Logic
+## Oplossing
 
-### Activiteiten (21% BTW)
+De UI uitbreiden om **direct de verwachte commissie te berekenen en tonen** op basis van het geoffreerde bedrag, nog vóórdat de pro forma workflow loopt.
+
+### BTW-Berekening
+- **Activiteiten**: 21% BTW → `bedrag_excl = €500 / 1.21 = €413,22`
+- **Logies**: 9% BTW → `bedrag_excl = €3.750 / 1.09 = €3.440,37`
+- **Commissie**: `€3.440,37 × 10% = €344,04`
+
+### Visueel Voorbeeld
+
+**Huidige weergave "Nog te factureren":**
 ```
-geoffreerd_incl_btw = €500,00
-bedrag_excl_btw = €500 / 1.21 = €413,22
-commissie_15% = €413,22 × 0.15 = €61,98
-```
-
-### Logies (9% BTW)
-```
-geoffreerd_incl_btw = €2.500,00
-bedrag_excl_btw = €2.500 / 1.09 = €2.293,58
-commissie_10% = €2.293,58 × 0.10 = €229,36
-```
-
-### Code Implementatie
-```typescript
-// Haal BTW-tarief uit app_settings of building block
-const vatRate = item.vat_rate ?? (isAccommodation ? 9 : 21);
-
-// Bereken bedrag excl. BTW
-const amountExclVat = quotedAmount / (1 + vatRate / 100);
-
-// Bereken commissie over excl. BTW bedrag
-const commissionAmount = amountExclVat * (commissionPercentage / 100);
+Hotel Seeduyn [Logies]
+Test Bedrijf BV  |  15 jun. - 17 jun. 2026
+                                    Offertebedrag
+                                    €3.750,00
 ```
 
----
-
-## Workflow Diagram
-
-```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                     PRO FORMA COMMISSIE WORKFLOW                             │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  TRIGGER                                                                     │
-│  ────────                                                                    │
-│  • Activiteit: status = 'executed'                                           │
-│  • Logies: departure_date verstreken + status = 'selected'                   │
-│                                                                              │
-│         │                                                                    │
-│         ▼                                                                    │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │  AUTOMATISCHE BEREKENING                                               │  │
-│  │                                                                        │  │
-│  │  1. Geoffreerd bedrag ophalen (quoted_price / price_total)             │  │
-│  │  2. BTW-tarief bepalen (21% activiteit / 9% logies)                    │  │
-│  │  3. Bedrag excl. BTW berekenen                                         │  │
-│  │  4. Commissie berekenen over excl. BTW                                 │  │
-│  │  5. Email versturen naar partner                                       │  │
-│  │  6. Status → 'pending_confirmation'                                    │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│         │                                                                    │
-│         ▼                                                                    │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │  EMAIL NAAR PARTNER                                                    │  │
-│  │                                                                        │  │
-│  │  "De activiteit voor [klant] is afgerond.                              │  │
-│  │                                                                        │  │
-│  │   Geoffreerd bedrag:     €500,00 incl. BTW                             │  │
-│  │   Bedrag excl. BTW:      €413,22                                       │  │
-│  │   Commissie (15%):       €61,98                                        │  │
-│  │                                                                        │  │
-│  │   Afwijkend gefactureerd? Meld binnen 7 dagen via [link]"              │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│         │                                                                    │
-│         │  7 dagen                                                           │
-│         ▼                                                                    │
-│  ┌───────────────────────┬────────────────────────┐                          │
-│  │  Partner meldt        │  Geen reactie          │                          │
-│  │  afwijking            │                        │                          │
-│  │         │             │         │              │                          │
-│  │         ▼             │         ▼              │                          │
-│  │  Registreer           │  Status → 'confirmed'  │                          │
-│  │  werkelijk bedrag     │  Commissie definitief  │                          │
-│  │  Herbereken commissie │  Admin todo: factureer │                          │
-│  └───────────────────────┴────────────────────────┘                          │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+**Nieuwe weergave:**
+```
+Hotel Seeduyn [Logies]
+Test Bedrijf BV  |  15 jun. - 17 jun. 2026
+                                    Offertebedrag
+                                    €3.750,00
+                                    Verwachte commissie: €344,04
 ```
 
----
+## Technische Wijzigingen
 
-## Database Wijzigingen
+### 1. PartnerFinance.tsx - AccommodationInvoiceCard
 
-### Nieuwe kolommen op `program_request_items`
-
-| Kolom | Type | Beschrijving |
-|-------|------|--------------|
-| `proforma_sent_at` | timestamp | Wanneer pro forma email verstuurd |
-| `proforma_amount_excl_vat` | numeric | Berekend bedrag excl. BTW |
-| `proforma_commission` | numeric | Berekende commissie |
-| `proforma_deadline` | date | Deadline voor reactie (7 dagen) |
-| `actual_invoiced_excl_vat` | numeric | Door partner gemeld afwijkend bedrag |
-
-### Nieuwe kolommen op `accommodation_quotes`
-
-Dezelfde kolommen als hierboven.
-
-### Uitbreiding commission_status
-
-Toevoegen van `'pending_confirmation'` als geldige waarde.
-
----
-
-## Edge Functions
-
-### 1. `process-completed-items` (Dagelijks)
-
-**Doel:** Vindt afgeronde items, berekent commissie, stuurt pro forma
+Voeg berekening toe voor verwachte commissie bij `variant="to-invoice"`:
 
 ```typescript
-// Pseudo-code
-async function processCompletedItems() {
-  // 1. Vind afgeronde activiteiten zonder pro forma
-  const activities = await supabase
-    .from('program_request_items')
-    .select('*, program_requests(*)')
-    .eq('status', 'executed')
-    .is('proforma_sent_at', null)
-    .not('quoted_price', 'is', null);
-
-  for (const item of activities) {
-    // 2. Haal BTW-tarief (standaard 21% voor activiteiten)
-    const vatRate = item.vat_rate ?? 21;
-    
-    // 3. Bereken excl. BTW
-    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
-    
-    // 4. Bereken commissie
-    const commissionRate = item.commission_percentage ?? 15;
-    const commissionAmount = amountExclVat * (commissionRate / 100);
-    
-    // 5. Update record
-    await supabase
-      .from('program_request_items')
-      .update({
-        proforma_sent_at: new Date().toISOString(),
-        proforma_amount_excl_vat: amountExclVat,
-        proforma_commission: commissionAmount,
-        proforma_deadline: addDays(new Date(), 7),
-        commission_status: 'pending_confirmation'
-      })
-      .eq('id', item.id);
-    
-    // 6. Stuur email
-    await sendProformaEmail(item, amountExclVat, commissionAmount);
-  }
-
-  // Zelfde logica voor accommodation_quotes...
-}
-```
-
-### 2. `confirm-pending-commissions` (Dagelijks)
-
-**Doel:** Bevestigt commissies na verstrijken deadline
-
-```typescript
-async function confirmPendingCommissions() {
-  const today = new Date().toISOString().split('T')[0];
+const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardProps) => {
+  const request = quote.accommodation_requests;
   
-  // Vind items met verlopen deadline
-  const { data: expiredItems } = await supabase
-    .from('program_request_items')
-    .select('*')
-    .eq('commission_status', 'pending_confirmation')
-    .lt('proforma_deadline', today)
-    .is('actual_invoiced_excl_vat', null); // Geen afwijking gemeld
-
-  for (const item of expiredItems) {
-    // Bevestig commissie o.b.v. pro forma
-    await supabase
-      .from('program_request_items')
-      .update({
-        commission_status: 'confirmed',
-        invoiced_amount: item.proforma_amount_excl_vat,
-        commission_amount: item.proforma_commission
-      })
-      .eq('id', item.id);
-
-    // Maak admin todo
-    await createAdminTodo({
-      title: `Commissie factureren: ${item.provider_name}`,
-      type: 'commission_ready_to_invoice',
-      entity_id: item.id
-    });
-  }
-}
+  // Calculate expected commission for "to-invoice" items
+  const calculateExpectedCommission = () => {
+    if (variant !== "to-invoice" || !quote.price_total) return null;
+    
+    const vatRate = quote.vat_rate ?? 9;
+    const priceTotal = quote.price_total;
+    const amountExclVat = quote.price_includes_vat 
+      ? priceTotal / (1 + vatRate / 100)
+      : priceTotal;
+    
+    // Use quote's commission_percentage or partner default (10%)
+    const commissionPercentage = quote.commission_percentage ?? 10;
+    const commissionAmount = amountExclVat * (commissionPercentage / 100);
+    
+    return {
+      amountExclVat,
+      commissionPercentage,
+      commissionAmount
+    };
+  };
+  
+  const expectedCommission = calculateExpectedCommission();
+  
+  // In render, bij variant="to-invoice":
+  {variant === "to-invoice" ? (
+    <div className="text-right">
+      <p className="text-sm text-muted-foreground">Offertebedrag</p>
+      <p className="font-semibold">€{quote.price_total.toLocaleString(...)}</p>
+      {expectedCommission && (
+        <p className="text-xs text-amber-600">
+          Verwachte commissie: €{expectedCommission.commissionAmount.toFixed(2)}
+        </p>
+      )}
+    </div>
+  )}
+};
 ```
 
----
+### 2. PartnerFinance.tsx - InvoiceItemCard (Activiteiten)
 
-## Partner UI: Afwijking Melden
+Zelfde logica voor activiteit items:
 
-Nieuwe component `ConfirmCommissionCard.tsx` in Partner Portal:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  💰 Commissie-opgave bevestigen                                 │
-│  Deadline: 5 februari 2026                                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Klant:          Districon BV                                   │
-│  Activiteit:     Strandzeil workshop                            │
-│  Uitgevoerd:     28 januari 2026                                │
-│                                                                 │
-│  ─────────────────────────────────────────────────────────────  │
-│                                                                 │
-│  Geoffreerd bedrag:     €500,00 incl. BTW                       │
-│  Bedrag excl. BTW:      €413,22                                 │
-│  Commissie (15%):       €61,98                                  │
-│                                                                 │
-│  ─────────────────────────────────────────────────────────────  │
-│                                                                 │
-│  ○ Bedrag klopt - geen afwijkingen                              │
-│                                                                 │
-│  ○ Werkelijk gefactureerd bedrag afwijkend:                     │
-│    Bedrag excl. BTW:  [____________]                            │
-│    Toelichting:       [________________________]                │
-│                                                                 │
-│  ─────────────────────────────────────────────────────────────  │
-│                                                                 │
-│  [Bevestigen]                                                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```typescript
+const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
+  const calculateExpectedCommission = () => {
+    if (variant !== "to-invoice" || !item.quoted_price) return null;
+    
+    const vatRate = 21; // Activities use 21% VAT
+    const quotedPrice = item.quoted_price;
+    const amountExclVat = quotedPrice / (1 + vatRate / 100);
+    
+    const commissionPercentage = item.commission_percentage ?? 15;
+    const commissionAmount = amountExclVat * (commissionPercentage / 100);
+    
+    return { commissionAmount, commissionPercentage };
+  };
+  
+  const expectedCommission = calculateExpectedCommission();
+  // ... render with expected commission
+};
 ```
 
----
+### 3. Totaal Commissie Summary Card
 
-## Email Template
+Update de commissie summary card om ook verwachte commissie te tonen:
 
-**Template ID:** `proforma_commission_notification`
+```typescript
+// Bereken verwachte commissie voor items nog te factureren
+const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
+  if (!i.quoted_price) return sum;
+  const amountExcl = i.quoted_price / 1.21;
+  const rate = i.commission_percentage ?? data.partner.commission_percentage;
+  return sum + (amountExcl * (rate / 100));
+}, 0);
 
-```html
-Onderwerp: Commissie-opgave voor [customer_name] - [block_name]
+const expectedAccommodationCommission = toBeInvoicedAccommodations.reduce((sum, q) => {
+  const vatRate = q.vat_rate ?? 9;
+  const amountExcl = q.price_includes_vat 
+    ? q.price_total / (1 + vatRate / 100)
+    : q.price_total;
+  const rate = q.commission_percentage ?? data.partner.accommodation_commission_percentage ?? 10;
+  return sum + (amountExcl * (rate / 100));
+}, 0);
 
-Beste [partner_name],
-
-De activiteit "[block_name]" voor [customer_name] is uitgevoerd.
-
-═══════════════════════════════════════════════════════════════
-COMMISSIE-OPGAVE
-═══════════════════════════════════════════════════════════════
-
-Geoffreerd bedrag:       €[quoted_amount_incl] incl. BTW
-Bedrag excl. BTW:        €[amount_excl_vat]
-BTW-tarief:              [vat_rate]%
-
-Commissiepercentage:     [commission_percentage]%
-Commissiebedrag:         €[commission_amount]
-
-═══════════════════════════════════════════════════════════════
-
-Wij gaan uit van bovenstaand geoffreerd bedrag voor onze 
-commissiefactuur.
-
-▸ Is het werkelijk gefactureerde bedrag afwijkend?
-  Geef dit vóór [deadline_date] door via uw partneromgeving:
-  [partner_portal_link]
-
-▸ Geen afwijkingen?
-  Dan ontvangt u na de deadline onze commissiefactuur van €[commission_amount].
-
-Met vriendelijke groet,
-Bureau Vlieland
+const totalExpectedCommission = expectedActivityCommission + expectedAccommodationCommission;
 ```
 
----
+In de card:
+```
+Commissie (15% / 10%)
+€0,00
+€0.00 betaald • €0.00 open
+Verwacht: €344,04
+```
 
-## Admin Overzicht
+## Bestanden te Wijzigen
 
-Nieuwe widget op Admin Dashboard: **"Commissies te factureren"**
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/pages/PartnerFinance.tsx` | Verwachte commissie berekening en weergave |
 
-| Partner | Type | Klant | Excl. BTW | Commissie | Status |
-|---------|------|-------|-----------|-----------|--------|
-| Seeduyn | Logies | Districon | €2.293,58 | €229,36 | Bevestigd ✓ |
-| Outdoor Vlieland | Activiteit | RMD | €413,22 | €61,98 | Wacht (3 dgn) |
+## Geen Database Wijzigingen Nodig
 
----
-
-## Te Wijzigen/Maken Bestanden
-
-| Bestand | Actie | Beschrijving |
-|---------|-------|--------------|
-| Database | Migratie | Nieuwe pro forma kolommen |
-| `supabase/functions/process-completed-items/index.ts` | Nieuw | Dagelijkse pro forma generatie |
-| `supabase/functions/confirm-pending-commissions/index.ts` | Nieuw | Dagelijkse deadline check |
-| `src/components/partner-portal/ConfirmCommissionCard.tsx` | Nieuw | UI voor afwijking melden |
-| `src/components/admin/PendingCommissionsCard.tsx` | Nieuw | Admin overzicht |
-| `src/pages/PartnerDashboard.tsx` | Wijzigen | Integratie ConfirmCommissionCard |
-| `src/pages/PartnerFinance.tsx` | Wijzigen | Toon pending confirmations |
-| Email templates (DB) | Insert | Nieuwe proforma template |
-
----
-
-## Configureerbare Parameters (app_settings)
-
-| Setting | Default | Beschrijving |
-|---------|---------|--------------|
-| `proforma_deadline_days` | 7 | Dagen om afwijking te melden |
-| `default_vat_rate` | 21 | Standaard BTW voor activiteiten |
-| `accommodation_vat_rate` | 9 | BTW voor logies |
-
----
+Dit is puur een UI-verbetering. De berekening gebeurt client-side op basis van bestaande data.
 
 ## Implementatie Volgorde
 
-1. **Database migratie** - Nieuwe kolommen toevoegen
-2. **Email template** - Pro forma notificatie in database
-3. **Edge Function: process-completed-items** - Pro forma generatie
-4. **Edge Function: confirm-pending-commissions** - Deadline checks  
-5. **Partner UI: ConfirmCommissionCard** - Afwijking melden
-6. **Admin UI: PendingCommissionsCard** - Overzicht commissies
-7. **Scheduling** - Dagelijkse cron jobs activeren
+1. Helper functie toevoegen voor commissie berekening
+2. AccommodationInvoiceCard updaten voor verwachte commissie
+3. InvoiceItemCard updaten voor verwachte commissie
+4. Summary card updaten met totaal verwachte commissie
