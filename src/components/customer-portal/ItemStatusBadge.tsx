@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, XCircle, MessageSquare, Ban } from "lucide-react";
+import { CheckCircle, CheckCircle2, Clock, XCircle, MessageSquare, Ban, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { type ItemStatus, itemStatusConfig } from "@/types/programRequest";
@@ -12,9 +12,11 @@ interface ItemStatusBadgeProps {
 const iconMap = {
   Clock,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   MessageSquare,
   Ban,
+  FileText,
 };
 
 export const ItemStatusBadge = ({
