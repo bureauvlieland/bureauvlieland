@@ -1,6 +1,6 @@
 # Plan: Terminologie-verbeteringen en Partner Portal Uitbreidingen
 
-## ✅ Status: Geïmplementeerd
+## ✅ Status: Volledig Geïmplementeerd
 
 ---
 
@@ -38,6 +38,14 @@
 7. **✅ Item Sheet klant-acceptatie indicator**
    - `PartnerItemSheet.tsx`: Badge "Klant akkoord" wanneer `customer_accepted_at` is gevuld
 
+### Fase 3: Admin Cross-linking ✅
+
+8. **✅ Cross-linking tussen partners en aanvragen**
+   - `AdminPartnerDetail.tsx`: Nieuwe sectie "Gerelateerde aanvragen" toegevoegd
+     - Toont programma aanvragen waar deze partner items in heeft
+     - Directe links naar aanvraag detail pagina's
+   - `AdminRequestDetail.tsx`: Partner links al aanwezig in items tabel
+
 ### Database Migratie ✅
 
 Nieuwe velden toegevoegd aan `partners` tabel:
@@ -58,4 +66,5 @@ src/pages/PartnerDashboard.tsx
 src/pages/admin/AdminPartners.tsx
 src/components/partner-portal/PartnerSettingsForm.tsx
 src/components/partner-portal/PartnerDashboardHeader.tsx
+src/pages/admin/AdminPartnerDetail.tsx
 ```
