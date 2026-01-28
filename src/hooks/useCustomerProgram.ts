@@ -42,6 +42,8 @@ interface UseCustomerProgramReturn {
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
   acceptTerms: (signatureName?: string) => Promise<boolean>;
   cancelRequest: (reason?: string) => Promise<boolean>;
+  acceptItem: (itemId: string) => Promise<boolean>;
+  cancelItem: (itemId: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
   // Accommodation data
   accommodation: AccommodationRequest | null;
@@ -372,9 +374,12 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       executed_at: null,
+      customer_accepted_at: null,
       quoted_price: null,
       quoted_at: null,
       quoted_notes: null,
+      proposed_time: null,
+      proposed_date: null,
       // Image data for display
       image_url: block.image_url,
       image_asset: block.image_asset,
@@ -610,6 +615,52 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [accommodation, fetchProgram]);
 
+  // Accept a confirmed item (klant akkoord)
+  const acceptItem = useCallback(async (itemId: string): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token: token,
+          acceptItemId: itemId,
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error accepting item:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
+  // Cancel a specific item
+  const cancelItem = useCallback(async (itemId: string): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token: token,
+          cancelItemId: itemId,
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error cancelling item:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, progress: 0 };
@@ -643,6 +694,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
+    acceptItem,
+    cancelItem,
     statusSummary,
     // Accommodation
     accommodation,
