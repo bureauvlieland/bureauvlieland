@@ -97,12 +97,26 @@ serve(async (req) => {
       );
     }
 
-    // Update the selected quote
+    // Get partner commission percentage
+    const { data: partner } = await supabase
+      .from("partners")
+      .select("accommodation_commission_percentage")
+      .eq("id", quote.partner_id)
+      .maybeSingle();
+
+    // Calculate commission (default 10% for accommodation)
+    const commissionPercentage = partner?.accommodation_commission_percentage || 10;
+    const commissionAmount = (quote.price_total * commissionPercentage) / 100;
+
+    // Update the selected quote with commission data
     const { error: updateQuoteError } = await supabase
       .from("accommodation_quotes")
       .update({
         status: "selected",
         selected_at: new Date().toISOString(),
+        commission_percentage: commissionPercentage,
+        commission_amount: commissionAmount,
+        commission_status: "pending", // Waiting for invoice registration
       })
       .eq("id", quoteId);
 
@@ -110,6 +124,8 @@ serve(async (req) => {
       console.error("Update quote error:", updateQuoteError);
       throw new Error("Fout bij bijwerken offerte");
     }
+
+    console.log(`Commission calculated for quote ${quoteId}: ${commissionPercentage}% = €${commissionAmount.toFixed(2)}`);
 
     // Reject other quotes for this request
     const { error: rejectError } = await supabase

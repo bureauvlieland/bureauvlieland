@@ -57,84 +57,130 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body for status filter
+    // Parse request body for filters
     let statusFilter = "pending";
+    let typeFilter = "all"; // "all" | "activity" | "accommodation"
     try {
       const body = await req.json();
-      if (body.status) {
-        statusFilter = body.status;
-      }
+      if (body.status) statusFilter = body.status;
+      if (body.type) typeFilter = body.type;
     } catch {
-      // No body or invalid JSON, use default
+      // No body or invalid JSON, use defaults
     }
 
-    // Get all items with commission
-    const { data: items, error: itemsError } = await adminClient
-      .from("program_request_items")
-      .select(`
-        *,
-        program_requests!inner (
-          id,
-          customer_name,
-          customer_company,
-          selected_dates
-        )
-      `)
-      .eq("commission_status", statusFilter)
-      .gt("commission_percentage", 0)
-      .not("invoiced_number", "is", null)
-      .order("invoiced_date", { ascending: false });
-
-    if (itemsError) {
-      console.error("Error fetching items:", itemsError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch commissions" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get partners for additional info
+    // Get partners for enrichment
     const { data: partners } = await adminClient
       .from("partners")
       .select("id, name, email, kvk_number, address_street, address_postal, address_city");
-
     const partnersMap = new Map(partners?.map((p) => [p.id, p]) || []);
 
-    // Enrich items with partner info
-    const enrichedItems = items?.map((item) => ({
-      ...item,
-      partner: partnersMap.get(item.provider_id) || null,
-    })) || [];
+    // ====== ACTIVITY ITEMS ======
+    let activityItems: unknown[] = [];
+    if (typeFilter === "all" || typeFilter === "activity") {
+      const { data: items, error: itemsError } = await adminClient
+        .from("program_request_items")
+        .select(`
+          *,
+          program_requests!inner (
+            id,
+            customer_name,
+            customer_company,
+            selected_dates
+          )
+        `)
+        .eq("commission_status", statusFilter)
+        .gt("commission_percentage", 0)
+        .not("invoiced_number", "is", null)
+        .order("invoiced_date", { ascending: false });
+
+      if (itemsError) {
+        console.error("Error fetching activity items:", itemsError);
+      } else {
+        activityItems = (items || []).map((item) => ({
+          ...item,
+          item_type: "activity",
+          partner: partnersMap.get(item.provider_id) || null,
+        }));
+      }
+    }
+
+    // ====== ACCOMMODATION QUOTES ======
+    let accommodationItems: unknown[] = [];
+    if (typeFilter === "all" || typeFilter === "accommodation") {
+      const { data: quotes, error: quotesError } = await adminClient
+        .from("accommodation_quotes")
+        .select(`
+          *,
+          accommodation_requests!inner (
+            id,
+            customer_name,
+            customer_company,
+            arrival_date,
+            departure_date
+          )
+        `)
+        .eq("commission_status", statusFilter)
+        .eq("status", "selected")
+        .gt("commission_percentage", 0)
+        .not("invoiced_number", "is", null)
+        .order("invoiced_date", { ascending: false });
+
+      if (quotesError) {
+        console.error("Error fetching accommodation quotes:", quotesError);
+      } else {
+        accommodationItems = (quotes || []).map((quote) => ({
+          id: quote.id,
+          block_name: quote.accommodation_name,
+          invoiced_amount: quote.invoiced_amount,
+          invoiced_number: quote.invoiced_number,
+          invoiced_date: quote.invoiced_date,
+          commission_percentage: quote.commission_percentage,
+          commission_amount: quote.commission_amount,
+          commission_status: quote.commission_status,
+          provider_id: quote.partner_id,
+          provider_name: partnersMap.get(quote.partner_id)?.name || "Onbekend",
+          item_type: "accommodation",
+          program_requests: null,
+          accommodation_requests: quote.accommodation_requests,
+          partner: partnersMap.get(quote.partner_id) || null,
+        }));
+      }
+    }
+
+    // Combine all items
+    const allItems = [...activityItems, ...accommodationItems] as any[];
 
     // Group by partner for summary
-    const byPartner = enrichedItems.reduce((acc, item) => {
+    const byPartnerMap: Record<string, { partner: any; items: any[]; totalCommission: number }> = {};
+    for (const item of allItems) {
       const partnerId = item.provider_id;
-      if (!acc[partnerId]) {
-        acc[partnerId] = {
+      if (!byPartnerMap[partnerId]) {
+        byPartnerMap[partnerId] = {
           partner: item.partner,
           items: [],
           totalCommission: 0,
         };
       }
-      acc[partnerId].items.push(item);
-      acc[partnerId].totalCommission += parseFloat(item.commission_amount) || 0;
-      return acc;
-    }, {} as Record<string, { partner: unknown; items: unknown[]; totalCommission: number }>);
+      byPartnerMap[partnerId].items.push(item);
+      byPartnerMap[partnerId].totalCommission += parseFloat(item.commission_amount) || 0;
+    }
 
     // Calculate totals
-    const totalCommission = enrichedItems.reduce(
-      (sum, item) => sum + (parseFloat(item.commission_amount) || 0),
-      0
-    );
+    let totalCommission = 0;
+    for (const item of allItems) {
+      totalCommission += parseFloat(item.commission_amount) || 0;
+    }
 
     return new Response(
       JSON.stringify({
-        items: enrichedItems,
-        byPartner: Object.values(byPartner),
+        items: allItems,
+        byPartner: Object.values(byPartnerMap),
         summary: {
-          totalItems: enrichedItems.length,
+          totalItems: allItems.length,
           totalCommission,
           status: statusFilter,
+          activityCount: activityItems.length,
+          accommodationCount: accommodationItems.length,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

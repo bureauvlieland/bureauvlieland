@@ -54,6 +54,11 @@ interface AccommodationQuote {
   quote_attachment_path: string | null;
   quote_attachment_filename: string | null;
   quote_external_url: string | null;
+  invoiced_amount: number | null;
+  invoiced_number: string | null;
+  invoiced_date: string | null;
+  commission_percentage: number | null;
+  commission_amount: number | null;
 }
 
 interface RequestWithQuote extends AccommodationRequest {
@@ -67,7 +72,8 @@ const PartnerAccommodationContent = () => {
   const [requests, setRequests] = useState<RequestWithQuote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [_partnerId, setPartnerId] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
 
@@ -95,10 +101,10 @@ const PartnerAccommodationContent = () => {
     }
 
     if (!currentPartnerId) {
-      // Get partner ID from auth
+      // Get partner ID and token from auth
       const { data: partner } = await supabase
         .from("partners")
-        .select("id")
+        .select("id, partner_token")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .maybeSingle();
@@ -110,6 +116,17 @@ const PartnerAccommodationContent = () => {
       }
 
       currentPartnerId = partner.id;
+      setPartnerToken(partner.partner_token);
+    } else {
+      // Admin impersonating - fetch the partner token
+      const { data: impersonatedPartner } = await supabase
+        .from("partners")
+        .select("partner_token")
+        .eq("id", currentPartnerId)
+        .maybeSingle();
+      if (impersonatedPartner) {
+        setPartnerToken(impersonatedPartner.partner_token);
+      }
     }
 
     setPartnerId(currentPartnerId);
@@ -408,8 +425,10 @@ const PartnerAccommodationContent = () => {
           setSelectedRequest(null);
         }}
         request={selectedRequest}
-        existingQuote={selectedRequest?.quote}
+        existingQuote={selectedRequest?.quote ?? null}
+        partnerToken={partnerToken || ""}
         onSubmit={handleQuoteSubmit}
+        onRefresh={fetchData}
       />
     </>
   );

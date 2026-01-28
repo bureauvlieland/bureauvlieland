@@ -43,6 +43,8 @@ import {
   Building2,
   Send,
   RefreshCw,
+  Home,
+  Activity,
 } from "lucide-react";
 
 interface CommissionItem {
@@ -56,12 +58,20 @@ interface CommissionItem {
   commission_status: string;
   provider_id: string;
   provider_name: string;
+  item_type: "activity" | "accommodation";
   program_requests: {
     id: string;
     customer_name: string;
     customer_company: string | null;
     selected_dates: unknown;
-  };
+  } | null;
+  accommodation_requests: {
+    id: string;
+    customer_name: string;
+    customer_company: string | null;
+    arrival_date: string;
+    departure_date: string;
+  } | null;
   partner: {
     id: string;
     name: string;
@@ -86,6 +96,8 @@ interface CommissionsResponse {
     totalItems: number;
     totalCommission: number;
     status: string;
+    activityCount: number;
+    accommodationCount: number;
   };
 }
 
@@ -416,7 +428,8 @@ export default function AdminCommissions() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
-                        <TableHead>Activiteit</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Naam</TableHead>
                         <TableHead>Klant</TableHead>
                         <TableHead>Factuurnr.</TableHead>
                         <TableHead className="text-right">Bedrag</TableHead>
@@ -425,61 +438,83 @@ export default function AdminCommissions() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {group.items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedItems.has(item.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectItem(item.id, !!checked)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{item.block_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.invoiced_date && formatDate(item.invoiced_date)}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <p>{item.program_requests?.customer_name}</p>
-                            {item.program_requests?.customer_company && (
-                              <p className="text-xs text-muted-foreground">
-                                {item.program_requests.customer_company}
-                              </p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              {item.invoiced_number}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.invoiced_amount)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div>
-                              <p className="font-medium">
-                                {formatCurrency(item.commission_amount)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.commission_percentage}%
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={statusColors[item.commission_status] || ""}
-                              variant="secondary"
-                            >
-                              {statusLabels[item.commission_status] || item.commission_status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {group.items.map((item) => {
+                        const customerName = item.item_type === "accommodation" 
+                          ? item.accommodation_requests?.customer_name 
+                          : item.program_requests?.customer_name;
+                        const customerCompany = item.item_type === "accommodation"
+                          ? item.accommodation_requests?.customer_company
+                          : item.program_requests?.customer_company;
+                        
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedItems.has(item.id)}
+                                onCheckedChange={(checked) =>
+                                  handleSelectItem(item.id, !!checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {item.item_type === "accommodation" ? (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  <Home className="h-3 w-3 mr-1" />
+                                  Logies
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <Activity className="h-3 w-3 mr-1" />
+                                  Activiteit
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{item.block_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.invoiced_date && formatDate(item.invoiced_date)}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <p>{customerName}</p>
+                              {customerCompany && (
+                                <p className="text-xs text-muted-foreground">
+                                  {customerCompany}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                {item.invoiced_number}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.invoiced_amount)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div>
+                                <p className="font-medium">
+                                  {formatCurrency(item.commission_amount)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {item.commission_percentage}%
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={statusColors[item.commission_status] || ""}
+                                variant="secondary"
+                              >
+                                {statusLabels[item.commission_status] || item.commission_status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>
