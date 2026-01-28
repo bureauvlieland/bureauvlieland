@@ -249,9 +249,9 @@ const PartnerDashboardContent = () => {
   }
 
   // Tab filtering with new status flow
-  const pendingItems = data.items.filter((i) => i.status === "pending");
-  const waitingItems = data.items.filter((i) => i.status === "confirmed"); // Waiting for customer
-  const acceptedItems = data.items.filter((i) => i.status === "accepted" || i.status === "executed");
+      const pendingItems = data.items.filter((i) => i.status === "pending");
+      const proposalSentItems = data.items.filter((i) => i.status === "confirmed" || i.status === "alternative"); // Proposals sent to customer
+      const acceptedItems = data.items.filter((i) => i.status === "accepted" || i.status === "executed");
   const closedItems = data.items.filter((i) => 
     ["invoiced", "unavailable", "cancelled"].includes(i.status)
   );
@@ -301,11 +301,30 @@ const PartnerDashboardContent = () => {
   const isAccommodationPartner = data.partner.partner_type === "accommodation" || data.partner.partner_type === "both";
   const pendingAccommodation = data.accommodationSummary?.pending || 0;
 
+  // Calculate YTD financials
+  const currentYear = new Date().getFullYear();
+  const ytdInvoicedItems = data.items.filter((i) => {
+    if (!i.invoiced_date) return false;
+    const invoiceYear = new Date(i.invoiced_date).getFullYear();
+    return invoiceYear === currentYear;
+  });
+  const ytdRevenue = ytdInvoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0);
+  const ytdCommission = ytdInvoicedItems.reduce((sum, i) => sum + (i.commission_amount || 0), 0);
+  const pendingCommission = data.items
+    .filter((i) => i.commission_status === "pending")
+    .reduce((sum, i) => sum + (i.commission_amount || 0), 0);
+
+  const financials = {
+    ytdRevenue,
+    ytdCommission,
+    pendingCommission,
+  };
+
   return (
     <>
       <div className="p-6">
         <div className="flex justify-between items-start mb-6">
-          <PartnerDashboardHeader partner={data.partner} summary={data.summary} />
+          <PartnerDashboardHeader partner={data.partner} summary={data.summary} financials={financials} />
           <div className="flex items-center gap-2">
             {(pendingItems.length > 0 || pendingAccommodation > 0) && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
@@ -369,10 +388,10 @@ const PartnerDashboardContent = () => {
                 )}
               </TabsTrigger>
               <TabsTrigger value="waiting" className="whitespace-nowrap">
-                Wacht op klant
-                {waitingItems.length > 0 && (
+                Voorstel verstuurd
+                {proposalSentItems.length > 0 && (
                   <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {waitingItems.length}
+                    {proposalSentItems.length}
                   </span>
                 )}
               </TabsTrigger>
@@ -396,7 +415,7 @@ const PartnerDashboardContent = () => {
           </TabsContent>
 
           <TabsContent value="waiting" className="mt-6">
-            {renderItemsTable(waitingItems, "Geen activiteiten wachtend op klant.")}
+            {renderItemsTable(proposalSentItems, "Geen voorstellen verstuurd.")}
           </TabsContent>
 
           <TabsContent value="accepted" className="mt-6">
