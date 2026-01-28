@@ -365,7 +365,7 @@ const PartnerDashboardContent = () => {
                   ) : null}
                 </div>
                 <Button asChild size="sm">
-                  <Link to="/partner/logies">
+                  <Link to={`/partner/logies${searchParams.get("impersonate") ? `?impersonate=${searchParams.get("impersonate")}` : ""}`}>
                     Bekijk aanvragen
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
