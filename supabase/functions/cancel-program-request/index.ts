@@ -1,5 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  getRenderedTemplate, 
+  sanitizeHtml, 
+  formatDateNL, 
+  isTestMode, 
+  getSubjectPrefix, 
+  getRecipientEmail,
+  TemplateIds 
+} from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,33 +23,6 @@ interface CancelRequest {
   reason?: string;
   origin?: string;
 }
-
-// Test mode configuration
-const TEST_EMAIL = "erwin@bureauvlieland.nl";
-const PRODUCTION_DOMAINS = ["bureauvlieland.nl", "bureauvlieland.lovable.app"];
-
-const isTestMode = (origin: string | undefined): boolean => {
-  if (!origin) return true;
-  return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
-};
-
-const getRecipientEmail = (originalEmail: string, origin: string | undefined): string => {
-  return isTestMode(origin) ? TEST_EMAIL : originalEmail;
-};
-
-const getSubjectPrefix = (origin: string | undefined): string => {
-  return isTestMode(origin) ? "[TEST] " : "";
-};
-
-const sanitizeHtml = (str: string | undefined | null): string => {
-  if (!str) return "";
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
 
 const sendEmailViaMailjet = async (messages: any[]) => {
   const response = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -67,7 +49,7 @@ serve(async (req) => {
     const subjectPrefix = getSubjectPrefix(origin);
     
     if (testMode) {
-      console.log(`[TEST MODE] All partner emails will be redirected to ${TEST_EMAIL}`);
+      console.log(`[TEST MODE] All partner emails will be redirected to test email`);
     }
 
     if (!token) {
@@ -160,81 +142,100 @@ serve(async (req) => {
 
     // Format dates
     const dates = (program.selected_dates as string[])
-      .map((d: string) => {
-        const date = new Date(d);
-        return date.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
-      })
+      .map((d: string) => formatDateNL(d))
       .join(", ");
 
-    // Send cancellation emails to providers
+    // Build emails
     const emails: any[] = [];
 
-    // Provider emails
-    // Provider cancellation emails (redirected in test mode)
+    // Partner emails using template
     for (const [, provider] of providers) {
-      const safeReason = reason ? sanitizeHtml(reason) : null;
-      emails.push({
-        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
-        Subject: `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-        HTMLPart: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
-            
-            <p>Beste ${sanitizeHtml(provider.name)},</p>
-            
-            <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd.</p>
-            
-            <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0 0 10px 0;"><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
-              ${program.customer_company ? `<p style="margin: 0 0 10px 0;"><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
-              <p style="margin: 0 0 10px 0;"><strong>Jouw activiteit(en):</strong></p>
-              <ul style="margin: 0; padding-left: 20px;">
-                ${provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join("")}
-              </ul>
-              ${safeReason ? `<p style="margin: 15px 0 0 0;"><strong>Reden:</strong> ${safeReason}</p>` : ""}
-            </div>
-            
-            <p>Je hoeft verder geen actie te ondernemen.</p>
-            
-            <p style="color: #718096; font-size: 14px; margin-top: 30px;">
-              Met vriendelijke groet,<br>
-              Bureau Vlieland
-            </p>
-          </div>
-        `,
-      });
-    }
+      const templateVariables = {
+        partner_name: sanitizeHtml(provider.name),
+        customer_name: sanitizeHtml(program.customer_name),
+        company_name: sanitizeHtml(program.customer_company) || "",
+        dates: dates,
+        cancellation_reason: reason ? sanitizeHtml(reason) : "",
+        activities_list: provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join(""),
+      };
 
-    // Customer confirmation email (always to real customer)
-    emails.push({
-      From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
-      To: [{ Email: program.customer_email, Name: program.customer_name }],
-      Subject: `${subjectPrefix}Bevestiging: Jouw aanvraag is geannuleerd`,
-      HTMLPart: `
+      const partnerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_PARTNER, templateVariables);
+      
+      const htmlContent = partnerTemplate?.body || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
           
-          <p>Beste ${sanitizeHtml(program.customer_name)},</p>
+          <p>Beste ${sanitizeHtml(provider.name)},</p>
           
-          <p>Je aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
+          <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd.</p>
           
-          ${reason ? `
           <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
+            ${program.customer_company ? `<p style="margin: 0 0 10px 0;"><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
+            <p style="margin: 0 0 10px 0;"><strong>Jouw activiteit(en):</strong></p>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join("")}
+            </ul>
+            ${reason ? `<p style="margin: 15px 0 0 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
           </div>
-          ` : ""}
           
-          <p>Alle ${providers.size} betrokken aanbieder(s) zijn automatisch op de hoogte gesteld.</p>
-          
-          <p>Wil je toch een programma samenstellen? Je kunt altijd een nieuwe aanvraag indienen via onze website.</p>
+          <p>Je hoeft verder geen actie te ondernemen.</p>
           
           <p style="color: #718096; font-size: 14px; margin-top: 30px;">
             Met vriendelijke groet,<br>
-            Erwin & Team Bureau Vlieland
+            Bureau Vlieland
           </p>
         </div>
-      `,
+      `;
+
+      emails.push({
+        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+        Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+        HTMLPart: htmlContent,
+      });
+    }
+
+    // Customer confirmation email using template
+    const customerTemplateVariables = {
+      customer_name: sanitizeHtml(program.customer_name),
+      dates: dates,
+      cancellation_reason: reason ? sanitizeHtml(reason) : "",
+      providers_count: String(providers.size),
+    };
+
+    const customerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_CUSTOMER, customerTemplateVariables);
+
+    const customerHtml = customerTemplate?.body || `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
+        
+        <p>Beste ${sanitizeHtml(program.customer_name)},</p>
+        
+        <p>Je aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
+        
+        ${reason ? `
+        <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>
+        </div>
+        ` : ""}
+        
+        <p>Alle ${providers.size} betrokken aanbieder(s) zijn automatisch op de hoogte gesteld.</p>
+        
+        <p>Wil je toch een programma samenstellen? Je kunt altijd een nieuwe aanvraag indienen via onze website.</p>
+        
+        <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+          Met vriendelijke groet,<br>
+          Erwin & Team Bureau Vlieland
+        </p>
+      </div>
+    `;
+
+    emails.push({
+      From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+      To: [{ Email: program.customer_email, Name: program.customer_name }],
+      Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Jouw aanvraag is geannuleerd`,
+      HTMLPart: customerHtml,
     });
 
     // Send emails (don't fail the request if emails fail)

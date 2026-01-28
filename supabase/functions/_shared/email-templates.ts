@@ -1,0 +1,155 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+export interface TemplateVariables {
+  [key: string]: string | number | undefined | null;
+}
+
+/**
+ * Fetch an email template from the database and render it with variables
+ */
+export async function getRenderedTemplate(
+  templateId: string,
+  variables: TemplateVariables
+): Promise<{ subject: string; body: string } | null> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: template, error } = await supabase
+      .from("email_templates")
+      .select("subject, body_html")
+      .eq("id", templateId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error || !template) {
+      console.error(`Template not found: ${templateId}`, error);
+      return null;
+    }
+
+    // Replace all {{variable}} placeholders with actual values
+    const subject = replaceVariables(template.subject, variables);
+    const body = replaceVariables(template.body_html, variables);
+
+    return { subject, body };
+  } catch (err) {
+    console.error("Error fetching template:", err);
+    return null;
+  }
+}
+
+/**
+ * Replace {{variable}} placeholders with actual values
+ */
+export function replaceVariables(text: string, variables: TemplateVariables): string {
+  return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    const value = variables[key];
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value);
+  });
+}
+
+/**
+ * Sanitize HTML to prevent XSS in emails
+ */
+export function sanitizeHtml(str: string | undefined | null): string {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Format date in Dutch locale
+ */
+export function formatDateNL(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("nl-NL", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
+ * Format currency in Dutch locale
+ */
+export function formatCurrencyNL(amount: number): string {
+  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
+}
+
+/**
+ * Get the base URL for portals based on environment
+ */
+export function getPortalBaseUrl(origin?: string): string {
+  // In production, always use the production domain
+  if (origin?.includes("bureauvlieland.nl")) {
+    return "https://bureauvlieland.nl";
+  }
+  // For lovable preview
+  if (origin?.includes("lovable.app")) {
+    return origin;
+  }
+  // Default to production
+  return "https://bureauvlieland.nl";
+}
+
+/**
+ * Check if we're in test mode (not production)
+ */
+export function isTestMode(origin?: string): boolean {
+  if (!origin) return true;
+  return !origin.includes("bureauvlieland.nl") && !origin.includes("bureauvlieland.lovable.app");
+}
+
+/**
+ * Get subject prefix for test mode
+ */
+export function getSubjectPrefix(origin?: string): string {
+  return isTestMode(origin) ? "[TEST] " : "";
+}
+
+/**
+ * Get the recipient email, redirecting to test email in test mode
+ */
+export function getRecipientEmail(originalEmail: string, origin?: string): string {
+  const TEST_EMAIL = "erwin@bureauvlieland.nl";
+  return isTestMode(origin) ? TEST_EMAIL : originalEmail;
+}
+
+// Template IDs as constants for consistency
+export const TemplateIds = {
+  // Program request emails
+  PROGRAM_REQUEST_BUREAU: "program_request_bureau",
+  PROGRAM_REQUEST_CUSTOMER: "program_request_customer",
+  PROGRAM_REQUEST_PARTNER: "program_request_partner",
+  
+  // Status update emails
+  STATUS_CONFIRMED: "status_confirmed",
+  STATUS_UNAVAILABLE: "status_unavailable",
+  
+  // Cancellation emails
+  CANCELLATION_CUSTOMER: "cancellation_customer",
+  CANCELLATION_PARTNER: "cancellation_partner",
+  
+  // Quote request emails
+  QUOTE_REQUEST_BUREAU: "quote_request_bureau",
+  QUOTE_REQUEST_CUSTOMER: "quote_request_customer",
+  
+  // Partner invitation
+  PARTNER_INVITATION: "partner_invitation",
+  
+  // Accommodation emails
+  ACCOMMODATION_REQUEST_BUREAU: "accommodation_request_bureau",
+  ACCOMMODATION_REQUEST_CUSTOMER: "accommodation_request_customer",
+  ACCOMMODATION_QUOTE_NOTIFICATION: "accommodation_quote_notification",
+  ACCOMMODATION_SELECTED_PARTNER: "accommodation_selected_partner",
+  ACCOMMODATION_SELECTED_CUSTOMER: "accommodation_selected_customer",
+} as const;
