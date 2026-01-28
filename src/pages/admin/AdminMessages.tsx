@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -35,11 +35,12 @@ import {
   XCircle,
   Clock,
   ExternalLink,
-  Building2,
   User,
-  FileText,
   Send,
+  RotateCcw,
+  Settings,
 } from "lucide-react";
+import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 
 interface EmailLog {
   id: string;
@@ -90,6 +91,8 @@ const AdminMessages = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
@@ -167,6 +170,11 @@ const AdminMessages = () => {
     return null;
   };
 
+  const handleResendEmail = (email: EmailLog) => {
+    setSelectedEmail(email);
+    setResendDialogOpen(true);
+  };
+
   return (
     <>
       <Helmet>
@@ -183,14 +191,22 @@ const AdminMessages = () => {
                 Overzicht van alle verzonden transactionele emails
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isRefetching}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-              Vernieuwen
-            </Button>
+            <div className="flex gap-2">
+              <Link to="/admin/berichten/templates">
+                <Button variant="outline">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Templates
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={() => refetch()}
+                disabled={isRefetching}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+                Vernieuwen
+              </Button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -339,6 +355,7 @@ const AdminMessages = () => {
                         <TableHead className="max-w-xs">Onderwerp</TableHead>
                         <TableHead>Link</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="w-20">Acties</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -415,6 +432,16 @@ const AdminMessages = () => {
                                 </p>
                               )}
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleResendEmail(email)}
+                                title="Opnieuw versturen"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -425,6 +452,13 @@ const AdminMessages = () => {
             </CardContent>
           </Card>
         </div>
+
+        <ResendEmailDialog
+          open={resendDialogOpen}
+          onOpenChange={setResendDialogOpen}
+          email={selectedEmail}
+          onSuccess={() => refetch()}
+        />
       </AdminLayout>
     </>
   );
