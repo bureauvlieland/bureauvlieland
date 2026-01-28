@@ -67,6 +67,7 @@ interface MobileProgramViewProps {
   hasChanges: boolean;
   onUpdateItem: (itemId: string, updates: Partial<ProgramRequestItem>) => void;
   onRemoveItem: (itemId: string) => void;
+  onAcceptItem: (itemId: string) => Promise<boolean>;
   onOpenBilling: () => void;
   onOpenEdit: () => void;
   onOpenCancel: () => void;
@@ -92,6 +93,7 @@ export const MobileProgramView = ({
   hasChanges,
   onUpdateItem,
   onRemoveItem,
+  onAcceptItem,
   onOpenBilling,
   onOpenEdit,
   onOpenCancel,
@@ -195,6 +197,7 @@ export const MobileProgramView = ({
                     selectedDates={selectedDates}
                     onUpdate={(updates) => onUpdateItem(item.id, updates)}
                     onRemove={() => onRemoveItem(item.id)}
+                    onAccept={() => onAcceptItem(item.id)}
                     hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                   />
                 ))}
@@ -223,6 +226,7 @@ export const MobileProgramView = ({
                   selectedDates={selectedDates}
                   onUpdate={(updates) => onUpdateItem(item.id, updates)}
                   onRemove={() => onRemoveItem(item.id)}
+                  onAccept={() => onAcceptItem(item.id)}
                   hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                 />
               ))}
