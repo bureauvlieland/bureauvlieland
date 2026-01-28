@@ -95,9 +95,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProgram = useCallback(async () => {
-    console.log("[useCustomerProgram] fetchProgram called with token:", token);
     if (!token) {
-      console.log("[useCustomerProgram] No token provided");
       setError("Geen token opgegeven");
       setIsLoading(false);
       return;
@@ -107,7 +105,6 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     setError(null);
 
     try {
-      console.log("[useCustomerProgram] Fetching program from Supabase...");
       // Fetch the program request
       const { data: requestData, error: requestError } = await supabase
         .from("program_requests")
@@ -115,14 +112,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         .eq("customer_token", token)
         .single();
 
-      console.log("[useCustomerProgram] program_requests response:", { requestData, requestError });
-
       if (requestError) {
         if (requestError.code === "PGRST116") {
-          console.log("[useCustomerProgram] No program found for token");
           setError("Programma niet gevonden of verlopen");
         } else {
-          console.error("[useCustomerProgram] Query error:", requestError);
           throw requestError;
         }
         return;

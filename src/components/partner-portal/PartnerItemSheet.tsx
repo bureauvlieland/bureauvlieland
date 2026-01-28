@@ -88,13 +88,13 @@ export const PartnerItemSheet = ({
   const activityDate = dates[item.day_index];
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
 
-  // Can invoice when executed and customer accepted terms
-  const canInvoice = item.status === "executed" && 
+  // Can invoice when accepted/executed and customer accepted terms
+  const canInvoice = (item.status === "accepted" || item.status === "executed") && 
     !item.invoiced_number && 
     request.terms_accepted_at !== null;
 
   // Waiting for customer to accept terms before invoicing
-  const awaitingTerms = item.status === "executed" && 
+  const awaitingTerms = (item.status === "accepted" || item.status === "executed") && 
     !item.invoiced_number && 
     request.terms_accepted_at === null;
 

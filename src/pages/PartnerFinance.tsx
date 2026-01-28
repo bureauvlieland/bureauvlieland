@@ -161,8 +161,9 @@ const PartnerFinanceContent = () => {
 
   // Calculate financial metrics for activities
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
+  // Show both "accepted" and "executed" items as "to be invoiced" once customer has accepted terms
   const toBeInvoicedItems = data.items.filter(
-    (i) => i.status === "executed" && !i.invoiced_number && i.program_requests.terms_accepted_at !== null
+    (i) => (i.status === "accepted" || i.status === "executed") && !i.invoiced_number && i.program_requests.terms_accepted_at !== null
   );
   
   // Calculate financial metrics for accommodations
