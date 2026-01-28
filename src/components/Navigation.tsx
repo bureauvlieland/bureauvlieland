@@ -106,7 +106,7 @@ export const Navigation = () => {
               Catering
             </Link>
             <Link
-              to="/logies-aanvragen"
+              to="/logies-vlieland"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Logies
@@ -225,7 +225,7 @@ export const Navigation = () => {
                 Catering
               </Link>
               <Link
-                to="/logies-aanvragen"
+                to="/logies-vlieland"
                 onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >

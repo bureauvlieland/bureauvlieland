@@ -280,6 +280,13 @@ const BedrijfsuitjeVlieland = () => {
                   <span className="font-medium text-foreground">Bedrijfsuitje ideeën Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
+                <Link 
+                  to="/logies-vlieland" 
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Logies op Vlieland</span>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
               </div>
             </div>
           </div>

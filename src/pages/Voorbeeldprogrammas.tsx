@@ -473,14 +473,14 @@ const Voorbeeldprogrammas = () => {
                 perfect bij jullie past - met de juiste mix van activiteit, ontspanning en inhoud.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
-                <Link to="/contact">
+                <Link to="/programma-samenstellen">
                   <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Vraag een offerte op maat aan
+                    Stel je programma samen
                   </Button>
                 </Link>
-                <Link to="/samenwerken">
+                <Link to="/logies-vlieland">
                   <Button size="lg" variant="outline">
-                    Bekijk samenwerkingsmogelijkheden
+                    Zoek logies
                   </Button>
                 </Link>
               </div>
