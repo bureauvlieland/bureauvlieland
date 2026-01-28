@@ -137,6 +137,28 @@ const PartnerFinanceContent = () => {
     );
   }
 
+  // Helper function to calculate expected commission
+  const calculateExpectedActivityCommission = (quotedPrice: number, itemCommissionPercentage?: number | null) => {
+    const vatRate = 21; // Activities use 21% VAT
+    const amountExclVat = quotedPrice / (1 + vatRate / 100);
+    const commissionRate = itemCommissionPercentage ?? data.partner.commission_percentage;
+    return amountExclVat * (commissionRate / 100);
+  };
+
+  const calculateExpectedAccommodationCommission = (
+    priceTotal: number, 
+    priceIncludesVat: boolean | null, 
+    vatRate: number | null,
+    quoteCommissionPercentage?: number | null
+  ) => {
+    const vat = vatRate ?? 9; // Accommodations use 9% VAT by default
+    const amountExclVat = (priceIncludesVat ?? true) 
+      ? priceTotal / (1 + vat / 100)
+      : priceTotal;
+    const commissionRate = quoteCommissionPercentage ?? data.partner.accommodation_commission_percentage ?? 10;
+    return amountExclVat * (commissionRate / 100);
+  };
+
   // Calculate financial metrics for activities
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
   const toBeInvoicedItems = data.items.filter(
@@ -170,6 +192,19 @@ const PartnerFinanceContent = () => {
   const paidCommission = 
     invoicedItems.filter((i) => i.commission_status === "paid").reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
     invoicedAccommodations.filter((q) => q.commission_status === "paid").reduce((sum, q) => sum + (q.commission_amount || 0), 0);
+
+  // Calculate expected commission for items to be invoiced
+  const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
+    if (!i.quoted_price) return sum;
+    return sum + calculateExpectedActivityCommission(i.quoted_price, i.commission_percentage);
+  }, 0);
+
+  const expectedAccommodationCommission = toBeInvoicedAccommodations.reduce((sum, q) => {
+    if (!q.price_total) return sum;
+    return sum + calculateExpectedAccommodationCommission(q.price_total, q.price_includes_vat, q.vat_rate, q.commission_percentage);
+  }, 0);
+
+  const totalExpectedCommission = expectedActivityCommission + expectedAccommodationCommission;
 
   const toBeInvoicedCount = toBeInvoicedItems.length + toBeInvoicedAccommodations.length;
   const invoicedCount = invoicedItems.length + invoicedAccommodations.length;
@@ -230,6 +265,9 @@ const PartnerFinanceContent = () => {
                 <p className="text-2xl font-bold">€{totalCommission.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
                 <p className="text-xs text-muted-foreground">
                   €{paidCommission.toFixed(2)} betaald • €{pendingCommission.toFixed(2)} open
+                  {totalExpectedCommission > 0 && (
+                    <span className="text-amber-600"> • Verwacht: €{totalExpectedCommission.toFixed(2)}</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -314,6 +352,20 @@ const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
 
+  // Calculate expected commission for "to-invoice" items
+  const calculateExpectedCommission = () => {
+    if (variant !== "to-invoice" || !item.quoted_price) return null;
+    
+    const vatRate = 21; // Activities use 21% VAT
+    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
+    const commissionPercentage = item.commission_percentage ?? 15;
+    const commissionAmount = amountExclVat * (commissionPercentage / 100);
+    
+    return commissionAmount;
+  };
+
+  const expectedCommission = calculateExpectedCommission();
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -349,6 +401,11 @@ const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Bevestigde prijs</p>
                 <p className="font-semibold">€{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                {expectedCommission !== null && (
+                  <p className="text-xs text-amber-600">
+                    Verwachte commissie: €{expectedCommission.toFixed(2)}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="text-right">
@@ -378,6 +435,23 @@ interface AccommodationInvoiceCardProps {
 
 const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardProps) => {
   const request = quote.accommodation_requests;
+
+  // Calculate expected commission for "to-invoice" items
+  const calculateExpectedCommission = () => {
+    if (variant !== "to-invoice" || !quote.price_total) return null;
+    
+    const vatRate = quote.vat_rate ?? 9; // Accommodations use 9% VAT by default
+    const amountExclVat = (quote.price_includes_vat ?? true)
+      ? quote.price_total / (1 + vatRate / 100)
+      : quote.price_total;
+    
+    const commissionPercentage = quote.commission_percentage ?? 10;
+    const commissionAmount = amountExclVat * (commissionPercentage / 100);
+    
+    return commissionAmount;
+  };
+
+  const expectedCommission = calculateExpectedCommission();
 
   return (
     <Card>
@@ -415,6 +489,11 @@ const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardPr
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Offertebedrag</p>
                 <p className="font-semibold">€{quote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                {expectedCommission !== null && (
+                  <p className="text-xs text-amber-600">
+                    Verwachte commissie: €{expectedCommission.toFixed(2)}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="text-right">
