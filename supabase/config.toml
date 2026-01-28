@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.resend-email]
 verify_jwt = false
+
+[functions.send-accommodation-quote-request]
+verify_jwt = false
