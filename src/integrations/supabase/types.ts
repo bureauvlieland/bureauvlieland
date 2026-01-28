@@ -35,6 +35,9 @@ export type Database = {
           price_includes_vat: boolean | null
           price_per_person_per_night: number | null
           price_total: number
+          quote_attachment_filename: string | null
+          quote_attachment_path: string | null
+          quote_external_url: string | null
           request_id: string
           room_configuration: Json | null
           selected_at: string | null
@@ -64,6 +67,9 @@ export type Database = {
           price_includes_vat?: boolean | null
           price_per_person_per_night?: number | null
           price_total: number
+          quote_attachment_filename?: string | null
+          quote_attachment_path?: string | null
+          quote_external_url?: string | null
           request_id: string
           room_configuration?: Json | null
           selected_at?: string | null
@@ -93,6 +99,9 @@ export type Database = {
           price_includes_vat?: boolean | null
           price_per_person_per_night?: number | null
           price_total?: number
+          quote_attachment_filename?: string | null
+          quote_attachment_path?: string | null
+          quote_external_url?: string | null
           request_id?: string
           room_configuration?: Json | null
           selected_at?: string | null

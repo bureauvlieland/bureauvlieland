@@ -66,6 +66,9 @@ interface AccommodationQuote {
   partner_notes: string | null;
   room_configuration: Record<string, unknown>[] | null;
   submitted_at: string | null;
+  quote_attachment_path: string | null;
+  quote_attachment_filename: string | null;
+  quote_external_url: string | null;
 }
 
 interface RoomConfig {
@@ -92,6 +95,7 @@ interface PartnerAccommodationQuoteSheetProps {
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: RoomConfig[];
+    quoteExternalUrl: string;
   }) => Promise<boolean>;
 }
 
@@ -125,6 +129,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [validUntil, setValidUntil] = useState("");
   const [partnerNotes, setPartnerNotes] = useState("");
   const [roomConfiguration, setRoomConfiguration] = useState<RoomConfig[]>([]);
+  const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
 
   // Initialize form when opening
   useEffect(() => {
@@ -141,6 +146,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setRoomConfiguration(Array.isArray(existingQuote.room_configuration) 
         ? (existingQuote.room_configuration as unknown as RoomConfig[])
         : []);
+      setQuoteExternalUrl(existingQuote.quote_external_url || "");
     } else if (isOpen) {
       // Default values for new quote
       setAccommodationName("");
@@ -153,6 +159,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setValidUntil(format(addDays(new Date(), 14), "yyyy-MM-dd"));
       setPartnerNotes("");
       setRoomConfiguration([]);
+      setQuoteExternalUrl("");
     }
   }, [isOpen, existingQuote]);
 
@@ -214,6 +221,7 @@ export const PartnerAccommodationQuoteSheet = ({
       validUntil,
       partnerNotes: partnerNotes.trim(),
       roomConfiguration,
+      quoteExternalUrl: quoteExternalUrl.trim(),
     });
 
     setIsSubmitting(false);
@@ -483,6 +491,21 @@ export const PartnerAccommodationQuoteSheet = ({
                 disabled={isReadOnly}
                 min={format(new Date(), "yyyy-MM-dd")}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quoteExternalUrl">Link naar uw offerte (optioneel)</Label>
+              <Input
+                id="quoteExternalUrl"
+                type="url"
+                placeholder="https://uwsite.nl/offerte/..."
+                value={quoteExternalUrl}
+                onChange={(e) => setQuoteExternalUrl(e.target.value)}
+                disabled={isReadOnly}
+              />
+              <p className="text-xs text-muted-foreground">
+                Voeg een link toe naar uw eigen offerte, boekingssysteem of prijsopgave
+              </p>
             </div>
 
             <div className="space-y-2">

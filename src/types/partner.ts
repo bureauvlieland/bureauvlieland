@@ -84,6 +84,8 @@ export interface PartnerDashboardData {
     name: string;
     email: string;
     commission_percentage: number;
+    accommodation_commission_percentage?: number;
+    partner_type?: string;
   };
   items: PartnerItem[];
   summary: {
@@ -95,6 +97,56 @@ export interface PartnerDashboardData {
     readyForInvoice: number;
     invoiced: number;
     total: number;
+  };
+  accommodationQuotes?: PartnerAccommodationQuote[];
+  accommodationSummary?: {
+    pending: number;
+    submitted: number;
+    selected: number;
+    closed: number;
+    total: number;
+  };
+}
+
+export interface PartnerAccommodationQuote {
+  id: string;
+  request_id: string;
+  partner_id: string;
+  accommodation_name: string;
+  description: string | null;
+  price_total: number;
+  price_per_person_per_night: number | null;
+  price_includes_vat: boolean;
+  vat_rate: number;
+  includes: unknown;
+  conditions: string | null;
+  valid_until: string;
+  status: string;
+  submitted_at: string | null;
+  partner_notes: string | null;
+  quote_external_url: string | null;
+  quote_attachment_path: string | null;
+  quote_attachment_filename: string | null;
+  room_configuration: unknown;
+  created_at: string;
+  updated_at: string;
+  accommodation_requests: {
+    id: string;
+    customer_name: string;
+    customer_email: string;
+    customer_phone: string;
+    customer_company: string | null;
+    arrival_date: string;
+    departure_date: string;
+    number_of_guests: number;
+    accommodation_type: string;
+    room_count: number | null;
+    room_types: string[];
+    location_preference: string[];
+    budget_range: string | null;
+    special_requests: string | null;
+    status: string;
+    created_at: string;
   };
 }
 

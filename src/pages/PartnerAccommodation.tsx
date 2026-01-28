@@ -51,6 +51,9 @@ interface AccommodationQuote {
   status: string;
   submitted_at: string | null;
   partner_notes: string | null;
+  quote_attachment_path: string | null;
+  quote_attachment_filename: string | null;
+  quote_external_url: string | null;
 }
 
 interface RequestWithQuote extends AccommodationRequest {
@@ -184,6 +187,7 @@ const PartnerAccommodationContent = () => {
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: any[];
+    quoteExternalUrl: string;
   }) => {
     if (!selectedRequest?.quote) return false;
 
@@ -202,6 +206,7 @@ const PartnerAccommodationContent = () => {
           valid_until: quoteData.validUntil,
           partner_notes: quoteData.partnerNotes,
           room_configuration: quoteData.roomConfiguration,
+          quote_external_url: quoteData.quoteExternalUrl || null,
           status: "submitted",
           submitted_at: new Date().toISOString(),
         })
