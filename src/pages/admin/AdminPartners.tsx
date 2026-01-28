@@ -44,6 +44,8 @@ import {
   UserPlus,
   ExternalLink,
   Trash2,
+  FileCheck2,
+  FileX,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -267,6 +269,7 @@ const AdminPartnersContent = () => {
                 <TableHead>Contact</TableHead>
                 <TableHead>Adres</TableHead>
                 <TableHead>Commissie</TableHead>
+                <TableHead>Voorwaarden</TableHead>
                 <TableHead>Login</TableHead>
                 <TableHead>Actief</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -324,6 +327,13 @@ const AdminPartnersContent = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{partner.commission_percentage}%</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {partner.terms_pdf_path ? (
+                        <FileCheck2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <FileX className="h-5 w-5 text-muted-foreground/50" />
+                      )}
                     </TableCell>
                     <TableCell>
                       {partner.auth_user_id ? (
