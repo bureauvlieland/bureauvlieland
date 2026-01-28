@@ -214,6 +214,15 @@ const PartnerAccommodationContent = () => {
 
       if (error) throw error;
 
+      // Send notification email to customer
+      try {
+        await supabase.functions.invoke("notify-accommodation-quote", {
+          body: { quoteId: selectedRequest.quote.id },
+        });
+      } catch (emailError) {
+        console.error("Failed to send quote notification:", emailError);
+      }
+
       toast({
         title: "Offerte ingediend",
         description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland.",

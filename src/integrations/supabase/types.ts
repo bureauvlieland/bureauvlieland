@@ -500,6 +500,85 @@ export type Database = {
           },
         ]
       }
+      email_log: {
+        Row: {
+          created_at: string
+          email_type: string
+          error_message: string | null
+          id: string
+          mailjet_message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          recipient_name: string | null
+          related_accommodation_id: string | null
+          related_item_id: string | null
+          related_partner_id: string | null
+          related_request_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          email_type: string
+          error_message?: string | null
+          id?: string
+          mailjet_message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          recipient_name?: string | null
+          related_accommodation_id?: string | null
+          related_item_id?: string | null
+          related_partner_id?: string | null
+          related_request_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          mailjet_message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          recipient_name?: string | null
+          related_accommodation_id?: string | null
+          related_item_id?: string | null
+          related_partner_id?: string | null
+          related_request_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_related_accommodation_id_fkey"
+            columns: ["related_accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_related_item_id_fkey"
+            columns: ["related_item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_related_request_id_fkey"
+            columns: ["related_request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           accommodation_commission_percentage: number | null
