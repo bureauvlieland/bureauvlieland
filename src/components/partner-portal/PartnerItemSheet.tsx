@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Building2,
   Mail,
@@ -23,6 +24,7 @@ import {
   Euro,
   CheckCircle,
   XCircle,
+  MessageSquare,
   FileText,
   Hourglass,
   Loader2,
@@ -37,7 +39,14 @@ interface PartnerItemSheetProps {
   item: PartnerItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onStatusUpdate: (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => Promise<boolean>;
+  onStatusUpdate: (
+    status: string, 
+    note?: string, 
+    quotedPrice?: number, 
+    quotedNotes?: string,
+    proposedTime?: string,
+    proposedDate?: string
+  ) => Promise<boolean>;
   onRegisterInvoice: () => void;
   commissionPercentage: number;
 }
@@ -53,19 +62,23 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   alternative: { label: "Alternatief voorgesteld", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
 };
 
+type ResponseType = "confirmed" | "alternative" | "unavailable";
+
 export const PartnerItemSheet = ({
   item,
   isOpen,
   onClose,
   onStatusUpdate,
   onRegisterInvoice,
-  commissionPercentage,
 }: PartnerItemSheetProps) => {
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [showPriceForm, setShowPriceForm] = useState(false);
+  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [responseType, setResponseType] = useState<ResponseType>("confirmed");
   const [quotedPrice, setQuotedPrice] = useState("");
   const [quotedNotes, setQuotedNotes] = useState("");
+  const [proposedTime, setProposedTime] = useState("");
+  const [statusNote, setStatusNote] = useState("");
   const [priceError, setPriceError] = useState("");
+  const [noteError, setNoteError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!item) return null;
@@ -85,31 +98,49 @@ export const PartnerItemSheet = ({
     !item.invoiced_number && 
     request.terms_accepted_at === null;
 
-  const handleConfirm = async () => {
-    const priceValue = parseFloat(quotedPrice.replace(",", "."));
-    if (!quotedPrice || isNaN(priceValue) || priceValue <= 0) {
-      setPriceError("Vul een geldige prijs in");
-      return;
+  // Can respond if pending or has alternative status (allow re-proposal)
+  const canRespond = item.status === "pending" || item.status === "alternative";
+
+  const handleSubmitResponse = async () => {
+    // Validate based on response type
+    let hasError = false;
+
+    if (responseType === "confirmed") {
+      const priceValue = parseFloat(quotedPrice.replace(",", "."));
+      if (!quotedPrice || isNaN(priceValue) || priceValue <= 0) {
+        setPriceError("Vul een geldige prijs in");
+        hasError = true;
+      }
     }
-    setPriceError("");
+
+    if (responseType === "alternative") {
+      if (!statusNote.trim()) {
+        setNoteError("Toelichting is verplicht bij een alternatief voorstel");
+        hasError = true;
+      }
+    }
+
+    if (hasError) return;
+
     setIsSubmitting(true);
     
-    const success = await onStatusUpdate("confirmed", undefined, priceValue, quotedNotes || undefined);
+    const priceValue = quotedPrice ? parseFloat(quotedPrice.replace(",", ".")) : undefined;
+    const validPrice = priceValue && !isNaN(priceValue) && priceValue > 0 ? priceValue : undefined;
+
+    const success = await onStatusUpdate(
+      responseType,
+      responseType === "confirmed" ? undefined : statusNote || undefined,
+      validPrice,
+      quotedNotes || undefined,
+      proposedTime || undefined,
+      undefined // proposedDate not used in current UI
+    );
     
     setIsSubmitting(false);
     if (success) {
-      setShowPriceForm(false);
-      setQuotedPrice("");
-      setQuotedNotes("");
+      resetForm();
       onClose();
     }
-  };
-
-  const handleUnavailable = async () => {
-    setIsSubmitting(true);
-    const success = await onStatusUpdate("unavailable");
-    setIsSubmitting(false);
-    if (success) onClose();
   };
 
   const handleMarkExecuted = async () => {
@@ -119,13 +150,32 @@ export const PartnerItemSheet = ({
     if (success) onClose();
   };
 
-  const handleClose = () => {
-    setShowPriceForm(false);
+  const resetForm = () => {
+    setShowResponseForm(false);
+    setResponseType("confirmed");
     setQuotedPrice("");
     setQuotedNotes("");
+    setProposedTime("");
+    setStatusNote("");
     setPriceError("");
-    setIsConfirming(false);
+    setNoteError("");
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
+  };
+
+  // Pre-fill form when editing alternative
+  const handleOpenResponseForm = () => {
+    if (item.status === "alternative") {
+      setResponseType("alternative");
+      if (item.quoted_price) setQuotedPrice(item.quoted_price.toString().replace(".", ","));
+      if (item.quoted_notes) setQuotedNotes(item.quoted_notes);
+      if (item.proposed_time) setProposedTime(item.proposed_time);
+      if (item.status_note) setStatusNote(item.status_note);
+    }
+    setShowResponseForm(true);
   };
 
   return (
@@ -220,7 +270,7 @@ export const PartnerItemSheet = ({
           )}
 
           {/* Quoted price (if confirmed) */}
-          {item.quoted_price && (
+          {item.quoted_price && item.status !== "alternative" && (
             <>
               <Separator />
               <div className="space-y-3">
@@ -240,6 +290,35 @@ export const PartnerItemSheet = ({
             </>
           )}
 
+          {/* Alternative proposal details */}
+          {item.status === "alternative" && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Jouw alternatief voorstel</h3>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 space-y-2">
+                  {item.proposed_time && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-amber-600" />
+                      <span className="font-medium">Voorgestelde tijd:</span>
+                      <span>{item.proposed_time}</span>
+                    </div>
+                  )}
+                  {item.quoted_price && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Euro className="h-4 w-4 text-amber-600" />
+                      <span className="font-medium">Voorgestelde prijs:</span>
+                      <span>€{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {item.status_note && (
+                    <p className="text-sm text-amber-800 dark:text-amber-300 mt-2">{item.status_note}</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Customer notes */}
           {item.customer_notes && (
             <>
@@ -251,13 +330,13 @@ export const PartnerItemSheet = ({
             </>
           )}
 
-          {/* Status note (for alternative/unavailable) */}
-          {item.status_note && (
+          {/* Status note for unavailable */}
+          {item.status === "unavailable" && item.status_note && (
             <>
               <Separator />
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Jouw reactie</h3>
-                <p className="text-sm bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-amber-800 dark:text-amber-300">
+                <p className="text-sm bg-destructive/10 rounded-lg p-3 text-destructive">
                   {item.status_note}
                 </p>
               </div>
@@ -318,76 +397,221 @@ export const PartnerItemSheet = ({
 
           {/* Actions */}
           <div className="space-y-3">
-            {/* Pending: Confirm or Unavailable */}
-            {item.status === "pending" && !showPriceForm && (
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => setShowPriceForm(true)} 
-                  className="flex-1"
-                  disabled={isSubmitting}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Bevestigen
-                </Button>
-                <Button 
-                  onClick={handleUnavailable} 
-                  variant="outline" 
-                  className="flex-1"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
-                  Niet beschikbaar
-                </Button>
-              </div>
+            {/* Can respond: show response button or form */}
+            {canRespond && !showResponseForm && (
+              <Button 
+                onClick={handleOpenResponseForm} 
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {item.status === "alternative" ? (
+                  <>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Voorstel aanpassen
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Reageren op aanvraag
+                  </>
+                )}
+              </Button>
             )}
 
-            {/* Price form for confirmation */}
-            {item.status === "pending" && showPriceForm && (
-              <div className="space-y-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-4 border border-green-200 dark:border-green-900">
-                <div className="space-y-2">
-                  <Label htmlFor="quotedPrice" className="flex items-center gap-1">
-                    <Euro className="h-4 w-4" />
-                    Totaalprijs (incl. BTW) *
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-                    <Input
-                      id="quotedPrice"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={quotedPrice}
-                      onChange={(e) => {
-                        setQuotedPrice(e.target.value);
-                        setPriceError("");
-                      }}
-                      className={cn("pl-7", priceError && "border-destructive")}
-                    />
+            {/* Response form with radio group */}
+            {canRespond && showResponseForm && (
+              <div className="space-y-4 border rounded-lg p-4">
+                <RadioGroup 
+                  value={responseType} 
+                  onValueChange={(v) => {
+                    setResponseType(v as ResponseType);
+                    setPriceError("");
+                    setNoteError("");
+                  }} 
+                  className="space-y-3"
+                >
+                  {/* Confirm option */}
+                  <div className={cn(
+                    "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                    responseType === "confirmed" ? "bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800" : "hover:bg-muted/50"
+                  )}>
+                    <RadioGroupItem value="confirmed" id="confirmed" className="mt-1" />
+                    <Label htmlFor="confirmed" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="font-medium">Bevestigen</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        De activiteit kan plaatsvinden zoals aangevraagd
+                      </p>
+                    </Label>
                   </div>
-                  {priceError && <p className="text-sm text-destructive">{priceError}</p>}
-                  <p className="text-xs text-muted-foreground">
-                    Prijs voor {request.number_of_people} personen
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="quotedNotes">Toelichting (optioneel)</Label>
-                  <Textarea
-                    id="quotedNotes"
-                    placeholder="Bijv. 'Inclusief materialen'"
-                    value={quotedNotes}
-                    onChange={(e) => setQuotedNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
 
-                <div className="flex gap-2">
-                  <Button onClick={handleConfirm} disabled={isSubmitting} className="flex-1">
+                  {/* Alternative option */}
+                  <div className={cn(
+                    "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                    responseType === "alternative" ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800" : "hover:bg-muted/50"
+                  )}>
+                    <RadioGroupItem value="alternative" id="alternative" className="mt-1" />
+                    <Label htmlFor="alternative" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-amber-600" />
+                        <span className="font-medium">Alternatief voorstellen</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Stel een andere tijd of aanpassing voor
+                      </p>
+                    </Label>
+                  </div>
+
+                  {/* Unavailable option */}
+                  <div className={cn(
+                    "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                    responseType === "unavailable" ? "bg-destructive/10 border-destructive/30" : "hover:bg-muted/50"
+                  )}>
+                    <RadioGroupItem value="unavailable" id="unavailable" className="mt-1" />
+                    <Label htmlFor="unavailable" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-destructive" />
+                        <span className="font-medium">Niet beschikbaar</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        De activiteit kan niet plaatsvinden
+                      </p>
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {/* Conditional fields based on response type */}
+                {responseType === "confirmed" && (
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="quotedPrice" className="flex items-center gap-1">
+                        <Euro className="h-4 w-4" />
+                        Totaalprijs (incl. BTW) *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                        <Input
+                          id="quotedPrice"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={quotedPrice}
+                          onChange={(e) => {
+                            setQuotedPrice(e.target.value);
+                            setPriceError("");
+                          }}
+                          className={cn("pl-7", priceError && "border-destructive")}
+                        />
+                      </div>
+                      {priceError && <p className="text-sm text-destructive">{priceError}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        Prijs voor {request.number_of_people} personen
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="proposedTime">Voorgestelde tijd (optioneel)</Label>
+                      <Input
+                        id="proposedTime"
+                        placeholder="Bijv. 10:00 of 'ochtend'"
+                        value={proposedTime}
+                        onChange={(e) => setProposedTime(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="quotedNotes">Toelichting (optioneel)</Label>
+                      <Textarea
+                        id="quotedNotes"
+                        placeholder="Bijv. 'Inclusief materialen'"
+                        value={quotedNotes}
+                        onChange={(e) => setQuotedNotes(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {responseType === "alternative" && (
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="proposedTimeAlt">Voorgestelde tijd (optioneel)</Label>
+                      <Input
+                        id="proposedTimeAlt"
+                        placeholder="Bijv. 14:00 in plaats van 10:00"
+                        value={proposedTime}
+                        onChange={(e) => setProposedTime(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="quotedPriceAlt" className="flex items-center gap-1">
+                        <Euro className="h-4 w-4" />
+                        Alternatieve prijs (optioneel)
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                        <Input
+                          id="quotedPriceAlt"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={quotedPrice}
+                          onChange={(e) => setQuotedPrice(e.target.value)}
+                          className="pl-7"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Optioneel: vul in als de prijs afwijkt
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="statusNote">Toelichting *</Label>
+                      <Textarea
+                        id="statusNote"
+                        placeholder="Bijv. 'Beschikbaar op 14:00 in plaats van 10:00, of op een andere datum'"
+                        value={statusNote}
+                        onChange={(e) => {
+                          setStatusNote(e.target.value);
+                          setNoteError("");
+                        }}
+                        rows={3}
+                        className={cn(noteError && "border-destructive")}
+                      />
+                      {noteError && <p className="text-sm text-destructive">{noteError}</p>}
+                    </div>
+                  </div>
+                )}
+
+                {responseType === "unavailable" && (
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="unavailableNote">Reden (optioneel)</Label>
+                      <Textarea
+                        id="unavailableNote"
+                        placeholder="Bijv. 'Volgeboekt op deze datum'"
+                        value={statusNote}
+                        onChange={(e) => setStatusNote(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    onClick={handleSubmitResponse} 
+                    disabled={isSubmitting} 
+                    className="flex-1"
+                  >
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Bevestigen
+                    Versturen
                   </Button>
                   <Button 
-                    onClick={() => setShowPriceForm(false)} 
+                    onClick={resetForm} 
                     variant="outline"
                     disabled={isSubmitting}
                   >

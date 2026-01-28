@@ -180,7 +180,9 @@ const PartnerDashboardContent = () => {
     status: string,
     statusNote?: string,
     quotedPrice?: number,
-    quotedNotes?: string
+    quotedNotes?: string,
+    proposedTime?: string,
+    proposedDate?: string
   ): Promise<boolean> => {
     if (!partnerToken || !selectedItem) return false;
 
@@ -200,6 +202,8 @@ const PartnerDashboardContent = () => {
             statusNote,
             quotedPrice,
             quotedNotes,
+            proposedTime,
+            proposedDate,
           }),
         }
       );
@@ -215,6 +219,8 @@ const PartnerDashboardContent = () => {
           ? "Activiteit bevestigd. De klant is op de hoogte gesteld."
           : status === "executed"
           ? "Activiteit gemarkeerd als uitgevoerd."
+          : status === "alternative"
+          ? "Alternatief voorstel verstuurd. De klant is op de hoogte gesteld."
           : "Status is bijgewerkt.",
       });
 
