@@ -248,6 +248,7 @@ export const DesktopProgramView = ({
             <InvoiceProvidersCard 
               items={program.items} 
               selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+              numberOfPeople={program.number_of_people}
             />
             <PriceSummaryCard 
               items={program.items} 
