@@ -140,23 +140,37 @@ export const PriceSummaryCard = ({
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">Prijsoverzicht</span>
         </div>
-        <div className="space-y-1 text-sm">
+        <div className="space-y-1.5 text-sm">
+          {/* Logies - amber accent */}
           {summary.hasAccommodation && (
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Logies</span>
-              <span>€{formatPrice(summary.accommodationTotal)}</span>
+              <span className="text-amber-700 dark:text-amber-400">Logies</span>
+              <span className="text-amber-700 dark:text-amber-400">€{formatPrice(summary.accommodationTotal)}</span>
             </div>
           )}
-          {summary.confirmedCount > 0 && (
+          
+          {/* Bureau Vlieland - primary accent */}
+          {(summary.hasBureauItems || summary.coordinationFee > 0) && (
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Activiteiten ({summary.confirmedCount})</span>
-              <span>€{formatPrice(summary.confirmedTotal + summary.coordinationFee)}</span>
+              <span className="text-primary">Bureau Vlieland</span>
+              <span className="text-primary">€{formatPrice(summary.bureauTotal + summary.coordinationFee)}</span>
             </div>
           )}
-          <div className="flex items-center justify-between pt-1 border-t">
+          
+          {/* Partner activiteiten - muted */}
+          {summary.hasPartnerItems && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Aanbieders</span>
+              <span className="text-muted-foreground">€{formatPrice(summary.partnerTotal)}</span>
+            </div>
+          )}
+          
+          {/* Totaal */}
+          <div className="flex items-center justify-between pt-1.5 border-t">
             <span className="font-medium">Totaal incl. BTW</span>
             <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
           </div>
+          
           {summary.pendingCount > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
               +{summary.pendingCount} activiteit{summary.pendingCount > 1 ? "en" : ""} nog te bevestigen
