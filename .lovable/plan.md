@@ -1,170 +1,229 @@
 
-# Plan: Pro Forma Commissie Overzicht in Admin Commissie Beheer
+# Plan: Maandselectie en Verbeterde Partner Groepering in Commissie Beheer
 
-## Probleem
+## Huidige Situatie
 
-De huidige Admin Commissie pagina toont alleen items die al gefactureerd zijn (`invoiced_number IS NOT NULL`). Dit betekent dat:
-- Items die nog uitgevoerd moeten worden (zoals Hotel Seeduyn booking voor juni 2026) niet zichtbaar zijn
-- De admin geen overzicht heeft van **verwachte commissies** voor lopende projecten
-- Er geen "pro forma" inzicht is in toekomstige commissie-inkomsten
+De Admin Commissie pagina:
+- Groepeert items al per partner ✓
+- Toont "Verwacht" met verwachte commissies ✓
+- **Mist**: maand/periode selectie om te filteren op projectdatums
 
-## Oplossing
+## Gewenste Uitbreiding
 
-Uitbreiden van de Admin Commissie pagina met een nieuwe filter/tab "Verwacht" die:
-1. Alle items toont waar commissie te verwachten is (nog niet gefactureerd door partner)
-2. De verwachte commissie berekent o.b.v. geoffreerd bedrag excl. BTW
-3. Een pro forma overzicht biedt per partner met geplande projectdata
+1. **Maand picker** toevoegen om commissies te filteren op uitvoermaand
+2. **Alle maanden** optie (huidige gedrag)
+3. **Verbeterde metrics** per geselecteerde periode
 
-## Nieuwe Status Filter
+## Visueel Ontwerp
 
-| Filter | Beschrijving |
-|--------|--------------|
-| **Verwacht** (nieuw) | Items met geoffreerd bedrag, nog niet gefactureerd |
-| Te factureren | Partner heeft gefactureerd, BV moet commissie factureren |
-| Gefactureerd | Commissie gefactureerd door BV |
-| Betaald | Commissie ontvangen |
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  Commissie Beheer                                              [Vernieuwen]    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  [Verwacht ▼]  [Type: Alle ▼]  [📅 Februari 2026 ▼]                            │
+│                                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                 │
+│  │ 🕐 Verwacht     │  │ € Totaal        │  │ 📅 Deze maand   │                 │
+│  │ 1               │  │ € 344,04        │  │ 0 project(en)   │                 │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                 │
+│                                                                                 │
+│  ════════════════════════════════════════════════════════════════════════════  │
+│  📋 COMMISSIE OVERZICHT - FEBRUARI 2026                                        │
+│  ════════════════════════════════════════════════════════════════════════════  │
+│                                                                                 │
+│  🏨 Hotel Seeduyn                                               € 0,00         │
+│  ───────────────────────────────────────────────────────────────────────────   │
+│  (geen projecten in februari)                                                  │
+│                                                                                 │
+│  🏨 Hotel Seeduyn                                               € 344,04       │
+│  ───────────────────────────────────────────────────────────────────────────   │
+│  🏠 Logies │ Hotel Seeduyn │ Test Bedrijf │ 15-17 jun 2026 │ € 344,04         │
+│                                                                                 │
+│  ═══════════════════════════════════════════════════════════════════════════   │
+│  TOTAAL FEBRUARI 2026                                           € 0,00        │
+│  ═══════════════════════════════════════════════════════════════════════════   │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Maand Picker Opties
+
+| Optie | Beschrijving |
+|-------|--------------|
+| Alle maanden | Geen datumfilter (huidige gedrag) |
+| Huidige maand | Januari 2026 |
+| Komende maand | Februari 2026 |
+| Specifieke maand | Dropdown met maanden waar projecten zijn |
 
 ## Technische Wijzigingen
 
 ### 1. Edge Function: `get-admin-commissions`
 
-Uitbreiden met nieuwe status `expected` die haalt:
+Uitbreiden met maand parameter:
 
 ```typescript
-// ACTIVITEITEN - Verwacht
-if (statusFilter === "expected") {
-  const { data: items } = await adminClient
-    .from("program_request_items")
-    .select(`*, program_requests!inner(...)`)
-    .in("status", ["confirmed", "accepted", "executed"])
-    .is("invoiced_number", null)
-    .not("quoted_price", "is", null);
-    
-  // Bereken verwachte commissie per item
-  for (const item of items) {
-    const vatRate = 21;
-    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
-    const commissionRate = item.commission_percentage ?? partner.commission_percentage;
-    item.expected_commission = amountExclVat * (commissionRate / 100);
-    item.amount_excl_vat = amountExclVat;
-  }
-}
+// Nieuwe filter parameter
+let monthFilter: string | null = null; // Format: "2026-06" of null voor alle
 
-// LOGIES - Verwacht
-if (statusFilter === "expected") {
-  const { data: quotes } = await adminClient
-    .from("accommodation_quotes")
-    .select(`*, accommodation_requests!inner(...)`)
-    .eq("status", "selected")
-    .is("invoiced_number", null);
-    
-  // Bereken verwachte commissie per quote
-  for (const quote of quotes) {
-    const vatRate = quote.vat_rate ?? 9;
-    const amountExclVat = quote.price_includes_vat 
-      ? quote.price_total / (1 + vatRate / 100)
-      : quote.price_total;
-    const commissionRate = quote.commission_percentage ?? partner.accommodation_commission_percentage ?? 10;
-    quote.expected_commission = amountExclVat * (commissionRate / 100);
-    quote.amount_excl_vat = amountExclVat;
-  }
+try {
+  const body = await req.json();
+  if (body.status) statusFilter = body.status;
+  if (body.type) typeFilter = body.type;
+  if (body.month) monthFilter = body.month; // Nieuw!
+} catch {}
+
+// Bij ophalen items, filter op projectdatum
+if (monthFilter) {
+  const [year, month] = monthFilter.split("-");
+  const startDate = `${year}-${month}-01`;
+  const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split("T")[0];
+  
+  // Voor accommodations: filter op arrival_date
+  // Voor activities: filter op selected_dates[0]
 }
 ```
 
 ### 2. UI: AdminCommissions.tsx
 
-Nieuwe weergave voor "Verwacht" status met pro forma stijl:
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│  Commissie Beheer                                              [Vernieuwen]    │
-│  Beheer partner commissies en facturatie                                       │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                 │
-│  │ 🕐 Verwacht     │  │ € Totaal verwacht│  │ 📅 Komende maand│                │
-│  │ 2               │  │ € 349,62        │  │ 1 project       │                │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘                 │
-│                                                                                 │
-│  [Verwacht ▼] [Te factureren] [Gefactureerd] [Betaald]                         │
-│                                                                                 │
-│  ════════════════════════════════════════════════════════════════════════════  │
-│                                                                                 │
-│  📋 VOORLOPIGE COMMISSIE OPGAVE                                                │
-│  ════════════════════════════════════════════════════════════════════════════  │
-│                                                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │  🏨 Hotel Seeduyn                                            € 344,04   │   │
-│  │  hotel@seeduyn.nl • KvK: 12345678                                       │   │
-│  ├─────────────────────────────────────────────────────────────────────────┤   │
-│  │  Type     │ Naam            │ Klant         │ Datum      │ Excl. BTW   │   │
-│  │  ─────────┼─────────────────┼───────────────┼────────────┼─────────────│   │
-│  │  🏠 Logies│ Hotel Seeduyn   │ Jan de Vries  │ 15-17 jun  │ € 3.440,37  │   │
-│  │           │ Test Bedrijf BV │               │ 2026       │ Comm: 10%   │   │
-│  │           │                 │               │            │ = € 344,04  │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │  🚴 Vlieland Outdoor Center                                    € 5,58   │   │
-│  │  info@vlielandoutdoor.nl • KvK: 87654321                                │   │
-│  ├─────────────────────────────────────────────────────────────────────────┤   │
-│  │  🏃 Activiteit │ E-bike Tour   │ Jan de Vries  │ 15 jun   │ € 37,19    │   │
-│  │                │ Test Bedrijf  │               │ 2026     │ Comm: 15%  │   │
-│  │                │               │               │          │ = € 5,58   │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-│  ════════════════════════════════════════════════════════════════════════════  │
-│  TOTAAL VERWACHTE COMMISSIE                                       € 349,62    │
-│  ════════════════════════════════════════════════════════════════════════════  │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 3. Summary Cards Aanpassen
-
-Voor "Verwacht" filter andere metrics tonen:
-
-| Card | Inhoud |
-|------|--------|
-| Verwacht | Aantal items met verwachte commissie |
-| Totaal verwacht | Som van alle berekende verwachte commissies |
-| Komende maand | Items met uitvoerdatum binnen 30 dagen |
-
-### 4. Berekening Logic (Client + Server)
-
-Dezelfde BTW-berekening als in Partner Portal:
+Nieuwe state en picker toevoegen:
 
 ```typescript
-// Activiteiten: 21% BTW
-const activityAmountExclVat = quotedPrice / 1.21;
-const activityCommission = activityAmountExclVat * (commissionPercentage / 100);
+const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+// null = alle maanden
+// "2026-02" = februari 2026
 
-// Logies: 9% BTW (of specifiek vat_rate)
-const vatRate = quote.vat_rate ?? 9;
-const accommodationAmountExclVat = priceIncludesVat 
-  ? priceTotal / (1 + vatRate / 100)
-  : priceTotal;
-const accommodationCommission = accommodationAmountExclVat * (commissionPercentage / 100);
+// Maand opties genereren
+const getMonthOptions = () => {
+  const months = [];
+  const now = new Date();
+  // Huidige maand + 12 komende maanden
+  for (let i = 0; i < 13; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push({
+      value: format(date, "yyyy-MM"),
+      label: format(date, "MMMM yyyy", { locale: nl }),
+    });
+  }
+  return months;
+};
+```
+
+### 3. Filter UI Component
+
+```tsx
+<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+  {/* Status Filter */}
+  <Select value={statusFilter} onValueChange={...}>
+    ...
+  </Select>
+  
+  {/* Type Filter (optioneel) */}
+  <Select value={typeFilter} onValueChange={...}>
+    <SelectTrigger className="w-40">
+      <SelectValue placeholder="Type" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">Alle types</SelectItem>
+      <SelectItem value="activity">Activiteiten</SelectItem>
+      <SelectItem value="accommodation">Logies</SelectItem>
+    </SelectContent>
+  </Select>
+  
+  {/* Maand Filter - NIEUW */}
+  <Select 
+    value={selectedMonth || "all"} 
+    onValueChange={(val) => setSelectedMonth(val === "all" ? null : val)}
+  >
+    <SelectTrigger className="w-48">
+      <CalendarIcon className="h-4 w-4 mr-2" />
+      <SelectValue placeholder="Selecteer maand" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="all">Alle maanden</SelectItem>
+      {monthOptions.map((opt) => (
+        <SelectItem key={opt.value} value={opt.value}>
+          {opt.label}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+```
+
+### 4. API Call Aanpassen
+
+```typescript
+const { data, isLoading } = useQuery<CommissionsResponse>({
+  queryKey: ["admin-commissions", statusFilter, typeFilter, selectedMonth],
+  queryFn: async () => {
+    const response = await supabase.functions.invoke("get-admin-commissions", {
+      body: { 
+        status: statusFilter,
+        type: typeFilter,
+        month: selectedMonth, // Nieuw!
+      },
+    });
+    return response.data;
+  },
+});
+```
+
+### 5. Header Updaten
+
+Voor gekozen maand:
+```tsx
+{isExpectedView && selectedMonth && (
+  <div className="border-t-4 border-purple-500 bg-purple-50/50 rounded-lg p-4">
+    <div className="flex items-center gap-2 text-purple-800">
+      <FileText className="h-5 w-5" />
+      <span className="font-semibold text-lg">
+        COMMISSIE OVERZICHT - {format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: nl }).toUpperCase()}
+      </span>
+    </div>
+  </div>
+)}
 ```
 
 ## Bestanden te Wijzigen
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `supabase/functions/get-admin-commissions/index.ts` | Nieuwe "expected" status met commissie berekening |
-| `src/pages/admin/AdminCommissions.tsx` | Nieuwe filter optie, aangepaste UI voor pro forma weergave |
+| `supabase/functions/get-admin-commissions/index.ts` | Maand filter parameter toevoegen |
+| `src/pages/admin/AdminCommissions.tsx` | Maand picker en type filter UI |
 
-## Extra Features
+## Filter Logica in Edge Function
 
-1. **Pro forma PDF export**: Optie om een voorlopige commissie-opgave te downloaden per partner
-2. **Tijdlijn indicator**: Wanneer project gepland staat (vandaag, deze week, deze maand, later)
-3. **Status indicator**: Of klant al akkoord heeft gegeven (terms_accepted_at)
-4. **Quick link**: Direct naar project detail pagina
+### Activiteiten
+```typescript
+// Filter op eerste datum in selected_dates array
+// PostgreSQL: selected_dates->0 as text
+if (monthFilter) {
+  query = query.gte("program_requests.selected_dates->>0", startOfMonth)
+               .lt("program_requests.selected_dates->>0", startOfNextMonth);
+}
+```
+
+### Logies
+```typescript
+// Filter op arrival_date
+if (monthFilter) {
+  query = query.gte("accommodation_requests.arrival_date", startOfMonth)
+               .lt("accommodation_requests.arrival_date", startOfNextMonth);
+}
+```
+
+## Extra Optie: Type Filter
+
+Naast maand ook filteren op type:
+- **Alle types** (default)
+- **Activiteiten** - alleen program_request_items
+- **Logies** - alleen accommodation_quotes
 
 ## Implementatie Volgorde
 
-1. Edge function uitbreiden met "expected" status query
-2. Client-side berekening van verwachte commissie
-3. UI aanpassen met nieuwe filter optie
-4. Pro forma styling toevoegen
-5. Summary cards updaten voor verwacht-modus
+1. Edge function uitbreiden met month + type parameters
+2. UI filters toevoegen (maand picker, type filter)
+3. Query key updaten met nieuwe filters
+4. Header tekst dynamisch maken op basis van geselecteerde maand
+5. Testen met verschillende maand/type combinaties
