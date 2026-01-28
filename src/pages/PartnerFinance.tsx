@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
+import { toast } from "sonner";
 import { 
   AlertCircle, 
   TrendingUp, 
@@ -37,6 +40,9 @@ const PartnerFinanceContent = () => {
   const [data, setData] = useState<PartnerDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [partnerToken, setPartnerToken] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -84,6 +90,8 @@ const PartnerFinanceContent = () => {
         token = partner.partner_token;
       }
 
+      setPartnerToken(token);
+
       try {
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
@@ -112,6 +120,80 @@ const PartnerFinanceContent = () => {
 
     fetchDashboard();
   }, [navigate, searchParams]);
+
+  // Refetch function for after invoice registration
+  const refetchData = useCallback(async () => {
+    if (!partnerToken) return;
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${partnerToken}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const dashboardData = await response.json();
+        setData(dashboardData);
+      }
+    } catch (err) {
+      console.error("Error refetching dashboard:", err);
+    }
+  }, [partnerToken]);
+
+  // Invoice registration handler
+  const handleInvoiceRegister = async (
+    amount: number,
+    invoiceNumber: string,
+    date: string,
+    notes?: string
+  ): Promise<{ success: boolean; commission?: { percentage: number; amount: number } }> => {
+    if (!selectedItem || !partnerToken) {
+      return { success: false };
+    }
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            partnerToken,
+            itemId: selectedItem.id,
+            invoicedAmount: amount,
+            invoicedNumber: invoiceNumber,
+            invoicedDate: date,
+            notes,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to register invoice");
+      }
+
+      const result = await response.json();
+      toast.success("Factuur succesvol geregistreerd");
+      setShowInvoiceDialog(false);
+      setSelectedItem(null);
+      await refetchData();
+      return { success: true, commission: result.commission };
+    } catch (err) {
+      console.error("Error registering invoice:", err);
+      toast.error("Er is een fout opgetreden bij het registreren van de factuur");
+      return { success: false };
+    }
+  };
 
   if (isLoading) {
     return (
@@ -306,7 +388,15 @@ const PartnerFinanceContent = () => {
             <div className="space-y-4">
               {/* Activity items to invoice */}
               {toBeInvoicedItems.map((item) => (
-                <InvoiceItemCard key={item.id} item={item} variant="to-invoice" />
+                <InvoiceItemCard 
+                  key={item.id} 
+                  item={item} 
+                  variant="to-invoice" 
+                  onInvoice={() => {
+                    setSelectedItem(item);
+                    setShowInvoiceDialog(true);
+                  }}
+                />
               ))}
               {/* Accommodation items to invoice */}
               {toBeInvoicedAccommodations.map((quote) => (
@@ -339,6 +429,29 @@ const PartnerFinanceContent = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Invoice Registration Dialog */}
+      <InvoiceRegistrationDialog
+        isOpen={showInvoiceDialog}
+        onClose={() => {
+          setShowInvoiceDialog(false);
+          setSelectedItem(null);
+        }}
+        onSubmit={handleInvoiceRegister}
+        item={selectedItem}
+        commissionPercentage={data.partner.commission_percentage}
+        billingDetails={selectedItem?.program_requests.terms_accepted_at ? {
+          billing_company_name: selectedItem.program_requests.billing_company_name,
+          billing_kvk_number: selectedItem.program_requests.billing_kvk_number,
+          billing_vat_number: selectedItem.program_requests.billing_vat_number,
+          billing_address_street: selectedItem.program_requests.billing_address_street,
+          billing_address_postal: selectedItem.program_requests.billing_address_postal,
+          billing_address_city: selectedItem.program_requests.billing_address_city,
+          billing_contact_name: selectedItem.program_requests.billing_contact_name,
+          billing_contact_email: selectedItem.program_requests.billing_contact_email,
+          billing_reference: selectedItem.program_requests.billing_reference,
+        } : null}
+      />
     </div>
   );
 };
@@ -346,9 +459,10 @@ const PartnerFinanceContent = () => {
 interface InvoiceItemCardProps {
   item: PartnerItem;
   variant: "to-invoice" | "invoiced";
+  onInvoice?: () => void;
 }
 
-const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
+const InvoiceItemCard = ({ item, variant, onInvoice }: InvoiceItemCardProps) => {
   const request = item.program_requests;
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
@@ -399,15 +513,23 @@ const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
 
           <div className="flex items-center gap-4">
             {variant === "to-invoice" ? (
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Bevestigde prijs</p>
-                <p className="font-semibold">€{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
-                {expectedCommission !== null && (
-                  <p className="text-xs text-amber-600">
-                    Verwachte commissie: €{expectedCommission.toFixed(2)}
-                  </p>
+              <>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Bevestigde prijs</p>
+                  <p className="font-semibold">€{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  {expectedCommission !== null && (
+                    <p className="text-xs text-amber-600">
+                      Verwachte commissie: €{expectedCommission.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                {onInvoice && (
+                  <Button onClick={onInvoice} size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Factureren
+                  </Button>
                 )}
-              </div>
+              </>
             ) : (
               <div className="text-right">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
