@@ -48,10 +48,8 @@ import {
   Phone,
   MapPin,
   Euro,
-  Clock,
   Send,
   Check,
-  X,
   Hotel,
   Home,
   Tent,
@@ -63,6 +61,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
+import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
 
 interface LinkedProgram {
   id: string;
@@ -112,6 +111,7 @@ export default function AdminAccommodationDetail() {
   const queryClient = useQueryClient();
   const [selectedPartners, setSelectedPartners] = useState<string[]>([]);
   const [adminNotes, setAdminNotes] = useState("");
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -207,38 +207,39 @@ export default function AdminAccommodationDetail() {
     },
   });
 
-  // Create quote requests for selected partners
+  // Create quote requests for selected partners (via edge function with email)
   const createQuotesMutation = useMutation({
-    mutationFn: async () => {
-      const quotesToCreate = selectedPartners.map((partnerId) => ({
-        request_id: id,
-        partner_id: partnerId,
-        accommodation_name: "",
-        price_total: 0,
-        valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        status: "pending",
-      }));
+    mutationFn: async ({ emailSubject, emailBody }: { emailSubject: string; emailBody: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("accommodation_quotes")
-        .insert(quotesToCreate);
+      const response = await supabase.functions.invoke("send-accommodation-quote-request", {
+        body: {
+          request_id: id,
+          partner_ids: selectedPartners,
+          email_subject: emailSubject,
+          email_body: emailBody,
+        },
+      });
 
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error.message || "Fout bij versturen");
+      }
 
-      // Update request status to processing
-      await supabase
-        .from("accommodation_requests")
-        .update({ status: "processing" })
-        .eq("id", id);
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
       setSelectedPartners([]);
-      toast({ title: "Offerteaanvragen verstuurd naar partners" });
+      setShowEmailDialog(false);
+      toast({ 
+        title: "Offerteaanvragen verstuurd", 
+        description: `Email verstuurd naar ${data.sent_count} partner(s)` 
+      });
     },
-    onError: () => {
-      toast({ title: "Fout bij versturen", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Fout bij versturen", description: error.message, variant: "destructive" });
     },
   });
 
@@ -553,7 +554,7 @@ export default function AdminAccommodationDetail() {
                     <p className="text-sm text-slate-600">
                       {selectedPartners.length} partner(s) geselecteerd
                     </p>
-                    <Button onClick={() => createQuotesMutation.mutate()} disabled={createQuotesMutation.isPending}>
+                    <Button onClick={() => setShowEmailDialog(true)} disabled={createQuotesMutation.isPending}>
                       <Send className="h-4 w-4 mr-2" />
                       Offerteaanvraag versturen
                     </Button>
@@ -865,6 +866,35 @@ export default function AdminAccommodationDetail() {
           </div>
         </div>
       </div>
+
+      {/* Email Preview Dialog */}
+      {request && partners && (
+        <SendAccommodationQuoteRequestDialog
+          open={showEmailDialog}
+          onOpenChange={setShowEmailDialog}
+          request={{
+            id: request.id,
+            reference_number: request.reference_number || undefined,
+            customer_name: request.customer_name,
+            customer_company: request.customer_company || undefined,
+            customer_email: request.customer_email,
+            arrival_date: request.arrival_date,
+            departure_date: request.departure_date,
+            number_of_guests: request.number_of_guests,
+            accommodation_type: request.accommodation_type,
+            special_requests: request.special_requests || undefined,
+          }}
+          selectedPartners={partners.filter(p => selectedPartners.includes(p.id)).map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+          }))}
+          onSend={(emailSubject, emailBody) => {
+            createQuotesMutation.mutate({ emailSubject, emailBody });
+          }}
+          isSending={createQuotesMutation.isPending}
+        />
+      )}
     </AdminLayout>
   );
 }
