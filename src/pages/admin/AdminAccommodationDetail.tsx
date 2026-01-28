@@ -342,7 +342,14 @@ export default function AdminAccommodationDetail() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">{request.customer_name}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-slate-900">{request.customer_name}</h1>
+                {request.reference_number && (
+                  <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
+                    {request.reference_number}
+                  </code>
+                )}
+              </div>
               <p className="text-slate-600">{request.customer_company || request.customer_email}</p>
             </div>
           </div>

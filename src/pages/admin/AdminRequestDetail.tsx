@@ -58,6 +58,7 @@ import type { CompletionStatus } from "@/types/bureauInvoice";
 
 interface ProgramRequest {
   id: string;
+  reference_number: string | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -333,9 +334,16 @@ const AdminRequestDetail = () => {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {request.customer_name}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold text-slate-900">
+                    {request.customer_name}
+                  </h1>
+                  {request.reference_number && (
+                    <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
+                      {request.reference_number}
+                    </code>
+                  )}
+                </div>
                 <p className="text-slate-500">
                   Aanvraag van {format(new Date(request.created_at), "d MMMM yyyy", { locale: nl })}
                 </p>

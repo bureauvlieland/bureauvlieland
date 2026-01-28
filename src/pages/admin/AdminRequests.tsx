@@ -45,6 +45,7 @@ import { nl } from "date-fns/locale";
 
 interface ProgramRequest {
   id: string;
+  reference_number: string | null;
   customer_name: string;
   customer_email: string;
   customer_company: string | null;
@@ -105,6 +106,7 @@ const AdminRequestsContent = () => {
             : [];
           return {
             id: req.id,
+            reference_number: req.reference_number,
             customer_name: req.customer_name,
             customer_email: req.customer_email,
             customer_company: req.customer_company,
@@ -141,7 +143,8 @@ const AdminRequestsContent = () => {
       const matchesSearch =
         req.customer_name.toLowerCase().includes(query) ||
         req.customer_email.toLowerCase().includes(query) ||
-        (req.customer_company?.toLowerCase().includes(query) ?? false);
+        (req.customer_company?.toLowerCase().includes(query) ?? false) ||
+        (req.reference_number?.toLowerCase().includes(query) ?? false);
 
       // Status filter
       const matchesStatus = statusFilter === "all" || req.status === statusFilter;
@@ -204,6 +207,7 @@ const AdminRequestsContent = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Ref.</TableHead>
                 <TableHead>Klant</TableHead>
                 <TableHead>Datum(s)</TableHead>
                 <TableHead>Personen</TableHead>
@@ -216,13 +220,18 @@ const AdminRequestsContent = () => {
             <TableBody>
               {filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     Geen aanvragen gevonden
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredRequests.map((request) => (
                   <TableRow key={request.id}>
+                    <TableCell>
+                      <code className="text-xs font-mono bg-slate-100 px-2 py-1 rounded">
+                        {request.reference_number || "-"}
+                      </code>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium">{request.customer_name}</p>

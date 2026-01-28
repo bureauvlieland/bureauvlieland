@@ -30,6 +30,7 @@ import {
   Euro,
   Blocks,
   Mail,
+  FolderKanban,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -44,6 +45,7 @@ interface AdminInfo {
 
 const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
   { title: "CRM", url: "/admin/crm", icon: Users },
   { title: "Aanvragen", url: "/admin/aanvragen", icon: FileText },
   { title: "Logies", url: "/admin/logies", icon: Building2 },
