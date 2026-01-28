@@ -259,6 +259,7 @@ export default function AdminAccommodation() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Ref.</TableHead>
                     <TableHead>Klant</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Datum</TableHead>
@@ -275,6 +276,11 @@ export default function AdminAccommodation() {
 
                     return (
                       <TableRow key={request.id}>
+                        <TableCell>
+                          <code className="text-xs font-mono bg-slate-100 px-2 py-1 rounded">
+                            {request.reference_number || "-"}
+                          </code>
+                        </TableCell>
                         <TableCell>
                           <div>
                             <p className="font-medium">{request.customer_name}</p>

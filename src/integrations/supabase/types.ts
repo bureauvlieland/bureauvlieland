@@ -147,6 +147,7 @@ export type Database = {
           linked_program_id: string | null
           location_preference: Json | null
           number_of_guests: number
+          reference_number: string | null
           room_count: number | null
           room_occupancy: string | null
           room_types: Json | null
@@ -173,6 +174,7 @@ export type Database = {
           linked_program_id?: string | null
           location_preference?: Json | null
           number_of_guests: number
+          reference_number?: string | null
           room_count?: number | null
           room_occupancy?: string | null
           room_types?: Json | null
@@ -199,6 +201,7 @@ export type Database = {
           linked_program_id?: string | null
           location_preference?: Json | null
           number_of_guests?: number
+          reference_number?: string | null
           room_count?: number | null
           room_occupancy?: string | null
           room_types?: Json | null
@@ -638,6 +641,7 @@ export type Database = {
           partner_token: string
           partner_type: string | null
           phone: string | null
+          reference_number: string | null
           terms_pdf_path: string | null
           terms_uploaded_at: string | null
           updated_at: string
@@ -664,6 +668,7 @@ export type Database = {
           partner_token?: string
           partner_type?: string | null
           phone?: string | null
+          reference_number?: string | null
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
@@ -690,6 +695,7 @@ export type Database = {
           partner_token?: string
           partner_type?: string | null
           phone?: string | null
+          reference_number?: string | null
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
@@ -897,6 +903,7 @@ export type Database = {
           id: string
           linked_accommodation_id: string | null
           number_of_people: number
+          reference_number: string | null
           selected_dates: Json
           signature_id: string | null
           signature_ip: string | null
@@ -931,6 +938,7 @@ export type Database = {
           id?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          reference_number?: string | null
           selected_dates?: Json
           signature_id?: string | null
           signature_ip?: string | null
@@ -965,6 +973,7 @@ export type Database = {
           id?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          reference_number?: string | null
           selected_dates?: Json
           signature_id?: string | null
           signature_ip?: string | null

@@ -52,6 +52,7 @@ import AdminBuildingBlocks from "./pages/admin/AdminBuildingBlocks";
 import AdminInvoicing from "./pages/admin/AdminInvoicing";
 import AdminAccommodation from "./pages/admin/AdminAccommodation";
 import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
+import AdminProjects from "./pages/admin/AdminProjects";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* Admin routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/projecten" element={<AdminProjects />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
             <Route path="/admin/aanvragen" element={<AdminRequests />} />
             <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
