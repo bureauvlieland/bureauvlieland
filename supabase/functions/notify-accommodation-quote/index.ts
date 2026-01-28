@@ -152,13 +152,16 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the quote with request and partner data
+    // Fetch the quote with request, partner, and linked program data
     const { data: quote, error: quoteError } = await supabase
       .from("accommodation_quotes")
       .select(`
         *,
         partner:partners(*),
-        request:accommodation_requests(*)
+        request:accommodation_requests(
+          *,
+          linked_program:program_requests!accommodation_requests_linked_program_id_fkey(customer_token)
+        )
       `)
       .eq("id", quoteId)
       .single();
@@ -181,9 +184,10 @@ serve(async (req) => {
       );
     }
 
-    // Determine portal URL
-    const portalUrl = request.linked_program_id 
-      ? `https://bureauvlieland.nl/mijn-programma/${request.customer_token}`
+    // Always use the program token for the portal URL (unified customer experience)
+    const programToken = request.linked_program?.customer_token;
+    const portalUrl = programToken 
+      ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
       : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
 
     // Calculate nights

@@ -550,10 +550,7 @@ const AdminProjectsContent = () => {
                         ) : null}
                         <Button variant="ghost" size="icon" asChild>
                           <Link 
-                            to={project.type === "accommodation_only" 
-                              ? `/mijn-logies/${project.customer_token}` 
-                              : `/mijn-programma/${project.customer_token}`
-                            } 
+                            to={`/mijn-programma/${project.customer_token}`} 
                             target="_blank"
                           >
                             <ExternalLink className="h-4 w-4" />
