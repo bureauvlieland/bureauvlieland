@@ -76,6 +76,7 @@ const emailTypeLabels: Record<string, { label: string; category: string }> = {
   partner_invitation: { label: "Partner uitnodiging", category: "Partner" },
   accommodation_request_bureau: { label: "Logies aanvraag (Bureau)", category: "Logies" },
   accommodation_request_customer: { label: "Logies aanvraag (Klant)", category: "Logies" },
+  accommodation_quote_request_partner: { label: "Logies offerteaanvraag (Partner)", category: "Logies" },
   accommodation_quote_notification: { label: "Logies offerte notificatie", category: "Logies" },
   accommodation_selected_partner: { label: "Logies gekozen (Partner)", category: "Logies" },
   accommodation_selected_customer: { label: "Logies gekozen (Klant)", category: "Logies" },
