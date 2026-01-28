@@ -41,7 +41,7 @@ serve(async (req) => {
       );
     }
 
-    // Get all items assigned to this partner
+    // Get all items assigned to this partner (activity items)
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
       .select(`
@@ -91,6 +91,64 @@ serve(async (req) => {
              i.program_requests?.terms_accepted_at !== null
     );
 
+    // Fetch accommodation quotes if partner offers accommodation
+    let accommodationQuotes: any[] = [];
+    let accommodationSummary = {
+      pending: 0,
+      submitted: 0,
+      selected: 0,
+      closed: 0,
+      total: 0,
+    };
+
+    const partnerType = partner.partner_type || "activity_provider";
+    const isAccommodationPartner = partnerType === "accommodation" || partnerType === "both";
+
+    if (isAccommodationPartner) {
+      const { data: quotes, error: quotesError } = await supabase
+        .from("accommodation_quotes")
+        .select(`
+          *,
+          accommodation_requests!inner (
+            id,
+            customer_name,
+            customer_email,
+            customer_phone,
+            customer_company,
+            arrival_date,
+            departure_date,
+            number_of_guests,
+            accommodation_type,
+            room_count,
+            room_types,
+            location_preference,
+            budget_range,
+            special_requests,
+            status,
+            created_at
+          )
+        `)
+        .eq("partner_id", partner.id)
+        .order("created_at", { ascending: false });
+
+      if (!quotesError && quotes) {
+        // Filter out quotes from cancelled requests
+        accommodationQuotes = quotes.filter(
+          (q) => q.accommodation_requests?.status !== "cancelled"
+        );
+
+        accommodationSummary = {
+          pending: accommodationQuotes.filter((q) => q.status === "pending").length,
+          submitted: accommodationQuotes.filter((q) => q.status === "submitted").length,
+          selected: accommodationQuotes.filter((q) => q.status === "selected").length,
+          closed: accommodationQuotes.filter((q) => 
+            ["rejected", "expired"].includes(q.status)
+          ).length,
+          total: accommodationQuotes.length,
+        };
+      }
+    }
+
     return new Response(
       JSON.stringify({
         partner: {
@@ -98,6 +156,8 @@ serve(async (req) => {
           name: partner.name,
           email: partner.email,
           commission_percentage: partner.commission_percentage,
+          accommodation_commission_percentage: partner.accommodation_commission_percentage,
+          partner_type: partnerType,
         },
         items: activeItems,
         summary: {
@@ -110,6 +170,8 @@ serve(async (req) => {
           invoiced: invoiced.length,
           total: activeItems.length,
         },
+        accommodationQuotes,
+        accommodationSummary,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

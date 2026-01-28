@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { Check, Clock, Building2, FileText } from 'lucide-react';
+import { Check, Clock, Building2, FileText, ExternalLink } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -169,6 +169,24 @@ export function AccommodationQuoteDetailSheet({
               <p className="text-sm text-muted-foreground whitespace-pre-line">
                 {quote.conditions}
               </p>
+            </div>
+          )}
+
+          {/* External quote link */}
+          {quote.quote_external_url && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg">
+              <h4 className="font-medium mb-2 text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Offerte document
+              </h4>
+              <a 
+                href={quote.quote_external_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
+              >
+                Bekijk de volledige offerte →
+              </a>
             </div>
           )}
 

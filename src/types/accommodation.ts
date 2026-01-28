@@ -78,6 +78,11 @@ export interface AccommodationQuote {
   // Partner notes
   partner_notes: string | null;
   
+  // Quote attachment/link (partner can attach their own quote document)
+  quote_attachment_path: string | null;
+  quote_attachment_filename: string | null;
+  quote_external_url: string | null;
+  
   // Invoice tracking
   invoiced_amount: number | null;
   invoiced_number: string | null;

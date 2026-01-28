@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
@@ -10,9 +10,9 @@ import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRe
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RefreshCw, Bell } from "lucide-react";
+import { AlertCircle, RefreshCw, Bell, BedDouble, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
@@ -297,16 +297,20 @@ const PartnerDashboardContent = () => {
     );
   };
 
+  // Check if this partner handles accommodation
+  const isAccommodationPartner = data.partner.partner_type === "accommodation" || data.partner.partner_type === "both";
+  const pendingAccommodation = data.accommodationSummary?.pending || 0;
+
   return (
     <>
       <div className="p-6">
         <div className="flex justify-between items-start mb-6">
           <PartnerDashboardHeader partner={data.partner} summary={data.summary} />
           <div className="flex items-center gap-2">
-            {pendingItems.length > 0 && (
+            {(pendingItems.length > 0 || pendingAccommodation > 0) && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 <Bell className="h-4 w-4" />
-                <span>{pendingItems.length} nieuw</span>
+                <span>{pendingItems.length + pendingAccommodation} nieuw</span>
               </div>
             )}
             <Button onClick={refetchDashboard} variant="outline" size="sm">
@@ -315,6 +319,42 @@ const PartnerDashboardContent = () => {
             </Button>
           </div>
         </div>
+
+        {/* Accommodation notice card for accommodation partners */}
+        {isAccommodationPartner && (data.accommodationSummary?.total || 0) > 0 && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BedDouble className="h-5 w-5 text-primary" />
+                Logies Aanvragen
+                {pendingAccommodation > 0 && (
+                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                    {pendingAccommodation} nieuw
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{data.accommodationSummary?.total}</span> logies aanvragen totaal
+                  {data.accommodationSummary?.submitted ? (
+                    <span> • {data.accommodationSummary.submitted} offertes verstuurd</span>
+                  ) : null}
+                  {data.accommodationSummary?.selected ? (
+                    <span> • {data.accommodationSummary.selected} geaccepteerd</span>
+                  ) : null}
+                </div>
+                <Button asChild size="sm">
+                  <Link to="/partner/logies">
+                    Bekijk aanvragen
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 4-tab structure */}
         <Tabs defaultValue="pending" className="mt-8">
