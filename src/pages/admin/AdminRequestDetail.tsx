@@ -37,6 +37,7 @@ import {
   Calendar,
   Users,
   ExternalLink,
+  Hotel,
   Clock,
   History,
   FileText,
@@ -73,6 +74,16 @@ interface ProgramRequest {
   customer_token: string;
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  linked_accommodation_id: string | null;
+}
+
+interface LinkedAccommodation {
+  id: string;
+  customer_name: string;
+  status: string;
+  arrival_date: string;
+  departure_date: string;
+  number_of_guests: number;
 }
 
 interface ProgramRequestItem {
@@ -119,6 +130,7 @@ const AdminRequestDetail = () => {
   const [items, setItems] = useState<ProgramRequestItem[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [bureauInvoices, setBureauInvoices] = useState<BureauInvoice[]>([]);
+  const [linkedAccommodation, setLinkedAccommodation] = useState<LinkedAccommodation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -184,6 +196,21 @@ const AdminRequestDetail = () => {
 
       if (invoicesError) throw invoicesError;
       setBureauInvoices(invoicesData as BureauInvoice[]);
+
+      // Fetch linked accommodation if exists
+      if (requestData.linked_accommodation_id) {
+        const { data: accData, error: accError } = await supabase
+          .from("accommodation_requests")
+          .select("id, customer_name, status, arrival_date, departure_date, number_of_guests")
+          .eq("id", requestData.linked_accommodation_id)
+          .maybeSingle();
+
+        if (!accError && accData) {
+          setLinkedAccommodation(accData as LinkedAccommodation);
+        }
+      } else {
+        setLinkedAccommodation(null);
+      }
     } catch (error) {
       console.error("Error fetching request:", error);
       toast.error("Fout bij ophalen aanvraag");
@@ -455,6 +482,49 @@ const AdminRequestDetail = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Linked Accommodation */}
+            {linkedAccommodation && (
+              <Card className="border-indigo-200 bg-indigo-50/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Hotel className="h-5 w-5 text-indigo-600" />
+                    Gekoppelde logies
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-slate-400" />
+                    <span>
+                      {format(new Date(linkedAccommodation.arrival_date), "d MMM", { locale: nl })} -{" "}
+                      {format(new Date(linkedAccommodation.departure_date), "d MMM yyyy", { locale: nl })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-slate-400" />
+                    <span>{linkedAccommodation.number_of_guests} gasten</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <Badge variant={
+                      linkedAccommodation.status === "accepted" ? "default" :
+                      linkedAccommodation.status === "quoted" ? "outline" :
+                      "secondary"
+                    }>
+                      {linkedAccommodation.status === "submitted" ? "Nieuw" :
+                       linkedAccommodation.status === "processing" ? "In behandeling" :
+                       linkedAccommodation.status === "quoted" ? "Offertes verstuurd" :
+                       linkedAccommodation.status === "accepted" ? "Geaccepteerd" :
+                       linkedAccommodation.status}
+                    </Badge>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/admin/logies/${linkedAccommodation.id}`}>
+                        Bekijken
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Completion Status and Financial Overview */}
