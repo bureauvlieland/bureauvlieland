@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+// Using Deno.serve() instead of deprecated import
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { getRenderedTemplate, sanitizeHtml, TemplateIds } from "../_shared/email-templates.ts";
 
@@ -259,4 +259,4 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-serve(handler);
+Deno.serve(handler);
