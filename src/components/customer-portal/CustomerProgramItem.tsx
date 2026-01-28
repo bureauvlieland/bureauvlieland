@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -31,8 +31,10 @@ interface CustomerProgramItemProps {
   selectedDates: Date[];
   onUpdate: (updates: Partial<ProgramRequestItem>) => void;
   onRemove: () => void;
+  onAccept?: () => Promise<boolean>;
   isEditing?: boolean;
   hasChanges?: boolean;
+  isAccepting?: boolean;
 }
 
 export const CustomerProgramItem = ({
@@ -40,11 +42,14 @@ export const CustomerProgramItem = ({
   selectedDates,
   onUpdate,
   onRemove,
+  onAccept,
   isEditing = false,
   hasChanges = false,
+  isAccepting = false,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
+  const [localAccepting, setLocalAccepting] = useState(false);
   
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
@@ -169,6 +174,46 @@ export const CustomerProgramItem = ({
                   <p className="mt-0.5">{item.status_note}</p>
                 </div>
               </div>
+            </div>
+          )}
+          
+          {/* Accept action for confirmed items - shows if not yet accepted by customer */}
+          {item.status === "confirmed" && !item.customer_accepted_at && onAccept && (
+            <div className="mt-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="font-medium text-green-800 dark:text-green-300">
+                    Bevestigd door aanbieder
+                  </p>
+                  <p className="text-sm text-green-700/80 dark:text-green-400/80 mt-0.5">
+                    Totaalprijs: €{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    setLocalAccepting(true);
+                    await onAccept();
+                    setLocalAccepting(false);
+                  }}
+                  disabled={localAccepting || isAccepting}
+                  className="shrink-0"
+                >
+                  {localAccepting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Akkoord
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Show accepted badge if customer has accepted */}
+          {item.customer_accepted_at && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+              <Check className="h-4 w-4" />
+              <span>Je hebt akkoord gegeven op dit voorstel</span>
             </div>
           )}
           

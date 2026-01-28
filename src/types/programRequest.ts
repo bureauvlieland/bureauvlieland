@@ -1,5 +1,5 @@
 // Status types for program request items
-export type ItemStatus = "pending" | "confirmed" | "unavailable" | "alternative" | "cancelled";
+export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced";
 
 export interface ItemStatusInfo {
   label: string;
@@ -24,6 +24,13 @@ export const itemStatusConfig: Record<ItemStatus, ItemStatusInfo> = {
     icon: "CheckCircle",
     description: "De aanbieder heeft deze activiteit bevestigd",
   },
+  accepted: {
+    label: "Akkoord",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950/50",
+    icon: "CheckCircle2",
+    description: "Jij hebt akkoord gegeven op deze activiteit",
+  },
   unavailable: {
     label: "Niet beschikbaar",
     color: "text-red-700 dark:text-red-400",
@@ -44,6 +51,20 @@ export const itemStatusConfig: Record<ItemStatus, ItemStatusInfo> = {
     bgColor: "bg-muted",
     icon: "Ban",
     description: "Deze activiteit is geannuleerd",
+  },
+  executed: {
+    label: "Uitgevoerd",
+    color: "text-emerald-700 dark:text-emerald-400",
+    bgColor: "bg-emerald-100 dark:bg-emerald-950/50",
+    icon: "CheckCircle2",
+    description: "Deze activiteit is uitgevoerd",
+  },
+  invoiced: {
+    label: "Gefactureerd",
+    color: "text-slate-700 dark:text-slate-400",
+    bgColor: "bg-slate-100 dark:bg-slate-950/50",
+    icon: "FileText",
+    description: "Deze activiteit is gefactureerd",
   },
 };
 
@@ -86,10 +107,15 @@ export interface ProgramRequestItem {
   created_at: string;
   updated_at: string;
   executed_at: string | null;
+  // Customer acceptance
+  customer_accepted_at: string | null;
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;
   quoted_notes: string | null;
+  // Partner proposal fields
+  proposed_time: string | null;
+  proposed_date: string | null;
   // Image fields (joined from building_blocks)
   image_url: string | null;
   image_asset: string | null;

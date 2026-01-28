@@ -125,7 +125,7 @@ serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, acceptTerms, signatureName, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, acceptTerms, signatureName, acceptItemId, cancelItemId, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
@@ -133,6 +133,8 @@ serve(async (req) => {
       billingDetails?: BillingDetailsUpdate;
       acceptTerms?: boolean;
       signatureName?: string;
+      acceptItemId?: string;
+      cancelItemId?: string;
       origin?: string;
     };
     
@@ -157,7 +159,7 @@ serve(async (req) => {
     }
     
     // Must have at least one type of update
-    if ((!changes || !items) && !programDetails && !billingDetails && !acceptTerms) {
+    if ((!changes || !items) && !programDetails && !billingDetails && !acceptTerms && !acceptItemId && !cancelItemId) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -323,6 +325,113 @@ serve(async (req) => {
         actor_name: program.customer_name,
         notes: "Facturatiegegevens bijgewerkt",
       });
+    }
+
+    // Handle individual item acceptance (klant akkoord op partner voorstel)
+    if (acceptItemId) {
+      const { data: item, error: itemError } = await supabase
+        .from("program_request_items")
+        .select("*")
+        .eq("id", acceptItemId)
+        .eq("request_id", program.id)
+        .single();
+
+      if (itemError || !item) {
+        return new Response(
+          JSON.stringify({ error: "Item not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Only allow accepting confirmed or alternative items
+      if (!["confirmed", "alternative"].includes(item.status)) {
+        return new Response(
+          JSON.stringify({ error: "Item cannot be accepted in current status" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update item with customer_accepted_at
+      await supabase
+        .from("program_request_items")
+        .update({
+          status: "accepted",
+          customer_accepted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", acceptItemId);
+
+      // Log to history
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        item_id: acceptItemId,
+        action: "customer_accepted",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Klant akkoord op ${item.block_name}`,
+        new_value: { status: "accepted", quoted_price: item.quoted_price },
+      });
+
+      console.log(`Customer accepted item ${acceptItemId}`);
+    }
+
+    // Handle individual item cancellation
+    if (cancelItemId) {
+      const { data: item, error: itemError } = await supabase
+        .from("program_request_items")
+        .select("*")
+        .eq("id", cancelItemId)
+        .eq("request_id", program.id)
+        .single();
+
+      if (itemError || !item) {
+        return new Response(
+          JSON.stringify({ error: "Item not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update item status to cancelled
+      await supabase
+        .from("program_request_items")
+        .update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", cancelItemId);
+
+      // Log to history
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        item_id: cancelItemId,
+        action: "customer_cancelled",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Klant heeft ${item.block_name} geannuleerd`,
+      });
+
+      // Notify partner if they have an email
+      if (item.provider_email && item.block_type !== "self_arranged") {
+        emailMessages.push({
+          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
+          Subject: `${subjectPrefix}Annulering - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+          HTMLPart: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2>Activiteit geannuleerd</h2>
+              <p>Beste ${sanitizeHtml(item.provider_name)},</p>
+              <p>De klant heeft de volgende activiteit geannuleerd:</p>
+              <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <p><strong>${sanitizeHtml(item.block_name)}</strong></p>
+                <p>Klant: ${sanitizeHtml(program.customer_company || program.customer_name)}</p>
+              </div>
+              <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+            </div>
+          `,
+        });
+      }
+
+      console.log(`Customer cancelled item ${cancelItemId}`);
     }
 
     // Handle terms acceptance with digital signature
