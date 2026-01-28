@@ -1,159 +1,331 @@
 
-# Plan: Partner Portaal Herstructurering
+# Plan: Pro Forma Commissie Workflow met BTW-Berekening
 
-## Analyse van het Verzoek
+## Samenvatting
 
-De gebruiker wil:
-1. **Menu aanpassen o.b.v. partner type**: "Aanbod" verbergen voor logies-only partners, "Logies" verbergen voor activiteiten-only partners
-2. **Dashboard aanpassen**: Relevante secties tonen o.b.v. partner type
-3. **Admin patronen hergebruiken**: De strakke, uniforme opzet van `AdminProjects.tsx` als voorbeeld voor de partner pagina's
-
-## Huidige Situatie
-
-### PartnerLayout.tsx (Navigatie)
-De sidebar toont nu al conditioneel "Logies" alleen voor accommodation partners:
-```typescript
-...(isAccommodationPartner ? [{ title: "Logies", ... }] : [])
-```
-
-**Maar "Mijn Aanbod" wordt altijd getoond**, ook voor logies-only partners die geen activiteiten aanbieden.
-
-### PartnerDashboard.tsx
-- Toont activiteiten tabs (Nieuw, Voorstel verstuurd, Akkoord, Afgerond)
-- Toont een aparte "Logies Aanvragen" kaart voor accommodation partners
-- **Probleem**: Voor een logies-only partner is de activiteitensectie leeg en irrelevant
-
-### Admin Patronen die we kunnen hergebruiken
-
-De `AdminProjects.tsx` heeft uitstekende patronen:
-1. **Uniforme tabel-layout** met filters
-2. **Stats-kaarten** met type-onderscheid
-3. **Badge-systeem** voor types
-4. **Zoekfunctionaliteit** met debouncing
-5. **Compacte rij-weergave** i.p.v. kaarten
+Automatische commissie-opvolging waarbij:
+1. Na afronding van activiteit/logies wordt commissie berekend over bedrag **excl. BTW**
+2. Partner krijgt pro forma email met 7 dagen om afwijkingen te melden
+3. Geen reactie = akkoord, commissie wordt definitief
+4. Bureau Vlieland kan dan commissiefactuur versturen
 
 ---
 
-## Voorgestelde Oplossing
+## BTW-Berekening Logic
 
-### Fase 1: Conditionele Navigatie Voltooien
-
-**Bestand:** `src/components/partner-portal/PartnerLayout.tsx`
-
-```typescript
-// Voeg check toe voor activiteit partner
-const isActivityPartner = partner.partner_type === "activity_provider" || partner.partner_type === "both";
-const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
-
-const menuItems = [
-  { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
-  // Alleen tonen als partner activiteiten levert
-  ...(isActivityPartner ? [{ title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
-  // Alleen tonen als partner logies levert
-  ...(isAccommodationPartner ? [{ title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble }] : []),
-  { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
-  { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
-];
+### Activiteiten (21% BTW)
+```
+geoffreerd_incl_btw = €500,00
+bedrag_excl_btw = €500 / 1.21 = €413,22
+commissie_15% = €413,22 × 0.15 = €61,98
 ```
 
-### Fase 2: Adaptief Partner Dashboard
+### Logies (9% BTW)
+```
+geoffreerd_incl_btw = €2.500,00
+bedrag_excl_btw = €2.500 / 1.09 = €2.293,58
+commissie_10% = €2.293,58 × 0.10 = €229,36
+```
 
-**Bestand:** `src/pages/PartnerDashboard.tsx`
+### Code Implementatie
+```typescript
+// Haal BTW-tarief uit app_settings of building block
+const vatRate = item.vat_rate ?? (isAccommodation ? 9 : 21);
 
-De dashboard pagina wordt **type-aware** en toont alleen relevante content:
+// Bereken bedrag excl. BTW
+const amountExclVat = quotedAmount / (1 + vatRate / 100);
+
+// Bereken commissie over excl. BTW bedrag
+const commissionAmount = amountExclVat * (commissionPercentage / 100);
+```
+
+---
+
+## Workflow Diagram
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  PARTNER DASHBOARD - ADAPTIEVE LAYOUT                                        │
+│                     PRO FORMA COMMISSIE WORKFLOW                             │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  VOOR ACTIVITEITEN PARTNERS (type: activity_provider)                        │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  Stats: YTD Omzet | Nieuw | Voorstel verstuurd | Akkoord | Te fact.  │   │
-│  ├──────────────────────────────────────────────────────────────────────┤   │
-│  │  Tabs: Nieuw | Voorstel verstuurd | Akkoord | Afgerond              │   │
-│  │  [Activiteiten tabel zoals nu]                                       │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
+│  TRIGGER                                                                     │
+│  ────────                                                                    │
+│  • Activiteit: status = 'executed'                                           │
+│  • Logies: departure_date verstreken + status = 'selected'                   │
 │                                                                              │
-│  VOOR LOGIES PARTNERS (type: accommodation)                                  │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  Stats: YTD Omzet | Te beantwoorden | Offerte verstuurd | Gekozen   │   │
-│  ├──────────────────────────────────────────────────────────────────────┤   │
-│  │  Tabs: Te beantwoorden | Offerte verstuurd | Afgerond               │   │
-│  │  [Logies aanvragen in uniforme tabel - hergebruik admin patronen]   │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
+│         │                                                                    │
+│         ▼                                                                    │
+│  ┌────────────────────────────────────────────────────────────────────────┐  │
+│  │  AUTOMATISCHE BEREKENING                                               │  │
+│  │                                                                        │  │
+│  │  1. Geoffreerd bedrag ophalen (quoted_price / price_total)             │  │
+│  │  2. BTW-tarief bepalen (21% activiteit / 9% logies)                    │  │
+│  │  3. Bedrag excl. BTW berekenen                                         │  │
+│  │  4. Commissie berekenen over excl. BTW                                 │  │
+│  │  5. Email versturen naar partner                                       │  │
+│  │  6. Status → 'pending_confirmation'                                    │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
-│  VOOR BEIDE PARTNERS (type: both)                                            │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │  Stats: YTD Omzet | Activiteiten stats | Logies stats               │   │
-│  ├──────────────────────────────────────────────────────────────────────┤   │
-│  │  Segment Toggle: [Activiteiten] [Logies]                            │   │
-│  │  [Tabel voor geselecteerd segment]                                   │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
+│         │                                                                    │
+│         ▼                                                                    │
+│  ┌────────────────────────────────────────────────────────────────────────┐  │
+│  │  EMAIL NAAR PARTNER                                                    │  │
+│  │                                                                        │  │
+│  │  "De activiteit voor [klant] is afgerond.                              │  │
+│  │                                                                        │  │
+│  │   Geoffreerd bedrag:     €500,00 incl. BTW                             │  │
+│  │   Bedrag excl. BTW:      €413,22                                       │  │
+│  │   Commissie (15%):       €61,98                                        │  │
+│  │                                                                        │  │
+│  │   Afwijkend gefactureerd? Meld binnen 7 dagen via [link]"              │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│         │                                                                    │
+│         │  7 dagen                                                           │
+│         ▼                                                                    │
+│  ┌───────────────────────┬────────────────────────┐                          │
+│  │  Partner meldt        │  Geen reactie          │                          │
+│  │  afwijking            │                        │                          │
+│  │         │             │         │              │                          │
+│  │         ▼             │         ▼              │                          │
+│  │  Registreer           │  Status → 'confirmed'  │                          │
+│  │  werkelijk bedrag     │  Commissie definitief  │                          │
+│  │  Herbereken commissie │  Admin todo: factureer │                          │
+│  └───────────────────────┴────────────────────────┘                          │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Fase 3: Hergebruik Admin Patronen
+---
 
-Van `AdminProjects.tsx` nemen we over:
+## Database Wijzigingen
 
-1. **Stats Grid Pattern**
-   - Consistente Card layout met icoon + cijfer + label
-   - Kleurcodering per type (amber voor logies, green voor activiteiten)
+### Nieuwe kolommen op `program_request_items`
 
-2. **Uniforme Tabel Layout**
-   - Zelfde table structuur voor beide types
-   - Badge systeem voor statussen
-   - Compacte rij-weergave
+| Kolom | Type | Beschrijving |
+|-------|------|--------------|
+| `proforma_sent_at` | timestamp | Wanneer pro forma email verstuurd |
+| `proforma_amount_excl_vat` | numeric | Berekend bedrag excl. BTW |
+| `proforma_commission` | numeric | Berekende commissie |
+| `proforma_deadline` | date | Deadline voor reactie (7 dagen) |
+| `actual_invoiced_excl_vat` | numeric | Door partner gemeld afwijkend bedrag |
 
-3. **Filter & Search Pattern**
-   - Zoekbalk bovenaan
-   - Status filter dropdown
+### Nieuwe kolommen op `accommodation_quotes`
 
-4. **Shared Components** (nieuw te maken):
-   - `PartnerStatsGrid.tsx` - Herbruikbare stats kaarten
-   - `PartnerUnifiedTable.tsx` - Tabel die zowel activiteiten als logies kan tonen
+Dezelfde kolommen als hierboven.
+
+### Uitbreiding commission_status
+
+Toevoegen van `'pending_confirmation'` als geldige waarde.
 
 ---
 
-## Te Wijzigen Bestanden
+## Edge Functions
 
-| Bestand | Wijziging |
-|---------|-----------|
-| `src/components/partner-portal/PartnerLayout.tsx` | Conditionele "Mijn Aanbod" nav item |
-| `src/pages/PartnerDashboard.tsx` | Type-aware dashboard met segment toggle |
-| `src/components/partner-portal/PartnerDashboardHeader.tsx` | Uitbreiden met logies stats |
-| **Nieuw:** `src/components/partner-portal/PartnerUnifiedRow.tsx` | Unified row voor tabel |
+### 1. `process-completed-items` (Dagelijks)
 
----
+**Doel:** Vindt afgeronde items, berekent commissie, stuurt pro forma
 
-## Resultaat
-
-Na implementatie:
-- **Logies-only partners** zien alleen "Overzicht", "Logies", "Facturatie", "Instellingen" in het menu
-- **Activiteiten-only partners** zien alleen "Overzicht", "Mijn Aanbod", "Facturatie", "Instellingen"
-- **Beide-partners** zien alle menu items
-- **Dashboard past zich aan** aan het partner type
-- **Consistente UI** met admin backend patronen
-
----
-
-## Technische Details
-
-### Type Check Logic
 ```typescript
-const partnerType = data.partner.partner_type || "activity_provider";
-const isActivityPartner = partnerType === "activity_provider" || partnerType === "both";
-const isAccommodationPartner = partnerType === "accommodation" || partnerType === "both";
-const isBothPartner = partnerType === "both";
+// Pseudo-code
+async function processCompletedItems() {
+  // 1. Vind afgeronde activiteiten zonder pro forma
+  const activities = await supabase
+    .from('program_request_items')
+    .select('*, program_requests(*)')
+    .eq('status', 'executed')
+    .is('proforma_sent_at', null)
+    .not('quoted_price', 'is', null);
+
+  for (const item of activities) {
+    // 2. Haal BTW-tarief (standaard 21% voor activiteiten)
+    const vatRate = item.vat_rate ?? 21;
+    
+    // 3. Bereken excl. BTW
+    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
+    
+    // 4. Bereken commissie
+    const commissionRate = item.commission_percentage ?? 15;
+    const commissionAmount = amountExclVat * (commissionRate / 100);
+    
+    // 5. Update record
+    await supabase
+      .from('program_request_items')
+      .update({
+        proforma_sent_at: new Date().toISOString(),
+        proforma_amount_excl_vat: amountExclVat,
+        proforma_commission: commissionAmount,
+        proforma_deadline: addDays(new Date(), 7),
+        commission_status: 'pending_confirmation'
+      })
+      .eq('id', item.id);
+    
+    // 6. Stuur email
+    await sendProformaEmail(item, amountExclVat, commissionAmount);
+  }
+
+  // Zelfde logica voor accommodation_quotes...
+}
 ```
 
-### Stats Card Kleurschema (consistent met admin)
-- **Activiteiten**: Green tints (`bg-green-100 text-green-600`)
-- **Logies**: Amber tints (`bg-amber-100 text-amber-600`)
-- **Gecombineerd**: Indigo tints (`bg-indigo-100 text-indigo-600`)
+### 2. `confirm-pending-commissions` (Dagelijks)
 
-### Edge Cases
-- Nieuwe partners zonder `partner_type` worden behandeld als `activity_provider` (bestaande default)
-- Als een partner geen items heeft in een categorie, toon een lege state
+**Doel:** Bevestigt commissies na verstrijken deadline
+
+```typescript
+async function confirmPendingCommissions() {
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Vind items met verlopen deadline
+  const { data: expiredItems } = await supabase
+    .from('program_request_items')
+    .select('*')
+    .eq('commission_status', 'pending_confirmation')
+    .lt('proforma_deadline', today)
+    .is('actual_invoiced_excl_vat', null); // Geen afwijking gemeld
+
+  for (const item of expiredItems) {
+    // Bevestig commissie o.b.v. pro forma
+    await supabase
+      .from('program_request_items')
+      .update({
+        commission_status: 'confirmed',
+        invoiced_amount: item.proforma_amount_excl_vat,
+        commission_amount: item.proforma_commission
+      })
+      .eq('id', item.id);
+
+    // Maak admin todo
+    await createAdminTodo({
+      title: `Commissie factureren: ${item.provider_name}`,
+      type: 'commission_ready_to_invoice',
+      entity_id: item.id
+    });
+  }
+}
+```
+
+---
+
+## Partner UI: Afwijking Melden
+
+Nieuwe component `ConfirmCommissionCard.tsx` in Partner Portal:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  💰 Commissie-opgave bevestigen                                 │
+│  Deadline: 5 februari 2026                                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Klant:          Districon BV                                   │
+│  Activiteit:     Strandzeil workshop                            │
+│  Uitgevoerd:     28 januari 2026                                │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  Geoffreerd bedrag:     €500,00 incl. BTW                       │
+│  Bedrag excl. BTW:      €413,22                                 │
+│  Commissie (15%):       €61,98                                  │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  ○ Bedrag klopt - geen afwijkingen                              │
+│                                                                 │
+│  ○ Werkelijk gefactureerd bedrag afwijkend:                     │
+│    Bedrag excl. BTW:  [____________]                            │
+│    Toelichting:       [________________________]                │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  [Bevestigen]                                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Email Template
+
+**Template ID:** `proforma_commission_notification`
+
+```html
+Onderwerp: Commissie-opgave voor [customer_name] - [block_name]
+
+Beste [partner_name],
+
+De activiteit "[block_name]" voor [customer_name] is uitgevoerd.
+
+═══════════════════════════════════════════════════════════════
+COMMISSIE-OPGAVE
+═══════════════════════════════════════════════════════════════
+
+Geoffreerd bedrag:       €[quoted_amount_incl] incl. BTW
+Bedrag excl. BTW:        €[amount_excl_vat]
+BTW-tarief:              [vat_rate]%
+
+Commissiepercentage:     [commission_percentage]%
+Commissiebedrag:         €[commission_amount]
+
+═══════════════════════════════════════════════════════════════
+
+Wij gaan uit van bovenstaand geoffreerd bedrag voor onze 
+commissiefactuur.
+
+▸ Is het werkelijk gefactureerde bedrag afwijkend?
+  Geef dit vóór [deadline_date] door via uw partneromgeving:
+  [partner_portal_link]
+
+▸ Geen afwijkingen?
+  Dan ontvangt u na de deadline onze commissiefactuur van €[commission_amount].
+
+Met vriendelijke groet,
+Bureau Vlieland
+```
+
+---
+
+## Admin Overzicht
+
+Nieuwe widget op Admin Dashboard: **"Commissies te factureren"**
+
+| Partner | Type | Klant | Excl. BTW | Commissie | Status |
+|---------|------|-------|-----------|-----------|--------|
+| Seeduyn | Logies | Districon | €2.293,58 | €229,36 | Bevestigd ✓ |
+| Outdoor Vlieland | Activiteit | RMD | €413,22 | €61,98 | Wacht (3 dgn) |
+
+---
+
+## Te Wijzigen/Maken Bestanden
+
+| Bestand | Actie | Beschrijving |
+|---------|-------|--------------|
+| Database | Migratie | Nieuwe pro forma kolommen |
+| `supabase/functions/process-completed-items/index.ts` | Nieuw | Dagelijkse pro forma generatie |
+| `supabase/functions/confirm-pending-commissions/index.ts` | Nieuw | Dagelijkse deadline check |
+| `src/components/partner-portal/ConfirmCommissionCard.tsx` | Nieuw | UI voor afwijking melden |
+| `src/components/admin/PendingCommissionsCard.tsx` | Nieuw | Admin overzicht |
+| `src/pages/PartnerDashboard.tsx` | Wijzigen | Integratie ConfirmCommissionCard |
+| `src/pages/PartnerFinance.tsx` | Wijzigen | Toon pending confirmations |
+| Email templates (DB) | Insert | Nieuwe proforma template |
+
+---
+
+## Configureerbare Parameters (app_settings)
+
+| Setting | Default | Beschrijving |
+|---------|---------|--------------|
+| `proforma_deadline_days` | 7 | Dagen om afwijking te melden |
+| `default_vat_rate` | 21 | Standaard BTW voor activiteiten |
+| `accommodation_vat_rate` | 9 | BTW voor logies |
+
+---
+
+## Implementatie Volgorde
+
+1. **Database migratie** - Nieuwe kolommen toevoegen
+2. **Email template** - Pro forma notificatie in database
+3. **Edge Function: process-completed-items** - Pro forma generatie
+4. **Edge Function: confirm-pending-commissions** - Deadline checks  
+5. **Partner UI: ConfirmCommissionCard** - Afwijking melden
+6. **Admin UI: PendingCommissionsCard** - Overzicht commissies
+7. **Scheduling** - Dagelijkse cron jobs activeren
