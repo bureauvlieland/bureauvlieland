@@ -1,139 +1,331 @@
 
-# SEO Landingspagina: Logies op Vlieland
+# Plan: Uniforme Klantpagina (Logies + Activiteiten)
 
-## Waarom zinvol?
+## De Visie
 
-Een SEO-landingspagina voor logies is zeer waardevol omdat:
-
-1. **SEO-waarde**: Mensen zoeken op "overnachten Vlieland groep", "groepsaccommodatie Vlieland", "hotel bedrijfsuitje Vlieland"
-2. **Funnel-structuur**: Net als `/bouwstenen` → `/programma-samenstellen`, creëren we `/logies-vlieland` → `/logies-aanvragen`
-3. **Interne linking**: Kan linken naar én gelinkt worden vanaf andere landingspagina's
-4. **Content-marketing**: Ruimte voor uitleg over accommodatietypes, locaties en proces
+Één klantpagina met een unieke URL waar klanten zowel hun logiesaanvraag als hun activiteitenprogramma kunnen bekijken en beheren. Dit versterkt de boodschap "geen bed, geen programma" en biedt een naadloze klantervaring.
 
 ---
 
-## Pagina-structuur: `/logies-vlieland`
+## Architectuurkeuze: Program Request als Kern
 
-### 1. Hero Sectie
-- **Afbeelding**: Kan `vlieland-landscape.jpg` of `vlieland-morning.jpg` gebruiken (sfeervolle eilandbeelden)
-- **Titel**: "Logies op Vlieland voor groepen"
-- **Subtitel**: Focus op ontzorging en keuze
-- **CTA**: "Vraag logies aan" → `/logies-aanvragen`
+De uniforme klantpagina zal het `program_request` model als kern gebruiken, met daaraan gekoppeld een optionele `accommodation_request`. Dit heeft de volgende voordelen:
 
-### 2. Inleiding Sectie
-- Uitleg over de unieke positie van Bureau Vlieland als lokale bemiddelaar
-- Benadrukken: vrijblijvend, vergelijken, direct boeken bij de accommodatie
-
-### 3. Accommodatietypes Grid
-Vier kaarten met de types uit de database:
-| Type | Icon | Beschrijving |
-|------|------|-------------|
-| Hotel | Building2 | Comfort en gemak in het dorp |
-| Vakantiehuis | Home | Privacy voor kleinere groepen |
-| Groepsaccommodatie | Users | Ideaal voor grote groepen |
-| Appartement | Building | Onafhankelijk verblijf |
-
-### 4. "Hoe werkt het?" Sectie
-Visuele stappen (hergebruik van huidige wizard-uitleg):
-1. Vul wensen in
-2. Wij zoeken voor u
-3. Vergelijk offertes
-4. Boek direct
-
-### 5. USP's / Voordelen
-- **Lokale kennis**: Wij kennen alle accommodaties persoonlijk
-- **Vrijblijvend**: Geen verplichtingen tot je boekt
-- **Eén aanspreekpunt**: Wij regelen de communicatie
-- **Gecombineerd boeken**: Link naar programma-samenstellen
-
-### 6. Interne Links Sectie
-Koppeling naar gerelateerde pagina's:
-- `/bedrijfsuitje-vlieland` - Compleet bedrijfsuitje
-- `/meerdaags-bedrijfsuitje-vlieland` - Meerdaags met overnachting
-- `/programma-samenstellen` - Activiteiten toevoegen
-- `/catering` - Eten en drinken
-
-### 7. CTA Sectie
-Geharmoniseerde CTA's:
-- Primair: "Vraag logies aan" → `/logies-aanvragen`
-- Secundair: "Liever persoonlijk advies?" → `/contact`
-
-### 8. Structured Data
-Hergebruik `LandingPageStructuredData` component voor:
-- Service schema (Accommodation Services)
-- BreadcrumbList schema
+- **Bestaande functionaliteit behouden**: Alle bestaande logica voor activiteiten, facturatie, en voorwaarden blijft intact
+- **Logische volgorde**: Eerst logies regelen, daarna activiteiten toevoegen
+- **Eén token**: Klant hoeft maar één URL te onthouden/bewaren
 
 ---
 
-## Technische Implementatie
+## Database Wijzigingen
 
-### Nieuw bestand
-```
-src/pages/LogiesVlieland.tsx
+### Optie A: Accommodation Request koppelen aan Program Request (aanbevolen)
+
+```sql
+-- Nieuwe kolom in program_requests
+ALTER TABLE program_requests 
+ADD COLUMN linked_accommodation_id uuid REFERENCES accommodation_requests(id);
+
+-- Index voor snelle lookups
+CREATE INDEX idx_program_requests_linked_accommodation 
+ON program_requests(linked_accommodation_id);
 ```
 
-### Route toevoegen in App.tsx
+Dit maakt bidirectionele koppeling mogelijk:
+- `accommodation_requests.linked_program_id` (bestaand) → voor verwijzing vanuit logies naar programma
+- `program_requests.linked_accommodation_id` (nieuw) → voor verwijzing vanuit programma naar logies
+
+### Alternatief: Gemeenschappelijk Token
+
+Een "master token" die beide aanvragen kan opvragen:
+
+```sql
+-- Nieuwe tabel voor gecombineerde klantomgevingen
+CREATE TABLE customer_portals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_token text UNIQUE NOT NULL,
+  accommodation_request_id uuid REFERENCES accommodation_requests(id),
+  program_request_id uuid REFERENCES program_requests(id),
+  customer_email text NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  expires_at timestamptz DEFAULT (now() + interval '90 days')
+);
+```
+
+**Aanbeveling**: Optie A is eenvoudiger en past beter bij de huidige structuur.
+
+---
+
+## Nieuwe Pagina Structuur
+
+### Route
+```
+/mijn-programma/:token
+```
+(bestaande route behouden, functionaliteit uitbreiden)
+
+### Pagina Secties (top-to-bottom)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Header (logo + vernieuwen)                                 │
+├─────────────────────────────────────────────────────────────┤
+│  Welkom [bedrijfsnaam] • [aantal personen] • [datum range]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  SECTIE 1: LOGIES                                     │  │
+│  │  ├─ Status banner (zoekend/offertes beschikbaar)      │  │
+│  │  ├─ Accommodatie samenvatting (indien gekozen)        │  │
+│  │  ├─ Offertes vergelijken (indien niet gekozen)        │  │
+│  │  └─ "Nog geen logies aangevraagd?" CTA (indien leeg)  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  SECTIE 2: ACTIVITEITEN                               │  │
+│  │  ├─ Status summary (X bevestigd, Y in afwachting)     │  │
+│  │  ├─ Dag tabs met programma items                      │  │
+│  │  └─ "Activiteit toevoegen" button                     │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  SECTIE 3: EXTRA'S                                    │  │
+│  │  ├─ Fietsverhuur banner                               │  │
+│  │  └─ Catering suggestie (indien niet in programma)     │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  SECTIE 4: FACTURATIE                                 │  │
+│  │  ├─ Totaaloverzicht (logies + activiteiten)           │  │
+│  │  ├─ Billing details                                   │  │
+│  │  └─ Wie factureert wat                                │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  SECTIE 5: VOORWAARDEN & BEVESTIGING                  │  │
+│  │  (alleen actief als alles bevestigd + billing klaar)  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  SECTIE 6: GESCHIEDENIS                               │  │
+│  │  (timeline van alle wijzigingen)                      │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Nieuwe Component: AccommodationSection
+
+```text
+src/components/customer-portal/AccommodationSection.tsx
+```
+
+Deze component toont de logies-status en -offertes binnen de klantpagina:
+
+### States
+
+1. **Geen logies gekoppeld**
+   - Bericht: "Meerdaags programma? Begin met logies!"
+   - CTA: "Vraag logies aan" → opent wizard met pre-filled data
+
+2. **Logies aangevraagd, geen offertes**
+   - Status banner: "We zoeken passende accommodaties"
+   - Verwachte reactietijd
+
+3. **Offertes beschikbaar**
+   - Compacte offerte-kaarten (vergelijkbaar met huidige)
+   - "Details bekijken" opent sheet
+   - "Kiezen" selecteert offerte
+
+4. **Offerte gekozen**
+   - Bevestigde accommodatie-kaart met details
+   - Eventueel contactgegevens accommodatie
+
+---
+
+## Hook Wijziging: useCustomerProgram
+
+Uitbreiden met logies-data:
+
+```typescript
+interface UseCustomerProgramReturn {
+  // Bestaande velden...
+  program: ProgramRequestWithItems | null;
+  
+  // Nieuw: gekoppelde logiesaanvraag
+  accommodation: AccommodationRequest | null;
+  accommodationQuotes: AccommodationQuote[];
+  
+  // Nieuw: logies acties
+  selectAccommodationQuote: (quoteId: string) => Promise<boolean>;
+  accommodationSummary: {
+    hasAccommodation: boolean;
+    status: 'none' | 'pending' | 'quoted' | 'selected';
+    selectedQuote: AccommodationQuote | null;
+  };
+}
+```
+
+---
+
+## Flow Wijzigingen
+
+### Scenario 1: Klant start met logies (aanbevolen flow)
+
+```text
+1. Klant gaat naar /logies-vlieland
+2. Klant doorloopt wizard en verzendt aanvraag
+3. Systeem maakt accommodation_request EN program_request aan
+4. Klant ontvangt email met link naar /mijn-programma/:token
+5. Klant ziet beide secties (logies + activiteiten leeg)
+6. Klant kan wachten op offertes EN alvast activiteiten toevoegen
+```
+
+### Scenario 2: Klant start met activiteiten
+
+```text
+1. Klant gaat naar /programma-samenstellen
+2. Klant stelt programma samen en verzendt aanvraag
+3. Klant ontvangt email met link naar /mijn-programma/:token
+4. Klant ziet activiteiten + banner "Meerdaags? Vraag logies aan"
+5. CTA opent logies-wizard met pre-filled data
+6. Na verzenden wordt accommodation_request gekoppeld aan program_request
+```
+
+---
+
+## Aanpassingen Bestaande Code
+
+### 1. CustomerProgram.tsx
+- Importeer en gebruik nieuwe `AccommodationSection` component
+- Voeg logies-data toe aan hook call
+- Integreer logies in prijsoverzicht
+
+### 2. useCustomerProgram.ts
+- Fetch gekoppelde accommodation_request
+- Fetch accommodation_quotes
+- Voeg selectAccommodationQuote functie toe
+
+### 3. AccommodationWizard / logies-aanvragen
+- Optie toevoegen om bestaand program_request token mee te geven
+- Bij verzenden: koppel aan bestaand program_request als token aanwezig
+
+### 4. send-program-request edge function
+- Optioneel: automatisch lege accommodation_request aanmaken voor meerdaagse programma's
+
+### 5. PriceSummaryCard.tsx
+- Logies-kosten toevoegen aan totaaloverzicht
+
+---
+
+## Verwijderen / Redirect
+
+### AccommodationQuotes.tsx pagina
+Na implementatie kan `/mijn-logies/:token` redirecten naar `/mijn-programma/:token` met de gekoppelde program_token.
+
+### App.tsx route aanpassing
 ```tsx
-<Route path="/logies-vlieland" element={<LogiesVlieland />} />
+// Redirect oude logies-portal naar nieuwe uniforme pagina
+<Route 
+  path="/mijn-logies/:token" 
+  element={<Navigate to={`/mijn-programma/${token}`} replace />} 
+/>
+```
+(Of behouden als legacy route die automatisch redirect)
+
+---
+
+## Fietsverhuur Integratie
+
+Toevoegen van fietsverhuur-banner in de "Extra's" sectie:
+
+```text
+src/components/customer-portal/ExtrasSection.tsx
 ```
 
-### Navigatie aanpassen
-```tsx
-// Link "Logies" verandert van /logies-aanvragen naar /logies-vlieland
-// De landingspagina bevat dan de link naar de wizard
-```
+Met:
+- Fietsverhuur CTA (externe link)
+- Eventueel catering-suggestie
 
-### Interne links toevoegen
-Update deze pagina's met links naar `/logies-vlieland`:
-- `BedrijfsuitjeVlieland.tsx`
-- `MeerdaagsBedrijfsuitjeVlieland.tsx`
-- `Voorbeeldprogrammas.tsx`
+---
 
-### Sitemap bijwerken
-```xml
-<url>
-  <loc>https://bureauvlieland.nl/logies-vlieland</loc>
-  <priority>0.8</priority>
-</url>
+## Technische Details
+
+### Nieuwe Bestanden
+
+| Bestand | Doel |
+|---------|------|
+| `src/components/customer-portal/AccommodationSection.tsx` | Logies sectie in klantportaal |
+| `src/components/customer-portal/AccommodationSummaryCard.tsx` | Compacte weergave gekozen accommodatie |
+| `src/components/customer-portal/ExtrasSection.tsx` | Fietsverhuur + extras |
+| `src/components/FietsverhuurBanner.tsx` | Herbruikbare fietsverhuur CTA |
+
+### Aan te passen Bestanden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/pages/CustomerProgram.tsx` | AccommodationSection + ExtrasSection toevoegen |
+| `src/hooks/useCustomerProgram.ts` | Logies data + quotes + acties toevoegen |
+| `src/components/customer-portal/MobileProgramView.tsx` | Logies + extras secties integreren |
+| `src/components/customer-portal/DesktopProgramView.tsx` | Logies + extras secties integreren |
+| `src/components/customer-portal/PriceSummaryCard.tsx` | Logies kosten optellen |
+| `src/pages/LogiesAanvragen.tsx` | Optionele koppeling aan bestaand program |
+
+### Database Migratie
+
+```sql
+-- Koppeling van program naar accommodation
+ALTER TABLE program_requests 
+ADD COLUMN linked_accommodation_id uuid REFERENCES accommodation_requests(id);
+
+CREATE INDEX idx_program_requests_linked_accommodation 
+ON program_requests(linked_accommodation_id);
+
+-- Update RLS indien nodig
 ```
 
 ---
 
-## SEO Metadata
+## Voordelen van deze aanpak
 
-```tsx
-<Helmet>
-  <title>Logies op Vlieland voor groepen | Bureau Vlieland</title>
-  <meta 
-    name="description" 
-    content="Zoek en vergelijk groepsaccommodaties op Vlieland. Hotels, vakantiehuizen en groepsverblijven - wij regelen de offertes, jij kiest." 
-  />
-  <link rel="canonical" href="https://bureauvlieland.nl/logies-vlieland" />
-</Helmet>
-```
+1. **Één URL voor alles**: Klant hoeft maar één link te bewaren
+2. **Logische flow**: Visueel wordt duidelijk dat logies eerst komt
+3. **Flexibiliteit**: Klant kan beginnen waar ze willen
+4. **Overzichtelijk**: Totaalkosten (logies + activiteiten) in één overzicht
+5. **Toekomstbestendig**: Makkelijk uit te breiden met andere diensten
 
 ---
 
-## Afbeeldingen
+## Implementatie Volgorde
 
-Beschikbare opties voor hero-afbeelding:
-- `vlieland-landscape.jpg` - Eilandlandschap
-- `vlieland-morning.jpg` - Ochtendsfeer
-- `vlieland-beach.jpg` - Strandbeeld
-
-Voor de accommodatietype-kaarten kunnen we iconen gebruiken (geen specifieke accommodatiefoto's beschikbaar).
+1. Database migratie (koppeling toevoegen)
+2. Hook aanpassen (logies data fetchen)
+3. AccommodationSection component bouwen
+4. FietsverhuurBanner component bouwen
+5. CustomerProgram pagina uitbreiden
+6. Mobile + Desktop views updaten
+7. Logies wizard koppeling mogelijk maken
+8. Oude routes redirecten
 
 ---
 
-## Geschatte Bestandslijst
+## Beantwoording van je vraag
 
-| Bestand | Actie |
-|---------|-------|
-| `src/pages/LogiesVlieland.tsx` | Nieuw - SEO landingspagina |
-| `src/App.tsx` | Route toevoegen |
-| `src/components/Navigation.tsx` | Link aanpassen naar landingspagina |
-| `src/pages/BedrijfsuitjeVlieland.tsx` | Interne link toevoegen |
-| `src/pages/MeerdaagsBedrijfsuitjeVlieland.tsx` | Interne link toevoegen |
-| `src/pages/Voorbeeldprogrammas.tsx` | Interne link toevoegen |
-| `public/sitemap.xml` | URL toevoegen |
+**"De klantpagina blijft behouden en is aangepast met het onderdeel logies?"**
+
+Ja, precies:
+- De `/mijn-programma/:token` pagina blijft bestaan
+- Wordt uitgebreid met een **Logies sectie** bovenaan
+- Logies-offertes kunnen direct in deze pagina vergeleken en gekozen worden
+- Na keuze worden activiteiten + logies samen getoond
+- Facturatie combineert beide
+
+**"Zodat klanten daarna via hun klantenpagina ook nog activiteiten kunnen aanvragen?"**
+
+Ja:
+- De bestaande "Activiteit toevoegen" functionaliteit blijft
+- Wordt alleen zichtbaar/actief nadat logies geregeld is (optioneel)
+- Of altijd zichtbaar maar met tip-banner over logies
 
