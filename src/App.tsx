@@ -51,6 +51,7 @@ import AdminInvoicing from "./pages/admin/AdminInvoicing";
 import AdminAccommodation from "./pages/admin/AdminAccommodation";
 import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
+import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
 
 const queryClient = new QueryClient();
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/zakelijk-evenement-vlieland" element={<ZakelijkEvenementVlieland />} />
             <Route path="/trouwen-op-vlieland" element={<TrouwenOpVlieland />} />
             <Route path="/programma-samenstellen" element={<ProgrammaSamenstellen />} />
+            <Route path="/logies-vlieland" element={<LogiesVlieland />} />
             <Route path="/logies-aanvragen" element={<LogiesAanvragen />} />
             <Route path="/programma/:shareCode" element={<SharedProgram />} />
             <Route path="/mijn-programma/:token" element={<CustomerProgram />} />
