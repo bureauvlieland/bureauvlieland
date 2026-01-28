@@ -130,6 +130,14 @@ export interface PartnerAccommodationQuote {
   room_configuration: unknown;
   created_at: string;
   updated_at: string;
+  // Invoice fields
+  invoiced_amount: number | null;
+  invoiced_number: string | null;
+  invoiced_date: string | null;
+  invoiced_file_path: string | null;
+  commission_percentage: number | null;
+  commission_amount: number | null;
+  commission_status: string | null;
   accommodation_requests: {
     id: string;
     customer_name: string;

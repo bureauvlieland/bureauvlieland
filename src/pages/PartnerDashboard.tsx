@@ -1,19 +1,22 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
-import { PartnerDashboardHeader } from "@/components/partner-portal/PartnerDashboardHeader";
+import { PartnerStatsGrid } from "@/components/partner-portal/PartnerStatsGrid";
 import { PartnerItemRow } from "@/components/partner-portal/PartnerItemRow";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
+import { PartnerAccommodationTable } from "@/components/partner-portal/PartnerAccommodationTable";
+import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RefreshCw, Bell, BedDouble, ArrowRight } from "lucide-react";
+import { AlertCircle, RefreshCw, Bell, Building2, Activity, BedDouble } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
 
@@ -28,6 +31,58 @@ const PartnerDashboardContent = () => {
   const [showSheet, setShowSheet] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
+  const [partnerName, setPartnerName] = useState<string>("");
+  
+  // For dual-type partners: segment toggle
+  const [activeSegment, setActiveSegment] = useState<"activities" | "accommodation">("activities");
+  
+  // Accommodation quote sheet - using same pattern as PartnerAccommodation.tsx
+  interface RequestWithQuote {
+    id: string;
+    customer_name: string;
+    customer_email: string;
+    customer_phone: string;
+    customer_company: string | null;
+    arrival_date: string;
+    departure_date: string;
+    number_of_guests: number;
+    accommodation_type: string;
+    room_count: number | null;
+    room_occupancy: string | null;
+    room_types: string[];
+    location_preference: string[];
+    budget_range: string | null;
+    special_requests: string | null;
+    wants_activities: boolean;
+    status: string;
+    created_at: string;
+    quote: {
+      id: string;
+      status: string;
+      accommodation_name: string;
+      description: string | null;
+      price_total: number;
+      price_per_person_per_night: number | null;
+      price_includes_vat: boolean;
+      vat_rate: number;
+      includes: unknown;
+      conditions: string | null;
+      valid_until: string;
+      partner_notes: string | null;
+      room_configuration: Record<string, unknown>[] | null;
+      submitted_at: string | null;
+      quote_attachment_path: string | null;
+      quote_attachment_filename: string | null;
+      quote_external_url: string | null;
+      invoiced_amount: number | null;
+      invoiced_number: string | null;
+      invoiced_date: string | null;
+      commission_percentage: number | null;
+      commission_amount: number | null;
+    } | null;
+  }
+  const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
+  const [showQuoteSheet, setShowQuoteSheet] = useState(false);
 
   const fetchDashboard = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -40,6 +95,7 @@ const PartnerDashboardContent = () => {
     // Check if admin is impersonating
     const impersonatePartnerId = searchParams.get("impersonate");
     let token: string | null = null;
+    let pName = "";
 
     if (impersonatePartnerId) {
       const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
@@ -47,12 +103,13 @@ const PartnerDashboardContent = () => {
       if (isAdmin) {
         const { data: partner } = await supabase
           .from("partners")
-          .select("partner_token")
+          .select("partner_token, name")
           .eq("id", impersonatePartnerId)
           .single();
 
         if (partner) {
           token = partner.partner_token;
+          pName = partner.name;
         }
       }
     }
@@ -72,9 +129,11 @@ const PartnerDashboardContent = () => {
       }
 
       token = partner.partner_token;
+      pName = partner.name;
     }
 
     setPartnerToken(token);
+    setPartnerName(pName);
 
     try {
       const response = await fetch(
@@ -94,6 +153,12 @@ const PartnerDashboardContent = () => {
 
       const dashboardData = await response.json();
       setData(dashboardData);
+      
+      // Set initial segment based on partner type
+      const partnerType = dashboardData.partner.partner_type || "activity_provider";
+      if (partnerType === "accommodation") {
+        setActiveSegment("accommodation");
+      }
     } catch (err) {
       console.error("Error fetching dashboard:", err);
       setError("Er is een fout opgetreden bij het laden van je dashboard.");
@@ -213,6 +278,75 @@ const PartnerDashboardContent = () => {
     }
   };
 
+  // Handle accommodation quote submission
+  const handleQuoteSubmit = async (quoteData: {
+    accommodationName: string;
+    description: string;
+    priceTotal: number;
+    pricePerPersonPerNight: number | null;
+    priceIncludesVat: boolean;
+    vatRate: number;
+    includes: string[];
+    conditions: string;
+    validUntil: string;
+    partnerNotes: string;
+    roomConfiguration: { type: string; count: number; price_per_night: number; occupancy: number }[];
+    quoteExternalUrl: string;
+  }) => {
+    if (!selectedRequest?.quote) return false;
+
+    try {
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({
+          accommodation_name: quoteData.accommodationName,
+          description: quoteData.description,
+          price_total: quoteData.priceTotal,
+          price_per_person_per_night: quoteData.pricePerPersonPerNight,
+          price_includes_vat: quoteData.priceIncludesVat,
+          vat_rate: quoteData.vatRate,
+          includes: quoteData.includes,
+          conditions: quoteData.conditions,
+          valid_until: quoteData.validUntil,
+          partner_notes: quoteData.partnerNotes,
+          room_configuration: quoteData.roomConfiguration,
+          quote_external_url: quoteData.quoteExternalUrl || null,
+          status: "submitted",
+          submitted_at: new Date().toISOString(),
+        })
+        .eq("id", selectedRequest.quote.id);
+
+      if (error) throw error;
+
+      // Send notification email to customer
+      try {
+        await supabase.functions.invoke("notify-accommodation-quote", {
+          body: { quoteId: selectedRequest.quote.id },
+        });
+      } catch (emailError) {
+        console.error("Failed to send quote notification:", emailError);
+      }
+
+      toast({
+        title: "Offerte ingediend",
+        description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland.",
+      });
+
+      await refetchDashboard();
+      setShowQuoteSheet(false);
+      setSelectedRequest(null);
+      return true;
+    } catch (err) {
+      console.error("Error submitting quote:", err);
+      toast({
+        title: "Fout",
+        description: "Kon offerte niet indienen. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleInvoiceRegister = async (
     amount: number,
     invoiceNumber: string,
@@ -248,15 +382,58 @@ const PartnerDashboardContent = () => {
     );
   }
 
-  // Tab filtering with new status flow
-      const pendingItems = data.items.filter((i) => i.status === "pending");
-      const proposalSentItems = data.items.filter((i) => i.status === "confirmed" || i.status === "alternative"); // Proposals sent to customer
-      const acceptedItems = data.items.filter((i) => i.status === "accepted" || i.status === "executed");
+  // Determine partner type
+  const partnerType = data.partner.partner_type || "activity_provider";
+  const isActivityPartner = partnerType === "activity_provider" || partnerType === "both";
+  const isAccommodationPartner = partnerType === "accommodation" || partnerType === "both";
+  const isBothPartner = partnerType === "both";
+
+  // Activity items filtering
+  const pendingItems = data.items.filter((i) => i.status === "pending");
+  const proposalSentItems = data.items.filter((i) => i.status === "confirmed" || i.status === "alternative");
+  const acceptedItems = data.items.filter((i) => i.status === "accepted" || i.status === "executed");
   const closedItems = data.items.filter((i) => 
     ["invoiced", "unavailable", "cancelled"].includes(i.status)
   );
 
-  const renderItemsTable = (items: PartnerItem[], emptyMessage: string) => {
+  // Accommodation quotes filtering
+  const accommodationQuotes = data.accommodationQuotes || [];
+  const pendingQuotes = accommodationQuotes.filter((q) => q.status === "pending");
+  const submittedQuotes = accommodationQuotes.filter((q) => q.status === "submitted");
+  const closedQuotes = accommodationQuotes.filter((q) => 
+    ["selected", "rejected", "expired"].includes(q.status)
+  );
+
+  // Calculate YTD financials (including accommodation)
+  const currentYear = new Date().getFullYear();
+  const ytdInvoicedItems = data.items.filter((i) => {
+    if (!i.invoiced_date) return false;
+    const invoiceYear = new Date(i.invoiced_date).getFullYear();
+    return invoiceYear === currentYear;
+  });
+  const ytdActivityRevenue = ytdInvoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0);
+  
+  // Add accommodation revenue
+  const ytdAccommodationRevenue = accommodationQuotes
+    .filter((q) => q.status === "selected" && q.invoiced_amount && q.invoiced_date)
+    .filter((q) => new Date(q.invoiced_date!).getFullYear() === currentYear)
+    .reduce((sum, q) => sum + (q.invoiced_amount || 0), 0);
+  
+  const ytdRevenue = ytdActivityRevenue + ytdAccommodationRevenue;
+  const ytdCommission = ytdInvoicedItems.reduce((sum, i) => sum + (i.commission_amount || 0), 0);
+  const pendingCommission = data.items
+    .filter((i) => i.commission_status === "pending")
+    .reduce((sum, i) => sum + (i.commission_amount || 0), 0);
+
+  const financials = {
+    ytdRevenue,
+    ytdCommission,
+    pendingCommission,
+  };
+
+  const totalPending = pendingItems.length + pendingQuotes.length;
+
+  const renderActivitiesTable = (items: PartnerItem[], emptyMessage: string) => {
     if (items.length === 0) {
       return (
         <Card>
@@ -297,39 +474,25 @@ const PartnerDashboardContent = () => {
     );
   };
 
-  // Check if this partner handles accommodation
-  const isAccommodationPartner = data.partner.partner_type === "accommodation" || data.partner.partner_type === "both";
-  const pendingAccommodation = data.accommodationSummary?.pending || 0;
-
-  // Calculate YTD financials
-  const currentYear = new Date().getFullYear();
-  const ytdInvoicedItems = data.items.filter((i) => {
-    if (!i.invoiced_date) return false;
-    const invoiceYear = new Date(i.invoiced_date).getFullYear();
-    return invoiceYear === currentYear;
-  });
-  const ytdRevenue = ytdInvoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0);
-  const ytdCommission = ytdInvoicedItems.reduce((sum, i) => sum + (i.commission_amount || 0), 0);
-  const pendingCommission = data.items
-    .filter((i) => i.commission_status === "pending")
-    .reduce((sum, i) => sum + (i.commission_amount || 0), 0);
-
-  const financials = {
-    ytdRevenue,
-    ytdCommission,
-    pendingCommission,
-  };
-
   return (
     <>
       <div className="p-6">
-        <div className="flex justify-between items-start mb-6">
-          <PartnerDashboardHeader partner={data.partner} summary={data.summary} financials={financials} />
+        {/* Header with partner info */}
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Building2 className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{data.partner.name}</h1>
+              <p className="text-muted-foreground">{data.partner.email}</p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            {(pendingItems.length > 0 || pendingAccommodation > 0) && (
+            {totalPending > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 <Bell className="h-4 w-4" />
-                <span>{pendingItems.length + pendingAccommodation} nieuw</span>
+                <span>{totalPending} nieuw</span>
               </div>
             )}
             <Button onClick={refetchDashboard} variant="outline" size="sm">
@@ -339,93 +502,297 @@ const PartnerDashboardContent = () => {
           </div>
         </div>
 
-        {/* Accommodation notice card for accommodation partners */}
-        {isAccommodationPartner && (data.accommodationSummary?.total || 0) > 0 && (
-          <Card className="mb-6 border-primary/20 bg-primary/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BedDouble className="h-5 w-5 text-primary" />
-                Logies Aanvragen
-                {pendingAccommodation > 0 && (
-                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                    {pendingAccommodation} nieuw
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">{data.accommodationSummary?.total}</span> logies aanvragen totaal
-                  {data.accommodationSummary?.submitted ? (
-                    <span> • {data.accommodationSummary.submitted} offertes verstuurd</span>
-                  ) : null}
-                  {data.accommodationSummary?.selected ? (
-                    <span> • {data.accommodationSummary.selected} geaccepteerd</span>
-                  ) : null}
-                </div>
-                <Button asChild size="sm">
-                  <Link to={`/partner/logies${searchParams.get("impersonate") ? `?impersonate=${searchParams.get("impersonate")}` : ""}`}>
-                    Bekijk aanvragen
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Stats Grid - adapts based on partner type */}
+        <PartnerStatsGrid
+          isActivityPartner={isActivityPartner}
+          isAccommodationPartner={isAccommodationPartner}
+          activitySummary={isActivityPartner ? data.summary : undefined}
+          accommodationSummary={isAccommodationPartner ? data.accommodationSummary : undefined}
+          financials={financials}
+        />
+
+        {/* Segment toggle for "both" partners */}
+        {isBothPartner && (
+          <div className="flex gap-2 mt-6">
+            <Button
+              variant={activeSegment === "activities" ? "default" : "outline"}
+              onClick={() => setActiveSegment("activities")}
+              className="flex items-center gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              Activiteiten
+              {pendingItems.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {pendingItems.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeSegment === "accommodation" ? "default" : "outline"}
+              onClick={() => setActiveSegment("accommodation")}
+              className="flex items-center gap-2"
+            >
+              <BedDouble className="h-4 w-4" />
+              Logies
+              {pendingQuotes.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {pendingQuotes.length}
+                </Badge>
+              )}
+            </Button>
+          </div>
         )}
 
-        {/* 4-tab structure */}
-        <Tabs defaultValue="pending" className="mt-8">
-          <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
-              <TabsTrigger value="pending" className="relative whitespace-nowrap">
-                Nieuw
-                {pendingItems.length > 0 && (
-                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                    {pendingItems.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="waiting" className="whitespace-nowrap">
-                Voorstel verstuurd
-                {proposalSentItems.length > 0 && (
-                  <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {proposalSentItems.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="accepted" className="whitespace-nowrap">
-                Akkoord
-                {acceptedItems.length > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {acceptedItems.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="closed" className="whitespace-nowrap">
-                Afgerond
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+        {/* Content based on partner type */}
+        {/* Activities view - for activity partners or "both" with activities segment */}
+        {(isActivityPartner && !isBothPartner) || (isBothPartner && activeSegment === "activities") ? (
+          <Tabs defaultValue="pending" className="mt-6">
+            <ScrollArea className="w-full">
+              <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
+                <TabsTrigger value="pending" className="relative whitespace-nowrap">
+                  Nieuw
+                  {pendingItems.length > 0 && (
+                    <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                      {pendingItems.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="waiting" className="whitespace-nowrap">
+                  Voorstel verstuurd
+                  {proposalSentItems.length > 0 && (
+                    <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      {proposalSentItems.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="accepted" className="whitespace-nowrap">
+                  Akkoord
+                  {acceptedItems.length > 0 && (
+                    <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                      {acceptedItems.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="closed" className="whitespace-nowrap">
+                  Afgerond
+                </TabsTrigger>
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
-          <TabsContent value="pending" className="mt-6">
-            {renderItemsTable(pendingItems, "Geen nieuwe aanvragen.")}
-          </TabsContent>
+            <TabsContent value="pending" className="mt-6">
+              {renderActivitiesTable(pendingItems, "Geen nieuwe aanvragen.")}
+            </TabsContent>
 
-          <TabsContent value="waiting" className="mt-6">
-            {renderItemsTable(proposalSentItems, "Geen voorstellen verstuurd.")}
-          </TabsContent>
+            <TabsContent value="waiting" className="mt-6">
+              {renderActivitiesTable(proposalSentItems, "Geen voorstellen verstuurd.")}
+            </TabsContent>
 
-          <TabsContent value="accepted" className="mt-6">
-            {renderItemsTable(acceptedItems, "Geen activiteiten met klantakkoord.")}
-          </TabsContent>
+            <TabsContent value="accepted" className="mt-6">
+              {renderActivitiesTable(acceptedItems, "Geen activiteiten met klantakkoord.")}
+            </TabsContent>
 
-          <TabsContent value="closed" className="mt-6">
-            {renderItemsTable(closedItems, "Geen afgeronde activiteiten.")}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="closed" className="mt-6">
+              {renderActivitiesTable(closedItems, "Geen afgeronde activiteiten.")}
+            </TabsContent>
+          </Tabs>
+        ) : null}
+
+        {/* Accommodation view - for accommodation partners or "both" with accommodation segment */}
+        {(isAccommodationPartner && !isBothPartner) || (isBothPartner && activeSegment === "accommodation") ? (
+          <Tabs defaultValue="pending" className="mt-6">
+            <ScrollArea className="w-full">
+              <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
+                <TabsTrigger value="pending" className="relative whitespace-nowrap">
+                  Te beantwoorden
+                  {pendingQuotes.length > 0 && (
+                    <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                      {pendingQuotes.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="submitted" className="whitespace-nowrap">
+                  Offerte verstuurd
+                  {submittedQuotes.length > 0 && (
+                    <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      {submittedQuotes.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="closed" className="whitespace-nowrap">
+                  Afgerond
+                </TabsTrigger>
+              </TabsList>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+
+            <TabsContent value="pending" className="mt-6">
+              <PartnerAccommodationTable
+                quotes={pendingQuotes}
+                emptyMessage="Geen openstaande logies aanvragen."
+                onSelectQuote={(quote) => {
+                  // Transform PartnerAccommodationQuote to RequestWithQuote format
+                  const req = quote.accommodation_requests;
+                  setSelectedRequest({
+                    id: req.id,
+                    customer_name: req.customer_name,
+                    customer_email: req.customer_email,
+                    customer_phone: req.customer_phone,
+                    customer_company: req.customer_company,
+                    arrival_date: req.arrival_date,
+                    departure_date: req.departure_date,
+                    number_of_guests: req.number_of_guests,
+                    accommodation_type: req.accommodation_type,
+                    room_count: req.room_count,
+                    room_occupancy: null,
+                    room_types: req.room_types || [],
+                    location_preference: req.location_preference || [],
+                    budget_range: req.budget_range,
+                    special_requests: req.special_requests,
+                    wants_activities: false,
+                    status: req.status,
+                    created_at: req.created_at,
+                    quote: {
+                      id: quote.id,
+                      status: quote.status,
+                      accommodation_name: quote.accommodation_name,
+                      description: quote.description,
+                      price_total: quote.price_total,
+                      price_per_person_per_night: quote.price_per_person_per_night,
+                      price_includes_vat: quote.price_includes_vat,
+                      vat_rate: quote.vat_rate,
+                      includes: quote.includes,
+                      conditions: quote.conditions,
+                      valid_until: quote.valid_until,
+                      partner_notes: quote.partner_notes,
+                      room_configuration: quote.room_configuration as Record<string, unknown>[] | null,
+                      submitted_at: quote.submitted_at,
+                      quote_attachment_path: quote.quote_attachment_path,
+                      quote_attachment_filename: quote.quote_attachment_filename,
+                      quote_external_url: quote.quote_external_url,
+                      invoiced_amount: quote.invoiced_amount,
+                      invoiced_number: quote.invoiced_number,
+                      invoiced_date: quote.invoiced_date,
+                      commission_percentage: quote.commission_percentage,
+                      commission_amount: quote.commission_amount,
+                    },
+                  });
+                  setShowQuoteSheet(true);
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="submitted" className="mt-6">
+              <PartnerAccommodationTable
+                quotes={submittedQuotes}
+                emptyMessage="Geen ingediende offertes."
+                onSelectQuote={(quote) => {
+                  const req = quote.accommodation_requests;
+                  setSelectedRequest({
+                    id: req.id,
+                    customer_name: req.customer_name,
+                    customer_email: req.customer_email,
+                    customer_phone: req.customer_phone,
+                    customer_company: req.customer_company,
+                    arrival_date: req.arrival_date,
+                    departure_date: req.departure_date,
+                    number_of_guests: req.number_of_guests,
+                    accommodation_type: req.accommodation_type,
+                    room_count: req.room_count,
+                    room_occupancy: null,
+                    room_types: req.room_types || [],
+                    location_preference: req.location_preference || [],
+                    budget_range: req.budget_range,
+                    special_requests: req.special_requests,
+                    wants_activities: false,
+                    status: req.status,
+                    created_at: req.created_at,
+                    quote: {
+                      id: quote.id,
+                      status: quote.status,
+                      accommodation_name: quote.accommodation_name,
+                      description: quote.description,
+                      price_total: quote.price_total,
+                      price_per_person_per_night: quote.price_per_person_per_night,
+                      price_includes_vat: quote.price_includes_vat,
+                      vat_rate: quote.vat_rate,
+                      includes: quote.includes,
+                      conditions: quote.conditions,
+                      valid_until: quote.valid_until,
+                      partner_notes: quote.partner_notes,
+                      room_configuration: quote.room_configuration as Record<string, unknown>[] | null,
+                      submitted_at: quote.submitted_at,
+                      quote_attachment_path: quote.quote_attachment_path,
+                      quote_attachment_filename: quote.quote_attachment_filename,
+                      quote_external_url: quote.quote_external_url,
+                      invoiced_amount: quote.invoiced_amount,
+                      invoiced_number: quote.invoiced_number,
+                      invoiced_date: quote.invoiced_date,
+                      commission_percentage: quote.commission_percentage,
+                      commission_amount: quote.commission_amount,
+                    },
+                  });
+                  setShowQuoteSheet(true);
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="closed" className="mt-6">
+              <PartnerAccommodationTable
+                quotes={closedQuotes}
+                emptyMessage="Geen afgeronde logies aanvragen."
+                onSelectQuote={(quote) => {
+                  const req = quote.accommodation_requests;
+                  setSelectedRequest({
+                    id: req.id,
+                    customer_name: req.customer_name,
+                    customer_email: req.customer_email,
+                    customer_phone: req.customer_phone,
+                    customer_company: req.customer_company,
+                    arrival_date: req.arrival_date,
+                    departure_date: req.departure_date,
+                    number_of_guests: req.number_of_guests,
+                    accommodation_type: req.accommodation_type,
+                    room_count: req.room_count,
+                    room_occupancy: null,
+                    room_types: req.room_types || [],
+                    location_preference: req.location_preference || [],
+                    budget_range: req.budget_range,
+                    special_requests: req.special_requests,
+                    wants_activities: false,
+                    status: req.status,
+                    created_at: req.created_at,
+                    quote: {
+                      id: quote.id,
+                      status: quote.status,
+                      accommodation_name: quote.accommodation_name,
+                      description: quote.description,
+                      price_total: quote.price_total,
+                      price_per_person_per_night: quote.price_per_person_per_night,
+                      price_includes_vat: quote.price_includes_vat,
+                      vat_rate: quote.vat_rate,
+                      includes: quote.includes,
+                      conditions: quote.conditions,
+                      valid_until: quote.valid_until,
+                      partner_notes: quote.partner_notes,
+                      room_configuration: quote.room_configuration as Record<string, unknown>[] | null,
+                      submitted_at: quote.submitted_at,
+                      quote_attachment_path: quote.quote_attachment_path,
+                      quote_attachment_filename: quote.quote_attachment_filename,
+                      quote_external_url: quote.quote_external_url,
+                      invoiced_amount: quote.invoiced_amount,
+                      invoiced_number: quote.invoiced_number,
+                      invoiced_date: quote.invoiced_date,
+                      commission_percentage: quote.commission_percentage,
+                      commission_amount: quote.commission_amount,
+                    },
+                  });
+                  setShowQuoteSheet(true);
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : null}
       </div>
 
       {/* Item detail sheet */}
@@ -454,6 +821,21 @@ const PartnerDashboardContent = () => {
         onSubmit={handleInvoiceRegister}
         item={selectedItem}
         commissionPercentage={data.partner.commission_percentage}
+      />
+
+      {/* Accommodation quote sheet */}
+      <PartnerAccommodationQuoteSheet
+        isOpen={showQuoteSheet}
+        onClose={() => {
+          setShowQuoteSheet(false);
+          setSelectedRequest(null);
+        }}
+        request={selectedRequest}
+        existingQuote={selectedRequest?.quote ?? null}
+        partnerToken={partnerToken || ""}
+        partnerName={partnerName}
+        onSubmit={handleQuoteSubmit}
+        onRefresh={refetchDashboard}
       />
     </>
   );

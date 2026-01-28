@@ -53,12 +53,15 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   const impersonateParam = searchParams.get("impersonate");
   const urlSuffix = impersonateParam ? `?impersonate=${impersonateParam}` : "";
 
-  // Check if partner handles accommodation
+  // Check if partner handles activities or accommodation
+  const isActivityPartner = partner.partner_type === "activity_provider" || partner.partner_type === "both" || !partner.partner_type;
   const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
 
   const menuItems = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
-    { title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package },
+    // Alleen tonen als partner activiteiten levert
+    ...(isActivityPartner ? [{ title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
+    // Alleen tonen als partner logies levert
     ...(isAccommodationPartner ? [{ title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble }] : []),
     { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
     { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
