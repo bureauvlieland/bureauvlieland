@@ -77,6 +77,7 @@ export const EmailTypes = {
   // Accommodation emails
   ACCOMMODATION_REQUEST_BUREAU: "accommodation_request_bureau",
   ACCOMMODATION_REQUEST_CUSTOMER: "accommodation_request_customer",
+  ACCOMMODATION_QUOTE_REQUEST_PARTNER: "accommodation_quote_request_partner",
   ACCOMMODATION_QUOTE_NOTIFICATION: "accommodation_quote_notification",
   ACCOMMODATION_SELECTED_PARTNER: "accommodation_selected_partner",
   ACCOMMODATION_SELECTED_CUSTOMER: "accommodation_selected_customer",
