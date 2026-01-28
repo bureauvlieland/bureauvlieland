@@ -1,0 +1,322 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { differenceInDays, format, isPast } from "date-fns";
+import { nl } from "date-fns/locale";
+import {
+  BedDouble,
+  Calendar,
+  Users,
+  Clock,
+  CheckCircle2,
+  ChevronRight,
+  Eye,
+  Check,
+  AlertTriangle,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { AccommodationQuoteDetailSheet } from "@/components/accommodation-portal/AccommodationQuoteDetailSheet";
+import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
+import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import { ACCOMMODATION_TYPES } from "@/types/accommodation";
+
+interface AccommodationSectionProps {
+  accommodation: AccommodationRequest | null;
+  quotes: AccommodationQuote[];
+  onSelectQuote: (quoteId: string) => Promise<boolean>;
+  selectedDates: Date[];
+}
+
+export const AccommodationSection = ({
+  accommodation,
+  quotes,
+  onSelectQuote,
+  selectedDates,
+}: AccommodationSectionProps) => {
+  const [selectedQuoteForDetails, setSelectedQuoteForDetails] = useState<AccommodationQuote | null>(null);
+  const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+
+  const handleSelectQuote = async () => {
+    if (!selectedQuoteForConfirm) return;
+    setIsSelecting(true);
+    const success = await onSelectQuote(selectedQuoteForConfirm.id);
+    setIsSelecting(false);
+    if (success) {
+      setSelectedQuoteForConfirm(null);
+    }
+  };
+
+  const numberOfNights = accommodation
+    ? differenceInDays(new Date(accommodation.departure_date), new Date(accommodation.arrival_date))
+    : selectedDates.length > 1
+    ? selectedDates.length - 1
+    : 1;
+
+  const hasSelectedQuote = quotes.some((q) => q.status === "selected");
+  const selectedQuote = quotes.find((q) => q.status === "selected");
+  const submittedQuotes = quotes.filter((q) => q.status === "submitted");
+
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
+
+  // State 1: No accommodation linked - show CTA
+  if (!accommodation) {
+    return (
+      <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <BedDouble className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Meerdaags programma? Begin met logies!</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Vind eerst passende accommodatie voor je groep. Daarna vul je het programma aan met activiteiten.
+                </p>
+              </div>
+            </div>
+            <Button asChild>
+              <Link to="/logies-aanvragen">
+                Zoek logies
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // State 2: Accommodation with selected quote - show confirmation
+  if (hasSelectedQuote && selectedQuote) {
+    return (
+      <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BedDouble className="h-5 w-5 text-green-600" />
+              Jouw Logies
+            </CardTitle>
+            <Badge className="bg-green-500">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Gekozen
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-start gap-4">
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">{selectedQuote.accommodation_name}</h3>
+              {selectedQuote.partner?.name && (
+                <p className="text-sm text-muted-foreground">{selectedQuote.partner.name}</p>
+              )}
+              
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {format(new Date(accommodation.arrival_date), "d MMM", { locale: nl })} -{" "}
+                    {format(new Date(accommodation.departure_date), "d MMM", { locale: nl })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span>{accommodation.number_of_guests} gasten</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="text-right">
+              <p className="text-2xl font-bold text-primary">{formatPrice(selectedQuote.price_total)}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedQuote.price_includes_vat ? "incl." : "excl."} BTW
+              </p>
+              {selectedQuote.price_per_person_per_night && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {formatPrice(selectedQuote.price_per_person_per_night)} p.p.p.n.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <p className="text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+            De accommodatie neemt contact met je op om de reservering definitief te maken.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // State 3: Quotes available - show comparison
+  if (submittedQuotes.length > 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BedDouble className="h-5 w-5 text-primary" />
+              Logies Offertes
+            </CardTitle>
+            <Badge variant="secondary">
+              {submittedQuotes.length} offerte{submittedQuotes.length > 1 ? "s" : ""}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Bekijk en vergelijk de offertes. Kies de optie die het beste bij je past.
+          </p>
+
+          {/* Compact quote cards */}
+          {submittedQuotes.map((quote) => {
+            const validUntil = new Date(quote.valid_until);
+            const isExpired = isPast(validUntil);
+
+            return (
+              <div
+                key={quote.id}
+                className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium truncate">{quote.accommodation_name}</h4>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    {quote.partner?.name && <span>{quote.partner.name}</span>}
+                    {isExpired ? (
+                      <Badge variant="destructive" className="text-xs">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Verlopen
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        <Clock className="h-3 w-3 mr-1" />
+                        t/m {format(validUntil, "d MMM", { locale: nl })}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <p className="font-semibold">{formatPrice(quote.price_total)}</p>
+                  {quote.price_per_person_per_night && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatPrice(quote.price_per_person_per_night)} p.p.p.n.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedQuoteForDetails(quote)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {!isExpired && (
+                    <Button
+                      size="sm"
+                      onClick={() => setSelectedQuoteForConfirm(quote)}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Kies
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+
+        {/* Detail sheet */}
+        <AccommodationQuoteDetailSheet
+          quote={selectedQuoteForDetails}
+          open={!!selectedQuoteForDetails}
+          onOpenChange={(open) => !open && setSelectedQuoteForDetails(null)}
+          onSelect={() => {
+            if (selectedQuoteForDetails) {
+              setSelectedQuoteForConfirm(selectedQuoteForDetails);
+            }
+          }}
+          isSelecting={isSelecting}
+          hasSelectedQuote={hasSelectedQuote}
+          numberOfGuests={accommodation.number_of_guests}
+          numberOfNights={numberOfNights}
+        />
+
+        {/* Confirmation dialog */}
+        <SelectQuoteDialog
+          quote={selectedQuoteForConfirm}
+          open={!!selectedQuoteForConfirm}
+          onOpenChange={(open) => !open && setSelectedQuoteForConfirm(null)}
+          onConfirm={handleSelectQuote}
+          isSelecting={isSelecting}
+        />
+      </Card>
+    );
+  }
+
+  // State 4: Waiting for quotes
+  const accommodationType = ACCOMMODATION_TYPES.find((t) => t.value === accommodation.accommodation_type);
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BedDouble className="h-5 w-5 text-amber-600" />
+            Jouw Logiesaanvraag
+          </CardTitle>
+          <Badge variant="outline" className="border-amber-500 text-amber-700">
+            <Clock className="h-3 w-3 mr-1" />
+            In behandeling
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Request summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {format(new Date(accommodation.arrival_date), "d MMM", { locale: nl })} -{" "}
+              {format(new Date(accommodation.departure_date), "d MMM", { locale: nl })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span>{accommodation.number_of_guests} gasten</span>
+          </div>
+          {accommodationType && (
+            <div className="flex items-center gap-2">
+              <span>{accommodationType.icon}</span>
+              <span>{accommodationType.label}</span>
+            </div>
+          )}
+          {accommodation.room_count && (
+            <div className="flex items-center gap-2">
+              <BedDouble className="h-4 w-4 text-muted-foreground" />
+              <span>{accommodation.room_count} kamer{accommodation.room_count > 1 ? "s" : ""}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Status message */}
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+          <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              We verzamelen offertes voor je. Je ontvangt een email zodra accommodaties reageren.
+            </p>
+            <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

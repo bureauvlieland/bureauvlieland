@@ -12,6 +12,8 @@ import { AcceptTermsCard } from "./AcceptTermsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
+import { AccommodationSection } from "./AccommodationSection";
+import { ExtrasSection } from "./ExtrasSection";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -26,10 +28,12 @@ import {
   Building2,
   Send,
   Plus,
+  BedDouble,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramRequestItem, ProgramRequestHistory } from "@/types/programRequest";
+import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 interface MobileProgramViewProps {
   program: {
@@ -69,6 +73,10 @@ interface MobileProgramViewProps {
   onSubmitChanges: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
   onAddActivity: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
+  // Accommodation
+  accommodation: AccommodationRequest | null;
+  accommodationQuotes: AccommodationQuote[];
+  onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
 }
 
 export const MobileProgramView = ({
@@ -90,6 +98,9 @@ export const MobileProgramView = ({
   onSubmitChanges,
   onAcceptTerms,
   onAddActivity,
+  accommodation,
+  accommodationQuotes,
+  onSelectAccommodationQuote,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const termsAccepted = !!program.terms_accepted_at;
@@ -107,6 +118,21 @@ export const MobileProgramView = ({
 
   return (
     <div className="space-y-4">
+      {/* Accommodation section - always first */}
+      <ProgramSection
+        id="accommodation"
+        title="Logies"
+        icon={<BedDouble className="h-4 w-4 text-primary" />}
+        defaultOpen
+      >
+        <AccommodationSection
+          accommodation={accommodation}
+          quotes={accommodationQuotes}
+          onSelectQuote={onSelectAccommodationQuote}
+          selectedDates={selectedDates}
+        />
+      </ProgramSection>
+
       {/* Next steps - always open */}
       <NextStepsCard
         statusSummary={statusSummary}
@@ -304,6 +330,9 @@ export const MobileProgramView = ({
           <ProgramHistoryTimeline history={history} variant="embedded" />
         </ProgramSection>
       )}
+
+      {/* Extras section */}
+      <ExtrasSection />
 
       {/* Floating changes bar */}
       {hasChanges && (

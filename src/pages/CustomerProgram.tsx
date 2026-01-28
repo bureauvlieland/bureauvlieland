@@ -44,6 +44,10 @@ const CustomerProgram = () => {
     acceptTerms,
     cancelRequest,
     statusSummary,
+    // Accommodation
+    accommodation,
+    accommodationQuotes,
+    selectAccommodationQuote,
   } = useCustomerProgram(token || "");
 
   const [activeDay, setActiveDay] = useState(0);
@@ -278,6 +282,10 @@ const CustomerProgram = () => {
     onRefresh: refetch,
     onAcceptTerms: handleAcceptTerms,
     onAddActivity: addItem,
+    // Accommodation
+    accommodation,
+    accommodationQuotes,
+    onSelectAccommodationQuote: selectAccommodationQuote,
   };
 
   return (
