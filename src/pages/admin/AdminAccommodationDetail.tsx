@@ -58,8 +58,20 @@ import {
   HelpCircle,
   FileText,
   ChevronRight,
+  ExternalLink,
+  Paperclip,
+  Link as LinkIcon,
 } from "lucide-react";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
+
+interface LinkedProgram {
+  id: string;
+  customer_token: string;
+  customer_name: string;
+  status: string;
+  number_of_people: number;
+  item_count: number;
+}
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   submitted: { label: "Nieuw", variant: "default" },
@@ -145,6 +157,33 @@ export default function AdminAccommodationDetail() {
 
       if (error) throw error;
       return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch linked program request (reverse lookup)
+  const { data: linkedProgram } = useQuery({
+    queryKey: ["admin-linked-program", id],
+    queryFn: async () => {
+      const { data: program, error } = await supabase
+        .from("program_requests")
+        .select("id, customer_token, customer_name, status, number_of_people")
+        .eq("linked_accommodation_id", id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!program) return null;
+
+      // Get item count
+      const { count } = await supabase
+        .from("program_request_items")
+        .select("id", { count: "exact", head: true })
+        .eq("request_id", program.id);
+
+      return {
+        ...program,
+        item_count: count || 0,
+      } as LinkedProgram;
     },
     enabled: !!id,
   });
@@ -294,7 +333,7 @@ export default function AdminAccommodationDetail() {
     <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
               <Link to="/admin/logies">
@@ -307,9 +346,19 @@ export default function AdminAccommodationDetail() {
               <p className="text-slate-600">{request.customer_company || request.customer_email}</p>
             </div>
           </div>
-          <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">
-            {statusConfig.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {linkedProgram && (
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/mijn-programma/${linkedProgram.customer_token}`} target="_blank">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Bekijk als klant
+                </Link>
+              </Button>
+            )}
+            <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">
+              {statusConfig.label}
+            </Badge>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -523,6 +572,7 @@ export default function AdminAccommodationDetail() {
                         <TableHead>Accommodatie</TableHead>
                         <TableHead>Prijs totaal</TableHead>
                         <TableHead>P.p.p.n.</TableHead>
+                        <TableHead>Offerte</TableHead>
                         <TableHead>Geldig tot</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actie</TableHead>
@@ -532,6 +582,7 @@ export default function AdminAccommodationDetail() {
                       {quotes.map((quote) => {
                         const quoteStatus = QUOTE_STATUS_CONFIG[quote.status] || QUOTE_STATUS_CONFIG.pending;
                         const partner = quote.partner as { id: string; name: string; email: string } | null;
+                        const hasAttachment = quote.quote_attachment_path || quote.quote_external_url;
 
                         return (
                           <TableRow key={quote.id}>
@@ -553,6 +604,36 @@ export default function AdminAccommodationDetail() {
                             <TableCell>
                               {quote.price_per_person_per_night ? (
                                 <span>€{quote.price_per_person_per_night}</span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {hasAttachment ? (
+                                <div className="flex items-center gap-1">
+                                  {quote.quote_external_url && (
+                                    <a
+                                      href={quote.quote_external_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                                    >
+                                      <LinkIcon className="h-3 w-3" />
+                                      Link
+                                    </a>
+                                  )}
+                                  {quote.quote_attachment_path && (
+                                    <a
+                                      href={quote.quote_attachment_path}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                                    >
+                                      <Paperclip className="h-3 w-3" />
+                                      {quote.quote_attachment_filename || "Bijlage"}
+                                    </a>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-slate-400">-</span>
                               )}
@@ -605,6 +686,54 @@ export default function AdminAccommodationDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Linked Program Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Gekoppeld programma
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {linkedProgram ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{linkedProgram.customer_name}</p>
+                        <p className="text-sm text-slate-500">
+                          {linkedProgram.number_of_people} personen • {linkedProgram.item_count} activiteiten
+                        </p>
+                      </div>
+                      <Badge variant={linkedProgram.status === "active" ? "default" : "secondary"}>
+                        {linkedProgram.status === "active" ? "Actief" : linkedProgram.status}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/admin/aanvragen/${linkedProgram.id}`}>
+                          <ChevronRight className="h-4 w-4 mr-1" />
+                          Aanvraag bekijken
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/mijn-programma/${linkedProgram.customer_token}`} target="_blank">
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Bekijk als klant
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-slate-500 mb-3">Geen programma gekoppeld aan deze logiesaanvraag</p>
+                    <p className="text-sm text-slate-400">
+                      De klant kan activiteiten toevoegen via de klantpagina zodra logies is geregeld.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
