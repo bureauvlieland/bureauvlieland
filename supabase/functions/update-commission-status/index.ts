@@ -70,7 +70,7 @@ serve(async (req) => {
       );
     }
 
-    const { itemIds, status, notes, commissionInvoiceNumber } = await req.json();
+    const { itemIds, status, notes, commissionInvoiceNumber, itemType = "activity" } = await req.json();
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return new Response(
@@ -91,30 +91,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get items with partner info before updating
-    const { data: rawItems } = await supabase
-      .from("program_request_items")
-      .select(`
-        id, 
-        request_id, 
-        block_name,
-        provider_id,
-        provider_name,
-        invoiced_amount,
-        invoiced_number,
-        commission_percentage,
-        commission_amount,
-        program_requests!inner(customer_name, customer_company)
-      `)
-      .in("id", itemIds);
-
-    // Flatten the program_requests relation
-    const items = rawItems?.map((item: any) => ({
-      ...item,
-      customer_name: item.program_requests?.customer_name,
-      customer_company: item.program_requests?.customer_company,
-    }));
-
     const updateData: Record<string, unknown> = {
       commission_status: status,
       updated_at: new Date().toISOString(),
@@ -128,9 +104,61 @@ serve(async (req) => {
       updateData.commission_notes = notes;
     }
 
+    // Determine which table to update based on itemType
+    const tableName = itemType === "accommodation" ? "accommodation_quotes" : "program_request_items";
+    
+    // Get items with partner info before updating
+    let items: any[] = [];
+    if (itemType === "activity") {
+      const { data: rawItems } = await supabase
+        .from("program_request_items")
+        .select(`
+          id, 
+          request_id, 
+          block_name,
+          provider_id,
+          provider_name,
+          invoiced_amount,
+          invoiced_number,
+          commission_percentage,
+          commission_amount,
+          program_requests!inner(customer_name, customer_company)
+        `)
+        .in("id", itemIds);
+
+      items = (rawItems || []).map((item: any) => ({
+        ...item,
+        customer_name: item.program_requests?.customer_name,
+        customer_company: item.program_requests?.customer_company,
+      }));
+    } else {
+      const { data: rawItems } = await supabase
+        .from("accommodation_quotes")
+        .select(`
+          id,
+          accommodation_name,
+          partner_id,
+          invoiced_amount,
+          invoiced_number,
+          commission_percentage,
+          commission_amount,
+          accommodation_requests!inner(id, customer_name, customer_company)
+        `)
+        .in("id", itemIds);
+
+      items = (rawItems || []).map((item: any) => ({
+        ...item,
+        block_name: item.accommodation_name,
+        provider_id: item.partner_id,
+        request_id: item.accommodation_requests?.id,
+        customer_name: item.accommodation_requests?.customer_name,
+        customer_company: item.accommodation_requests?.customer_company,
+      }));
+    }
+
     // Update items
     const { error: updateError } = await supabase
-      .from("program_request_items")
+      .from(tableName)
       .update(updateData)
       .in("id", itemIds);
 
@@ -142,8 +170,8 @@ serve(async (req) => {
       );
     }
 
-    // Log to history for each item
-    if (items) {
+    // Log to history for activity items only (accommodation doesn't have request history)
+    if (itemType === "activity" && items.length > 0) {
       const historyEntries = items.map((item) => ({
         request_id: item.request_id,
         item_id: item.id,

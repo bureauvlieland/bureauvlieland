@@ -27,8 +27,10 @@ import {
   Trash2,
   Check,
   X,
+  FileText,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
+import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 
 interface AccommodationRequest {
   id: string;
@@ -69,6 +71,11 @@ interface AccommodationQuote {
   quote_attachment_path: string | null;
   quote_attachment_filename: string | null;
   quote_external_url: string | null;
+  invoiced_amount: number | null;
+  invoiced_number: string | null;
+  invoiced_date: string | null;
+  commission_percentage: number | null;
+  commission_amount: number | null;
 }
 
 interface RoomConfig {
@@ -83,6 +90,7 @@ interface PartnerAccommodationQuoteSheetProps {
   onClose: () => void;
   request: { quote: AccommodationQuote | null } & AccommodationRequest | null;
   existingQuote: AccommodationQuote | null;
+  partnerToken: string;
   onSubmit: (data: {
     accommodationName: string;
     description: string;
@@ -97,6 +105,7 @@ interface PartnerAccommodationQuoteSheetProps {
     roomConfiguration: RoomConfig[];
     quoteExternalUrl: string;
   }) => Promise<boolean>;
+  onRefresh?: () => void;
 }
 
 const INCLUDE_OPTIONS = [
@@ -116,7 +125,9 @@ export const PartnerAccommodationQuoteSheet = ({
   onClose,
   request,
   existingQuote,
+  partnerToken,
   onSubmit,
+  onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [accommodationName, setAccommodationName] = useState("");
@@ -130,6 +141,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [partnerNotes, setPartnerNotes] = useState("");
   const [roomConfiguration, setRoomConfiguration] = useState<RoomConfig[]>([]);
   const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
 
   // Initialize form when opening
   useEffect(() => {
@@ -307,9 +319,38 @@ export const PartnerAccommodationQuoteSheet = ({
 
           {/* Status message for closed quotes */}
           {existingQuote?.status === "selected" && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-              <Check className="h-5 w-5" />
-              <span className="font-medium">Deze offerte is geaccepteerd door de klant!</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
+                <Check className="h-5 w-5" />
+                <span className="font-medium">Deze offerte is geaccepteerd door de klant!</span>
+              </div>
+              
+              {/* Invoice registration section */}
+              {existingQuote.invoiced_number ? (
+                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Factuur geregistreerd
+                  </p>
+                  <div className="text-sm text-muted-foreground grid grid-cols-2 gap-1">
+                    <span>Factuurnr:</span>
+                    <span className="font-medium text-foreground">{existingQuote.invoiced_number}</span>
+                    <span>Bedrag:</span>
+                    <span className="font-medium text-foreground">€{existingQuote.invoiced_amount?.toFixed(2)}</span>
+                    <span>Commissie ({existingQuote.commission_percentage}%):</span>
+                    <span className="font-medium text-foreground">€{existingQuote.commission_amount?.toFixed(2)}</span>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowInvoiceDialog(true)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Factuur registreren
+                </Button>
+              )}
             </div>
           )}
 
@@ -546,6 +587,23 @@ export const PartnerAccommodationQuoteSheet = ({
           )}
         </div>
       </SheetContent>
+
+      {/* Invoice Registration Dialog */}
+      {existingQuote && (
+        <AccommodationInvoiceDialog
+          isOpen={showInvoiceDialog}
+          onClose={() => setShowInvoiceDialog(false)}
+          quoteId={existingQuote.id}
+          partnerToken={partnerToken}
+          accommodationName={existingQuote.accommodation_name}
+          priceTotal={existingQuote.price_total}
+          commissionPercentage={existingQuote.commission_percentage || 10}
+          onSuccess={() => {
+            setShowInvoiceDialog(false);
+            onRefresh?.();
+          }}
+        />
+      )}
     </Sheet>
   );
 };
