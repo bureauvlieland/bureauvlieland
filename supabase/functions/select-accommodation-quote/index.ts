@@ -1,5 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  getRenderedTemplate, 
+  sanitizeHtml, 
+  formatDateNL, 
+  formatCurrencyNL,
+  isTestMode,
+  getSubjectPrefix,
+  getRecipientEmail,
+  TemplateIds 
+} from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -132,11 +142,74 @@ serve(async (req) => {
     if (mailjetApiKey && mailjetSecretKey) {
       const auth = btoa(`${mailjetApiKey}:${mailjetSecretKey}`);
       const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
-      const isTestMode = !origin.includes("bureauvlieland.nl");
+      const testMode = isTestMode(origin);
+      const subjectPrefix = getSubjectPrefix(origin);
 
-      // Email to selected partner
-      const partnerEmail = isTestMode ? "erwin@bureauvlieland.nl" : quote.partner?.email;
+      const portalUrl = `${origin}/mijn-logies/${token}`;
+
+      // Prepare template variables for partner email
+      const partnerTemplateVariables = {
+        partner_name: sanitizeHtml(quote.partner?.name),
+        customer_name: sanitizeHtml(request.customer_name),
+        company_name: sanitizeHtml(request.customer_company) || "",
+        customer_email: request.customer_email,
+        customer_phone: sanitizeHtml(request.customer_phone),
+        accommodation_name: sanitizeHtml(quote.accommodation_name),
+        arrival_date: formatDateNL(request.arrival_date),
+        departure_date: formatDateNL(request.departure_date),
+        number_of_guests: String(request.number_of_guests),
+        price_total: formatCurrencyNL(quote.price_total),
+      };
+
+      // Prepare template variables for customer email
+      const customerTemplateVariables = {
+        customer_name: sanitizeHtml(request.customer_name),
+        accommodation_name: sanitizeHtml(quote.accommodation_name),
+        arrival_date: formatDateNL(request.arrival_date),
+        departure_date: formatDateNL(request.departure_date),
+        number_of_guests: String(request.number_of_guests),
+        price_total: formatCurrencyNL(quote.price_total),
+        portal_link: portalUrl,
+      };
+
+      // Try to get templates from database
+      const [partnerTemplate, customerTemplate] = await Promise.all([
+        getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables),
+        getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables),
+      ]);
+
+      // Partner email
+      const partnerEmail = getRecipientEmail(quote.partner?.email || "", origin);
       if (partnerEmail) {
+        const partnerHtml = partnerTemplate?.body || `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #16a34a;">Goed nieuws!</h1>
+            <p>Uw offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd door ${sanitizeHtml(request.customer_name)}.</p>
+            
+            <h2>Klantgegevens</h2>
+            <ul>
+              <li><strong>Naam:</strong> ${sanitizeHtml(request.customer_name)}</li>
+              <li><strong>Email:</strong> ${request.customer_email}</li>
+              <li><strong>Telefoon:</strong> ${sanitizeHtml(request.customer_phone)}</li>
+              ${request.customer_company ? `<li><strong>Bedrijf:</strong> ${sanitizeHtml(request.customer_company)}</li>` : ""}
+            </ul>
+            
+            <h2>Reserveringsdetails</h2>
+            <ul>
+              <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
+              <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
+              <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
+              <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+            </ul>
+            
+            <p>Neem zo snel mogelijk contact op met de klant om de reservering te bevestigen.</p>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 40px;">
+              Dit bericht is verzonden door Bureau Vlieland.
+            </p>
+          </div>
+        `;
+
         try {
           await fetch("https://api.mailjet.com/v3.1/send", {
             method: "POST",
@@ -149,37 +222,8 @@ serve(async (req) => {
                 {
                   From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: partnerEmail }],
-                  Subject: isTestMode
-                    ? `[TEST] Uw offerte voor ${request.customer_name} is geaccepteerd`
-                    : `Uw offerte voor ${request.customer_name} is geaccepteerd`,
-                  HTMLPart: `
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                      <h1 style="color: #16a34a;">Goed nieuws!</h1>
-                      <p>Uw offerte voor <strong>${quote.accommodation_name}</strong> is geaccepteerd door ${request.customer_name}.</p>
-                      
-                      <h2>Klantgegevens</h2>
-                      <ul>
-                        <li><strong>Naam:</strong> ${request.customer_name}</li>
-                        <li><strong>Email:</strong> ${request.customer_email}</li>
-                        <li><strong>Telefoon:</strong> ${request.customer_phone}</li>
-                        ${request.customer_company ? `<li><strong>Bedrijf:</strong> ${request.customer_company}</li>` : ""}
-                      </ul>
-                      
-                      <h2>Reserveringsdetails</h2>
-                      <ul>
-                        <li><strong>Aankomst:</strong> ${request.arrival_date}</li>
-                        <li><strong>Vertrek:</strong> ${request.departure_date}</li>
-                        <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
-                        <li><strong>Totaalprijs:</strong> €${quote.price_total}</li>
-                      </ul>
-                      
-                      <p>Neem zo snel mogelijk contact op met de klant om de reservering te bevestigen.</p>
-                      
-                      <p style="color: #666; font-size: 12px; margin-top: 40px;">
-                        Dit bericht is verzonden door Bureau Vlieland.
-                      </p>
-                    </div>
-                  `,
+                  Subject: partnerTemplate?.subject || `${subjectPrefix}Uw offerte voor ${request.customer_name} is geaccepteerd`,
+                  HTMLPart: partnerHtml,
                 },
               ],
             }),
@@ -189,7 +233,31 @@ serve(async (req) => {
         }
       }
 
-      // Email to customer
+      // Customer email
+      const customerHtml = customerTemplate?.body || `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #0f766e;">Bedankt voor uw keuze!</h1>
+          <p>Beste ${sanitizeHtml(request.customer_name)},</p>
+          <p>U heeft gekozen voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> voor uw verblijf op Vlieland.</p>
+          
+          <h2>Uw reservering</h2>
+          <ul>
+            <li><strong>Accommodatie:</strong> ${sanitizeHtml(quote.accommodation_name)}</li>
+            <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
+            <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
+            <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
+            <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+          </ul>
+          
+          <p>De accommodatie neemt binnenkort contact met u op om de reservering definitief te maken.</p>
+          
+          <p>U kunt de status van uw aanvraag altijd bekijken via:<br>
+          <a href="${portalUrl}">${portalUrl}</a></p>
+          
+          <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+        </div>
+      `;
+
       try {
         await fetch("https://api.mailjet.com/v3.1/send", {
           method: "POST",
@@ -202,30 +270,8 @@ serve(async (req) => {
               {
                 From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
                 To: [{ Email: request.customer_email }],
-                Subject: "Bevestiging van uw logies keuze",
-                HTMLPart: `
-                  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h1 style="color: #0f766e;">Bedankt voor uw keuze!</h1>
-                    <p>Beste ${request.customer_name},</p>
-                    <p>U heeft gekozen voor <strong>${quote.accommodation_name}</strong> voor uw verblijf op Vlieland.</p>
-                    
-                    <h2>Uw reservering</h2>
-                    <ul>
-                      <li><strong>Accommodatie:</strong> ${quote.accommodation_name}</li>
-                      <li><strong>Aankomst:</strong> ${request.arrival_date}</li>
-                      <li><strong>Vertrek:</strong> ${request.departure_date}</li>
-                      <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
-                      <li><strong>Totaalprijs:</strong> €${quote.price_total}</li>
-                    </ul>
-                    
-                    <p>De accommodatie neemt binnenkort contact met u op om de reservering definitief te maken.</p>
-                    
-                    <p>U kunt de status van uw aanvraag altijd bekijken via:<br>
-                    <a href="${origin}/mijn-logies/${token}">${origin}/mijn-logies/${token}</a></p>
-                    
-                    <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-                  </div>
-                `,
+                Subject: customerTemplate?.subject || "Bevestiging van uw logies keuze",
+                HTMLPart: customerHtml,
               },
             ],
           }),

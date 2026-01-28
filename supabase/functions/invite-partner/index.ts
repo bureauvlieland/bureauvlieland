@@ -1,5 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  getRenderedTemplate, 
+  sanitizeHtml,
+  TemplateIds 
+} from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +16,57 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
 interface InviteRequest {
   partnerId: string;
+}
+
+// Fallback email template if database template not found
+function getFallbackInvitationHtml(partnerName: string, resetLink: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Partner Portaal</p>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px;">
+    <h2 style="color: #1e3a5f; margin-top: 0;">Welkom ${sanitizeHtml(partnerName)}!</h2>
+    
+    <p>Je bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal. Via dit portaal kun je:</p>
+    
+    <ul style="color: #475569;">
+      <li>Activiteitsaanvragen bekijken en bevestigen</li>
+      <li>Prijzen doorgeven aan klanten</li>
+      <li>Facturen registreren</li>
+      <li>Je bedrijfsgegevens beheren</li>
+    </ul>
+    
+    <p>Klik op de onderstaande knop om je wachtwoord in te stellen en in te loggen:</p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${resetLink}" 
+         style="background: #1e3a5f; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+        Stel je wachtwoord in
+      </a>
+    </div>
+    
+    <p style="color: #64748b; font-size: 14px;">
+      Deze link is 24 uur geldig. Als de link verlopen is, kun je op de loginpagina een nieuwe wachtwoord-reset aanvragen.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">
+      Vragen? Neem contact op via <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a>
+    </p>
+  </div>
+</body>
+</html>
+  `;
 }
 
 serve(async (req) => {
@@ -141,11 +197,12 @@ serve(async (req) => {
     }
 
     // Generate password reset link
+    const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
     const { data: resetData, error: resetError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email: partner.email,
       options: {
-        redirectTo: `${req.headers.get("origin") || "https://bureauvlieland.lovable.app"}/partner/reset-password`,
+        redirectTo: `${origin}/partner/reset-password`,
       },
     });
 
@@ -154,11 +211,23 @@ serve(async (req) => {
     }
 
     // Get the action link (password reset URL)
-    const resetLink = resetData?.properties?.action_link || 
-      `${req.headers.get("origin") || "https://bureauvlieland.lovable.app"}/partner/login`;
+    const resetLink = resetData?.properties?.action_link || `${origin}/partner/login`;
 
     // Send invitation email via Mailjet
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
+      // Prepare template variables
+      const templateVariables = {
+        partner_name: sanitizeHtml(partner.name),
+        reset_link: resetLink,
+        partner_portal_link: `${origin}/partner`,
+      };
+
+      // Try to get template from database
+      const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
+
+      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink);
+      const emailSubject = template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal";
+
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
         headers: {
@@ -178,54 +247,8 @@ serve(async (req) => {
                   Name: partner.name,
                 },
               ],
-              Subject: "Welkom bij het Bureau Vlieland Partner Portaal",
-              HTMLPart: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Partner Portaal</p>
-  </div>
-  
-  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px;">
-    <h2 style="color: #1e3a5f; margin-top: 0;">Welkom ${partner.name}!</h2>
-    
-    <p>Je bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal. Via dit portaal kun je:</p>
-    
-    <ul style="color: #475569;">
-      <li>Activiteitsaanvragen bekijken en bevestigen</li>
-      <li>Prijzen doorgeven aan klanten</li>
-      <li>Facturen registreren</li>
-      <li>Je bedrijfsgegevens beheren</li>
-    </ul>
-    
-    <p>Klik op de onderstaande knop om je wachtwoord in te stellen en in te loggen:</p>
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${resetLink}" 
-         style="background: #1e3a5f; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-        Stel je wachtwoord in
-      </a>
-    </div>
-    
-    <p style="color: #64748b; font-size: 14px;">
-      Deze link is 24 uur geldig. Als de link verlopen is, kun je op de loginpagina een nieuwe wachtwoord-reset aanvragen.
-    </p>
-    
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-    
-    <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">
-      Vragen? Neem contact op via <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a>
-    </p>
-  </div>
-</body>
-</html>
-              `,
+              Subject: emailSubject,
+              HTMLPart: emailHtml,
               TextPart: `
 Welkom ${partner.name}!
 

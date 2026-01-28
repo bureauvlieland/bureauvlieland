@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { getRenderedTemplate, sanitizeHtml, TemplateIds } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -48,17 +49,6 @@ const QuoteRequestSchema = z.object({
 
 type QuoteRequest = z.infer<typeof QuoteRequestSchema>;
 
-// Sanitize HTML to prevent XSS in emails
-function sanitizeHtml(str: string | undefined): string {
-  if (!str) return "";
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 const sendEmailViaMailjet = async (messages: any[]) => {
   const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
   
@@ -79,6 +69,62 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 
   return await response.json();
 };
+
+// Fallback hardcoded template if database template not found
+function getFallbackBureauHtml(data: QuoteRequest): string {
+  const safeName = sanitizeHtml(data.name);
+  const safeCompany = sanitizeHtml(data.company);
+  const safeEmail = sanitizeHtml(data.email);
+  const safePhone = sanitizeHtml(data.phone);
+  const safeNumberOfPeople = sanitizeHtml(data.numberOfPeople);
+  const safeStartDate = sanitizeHtml(data.startDate);
+  const safeNumberOfDays = sanitizeHtml(data.numberOfDays);
+  const safeBudgetPerPerson = sanitizeHtml(data.budgetPerPerson);
+  const safeDescription = sanitizeHtml(data.description);
+
+  return `
+    <h2>Nieuwe Offerteaanvraag</h2>
+    
+    <h3>Contactgegevens</h3>
+    <p><strong>Naam:</strong> ${safeName}</p>
+    ${safeCompany ? `<p><strong>Bedrijf:</strong> ${safeCompany}</p>` : ''}
+    <p><strong>Email:</strong> ${safeEmail}</p>
+    <p><strong>Telefoon:</strong> ${safePhone}</p>
+    
+    <h3>Evenement Details</h3>
+    <p><strong>Aantal personen:</strong> ${safeNumberOfPeople}</p>
+    <p><strong>Gewenste startdatum:</strong> ${safeStartDate}</p>
+    <p><strong>Aantal dagen:</strong> ${safeNumberOfDays}</p>
+    <p><strong>Budget indicatie p.p.:</strong> ${safeBudgetPerPerson}</p>
+    
+    ${safeDescription ? `
+    <h3>Omschrijving / Bijzondere wensen</h3>
+    <p>${safeDescription.replace(/\n/g, '<br>')}</p>
+    ` : ''}
+  `;
+}
+
+function getFallbackCustomerHtml(data: QuoteRequest, quoteDetails: string): string {
+  const safeName = sanitizeHtml(data.name);
+
+  return `
+    <h2>Beste ${safeName},</h2>
+    <p>Bedankt voor je offerteaanvraag bij Bureau Vlieland!</p>
+    <p>We hebben je aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met je opnemen met een passende offerte.</p>
+    
+    <h3>Jouw aanvraag:</h3>
+    ${quoteDetails}
+    
+    <p>Heb je nog vragen? Neem gerust contact met ons op via:</p>
+    <ul>
+      <li>Email: hallo@bureauvlieland.nl</li>
+      <li>Telefoon: +31 (0)562 45 27 00</li>
+    </ul>
+    
+    <p>Met vriendelijke groet,<br>
+    Erwin & Team Bureau Vlieland</p>
+  `;
+}
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -124,41 +170,36 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData: QuoteRequest = validationResult.data;
     console.log("Quote request received and validated for:", requestData.email);
 
-    // Sanitize all string fields for email HTML
-    const safeName = sanitizeHtml(requestData.name);
-    const safeCompany = sanitizeHtml(requestData.company);
-    const safeEmail = sanitizeHtml(requestData.email);
-    const safePhone = sanitizeHtml(requestData.phone);
-    const safeNumberOfPeople = sanitizeHtml(requestData.numberOfPeople);
-    const safeStartDate = sanitizeHtml(requestData.startDate);
-    const safeNumberOfDays = sanitizeHtml(requestData.numberOfDays);
-    const safeBudgetPerPerson = sanitizeHtml(requestData.budgetPerPerson);
-    const safeDescription = sanitizeHtml(requestData.description);
+    // Prepare template variables
+    const templateVariables = {
+      customer_name: sanitizeHtml(requestData.name),
+      company_name: sanitizeHtml(requestData.company) || "",
+      customer_email: sanitizeHtml(requestData.email),
+      customer_phone: sanitizeHtml(requestData.phone),
+      number_of_people: sanitizeHtml(requestData.numberOfPeople),
+      start_date: sanitizeHtml(requestData.startDate),
+      number_of_days: sanitizeHtml(requestData.numberOfDays),
+      budget_per_person: sanitizeHtml(requestData.budgetPerPerson),
+      description: sanitizeHtml(requestData.description)?.replace(/\n/g, '<br>') || "",
+      admin_link: "https://bureauvlieland.nl/admin",
+    };
 
-    // Format the quote details for the email
-    const quoteDetails = `
-      <h2>Nieuwe Offerteaanvraag</h2>
-      
-      <h3>Contactgegevens</h3>
-      <p><strong>Naam:</strong> ${safeName}</p>
-      ${safeCompany ? `<p><strong>Bedrijf:</strong> ${safeCompany}</p>` : ''}
-      <p><strong>Email:</strong> ${safeEmail}</p>
-      <p><strong>Telefoon:</strong> ${safePhone}</p>
-      
-      <h3>Evenement Details</h3>
-      <p><strong>Aantal personen:</strong> ${safeNumberOfPeople}</p>
-      <p><strong>Gewenste startdatum:</strong> ${safeStartDate}</p>
-      <p><strong>Aantal dagen:</strong> ${safeNumberOfDays}</p>
-      <p><strong>Budget indicatie p.p.:</strong> ${safeBudgetPerPerson}</p>
-      
-      ${safeDescription ? `
-      <h3>Omschrijving / Bijzondere wensen</h3>
-      <p>${safeDescription.replace(/\n/g, '<br>')}</p>
-      ` : ''}
-    `;
+    // Try to get templates from database
+    const [bureauTemplate, customerTemplate] = await Promise.all([
+      getRenderedTemplate(TemplateIds.QUOTE_REQUEST_BUREAU, templateVariables),
+      getRenderedTemplate(TemplateIds.QUOTE_REQUEST_CUSTOMER, templateVariables),
+    ]);
+
+    // Use database templates or fallback to hardcoded
+    const bureauHtml = bureauTemplate?.body || getFallbackBureauHtml(requestData);
+    const bureauSubject = bureauTemplate?.subject || `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`;
+
+    const fallbackQuoteDetails = getFallbackBureauHtml(requestData);
+    const customerHtml = customerTemplate?.body || getFallbackCustomerHtml(requestData, fallbackQuoteDetails);
+    const customerSubject = customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland";
 
     // Send both emails using Mailjet
-    const emailResponse = await sendEmailViaMailjet([
+    await sendEmailViaMailjet([
       // Email to Bureau Vlieland
       {
         From: {
@@ -171,8 +212,8 @@ const handler = async (req: Request): Promise<Response> => {
             Name: "Erwin van der Most"
           }
         ],
-        Subject: `Nieuwe offerteaanvraag - ${safeNumberOfPeople} personen`,
-        HTMLPart: quoteDetails,
+        Subject: bureauSubject,
+        HTMLPart: bureauHtml,
       },
       // Confirmation email to customer
       {
@@ -186,24 +227,8 @@ const handler = async (req: Request): Promise<Response> => {
             Name: requestData.name
           }
         ],
-        Subject: "Bevestiging offerte aanvraag - Bureau Vlieland",
-        HTMLPart: `
-          <h2>Beste ${safeName},</h2>
-          <p>Bedankt voor je offerteaanvraag bij Bureau Vlieland!</p>
-          <p>We hebben je aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met je opnemen met een passende offerte.</p>
-          
-          <h3>Jouw aanvraag:</h3>
-          ${quoteDetails}
-          
-          <p>Heb je nog vragen? Neem gerust contact met ons op via:</p>
-          <ul>
-            <li>Email: hallo@bureauvlieland.nl</li>
-            <li>Telefoon: +31 (0)562 45 27 00</li>
-          </ul>
-          
-          <p>Met vriendelijke groet,<br>
-          Erwin & Team Bureau Vlieland</p>
-        `,
+        Subject: customerSubject,
+        HTMLPart: customerHtml,
       }
     ]);
 

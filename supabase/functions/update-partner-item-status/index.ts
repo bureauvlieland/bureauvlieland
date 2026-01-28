@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  getRenderedTemplate, 
+  sanitizeHtml, 
+  formatCurrencyNL,
+  TemplateIds 
+} from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,16 +64,17 @@ const sendEmailViaMailjet = async (
   }
 };
 
-const generateStatusEmailHtml = (
+// Fallback email generator if template not found
+const generateFallbackStatusEmailHtml = (
   customerName: string,
   activityName: string,
   partnerName: string,
-  status: "confirmed" | "unavailable" | "alternative",
+  status: "confirmed" | "unavailable",
   quotedPrice: number | null,
   statusNote: string | null,
   customerToken: string
 ) => {
-  const portalUrl = `https://bureauvlieland.lovable.app/programma/${customerToken}`;
+  const portalUrl = `https://bureauvlieland.nl/mijn-programma/${customerToken}`;
   
   const statusConfig = {
     confirmed: {
@@ -86,20 +93,10 @@ const generateStatusEmailHtml = (
       icon: "✕",
       message: "is helaas niet beschikbaar op de gewenste datum",
     },
-    alternative: {
-      title: "Alternatief voorgesteld",
-      color: "#dd6b20",
-      bgColor: "#fffaf0",
-      borderColor: "#fbd38d",
-      icon: "↻",
-      message: "heeft een alternatief voorstel ontvangen",
-    },
   };
 
   const config = statusConfig[status];
-  const formattedPrice = quotedPrice
-    ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(quotedPrice)
-    : null;
+  const formattedPrice = quotedPrice ? formatCurrencyNL(quotedPrice) : null;
 
   return `
 <!DOCTYPE html>
@@ -114,35 +111,31 @@ const generateStatusEmailHtml = (
     <tr>
       <td style="padding: 40px 20px;">
         <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header -->
           <tr>
             <td style="background-color: #1a365d; padding: 30px 40px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Bureau Vlieland</h1>
             </td>
           </tr>
-          
-          <!-- Content -->
           <tr>
             <td style="padding: 40px;">
               <h2 style="margin: 0 0 20px; color: #1a365d; font-size: 20px;">
-                ${status === "confirmed" ? "Goed nieuws" : "Update"}, ${customerName}!
+                ${status === "confirmed" ? "Goed nieuws" : "Update"}, ${sanitizeHtml(customerName)}!
               </h2>
               
               <p style="margin: 0 0 20px; color: #4a5568; font-size: 16px; line-height: 1.6;">
                 Een activiteit uit uw programma ${config.message}:
               </p>
               
-              <!-- Activity Card -->
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: ${config.bgColor}; border-radius: 8px; border: 1px solid ${config.borderColor};">
                 <tr>
                   <td style="padding: 20px;">
                     <div style="display: inline-block; width: 32px; height: 32px; background-color: ${config.color}; color: white; border-radius: 50%; text-align: center; line-height: 32px; font-size: 18px; margin-bottom: 12px;">${config.icon}</div>
                     
                     <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Activiteit</p>
-                    <p style="margin: 0 0 16px; color: #1a365d; font-size: 18px; font-weight: 600;">${activityName}</p>
+                    <p style="margin: 0 0 16px; color: #1a365d; font-size: 18px; font-weight: 600;">${sanitizeHtml(activityName)}</p>
                     
                     <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Partner</p>
-                    <p style="margin: 0 0 16px; color: #2d3748; font-size: 16px;">${partnerName}</p>
+                    <p style="margin: 0 0 16px; color: #2d3748; font-size: 16px;">${sanitizeHtml(partnerName)}</p>
                     
                     <p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Status</p>
                     <p style="margin: 0; color: ${config.color}; font-size: 16px; font-weight: 600;">${config.title}</p>
@@ -157,28 +150,13 @@ const generateStatusEmailHtml = (
                     ${statusNote ? `
                     <p style="margin: 16px 0 0; padding-top: 16px; border-top: 1px solid ${config.borderColor}; color: #4a5568; font-size: 14px;">
                       <strong>Toelichting van partner:</strong><br/>
-                      "${statusNote}"
+                      "${sanitizeHtml(statusNote)}"
                     </p>
                     ` : ""}
                   </td>
                 </tr>
               </table>
               
-              ${status === "unavailable" ? `
-              <p style="margin: 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                Wij helpen u graag met het vinden van een geschikt alternatief. Neem contact op of bekijk uw programma in de portal.
-              </p>
-              ` : status === "alternative" ? `
-              <p style="margin: 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                Bekijk het voorgestelde alternatief in uw persoonlijke portal en laat ons weten of dit bij uw wensen past.
-              </p>
-              ` : `
-              <p style="margin: 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                Bekijk alle details en de voortgang van uw programma in uw persoonlijke portal:
-              </p>
-              `}
-              
-              <!-- CTA Button -->
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="text-align: center; padding: 20px 0;">
@@ -190,8 +168,6 @@ const generateStatusEmailHtml = (
               </table>
             </td>
           </tr>
-          
-          <!-- Footer -->
           <tr>
             <td style="background-color: #f7fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
               <p style="margin: 0 0 10px; color: #718096; font-size: 14px; text-align: center;">
@@ -226,7 +202,6 @@ serve(async (req) => {
       );
     }
 
-    // Valid statuses in the new flow
     const validStatuses = ["confirmed", "unavailable", "executed"];
     if (!validStatuses.includes(status)) {
       return new Response(
@@ -235,7 +210,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate quoted price is required for confirmed status (but not for executed)
     if (status === "confirmed" && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
       return new Response(
         JSON.stringify({ error: "Quoted price is required when confirming" }),
@@ -289,14 +263,12 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    // If marking as confirmed with a quoted price
     if (status === "confirmed" && quotedPrice !== undefined) {
       updateData.quoted_price = quotedPrice;
       updateData.quoted_at = new Date().toISOString();
       updateData.quoted_notes = quotedNotes || null;
     }
 
-    // If marking as executed
     if (status === "executed") {
       updateData.executed_at = new Date().toISOString();
     }
@@ -332,7 +304,7 @@ serve(async (req) => {
       notes: historyNotes,
     });
 
-    // Resolve any pending partner_reminder todos for this item (on any status change except executed)
+    // Resolve any pending partner_reminder todos for this item
     if (status === "confirmed" || status === "unavailable") {
       await supabase
         .from("admin_todos")
@@ -358,7 +330,6 @@ serve(async (req) => {
       const allConfirmed = relevantItems.every(i => i.status === "confirmed");
       
       if (allConfirmed) {
-        // Get request to check terms
         const { data: request } = await supabase
           .from("program_requests")
           .select("terms_accepted_at, customer_name, customer_company")
@@ -366,7 +337,6 @@ serve(async (req) => {
           .single();
         
         if (request && !request.terms_accepted_at) {
-          // Check if todo already exists
           const { data: existingTodo } = await supabase
             .from("admin_todos")
             .select("id")
@@ -392,30 +362,46 @@ serve(async (req) => {
       }
     }
 
-    // Send notification email to customer for confirmed/unavailable status changes (not executed)
+    // Send notification email to customer for confirmed/unavailable status changes
     const validEmailStatuses = ["confirmed", "unavailable"];
     if (validEmailStatuses.includes(status)) {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
-      const subjectMap: Record<string, string> = {
-        confirmed: `Activiteit bevestigd: ${item.block_name} - Jouw akkoord gevraagd`,
-        unavailable: `Activiteit niet beschikbaar: ${item.block_name}`,
+      // Try to get template from database
+      const templateId = status === "confirmed" ? TemplateIds.STATUS_CONFIRMED : TemplateIds.STATUS_UNAVAILABLE;
+      const templateVariables = {
+        customer_name: sanitizeHtml(programRequest.customer_name),
+        activity_name: sanitizeHtml(item.block_name),
+        partner_name: sanitizeHtml(partner.name),
+        quoted_price: quotedPrice ? formatCurrencyNL(quotedPrice) : "",
+        status_note: sanitizeHtml(statusNote || quotedNotes || ""),
+        portal_link: portalUrl,
       };
+
+      const template = await getRenderedTemplate(templateId, templateVariables);
       
-      const emailHtml = generateStatusEmailHtml(
+      const emailHtml = template?.body || generateFallbackStatusEmailHtml(
         programRequest.customer_name,
         item.block_name,
         partner.name,
-        status as "confirmed" | "unavailable" | "alternative",
+        status as "confirmed" | "unavailable",
         quotedPrice || null,
         statusNote || quotedNotes || null,
         programRequest.customer_token
       );
 
+      const subjectMap: Record<string, string> = {
+        confirmed: `Activiteit bevestigd: ${item.block_name} - Jouw akkoord gevraagd`,
+        unavailable: `Activiteit niet beschikbaar: ${item.block_name}`,
+      };
+
+      const emailSubject = template?.subject || subjectMap[status];
+
       const emailSent = await sendEmailViaMailjet(
         programRequest.customer_email,
         programRequest.customer_name,
-        subjectMap[status],
+        emailSubject,
         emailHtml
       );
 
