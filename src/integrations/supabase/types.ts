@@ -623,6 +623,11 @@ export type Database = {
           address_postal: string | null
           address_street: string | null
           auth_user_id: string | null
+          availability_notes: string | null
+          bank_account_name: string | null
+          bank_iban: string | null
+          booking_contact_name: string | null
+          booking_contact_phone: string | null
           commission_percentage: number
           created_at: string
           email: string
@@ -644,6 +649,11 @@ export type Database = {
           address_postal?: string | null
           address_street?: string | null
           auth_user_id?: string | null
+          availability_notes?: string | null
+          bank_account_name?: string | null
+          bank_iban?: string | null
+          booking_contact_name?: string | null
+          booking_contact_phone?: string | null
           commission_percentage?: number
           created_at?: string
           email: string
@@ -665,6 +675,11 @@ export type Database = {
           address_postal?: string | null
           address_street?: string | null
           auth_user_id?: string | null
+          availability_notes?: string | null
+          bank_account_name?: string | null
+          bank_iban?: string | null
+          booking_contact_name?: string | null
+          booking_contact_phone?: string | null
           commission_percentage?: number
           created_at?: string
           email?: string

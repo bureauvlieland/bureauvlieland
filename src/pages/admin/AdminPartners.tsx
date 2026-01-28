@@ -72,7 +72,7 @@ interface Partner {
 const PARTNER_TYPE_LABELS: Record<string, string> = {
   activity_provider: "Activiteiten",
   accommodation: "Logies",
-  both: "Beide",
+  both: "Activiteiten & Logies",
 };
 
 const AdminPartnersContent = () => {

@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Building2, Save, KeyRound, ShieldCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
@@ -21,6 +22,11 @@ interface PartnerDetails {
   commission_percentage: number;
   terms_pdf_path: string | null;
   terms_uploaded_at: string | null;
+  bank_iban: string | null;
+  bank_account_name: string | null;
+  booking_contact_name: string | null;
+  booking_contact_phone: string | null;
+  availability_notes: string | null;
 }
 
 export const PartnerSettingsForm = () => {
@@ -40,6 +46,11 @@ export const PartnerSettingsForm = () => {
     address_street: "",
     address_postal: "",
     address_city: "",
+    bank_iban: "",
+    bank_account_name: "",
+    booking_contact_name: "",
+    booking_contact_phone: "",
+    availability_notes: "",
   });
 
   // Password form state
@@ -67,7 +78,7 @@ export const PartnerSettingsForm = () => {
           .single();
 
         if (data && !error) {
-          setPartner(data);
+          setPartner(data as PartnerDetails);
           setFormData({
             name: data.name || "",
             phone: data.phone || "",
@@ -75,6 +86,11 @@ export const PartnerSettingsForm = () => {
             address_street: data.address_street || "",
             address_postal: data.address_postal || "",
             address_city: data.address_city || "",
+            bank_iban: (data as any).bank_iban || "",
+            bank_account_name: (data as any).bank_account_name || "",
+            booking_contact_name: (data as any).booking_contact_name || "",
+            booking_contact_phone: (data as any).booking_contact_phone || "",
+            availability_notes: (data as any).availability_notes || "",
           });
           setIsImpersonating(true);
         }
@@ -92,7 +108,7 @@ export const PartnerSettingsForm = () => {
       .single();
 
     if (data && !error) {
-      setPartner(data);
+      setPartner(data as PartnerDetails);
       setFormData({
         name: data.name || "",
         phone: data.phone || "",
@@ -100,6 +116,11 @@ export const PartnerSettingsForm = () => {
         address_street: data.address_street || "",
         address_postal: data.address_postal || "",
         address_city: data.address_city || "",
+        bank_iban: (data as any).bank_iban || "",
+        bank_account_name: (data as any).bank_account_name || "",
+        booking_contact_name: (data as any).booking_contact_name || "",
+        booking_contact_phone: (data as any).booking_contact_phone || "",
+        availability_notes: (data as any).availability_notes || "",
       });
     }
     setIsLoading(false);
@@ -132,7 +153,12 @@ export const PartnerSettingsForm = () => {
           address_street: formData.address_street || null,
           address_postal: formData.address_postal || null,
           address_city: formData.address_city || null,
-        })
+          bank_iban: formData.bank_iban || null,
+          bank_account_name: formData.bank_account_name || null,
+          booking_contact_name: formData.booking_contact_name || null,
+          booking_contact_phone: formData.booking_contact_phone || null,
+          availability_notes: formData.availability_notes || null,
+        } as any)
         .eq("id", partner.id);
 
       if (error) throw error;
@@ -311,6 +337,131 @@ export const PartnerSettingsForm = () => {
             </div>
           </div>
 
+          <div className="pt-2">
+            <Button onClick={handleSaveDetails} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Opslaan
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bank details */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <CardTitle>Bankgegevens</CardTitle>
+          </div>
+          <CardDescription>
+            Voor commissie-uitbetalingen door Bureau Vlieland.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="bank_iban">IBAN</Label>
+              <Input
+                id="bank_iban"
+                value={formData.bank_iban}
+                onChange={(e) => handleChange("bank_iban", e.target.value.toUpperCase())}
+                placeholder="NL00 BANK 0000 0000 00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bank_account_name">Tenaamstelling</Label>
+              <Input
+                id="bank_account_name"
+                value={formData.bank_account_name}
+                onChange={(e) => handleChange("bank_account_name", e.target.value)}
+                placeholder="Bedrijfsnaam B.V."
+              />
+            </div>
+          </div>
+          <div className="pt-2">
+            <Button onClick={handleSaveDetails} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Opslaan
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Booking contact */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <UserCircle className="h-5 w-5 text-primary" />
+            <CardTitle>Contactpersoon Boekingen</CardTitle>
+          </div>
+          <CardDescription>
+            Contactpersoon voor vragen over specifieke boekingen (indien afwijkend van hoofdcontact).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="booking_contact_name">Naam</Label>
+              <Input
+                id="booking_contact_name"
+                value={formData.booking_contact_name}
+                onChange={(e) => handleChange("booking_contact_name", e.target.value)}
+                placeholder="Jan Jansen"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="booking_contact_phone">Telefoonnummer</Label>
+              <Input
+                id="booking_contact_phone"
+                value={formData.booking_contact_phone}
+                onChange={(e) => handleChange("booking_contact_phone", e.target.value)}
+                placeholder="06-12345678"
+              />
+            </div>
+          </div>
+          <div className="pt-2">
+            <Button onClick={handleSaveDetails} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Opslaan
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Availability notes */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            <CardTitle>Beschikbaarheid</CardTitle>
+          </div>
+          <CardDescription>
+            Notities over openingstijden, seizoensgebonden beschikbaarheid of andere opmerkingen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="availability_notes">Beschikbaarheid notities</Label>
+            <Textarea
+              id="availability_notes"
+              value={formData.availability_notes}
+              onChange={(e) => handleChange("availability_notes", e.target.value)}
+              placeholder="Bijv. 'April t/m oktober, dagelijks van 10:00-18:00. Gesloten op maandag.'"
+              rows={3}
+            />
+          </div>
           <div className="pt-2">
             <Button onClick={handleSaveDetails} disabled={isSaving}>
               {isSaving ? (

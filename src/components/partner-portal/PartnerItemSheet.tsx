@@ -50,7 +50,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   invoiced: { label: "Gefactureerd", color: "text-muted-foreground", bgColor: "bg-muted" },
   unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
   cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  alternative: { label: "Wacht op klant", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
+  alternative: { label: "Alternatief voorgesteld", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
 };
 
 export const PartnerItemSheet = ({
@@ -132,7 +132,7 @@ export const PartnerItemSheet = ({
     <Sheet open={isOpen} onOpenChange={handleClose}>
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <SheetTitle className="text-xl">{item.block_name}</SheetTitle>
             <Badge 
               variant="outline" 
@@ -140,6 +140,12 @@ export const PartnerItemSheet = ({
             >
               {statusInfo.label}
             </Badge>
+            {item.customer_accepted_at && (
+              <Badge className="bg-green-600 hover:bg-green-700">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Klant akkoord
+              </Badge>
+            )}
           </div>
           <SheetDescription>{item.block_category}</SheetDescription>
         </SheetHeader>

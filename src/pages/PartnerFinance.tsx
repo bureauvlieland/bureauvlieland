@@ -129,7 +129,9 @@ const PartnerFinanceContent = () => {
 
   // Calculate financial metrics
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
-  const toBeInvoicedItems = data.items.filter((i) => i.status === "confirmed" && !i.invoiced_number);
+  const toBeInvoicedItems = data.items.filter(
+    (i) => i.status === "executed" && !i.invoiced_number && i.program_requests.terms_accepted_at !== null
+  );
   
   const totalInvoiced = invoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0);
   const totalToBeInvoiced = toBeInvoicedItems.reduce((sum, i) => sum + (i.quoted_price || 0), 0);

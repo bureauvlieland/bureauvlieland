@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Bell, CheckCircle, Receipt, Play } from "lucide-react";
+import { Building2, Bell, CheckCircle, Receipt, Play, TrendingUp, Euro } from "lucide-react";
 
 interface PartnerDashboardHeaderProps {
   partner: {
@@ -18,9 +18,14 @@ interface PartnerDashboardHeaderProps {
     invoiced: number;
     total: number;
   };
+  financials?: {
+    ytdRevenue: number;
+    ytdCommission: number;
+    pendingCommission: number;
+  };
 }
 
-export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHeaderProps) => {
+export const PartnerDashboardHeader = ({ partner, summary, financials }: PartnerDashboardHeaderProps) => {
   return (
     <div className="space-y-6">
       {/* Partner info */}
@@ -34,8 +39,33 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
         </div>
       </div>
 
-      {/* Stats cards - action-focused */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Stats cards - two rows on mobile, one row on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        {/* YTD Revenue - prominent */}
+        {financials && (
+          <Card className="col-span-2 lg:col-span-2 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">YTD Omzet</p>
+                  <p className="text-2xl font-bold">
+                    €{financials.ytdRevenue.toLocaleString("nl-NL", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </p>
+                  {financials.pendingCommission > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      €{financials.pendingCommission.toFixed(0)} commissie open
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Action-focused stats */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -58,7 +88,7 @@ export const PartnerDashboardHeader = ({ partner, summary }: PartnerDashboardHea
               </div>
               <div>
                 <p className="text-2xl font-bold">{summary.confirmed}</p>
-                <p className="text-xs text-muted-foreground">Wacht op klant</p>
+                <p className="text-xs text-muted-foreground">Voorstel verstuurd</p>
               </div>
             </div>
           </CardContent>
