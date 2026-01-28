@@ -239,8 +239,16 @@ export const MobileProgramView = ({
       >
         <div className="space-y-4">
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
-          <InvoiceProvidersCard items={program.items} />
-          <PriceSummaryCard items={program.items} numberOfPeople={program.number_of_people} termsAccepted={termsAccepted} />
+          <InvoiceProvidersCard 
+            items={program.items} 
+            selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+          />
+          <PriceSummaryCard 
+            items={program.items} 
+            numberOfPeople={program.number_of_people} 
+            termsAccepted={termsAccepted}
+            selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+          />
         </div>
       </ProgramSection>
 
