@@ -7,6 +7,7 @@ import type { AccommodationQuote } from "@/types/accommodation";
 interface InvoiceProvidersCardProps {
   items: ProgramRequestItem[];
   selectedAccommodationQuote?: AccommodationQuote | null;
+  numberOfPeople?: number;
   className?: string;
 }
 
@@ -28,7 +29,7 @@ const getCoordinationFee = (numberOfPeople: number): number => {
   return 500;
 };
 
-export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, className }: InvoiceProvidersCardProps) => {
+export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, numberOfPeople = 20, className }: InvoiceProvidersCardProps) => {
   const { providers, selfArrangedItems, bureauTotal, partnerProviders, coordinationFee } = useMemo(() => {
     // Group items by provider, excluding cancelled and self-arranged
     const providerMap = items
@@ -65,8 +66,8 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, classN
       (item) => item.status !== "cancelled" && item.block_type === "self_arranged"
     );
 
-    // Estimate coordination fee (we don't have numberOfPeople here, use a default)
-    const fee = getCoordinationFee(20); // This will be shown as an estimate
+    // Coordination fee based on actual group size
+    const fee = getCoordinationFee(numberOfPeople);
 
     return {
       providers: providerList,
@@ -75,7 +76,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, classN
       partnerProviders: partnerItems,
       coordinationFee: fee,
     };
-  }, [items]);
+  }, [items, numberOfPeople]);
 
   const formatPrice = (amount: number) => {
     return amount.toLocaleString("nl-NL", { 
