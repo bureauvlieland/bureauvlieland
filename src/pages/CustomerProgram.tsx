@@ -28,6 +28,8 @@ const CustomerProgram = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
+  console.log("[CustomerProgram] Rendering with token:", token);
+  
   const {
     program,
     history,
