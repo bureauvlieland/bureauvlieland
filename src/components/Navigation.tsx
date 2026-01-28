@@ -105,6 +105,12 @@ export const Navigation = () => {
             >
               Catering
             </Link>
+            <Link
+              to="/logies-aanvragen"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Logies
+            </Link>
             <Link to="/contact">
               <Button
                 variant="outline"
@@ -217,6 +223,13 @@ export const Navigation = () => {
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 Catering
+              </Link>
+              <Link
+                to="/logies-aanvragen"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Logies
               </Link>
               <Link
                 to="/contact"
