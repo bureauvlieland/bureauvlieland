@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { differenceInDays } from 'date-fns';
 import { RefreshCw, ArrowRight, Home, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useAccommodationQuotes } from '@/hooks/useAccommodationQuotes';
 import { AccommodationRequestSummary } from '@/components/accommodation-portal/AccommodationRequestSummary';
@@ -15,7 +16,48 @@ import logo from '@/assets/logo.png';
 
 export default function AccommodationQuotes() {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const [isRedirecting, setIsRedirecting] = useState(true);
+  
+  // On mount, check if we should redirect to the unified /mijn-programma URL
+  useEffect(() => {
+    const checkAndRedirect = async () => {
+      if (!token) {
+        setIsRedirecting(false);
+        return;
+      }
+
+      // Find the accommodation request by its customer_token
+      const { data: accRequest, error } = await supabase
+        .from('accommodation_requests')
+        .select(`
+          id,
+          linked_program_id,
+          linked_program:program_requests!accommodation_requests_linked_program_id_fkey(customer_token)
+        `)
+        .eq('customer_token', token)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking accommodation redirect:', error);
+        setIsRedirecting(false);
+        return;
+      }
+
+      // If there's a linked program, redirect to the unified URL
+      if (accRequest?.linked_program?.customer_token) {
+        navigate(`/mijn-programma/${accRequest.linked_program.customer_token}`, { replace: true });
+        return;
+      }
+
+      // No linked program found, show the legacy page
+      setIsRedirecting(false);
+    };
+
+    checkAndRedirect();
+  }, [token, navigate]);
+
   const {
     request,
     quotes,

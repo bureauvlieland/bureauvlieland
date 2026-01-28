@@ -163,10 +163,13 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the accommodation request
+    // Fetch the accommodation request with linked program
     const { data: request, error: requestError } = await supabase
       .from("accommodation_requests")
-      .select("*")
+      .select(`
+        *,
+        linked_program:program_requests!accommodation_requests_linked_program_id_fkey(customer_token)
+      `)
       .eq("id", accommodationRequestId)
       .single();
 
@@ -182,8 +185,10 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "";
     const subjectPrefix = getSubjectPrefix(origin);
 
-    const portalUrl = request.linked_program_id 
-      ? `https://bureauvlieland.nl/mijn-programma/${request.customer_token}`
+    // Always use the program token for the portal URL (unified customer experience)
+    const programToken = request.linked_program?.customer_token;
+    const portalUrl = programToken 
+      ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
       : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
 
     // Format accommodation type
