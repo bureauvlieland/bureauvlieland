@@ -60,6 +60,16 @@ export interface PartnerItem {
     selected_dates: string[];
     status: string;
     terms_accepted_at: string | null;
+    // Billing details (only populated when terms_accepted_at is set)
+    billing_company_name?: string | null;
+    billing_kvk_number?: string | null;
+    billing_vat_number?: string | null;
+    billing_address_street?: string | null;
+    billing_address_postal?: string | null;
+    billing_address_city?: string | null;
+    billing_contact_name?: string | null;
+    billing_contact_email?: string | null;
+    billing_reference?: string | null;
   };
 }
 

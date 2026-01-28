@@ -12,9 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Info, Receipt } from "lucide-react";
+import { Loader2, Info, Receipt, Building2, Mail, FileText } from "lucide-react";
 import { format } from "date-fns";
 import type { PartnerItem } from "@/types/partner";
+
+interface BillingDetails {
+  billing_company_name?: string | null;
+  billing_kvk_number?: string | null;
+  billing_vat_number?: string | null;
+  billing_address_street?: string | null;
+  billing_address_postal?: string | null;
+  billing_address_city?: string | null;
+  billing_contact_name?: string | null;
+  billing_contact_email?: string | null;
+  billing_reference?: string | null;
+}
 
 interface InvoiceRegistrationDialogProps {
   isOpen: boolean;
@@ -27,6 +39,7 @@ interface InvoiceRegistrationDialogProps {
   ) => Promise<{ success: boolean; commission?: { percentage: number; amount: number } }>;
   item: PartnerItem | null;
   commissionPercentage: number;
+  billingDetails?: BillingDetails | null;
 }
 
 export const InvoiceRegistrationDialog = ({
@@ -35,6 +48,7 @@ export const InvoiceRegistrationDialog = ({
   onSubmit,
   item,
   commissionPercentage,
+  billingDetails,
 }: InvoiceRegistrationDialogProps) => {
   const [amount, setAmount] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -98,7 +112,7 @@ export const InvoiceRegistrationDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
@@ -110,6 +124,71 @@ export const InvoiceRegistrationDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Billing Details Section */}
+          {billingDetails?.billing_company_name && (
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Factureer aan
+              </h4>
+              <div className="space-y-2">
+                <p className="font-medium">{billingDetails.billing_company_name}</p>
+                {(billingDetails.billing_address_street || billingDetails.billing_address_city) && (
+                  <p className="text-sm text-muted-foreground">
+                    {[
+                      billingDetails.billing_address_street,
+                      [billingDetails.billing_address_postal, billingDetails.billing_address_city]
+                        .filter(Boolean)
+                        .join(" ")
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {billingDetails.billing_kvk_number && (
+                    <div>
+                      <span className="text-muted-foreground">KvK: </span>
+                      <span>{billingDetails.billing_kvk_number}</span>
+                    </div>
+                  )}
+                  {billingDetails.billing_vat_number && (
+                    <div>
+                      <span className="text-muted-foreground">BTW: </span>
+                      <span>{billingDetails.billing_vat_number}</span>
+                    </div>
+                  )}
+                </div>
+                {(billingDetails.billing_contact_name || billingDetails.billing_contact_email) && (
+                  <div className="pt-2 border-t border-border/50 space-y-1 text-sm">
+                    {billingDetails.billing_contact_name && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Contact:</span>
+                        <span>{billingDetails.billing_contact_name}</span>
+                      </div>
+                    )}
+                    {billingDetails.billing_contact_email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <a href={`mailto:${billingDetails.billing_contact_email}`} className="hover:underline">
+                          {billingDetails.billing_contact_email}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {billingDetails.billing_reference && (
+                  <div className="pt-2 border-t border-border/50 flex items-center gap-2 text-sm">
+                    <FileText className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Referentie:</span>
+                    <span className="font-medium">{billingDetails.billing_reference}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Invoice Form Section */}
           <div className="space-y-2">
             <Label htmlFor="invoiceNumber">Factuurnummer *</Label>
             <Input
