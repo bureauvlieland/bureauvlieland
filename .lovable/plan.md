@@ -1,161 +1,170 @@
 
-# Plan: Verwachte Commissie Tonen in Partner Facturatie Overzicht
+# Plan: Pro Forma Commissie Overzicht in Admin Commissie Beheer
 
 ## Probleem
 
-In het Partner Portal "Facturatie Overzicht" wordt bij items "Nog te factureren" alleen het offertebedrag getoond (€3.750,00), maar **niet de verwachte commissie**. Dit maakt het voor partners onduidelijk hoeveel commissie ze uiteindelijk moeten betalen.
-
-De commissie wordt momenteel pas zichtbaar nadat:
-1. Het verblijf is afgerond (departure_date verstreken)
-2. De pro forma workflow heeft gedraaid
-3. Of na handmatige factuurregistratie
+De huidige Admin Commissie pagina toont alleen items die al gefactureerd zijn (`invoiced_number IS NOT NULL`). Dit betekent dat:
+- Items die nog uitgevoerd moeten worden (zoals Hotel Seeduyn booking voor juni 2026) niet zichtbaar zijn
+- De admin geen overzicht heeft van **verwachte commissies** voor lopende projecten
+- Er geen "pro forma" inzicht is in toekomstige commissie-inkomsten
 
 ## Oplossing
 
-De UI uitbreiden om **direct de verwachte commissie te berekenen en tonen** op basis van het geoffreerde bedrag, nog vóórdat de pro forma workflow loopt.
+Uitbreiden van de Admin Commissie pagina met een nieuwe filter/tab "Verwacht" die:
+1. Alle items toont waar commissie te verwachten is (nog niet gefactureerd door partner)
+2. De verwachte commissie berekent o.b.v. geoffreerd bedrag excl. BTW
+3. Een pro forma overzicht biedt per partner met geplande projectdata
 
-### BTW-Berekening
-- **Activiteiten**: 21% BTW → `bedrag_excl = €500 / 1.21 = €413,22`
-- **Logies**: 9% BTW → `bedrag_excl = €3.750 / 1.09 = €3.440,37`
-- **Commissie**: `€3.440,37 × 10% = €344,04`
+## Nieuwe Status Filter
 
-### Visueel Voorbeeld
-
-**Huidige weergave "Nog te factureren":**
-```
-Hotel Seeduyn [Logies]
-Test Bedrijf BV  |  15 jun. - 17 jun. 2026
-                                    Offertebedrag
-                                    €3.750,00
-```
-
-**Nieuwe weergave:**
-```
-Hotel Seeduyn [Logies]
-Test Bedrijf BV  |  15 jun. - 17 jun. 2026
-                                    Offertebedrag
-                                    €3.750,00
-                                    Verwachte commissie: €344,04
-```
+| Filter | Beschrijving |
+|--------|--------------|
+| **Verwacht** (nieuw) | Items met geoffreerd bedrag, nog niet gefactureerd |
+| Te factureren | Partner heeft gefactureerd, BV moet commissie factureren |
+| Gefactureerd | Commissie gefactureerd door BV |
+| Betaald | Commissie ontvangen |
 
 ## Technische Wijzigingen
 
-### 1. PartnerFinance.tsx - AccommodationInvoiceCard
+### 1. Edge Function: `get-admin-commissions`
 
-Voeg berekening toe voor verwachte commissie bij `variant="to-invoice"`:
+Uitbreiden met nieuwe status `expected` die haalt:
 
 ```typescript
-const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardProps) => {
-  const request = quote.accommodation_requests;
-  
-  // Calculate expected commission for "to-invoice" items
-  const calculateExpectedCommission = () => {
-    if (variant !== "to-invoice" || !quote.price_total) return null;
+// ACTIVITEITEN - Verwacht
+if (statusFilter === "expected") {
+  const { data: items } = await adminClient
+    .from("program_request_items")
+    .select(`*, program_requests!inner(...)`)
+    .in("status", ["confirmed", "accepted", "executed"])
+    .is("invoiced_number", null)
+    .not("quoted_price", "is", null);
     
+  // Bereken verwachte commissie per item
+  for (const item of items) {
+    const vatRate = 21;
+    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
+    const commissionRate = item.commission_percentage ?? partner.commission_percentage;
+    item.expected_commission = amountExclVat * (commissionRate / 100);
+    item.amount_excl_vat = amountExclVat;
+  }
+}
+
+// LOGIES - Verwacht
+if (statusFilter === "expected") {
+  const { data: quotes } = await adminClient
+    .from("accommodation_quotes")
+    .select(`*, accommodation_requests!inner(...)`)
+    .eq("status", "selected")
+    .is("invoiced_number", null);
+    
+  // Bereken verwachte commissie per quote
+  for (const quote of quotes) {
     const vatRate = quote.vat_rate ?? 9;
-    const priceTotal = quote.price_total;
     const amountExclVat = quote.price_includes_vat 
-      ? priceTotal / (1 + vatRate / 100)
-      : priceTotal;
-    
-    // Use quote's commission_percentage or partner default (10%)
-    const commissionPercentage = quote.commission_percentage ?? 10;
-    const commissionAmount = amountExclVat * (commissionPercentage / 100);
-    
-    return {
-      amountExclVat,
-      commissionPercentage,
-      commissionAmount
-    };
-  };
-  
-  const expectedCommission = calculateExpectedCommission();
-  
-  // In render, bij variant="to-invoice":
-  {variant === "to-invoice" ? (
-    <div className="text-right">
-      <p className="text-sm text-muted-foreground">Offertebedrag</p>
-      <p className="font-semibold">€{quote.price_total.toLocaleString(...)}</p>
-      {expectedCommission && (
-        <p className="text-xs text-amber-600">
-          Verwachte commissie: €{expectedCommission.commissionAmount.toFixed(2)}
-        </p>
-      )}
-    </div>
-  )}
-};
+      ? quote.price_total / (1 + vatRate / 100)
+      : quote.price_total;
+    const commissionRate = quote.commission_percentage ?? partner.accommodation_commission_percentage ?? 10;
+    quote.expected_commission = amountExclVat * (commissionRate / 100);
+    quote.amount_excl_vat = amountExclVat;
+  }
+}
 ```
 
-### 2. PartnerFinance.tsx - InvoiceItemCard (Activiteiten)
+### 2. UI: AdminCommissions.tsx
 
-Zelfde logica voor activiteit items:
+Nieuwe weergave voor "Verwacht" status met pro forma stijl:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  Commissie Beheer                                              [Vernieuwen]    │
+│  Beheer partner commissies en facturatie                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                 │
+│  │ 🕐 Verwacht     │  │ € Totaal verwacht│  │ 📅 Komende maand│                │
+│  │ 2               │  │ € 349,62        │  │ 1 project       │                │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘                 │
+│                                                                                 │
+│  [Verwacht ▼] [Te factureren] [Gefactureerd] [Betaald]                         │
+│                                                                                 │
+│  ════════════════════════════════════════════════════════════════════════════  │
+│                                                                                 │
+│  📋 VOORLOPIGE COMMISSIE OPGAVE                                                │
+│  ════════════════════════════════════════════════════════════════════════════  │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  🏨 Hotel Seeduyn                                            € 344,04   │   │
+│  │  hotel@seeduyn.nl • KvK: 12345678                                       │   │
+│  ├─────────────────────────────────────────────────────────────────────────┤   │
+│  │  Type     │ Naam            │ Klant         │ Datum      │ Excl. BTW   │   │
+│  │  ─────────┼─────────────────┼───────────────┼────────────┼─────────────│   │
+│  │  🏠 Logies│ Hotel Seeduyn   │ Jan de Vries  │ 15-17 jun  │ € 3.440,37  │   │
+│  │           │ Test Bedrijf BV │               │ 2026       │ Comm: 10%   │   │
+│  │           │                 │               │            │ = € 344,04  │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │  🚴 Vlieland Outdoor Center                                    € 5,58   │   │
+│  │  info@vlielandoutdoor.nl • KvK: 87654321                                │   │
+│  ├─────────────────────────────────────────────────────────────────────────┤   │
+│  │  🏃 Activiteit │ E-bike Tour   │ Jan de Vries  │ 15 jun   │ € 37,19    │   │
+│  │                │ Test Bedrijf  │               │ 2026     │ Comm: 15%  │   │
+│  │                │               │               │          │ = € 5,58   │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+│  ════════════════════════════════════════════════════════════════════════════  │
+│  TOTAAL VERWACHTE COMMISSIE                                       € 349,62    │
+│  ════════════════════════════════════════════════════════════════════════════  │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3. Summary Cards Aanpassen
+
+Voor "Verwacht" filter andere metrics tonen:
+
+| Card | Inhoud |
+|------|--------|
+| Verwacht | Aantal items met verwachte commissie |
+| Totaal verwacht | Som van alle berekende verwachte commissies |
+| Komende maand | Items met uitvoerdatum binnen 30 dagen |
+
+### 4. Berekening Logic (Client + Server)
+
+Dezelfde BTW-berekening als in Partner Portal:
 
 ```typescript
-const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
-  const calculateExpectedCommission = () => {
-    if (variant !== "to-invoice" || !item.quoted_price) return null;
-    
-    const vatRate = 21; // Activities use 21% VAT
-    const quotedPrice = item.quoted_price;
-    const amountExclVat = quotedPrice / (1 + vatRate / 100);
-    
-    const commissionPercentage = item.commission_percentage ?? 15;
-    const commissionAmount = amountExclVat * (commissionPercentage / 100);
-    
-    return { commissionAmount, commissionPercentage };
-  };
-  
-  const expectedCommission = calculateExpectedCommission();
-  // ... render with expected commission
-};
-```
+// Activiteiten: 21% BTW
+const activityAmountExclVat = quotedPrice / 1.21;
+const activityCommission = activityAmountExclVat * (commissionPercentage / 100);
 
-### 3. Totaal Commissie Summary Card
-
-Update de commissie summary card om ook verwachte commissie te tonen:
-
-```typescript
-// Bereken verwachte commissie voor items nog te factureren
-const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
-  if (!i.quoted_price) return sum;
-  const amountExcl = i.quoted_price / 1.21;
-  const rate = i.commission_percentage ?? data.partner.commission_percentage;
-  return sum + (amountExcl * (rate / 100));
-}, 0);
-
-const expectedAccommodationCommission = toBeInvoicedAccommodations.reduce((sum, q) => {
-  const vatRate = q.vat_rate ?? 9;
-  const amountExcl = q.price_includes_vat 
-    ? q.price_total / (1 + vatRate / 100)
-    : q.price_total;
-  const rate = q.commission_percentage ?? data.partner.accommodation_commission_percentage ?? 10;
-  return sum + (amountExcl * (rate / 100));
-}, 0);
-
-const totalExpectedCommission = expectedActivityCommission + expectedAccommodationCommission;
-```
-
-In de card:
-```
-Commissie (15% / 10%)
-€0,00
-€0.00 betaald • €0.00 open
-Verwacht: €344,04
+// Logies: 9% BTW (of specifiek vat_rate)
+const vatRate = quote.vat_rate ?? 9;
+const accommodationAmountExclVat = priceIncludesVat 
+  ? priceTotal / (1 + vatRate / 100)
+  : priceTotal;
+const accommodationCommission = accommodationAmountExclVat * (commissionPercentage / 100);
 ```
 
 ## Bestanden te Wijzigen
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/pages/PartnerFinance.tsx` | Verwachte commissie berekening en weergave |
+| `supabase/functions/get-admin-commissions/index.ts` | Nieuwe "expected" status met commissie berekening |
+| `src/pages/admin/AdminCommissions.tsx` | Nieuwe filter optie, aangepaste UI voor pro forma weergave |
 
-## Geen Database Wijzigingen Nodig
+## Extra Features
 
-Dit is puur een UI-verbetering. De berekening gebeurt client-side op basis van bestaande data.
+1. **Pro forma PDF export**: Optie om een voorlopige commissie-opgave te downloaden per partner
+2. **Tijdlijn indicator**: Wanneer project gepland staat (vandaag, deze week, deze maand, later)
+3. **Status indicator**: Of klant al akkoord heeft gegeven (terms_accepted_at)
+4. **Quick link**: Direct naar project detail pagina
 
 ## Implementatie Volgorde
 
-1. Helper functie toevoegen voor commissie berekening
-2. AccommodationInvoiceCard updaten voor verwachte commissie
-3. InvoiceItemCard updaten voor verwachte commissie
-4. Summary card updaten met totaal verwachte commissie
+1. Edge function uitbreiden met "expected" status query
+2. Client-side berekening van verwachte commissie
+3. UI aanpassen met nieuwe filter optie
+4. Pro forma styling toevoegen
+5. Summary cards updaten voor verwacht-modus
