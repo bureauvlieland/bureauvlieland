@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -17,6 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -30,6 +41,9 @@ import {
   UserPlus,
   CheckCircle2,
   XCircle,
+  Calendar,
+  Users,
+  ExternalLink,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 
@@ -49,6 +63,17 @@ interface Partner {
   created_at: string;
   partner_type: string | null;
   accommodation_commission_percentage: number | null;
+}
+
+interface RelatedRequest {
+  id: string;
+  customer_name: string;
+  customer_company: string | null;
+  number_of_people: number;
+  selected_dates: string[];
+  status: string;
+  created_at: string;
+  item_count: number;
 }
 
 const PARTNER_TYPE_OPTIONS = [
@@ -88,10 +113,13 @@ const AdminPartnerDetail = () => {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [relatedRequests, setRelatedRequests] = useState<RelatedRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
   useEffect(() => {
     if (!isNew && id) {
       fetchPartner();
+      fetchRelatedRequests();
     }
   }, [id, isNew]);
 
@@ -131,6 +159,60 @@ const AdminPartnerDetail = () => {
       toast.error("Fout bij ophalen partner");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchRelatedRequests = async () => {
+    if (!id) return;
+    setIsLoadingRequests(true);
+    try {
+      // Get all items for this partner
+      const { data: items, error: itemsError } = await supabase
+        .from("program_request_items")
+        .select("request_id")
+        .eq("provider_id", id);
+
+      if (itemsError) throw itemsError;
+
+      if (!items || items.length === 0) {
+        setRelatedRequests([]);
+        return;
+      }
+
+      // Get unique request IDs and count items per request
+      const requestCounts = items.reduce((acc, item) => {
+        acc[item.request_id] = (acc[item.request_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const requestIds = Object.keys(requestCounts);
+
+      // Fetch the requests
+      const { data: requests, error: requestsError } = await supabase
+        .from("program_requests")
+        .select("id, customer_name, customer_company, number_of_people, selected_dates, status, created_at")
+        .in("id", requestIds)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (requestsError) throw requestsError;
+
+      const mappedRequests: RelatedRequest[] = (requests || []).map((req) => ({
+        id: req.id,
+        customer_name: req.customer_name,
+        customer_company: req.customer_company,
+        number_of_people: req.number_of_people,
+        selected_dates: Array.isArray(req.selected_dates) ? req.selected_dates.map(String) : [],
+        status: req.status,
+        created_at: req.created_at,
+        item_count: requestCounts[req.id] || 0,
+      }));
+
+      setRelatedRequests(mappedRequests);
+    } catch (error) {
+      console.error("Error fetching related requests:", error);
+    } finally {
+      setIsLoadingRequests(false);
     }
   };
 
@@ -587,6 +669,106 @@ const AdminPartnerDetail = () => {
               </Card>
             </div>
           </div>
+
+          {/* Related Requests Section */}
+          {!isNew && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Gerelateerde aanvragen
+                </CardTitle>
+                <CardDescription>
+                  Programma aanvragen met activiteiten van deze partner
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoadingRequests ? (
+                  <div className="p-6">
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                ) : relatedRequests.length === 0 ? (
+                  <div className="p-6 text-center text-slate-500">
+                    Geen gerelateerde aanvragen gevonden
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Klant</TableHead>
+                          <TableHead>Datum(s)</TableHead>
+                          <TableHead>Personen</TableHead>
+                          <TableHead>Items</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-12"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {relatedRequests.map((req) => (
+                          <TableRow key={req.id}>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{req.customer_name}</p>
+                                {req.customer_company && (
+                                  <p className="text-sm text-slate-500">{req.customer_company}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4 text-slate-400" />
+                                <span className="text-sm">
+                                  {req.selected_dates.length > 0
+                                    ? format(new Date(req.selected_dates[0]), "d MMM yyyy", { locale: nl })
+                                    : "-"}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Users className="h-4 w-4 text-slate-400" />
+                                {req.number_of_people}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {req.item_count} {req.item_count === 1 ? "item" : "items"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  req.status === "active"
+                                    ? "default"
+                                    : req.status === "cancelled"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                              >
+                                {req.status === "active"
+                                  ? "Actief"
+                                  : req.status === "cancelled"
+                                  ? "Geannuleerd"
+                                  : req.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link to={`/admin/aanvragen/${req.id}`}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </AdminLayout>
     </>
