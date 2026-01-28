@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
+import type { AccommodationQuote } from "@/types/accommodation";
 
 interface ProgramSidebarProps {
   statusSummary: {
@@ -20,6 +21,7 @@ interface ProgramSidebarProps {
   onCancel: () => void;
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  selectedAccommodationQuote?: AccommodationQuote | null;
   className?: string;
 }
 
@@ -30,6 +32,7 @@ export const ProgramSidebar = ({
   onCancel,
   items,
   numberOfPeople,
+  selectedAccommodationQuote,
   className,
 }: ProgramSidebarProps) => {
   return (
@@ -55,6 +58,7 @@ export const ProgramSidebar = ({
         numberOfPeople={numberOfPeople}
         variant="compact"
         termsAccepted={termsAccepted}
+        selectedAccommodationQuote={selectedAccommodationQuote}
       />
 
       {/* Quick actions */}

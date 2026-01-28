@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Euro, CheckCircle, Clock, HelpCircle, Building2, FileText, AlertCircle } from "lucide-react";
+import { Euro, CheckCircle, Clock, HelpCircle, Building2, FileText, AlertCircle, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
+import type { AccommodationQuote } from "@/types/accommodation";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -10,6 +11,8 @@ interface PriceSummaryCardProps {
   className?: string;
   variant?: "default" | "compact";
   termsAccepted?: boolean;
+  // Accommodation data
+  selectedAccommodationQuote?: AccommodationQuote | null;
 }
 
 // Coordination fee tiers based on group size
@@ -21,7 +24,7 @@ const getCoordinationFee = (numberOfPeople: number): number => {
   return 500;
 };
 
-// Calculate VAT breakdown (assuming 21% VAT rate for most items)
+// Calculate VAT breakdown
 const calculateVatBreakdown = (amountInclVat: number, vatRate: number = 21) => {
   const exclVat = amountInclVat / (1 + vatRate / 100);
   const vatAmount = amountInclVat - exclVat;
@@ -33,7 +36,8 @@ export const PriceSummaryCard = ({
   numberOfPeople = 20, 
   className, 
   variant = "default",
-  termsAccepted = false 
+  termsAccepted = false,
+  selectedAccommodationQuote,
 }: PriceSummaryCardProps) => {
   const summary = useMemo(() => {
     // Filter out self-arranged and cancelled items
@@ -69,6 +73,11 @@ export const PriceSummaryCard = ({
       0
     );
 
+    // Accommodation pricing
+    const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
+    const accommodationVatRate = selectedAccommodationQuote?.vat_rate || 9;
+    const accommodationVat = calculateVatBreakdown(accommodationTotal, accommodationVatRate);
+
     const confirmedTotal = bureauTotal + partnerTotal;
 
     // Coordination fee (includes VAT)
@@ -79,8 +88,8 @@ export const PriceSummaryCard = ({
     const partnerVat = calculateVatBreakdown(partnerTotal);
     const feeVat = calculateVatBreakdown(coordinationFee);
 
-    const totalExclVat = bureauVat.exclVat + partnerVat.exclVat + feeVat.exclVat;
-    const totalVatAmount = bureauVat.vatAmount + partnerVat.vatAmount + feeVat.vatAmount;
+    const totalExclVat = bureauVat.exclVat + partnerVat.exclVat + feeVat.exclVat + accommodationVat.exclVat;
+    const totalVatAmount = bureauVat.vatAmount + partnerVat.vatAmount + feeVat.vatAmount + accommodationVat.vatAmount;
 
     return {
       confirmedTotal,
@@ -92,15 +101,25 @@ export const PriceSummaryCard = ({
       bureauVatAmount: bureauVat.vatAmount + feeVat.vatAmount,
       partnerExclVat: partnerVat.exclVat,
       partnerVatAmount: partnerVat.vatAmount,
+      // Accommodation
+      accommodationTotal,
+      accommodationExclVat: accommodationVat.exclVat,
+      accommodationVatAmount: accommodationVat.vatAmount,
+      accommodationVatRate,
+      hasAccommodation: !!selectedAccommodationQuote,
+      accommodationName: selectedAccommodationQuote?.accommodation_name || "",
+      accommodationPartnerName: selectedAccommodationQuote?.partner?.name || "",
+      // Totals
       totalExclVat,
       totalVatAmount,
+      grandTotalInclVat: confirmedTotal + coordinationFee + accommodationTotal,
       confirmedCount: confirmedItems.length,
       pendingCount: pendingItems.length,
-      hasConfirmedPrices: confirmedItems.length > 0,
+      hasConfirmedPrices: confirmedItems.length > 0 || !!selectedAccommodationQuote,
       hasBureauItems: confirmedBureauItems.length > 0,
       hasPartnerItems: confirmedPartnerItems.length > 0,
     };
-  }, [items, numberOfPeople]);
+  }, [items, numberOfPeople, selectedAccommodationQuote]);
 
   // Don't show if there are no confirmed prices yet
   if (!summary.hasConfirmedPrices) {
@@ -122,17 +141,21 @@ export const PriceSummaryCard = ({
           <span className="text-sm font-medium">Prijsoverzicht</span>
         </div>
         <div className="space-y-1 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Bevestigd excl. BTW</span>
-            <span>€{formatPrice(summary.totalExclVat)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">BTW (21%)</span>
-            <span>€{formatPrice(summary.totalVatAmount)}</span>
-          </div>
+          {summary.hasAccommodation && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Logies</span>
+              <span>€{formatPrice(summary.accommodationTotal)}</span>
+            </div>
+          )}
+          {summary.confirmedCount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Activiteiten ({summary.confirmedCount})</span>
+              <span>€{formatPrice(summary.confirmedTotal + summary.coordinationFee)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-1 border-t">
             <span className="font-medium">Totaal incl. BTW</span>
-            <span className="font-semibold text-primary">€{formatPrice(summary.confirmedTotal + summary.coordinationFee)}</span>
+            <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
           </div>
           {summary.pendingCount > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -145,7 +168,7 @@ export const PriceSummaryCard = ({
   }
 
   return (
-    <Card className={cn("mb-6", className)}>
+    <Card className={cn("", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Euro className="h-5 w-5" />
@@ -153,17 +176,27 @@ export const PriceSummaryCard = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Confirmed prices */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <span>
-              Bevestigde activiteiten ({summary.confirmedCount})
-            </span>
-          </div>
-          <span className="font-semibold text-lg">
-            €{formatPrice(summary.confirmedTotal)}
-          </span>
+        {/* Summary header */}
+        <div className="space-y-2">
+          {summary.hasAccommodation && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <BedDouble className="h-4 w-4 text-green-600" />
+                <span>Logies ({summary.accommodationName})</span>
+              </div>
+              <span className="font-semibold">€{formatPrice(summary.accommodationTotal)}</span>
+            </div>
+          )}
+          
+          {summary.confirmedCount > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>Bevestigde activiteiten ({summary.confirmedCount})</span>
+              </div>
+              <span className="font-semibold">€{formatPrice(summary.confirmedTotal)}</span>
+            </div>
+          )}
         </div>
 
         {/* Pending prices */}
@@ -171,9 +204,7 @@ export const PriceSummaryCard = ({
           <div className="flex items-center justify-between text-muted-foreground">
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4" />
-              <span>
-                Nog te bevestigen ({summary.pendingCount})
-              </span>
+              <span>Nog te bevestigen ({summary.pendingCount})</span>
             </div>
             <span className="text-sm italic">Prijs volgt</span>
           </div>
@@ -181,6 +212,38 @@ export const PriceSummaryCard = ({
 
         {/* Divider and breakdown */}
         <div className="border-t pt-3 space-y-2">
+          {/* Accommodation section */}
+          {summary.hasAccommodation && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <BedDouble className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span>Factuur {summary.accommodationPartnerName}</span>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm pl-6">
+                <span className="text-muted-foreground">{summary.accommodationName}</span>
+                <span>€{formatPrice(summary.accommodationTotal)}</span>
+              </div>
+
+              {/* VAT breakdown for Accommodation */}
+              <div className="border-t border-amber-200 dark:border-amber-800 pt-2 mt-2 space-y-1 pl-6">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Subtotaal excl. BTW</span>
+                  <span>€{formatPrice(summary.accommodationExclVat)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>BTW ({summary.accommodationVatRate}%)</span>
+                  <span>€{formatPrice(summary.accommodationVatAmount)}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between font-medium pt-2 border-t border-amber-200 dark:border-amber-800 pl-6">
+                <span>Subtotaal incl. BTW</span>
+                <span className="text-amber-700 dark:text-amber-400">€{formatPrice(summary.accommodationTotal)}</span>
+              </div>
+            </div>
+          )}
+
           {/* Bureau Vlieland section */}
           {(summary.hasBureauItems || true) && (
             <div className="bg-primary/5 rounded-lg p-3 space-y-2">
@@ -254,15 +317,15 @@ export const PriceSummaryCard = ({
               <span>€{formatPrice(summary.totalExclVat)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Totaal BTW (21%)</span>
+              <span className="text-muted-foreground">Totaal BTW</span>
               <span>€{formatPrice(summary.totalVatAmount)}</span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t">
               <span className="font-medium">
-                {summary.pendingCount > 0 ? "Bevestigd totaal incl. BTW" : "Totaal programma incl. BTW"}
+                {summary.pendingCount > 0 ? "Bevestigd totaal incl. BTW" : "Totaal incl. BTW"}
               </span>
               <span className="font-bold text-xl text-primary">
-                €{formatPrice(summary.confirmedTotal + summary.coordinationFee)}
+                €{formatPrice(summary.grandTotalInclVat)}
               </span>
             </div>
           </div>
