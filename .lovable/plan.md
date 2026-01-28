@@ -1,5 +1,5 @@
 
-# Plan: Unieke Identifiers + Gebundeld Klantprojecten Overzicht
+# Plan: Applicatie-Instellingen & Centrale Business Rules
 
 ## Status: ✅ Volledig Geïmplementeerd
 
@@ -7,75 +7,154 @@
 
 ## Wat is geïmplementeerd
 
-### Fase 1: Database Migratie ✅
-- `reference_number` kolommen toegevoegd aan `program_requests`, `accommodation_requests`, en `partners`
-- Database functies voor auto-generatie:
-  - `generate_program_reference_number()` → BV-YYMM-NNNN
-  - `generate_accommodation_reference_number()` → LOG-YYMM-NNNN
-  - `generate_partner_reference_number()` → P-NNN
-- Triggers voor automatisch toekennen bij INSERT
-- Bestaande records hebben referentienummers gekregen
+### Fase 1: Database Structuur ✅
+- Nieuwe tabel `app_settings` met RLS policies
+- Kolommen: `id`, `category`, `label`, `description`, `value_type`, `value`, `updated_at`, `updated_by`
+- Initiële settings ingevoerd:
+  - `coordination_fee_tiers` - JSON staffel
+  - `default_vat_rate` - 21%
+  - `accommodation_vat_rate` - 9%
+  - `default_partner_commission` - 15%
+  - `default_accommodation_commission` - 10%
+  - `request_expiry_days` - 90 dagen
 
-### Fase 2: Admin Projecten Overzicht ✅
-- Nieuwe pagina `/admin/projecten` (AdminProjects.tsx)
-- **Unified Project View** die drie types combineert:
-  - `program_only`: Alleen activiteiten (groen)
-  - `accommodation_only`: Alleen logies (amber)
-  - `combined`: Logies + Activiteiten (indigo)
-- Query haalt zowel `program_requests` als standalone `accommodation_requests` op
-- Standalone logies (zonder gekoppelde activiteiten) worden nu correct getoond
-- Statistieken per projecttype
-- Zoeken op referentienummer (BV-XXXX of LOG-XXXX), naam, bedrijf
-- Filter op projecttype en status
-- Links naar detail pagina's en klantportaal
+### Fase 2: Centrale Business Constants Library ✅
+- **`src/types/appSettings.ts`** - TypeScript types voor settings
+- **`src/lib/appSettings.ts`** - Centrale utility library met:
+  - `FALLBACK_FEE_TIERS` - Fallback waarden
+  - `getCoordinationFee()` - Fee berekening
+  - `getVatRate()` - BTW tarief ophalen
+  - `getCommissionRate()` - Commissie percentage
+  - `calculateExclVat()` / `calculateVatAmount()` - BTW berekeningen
+  - `DEFAULT_GROUP_SIZE` - Initiële groepsgrootte constant
 
-### Fase 3: UI Updates ✅
-- Referentienummer kolom in AdminRequests.tsx
-- Referentienummer kolom in AdminAccommodation.tsx
-- Referentienummer prominent in AdminRequestDetail.tsx header
-- Referentienummer prominent in AdminAccommodationDetail.tsx header
-- Navigatie: "Projecten" toegevoegd aan admin sidebar
-- Type-indicator badges (Logies/Activiteiten/Beide)
-- Beide referentienummers zichtbaar per project waar van toepassing
+### Fase 3: React Hook ✅
+- **`src/hooks/useAppSettings.ts`** - Hook met React Query caching
+  - 5 minuten staleTime voor performance
+  - Fallback waarden bij DB issues
+  - Helper functies: `getCoordinationFee()`, `getVatRate()`, `getCommissionRate()`
+  - Mutation voor updates
 
-### Fase 4: Partner Portal Bundeling
-- Nog niet geïmplementeerd (low priority)
+### Fase 4: Admin Instellingen Pagina ✅
+- **`src/pages/admin/AdminSettings.tsx`** - Nieuwe admin pagina
+- Gegroepeerd per categorie (Prijzen, BTW, Commissies, Systeem)
+- Inline editing met Save/Cancel
+- Speciaal component voor fee tier editing
+- Laatst gewijzigd timestamp per setting
+- Route: `/admin/instellingen`
+
+### Fase 5: Navigatie Update ✅
+- "Instellingen" toegevoegd aan admin sidebar met Settings icon
+- Route toegevoegd aan App.tsx
+
+### Fase 6: Code Refactoring ✅
+Alle hardcoded waarden vervangen door centrale functies:
+
+| Component | Wijziging |
+|-----------|-----------|
+| `PriceSummaryCard.tsx` | Gebruikt `useAppSettings` hook, removed local fee function |
+| `InvoiceProvidersCard.tsx` | Gebruikt `useAppSettings` hook, removed local fee function |
+| `FinancialOverviewCard.tsx` | Gebruikt `useAppSettings` hook |
+| `AdminInvoicing.tsx` | Gebruikt `useAppSettings` hook |
+| `CartContext.tsx` | Gebruikt `DEFAULT_GROUP_SIZE` constant |
+
+### Fase 7: Type Safety ✅
+- `numberOfPeople` prop is nu required (niet optional) in:
+  - `PriceSummaryCard`
+  - `InvoiceProvidersCard`
+- Voorkomt verborgen bugs door default waarden
 
 ---
 
-## Referentienummer Formats
+## Setting Categories
 
-| Entiteit | Format | Voorbeeld |
-|----------|--------|-----------|
-| Programma aanvragen | `BV-JJMM-NNNN` | `BV-2601-0001` |
-| Logies aanvragen | `LOG-JJMM-NNNN` | `LOG-2601-0001` |
-| Partners | `P-NNN` | `P-001` |
-| Bouwstenen | Bestaande slugs | `zeehondentocht` |
-
----
-
-## Project Type Definitie
-
-Een "project" in `/admin/projecten` is nu:
-1. Een `program_request` (met of zonder gekoppelde accommodation), OF
-2. Een standalone `accommodation_request` (niet gekoppeld aan een program_request)
-
-Dit zorgt ervoor dat alle klantaanvragen zichtbaar zijn in één centraal overzicht.
+| Category | Label | Settings |
+|----------|-------|----------|
+| `pricing` | Prijzen | Coördinatiefee Staffel |
+| `vat` | BTW Tarieven | Standaard BTW, Logies BTW |
+| `commission` | Commissies | Partner, Logies commissie |
+| `system` | Systeem | Geldigheidsduur aanvragen |
 
 ---
 
-## Bestanden aangepast
+## Fee Tier Format (JSON)
 
-### Nieuwe bestanden
-- `src/pages/admin/AdminProjects.tsx`
+```json
+[
+  {"maxPeople": 10, "fee": 50},
+  {"maxPeople": 25, "fee": 100},
+  {"maxPeople": 100, "fee": 250},
+  {"maxPeople": 150, "fee": 350},
+  {"maxPeople": 999999, "fee": 500}
+]
+```
 
-### Aangepaste bestanden
-- `src/components/admin/AdminLayout.tsx` - Projecten nav item
+---
+
+## Nieuwe Bestanden
+
+| Bestand | Doel |
+|---------|------|
+| `src/types/appSettings.ts` | TypeScript types |
+| `src/lib/appSettings.ts` | Centrale utilities en fallbacks |
+| `src/hooks/useAppSettings.ts` | React hook met caching |
+| `src/pages/admin/AdminSettings.tsx` | Admin instellingen UI |
+
+---
+
+## Aangepaste Bestanden
+
+- `src/components/admin/AdminLayout.tsx` - Nav item toegevoegd
 - `src/App.tsx` - Route toegevoegd
-- `src/pages/admin/AdminRequests.tsx` - Reference column
-- `src/pages/admin/AdminAccommodation.tsx` - Reference column
-- `src/pages/admin/AdminRequestDetail.tsx` - Reference in header
-- `src/pages/admin/AdminAccommodationDetail.tsx` - Reference in header
+- `src/components/customer-portal/PriceSummaryCard.tsx` - Centrale functies
+- `src/components/customer-portal/InvoiceProvidersCard.tsx` - Centrale functies
+- `src/components/admin/FinancialOverviewCard.tsx` - Centrale functies
+- `src/pages/admin/AdminInvoicing.tsx` - Centrale functies
+- `src/contexts/CartContext.tsx` - DEFAULT_GROUP_SIZE constant
 
-### Database
-- Migratie uitgevoerd voor reference_number kolommen en triggers
+---
+
+## Technische Architectuur
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Database (app_settings)                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ coordination_fee_tiers | default_vat_rate | etc.    │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              useAppSettings Hook (React Query)               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ • 5 min cache │ getCoordinationFee() │ getVatRate() │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ PriceSummaryCard │ │ InvoiceProviders │ │ AdminInvoicing   │
+│                  │ │ Card             │ │                  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+```
+
+---
+
+## Fallback Mechanisme
+
+Als database niet bereikbaar is, worden fallback waarden gebruikt:
+
+```typescript
+export const FALLBACK_SETTINGS: AppSettingsMap = {
+  coordination_fee_tiers: FALLBACK_FEE_TIERS,
+  default_vat_rate: 21,
+  accommodation_vat_rate: 9,
+  default_partner_commission: 15,
+  default_accommodation_commission: 10,
+  request_expiry_days: 90,
+};
+```
+
+Dit zorgt ervoor dat de applicatie altijd functioneel blijft.

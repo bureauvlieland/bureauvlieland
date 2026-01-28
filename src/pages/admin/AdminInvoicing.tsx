@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
-import { calculateBureauFee } from "@/types/buildingBlock";
 import { calculateVatAmount, calculateTotalInclVat } from "@/types/bureauInvoice";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface ProgramRequestWithItems {
   id: string;
@@ -63,44 +63,47 @@ interface InvoiceTotals {
   outstanding: number;
 }
 
-const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
-  // Only bureau items count toward invoicing
-  const bureauItems = request.items.filter(
-    (item) => item.block_type === "bureau" && item.status === "confirmed"
-  );
-  
-  const bureauItemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
-  const coordinationFee = calculateBureauFee(request.number_of_people);
-  const totalExclVat = bureauItemsTotal + coordinationFee;
-  const vatAmount = calculateVatAmount(totalExclVat, 21);
-  const totalInclVat = calculateTotalInclVat(totalExclVat, 21);
-  
-  const invoicedTotal = request.invoices.reduce(
-    (sum, inv) => sum + (inv.amount_excl_vat + inv.vat_amount), 
-    0
-  );
-  
-  const outstanding = totalInclVat - invoicedTotal;
-  
-  return {
-    bureauItemsTotal,
-    coordinationFee,
-    totalExclVat,
-    vatAmount,
-    totalInclVat,
-    invoicedTotal,
-    outstanding,
-  };
-};
-
 const formatCurrency = (amount: number) => 
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
 
 const AdminInvoicing = () => {
   const queryClient = useQueryClient();
+  const { getCoordinationFee, getVatRate } = useAppSettings();
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+
+  // Calculate invoice totals using centralized settings
+  const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
+    // Only bureau items count toward invoicing
+    const bureauItems = request.items.filter(
+      (item) => item.block_type === "bureau" && item.status === "confirmed"
+    );
+    
+    const bureauItemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
+    const coordinationFee = getCoordinationFee(request.number_of_people);
+    const vatRate = getVatRate("standard");
+    const totalExclVat = bureauItemsTotal + coordinationFee;
+    const vatAmount = calculateVatAmount(totalExclVat, vatRate);
+    const totalInclVat = calculateTotalInclVat(totalExclVat, vatRate);
+    
+    const invoicedTotal = request.invoices.reduce(
+      (sum, inv) => sum + (inv.amount_excl_vat + inv.vat_amount), 
+      0
+    );
+    
+    const outstanding = totalInclVat - invoicedTotal;
+    
+    return {
+      bureauItemsTotal,
+      coordinationFee,
+      totalExclVat,
+      vatAmount,
+      totalInclVat,
+      invoicedTotal,
+      outstanding,
+    };
+  };
 
   // Fetch all requests with their items and invoices
   const { data: requests = [], isLoading } = useQuery({
