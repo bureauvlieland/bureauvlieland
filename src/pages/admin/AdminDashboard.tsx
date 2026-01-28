@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { PendingCommissionsCard } from "@/components/admin/PendingCommissionsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -274,6 +275,9 @@ const AdminDashboardContent = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Commissions */}
+      <PendingCommissionsCard />
 
       {/* Recent requests grid */}
       <div className="grid lg:grid-cols-2 gap-6">
