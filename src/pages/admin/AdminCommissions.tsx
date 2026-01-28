@@ -45,25 +45,32 @@ import {
   RefreshCw,
   Home,
   Activity,
+  CalendarClock,
+  TrendingUp,
 } from "lucide-react";
 
 interface CommissionItem {
   id: string;
   block_name: string;
-  invoiced_amount: number;
-  invoiced_number: string;
-  invoiced_date: string;
+  invoiced_amount: number | null;
+  invoiced_number: string | null;
+  invoiced_date: string | null;
   commission_percentage: number;
-  commission_amount: number;
+  commission_amount: number | null;
   commission_status: string;
   provider_id: string;
   provider_name: string;
   item_type: "activity" | "accommodation";
+  quoted_price?: number;
+  amount_excl_vat?: number;
+  expected_commission?: number;
+  vat_rate?: number;
   program_requests: {
     id: string;
     customer_name: string;
     customer_company: string | null;
     selected_dates: unknown;
+    terms_accepted_at?: string | null;
   } | null;
   accommodation_requests: {
     id: string;
@@ -98,29 +105,34 @@ interface CommissionsResponse {
     status: string;
     activityCount: number;
     accommodationCount: number;
+    upcomingCount?: number;
   };
 }
 
 const statusLabels: Record<string, string> = {
+  expected: "Verwacht",
   pending: "Te factureren",
   invoiced: "Gefactureerd",
   paid: "Betaald",
 };
 
 const statusColors: Record<string, string> = {
+  expected: "bg-purple-100 text-purple-800",
   pending: "bg-amber-100 text-amber-800",
   invoiced: "bg-blue-100 text-blue-800",
   paid: "bg-green-100 text-green-800",
 };
 
 export default function AdminCommissions() {
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("expected");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const isExpectedView = statusFilter === "expected";
 
   // Fetch commissions via edge function
   const { data, isLoading, error, refetch } = useQuery<CommissionsResponse>({
@@ -261,6 +273,31 @@ export default function AdminCommissions() {
     return format(new Date(dateStr), "d MMM yyyy", { locale: nl });
   };
 
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return `${format(start, "d", { locale: nl })}-${format(end, "d MMM yyyy", { locale: nl })}`;
+  };
+
+  const getProjectDate = (item: CommissionItem): string => {
+    if (item.item_type === "accommodation" && item.accommodation_requests) {
+      return formatDateRange(
+        item.accommodation_requests.arrival_date,
+        item.accommodation_requests.departure_date
+      );
+    }
+    if (item.program_requests?.selected_dates) {
+      const dates = item.program_requests.selected_dates as string[];
+      if (Array.isArray(dates) && dates.length > 0) {
+        if (dates.length === 1) {
+          return formatDate(dates[0]);
+        }
+        return formatDateRange(dates[0], dates[dates.length - 1]);
+      }
+    }
+    return "-";
+  };
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -294,6 +331,9 @@ export default function AdminCommissions() {
 
   const selectedTotal = Array.from(selectedItems).reduce((sum, itemId) => {
     const item = data?.items.find((i) => i.id === itemId);
+    if (isExpectedView) {
+      return sum + (item?.expected_commission || 0);
+    }
     return sum + (item?.commission_amount || 0);
   }, 0);
 
@@ -316,54 +356,100 @@ export default function AdminCommissions() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-amber-100 rounded-lg">
-                <Clock className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Te factureren</p>
-                <p className="text-2xl font-bold">
-                  {statusFilter === "pending" ? data?.summary.totalItems || 0 : "-"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Euro className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Totaal bedrag</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(data?.summary.totalCommission || 0)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Geselecteerd</p>
-                <p className="text-2xl font-bold">
-                  {selectedItems.size} ({formatCurrency(selectedTotal)})
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {isExpectedView ? (
+            <>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <Clock className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Verwacht</p>
+                    <p className="text-2xl font-bold">{data?.summary.totalItems || 0}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <TrendingUp className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Totaal verwacht</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(data?.summary.totalCommission || 0)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-amber-100 rounded-lg">
+                    <CalendarClock className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Komende 30 dagen</p>
+                    <p className="text-2xl font-bold">
+                      {data?.summary.upcomingCount || 0} project(en)
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-amber-100 rounded-lg">
+                    <Clock className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{statusLabels[statusFilter]}</p>
+                    <p className="text-2xl font-bold">{data?.summary.totalItems || 0}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Euro className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Totaal bedrag</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(data?.summary.totalCommission || 0)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Geselecteerd</p>
+                    <p className="text-2xl font-bold">
+                      {selectedItems.size} ({formatCurrency(selectedTotal)})
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Filters & Actions */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(val) => {
+            setStatusFilter(val);
+            setSelectedItems(new Set());
+          }}>
             <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="expected">Verwacht</SelectItem>
               <SelectItem value="pending">Te factureren</SelectItem>
               <SelectItem value="invoiced">Gefactureerd</SelectItem>
               <SelectItem value="paid">Betaald</SelectItem>
@@ -386,22 +472,37 @@ export default function AdminCommissions() {
           </div>
         </div>
 
+        {/* Pro Forma Header for Expected View */}
+        {isExpectedView && data?.byPartner && data.byPartner.length > 0 && (
+          <div className="border-t-4 border-purple-500 bg-purple-50/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-purple-800">
+              <FileText className="h-5 w-5" />
+              <span className="font-semibold text-lg">VOORLOPIGE COMMISSIE OPGAVE</span>
+            </div>
+            <p className="text-sm text-purple-600 mt-1">
+              Dit overzicht toont verwachte commissies voor lopende projecten die nog niet gefactureerd zijn door de partner.
+            </p>
+          </div>
+        )}
+
         {/* Partner Groups */}
         {data?.byPartner && data.byPartner.length > 0 ? (
           <div className="space-y-6">
             {data.byPartner.map((group) => (
-              <Card key={group.partner?.id || "unknown"}>
+              <Card key={group.partner?.id || "unknown"} className={isExpectedView ? "border-purple-200" : ""}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={group.items.every((item) =>
-                          selectedItems.has(item.id)
-                        )}
-                        onCheckedChange={(checked) =>
-                          handleSelectAll(group.partner?.id || "", !!checked)
-                        }
-                      />
+                      {!isExpectedView && (
+                        <Checkbox
+                          checked={group.items.every((item) =>
+                            selectedItems.has(item.id)
+                          )}
+                          onCheckedChange={(checked) =>
+                            handleSelectAll(group.partner?.id || "", !!checked)
+                          }
+                        />
+                      )}
                       <Building2 className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <CardTitle className="text-lg">
@@ -417,7 +518,7 @@ export default function AdminCommissions() {
                       <p className="text-sm text-muted-foreground">
                         {group.items.length} item(s)
                       </p>
-                      <p className="text-lg font-semibold text-primary">
+                      <p className={`text-lg font-semibold ${isExpectedView ? "text-purple-700" : "text-primary"}`}>
                         {formatCurrency(group.totalCommission)}
                       </p>
                     </div>
@@ -427,14 +528,24 @@ export default function AdminCommissions() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-10"></TableHead>
+                        {!isExpectedView && <TableHead className="w-10"></TableHead>}
                         <TableHead>Type</TableHead>
                         <TableHead>Naam</TableHead>
                         <TableHead>Klant</TableHead>
-                        <TableHead>Factuurnr.</TableHead>
-                        <TableHead className="text-right">Bedrag</TableHead>
-                        <TableHead className="text-right">Commissie</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Datum</TableHead>
+                        {isExpectedView ? (
+                          <>
+                            <TableHead className="text-right">Excl. BTW</TableHead>
+                            <TableHead className="text-right">Commissie</TableHead>
+                          </>
+                        ) : (
+                          <>
+                            <TableHead>Factuurnr.</TableHead>
+                            <TableHead className="text-right">Bedrag</TableHead>
+                            <TableHead className="text-right">Commissie</TableHead>
+                            <TableHead>Status</TableHead>
+                          </>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -448,14 +559,16 @@ export default function AdminCommissions() {
                         
                         return (
                           <TableRow key={item.id}>
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedItems.has(item.id)}
-                                onCheckedChange={(checked) =>
-                                  handleSelectItem(item.id, !!checked)
-                                }
-                              />
-                            </TableCell>
+                            {!isExpectedView && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedItems.has(item.id)}
+                                  onCheckedChange={(checked) =>
+                                    handleSelectItem(item.id, !!checked)
+                                  }
+                                />
+                              </TableCell>
+                            )}
                             <TableCell>
                               {item.item_type === "accommodation" ? (
                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
@@ -470,12 +583,7 @@ export default function AdminCommissions() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div>
-                                <p className="font-medium">{item.block_name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.invoiced_date && formatDate(item.invoiced_date)}
-                                </p>
-                              </div>
+                              <p className="font-medium">{item.block_name}</p>
                             </TableCell>
                             <TableCell>
                               <p>{customerName}</p>
@@ -486,32 +594,62 @@ export default function AdminCommissions() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                {item.invoiced_number}
-                              </div>
+                              <p className="text-sm">{getProjectDate(item)}</p>
                             </TableCell>
-                            <TableCell className="text-right">
-                              {formatCurrency(item.invoiced_amount)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div>
-                                <p className="font-medium">
-                                  {formatCurrency(item.commission_amount)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.commission_percentage}%
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={statusColors[item.commission_status] || ""}
-                                variant="secondary"
-                              >
-                                {statusLabels[item.commission_status] || item.commission_status}
-                              </Badge>
-                            </TableCell>
+                            {isExpectedView ? (
+                              <>
+                                <TableCell className="text-right">
+                                  <div>
+                                    <p className="font-medium">
+                                      {formatCurrency(item.amount_excl_vat || 0)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {item.vat_rate}% BTW
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div>
+                                    <p className="font-medium text-purple-700">
+                                      {formatCurrency(item.expected_commission || 0)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {item.commission_percentage}%
+                                    </p>
+                                  </div>
+                                </TableCell>
+                              </>
+                            ) : (
+                              <>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    {item.invoiced_number}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {formatCurrency(item.invoiced_amount || 0)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div>
+                                    <p className="font-medium">
+                                      {formatCurrency(item.commission_amount || 0)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {item.commission_percentage}%
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    className={statusColors[item.commission_status] || ""}
+                                    variant="secondary"
+                                  >
+                                    {statusLabels[item.commission_status] || item.commission_status}
+                                  </Badge>
+                                </TableCell>
+                              </>
+                            )}
                           </TableRow>
                         );
                       })}
@@ -520,6 +658,18 @@ export default function AdminCommissions() {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Total Summary Footer for Expected View */}
+            {isExpectedView && (
+              <div className="border-t-4 border-purple-500 bg-purple-100 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-purple-900">TOTAAL VERWACHTE COMMISSIE</span>
+                  <span className="text-2xl font-bold text-purple-900">
+                    {formatCurrency(data?.summary.totalCommission || 0)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <Card>

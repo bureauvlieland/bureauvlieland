@@ -71,10 +71,175 @@ serve(async (req) => {
     // Get partners for enrichment
     const { data: partners } = await adminClient
       .from("partners")
-      .select("id, name, email, kvk_number, address_street, address_postal, address_city");
+      .select("id, name, email, kvk_number, address_street, address_postal, address_city, commission_percentage, accommodation_commission_percentage");
     const partnersMap = new Map(partners?.map((p) => [p.id, p]) || []);
 
-    // ====== ACTIVITY ITEMS ======
+    // ====== EXPECTED STATUS: Items not yet invoiced by partner ======
+    if (statusFilter === "expected") {
+      let activityItems: unknown[] = [];
+      let accommodationItems: unknown[] = [];
+
+      // ACTIVITY ITEMS - Confirmed/accepted/executed but not invoiced
+      if (typeFilter === "all" || typeFilter === "activity") {
+        const { data: items, error: itemsError } = await adminClient
+          .from("program_request_items")
+          .select(`
+            *,
+            program_requests!inner (
+              id,
+              customer_name,
+              customer_company,
+              selected_dates,
+              terms_accepted_at
+            )
+          `)
+          .in("status", ["confirmed", "accepted", "executed"])
+          .is("invoiced_number", null)
+          .not("quoted_price", "is", null)
+          .order("created_at", { ascending: false });
+
+        if (itemsError) {
+          console.error("Error fetching expected activity items:", itemsError);
+        } else {
+          activityItems = (items || []).map((item) => {
+            const partner = partnersMap.get(item.provider_id);
+            const vatRate = 21;
+            const quotedPrice = parseFloat(item.quoted_price) || 0;
+            const amountExclVat = quotedPrice / (1 + vatRate / 100);
+            const commissionPercentage = item.commission_percentage ?? partner?.commission_percentage ?? 15;
+            const expectedCommission = amountExclVat * (commissionPercentage / 100);
+
+            return {
+              ...item,
+              item_type: "activity",
+              partner: partner || null,
+              amount_excl_vat: amountExclVat,
+              expected_commission: expectedCommission,
+              commission_percentage: commissionPercentage,
+              vat_rate: vatRate,
+            };
+          });
+        }
+      }
+
+      // ACCOMMODATION QUOTES - Selected but not invoiced
+      if (typeFilter === "all" || typeFilter === "accommodation") {
+        const { data: quotes, error: quotesError } = await adminClient
+          .from("accommodation_quotes")
+          .select(`
+            *,
+            accommodation_requests!inner (
+              id,
+              customer_name,
+              customer_company,
+              arrival_date,
+              departure_date
+            )
+          `)
+          .eq("status", "selected")
+          .is("invoiced_number", null)
+          .order("created_at", { ascending: false });
+
+        if (quotesError) {
+          console.error("Error fetching expected accommodation quotes:", quotesError);
+        } else {
+          accommodationItems = (quotes || []).map((quote) => {
+            const partner = partnersMap.get(quote.partner_id);
+            const vatRate = quote.vat_rate ?? 9;
+            const priceTotal = parseFloat(quote.price_total) || 0;
+            const amountExclVat = quote.price_includes_vat
+              ? priceTotal / (1 + vatRate / 100)
+              : priceTotal;
+            const commissionPercentage = quote.commission_percentage ?? partner?.accommodation_commission_percentage ?? 10;
+            const expectedCommission = amountExclVat * (commissionPercentage / 100);
+
+            return {
+              id: quote.id,
+              block_name: quote.accommodation_name,
+              quoted_price: priceTotal,
+              invoiced_amount: null,
+              invoiced_number: null,
+              invoiced_date: null,
+              commission_percentage: commissionPercentage,
+              commission_amount: null,
+              commission_status: "expected",
+              provider_id: quote.partner_id,
+              provider_name: partner?.name || "Onbekend",
+              item_type: "accommodation",
+              program_requests: null,
+              accommodation_requests: quote.accommodation_requests,
+              partner: partner || null,
+              amount_excl_vat: amountExclVat,
+              expected_commission: expectedCommission,
+              vat_rate: vatRate,
+              price_includes_vat: quote.price_includes_vat,
+              status: quote.status,
+            };
+          });
+        }
+      }
+
+      // Combine all items
+      const allItems = [...activityItems, ...accommodationItems] as any[];
+
+      // Group by partner for summary
+      const byPartnerMap: Record<string, { partner: any; items: any[]; totalCommission: number }> = {};
+      for (const item of allItems) {
+        const partnerId = item.provider_id || item.partner_id;
+        if (!byPartnerMap[partnerId]) {
+          byPartnerMap[partnerId] = {
+            partner: item.partner,
+            items: [],
+            totalCommission: 0,
+          };
+        }
+        byPartnerMap[partnerId].items.push(item);
+        byPartnerMap[partnerId].totalCommission += item.expected_commission || 0;
+      }
+
+      // Calculate totals
+      let totalExpectedCommission = 0;
+      for (const item of allItems) {
+        totalExpectedCommission += item.expected_commission || 0;
+      }
+
+      // Calculate items coming up in next 30 days
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      let upcomingCount = 0;
+      for (const item of allItems) {
+        let itemDate: Date | null = null;
+        if (item.item_type === "accommodation" && item.accommodation_requests?.arrival_date) {
+          itemDate = new Date(item.accommodation_requests.arrival_date);
+        } else if (item.program_requests?.selected_dates) {
+          const dates = item.program_requests.selected_dates;
+          if (Array.isArray(dates) && dates.length > 0) {
+            itemDate = new Date(dates[0]);
+          }
+        }
+        if (itemDate && itemDate >= now && itemDate <= thirtyDaysFromNow) {
+          upcomingCount++;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          items: allItems,
+          byPartner: Object.values(byPartnerMap),
+          summary: {
+            totalItems: allItems.length,
+            totalCommission: totalExpectedCommission,
+            status: statusFilter,
+            activityCount: activityItems.length,
+            accommodationCount: accommodationItems.length,
+            upcomingCount,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ====== EXISTING STATUS FILTERS: pending, invoiced, paid ======
     let activityItems: unknown[] = [];
     if (typeFilter === "all" || typeFilter === "activity") {
       const { data: items, error: itemsError } = await adminClient
