@@ -29,6 +29,7 @@ import {
   Activity,
   Euro,
   Blocks,
+  Mail,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -51,6 +52,7 @@ const menuItems = [
   { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
   { title: "Commissies", url: "/admin/commissies", icon: Euro },
   { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
+  { title: "Berichten", url: "/admin/berichten", icon: Mail },
   { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },
 ];
 

@@ -45,6 +45,7 @@ import AdminPartners from "./pages/admin/AdminPartners";
 import AdminPartnerDetail from "./pages/admin/AdminPartnerDetail";
 import AdminTodos from "./pages/admin/AdminTodos";
 import AdminLogs from "./pages/admin/AdminLogs";
+import AdminMessages from "./pages/admin/AdminMessages";
 import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminBuildingBlocks from "./pages/admin/AdminBuildingBlocks";
 import AdminInvoicing from "./pages/admin/AdminInvoicing";
@@ -108,6 +109,7 @@ const App = () => (
             <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
             <Route path="/admin/todos" element={<AdminTodos />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
+            <Route path="/admin/berichten" element={<AdminMessages />} />
             <Route path="/admin/commissies" element={<AdminCommissions />} />
             <Route path="/admin/facturatie" element={<AdminInvoicing />} />
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />

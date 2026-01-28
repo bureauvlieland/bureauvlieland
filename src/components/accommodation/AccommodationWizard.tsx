@@ -112,10 +112,20 @@ export const AccommodationWizard = ({ onSuccess }: AccommodationWizardProps) => 
           wants_activities: formData.wants_activities,
           status: "submitted",
         })
-        .select("customer_token")
+        .select("id, customer_token")
         .single();
 
       if (error) throw error;
+
+      // Send confirmation emails
+      try {
+        await supabase.functions.invoke("send-accommodation-request", {
+          body: { accommodationRequestId: data.id },
+        });
+      } catch (emailError) {
+        console.error("Failed to send confirmation emails:", emailError);
+        // Don't fail the whole submission if emails fail
+      }
 
       setIsComplete(true);
       toast.success("Uw aanvraag is succesvol verzonden!");

@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.select-accommodation-quote]
 verify_jwt = false
+
+[functions.send-accommodation-request]
+verify_jwt = false
+
+[functions.notify-accommodation-quote]
+verify_jwt = false
