@@ -63,7 +63,15 @@ interface Partner {
   auth_user_id: string | null;
   partner_token: string;
   created_at: string;
+  partner_type: string | null;
+  terms_pdf_path: string | null;
 }
+
+const PARTNER_TYPE_LABELS: Record<string, string> = {
+  activity_provider: "Activiteiten",
+  accommodation: "Logies",
+  both: "Beide",
+};
 
 const AdminPartnersContent = () => {
   const navigate = useNavigate();
@@ -255,6 +263,7 @@ const AdminPartnersContent = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Partner</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Adres</TableHead>
                 <TableHead>Commissie</TableHead>
@@ -266,7 +275,7 @@ const AdminPartnersContent = () => {
             <TableBody>
               {filteredPartners.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     Geen partners gevonden
                   </TableCell>
                 </TableRow>
@@ -285,6 +294,11 @@ const AdminPartnersContent = () => {
                           )}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {PARTNER_TYPE_LABELS[partner.partner_type || "activity_provider"] || "Activiteiten"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">

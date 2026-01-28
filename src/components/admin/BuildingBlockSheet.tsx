@@ -40,7 +40,7 @@ import {
   useDeleteBuildingBlock,
   useUploadBlockImage,
 } from "@/hooks/useBuildingBlocks";
-import { Loader2, Upload, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import {
   AlertDialog,
@@ -81,8 +81,10 @@ const formSchema = z.object({
   image_url: z.string().optional(),
   image_asset: z.string().optional(),
   is_published: z.boolean(),
+  is_active: z.boolean(),
   sort_order: z.coerce.number(),
   seasonal_notes: z.string().optional(),
+  tags: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -147,8 +149,10 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       image_url: "",
       image_asset: "",
       is_published: false,
+      is_active: true,
       sort_order: 0,
       seasonal_notes: "",
+      tags: "",
     },
   });
   
@@ -183,8 +187,10 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         image_url: block.image_url || "",
         image_asset: block.image_asset || "",
         is_published: block.is_published ?? false,
+        is_active: block.is_active ?? true,
         sort_order: block.sort_order ?? 0,
         seasonal_notes: block.seasonal_notes || "",
+        tags: block.tags?.join(", ") || "",
       });
     } else {
       form.reset({
@@ -215,22 +221,34 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         image_url: "",
         image_asset: "",
         is_published: false,
+        is_active: true,
         sort_order: 0,
         seasonal_notes: "",
+        tags: "",
       });
     }
   }, [block, form]);
   
   const onSubmit = async (data: FormData) => {
     try {
+      // Convert tags string to array
+      const tagsArray = data.tags
+        ? data.tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [];
+      
+      const submitData = {
+        ...data,
+        tags: tagsArray,
+      };
+      
       if (isEditing) {
-        await updateBlock.mutateAsync({ id: block.id, updates: data });
+        await updateBlock.mutateAsync({ id: block.id, updates: submitData });
         toast({
           title: "Bouwsteen bijgewerkt",
           description: `${data.name} is succesvol opgeslagen.`,
         });
       } else {
-        await createBlock.mutateAsync(data as any);
+        await createBlock.mutateAsync(submitData as any);
         toast({
           title: "Bouwsteen aangemaakt",
           description: `${data.name} is succesvol toegevoegd.`,
@@ -543,6 +561,23 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                         <FormControl>
                           <Input {...field} placeholder="Alleen april-september" />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="strand, water, groep" />
+                        </FormControl>
+                        <FormDescription>
+                          Komma-gescheiden tags voor filtering
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -885,22 +920,40 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
               
               <Separator />
               
-              <div className="flex items-center justify-between">
-                <FormField
-                  control={form.control}
-                  name="is_published"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormLabel className="!mt-0">Gepubliceerd</FormLabel>
-                    </FormItem>
-                  )}
-                />
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <FormField
+                    control={form.control}
+                    name="is_published"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Gepubliceerd</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Actief</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 
                 <FormField
                   control={form.control}
