@@ -16,10 +16,20 @@ import {
   Calendar,
   Building2,
   FileText,
+  BedDouble,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
+import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+
+interface AccommodationQuoteWithInvoice extends PartnerAccommodationQuote {
+  invoiced_amount: number | null;
+  invoiced_number: string | null;
+  invoiced_date: string | null;
+  commission_percentage: number | null;
+  commission_amount: number | null;
+  commission_status: string | null;
+}
 
 const PartnerFinanceContent = () => {
   const navigate = useNavigate();
@@ -127,21 +137,47 @@ const PartnerFinanceContent = () => {
     );
   }
 
-  // Calculate financial metrics
+  // Calculate financial metrics for activities
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
   const toBeInvoicedItems = data.items.filter(
     (i) => i.status === "executed" && !i.invoiced_number && i.program_requests.terms_accepted_at !== null
   );
   
-  const totalInvoiced = invoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0);
-  const totalToBeInvoiced = toBeInvoicedItems.reduce((sum, i) => sum + (i.quoted_price || 0), 0);
-  const totalCommission = invoicedItems.reduce((sum, i) => sum + (i.commission_amount || 0), 0);
-  const pendingCommission = invoicedItems
-    .filter((i) => i.commission_status === "pending")
-    .reduce((sum, i) => sum + (i.commission_amount || 0), 0);
-  const paidCommission = invoicedItems
-    .filter((i) => i.commission_status === "paid")
-    .reduce((sum, i) => sum + (i.commission_amount || 0), 0);
+  // Calculate financial metrics for accommodations
+  const accommodationQuotes = (data.accommodationQuotes || []) as AccommodationQuoteWithInvoice[];
+  const invoicedAccommodations = accommodationQuotes.filter((q) => q.invoiced_number !== null);
+  const toBeInvoicedAccommodations = accommodationQuotes.filter(
+    (q) => q.status === "selected" && !q.invoiced_number
+  );
+
+  // Combined totals
+  const totalInvoiced = 
+    invoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0) +
+    invoicedAccommodations.reduce((sum, q) => sum + (q.invoiced_amount || 0), 0);
+  
+  const totalToBeInvoiced = 
+    toBeInvoicedItems.reduce((sum, i) => sum + (i.quoted_price || 0), 0) +
+    toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
+  
+  const totalCommission = 
+    invoicedItems.reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
+    invoicedAccommodations.reduce((sum, q) => sum + (q.commission_amount || 0), 0);
+  
+  const pendingCommission = 
+    invoicedItems.filter((i) => i.commission_status === "pending").reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
+    invoicedAccommodations.filter((q) => q.commission_status === "pending").reduce((sum, q) => sum + (q.commission_amount || 0), 0);
+  
+  const paidCommission = 
+    invoicedItems.filter((i) => i.commission_status === "paid").reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
+    invoicedAccommodations.filter((q) => q.commission_status === "paid").reduce((sum, q) => sum + (q.commission_amount || 0), 0);
+
+  const toBeInvoicedCount = toBeInvoicedItems.length + toBeInvoicedAccommodations.length;
+  const invoicedCount = invoicedItems.length + invoicedAccommodations.length;
+
+  // Determine commission percentage display
+  const commissionPercentage = data.partner.accommodation_commission_percentage 
+    ? `${data.partner.commission_percentage}% / ${data.partner.accommodation_commission_percentage}%`
+    : `${data.partner.commission_percentage}%`;
 
   return (
     <div className="p-6">
@@ -172,7 +208,12 @@ const PartnerFinanceContent = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Nog te factureren</p>
                 <p className="text-2xl font-bold">€{totalToBeInvoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
-                <p className="text-xs text-muted-foreground">{toBeInvoicedItems.length} {toBeInvoicedItems.length === 1 ? "activiteit" : "activiteiten"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {toBeInvoicedItems.length > 0 && `${toBeInvoicedItems.length} activiteit${toBeInvoicedItems.length !== 1 ? "en" : ""}`}
+                  {toBeInvoicedItems.length > 0 && toBeInvoicedAccommodations.length > 0 && " • "}
+                  {toBeInvoicedAccommodations.length > 0 && `${toBeInvoicedAccommodations.length} logies`}
+                  {toBeInvoicedCount === 0 && "0 items"}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -185,7 +226,7 @@ const PartnerFinanceContent = () => {
                 <Receipt className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Commissie ({data.partner.commission_percentage}%)</p>
+                <p className="text-sm text-muted-foreground">Commissie ({commissionPercentage})</p>
                 <p className="text-2xl font-bold">€{totalCommission.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
                 <p className="text-xs text-muted-foreground">
                   €{paidCommission.toFixed(2)} betaald • €{pendingCommission.toFixed(2)} open
@@ -197,42 +238,47 @@ const PartnerFinanceContent = () => {
       </div>
 
       {/* Tabs for invoice status */}
-      <Tabs defaultValue="invoiced" className="mt-6">
+      <Tabs defaultValue="to-invoice" className="mt-6">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="to-invoice" className="flex-1 sm:flex-none">
             Nog te factureren
-            {toBeInvoicedItems.length > 0 && (
-              <Badge variant="secondary" className="ml-2">{toBeInvoicedItems.length}</Badge>
+            {toBeInvoicedCount > 0 && (
+              <Badge variant="secondary" className="ml-2">{toBeInvoicedCount}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="invoiced" className="flex-1 sm:flex-none">
             Gefactureerd
-            {invoicedItems.length > 0 && (
-              <Badge variant="secondary" className="ml-2">{invoicedItems.length}</Badge>
+            {invoicedCount > 0 && (
+              <Badge variant="secondary" className="ml-2">{invoicedCount}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="to-invoice" className="mt-6">
-          {toBeInvoicedItems.length === 0 ? (
+          {toBeInvoicedCount === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
                 <p className="text-lg font-medium">Alles gefactureerd!</p>
-                <p className="text-muted-foreground">Er zijn geen activiteiten die nog gefactureerd moeten worden.</p>
+                <p className="text-muted-foreground">Er zijn geen items die nog gefactureerd moeten worden.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
+              {/* Activity items to invoice */}
               {toBeInvoicedItems.map((item) => (
                 <InvoiceItemCard key={item.id} item={item} variant="to-invoice" />
+              ))}
+              {/* Accommodation items to invoice */}
+              {toBeInvoicedAccommodations.map((quote) => (
+                <AccommodationInvoiceCard key={quote.id} quote={quote} variant="to-invoice" />
               ))}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="invoiced" className="mt-6">
-          {invoicedItems.length === 0 ? (
+          {invoicedCount === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -242,8 +288,13 @@ const PartnerFinanceContent = () => {
             </Card>
           ) : (
             <div className="space-y-4">
+              {/* Invoiced activity items */}
               {invoicedItems.map((item) => (
                 <InvoiceItemCard key={item.id} item={item} variant="invoiced" />
+              ))}
+              {/* Invoiced accommodation items */}
+              {invoicedAccommodations.map((quote) => (
+                <AccommodationInvoiceCard key={quote.id} quote={quote} variant="invoiced" />
               ))}
             </div>
           )}
@@ -270,6 +321,7 @@ const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium">{item.block_name}</h3>
+              <Badge variant="outline" className="text-xs">Activiteit</Badge>
               {variant === "invoiced" && item.commission_status && (
                 <Badge variant={item.commission_status === "paid" ? "default" : "outline"} className="text-xs">
                   {item.commission_status === "pending" && "Commissie open"}
@@ -308,6 +360,72 @@ const InvoiceItemCard = ({ item, variant }: InvoiceItemCardProps) => {
                 {item.commission_amount && item.commission_amount > 0 && (
                   <p className="text-xs text-muted-foreground">
                     Commissie: €{item.commission_amount.toFixed(2)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+interface AccommodationInvoiceCardProps {
+  quote: AccommodationQuoteWithInvoice;
+  variant: "to-invoice" | "invoiced";
+}
+
+const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardProps) => {
+  const request = quote.accommodation_requests;
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-medium">{quote.accommodation_name}</h3>
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <BedDouble className="h-3 w-3" />
+                Logies
+              </Badge>
+              {variant === "invoiced" && quote.commission_status && (
+                <Badge variant={quote.commission_status === "paid" ? "default" : "outline"} className="text-xs">
+                  {quote.commission_status === "pending" && "Commissie open"}
+                  {quote.commission_status === "invoiced" && "Commissie gefactureerd"}
+                  {quote.commission_status === "paid" && "Commissie betaald"}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Building2 className="h-3 w-3" />
+                {request.customer_company || request.customer_name}
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {format(parseISO(request.arrival_date), "d MMM", { locale: nl })} - {format(parseISO(request.departure_date), "d MMM yyyy", { locale: nl })}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {variant === "to-invoice" ? (
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Offertebedrag</p>
+                <p className="font-semibold">€{quote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+              </div>
+            ) : (
+              <div className="text-right">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="h-3 w-3" />
+                  <span>{quote.invoiced_number}</span>
+                </div>
+                <p className="font-semibold">€{quote.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                {quote.commission_amount && quote.commission_amount > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Commissie: €{quote.commission_amount.toFixed(2)}
                   </p>
                 )}
               </div>

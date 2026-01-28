@@ -74,6 +74,7 @@ const PartnerAccommodationContent = () => {
   const [error, setError] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
+  const [partnerName, setPartnerName] = useState<string>("");
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
 
@@ -104,7 +105,7 @@ const PartnerAccommodationContent = () => {
       // Get partner ID and token from auth
       const { data: partner } = await supabase
         .from("partners")
-        .select("id, partner_token")
+        .select("id, partner_token, name")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .maybeSingle();
@@ -117,15 +118,17 @@ const PartnerAccommodationContent = () => {
 
       currentPartnerId = partner.id;
       setPartnerToken(partner.partner_token);
+      setPartnerName(partner.name);
     } else {
-      // Admin impersonating - fetch the partner token
+      // Admin impersonating - fetch the partner token and name
       const { data: impersonatedPartner } = await supabase
         .from("partners")
-        .select("partner_token")
+        .select("partner_token, name")
         .eq("id", currentPartnerId)
         .maybeSingle();
       if (impersonatedPartner) {
         setPartnerToken(impersonatedPartner.partner_token);
+        setPartnerName(impersonatedPartner.name);
       }
     }
 
@@ -427,6 +430,7 @@ const PartnerAccommodationContent = () => {
         request={selectedRequest}
         existingQuote={selectedRequest?.quote ?? null}
         partnerToken={partnerToken || ""}
+        partnerName={partnerName}
         onSubmit={handleQuoteSubmit}
         onRefresh={fetchData}
       />

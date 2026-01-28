@@ -91,6 +91,7 @@ interface PartnerAccommodationQuoteSheetProps {
   request: { quote: AccommodationQuote | null } & AccommodationRequest | null;
   existingQuote: AccommodationQuote | null;
   partnerToken: string;
+  partnerName?: string;
   onSubmit: (data: {
     accommodationName: string;
     description: string;
@@ -126,6 +127,7 @@ export const PartnerAccommodationQuoteSheet = ({
   request,
   existingQuote,
   partnerToken,
+  partnerName = "",
   onSubmit,
   onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
@@ -160,8 +162,8 @@ export const PartnerAccommodationQuoteSheet = ({
         : []);
       setQuoteExternalUrl(existingQuote.quote_external_url || "");
     } else if (isOpen) {
-      // Default values for new quote
-      setAccommodationName("");
+      // Default values for new quote - use partner name as default accommodation name
+      setAccommodationName(partnerName);
       setDescription("");
       setPriceTotal("");
       setPriceIncludesVat(true);
@@ -173,7 +175,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setRoomConfiguration([]);
       setQuoteExternalUrl("");
     }
-  }, [isOpen, existingQuote]);
+  }, [isOpen, existingQuote, partnerName]);
 
   if (!request) return null;
 
