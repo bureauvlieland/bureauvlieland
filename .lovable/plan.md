@@ -1,167 +1,173 @@
 
 
-# Plan: Admin Omgeving Bijwerken voor Logies Functionaliteiten
+# Plan: Terminologie-verbeteringen en Partner Portal Uitbreidingen
 
-## Samenvatting
+## Analyse Bevindingen
 
-De admin-omgeving heeft de basis al (navigatie en pagina's), maar mist integratie met de nieuwe functionaliteiten:
-- Logies statistieken op het dashboard
-- Quote bijlagen/externe links weergave
-- Koppeling tussen logies en programma-aanvragen
+### 1. Terminologie-inconsistenties
+
+**Status Labels (Partner vs Klant)**
+
+| Status | Partner Portal | Klant Portal | Voorstel |
+|--------|---------------|--------------|----------|
+| pending | "Nieuw" | "Aangevraagd" | Beide correct voor eigen perspectief |
+| confirmed | "Bevestigd" | "Bevestigd" | Consistent |
+| accepted | "Klantakkoord" | - | OK |
+| executed | "Uitgevoerd" | - | OK |
+| alternative | "Wacht op klant" | "Alternatief" | Partner: "Alternatief voorgesteld" |
+| invoiced | "Gefactureerd" | - | OK |
+
+**Probleem:** De status `alternative` wordt in de Partner Portal weergegeven als "Wacht op klant", maar vanuit partnerperspectief is "Alternatief voorgesteld" duidelijker.
+
+**Dashboard Tab Namen (Partner Portal)**
+
+Huidige tabs: Nieuw / Wacht op klant / Akkoord / Afgerond
+
+Voorstel voor consistentie:
+- "Nieuw" (pending) - OK
+- "Voorstel verstuurd" (confirmed + alternative) - duidelijker dan "Wacht op klant"
+- "Akkoord" (accepted + executed) - OK  
+- "Afgerond" (invoiced + cancelled + unavailable) - OK
 
 ---
 
-## 1. Dashboard Uitbreiden met Logies Statistieken
+### 2. Bug in Partner Facturatie
 
-### Bestand: `src/pages/admin/AdminDashboard.tsx`
+**Locatie:** `src/pages/PartnerFinance.tsx` regel 132
 
-Toevoegen:
-- Statistiek-kaart voor logies aanvragen (nieuw, in behandeling, offertes verstuurd)
-- Recente logies aanvragen sectie naast recente programma-aanvragen
+```typescript
+// HUIDIG (FOUT):
+const toBeInvoicedItems = data.items.filter(
+  (i) => i.status === "confirmed" && !i.invoiced_number
+);
 
-```text
-Nieuwe statistieken:
-- Actieve logies aanvragen
-- Te verwerken logies (status: submitted)
-- Offertes verstuurd
+// CORRECT:
+const toBeInvoicedItems = data.items.filter(
+  (i) => i.status === "executed" && 
+         !i.invoiced_number && 
+         i.program_requests.terms_accepted_at !== null
+);
 ```
 
----
-
-## 2. Quote Details Uitbreiden in Admin
-
-### Bestand: `src/pages/admin/AdminAccommodationDetail.tsx`
-
-In de quotes-tabel toevoegen:
-- Kolom/indicatie voor externe offerte-link (`quote_external_url`)
-- Kolom/indicatie voor bijlage (`quote_attachment_path`)
-- Klikbare link naar de offerte-PDF of externe URL
-
-Wijzigingen in de quotes-tabel:
-```text
-| Partner | Accommodatie | Prijs | P.p.p.n. | Bijlage | Geldig tot | Status | Actie |
-                                            ^^^^^^^
-                                            NIEUW: link naar offerte
-```
+**Impact:** Partners zien items als "nog te factureren" voordat de klant akkoord is gegaan.
 
 ---
 
-## 3. Koppeling Logies - Programma Weergeven
+### 3. Partner Type Labels
 
-### Bestand: `src/pages/admin/AdminAccommodationDetail.tsx`
+**Huidige labels:**
+- `activity_provider` → "Activiteiten"
+- `accommodation` → "Logies"  
+- `both` → "Beide"
 
-Toevoegen:
-- Sectie die toont of er een gekoppeld programma is
-- Link naar `/admin/aanvragen/:id` als er een gekoppeld programma bestaat
-- Of: CTA om programma aan te maken als er geen koppeling is
-
-### Bestand: `src/pages/admin/AdminRequestDetail.tsx` (indien nodig)
-
-Toevoegen:
-- Sectie die toont of er gekoppelde logies zijn
-- Link naar `/admin/logies/:id` voor de logies-aanvraag
+**Voorstel:** Consistenter en duidelijker:
+- `activity_provider` → "Activiteiten"
+- `accommodation` → "Logies"
+- `both` → "Activiteiten & Logies"
 
 ---
 
-## 4. Klantpagina Link vanuit Admin
+### 4. Ontbrekende Partner Portal Functies
 
-### Beide detailpagina's
+**A. Dashboard Uitbreiding**
+- YTD omzet (Year-to-Date revenue)
+- Openstaande commissies prominenter
+- Snelle navigatie naar actie-items
 
-Toevoegen:
-- "Bekijk als klant" knop die de uniforme klantpagina opent (`/mijn-programma/:token`)
-- Zorgt voor snelle verificatie van de klantervaring
+**B. Instellingen Pagina**
+Momenteel beperkt tot basisgegevens. Toevoegen:
+- Bankgegevens voor commissie-uitbetalingen
+- Contactpersoon voor boekingen
+- Openingstijden/beschikbaarheid
+- Factuurgegevens (standaard teksten)
+
+**C. Notificatie-overzicht**
+Partners zien nu niet wanneer klanten hun voorstellen accepteren. Toevoegen:
+- "Klant heeft akkoord gegeven" badge
+- Tijdlijn van belangrijke events per item
+
+---
+
+## Implementatie Stappen
+
+### Fase 1: Terminologie Fixes (Prioriteit Hoog)
+
+1. **Fix status label voor 'alternative'**
+   - Bestand: `src/components/partner-portal/PartnerItemSheet.tsx`
+   - Wijzig: `alternative: { label: "Wacht op klant" }` naar `alternative: { label: "Alternatief voorgesteld" }`
+
+2. **Fix Partner Finance filter bug**
+   - Bestand: `src/pages/PartnerFinance.tsx`
+   - Corrigeer filter voor "Nog te factureren" items
+
+3. **Update Partner Dashboard tabs**
+   - Bestand: `src/pages/PartnerDashboard.tsx`
+   - "Wacht op klant" → "Voorstel verstuurd"
+
+4. **Partner type label update**
+   - Bestand: `src/pages/admin/AdminPartners.tsx`
+   - Update `PARTNER_TYPE_LABELS` object
+
+### Fase 2: Partner Portal Verbeteringen (Prioriteit Medium)
+
+5. **Uitgebreidere Instellingen pagina**
+   - Bestand: `src/components/partner-portal/PartnerSettingsForm.tsx`
+   - Toevoegen: Bankgegevens sectie
+   - Toevoegen: Contactpersoon velden
+   - Toevoegen: Beschikbaarheid notities
+
+6. **Dashboard Header verbetering**
+   - Bestand: `src/components/partner-portal/PartnerDashboardHeader.tsx`
+   - Toevoegen: YTD omzet kaart
+   - Toevoegen: Commissie-status indicator
+
+7. **Item Sheet klant-acceptatie indicator**
+   - Bestand: `src/components/partner-portal/PartnerItemSheet.tsx`
+   - Badge tonen wanneer `customer_accepted_at` is gevuld
+
+### Fase 3: Admin Verbeteringen (Prioriteit Laag)
+
+8. **Better cross-linking in Admin**
+   - Links tussen gerelateerde entiteiten versterken
+   - Partner detail → Gerelateerde aanvragen
+   - Aanvraag detail → Partner overzicht
 
 ---
 
 ## Technische Details
 
-### Aan te passen bestanden
+### Database Impact
+Geen schema wijzigingen nodig - alle velden bestaan al.
 
-| Bestand | Wijziging |
-|---------|-----------|
-| `src/pages/admin/AdminDashboard.tsx` | Logies statistieken + recente logies aanvragen |
-| `src/pages/admin/AdminAccommodationDetail.tsx` | Quote bijlagen/links tonen + gekoppeld programma |
-| `src/pages/admin/AdminRequestDetail.tsx` | Gekoppelde logies tonen |
+### Bestanden die worden aangepast
 
-### Database queries uitbreiden
-
-**AdminDashboard.tsx**:
-```typescript
-// Nieuwe query voor logies statistieken
-const { data: accommodationRequests } = await supabase
-  .from("accommodation_requests")
-  .select("id, status");
+```text
+src/components/partner-portal/PartnerItemSheet.tsx
+src/pages/PartnerFinance.tsx
+src/pages/PartnerDashboard.tsx
+src/pages/admin/AdminPartners.tsx
+src/components/partner-portal/PartnerSettingsForm.tsx
+src/components/partner-portal/PartnerDashboardHeader.tsx
 ```
 
-**AdminAccommodationDetail.tsx**:
-```typescript
-// Gekoppeld programma ophalen
-const { data: linkedProgram } = await supabase
-  .from("program_requests")
-  .select("id, customer_token, customer_name")
-  .eq("linked_accommodation_id", id)
-  .maybeSingle();
-```
+### Nieuwe database velden (optioneel voor Fase 2)
+Partners tabel uitbreiden met:
+- `bank_iban` (text, nullable)
+- `bank_account_name` (text, nullable)
+- `booking_contact_name` (text, nullable)
+- `booking_contact_phone` (text, nullable)
+- `availability_notes` (text, nullable)
 
 ---
 
-## UI Voorbeelden
+## Samenvatting Prioriteiten
 
-### Dashboard met logies kaarten
-
-```text
-┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
-│ Actieve        │ │ Te bevestigen  │ │ Bevestigde     │ │ Actieve        │
-│ aanvragen      │ │ items          │ │ items          │ │ partners       │
-│     12         │ │     5          │ │     28         │ │     8          │
-└────────────────┘ └────────────────┘ └────────────────┘ └────────────────┘
-
-┌────────────────┐ ┌────────────────┐ ┌────────────────┐   <-- NIEUW
-│ Logies         │ │ Logies te      │ │ Offertes       │
-│ aanvragen      │ │ verwerken      │ │ verstuurd      │
-│     6          │ │     3          │ │     2          │
-└────────────────┘ └────────────────┘ └────────────────┘
-```
-
-### Quote met bijlage indicator
-
-```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Partner        │ Accommodatie    │ Prijs   │ Offerte     │ Status       │
-├──────────────────────────────────────────────────────────────────────────┤
-│ Hotel Seeduyn  │ Standaardkamers │ €4.500  │ 📎 Bekijken │ ✓ Ontvangen │
-│ Strandhotel    │ Deluxe kamers   │ €5.200  │ 🔗 Link     │ ✓ Ontvangen │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-### Gekoppeld programma sectie
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│  📎 Gekoppeld programma                                 │
-│                                                          │
-│  [Aanvraag bekijken] → /admin/aanvragen/uuid            │
-│  [Bekijk als klant] → /mijn-programma/token             │
-│                                                          │
-│  Status: 3 activiteiten, 2 bevestigd                    │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
-## Implementatievolgorde
-
-1. **Dashboard** - Logies statistieken toevoegen
-2. **AdminAccommodationDetail** - Quote bijlagen + gekoppeld programma
-3. **AdminRequestDetail** - Gekoppelde logies weergeven (reverse lookup)
-4. **"Bekijk als klant"** - Link naar uniforme klantpagina
-
----
-
-## Voordelen
-
-1. **Volledig overzicht**: Admins zien alle logies-activiteit op het dashboard
-2. **Efficiënte workflow**: Direct toegang tot offerte-documenten
-3. **Gekoppelde context**: Duidelijke relatie tussen logies en programma
-4. **Klantperspectief**: Snel kunnen checken wat de klant ziet
+| Prioriteit | Item | Reden |
+|------------|------|-------|
+| Hoog | Fix Finance filter bug | Functioneel probleem |
+| Hoog | Fix 'alternative' label | UX verwarring |
+| Medium | Tab naam update | Consistentie |
+| Medium | Instellingen uitbreiding | Partner gemak |
+| Medium | Dashboard YTD omzet | Inzicht |
+| Laag | Cross-linking admin | Nice-to-have |
 
