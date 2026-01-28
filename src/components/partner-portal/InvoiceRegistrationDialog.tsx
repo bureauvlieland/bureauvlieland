@@ -12,8 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Info, Receipt, Building2, Mail, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Info, Receipt, Building2, Mail, FileText, Calendar, Users, Clock, Euro } from "lucide-react";
 import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
 
 interface BillingDetails {
@@ -124,6 +127,55 @@ export const InvoiceRegistrationDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Item Details Section - What's being invoiced */}
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-primary uppercase tracking-wide flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Te factureren
+            </h4>
+            <div className="space-y-2">
+              <p className="font-semibold text-lg">{item.block_name}</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                {item.proposed_date && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>{format(new Date(item.proposed_date), "d MMMM yyyy", { locale: nl })}</span>
+                  </div>
+                )}
+                {item.proposed_time && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>{item.proposed_time}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span>{item.program_requests.number_of_people} personen</span>
+                </div>
+                {item.duration && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>{item.duration}</span>
+                  </div>
+                )}
+              </div>
+              {item.quoted_price && (
+                <div className="pt-2 border-t border-primary/10 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Geoffreerde prijs:</span>
+                  <Badge variant="secondary" className="text-base font-semibold">
+                    <Euro className="h-3 w-3 mr-1" />
+                    {item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                  </Badge>
+                </div>
+              )}
+              {item.quoted_notes && (
+                <p className="text-sm text-muted-foreground italic">"{item.quoted_notes}"</p>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Billing Details Section */}
           {billingDetails?.billing_company_name && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
@@ -187,6 +239,8 @@ export const InvoiceRegistrationDialog = ({
               </div>
             </div>
           )}
+
+          <Separator />
 
           {/* Invoice Form Section */}
           <div className="space-y-2">
