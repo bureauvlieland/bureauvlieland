@@ -549,7 +549,13 @@ const AdminProjectsContent = () => {
                           </Button>
                         ) : null}
                         <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/mijn-programma/${project.customer_token}`} target="_blank">
+                          <Link 
+                            to={project.type === "accommodation_only" 
+                              ? `/mijn-logies/${project.customer_token}` 
+                              : `/mijn-programma/${project.customer_token}`
+                            } 
+                            target="_blank"
+                          >
                             <ExternalLink className="h-4 w-4" />
                           </Link>
                         </Button>
