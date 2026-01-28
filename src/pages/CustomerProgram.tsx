@@ -43,6 +43,7 @@ const CustomerProgram = () => {
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
+    acceptItem,
     statusSummary,
     // Accommodation
     accommodation,
@@ -275,6 +276,7 @@ const CustomerProgram = () => {
     hasChanges,
     onUpdateItem: updateItem,
     onRemoveItem: removeItem,
+    onAcceptItem: acceptItem,
     onOpenBilling: () => setShowBillingDialog(true),
     onOpenEdit: () => setShowEditDialog(true),
     onOpenCancel: () => setShowCancelDialog(true),
