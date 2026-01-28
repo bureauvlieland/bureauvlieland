@@ -10,6 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -40,7 +47,15 @@ interface Partner {
   auth_user_id: string | null;
   partner_token: string;
   created_at: string;
+  partner_type: string | null;
+  accommodation_commission_percentage: number | null;
 }
+
+const PARTNER_TYPE_OPTIONS = [
+  { value: "activity_provider", label: "Activiteiten partner" },
+  { value: "accommodation", label: "Logies partner" },
+  { value: "both", label: "Activiteiten én logies" },
+];
 
 const generatePartnerId = (name: string): string => {
   return name
@@ -67,6 +82,8 @@ const AdminPartnerDetail = () => {
     address_city: "",
     commission_percentage: 15,
     is_active: true,
+    partner_type: "activity_provider",
+    accommodation_commission_percentage: 10,
   });
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
@@ -106,6 +123,8 @@ const AdminPartnerDetail = () => {
         address_city: data.address_city || "",
         commission_percentage: data.commission_percentage,
         is_active: data.is_active,
+        partner_type: data.partner_type || "activity_provider",
+        accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
       });
     } catch (error) {
       console.error("Error fetching partner:", error);
@@ -167,6 +186,11 @@ const AdminPartnerDetail = () => {
           address_city: formData.address_city || null,
           commission_percentage: formData.commission_percentage,
           is_active: formData.is_active,
+          partner_type: formData.partner_type,
+          accommodation_commission_percentage:
+            formData.partner_type === "accommodation" || formData.partner_type === "both"
+              ? formData.accommodation_commission_percentage
+              : null,
         });
 
         if (error) throw error;
@@ -193,6 +217,11 @@ const AdminPartnerDetail = () => {
             address_city: formData.address_city || null,
             commission_percentage: formData.commission_percentage,
             is_active: formData.is_active,
+            partner_type: formData.partner_type,
+            accommodation_commission_percentage:
+              formData.partner_type === "accommodation" || formData.partner_type === "both"
+                ? formData.accommodation_commission_percentage
+                : null,
           })
           .eq("id", id);
 
@@ -441,8 +470,34 @@ const AdminPartnerDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Partner type */}
                   <div className="space-y-2">
-                    <Label htmlFor="commission">Commissie percentage</Label>
+                    <Label htmlFor="partner_type">Partner type</Label>
+                    <Select
+                      value={formData.partner_type}
+                      onValueChange={(value) => handleChange("partner_type", value)}
+                    >
+                      <SelectTrigger id="partner_type">
+                        <SelectValue placeholder="Selecteer type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PARTNER_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      Bepaalt welke portaalfuncties zichtbaar zijn voor deze partner
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  {/* Activity commission */}
+                  <div className="space-y-2">
+                    <Label htmlFor="commission">Commissie activiteiten</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="commission"
@@ -459,9 +514,34 @@ const AdminPartnerDetail = () => {
                       <span className="text-slate-500">%</span>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Dit percentage wordt in rekening gebracht over gefactureerde bedragen
+                      Dit percentage wordt in rekening gebracht over gefactureerde activiteiten
                     </p>
                   </div>
+
+                  {/* Accommodation commission - conditional */}
+                  {(formData.partner_type === "accommodation" || formData.partner_type === "both") && (
+                    <div className="space-y-2">
+                      <Label htmlFor="accommodation_commission">Commissie logies</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="accommodation_commission"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                          value={formData.accommodation_commission_percentage}
+                          onChange={(e) =>
+                            handleChange("accommodation_commission_percentage", parseFloat(e.target.value) || 0)
+                          }
+                          className="w-24"
+                        />
+                        <span className="text-slate-500">%</span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Dit percentage over geaccepteerde logiesboekingen
+                      </p>
+                    </div>
+                  )}
 
                   <Separator />
 
