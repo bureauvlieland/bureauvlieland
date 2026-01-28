@@ -17,6 +17,7 @@ export type Database = {
       accommodation_quotes: {
         Row: {
           accommodation_name: string
+          actual_invoiced_excl_vat: number | null
           commission_amount: number | null
           commission_invoiced_at: string | null
           commission_percentage: number | null
@@ -24,6 +25,7 @@ export type Database = {
           conditions: string | null
           created_at: string
           description: string | null
+          deviation_reason: string | null
           id: string
           includes: Json | null
           invoiced_amount: number | null
@@ -35,6 +37,10 @@ export type Database = {
           price_includes_vat: boolean | null
           price_per_person_per_night: number | null
           price_total: number
+          proforma_amount_excl_vat: number | null
+          proforma_commission: number | null
+          proforma_deadline: string | null
+          proforma_sent_at: string | null
           quote_attachment_filename: string | null
           quote_attachment_path: string | null
           quote_external_url: string | null
@@ -49,6 +55,7 @@ export type Database = {
         }
         Insert: {
           accommodation_name: string
+          actual_invoiced_excl_vat?: number | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
@@ -56,6 +63,7 @@ export type Database = {
           conditions?: string | null
           created_at?: string
           description?: string | null
+          deviation_reason?: string | null
           id?: string
           includes?: Json | null
           invoiced_amount?: number | null
@@ -67,6 +75,10 @@ export type Database = {
           price_includes_vat?: boolean | null
           price_per_person_per_night?: number | null
           price_total: number
+          proforma_amount_excl_vat?: number | null
+          proforma_commission?: number | null
+          proforma_deadline?: string | null
+          proforma_sent_at?: string | null
           quote_attachment_filename?: string | null
           quote_attachment_path?: string | null
           quote_external_url?: string | null
@@ -81,6 +93,7 @@ export type Database = {
         }
         Update: {
           accommodation_name?: string
+          actual_invoiced_excl_vat?: number | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
@@ -88,6 +101,7 @@ export type Database = {
           conditions?: string | null
           created_at?: string
           description?: string | null
+          deviation_reason?: string | null
           id?: string
           includes?: Json | null
           invoiced_amount?: number | null
@@ -99,6 +113,10 @@ export type Database = {
           price_includes_vat?: boolean | null
           price_per_person_per_night?: number | null
           price_total?: number
+          proforma_amount_excl_vat?: number | null
+          proforma_commission?: number | null
+          proforma_deadline?: string | null
+          proforma_sent_at?: string | null
           quote_attachment_filename?: string | null
           quote_attachment_path?: string | null
           quote_external_url?: string | null
@@ -791,6 +809,7 @@ export type Database = {
       }
       program_request_items: {
         Row: {
+          actual_invoiced_excl_vat: number | null
           block_category: string
           block_id: string
           block_name: string
@@ -804,6 +823,7 @@ export type Database = {
           customer_accepted_at: string | null
           customer_notes: string | null
           day_index: number
+          deviation_reason: string | null
           duration: string | null
           executed_at: string | null
           id: string
@@ -813,6 +833,10 @@ export type Database = {
           invoiced_number: string | null
           preferred_time: string | null
           price_indication: string | null
+          proforma_amount_excl_vat: number | null
+          proforma_commission: number | null
+          proforma_deadline: string | null
+          proforma_sent_at: string | null
           provider_email: string | null
           provider_id: string
           provider_name: string
@@ -828,6 +852,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          actual_invoiced_excl_vat?: number | null
           block_category: string
           block_id: string
           block_name: string
@@ -841,6 +866,7 @@ export type Database = {
           customer_accepted_at?: string | null
           customer_notes?: string | null
           day_index?: number
+          deviation_reason?: string | null
           duration?: string | null
           executed_at?: string | null
           id?: string
@@ -850,6 +876,10 @@ export type Database = {
           invoiced_number?: string | null
           preferred_time?: string | null
           price_indication?: string | null
+          proforma_amount_excl_vat?: number | null
+          proforma_commission?: number | null
+          proforma_deadline?: string | null
+          proforma_sent_at?: string | null
           provider_email?: string | null
           provider_id: string
           provider_name: string
@@ -865,6 +895,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          actual_invoiced_excl_vat?: number | null
           block_category?: string
           block_id?: string
           block_name?: string
@@ -878,6 +909,7 @@ export type Database = {
           customer_accepted_at?: string | null
           customer_notes?: string | null
           day_index?: number
+          deviation_reason?: string | null
           duration?: string | null
           executed_at?: string | null
           id?: string
@@ -887,6 +919,10 @@ export type Database = {
           invoiced_number?: string | null
           preferred_time?: string | null
           price_indication?: string | null
+          proforma_amount_excl_vat?: number | null
+          proforma_commission?: number | null
+          proforma_deadline?: string | null
+          proforma_sent_at?: string | null
           provider_email?: string | null
           provider_id?: string
           provider_name?: string
