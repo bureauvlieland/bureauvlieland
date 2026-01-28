@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     }
 
     // Get all items assigned to this partner (activity items)
+    // Include billing details only when terms have been accepted (for invoicing)
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
       .select(`
@@ -56,7 +57,16 @@ Deno.serve(async (req) => {
           selected_dates,
           status,
           cancelled_at,
-          terms_accepted_at
+          terms_accepted_at,
+          billing_company_name,
+          billing_kvk_number,
+          billing_vat_number,
+          billing_address_street,
+          billing_address_postal,
+          billing_address_city,
+          billing_contact_name,
+          billing_contact_email,
+          billing_reference
         )
       `)
       .eq("provider_id", partner.id)

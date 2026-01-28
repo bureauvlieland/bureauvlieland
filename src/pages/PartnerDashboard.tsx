@@ -827,6 +827,17 @@ const PartnerDashboardContent = () => {
         onSubmit={handleInvoiceRegister}
         item={selectedItem}
         commissionPercentage={data.partner.commission_percentage}
+        billingDetails={selectedItem?.program_requests.terms_accepted_at ? {
+          billing_company_name: selectedItem.program_requests.billing_company_name,
+          billing_kvk_number: selectedItem.program_requests.billing_kvk_number,
+          billing_vat_number: selectedItem.program_requests.billing_vat_number,
+          billing_address_street: selectedItem.program_requests.billing_address_street,
+          billing_address_postal: selectedItem.program_requests.billing_address_postal,
+          billing_address_city: selectedItem.program_requests.billing_address_city,
+          billing_contact_name: selectedItem.program_requests.billing_contact_name,
+          billing_contact_email: selectedItem.program_requests.billing_contact_email,
+          billing_reference: selectedItem.program_requests.billing_reference,
+        } : null}
       />
 
       {/* Accommodation quote sheet */}
