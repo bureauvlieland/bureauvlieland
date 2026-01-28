@@ -35,16 +35,17 @@ function isRateLimited(ip: string): boolean {
 const BlockItemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  category: z.string(),
-  provider: z.string(),
-  providerId: z.string(),
-  providerEmail: z.string().email().optional().or(z.literal("")),
-  priceIndication: z.string(),
-  priceNote: z.string().optional(),
+  category: z.string().nullable().optional().transform(v => v ?? ""),
+  provider: z.string().nullable().optional().transform(v => v ?? "Bureau Vlieland"),
+  providerId: z.string().nullable().optional().transform(v => v ?? ""),
+  providerEmail: z.string().email().nullable().optional().or(z.literal("")),
+  priceIndication: z.string().nullable().optional().transform(v => v ?? "Op aanvraag"),
+  priceNote: z.string().nullable().optional(),
   blockType: z.enum(["bureau", "partner", "self_arranged"]),
-  externalUrl: z.string().optional(),
+  externalUrl: z.string().nullable().optional(),
   preferredTime: z.string().nullable().optional(),
-  itemNotes: z.string().max(500).optional().or(z.literal("")),
+  itemNotes: z.string().max(500).nullable().optional().or(z.literal("")),
+  dayIndex: z.number().optional(),
 });
 
 const ProgramRequestSchema = z.object({
