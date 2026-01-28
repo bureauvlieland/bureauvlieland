@@ -40,24 +40,37 @@ import {
   Hotel,
 } from "lucide-react";
 
+// Project types: program_only, accommodation_only, combined
+type ProjectType = "program_only" | "accommodation_only" | "combined";
+
 interface Project {
+  // Unified ID (uses program_id if available, otherwise accommodation_id)
   id: string;
-  reference_number: string | null;
+  type: ProjectType;
+  
+  // Program data (null for standalone accommodations)
+  program_id: string | null;
+  program_ref: string | null;
+  program_status: string | null;
+  
+  // Accommodation data (null for standalone programs)
+  accommodation_id: string | null;
+  accommodation_ref: string | null;
+  accommodation_status: string | null;
+  accommodation_arrival: string | null;
+  accommodation_departure: string | null;
+  
+  // Shared/merged fields
   customer_name: string;
   customer_email: string;
   customer_company: string | null;
   customer_token: string;
   number_of_people: number;
   selected_dates: string[];
-  status: string;
   terms_accepted_at: string | null;
   created_at: string;
-  updated_at: string;
-  accommodation_id: string | null;
-  accommodation_ref: string | null;
-  accommodation_status: string | null;
-  accommodation_arrival: string | null;
-  accommodation_departure: string | null;
+  
+  // Activity stats (only for projects with programs)
   item_count: number;
   items_pending: number;
   items_confirmed: number;
@@ -71,15 +84,22 @@ const ACCOMMODATION_STATUS_CONFIG: Record<string, { label: string; color: string
   cancelled: { label: "Geannuleerd", color: "bg-red-100 text-red-800" },
 };
 
+const PROJECT_TYPE_CONFIG: Record<ProjectType, { label: string; icon: React.ReactNode }> = {
+  program_only: { label: "Alleen activiteiten", icon: <Activity className="h-4 w-4" /> },
+  accommodation_only: { label: "Alleen logies", icon: <Hotel className="h-4 w-4" /> },
+  combined: { label: "Logies + Activiteiten", icon: <FolderKanban className="h-4 w-4" /> },
+};
+
 const AdminProjectsContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const { data: projects, isLoading } = useQuery({
-    queryKey: ["admin-projects"],
+    queryKey: ["admin-projects-unified"],
     queryFn: async () => {
-      // Fetch program requests with linked accommodation
-      const { data: requests, error: reqError } = await supabase
+      // 1. Fetch all program requests
+      const { data: programs, error: progError } = await supabase
         .from("program_requests")
         .select(`
           id,
@@ -93,31 +113,34 @@ const AdminProjectsContent = () => {
           status,
           terms_accepted_at,
           created_at,
-          updated_at,
           linked_accommodation_id
         `)
         .order("created_at", { ascending: false });
 
-      if (reqError) throw reqError;
+      if (progError) throw progError;
 
-      // Fetch accommodation requests
-      const accommodationIds = requests
-        ?.filter((r) => r.linked_accommodation_id)
-        .map((r) => r.linked_accommodation_id) || [];
+      // 2. Fetch all accommodation requests
+      const { data: accommodations, error: accError } = await supabase
+        .from("accommodation_requests")
+        .select(`
+          id,
+          reference_number,
+          customer_name,
+          customer_email,
+          customer_company,
+          customer_token,
+          number_of_guests,
+          arrival_date,
+          departure_date,
+          status,
+          created_at,
+          linked_program_id
+        `)
+        .order("created_at", { ascending: false });
 
-      let accommodationMap: Record<string, any> = {};
-      if (accommodationIds.length > 0) {
-        const { data: accommodations } = await supabase
-          .from("accommodation_requests")
-          .select("id, reference_number, status, arrival_date, departure_date")
-          .in("id", accommodationIds);
+      if (accError) throw accError;
 
-        accommodations?.forEach((acc) => {
-          accommodationMap[acc.id] = acc;
-        });
-      }
-
-      // Fetch item counts
+      // 3. Fetch item counts for program requests
       const { data: items } = await supabase
         .from("program_request_items")
         .select("request_id, status");
@@ -132,36 +155,94 @@ const AdminProjectsContent = () => {
         if (item.status === "confirmed") itemStats[item.request_id].confirmed++;
       });
 
-      // Map to projects
-      const mappedProjects: Project[] = (requests || []).map((req) => {
-        const acc = req.linked_accommodation_id ? accommodationMap[req.linked_accommodation_id] : null;
-        const stats = itemStats[req.id] || { total: 0, pending: 0, confirmed: 0 };
+      // 4. Create accommodation lookup map
+      const accommodationMap: Record<string, typeof accommodations[0]> = {};
+      accommodations?.forEach((acc) => {
+        accommodationMap[acc.id] = acc;
+      });
 
-        return {
-          id: req.id,
-          reference_number: req.reference_number,
-          customer_name: req.customer_name,
-          customer_email: req.customer_email,
-          customer_company: req.customer_company,
-          customer_token: req.customer_token,
-          number_of_people: req.number_of_people,
-          selected_dates: Array.isArray(req.selected_dates) ? req.selected_dates.map(String) : [],
-          status: req.status,
-          terms_accepted_at: req.terms_accepted_at,
-          created_at: req.created_at,
-          updated_at: req.updated_at,
-          accommodation_id: acc?.id || null,
-          accommodation_ref: acc?.reference_number || null,
-          accommodation_status: acc?.status || null,
-          accommodation_arrival: acc?.arrival_date || null,
-          accommodation_departure: acc?.departure_date || null,
+      // 5. Create program lookup map (to check which accommodations are linked)
+      const linkedAccommodationIds = new Set(
+        programs?.filter((p) => p.linked_accommodation_id).map((p) => p.linked_accommodation_id)
+      );
+
+      // 6. Build unified projects list
+      const projectList: Project[] = [];
+
+      // Add all program requests (with or without linked accommodation)
+      programs?.forEach((prog) => {
+        const linkedAcc = prog.linked_accommodation_id 
+          ? accommodationMap[prog.linked_accommodation_id] 
+          : null;
+        const stats = itemStats[prog.id] || { total: 0, pending: 0, confirmed: 0 };
+
+        projectList.push({
+          id: prog.id,
+          type: linkedAcc ? "combined" : "program_only",
+          
+          program_id: prog.id,
+          program_ref: prog.reference_number,
+          program_status: prog.status,
+          
+          accommodation_id: linkedAcc?.id || null,
+          accommodation_ref: linkedAcc?.reference_number || null,
+          accommodation_status: linkedAcc?.status || null,
+          accommodation_arrival: linkedAcc?.arrival_date || null,
+          accommodation_departure: linkedAcc?.departure_date || null,
+          
+          customer_name: prog.customer_name,
+          customer_email: prog.customer_email,
+          customer_company: prog.customer_company,
+          customer_token: prog.customer_token,
+          number_of_people: prog.number_of_people,
+          selected_dates: Array.isArray(prog.selected_dates) ? prog.selected_dates.map(String) : [],
+          terms_accepted_at: prog.terms_accepted_at,
+          created_at: prog.created_at,
+          
           item_count: stats.total,
           items_pending: stats.pending,
           items_confirmed: stats.confirmed,
-        };
+        });
       });
 
-      return mappedProjects;
+      // Add standalone accommodation requests (not linked to any program)
+      accommodations?.forEach((acc) => {
+        // Skip if this accommodation is already linked to a program
+        if (linkedAccommodationIds.has(acc.id)) return;
+
+        projectList.push({
+          id: acc.id,
+          type: "accommodation_only",
+          
+          program_id: null,
+          program_ref: null,
+          program_status: null,
+          
+          accommodation_id: acc.id,
+          accommodation_ref: acc.reference_number,
+          accommodation_status: acc.status,
+          accommodation_arrival: acc.arrival_date,
+          accommodation_departure: acc.departure_date,
+          
+          customer_name: acc.customer_name,
+          customer_email: acc.customer_email,
+          customer_company: acc.customer_company,
+          customer_token: acc.customer_token,
+          number_of_people: acc.number_of_guests,
+          selected_dates: [],
+          terms_accepted_at: null,
+          created_at: acc.created_at,
+          
+          item_count: 0,
+          items_pending: 0,
+          items_confirmed: 0,
+        });
+      });
+
+      // Sort by created_at descending
+      projectList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      return projectList;
     },
   });
 
@@ -172,22 +253,29 @@ const AdminProjectsContent = () => {
         project.customer_name.toLowerCase().includes(query) ||
         project.customer_email.toLowerCase().includes(query) ||
         (project.customer_company?.toLowerCase().includes(query) ?? false) ||
-        (project.reference_number?.toLowerCase().includes(query) ?? false) ||
+        (project.program_ref?.toLowerCase().includes(query) ?? false) ||
         (project.accommodation_ref?.toLowerCase().includes(query) ?? false);
 
-      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+      // Status filter applies to program status OR accommodation status
+      let matchesStatus = statusFilter === "all";
+      if (!matchesStatus) {
+        if (project.program_status === statusFilter) matchesStatus = true;
+        if (project.accommodation_status === statusFilter) matchesStatus = true;
+      }
 
-      return matchesSearch && matchesStatus;
+      const matchesType = typeFilter === "all" || project.type === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [projects, searchQuery, statusFilter]);
+  }, [projects, searchQuery, statusFilter, typeFilter]);
 
   const stats = useMemo(() => {
     const all = projects || [];
     return {
       total: all.length,
-      withAccommodation: all.filter((p) => p.accommodation_id).length,
-      active: all.filter((p) => p.status === "active").length,
-      termsAccepted: all.filter((p) => p.terms_accepted_at).length,
+      combined: all.filter((p) => p.type === "combined").length,
+      accommodationOnly: all.filter((p) => p.type === "accommodation_only").length,
+      programOnly: all.filter((p) => p.type === "program_only").length,
     };
   }, [projects]);
 
@@ -209,7 +297,7 @@ const AdminProjectsContent = () => {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Klantprojecten</h1>
-        <p className="text-slate-600">Overzicht van alle klantopdrachten (logies + activiteiten)</p>
+        <p className="text-slate-600">Centraal overzicht van alle klantopdrachten (logies + activiteiten)</p>
       </div>
 
       {/* Stats */}
@@ -231,11 +319,24 @@ const AdminProjectsContent = () => {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-100 rounded-lg">
-                <Hotel className="h-5 w-5 text-indigo-600" />
+                <Building2 className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.withAccommodation}</p>
-                <p className="text-sm text-slate-600">Met logies</p>
+                <p className="text-2xl font-bold">{stats.combined}</p>
+                <p className="text-sm text-slate-600">Logies + Activiteiten</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <Hotel className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.accommodationOnly}</p>
+                <p className="text-sm text-slate-600">Alleen logies</p>
               </div>
             </div>
           </CardContent>
@@ -247,21 +348,8 @@ const AdminProjectsContent = () => {
                 <Activity className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.active}</p>
-                <p className="text-sm text-slate-600">Actief</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <CheckCircle2 className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.termsAccepted}</p>
-                <p className="text-sm text-slate-600">Voorwaarden akkoord</p>
+                <p className="text-2xl font-bold">{stats.programOnly}</p>
+                <p className="text-sm text-slate-600">Alleen activiteiten</p>
               </div>
             </div>
           </CardContent>
@@ -279,6 +367,17 @@ const AdminProjectsContent = () => {
             className="pl-10"
           />
         </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Projecttype" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle types</SelectItem>
+            <SelectItem value="combined">Logies + Activiteiten</SelectItem>
+            <SelectItem value="accommodation_only">Alleen logies</SelectItem>
+            <SelectItem value="program_only">Alleen activiteiten</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />
@@ -286,6 +385,9 @@ const AdminProjectsContent = () => {
           <SelectContent>
             <SelectItem value="all">Alle statussen</SelectItem>
             <SelectItem value="active">Actief</SelectItem>
+            <SelectItem value="submitted">Nieuw (logies)</SelectItem>
+            <SelectItem value="processing">In behandeling</SelectItem>
+            <SelectItem value="quoted">Offertes ontvangen</SelectItem>
             <SelectItem value="cancelled">Geannuleerd</SelectItem>
           </SelectContent>
         </Select>
@@ -297,13 +399,13 @@ const AdminProjectsContent = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Referentie</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Referentie(s)</TableHead>
                 <TableHead>Klant</TableHead>
                 <TableHead>Logies</TableHead>
                 <TableHead>Activiteiten</TableHead>
                 <TableHead>Datum(s)</TableHead>
                 <TableHead>Personen</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -318,9 +420,35 @@ const AdminProjectsContent = () => {
                 filteredProjects.map((project) => (
                   <TableRow key={project.id}>
                     <TableCell>
-                      <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                        {project.reference_number || "-"}
-                      </code>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          project.type === "combined" 
+                            ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                            : project.type === "accommodation_only"
+                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                            : "border-green-200 bg-green-50 text-green-700"
+                        }`}
+                      >
+                        {PROJECT_TYPE_CONFIG[project.type].icon}
+                        <span className="ml-1 hidden lg:inline">
+                          {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {project.program_ref && (
+                          <code className="text-xs font-mono bg-green-50 text-green-700 px-2 py-0.5 rounded block w-fit">
+                            {project.program_ref}
+                          </code>
+                        )}
+                        {project.accommodation_ref && (
+                          <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded block w-fit">
+                            {project.accommodation_ref}
+                          </code>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -335,13 +463,13 @@ const AdminProjectsContent = () => {
                         <div className="space-y-1">
                           <Link
                             to={`/admin/logies/${project.accommodation_id}`}
-                            className="text-sm font-mono text-indigo-600 hover:underline"
+                            className="text-sm text-indigo-600 hover:underline"
                           >
-                            {project.accommodation_ref || "Bekijk"}
+                            Bekijk
                           </Link>
                           {project.accommodation_status && (
                             <Badge
-                              className={`text-xs ${
+                              className={`text-xs block w-fit ${
                                 ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.color ||
                                 "bg-slate-100 text-slate-800"
                               }`}
@@ -356,21 +484,30 @@ const AdminProjectsContent = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{project.item_count} items</span>
-                        {project.items_pending > 0 && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {project.items_pending}
-                          </Badge>
-                        )}
-                        {project.items_confirmed > 0 && (
-                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {project.items_confirmed}
-                          </Badge>
-                        )}
-                      </div>
+                      {project.program_id ? (
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/admin/aanvragen/${project.program_id}`}
+                            className="text-sm text-indigo-600 hover:underline"
+                          >
+                            {project.item_count} items
+                          </Link>
+                          {project.items_pending > 0 && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {project.items_pending}
+                            </Badge>
+                          )}
+                          {project.items_confirmed > 0 && (
+                            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              {project.items_confirmed}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -382,7 +519,7 @@ const AdminProjectsContent = () => {
                                 .map((d) => format(new Date(d), "d MMM", { locale: nl }))
                                 .join(", ")
                             : project.accommodation_arrival
-                            ? format(new Date(project.accommodation_arrival), "d MMM", { locale: nl })
+                            ? `${format(new Date(project.accommodation_arrival), "d MMM", { locale: nl })} - ${format(new Date(project.accommodation_departure!), "d MMM", { locale: nl })}`
                             : "-"}
                           {project.selected_dates.length > 2 && (
                             <span className="text-slate-400"> +{project.selected_dates.length - 2}</span>
@@ -397,33 +534,20 @@ const AdminProjectsContent = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
-                        <Badge
-                          variant={
-                            project.status === "active"
-                              ? "default"
-                              : project.status === "cancelled"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {project.status === "active" ? "Actief" : project.status === "cancelled" ? "Geannuleerd" : project.status}
-                        </Badge>
-                        {project.terms_accepted_at && (
-                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 block w-fit">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Akkoord
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/admin/aanvragen/${project.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        {project.program_id ? (
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link to={`/admin/aanvragen/${project.program_id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        ) : project.accommodation_id ? (
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link to={`/admin/logies/${project.accommodation_id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        ) : null}
                         <Button variant="ghost" size="icon" asChild>
                           <Link to={`/mijn-programma/${project.customer_token}`} target="_blank">
                             <ExternalLink className="h-4 w-4" />

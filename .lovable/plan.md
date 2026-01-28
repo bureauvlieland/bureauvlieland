@@ -18,9 +18,15 @@
 
 ### Fase 2: Admin Projecten Overzicht ✅
 - Nieuwe pagina `/admin/projecten` (AdminProjects.tsx)
-- Gecombineerde view van logies + activiteiten per klant
-- Statistieken: totaal, met logies, actief, voorwaarden akkoord
-- Zoeken op referentienummer, naam, bedrijf
+- **Unified Project View** die drie types combineert:
+  - `program_only`: Alleen activiteiten (groen)
+  - `accommodation_only`: Alleen logies (amber)
+  - `combined`: Logies + Activiteiten (indigo)
+- Query haalt zowel `program_requests` als standalone `accommodation_requests` op
+- Standalone logies (zonder gekoppelde activiteiten) worden nu correct getoond
+- Statistieken per projecttype
+- Zoeken op referentienummer (BV-XXXX of LOG-XXXX), naam, bedrijf
+- Filter op projecttype en status
 - Links naar detail pagina's en klantportaal
 
 ### Fase 3: UI Updates ✅
@@ -29,6 +35,8 @@
 - Referentienummer prominent in AdminRequestDetail.tsx header
 - Referentienummer prominent in AdminAccommodationDetail.tsx header
 - Navigatie: "Projecten" toegevoegd aan admin sidebar
+- Type-indicator badges (Logies/Activiteiten/Beide)
+- Beide referentienummers zichtbaar per project waar van toepassing
 
 ### Fase 4: Partner Portal Bundeling
 - Nog niet geïmplementeerd (low priority)
@@ -43,6 +51,16 @@
 | Logies aanvragen | `LOG-JJMM-NNNN` | `LOG-2601-0001` |
 | Partners | `P-NNN` | `P-001` |
 | Bouwstenen | Bestaande slugs | `zeehondentocht` |
+
+---
+
+## Project Type Definitie
+
+Een "project" in `/admin/projecten` is nu:
+1. Een `program_request` (met of zonder gekoppelde accommodation), OF
+2. Een standalone `accommodation_request` (niet gekoppeld aan een program_request)
+
+Dit zorgt ervoor dat alle klantaanvragen zichtbaar zijn in één centraal overzicht.
 
 ---
 
