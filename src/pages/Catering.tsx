@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
+import { Helmet } from "react-helmet";
 import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
 import beachEventImage from "@/assets/beach-event.jpg";
 import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
@@ -46,10 +47,19 @@ const Catering = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      <Navigation />
-      <main>
-        {/* Hero Section */}
+    <>
+      <Helmet>
+        <title>Catering op Vlieland – Bureau Vlieland & Zuiver Traiteur</title>
+        <meta 
+          name="description" 
+          content="Bureau Vlieland en Zuiver Traiteur verzorgen de volledige catering voor zakelijke evenementen op Vlieland. Van lunch tot strand-BBQ." 
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/catering" />
+      </Helmet>
+      <div className="min-h-screen">
+        <Navigation />
+        <main>
+          {/* Hero Section */}
         <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
           <div 
             className="absolute inset-0 bg-cover bg-center"
@@ -239,29 +249,40 @@ const Catering = () => {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Op maat samengesteld
+          {/* CTA Section */}
+          <section className="py-16 md:py-24 bg-primary text-primary-foreground">
+            <div className="container mx-auto px-4 text-center">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
+                Klaar om te beginnen?
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Elk arrangement wordt op maat samengesteld door Bureau Vlieland en 
-                Zuiver Traiteur. Van menusamenstelling tot dieetwensen: wij stemmen 
-                alles af op jouw groep.
+              <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
+                Stel in 5 minuten je eigen programma samen inclusief catering. 
+                Kies je bouwstenen en ontvang binnen 5 werkdagen bevestiging.
               </p>
-              <Link to="/contact">
-                <Button size="lg" className="bg-primary hover:bg-primary/90">
-                  Vraag offerte aan
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  asChild 
+                  size="lg" 
+                  variant="heroPrimary"
+                  className="text-lg px-8"
+                >
+                  <Link to="/programma-samenstellen">Stel je programma samen</Link>
                 </Button>
-              </Link>
+                <Button 
+                  asChild 
+                  size="lg" 
+                  variant="heroOutline"
+                  className="text-lg px-8"
+                >
+                  <Link to="/contact">Liever persoonlijk advies?</Link>
+                </Button>
+              </div>
             </div>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    </>
   );
 };
 

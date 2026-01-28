@@ -112,11 +112,11 @@ const BedrijfsuitjeIdeeenVlieland = () => {
         <section className="py-16 md:py-24 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Ideeën bespreken?
+              Klaar om te beginnen?
             </h2>
             <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
-              Neem contact met ons op en we vertellen je graag meer over de mogelijkheden 
-              voor een bedrijfsuitje op Vlieland.
+              Stel in 5 minuten je eigen programma samen. Kies je bouwstenen en ontvang 
+              binnen 5 werkdagen bevestiging. Vrijblijvend en zonder verplichtingen.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -125,7 +125,7 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                 variant="heroPrimary"
                 className="text-lg px-8"
               >
-                <Link to="/contact">Plan een vrijblijvend gesprek</Link>
+                <Link to="/programma-samenstellen">Stel je programma samen</Link>
               </Button>
               <Button 
                 asChild 
@@ -133,7 +133,7 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                 variant="heroOutline"
                 className="text-lg px-8"
               >
-                <Link to="/offerte">Vraag een voorstel aan</Link>
+                <Link to="/contact">Liever persoonlijk advies?</Link>
               </Button>
             </div>
           </div>
