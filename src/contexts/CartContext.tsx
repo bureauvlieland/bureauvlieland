@@ -3,6 +3,8 @@ import { type CartItemDetail } from "@/types/buildingBlock";
 import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
 import { trackAddToCart, trackRemoveFromCart } from "@/lib/analytics";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
+import { DEFAULT_GROUP_SIZE } from "@/lib/appSettings";
+
 const MAX_DAYS = 7;
 
 interface CartContextType {
@@ -38,7 +40,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
 
   const [cartItems, setCartItems] = useState<CartItemDetail[]>([]);
-  const [numberOfPeople, setNumberOfPeople] = useState(20);
+  const [numberOfPeople, setNumberOfPeople] = useState(DEFAULT_GROUP_SIZE);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [manualOrder, setManualOrder] = useState(false);
   const [hasPendingDraft, setHasPendingDraft] = useState(false);

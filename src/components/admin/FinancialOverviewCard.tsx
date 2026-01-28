@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Euro, Plus, CheckCircle2, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { calculateBureauFee } from "@/types/buildingBlock";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 
 interface ProgramRequestItem {
@@ -29,6 +29,8 @@ export const FinancialOverviewCard = ({
   invoices,
   onRegisterInvoice,
 }: FinancialOverviewCardProps) => {
+  const { getCoordinationFee, getVatRate } = useAppSettings();
+  
   // Calculate items to be invoiced by Bureau Vlieland
   const bureauItems = items.filter(
     (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price
@@ -36,14 +38,16 @@ export const FinancialOverviewCard = ({
 
   // Calculate totals
   const itemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
-  const coordinationFee = calculateBureauFee(numberOfPeople);
+  const coordinationFee = getCoordinationFee(numberOfPeople);
+  const vatRate = getVatRate("standard");
+  const vatMultiplier = 1 + vatRate / 100;
   
-  // Assuming 21% VAT for coordination fee
-  const coordinationFeeExcl = coordinationFee / 1.21;
+  // VAT for coordination fee
+  const coordinationFeeExcl = coordinationFee / vatMultiplier;
   const coordinationFeeVat = coordinationFee - coordinationFeeExcl;
 
-  // For simplicity, assume all bureau items are incl. 21% VAT
-  const itemsTotalExcl = itemsTotal / 1.21;
+  // For simplicity, assume all bureau items are incl. VAT
+  const itemsTotalExcl = itemsTotal / vatMultiplier;
   const itemsVat = itemsTotal - itemsTotalExcl;
 
   const totalInclVat = itemsTotal + coordinationFee;

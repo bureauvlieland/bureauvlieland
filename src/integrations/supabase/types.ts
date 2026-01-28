@@ -322,6 +322,39 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          category: string
+          description: string | null
+          id: string
+          label: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+          value_type: string
+        }
+        Insert: {
+          category: string
+          description?: string | null
+          id: string
+          label: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+          value_type?: string
+        }
+        Update: {
+          category?: string
+          description?: string | null
+          id?: string
+          label?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+          value_type?: string
+        }
+        Relationships: []
+      }
       building_blocks: {
         Row: {
           block_type: Database["public"]["Enums"]["building_block_type"]

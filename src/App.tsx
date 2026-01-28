@@ -53,6 +53,7 @@ import AdminInvoicing from "./pages/admin/AdminInvoicing";
 import AdminAccommodation from "./pages/admin/AdminAccommodation";
 import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
 import AdminProjects from "./pages/admin/AdminProjects";
+import AdminSettings from "./pages/admin/AdminSettings";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
@@ -119,6 +120,7 @@ const App = () => (
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />
             <Route path="/admin/logies" element={<AdminAccommodation />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
+            <Route path="/admin/instellingen" element={<AdminSettings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

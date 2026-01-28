@@ -4,10 +4,12 @@ import { Euro, CheckCircle, Clock, HelpCircle, Building2, FileText, AlertCircle,
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
-  numberOfPeople?: number;
+  numberOfPeople: number;
   className?: string;
   variant?: "default" | "compact";
   termsAccepted?: boolean;
@@ -15,30 +17,22 @@ interface PriceSummaryCardProps {
   selectedAccommodationQuote?: AccommodationQuote | null;
 }
 
-// Coordination fee tiers based on group size
-const getCoordinationFee = (numberOfPeople: number): number => {
-  if (numberOfPeople <= 10) return 50;
-  if (numberOfPeople <= 25) return 100;
-  if (numberOfPeople <= 100) return 250;
-  if (numberOfPeople <= 150) return 350;
-  return 500;
-};
-
 // Calculate VAT breakdown
 const calculateVatBreakdown = (amountInclVat: number, vatRate: number = 21) => {
-  const exclVat = amountInclVat / (1 + vatRate / 100);
-  const vatAmount = amountInclVat - exclVat;
+  const exclVat = calculateExclVat(amountInclVat, vatRate);
+  const vatAmount = calculateVatAmount(amountInclVat, vatRate);
   return { exclVat, vatAmount };
 };
 
 export const PriceSummaryCard = ({ 
   items, 
-  numberOfPeople = 20, 
+  numberOfPeople, 
   className, 
   variant = "default",
   termsAccepted = false,
   selectedAccommodationQuote,
 }: PriceSummaryCardProps) => {
+  const { getCoordinationFee, getVatRate } = useAppSettings();
   const summary = useMemo(() => {
     // Filter out self-arranged and cancelled items
     const relevantItems = items.filter(
@@ -81,13 +75,13 @@ export const PriceSummaryCard = ({
     const confirmedTotal = bureauTotal + partnerTotal;
 
     // Coordination fee (includes VAT)
-    const coordinationFee = getCoordinationFee(numberOfPeople);
+    const coordinationFeeAmount = getCoordinationFee(numberOfPeople);
+    const standardVatRate = getVatRate("standard");
 
     // Calculate VAT breakdown
-    const bureauVat = calculateVatBreakdown(bureauTotal);
-    const partnerVat = calculateVatBreakdown(partnerTotal);
-    const feeVat = calculateVatBreakdown(coordinationFee);
-
+    const bureauVat = calculateVatBreakdown(bureauTotal, standardVatRate);
+    const partnerVat = calculateVatBreakdown(partnerTotal, standardVatRate);
+    const feeVat = calculateVatBreakdown(coordinationFeeAmount, standardVatRate);
     const totalExclVat = bureauVat.exclVat + partnerVat.exclVat + feeVat.exclVat + accommodationVat.exclVat;
     const totalVatAmount = bureauVat.vatAmount + partnerVat.vatAmount + feeVat.vatAmount + accommodationVat.vatAmount;
 
@@ -95,12 +89,13 @@ export const PriceSummaryCard = ({
       confirmedTotal,
       bureauTotal,
       partnerTotal,
-      coordinationFee,
-      grandTotal: bureauTotal + coordinationFee, // Only bureau items + fee are invoiced by Bureau Vlieland
+      coordinationFee: coordinationFeeAmount,
+      grandTotal: bureauTotal + coordinationFeeAmount, // Only bureau items + fee are invoiced by Bureau Vlieland
       bureauExclVat: bureauVat.exclVat + feeVat.exclVat,
       bureauVatAmount: bureauVat.vatAmount + feeVat.vatAmount,
       partnerExclVat: partnerVat.exclVat,
       partnerVatAmount: partnerVat.vatAmount,
+      standardVatRate,
       // Accommodation
       accommodationTotal,
       accommodationExclVat: accommodationVat.exclVat,
@@ -112,14 +107,14 @@ export const PriceSummaryCard = ({
       // Totals
       totalExclVat,
       totalVatAmount,
-      grandTotalInclVat: confirmedTotal + coordinationFee + accommodationTotal,
+      grandTotalInclVat: confirmedTotal + coordinationFeeAmount + accommodationTotal,
       confirmedCount: confirmedItems.length,
       pendingCount: pendingItems.length,
       hasConfirmedPrices: confirmedItems.length > 0 || !!selectedAccommodationQuote,
       hasBureauItems: confirmedBureauItems.length > 0,
       hasPartnerItems: confirmedPartnerItems.length > 0,
     };
-  }, [items, numberOfPeople, selectedAccommodationQuote]);
+  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate]);
 
   // Don't show if there are no confirmed prices yet
   if (!summary.hasConfirmedPrices) {
@@ -284,8 +279,8 @@ export const PriceSummaryCard = ({
                   <span>Subtotaal excl. BTW</span>
                   <span>€{formatPrice(summary.bureauExclVat)}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>BTW (21%)</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>BTW ({summary.standardVatRate}%)</span>
                   <span>€{formatPrice(summary.bureauVatAmount)}</span>
                 </div>
               </div>
@@ -316,8 +311,8 @@ export const PriceSummaryCard = ({
                   <span>Subtotaal excl. BTW</span>
                   <span>€{formatPrice(summary.partnerExclVat)}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>BTW (21%)</span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>BTW ({summary.standardVatRate}%)</span>
                   <span>€{formatPrice(summary.partnerVatAmount)}</span>
                 </div>
               </div>

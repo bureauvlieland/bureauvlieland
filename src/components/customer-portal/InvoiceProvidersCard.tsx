@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Receipt, Building2, ExternalLink, BedDouble, Euro } from "lucide-react";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface InvoiceProvidersCardProps {
   items: ProgramRequestItem[];
   selectedAccommodationQuote?: AccommodationQuote | null;
-  numberOfPeople?: number;
+  numberOfPeople: number;
   className?: string;
 }
 
@@ -20,16 +21,8 @@ interface ProviderInfo {
   itemNames: string[];
 }
 
-// Coordination fee tiers based on group size
-const getCoordinationFee = (numberOfPeople: number): number => {
-  if (numberOfPeople <= 10) return 50;
-  if (numberOfPeople <= 25) return 100;
-  if (numberOfPeople <= 100) return 250;
-  if (numberOfPeople <= 150) return 350;
-  return 500;
-};
-
-export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, numberOfPeople = 20, className }: InvoiceProvidersCardProps) => {
+export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, numberOfPeople, className }: InvoiceProvidersCardProps) => {
+  const { getCoordinationFee } = useAppSettings();
   const { providers, selfArrangedItems, bureauTotal, partnerProviders, coordinationFee } = useMemo(() => {
     // Group items by provider, excluding cancelled and self-arranged
     const providerMap = items

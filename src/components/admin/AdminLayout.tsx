@@ -30,6 +30,7 @@ import {
   Blocks,
   Mail,
   FolderKanban,
+  Settings,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -53,6 +54,7 @@ const menuItems = [
   { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
   { title: "Berichten", url: "/admin/berichten", icon: Mail },
   { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },
+  { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
 ];
 
 const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => void }) => {
