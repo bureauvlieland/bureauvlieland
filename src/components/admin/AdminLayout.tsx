@@ -20,7 +20,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   Users,
-  FileText,
   Building2,
   ClipboardList,
   LogOut,
@@ -47,8 +46,6 @@ const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
   { title: "CRM", url: "/admin/crm", icon: Users },
-  { title: "Aanvragen", url: "/admin/aanvragen", icon: FileText },
-  { title: "Logies", url: "/admin/logies", icon: Building2 },
   { title: "Partners", url: "/admin/partners", icon: Building2 },
   { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
   { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
