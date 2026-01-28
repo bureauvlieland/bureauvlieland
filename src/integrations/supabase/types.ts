@@ -837,6 +837,8 @@ export type Database = {
           proforma_commission: number | null
           proforma_deadline: string | null
           proforma_sent_at: string | null
+          proposed_date: string | null
+          proposed_time: string | null
           provider_email: string | null
           provider_id: string
           provider_name: string
@@ -880,6 +882,8 @@ export type Database = {
           proforma_commission?: number | null
           proforma_deadline?: string | null
           proforma_sent_at?: string | null
+          proposed_date?: string | null
+          proposed_time?: string | null
           provider_email?: string | null
           provider_id: string
           provider_name: string
@@ -923,6 +927,8 @@ export type Database = {
           proforma_commission?: number | null
           proforma_deadline?: string | null
           proforma_sent_at?: string | null
+          proposed_date?: string | null
+          proposed_time?: string | null
           provider_email?: string | null
           provider_id?: string
           provider_name?: string

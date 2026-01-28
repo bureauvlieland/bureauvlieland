@@ -193,7 +193,7 @@ serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes } = await req.json();
+    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes, proposedTime, proposedDate } = await req.json();
 
     if (!partnerToken || !itemId || !status) {
       return new Response(
@@ -202,7 +202,7 @@ serve(async (req) => {
       );
     }
 
-    const validStatuses = ["confirmed", "unavailable", "executed"];
+    const validStatuses = ["confirmed", "unavailable", "executed", "alternative"];
     if (!validStatuses.includes(status)) {
       return new Response(
         JSON.stringify({ error: "Invalid status" }),
@@ -210,9 +210,17 @@ serve(async (req) => {
       );
     }
 
+    // Require price for confirmed status, require note for alternative status
     if (status === "confirmed" && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
       return new Response(
         JSON.stringify({ error: "Quoted price is required when confirming" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (status === "alternative" && (!statusNote || statusNote.trim() === "")) {
+      return new Response(
+        JSON.stringify({ error: "Explanation is required when proposing an alternative" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -267,6 +275,20 @@ serve(async (req) => {
       updateData.quoted_price = quotedPrice;
       updateData.quoted_at = new Date().toISOString();
       updateData.quoted_notes = quotedNotes || null;
+      // Clear any previous proposed values when confirming
+      updateData.proposed_time = null;
+      updateData.proposed_date = null;
+    }
+
+    if (status === "alternative") {
+      // Store proposed time/date and optional price for alternatives
+      if (proposedTime) updateData.proposed_time = proposedTime;
+      if (proposedDate) updateData.proposed_date = proposedDate;
+      if (quotedPrice !== undefined && quotedPrice !== null && quotedPrice > 0) {
+        updateData.quoted_price = quotedPrice;
+        updateData.quoted_at = new Date().toISOString();
+        updateData.quoted_notes = quotedNotes || null;
+      }
     }
 
     if (status === "executed") {
@@ -305,7 +327,7 @@ serve(async (req) => {
     });
 
     // Resolve any pending partner_reminder todos for this item
-    if (status === "confirmed" || status === "unavailable") {
+    if (status === "confirmed" || status === "unavailable" || status === "alternative") {
       await supabase
         .from("admin_todos")
         .update({
@@ -362,20 +384,30 @@ serve(async (req) => {
       }
     }
 
-    // Send notification email to customer for confirmed/unavailable status changes
-    const validEmailStatuses = ["confirmed", "unavailable"];
+    // Send notification email to customer for confirmed/unavailable/alternative status changes
+    const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
     if (validEmailStatuses.includes(status)) {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
-      // Try to get template from database
-      const templateId = status === "confirmed" ? TemplateIds.STATUS_CONFIRMED : TemplateIds.STATUS_UNAVAILABLE;
+      // Determine template ID based on status
+      let templateId: string;
+      if (status === "confirmed") {
+        templateId = TemplateIds.STATUS_CONFIRMED;
+      } else if (status === "alternative") {
+        templateId = "STATUS_ALTERNATIVE"; // May not exist yet, will use fallback
+      } else {
+        templateId = TemplateIds.STATUS_UNAVAILABLE;
+      }
+
       const templateVariables = {
         customer_name: sanitizeHtml(programRequest.customer_name),
         activity_name: sanitizeHtml(item.block_name),
         partner_name: sanitizeHtml(partner.name),
         quoted_price: quotedPrice ? formatCurrencyNL(quotedPrice) : "",
         status_note: sanitizeHtml(statusNote || quotedNotes || ""),
+        proposed_time: sanitizeHtml(proposedTime || ""),
+        proposed_date: proposedDate || "",
         portal_link: portalUrl,
       };
 
@@ -385,7 +417,7 @@ serve(async (req) => {
         programRequest.customer_name,
         item.block_name,
         partner.name,
-        status as "confirmed" | "unavailable",
+        status === "alternative" ? "confirmed" : status as "confirmed" | "unavailable", // Fallback treats alternative similar to confirmed
         quotedPrice || null,
         statusNote || quotedNotes || null,
         programRequest.customer_token
@@ -394,6 +426,7 @@ serve(async (req) => {
       const subjectMap: Record<string, string> = {
         confirmed: `Activiteit bevestigd: ${item.block_name} - Jouw akkoord gevraagd`,
         unavailable: `Activiteit niet beschikbaar: ${item.block_name}`,
+        alternative: `Alternatief voorstel voor: ${item.block_name} - Reactie gevraagd`,
       };
 
       const emailSubject = template?.subject || subjectMap[status];
