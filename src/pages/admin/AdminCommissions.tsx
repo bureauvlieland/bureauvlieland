@@ -33,7 +33,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
-import { format } from "date-fns";
+import { format, addMonths, startOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   Euro,
@@ -47,6 +47,7 @@ import {
   Activity,
   CalendarClock,
   TrendingUp,
+  CalendarDays,
 } from "lucide-react";
 
 interface CommissionItem {
@@ -125,6 +126,8 @@ const statusColors: Record<string, string> = {
 
 export default function AdminCommissions() {
   const [statusFilter, setStatusFilter] = useState("expected");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -134,15 +137,33 @@ export default function AdminCommissions() {
 
   const isExpectedView = statusFilter === "expected";
 
+  // Generate month options (current + next 12 months)
+  const monthOptions = (() => {
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 13; i++) {
+      const date = addMonths(startOfMonth(now), i);
+      options.push({
+        value: format(date, "yyyy-MM"),
+        label: format(date, "MMMM yyyy", { locale: nl }),
+      });
+    }
+    return options;
+  })();
+
   // Fetch commissions via edge function
   const { data, isLoading, error, refetch } = useQuery<CommissionsResponse>({
-    queryKey: ["admin-commissions", statusFilter],
+    queryKey: ["admin-commissions", statusFilter, typeFilter, selectedMonth],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
       const response = await supabase.functions.invoke("get-admin-commissions", {
-        body: { status: statusFilter },
+        body: { 
+          status: statusFilter,
+          type: typeFilter,
+          month: selectedMonth,
+        },
       });
 
       if (response.error) throw response.error;
@@ -441,20 +462,60 @@ export default function AdminCommissions() {
 
         {/* Filters & Actions */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <Select value={statusFilter} onValueChange={(val) => {
-            setStatusFilter(val);
-            setSelectedItems(new Set());
-          }}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="expected">Verwacht</SelectItem>
-              <SelectItem value="pending">Te factureren</SelectItem>
-              <SelectItem value="invoiced">Gefactureerd</SelectItem>
-              <SelectItem value="paid">Betaald</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-3">
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={(val) => {
+              setStatusFilter(val);
+              setSelectedItems(new Set());
+            }}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expected">Verwacht</SelectItem>
+                <SelectItem value="pending">Te factureren</SelectItem>
+                <SelectItem value="invoiced">Gefactureerd</SelectItem>
+                <SelectItem value="paid">Betaald</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Type Filter */}
+            <Select value={typeFilter} onValueChange={(val) => {
+              setTypeFilter(val);
+              setSelectedItems(new Set());
+            }}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle types</SelectItem>
+                <SelectItem value="activity">Activiteiten</SelectItem>
+                <SelectItem value="accommodation">Logies</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Month Filter */}
+            <Select 
+              value={selectedMonth || "all"} 
+              onValueChange={(val) => {
+                setSelectedMonth(val === "all" ? null : val);
+                setSelectedItems(new Set());
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <CalendarDays className="h-4 w-4 mr-2 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle maanden</SelectItem>
+                {monthOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="flex gap-2">
             {statusFilter === "pending" && selectedItems.size > 0 && (
@@ -477,10 +538,18 @@ export default function AdminCommissions() {
           <div className="border-t-4 border-purple-500 bg-purple-50/50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-purple-800">
               <FileText className="h-5 w-5" />
-              <span className="font-semibold text-lg">VOORLOPIGE COMMISSIE OPGAVE</span>
+              <span className="font-semibold text-lg">
+                {selectedMonth 
+                  ? `COMMISSIE OVERZICHT - ${format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: nl }).toUpperCase()}`
+                  : "VOORLOPIGE COMMISSIE OPGAVE"
+                }
+              </span>
             </div>
             <p className="text-sm text-purple-600 mt-1">
-              Dit overzicht toont verwachte commissies voor lopende projecten die nog niet gefactureerd zijn door de partner.
+              {selectedMonth 
+                ? `Dit overzicht toont verwachte commissies voor projecten in ${format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: nl })}.`
+                : "Dit overzicht toont verwachte commissies voor lopende projecten die nog niet gefactureerd zijn door de partner."
+              }
             </p>
           </div>
         )}
@@ -663,7 +732,12 @@ export default function AdminCommissions() {
             {isExpectedView && (
               <div className="border-t-4 border-purple-500 bg-purple-100 rounded-lg p-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-purple-900">TOTAAL VERWACHTE COMMISSIE</span>
+                  <span className="font-semibold text-purple-900">
+                    {selectedMonth 
+                      ? `TOTAAL ${format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: nl }).toUpperCase()}`
+                      : "TOTAAL VERWACHTE COMMISSIE"
+                    }
+                  </span>
                   <span className="text-2xl font-bold text-purple-900">
                     {formatCurrency(data?.summary.totalCommission || 0)}
                   </span>

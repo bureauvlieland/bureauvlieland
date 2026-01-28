@@ -60,12 +60,25 @@ serve(async (req) => {
     // Parse request body for filters
     let statusFilter = "pending";
     let typeFilter = "all"; // "all" | "activity" | "accommodation"
+    let monthFilter: string | null = null; // Format: "2026-06" or null for all
     try {
       const body = await req.json();
       if (body.status) statusFilter = body.status;
       if (body.type) typeFilter = body.type;
+      if (body.month) monthFilter = body.month;
     } catch {
       // No body or invalid JSON, use defaults
+    }
+
+    // Calculate month date range if filter is set
+    let monthStartDate: string | null = null;
+    let monthEndDate: string | null = null;
+    if (monthFilter) {
+      const [year, month] = monthFilter.split("-").map(Number);
+      monthStartDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      // Last day of month
+      const lastDay = new Date(year, month, 0).getDate();
+      monthEndDate = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
     }
 
     // Get partners for enrichment
@@ -101,7 +114,20 @@ serve(async (req) => {
         if (itemsError) {
           console.error("Error fetching expected activity items:", itemsError);
         } else {
-          activityItems = (items || []).map((item) => {
+          // Filter by month if set
+          let filteredItems = items || [];
+          if (monthStartDate && monthEndDate) {
+            filteredItems = filteredItems.filter((item) => {
+              const dates = item.program_requests?.selected_dates;
+              if (Array.isArray(dates) && dates.length > 0) {
+                const firstDate = dates[0];
+                return firstDate >= monthStartDate && firstDate <= monthEndDate;
+              }
+              return false;
+            });
+          }
+
+          activityItems = filteredItems.map((item) => {
             const partner = partnersMap.get(item.provider_id);
             const vatRate = 21;
             const quotedPrice = parseFloat(item.quoted_price) || 0;
@@ -143,7 +169,16 @@ serve(async (req) => {
         if (quotesError) {
           console.error("Error fetching expected accommodation quotes:", quotesError);
         } else {
-          accommodationItems = (quotes || []).map((quote) => {
+          // Filter by month if set
+          let filteredQuotes = quotes || [];
+          if (monthStartDate && monthEndDate) {
+            filteredQuotes = filteredQuotes.filter((quote) => {
+              const arrivalDate = quote.accommodation_requests?.arrival_date;
+              return arrivalDate && arrivalDate >= monthStartDate && arrivalDate <= monthEndDate;
+            });
+          }
+
+          accommodationItems = filteredQuotes.map((quote) => {
             const partner = partnersMap.get(quote.partner_id);
             const vatRate = quote.vat_rate ?? 9;
             const priceTotal = parseFloat(quote.price_total) || 0;
@@ -261,7 +296,20 @@ serve(async (req) => {
       if (itemsError) {
         console.error("Error fetching activity items:", itemsError);
       } else {
-        activityItems = (items || []).map((item) => ({
+        // Filter by month if set
+        let filteredItems = items || [];
+        if (monthStartDate && monthEndDate) {
+          filteredItems = filteredItems.filter((item) => {
+            const dates = item.program_requests?.selected_dates;
+            if (Array.isArray(dates) && dates.length > 0) {
+              const firstDate = dates[0];
+              return firstDate >= monthStartDate && firstDate <= monthEndDate;
+            }
+            return false;
+          });
+        }
+
+        activityItems = filteredItems.map((item) => ({
           ...item,
           item_type: "activity",
           partner: partnersMap.get(item.provider_id) || null,
@@ -293,7 +341,16 @@ serve(async (req) => {
       if (quotesError) {
         console.error("Error fetching accommodation quotes:", quotesError);
       } else {
-        accommodationItems = (quotes || []).map((quote) => ({
+        // Filter by month if set
+        let filteredQuotes = quotes || [];
+        if (monthStartDate && monthEndDate) {
+          filteredQuotes = filteredQuotes.filter((quote) => {
+            const arrivalDate = quote.accommodation_requests?.arrival_date;
+            return arrivalDate && arrivalDate >= monthStartDate && arrivalDate <= monthEndDate;
+          });
+        }
+
+        accommodationItems = filteredQuotes.map((quote) => ({
           id: quote.id,
           block_name: quote.accommodation_name,
           invoiced_amount: quote.invoiced_amount,
