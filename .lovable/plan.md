@@ -1,97 +1,161 @@
 
 
-# Plan: Partner Bevestigingsflow Uitbreiden met Tijd/Prijs Aanpassingen
+# Plan: Facturatiegegevens verstrekken bij factuurregistratie
 
-## Probleem
+## Samenvatting
+Breid de factuurregistratie-dialog uit zodat partners de volledige facturatiegegevens van de klant zien zodra ze op "Factureren" klikken. Dit combineert privacy (gegevens pas tonen bij intent) met efficiëntie (alles in één scherm).
 
-Zoals je op de screenshot ziet, kunnen partners momenteel alleen:
-- **Bevestigen** (met prijs) 
-- **Niet beschikbaar** markeren
+---
 
-Wat ontbreekt:
-- Mogelijkheid om een **alternatief** voor te stellen (andere tijd, aangepaste prijs)
-- Velden om **tijd** en **details** aan te passen naast alleen de prijs
+## Visueel ontwerp
 
-## Oplossing
-
-De bestaande `StatusUpdateDialog` component heeft al de juiste 3 opties, maar wordt niet gebruikt. We integreren deze in de flow en breiden de backend uit.
-
-## Visuele Flow Na Aanpassing
-
-```text
-Partner opent item details
-           │
-           ▼
-┌──────────────────────────────────────────────────────┐
-│  BEVESTIGEN                                          │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │ Totaalprijs (incl. BTW) *          € [____]     │ │
-│  │ Voorgestelde tijd (optioneel)      [________]   │ │
-│  │ Toelichting (optioneel)            [________]   │ │
-│  └─────────────────────────────────────────────────┘ │
-│                                                      │
-│  ALTERNATIEF VOORSTELLEN                             │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │ Alternatieve tijd *                [________]   │ │
-│  │ Alternatieve prijs                 € [____]     │ │
-│  │ Toelichting *                      [________]   │ │
-│  └─────────────────────────────────────────────────┘ │
-│                                                      │
-│  NIET BESCHIKBAAR                                    │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │ Reden (optioneel)                  [________]   │ │
-│  └─────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────┘
+### Nieuwe Invoice Registration Dialog
+```
+┌─────────────────────────────────────────────────────┐
+│  [Receipt icon] Facturatie registreren              │
+│  Silent Disco Beach - Testbedrijf B.V.              │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  ▼ FACTUREER AAN                                    │
+│  ┌─────────────────────────────────────────────────┐│
+│  │ Testbedrijf B.V.                                ││
+│  │ Dorpsstraat 54, 7788 AJ Amsterdam               ││
+│  │                                                 ││
+│  │ KvK: 12345678                                   ││
+│  │ BTW: NL123456789B01                             ││
+│  │                                                 ││
+│  │ Facturatiecontact: Piet de Leeuw                ││
+│  │ p.de.leeuw@vlie.com                             ││
+│  │                                                 ││
+│  │ Referentie: PO-2026-001                         ││
+│  └─────────────────────────────────────────────────┘│
+│                                                     │
+│  ▼ JOUW FACTUUR                                     │
+│  ┌─────────────────────────────────────────────────┐│
+│  │ Factuurnummer *        [FA-2026-0042          ] ││
+│  │                                                 ││
+│  │ Bedrag excl. BTW *     Factuurdatum *          ││
+│  │ [€ 500,00           ]  [28-01-2026          ]  ││
+│  │                                                 ││
+│  │ ℹ️ Commissie Bureau Vlieland (15%): €82,64      ││
+│  │    Je ontvangt hiervoor een factuur van BV.     ││
+│  │                                                 ││
+│  │ Opmerkingen (optioneel)                         ││
+│  │ [                                             ] ││
+│  └─────────────────────────────────────────────────┘│
+│                                                     │
+│                    [Annuleren]  [Registreren]       │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Technisch Plan
+---
 
-### 1. Edge Function Aanpassen
-**Bestand:** `supabase/functions/update-partner-item-status/index.ts`
+## Technische wijzigingen
 
-- `alternative` toevoegen aan `validStatuses` array (regel 205)
-- Optionele velden toevoegen: `proposedTime`, `proposedDate`
-- Database update uitbreiden met nieuwe velden
-- Email template voor alternative status activeren
+### 1. Backend: get-partner-dashboard uitbreiden
+**Bestand**: `supabase/functions/get-partner-dashboard/index.ts`
 
-### 2. Database Migratie
-Nieuwe kolommen toevoegen aan `program_request_items`:
-- `proposed_time` (text, nullable) - voorgestelde alternatieve tijd
-- `proposed_date` (date, nullable) - voorgestelde alternatieve datum
+De Edge Function moet de facturatiegegevens ophalen, maar deze alleen meesturen voor items die "factureerbaar" zijn (status accepted/executed + terms_accepted_at niet null).
 
-### 3. PartnerItemSheet Component Aanpassen
-**Bestand:** `src/components/partner-portal/PartnerItemSheet.tsx`
+**Aanpassing**:
+- Bij het ophalen van `program_requests` ook de billing-velden meenemen:
+  - `billing_company_name`
+  - `billing_kvk_number`
+  - `billing_vat_number`
+  - `billing_address_street`
+  - `billing_address_postal`
+  - `billing_address_city`
+  - `billing_contact_name`
+  - `billing_contact_email`
+  - `billing_reference`
 
-Uitbreiden met:
-- Radio group met 3 opties (Bevestigen / Alternatief / Niet beschikbaar)
-- Conditionele formuliervelden per optie
-- Nieuw veld "Voorgestelde tijd" bij bevestiging
-- Uitgebreide velden bij alternatief voorstel
+- Filter: Alleen billing-data meesturen als `terms_accepted_at !== null`
 
-### 4. Types Uitbreiden
-**Bestand:** `src/types/partner.ts`
+### 2. TypeScript types bijwerken
+**Bestand**: `src/types/partner.ts`
 
-Nieuwe velden toevoegen aan `PartnerItem`:
-- `proposed_time`
-- `proposed_date`
+Voeg de billing-velden toe aan het `ProgramRequest` type binnen `PartnerItem`:
 
-### 5. Email Template voor Alternatieven
-Bestaande `STATUS_ALTERNATIVE` template controleren/activeren zodat klanten geïnformeerd worden over het alternatieve voorstel.
+```typescript
+interface PartnerItemRequest {
+  // ... bestaande velden
+  billing_company_name?: string | null;
+  billing_kvk_number?: string | null;
+  billing_vat_number?: string | null;
+  billing_address_street?: string | null;
+  billing_address_postal?: string | null;
+  billing_address_city?: string | null;
+  billing_contact_name?: string | null;
+  billing_contact_email?: string | null;
+  billing_reference?: string | null;
+}
+```
 
-## Implementatie Volgorde
+### 3. Frontend: InvoiceRegistrationDialog uitbreiden
+**Bestand**: `src/components/partner-portal/InvoiceRegistrationDialog.tsx`
 
-1. Database migratie uitvoeren (nieuwe kolommen)
-2. Edge function aanpassen (`alternative` status + nieuwe velden)
-3. TypeScript types bijwerken
-4. PartnerItemSheet UI uitbreiden
-5. Testen van volledige flow
+Voeg een informatiesectie toe boven het formulier:
 
-## Resultaat
+```tsx
+{/* Billing Details Section */}
+{request.billing_company_name && (
+  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      Factureer aan
+    </h4>
+    <div className="space-y-1">
+      <p className="font-medium">{request.billing_company_name}</p>
+      {request.billing_address_street && (
+        <p className="text-sm text-muted-foreground">
+          {request.billing_address_street}, {request.billing_address_postal} {request.billing_address_city}
+        </p>
+      )}
+      {/* KvK, BTW, Contact, Referentie */}
+    </div>
+  </div>
+)}
+```
 
-Partners kunnen:
-- Bevestigen met prijs én optioneel aangepaste tijd
-- Een compleet alternatief voorstel doen (tijd + prijs + toelichting)
-- Aangeven dat ze niet beschikbaar zijn met reden
+### 4. Props aanpassen
+De dialog heeft nu alleen toegang tot `item` maar niet tot de volledige request-gegevens. We moeten de `request` (inclusief billing-velden) meegeven aan de dialog.
 
-Klanten ontvangen een email bij elk van deze acties.
+**Bestanden om aan te passen**:
+- `PartnerItemSheet.tsx` - request data doorgeven
+- `PartnerFinance.tsx` - bij het openen van factuurregistratie
+
+---
+
+## Privacy-overwegingen
+
+| Gegeven | Zichtbaar voor partner? | Wanneer? |
+|---------|------------------------|----------|
+| Klantnaam | Ja | Altijd |
+| E-mail/Telefoon | Ja | Altijd (nodig voor contact) |
+| Factuurbedrijfsnaam | Ja | Pas bij factureren |
+| KvK/BTW-nummer | Ja | Pas bij factureren |
+| Factuuradres | Ja | Pas bij factureren |
+| Facturatiecontact | Ja | Pas bij factureren |
+
+De privacy wordt gewaarborgd doordat:
+1. Facturatiegegevens pas worden getoond wanneer de partner actief kiest voor "Factureren"
+2. De Edge Function deze data alleen meestuurt als de klant de voorwaarden heeft geaccepteerd
+3. Partners kunnen niet bij gegevens van andere partners/klanten
+
+---
+
+## Bestanden die worden aangepast
+
+1. `supabase/functions/get-partner-dashboard/index.ts` - Billing-velden ophalen
+2. `src/types/partner.ts` - TypeScript types uitbreiden
+3. `src/components/partner-portal/InvoiceRegistrationDialog.tsx` - Billing-info tonen
+4. `src/components/partner-portal/PartnerItemSheet.tsx` - Request data doorgeven
+
+---
+
+## Voordelen van deze aanpak
+
+1. **Eén actie, alle info**: Partner hoeft niet apart facturatiegegevens op te vragen
+2. **Privacy by design**: Gevoelige data pas zichtbaar bij intent om te factureren
+3. **Tracking**: Bureau Vlieland weet dat een partner gaat factureren zodra ze de dialog openen (optioneel: loggen)
+4. **Efficiënt**: Minste aantal clicks voor de partner
 
