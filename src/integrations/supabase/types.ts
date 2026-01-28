@@ -756,6 +756,7 @@ export type Database = {
           expires_at: string
           general_notes: string | null
           id: string
+          linked_accommodation_id: string | null
           number_of_people: number
           selected_dates: Json
           signature_id: string | null
@@ -789,6 +790,7 @@ export type Database = {
           expires_at?: string
           general_notes?: string | null
           id?: string
+          linked_accommodation_id?: string | null
           number_of_people?: number
           selected_dates?: Json
           signature_id?: string | null
@@ -822,6 +824,7 @@ export type Database = {
           expires_at?: string
           general_notes?: string | null
           id?: string
+          linked_accommodation_id?: string | null
           number_of_people?: number
           selected_dates?: Json
           signature_id?: string | null
@@ -833,7 +836,15 @@ export type Database = {
           terms_version?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "program_requests_linked_accommodation_id_fkey"
+            columns: ["linked_accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shared_programs: {
         Row: {

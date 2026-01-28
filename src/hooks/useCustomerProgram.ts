@@ -6,6 +6,7 @@ import {
   type ProgramRequestWithItems,
   calculateStatusSummary,
 } from "@/types/programRequest";
+import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 export interface BillingDetails {
   billing_company_name: string;
@@ -17,6 +18,13 @@ export interface BillingDetails {
   billing_contact_name: string;
   billing_contact_email: string;
   billing_reference: string;
+}
+
+export interface AccommodationSummary {
+  hasAccommodation: boolean;
+  status: "none" | "pending" | "quoted" | "selected";
+  selectedQuote: AccommodationQuote | null;
+  totalQuotes: number;
 }
 
 interface UseCustomerProgramReturn {
@@ -35,6 +43,11 @@ interface UseCustomerProgramReturn {
   acceptTerms: (signatureName?: string) => Promise<boolean>;
   cancelRequest: (reason?: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
+  // Accommodation data
+  accommodation: AccommodationRequest | null;
+  accommodationQuotes: AccommodationQuote[];
+  accommodationSummary: AccommodationSummary;
+  selectAccommodationQuote: (quoteId: string) => Promise<boolean>;
 }
 
 export interface PendingChange {
@@ -59,6 +72,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [program, setProgram] = useState<ProgramRequestWithItems | null>(null);
   const [history, setHistory] = useState<ProgramRequestHistory[]>([]);
   const [originalItems, setOriginalItems] = useState<ProgramRequestItem[]>([]);
+  const [accommodation, setAccommodation] = useState<AccommodationRequest | null>(null);
+  const [accommodationQuotes, setAccommodationQuotes] = useState<AccommodationQuote[]>([]);
   const [addedItems, setAddedItems] = useState<Array<{
     tempId: string;
     blockId: string;
@@ -142,6 +157,90 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         .select("*")
         .eq("request_id", requestData.id)
         .order("created_at", { ascending: false });
+
+      // Fetch linked accommodation if present
+      if (requestData.linked_accommodation_id) {
+        const { data: accomData } = await supabase
+          .from("accommodation_requests")
+          .select("*")
+          .eq("id", requestData.linked_accommodation_id)
+          .maybeSingle();
+
+        if (accomData) {
+          const transformedAccom: AccommodationRequest = {
+            id: accomData.id,
+            customer_token: accomData.customer_token,
+            customer_name: accomData.customer_name,
+            customer_email: accomData.customer_email,
+            customer_phone: accomData.customer_phone,
+            customer_company: accomData.customer_company,
+            arrival_date: accomData.arrival_date,
+            departure_date: accomData.departure_date,
+            number_of_guests: accomData.number_of_guests,
+            accommodation_type: accomData.accommodation_type as AccommodationRequest["accommodation_type"],
+            room_count: accomData.room_count,
+            room_occupancy: accomData.room_occupancy,
+            room_types: (accomData.room_types as string[]) || [],
+            location_preference: (accomData.location_preference as string[]) || [],
+            facilities_required: (accomData.facilities_required as string[]) || [],
+            budget_range: accomData.budget_range,
+            special_requests: accomData.special_requests,
+            wants_activities: accomData.wants_activities || false,
+            linked_program_id: accomData.linked_program_id,
+            status: accomData.status as AccommodationRequest["status"],
+            admin_notes: accomData.admin_notes,
+            created_at: accomData.created_at,
+            updated_at: accomData.updated_at,
+            expires_at: accomData.expires_at,
+          };
+          setAccommodation(transformedAccom);
+
+          // Fetch accommodation quotes
+          const { data: quotesData } = await supabase
+            .from("accommodation_quotes")
+            .select(`*, partner:partners(id, name, email)`)
+            .eq("request_id", accomData.id)
+            .in("status", ["submitted", "selected"])
+            .order("price_per_person_per_night", { ascending: true });
+
+          if (quotesData) {
+            const transformedQuotes: AccommodationQuote[] = quotesData.map((q: any) => ({
+              id: q.id,
+              request_id: q.request_id,
+              partner_id: q.partner_id,
+              accommodation_name: q.accommodation_name,
+              description: q.description,
+              room_configuration: q.room_configuration || [],
+              price_total: q.price_total,
+              price_per_person_per_night: q.price_per_person_per_night,
+              price_includes_vat: q.price_includes_vat ?? true,
+              vat_rate: q.vat_rate ?? 9,
+              includes: (q.includes as string[]) || [],
+              conditions: q.conditions,
+              valid_until: q.valid_until,
+              status: q.status,
+              submitted_at: q.submitted_at,
+              selected_at: q.selected_at,
+              partner_notes: q.partner_notes,
+              invoiced_amount: q.invoiced_amount,
+              invoiced_number: q.invoiced_number,
+              invoiced_date: q.invoiced_date,
+              invoiced_file_path: q.invoiced_file_path,
+              commission_percentage: q.commission_percentage,
+              commission_amount: q.commission_amount,
+              commission_status: q.commission_status,
+              commission_invoiced_at: q.commission_invoiced_at,
+              created_at: q.created_at,
+              updated_at: q.updated_at,
+              partner: q.partner,
+            }));
+            setAccommodationQuotes(transformedQuotes);
+          }
+        }
+      } else {
+        setAccommodation(null);
+        setAccommodationQuotes([]);
+      }
 
       const programWithItems: ProgramRequestWithItems = {
         ...requestData,
@@ -487,9 +586,44 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token]);
 
+  const selectAccommodationQuote = useCallback(async (quoteId: string): Promise<boolean> => {
+    if (!accommodation) return false;
+
+    try {
+      const response = await supabase.functions.invoke("select-accommodation-quote", {
+        body: { token: accommodation.customer_token, quoteId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Fout bij selecteren offerte");
+      }
+
+      // Refetch data after selection
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error selecting accommodation quote:", err);
+      return false;
+    }
+  }, [accommodation, fetchProgram]);
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, progress: 0 };
+
+  // Accommodation summary
+  const accommodationSummary: AccommodationSummary = {
+    hasAccommodation: !!accommodation,
+    status: !accommodation
+      ? "none"
+      : accommodationQuotes.some((q) => q.status === "selected")
+      ? "selected"
+      : accommodationQuotes.some((q) => q.status === "submitted")
+      ? "quoted"
+      : "pending",
+    selectedQuote: accommodationQuotes.find((q) => q.status === "selected") || null,
+    totalQuotes: accommodationQuotes.filter((q) => q.status === "submitted" || q.status === "selected").length,
+  };
 
   return {
     program,
@@ -507,5 +641,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     acceptTerms,
     cancelRequest,
     statusSummary,
+    // Accommodation
+    accommodation,
+    accommodationQuotes,
+    accommodationSummary,
+    selectAccommodationQuote,
   };
 };

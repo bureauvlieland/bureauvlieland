@@ -12,6 +12,8 @@ import { NextStepsCard } from "./NextStepsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
+import { AccommodationSection } from "./AccommodationSection";
+import { ExtrasSection } from "./ExtrasSection";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -25,10 +27,12 @@ import {
   Building2,
   Send,
   Plus,
+  BedDouble,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramRequestItem, ProgramRequestHistory } from "@/types/programRequest";
+import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 interface DesktopProgramViewProps {
   program: {
@@ -69,6 +73,10 @@ interface DesktopProgramViewProps {
   onRefresh: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
   onAddActivity: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
+  // Accommodation
+  accommodation: AccommodationRequest | null;
+  accommodationQuotes: AccommodationQuote[];
+  onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
 }
 
 export const DesktopProgramView = ({
@@ -91,6 +99,9 @@ export const DesktopProgramView = ({
   onRefresh,
   onAcceptTerms,
   onAddActivity,
+  accommodation,
+  accommodationQuotes,
+  onSelectAccommodationQuote,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const termsAccepted = !!program.terms_accepted_at;
@@ -107,6 +118,26 @@ export const DesktopProgramView = ({
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
+        {/* Accommodation section - always first */}
+        <div id="accommodation" className="scroll-mt-20">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BedDouble className="h-5 w-5 text-primary" />
+                Logies
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AccommodationSection
+                accommodation={accommodation}
+                quotes={accommodationQuotes}
+                onSelectQuote={onSelectAccommodationQuote}
+                selectedDates={selectedDates}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Next steps card - always visible, shows full workflow */}
         <NextStepsCard
           statusSummary={statusSummary}
@@ -325,6 +356,9 @@ export const DesktopProgramView = ({
             </div>
           </div>
         )}
+
+        {/* Extras section */}
+        <ExtrasSection />
 
         {/* Contact section */}
         <Card className="bg-muted/30">
