@@ -483,16 +483,48 @@ Deno.serve(async (req) => {
         new_value: { customer_counter_time: counterTime, customer_counter_note: counterNote },
       });
 
-      // Email partner about counter proposal
+      // Email partner about counter proposal using template
       if (item.provider_email && item.block_type !== "self_arranged") {
-        const counterProposalSubject = `${subjectPrefix}Tegenvoorstel van klant - ${sanitizeHtml(item.block_name)}`;
         const counterProposalRecipient = getRecipientEmail(item.provider_email, origin);
         
-        emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
-          To: [{ Email: counterProposalRecipient, Name: item.provider_name }],
-          Subject: counterProposalSubject,
-          HTMLPart: `
+        // Fetch email template
+        const { data: template } = await supabase
+          .from("email_templates")
+          .select("subject, body_html")
+          .eq("id", "counter_proposal_partner")
+          .eq("is_active", true)
+          .maybeSingle();
+
+        const originalTime = item.proposed_time || item.confirmed_time || "niet opgegeven";
+        const counterNoteSection = counterNote 
+          ? `<p style="margin: 8px 0 0; font-style: italic;">"${sanitizeHtml(counterNote)}"</p>` 
+          : "";
+        const priceSection = item.quoted_price 
+          ? `<p style="margin: 8px 0 0;">Huidige prijs: €${Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>` 
+          : "";
+        const partnerPortalLink = "https://bureauvlieland.nl/partner/login";
+
+        let emailSubject: string;
+        let emailBody: string;
+
+        if (template) {
+          // Use template with variable replacement
+          emailSubject = template.subject
+            .replace(/\{\{block_name\}\}/g, item.block_name);
+          
+          emailBody = template.body_html
+            .replace(/\{\{provider_name\}\}/g, sanitizeHtml(item.provider_name))
+            .replace(/\{\{customer_name\}\}/g, sanitizeHtml(program.customer_company || program.customer_name))
+            .replace(/\{\{block_name\}\}/g, sanitizeHtml(item.block_name))
+            .replace(/\{\{original_time\}\}/g, originalTime)
+            .replace(/\{\{counter_time\}\}/g, counterTime)
+            .replace(/\{\{counter_note_section\}\}/g, counterNoteSection)
+            .replace(/\{\{price_section\}\}/g, priceSection)
+            .replace(/\{\{partner_portal_link\}\}/g, partnerPortalLink);
+        } else {
+          // Fallback to hardcoded template
+          emailSubject = `Tegenvoorstel van klant - ${item.block_name}`;
+          emailBody = `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #1a365d; padding: 24px; text-align: center;">
                 <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
@@ -503,25 +535,32 @@ Deno.serve(async (req) => {
                 <p>De klant <strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> heeft een tegenvoorstel gedaan voor:</p>
                 <div style="background: #f3e8ff; border: 1px solid #c4b5fd; padding: 16px; border-radius: 8px; margin: 16px 0;">
                   <p style="margin: 0 0 8px; font-weight: bold;">${sanitizeHtml(item.block_name)}</p>
-                  <p style="margin: 0 0 8px;">Jouw voorstel: <strong>${item.proposed_time || item.confirmed_time || "niet opgegeven"}</strong></p>
+                  <p style="margin: 0 0 8px;">Jouw voorstel: <strong>${originalTime}</strong></p>
                   <p style="margin: 0; color: #7c3aed; font-weight: bold;">Klant wil liever: ${counterTime}</p>
-                  ${counterNote ? `<p style="margin: 8px 0 0; font-style: italic;">"${sanitizeHtml(counterNote)}"</p>` : ""}
-                  ${item.quoted_price ? `<p style="margin: 8px 0 0;">Huidige prijs: €${Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>` : ""}
+                  ${counterNoteSection}
+                  ${priceSection}
                 </div>
                 <p>Graag je reactie via het Partner Portal:</p>
                 <p style="text-align: center; margin: 24px 0;">
-                  <a href="https://bureauvlieland.nl/partner/login" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Partner Portal</a>
+                  <a href="${partnerPortalLink}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Partner Portal</a>
                 </p>
                 <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
               </div>
             </div>
-          `,
+          `;
+        }
+        
+        emailMessages.push({
+          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: counterProposalRecipient, Name: item.provider_name }],
+          Subject: `${subjectPrefix}${emailSubject}`,
+          HTMLPart: emailBody,
         });
 
         // Log email for counter proposal
         await supabase.from("email_log").insert({
           email_type: "counter_proposal_partner",
-          subject: counterProposalSubject,
+          subject: `${subjectPrefix}${emailSubject}`,
           recipient_email: counterProposalRecipient,
           recipient_name: item.provider_name,
           related_request_id: program.id,
