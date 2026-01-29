@@ -1,10 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProgramSection } from "./ProgramSection";
-
-import { NextStepsCard } from "./NextStepsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { BillingDetailsCard } from "./BillingDetailsCard";
 import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
@@ -16,6 +14,8 @@ import { AddActivitySheet } from "./AddActivitySheet";
 import { AccommodationSection } from "./AccommodationSection";
 import { ExtrasSection } from "./ExtrasSection";
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
+import { ActionRequiredCard } from "./ActionRequiredCard";
+import { MobileStickyStatus } from "./MobileStickyStatus";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -53,6 +53,10 @@ interface MobileProgramViewProps {
     billing_address_postal?: string;
     billing_address_city?: string;
     billing_contact_name?: string;
+    billing_kvk_number?: string;
+    billing_vat_number?: string;
+    billing_contact_email?: string;
+    billing_reference?: string;
     acceptedTerms?: AcceptedTermsEntry[];
   };
   history: ProgramRequestHistory[];
@@ -63,6 +67,7 @@ interface MobileProgramViewProps {
     pending: number;
     alternative: number;
     progress: number;
+    counter_proposed?: number;
   };
   activeDay: number;
   onDayChange: (day: number) => void;
@@ -121,15 +126,74 @@ export const MobileProgramView = ({
     program.billing_contact_name
   );
 
-  // Determine which sections should be open by default
-  // Show AcceptTermsCard when no pending/alternative items and at least one item exists
-  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.total > 0;
-  const shouldOpenBilling = allConfirmed && !termsAccepted && !billingComplete;
+  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isMultiDay = selectedDates.length > 1;
+  const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
+
+  // Calculate total cost
+  const totalCost = useMemo(() => {
+    let total = 0;
+    program.items.forEach(item => {
+      if (item.status !== "cancelled" && item.quoted_price) {
+        total += item.quoted_price;
+      }
+    });
+    const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
+    if (selectedQuote) {
+      total += selectedQuote.price_total;
+    }
+    return total;
+  }, [program.items, accommodationQuotes]);
+
+  // Calculate completed steps
+  const completedSteps = useMemo(() => {
+    let count = 0;
+    if (allConfirmed) count++;
+    if (billingComplete) count++;
+    if (!isMultiDay || hasSelectedAccommodation) count++;
+    if (termsAccepted) count++;
+    return count;
+  }, [allConfirmed, billingComplete, isMultiDay, hasSelectedAccommodation, termsAccepted]);
+
+  const totalSteps = isMultiDay ? 4 : 3;
+
+  // Get next action for mobile sticky bar
+  const getNextAction = () => {
+    if (statusSummary.alternative > 0) {
+      return { 
+        label: "Bekijk", 
+        onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }) 
+      };
+    }
+    if (isMultiDay && !hasSelectedAccommodation) {
+      return { 
+        label: "Logies", 
+        onClick: () => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" }) 
+      };
+    }
+    if (!billingComplete && allConfirmed) {
+      return { label: "Invullen", onClick: onOpenBilling };
+    }
+    if (allConfirmed && billingComplete && !termsAccepted) {
+      return { 
+        label: "Ondertekenen", 
+        onClick: () => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" }) 
+      };
+    }
+    return undefined;
+  };
 
   return (
     <div className="space-y-4">
-      {/* Program Overview Card - always first */}
+      {/* Mobile sticky status bar */}
+      <MobileStickyStatus
+        completedSteps={completedSteps}
+        totalSteps={totalSteps}
+        totalCost={totalCost}
+        nextAction={getNextAction()}
+      />
+
+      {/* 1. Program Overview Card */}
       <ProgramOverviewCard
         selectedDates={selectedDates}
         numberOfPeople={program.number_of_people}
@@ -138,7 +202,19 @@ export const MobileProgramView = ({
         accommodationQuotes={accommodationQuotes}
       />
 
-      {/* Accommodation section - show for multi-day programs */}
+      {/* 2. Action Required Card */}
+      <ActionRequiredCard
+        statusSummary={statusSummary}
+        isMultiDay={isMultiDay}
+        hasAccommodation={hasSelectedAccommodation}
+        billingComplete={billingComplete}
+        termsAccepted={termsAccepted}
+        onOpenBilling={onOpenBilling}
+        onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
+        onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
+      />
+
+      {/* 3. Accommodation section - only for multi-day */}
       {isMultiDay && (
         <ProgramSection
           id="accommodation"
@@ -155,40 +231,10 @@ export const MobileProgramView = ({
         </ProgramSection>
       )}
 
-      {/* Next steps - always open */}
-      <NextStepsCard
-        statusSummary={statusSummary}
-        termsAccepted={termsAccepted}
-        billingComplete={billingComplete}
-        onOpenBilling={onOpenBilling}
-      />
-
-      {/* Accept terms card - shows when all confirmed but not yet accepted */}
-      {allConfirmed && !termsAccepted && (
-        <AcceptTermsCard
-          onAccept={onAcceptTerms}
-          isBillingComplete={billingComplete}
-          onOpenBilling={onOpenBilling}
-          items={program.items}
-          accommodationQuotes={accommodationQuotes}
-          selectedDates={selectedDates}
-        />
-      )}
-
-      {/* Accepted terms card - shows after acceptance with permanent visibility */}
-      {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
-        <AcceptedTermsCard
-          termsAcceptedAt={program.terms_accepted_at!}
-          signatureName={program.signature_name || null}
-          signatureId={program.signature_id || null}
-          acceptedTerms={program.acceptedTerms}
-        />
-      )}
-
-      {/* Program section - always open */}
+      {/* 4. Program section */}
       <ProgramSection
         id="program"
-        title="Jouw Programma"
+        title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
         badge={
           <div className="flex items-center gap-2 ml-auto">
@@ -270,12 +316,12 @@ export const MobileProgramView = ({
         )}
       </ProgramSection>
 
-      {/* Invoicing section */}
+      {/* 5. Billing section - always visible */}
       <ProgramSection
-        id="invoicing"
-        title="Facturatie"
+        id="billing"
+        title="Facturatie & Kosten"
         icon={<FileText className="h-4 w-4 text-primary" />}
-        defaultOpen={shouldOpenBilling}
+        defaultOpen={allConfirmed && !termsAccepted}
       >
         <div className="space-y-4">
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
@@ -293,7 +339,54 @@ export const MobileProgramView = ({
         </div>
       </ProgramSection>
 
-      {/* Details section */}
+      {/* 6. Accept terms - only when ready */}
+      {allConfirmed && !termsAccepted && (
+        <div id="terms-section">
+          <AcceptTermsCard
+            onAccept={onAcceptTerms}
+            isBillingComplete={billingComplete}
+            onOpenBilling={onOpenBilling}
+            items={program.items}
+            accommodationQuotes={accommodationQuotes}
+            selectedDates={selectedDates}
+          />
+        </div>
+      )}
+
+      {/* Accepted terms - permanent visibility */}
+      {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
+        <AcceptedTermsCard
+          termsAcceptedAt={program.terms_accepted_at!}
+          signatureName={program.signature_name || null}
+          signatureId={program.signature_id || null}
+          acceptedTerms={program.acceptedTerms}
+        />
+      )}
+
+      {/* Extras section */}
+      <ExtrasSection />
+
+      {/* Floating changes bar */}
+      {hasChanges && (
+        <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-medium">
+                {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Aanbieders worden op de hoogte gesteld
+              </p>
+            </div>
+            <Button onClick={onSubmitChanges}>
+              <Send className="h-4 w-4 mr-2" />
+              Doorvoeren
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Secondary options - collapsible */}
       <ProgramSection
         id="details"
         title="Programma Details"
@@ -378,29 +471,6 @@ export const MobileProgramView = ({
         >
           <ProgramHistoryTimeline history={history} variant="embedded" />
         </ProgramSection>
-      )}
-
-      {/* Extras section */}
-      <ExtrasSection />
-
-      {/* Floating changes bar */}
-      {hasChanges && (
-        <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium">
-                {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Aanbieders worden op de hoogte gesteld
-              </p>
-            </div>
-            <Button onClick={onSubmitChanges}>
-              <Send className="h-4 w-4 mr-2" />
-              Doorvoeren
-            </Button>
-          </div>
-        </div>
       )}
 
       {/* Cancel request section */}

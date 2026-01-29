@@ -1,28 +1,23 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ProgramSection } from "./ProgramSection";
 import { ProgramSidebar } from "./ProgramSidebar";
-import { BillingDetailsCard } from "./BillingDetailsCard";
-import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
-import { PriceSummaryCard } from "./PriceSummaryCard";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
-import { NextStepsCard } from "./NextStepsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
 import { AccommodationSection } from "./AccommodationSection";
 import { ExtrasSection } from "./ExtrasSection";
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
+import { ActionRequiredCard } from "./ActionRequiredCard";
+import { CompactBillingSection } from "./CompactBillingSection";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
-  FileText,
   Settings,
   History,
-  Users,
   Mail,
   Phone,
   Pencil,
@@ -30,9 +25,14 @@ import {
   Send,
   Plus,
   BedDouble,
+  MoreHorizontal,
 } from "lucide-react";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ProgramRequestItem, ProgramRequestHistory } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
@@ -52,6 +52,10 @@ interface DesktopProgramViewProps {
     billing_address_postal?: string;
     billing_address_city?: string;
     billing_contact_name?: string;
+    billing_kvk_number?: string;
+    billing_vat_number?: string;
+    billing_contact_email?: string;
+    billing_reference?: string;
     acceptedTerms?: AcceptedTermsEntry[];
   };
   history: ProgramRequestHistory[];
@@ -62,6 +66,7 @@ interface DesktopProgramViewProps {
     pending: number;
     alternative: number;
     progress: number;
+    counter_proposed?: number;
   };
   activeDay: number;
   onDayChange: (day: number) => void;
@@ -113,6 +118,8 @@ export const DesktopProgramView = ({
   onSelectAccommodationQuote,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  
   const termsAccepted = !!program.terms_accepted_at;
   const billingComplete = !!(
     program.billing_company_name &&
@@ -121,16 +128,46 @@ export const DesktopProgramView = ({
     program.billing_address_city &&
     program.billing_contact_name
   );
-  // Show AcceptTermsCard when no pending/alternative items and at least one confirmed or accepted
-  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.total > 0;
-
+  
+  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isMultiDay = selectedDates.length > 1;
+  const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
+
+  // Calculate total cost for sidebar
+  const totalCost = useMemo(() => {
+    let total = 0;
+    
+    // Activity costs
+    program.items.forEach(item => {
+      if (item.status !== "cancelled" && item.quoted_price) {
+        total += item.quoted_price;
+      }
+    });
+    
+    // Accommodation cost
+    const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
+    if (selectedQuote) {
+      total += selectedQuote.price_total;
+    }
+    
+    return total;
+  }, [program.items, accommodationQuotes]);
+
+  const scrollToTerms = () => {
+    const termsSection = document.getElementById("terms-section");
+    termsSection?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollToAccommodation = () => {
+    const accommodationSection = document.getElementById("accommodation");
+    accommodationSection?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
-        {/* Program Overview Card - always first */}
+        {/* 1. Hero header - compact overview */}
         <ProgramOverviewCard
           selectedDates={selectedDates}
           numberOfPeople={program.number_of_people}
@@ -139,7 +176,19 @@ export const DesktopProgramView = ({
           accommodationQuotes={accommodationQuotes}
         />
 
-        {/* Accommodation section - show for multi-day programs */}
+        {/* 2. Action required card - intelligent priority-based alert */}
+        <ActionRequiredCard
+          statusSummary={statusSummary}
+          isMultiDay={isMultiDay}
+          hasAccommodation={hasSelectedAccommodation}
+          billingComplete={billingComplete}
+          termsAccepted={termsAccepted}
+          onOpenBilling={onOpenBilling}
+          onScrollToTerms={scrollToTerms}
+          onScrollToAccommodation={scrollToAccommodation}
+        />
+
+        {/* 3. Accommodation section - only for multi-day, only if not yet selected */}
         {isMultiDay && (
           <div id="accommodation" className="scroll-mt-20">
             <Card>
@@ -161,44 +210,14 @@ export const DesktopProgramView = ({
           </div>
         )}
 
-        {/* Next steps card - always visible, shows full workflow */}
-        <NextStepsCard
-          statusSummary={statusSummary}
-          termsAccepted={termsAccepted}
-          billingComplete={billingComplete}
-          onOpenBilling={onOpenBilling}
-        />
-
-        {/* Accept terms card - shows when all confirmed but not yet accepted */}
-        {allConfirmed && !termsAccepted && (
-          <AcceptTermsCard
-            onAccept={onAcceptTerms}
-            isBillingComplete={billingComplete}
-            onOpenBilling={onOpenBilling}
-            items={program.items}
-            accommodationQuotes={accommodationQuotes}
-            selectedDates={selectedDates}
-          />
-        )}
-
-        {/* Accepted terms card - shows after acceptance with permanent visibility */}
-        {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
-          <AcceptedTermsCard
-            termsAcceptedAt={program.terms_accepted_at!}
-            signatureName={program.signature_name || null}
-            signatureId={program.signature_id || null}
-            acceptedTerms={program.acceptedTerms}
-          />
-        )}
-
-        {/* Program section - always visible on desktop */}
+        {/* 4. Program section - always visible */}
         <div id="program" className="scroll-mt-20">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
-                  Jouw Programma
+                  Programma
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   {!termsAccepted && (
@@ -277,115 +296,42 @@ export const DesktopProgramView = ({
           </Card>
         </div>
 
-        {/* Invoicing section */}
-        <ProgramSection
-          id="invoicing"
-          title="Facturatie"
-          icon={<FileText className="h-4 w-4 text-primary" />}
-          defaultOpen={allConfirmed && !termsAccepted}
-        >
-          <div className="space-y-4">
-            <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
-            <InvoiceProvidersCard 
-              items={program.items} 
-              selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
-              numberOfPeople={program.number_of_people}
-            />
-            <PriceSummaryCard 
-              items={program.items} 
-              numberOfPeople={program.number_of_people} 
-              termsAccepted={termsAccepted}
-              selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+        {/* 5. Billing & Costs section - always visible, not in accordion */}
+        <CompactBillingSection
+          program={program}
+          items={program.items}
+          numberOfPeople={program.number_of_people}
+          termsAccepted={termsAccepted}
+          selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+          onEditBilling={onOpenBilling}
+        />
+
+        {/* 6. Accept terms - only when ready */}
+        {allConfirmed && !termsAccepted && (
+          <div id="terms-section" className="scroll-mt-20">
+            <AcceptTermsCard
+              onAccept={onAcceptTerms}
+              isBillingComplete={billingComplete}
+              onOpenBilling={onOpenBilling}
+              items={program.items}
+              accommodationQuotes={accommodationQuotes}
+              selectedDates={selectedDates}
             />
           </div>
-        </ProgramSection>
-
-        {/* Details section */}
-        <ProgramSection
-          id="details"
-          title="Programma Details"
-          icon={<Settings className="h-4 w-4 text-primary" />}
-        >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Pas gegevens aan</span>
-              <Button variant="ghost" size="sm" onClick={onOpenEdit}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Bewerken
-              </Button>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Contactpersoon</p>
-                  <p className="font-medium">{program.customer_name}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Datum(s)</p>
-                  <p className="font-medium">
-                    {selectedDates.map((d, i) => (
-                      <span key={i}>
-                        {i > 0 && ", "}
-                        {format(d, "d MMM yyyy", { locale: nl })}
-                      </span>
-                    ))}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Mail className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground">E-mail</p>
-                  <p className="font-medium">{program.customer_email}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Phone className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Telefoon</p>
-                  <p className="font-medium">{program.customer_phone}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Aantal personen</p>
-                  <p className="font-medium">{program.number_of_people}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ProgramSection>
-
-        {/* History section */}
-        {history.length > 0 && (
-          <ProgramSection
-            id="history"
-            title="Geschiedenis"
-            icon={<History className="h-4 w-4 text-primary" />}
-          >
-            <ProgramHistoryTimeline history={history} variant="embedded" />
-          </ProgramSection>
         )}
+
+        {/* Accepted terms - permanent visibility after acceptance */}
+        {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
+          <AcceptedTermsCard
+            termsAcceptedAt={program.terms_accepted_at!}
+            signatureName={program.signature_name || null}
+            signatureId={program.signature_id || null}
+            acceptedTerms={program.acceptedTerms}
+          />
+        )}
+
+        {/* Extras section */}
+        <ExtrasSection />
 
         {/* Floating changes bar */}
         {hasChanges && (
@@ -407,8 +353,57 @@ export const DesktopProgramView = ({
           </div>
         )}
 
-        {/* Extras section */}
-        <ExtrasSection />
+        {/* Secondary info in collapsible section */}
+        <Card className="border-dashed">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <button 
+                  onClick={onOpenEdit}
+                  className="hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <Settings className="h-4 w-4" />
+                  Programma details
+                </button>
+                {history.length > 0 && (
+                  <button 
+                    onClick={() => setShowHistory(!showHistory)}
+                    className="hover:text-foreground transition-colors flex items-center gap-1"
+                  >
+                    <History className="h-4 w-4" />
+                    Geschiedenis
+                  </button>
+                )}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background">
+                  <DropdownMenuItem onClick={onOpenEdit}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Gegevens bewerken
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={onOpenCancel}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    Aanvraag annuleren
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            {/* Expandable history */}
+            {showHistory && history.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <ProgramHistoryTimeline history={history} variant="embedded" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Contact section */}
         <Card className="bg-muted/30">
@@ -420,7 +415,7 @@ export const DesktopProgramView = ({
               <div>
                 <h3 className="font-medium mb-1">Vragen of hulp nodig?</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Neem gerust contact met ons op. We helpen je graag verder.
+                  Neem gerust contact met ons op. We helpen u graag verder.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <a href="mailto:hallo@bureauvlieland.nl">
@@ -454,6 +449,9 @@ export const DesktopProgramView = ({
         numberOfPeople={program.number_of_people}
         selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
         isMultiDay={isMultiDay}
+        totalCost={totalCost}
+        allConfirmed={allConfirmed}
+        onScrollToTerms={scrollToTerms}
       />
 
       {/* Add Activity Sheet */}
