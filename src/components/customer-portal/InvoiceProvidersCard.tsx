@@ -87,12 +87,12 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Receipt className="h-5 w-5" />
-          Wie stuurt je een factuur?
+          Facturatie per onderdeel
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Voor dit programma ontvang je facturen van de volgende partijen:
+          Voor dit programma ontvang je afzonderlijke facturen van de onderstaande partijen.
         </p>
 
         <div className="space-y-3">
@@ -132,7 +132,10 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {bureauTotal > 0 ? "Activiteiten + " : ""}Coördinatie & handling fee
+                  Coördinatie & handling
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Factuur door: Bureau Vlieland
                 </p>
               </div>
             </div>
@@ -161,8 +164,11 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                   {provider.itemNames.slice(0, 2).join(", ")}
                   {provider.itemNames.length > 2 && ` +${provider.itemNames.length - 2} meer`}
                 </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Uitvoering & factuur door: {provider.name}
+                </p>
                 {provider.totalAmount === 0 && (
-                  <p className="text-xs text-muted-foreground italic mt-0.5">
+                  <p className="text-xs text-muted-foreground italic">
                     Prijs nog te bevestigen
                   </p>
                 )}

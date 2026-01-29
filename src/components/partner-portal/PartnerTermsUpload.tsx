@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Eye, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { FileText, Upload, Eye, Trash2, Loader2, CheckCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
@@ -11,23 +13,88 @@ interface PartnerTermsUploadProps {
   partnerId: string;
   termsPdfPath: string | null;
   termsUploadedAt: string | null;
+  usesDefaultTerms: boolean;
   onUpdate: () => void;
 }
+
+const DEFAULT_TERMS_URL = "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/partner-terms/default/standaard-partnervoorwaarden.pdf";
 
 export const PartnerTermsUpload = ({
   partnerId,
   termsPdfPath,
   termsUploadedAt,
+  usesDefaultTerms,
   onUpdate,
 }: PartnerTermsUploadProps) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Determine the selected option based on current state
+  const getSelectedOption = () => {
+    if (usesDefaultTerms) return "default";
+    if (termsPdfPath) return "custom";
+    return "custom"; // Default to custom when nothing is set yet
+  };
+  const [selectedOption, setSelectedOption] = useState<"custom" | "default">(getSelectedOption());
 
   const getPublicUrl = (path: string) => {
     const { data } = supabase.storage.from("partner-terms").getPublicUrl(path);
     return data.publicUrl;
+  };
+
+  const handleOptionChange = async (value: "custom" | "default") => {
+    setSelectedOption(value);
+    
+    if (value === "default") {
+      setIsSaving(true);
+      try {
+        // Update partner to use default terms
+        const { error } = await supabase
+          .from("partners")
+          .update({
+            uses_default_terms: true,
+          })
+          .eq("id", partnerId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Opgeslagen",
+          description: "Je gebruikt nu de standaardvoorwaarden van Bureau Vlieland.",
+        });
+        onUpdate();
+      } catch (err) {
+        console.error("Error updating terms preference:", err);
+        toast({
+          title: "Opslaan mislukt",
+          description: "Kon de voorkeur niet opslaan. Probeer het opnieuw.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    } else if (value === "custom" && usesDefaultTerms) {
+      // Switching back to custom - update the flag
+      setIsSaving(true);
+      try {
+        const { error } = await supabase
+          .from("partners")
+          .update({
+            uses_default_terms: false,
+          })
+          .eq("id", partnerId);
+
+        if (error) throw error;
+        onUpdate();
+      } catch (err) {
+        console.error("Error updating terms preference:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    }
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,12 +137,13 @@ export const PartnerTermsUpload = ({
 
       if (uploadError) throw uploadError;
 
-      // Update partner record
+      // Update partner record - set uses_default_terms to false when uploading custom
       const { error: updateError } = await supabase
         .from("partners")
         .update({
           terms_pdf_path: fileName,
           terms_uploaded_at: new Date().toISOString(),
+          uses_default_terms: false,
         })
         .eq("id", partnerId);
 
@@ -152,84 +220,136 @@ export const PartnerTermsUpload = ({
           <CardTitle>Algemene Voorwaarden</CardTitle>
         </div>
         <CardDescription>
-          Upload je algemene voorwaarden zodat klanten deze kunnen inzien voordat ze een boeking definitief maken.
+          Kies hoe je voorwaarden worden getoond aan klanten.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {termsPdfPath ? (
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded bg-green-100 dark:bg-green-900/30">
-                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">algemene-voorwaarden.pdf</p>
-                {termsUploadedAt && (
-                  <p className="text-sm text-muted-foreground">
-                    Geüpload op {format(parseISO(termsUploadedAt), "d MMMM yyyy", { locale: nl })}
+      <CardContent className="space-y-6">
+        <RadioGroup
+          value={selectedOption}
+          onValueChange={(value) => handleOptionChange(value as "custom" | "default")}
+          disabled={isSaving}
+        >
+          {/* Option 1: Custom PDF */}
+          <div className="flex items-start space-x-3">
+            <RadioGroupItem value="custom" id="custom" className="mt-1" />
+            <div className="flex-1 space-y-3">
+              <Label htmlFor="custom" className="text-base font-medium cursor-pointer">
+                Eigen voorwaarden uploaden (PDF)
+              </Label>
+              
+              {selectedOption === "custom" && (
+                <div className="space-y-3 pl-0">
+                  {termsPdfPath && !usesDefaultTerms ? (
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded bg-green-100 dark:bg-green-900/30">
+                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">algemene-voorwaarden.pdf</p>
+                          {termsUploadedAt && (
+                            <p className="text-sm text-muted-foreground">
+                              Geüpload op {format(parseISO(termsUploadedAt), "d MMMM yyyy", { locale: nl })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(getPublicUrl(termsPdfPath), "_blank")}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Bekijken
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDelete}
+                          disabled={isDeleting}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 mr-2" />
+                          )}
+                          Verwijderen
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                      <FileText className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Nog geen voorwaarden geüpload
+                      </p>
+                    </div>
+                  )}
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".pdf,application/pdf"
+                    onChange={handleUpload}
+                    className="hidden"
+                  />
+
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="w-full"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {termsPdfPath && !usesDefaultTerms ? "Nieuwe PDF uploaden" : "PDF uploaden"}
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    Maximale bestandsgrootte: 5MB
                   </p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(getPublicUrl(termsPdfPath), "_blank")}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Bekijken
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="text-destructive hover:text-destructive"
-              >
-                {isDeleting ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4 mr-2" />
-                )}
-                Verwijderen
-              </Button>
+                </div>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-            <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground mb-3">
-              Nog geen voorwaarden geüpload
-            </p>
+
+          {/* Option 2: Default Bureau Vlieland Terms */}
+          <div className="flex items-start space-x-3 pt-4 border-t">
+            <RadioGroupItem value="default" id="default" className="mt-1" />
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="default" className="text-base font-medium cursor-pointer">
+                Standaardvoorwaarden Bureau Vlieland
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                De standaard partnervoorwaarden van Bureau Vlieland worden getoond aan klanten. 
+                Deze dekken de meeste situaties.
+              </p>
+              {selectedOption === "default" && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0"
+                  onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Bekijk standaardvoorwaarden
+                </Button>
+              )}
+            </div>
+          </div>
+        </RadioGroup>
+
+        {isSaving && (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Opslaan...
           </div>
         )}
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept=".pdf,application/pdf"
-          onChange={handleUpload}
-          className="hidden"
-        />
-
-        <Button
-          variant={termsPdfPath ? "outline" : "default"}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="w-full"
-        >
-          {isUploading ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Upload className="h-4 w-4 mr-2" />
-          )}
-          {termsPdfPath ? "Nieuwe PDF uploaden" : "PDF uploaden"}
-        </Button>
-
-        <p className="text-xs text-muted-foreground text-center">
-          Maximale bestandsgrootte: 5MB
-        </p>
       </CardContent>
     </Card>
   );

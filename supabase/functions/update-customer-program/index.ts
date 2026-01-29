@@ -469,6 +469,78 @@ Deno.serve(async (req) => {
         },
       });
 
+      // === LOG ACCEPTED TERMS TO accepted_terms_log ===
+      const acceptedAt = new Date().toISOString();
+      const termsLogEntries: any[] = [];
+
+      // 1. Bureau Vlieland terms - always included
+      termsLogEntries.push({
+        request_id: program.id,
+        partner_id: "bureau",
+        partner_name: "Bureau Vlieland",
+        terms_type: "bureau_vlieland",
+        terms_version: termsVersion,
+        terms_pdf_path: null,
+        accepted_at: acceptedAt,
+      });
+
+      // 2. Get all partner items to log their terms
+      const { data: programItems } = await supabase
+        .from("program_request_items")
+        .select("provider_id, provider_name, block_type, block_category")
+        .eq("request_id", program.id)
+        .neq("status", "cancelled")
+        .eq("block_type", "partner");
+
+      if (programItems && programItems.length > 0) {
+        // Get unique partner IDs
+        const uniquePartnerIds = [...new Set(programItems.map(i => i.provider_id))];
+        
+        // Fetch partner details including terms info
+        const { data: partners } = await supabase
+          .from("partners")
+          .select("id, name, terms_pdf_path, uses_default_terms")
+          .in("id", uniquePartnerIds);
+
+        if (partners) {
+          for (const partner of partners) {
+            const termsType = partner.terms_pdf_path && !partner.uses_default_terms 
+              ? "partner_custom" 
+              : "partner_default";
+
+            termsLogEntries.push({
+              request_id: program.id,
+              partner_id: partner.id,
+              partner_name: partner.name,
+              terms_type: termsType,
+              terms_version: termsVersion,
+              terms_pdf_path: termsType === "partner_custom" ? partner.terms_pdf_path : "default/standaard-partnervoorwaarden.pdf",
+              accepted_at: acceptedAt,
+            });
+          }
+        }
+
+        // 3. Check if any catering items - add UVH 2024 if so
+        const hasCatering = programItems.some(i => i.block_category === "catering");
+        if (hasCatering) {
+          termsLogEntries.push({
+            request_id: program.id,
+            partner_id: "uvh",
+            partner_name: "Koninklijke Horeca Nederland",
+            terms_type: "uvh_2024",
+            terms_version: "2024",
+            terms_pdf_path: null,
+            accepted_at: acceptedAt,
+          });
+        }
+      }
+
+      // Insert all terms log entries
+      if (termsLogEntries.length > 0) {
+        await supabase.from("accepted_terms_log").insert(termsLogEntries);
+        console.log(`Logged ${termsLogEntries.length} accepted terms entries for request ${program.id}`);
+      }
+
       // Resolve any terms_reminder todos
       await supabase
         .from("admin_todos")

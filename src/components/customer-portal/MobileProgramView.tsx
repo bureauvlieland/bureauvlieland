@@ -9,6 +9,7 @@ import { PriceSummaryCard } from "./PriceSummaryCard";
 import { BillingDetailsCard } from "./BillingDetailsCard";
 import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
 import { AcceptTermsCard } from "./AcceptTermsCard";
+import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
@@ -44,11 +45,14 @@ interface MobileProgramViewProps {
     number_of_people: number;
     items: ProgramRequestItem[];
     terms_accepted_at?: string;
+    signature_name?: string;
+    signature_id?: string;
     billing_company_name?: string;
     billing_address_street?: string;
     billing_address_postal?: string;
     billing_address_city?: string;
     billing_contact_name?: string;
+    acceptedTerms?: AcceptedTermsEntry[];
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -143,13 +147,23 @@ export const MobileProgramView = ({
         onOpenBilling={onOpenBilling}
       />
 
-      {/* Accept terms card - shows when all confirmed */}
+      {/* Accept terms card - shows when all confirmed but not yet accepted */}
       {allConfirmed && !termsAccepted && (
         <AcceptTermsCard
           onAccept={onAcceptTerms}
           isBillingComplete={billingComplete}
           onOpenBilling={onOpenBilling}
           items={program.items}
+        />
+      )}
+
+      {/* Accepted terms card - shows after acceptance with permanent visibility */}
+      {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
+        <AcceptedTermsCard
+          termsAcceptedAt={program.terms_accepted_at!}
+          signatureName={program.signature_name || null}
+          signatureId={program.signature_id || null}
+          acceptedTerms={program.acceptedTerms}
         />
       )}
 
