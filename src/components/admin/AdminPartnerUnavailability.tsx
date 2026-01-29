@@ -31,6 +31,7 @@ import {
 import { CalendarOff, AlertTriangle, CheckCircle2, Plus, Trash2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+import { checkConflictsForNewUnavailability } from "@/lib/conflictChecker";
 
 interface UnavailabilityPeriod {
   id: string;
@@ -190,6 +191,9 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
             end_date: formData.end_date,
           },
         });
+
+        // Check for conflicts and create auto-todos if needed
+        await checkConflictsForNewUnavailability(partnerId, formData.start_date, formData.end_date);
 
         toast({ title: "Periode toegevoegd" });
       }
