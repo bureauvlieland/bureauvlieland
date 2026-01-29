@@ -4,6 +4,8 @@ import {
   type ProgramRequestItem,
   type ProgramRequestHistory,
   type ProgramRequestWithItems,
+  type ProgramType,
+  type QuoteStatus,
   calculateStatusSummary,
 } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
@@ -251,6 +253,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       const programWithItems: ProgramRequestWithItems = {
         ...requestData,
         selected_dates: requestData.selected_dates as string[],
+        program_type: (requestData.program_type || 'self_service') as ProgramType,
+        quote_status: requestData.quote_status as QuoteStatus | null,
         items: itemsWithImages as ProgramRequestItem[],
       };
 
@@ -389,6 +393,11 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       // Image data for display
       image_url: block.image_url,
       image_asset: block.image_asset,
+      // Quote mode fields (null for self-service added items)
+      item_quote_status: null,
+      admin_price_override: null,
+      admin_price_notes: null,
+      skip_partner_notification: false,
     };
 
     setProgram((prev) => {

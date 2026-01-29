@@ -1,6 +1,125 @@
 // Status types for program request items
 export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced" | "counter_proposed";
 
+// Program type: self-service (customer-initiated) vs quote (admin-initiated)
+export type ProgramType = "self_service" | "quote";
+
+// Quote status for admin-created programs
+export type QuoteStatus =
+  | "concept"
+  | "in_afstemming"
+  | "offerte_verstuurd"
+  | "akkoord_ontvangen"
+  | "definitief_bevestigd"
+  | "verlopen"
+  | "geannuleerd";
+
+// Item quote status for individual building blocks in quote mode
+export type ItemQuoteStatus =
+  | "concept"
+  | "in_afstemming"
+  | "bevestigd"
+  | "optioneel";
+
+export interface QuoteStatusInfo {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+  description: string;
+}
+
+export const quoteStatusConfig: Record<QuoteStatus, QuoteStatusInfo> = {
+  concept: {
+    label: "Concept",
+    color: "text-slate-700 dark:text-slate-300",
+    bgColor: "bg-slate-100 dark:bg-slate-800",
+    icon: "FileEdit",
+    description: "Offerte wordt samengesteld",
+  },
+  in_afstemming: {
+    label: "In afstemming",
+    color: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-950/50",
+    icon: "MessageCircle",
+    description: "Afstemming met partners loopt",
+  },
+  offerte_verstuurd: {
+    label: "Offerte verstuurd",
+    color: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-950/50",
+    icon: "Send",
+    description: "Klant heeft offerte ontvangen",
+  },
+  akkoord_ontvangen: {
+    label: "Akkoord ontvangen",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950/50",
+    icon: "CheckCircle",
+    description: "Klant heeft voorwaarden geaccepteerd",
+  },
+  definitief_bevestigd: {
+    label: "Definitief bevestigd",
+    color: "text-emerald-700 dark:text-emerald-400",
+    bgColor: "bg-emerald-100 dark:bg-emerald-950/50",
+    icon: "CheckCircle2",
+    description: "Alle reserveringen definitief",
+  },
+  verlopen: {
+    label: "Verlopen",
+    color: "text-red-700 dark:text-red-400",
+    bgColor: "bg-red-100 dark:bg-red-950/50",
+    icon: "Clock",
+    description: "Geldigheidsdatum verstreken",
+  },
+  geannuleerd: {
+    label: "Geannuleerd",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    icon: "XCircle",
+    description: "Offerte is geannuleerd",
+  },
+};
+
+export const itemQuoteStatusConfig: Record<ItemQuoteStatus, QuoteStatusInfo> = {
+  concept: {
+    label: "Concept",
+    color: "text-slate-700 dark:text-slate-300",
+    bgColor: "bg-slate-100 dark:bg-slate-800",
+    icon: "FileEdit",
+    description: "Nog niet bevestigd",
+  },
+  in_afstemming: {
+    label: "In afstemming",
+    color: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-950/50",
+    icon: "MessageCircle",
+    description: "In afstemming met partner",
+  },
+  bevestigd: {
+    label: "Bevestigd",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950/50",
+    icon: "CheckCircle",
+    description: "Door partner bevestigd",
+  },
+  optioneel: {
+    label: "Optioneel",
+    color: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-950/50",
+    icon: "HelpCircle",
+    description: "Optioneel onderdeel",
+  },
+};
+
+// Customer-facing labels (hide internal terminology)
+export const customerItemQuoteStatusLabels: Record<ItemQuoteStatus, string> = {
+  concept: "Onder voorbehoud",
+  in_afstemming: "Onder voorbehoud",
+  bevestigd: "Bevestigd",
+  optioneel: "Optioneel",
+};
+
 export interface ItemStatusInfo {
   label: string;
   color: string;
@@ -89,6 +208,14 @@ export interface ProgramRequest {
   created_at: string;
   updated_at: string;
   expires_at: string;
+  // Quote mode fields
+  program_type: ProgramType;
+  quote_status: QuoteStatus | null;
+  quote_valid_until: string | null;
+  quote_sent_at: string | null;
+  quote_sent_by: string | null;
+  quote_personal_message: string | null;
+  admin_created_by: string | null;
 }
 
 export interface ProgramRequestItem {
@@ -132,6 +259,11 @@ export interface ProgramRequestItem {
   // Image fields (joined from building_blocks)
   image_url: string | null;
   image_asset: string | null;
+  // Quote mode fields
+  item_quote_status: ItemQuoteStatus | null;
+  admin_price_override: number | null;
+  admin_price_notes: string | null;
+  skip_partner_notification: boolean;
 }
 
 export interface ProgramRequestHistory {
