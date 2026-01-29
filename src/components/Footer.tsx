@@ -237,12 +237,25 @@ export const Footer = () => {
         <div className="pt-8 border-t border-border">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.</p>
-            <Link 
-              to="/algemene-voorwaarden" 
-              className="hover:text-primary transition-colors"
-            >
-              Algemene Voorwaarden
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <a 
+                href="https://norisksoftware.nl/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+                Technologie Partner: No Risk Software
+              </a>
+              <Link 
+                to="/algemene-voorwaarden" 
+                className="hover:text-primary transition-colors"
+              >
+                Algemene Voorwaarden
+              </Link>
+            </div>
           </div>
         </div>
       </div>
