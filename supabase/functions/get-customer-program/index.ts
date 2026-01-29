@@ -53,11 +53,26 @@ Deno.serve(async (req) => {
       throw itemsError;
     }
 
+    // Fetch accepted terms log (if terms have been accepted)
+    let acceptedTerms: any[] = [];
+    if (program.terms_accepted_at) {
+      const { data: termsData, error: termsError } = await supabase
+        .from("accepted_terms_log")
+        .select("*")
+        .eq("request_id", program.id)
+        .order("created_at", { ascending: true });
+
+      if (!termsError && termsData) {
+        acceptedTerms = termsData;
+      }
+    }
+
     return new Response(
       JSON.stringify({
         program: {
           ...program,
           items: items || [],
+          acceptedTerms: acceptedTerms,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -22,6 +22,7 @@ interface PartnerDetails {
   commission_percentage: number;
   terms_pdf_path: string | null;
   terms_uploaded_at: string | null;
+  uses_default_terms: boolean | null;
   bank_iban: string | null;
   bank_account_name: string | null;
   booking_contact_name: string | null;
@@ -499,6 +500,7 @@ export const PartnerSettingsForm = () => {
         partnerId={partner.id}
         termsPdfPath={partner.terms_pdf_path}
         termsUploadedAt={partner.terms_uploaded_at}
+        usesDefaultTerms={partner.uses_default_terms ?? false}
         onUpdate={fetchPartner}
       />
 

@@ -13,6 +13,7 @@ interface PartnerTermsInfo {
   id: string;
   name: string;
   terms_pdf_path: string | null;
+  uses_default_terms: boolean;
 }
 
 interface AcceptTermsCardProps {
@@ -21,6 +22,9 @@ interface AcceptTermsCardProps {
   onOpenBilling: () => void;
   items: ProgramRequestItem[];
 }
+
+const DEFAULT_TERMS_URL = "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/partner-terms/default/standaard-partnervoorwaarden.pdf";
+const BUREAU_TERMS_URL = "https://bureauvlieland.nl/algemene-voorwaarden";
 
 export const AcceptTermsCard = ({
   onAccept,
@@ -50,7 +54,7 @@ export const AcceptTermsCard = ({
 
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name, terms_pdf_path")
+        .select("id, name, terms_pdf_path, uses_default_terms")
         .in("id", uniquePartnerIds);
 
       if (!error && data) {
@@ -79,6 +83,23 @@ export const AcceptTermsCard = ({
   };
 
   const canSubmit = isChecked && isBillingComplete && signatureName.trim().length >= 2;
+
+  // Helper to get the appropriate terms link/label for a partner
+  const getPartnerTermsInfo = (partner: PartnerTermsInfo) => {
+    if (partner.terms_pdf_path && !partner.uses_default_terms) {
+      return {
+        label: "Bekijken",
+        url: getPublicUrl(partner.terms_pdf_path),
+        type: "custom" as const,
+      };
+    }
+    // Partner uses default terms or has no terms uploaded
+    return {
+      label: "Standaardvoorwaarden",
+      url: DEFAULT_TERMS_URL,
+      type: "default" as const,
+    };
+  };
 
   return (
     <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
@@ -116,37 +137,53 @@ export const AcceptTermsCard = ({
               </div>
             )}
 
-            {/* Partner Terms Section */}
-            {!isLoadingPartners && partnerTerms.length > 0 && (
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <p className="text-sm font-medium">
-                  Let op: voor de activiteiten in je programma zijn ook de voorwaarden van de volgende aanbieders van toepassing:
-                </p>
-                <ul className="space-y-2">
-                  {partnerTerms.map((partner) => (
+            {/* Terms Section - rewritten per briefing */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium">
+                Voor dit programma gelden de volgende voorwaarden:
+              </p>
+              <ul className="space-y-2">
+                {/* Bureau Vlieland terms - always shown first */}
+                <li className="flex items-center gap-2 text-sm">
+                  <span>•</span>
+                  <span className="font-medium">Bemiddelingsvoorwaarden Bureau Vlieland</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-primary"
+                    onClick={() => window.open(BUREAU_TERMS_URL, "_blank")}
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Bekijken
+                  </Button>
+                </li>
+
+                {/* Partner terms */}
+                {!isLoadingPartners && partnerTerms.map((partner) => {
+                  const termsInfo = getPartnerTermsInfo(partner);
+                  return (
                     <li key={partner.id} className="flex items-center gap-2 text-sm">
                       <span>•</span>
-                      <span className="font-medium">{partner.name}</span>
-                      {partner.terms_pdf_path ? (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="h-auto p-0 text-primary"
-                          onClick={() => window.open(getPublicUrl(partner.terms_pdf_path!), "_blank")}
-                        >
-                          <FileText className="h-3 w-3 mr-1" />
-                          Bekijken
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">
-                          (geen voorwaarden beschikbaar)
-                        </span>
-                      )}
+                      <span className="font-medium">
+                        {termsInfo.type === "default" 
+                          ? `Standaardvoorwaarden Partneraanbod (${partner.name})`
+                          : `Voorwaarden ${partner.name}`
+                        }
+                      </span>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-primary"
+                        onClick={() => window.open(termsInfo.url, "_blank")}
+                      >
+                        <FileText className="h-3 w-3 mr-1" />
+                        {termsInfo.label}
+                      </Button>
                     </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                  );
+                })}
+              </ul>
+            </div>
 
             <div className="space-y-3">
               <div className="flex items-start gap-3">
@@ -164,24 +201,20 @@ export const AcceptTermsCard = ({
                     !isBillingComplete && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  Ik ga akkoord met de{" "}
-                  <a
-                    href="https://bureauvlieland.nl/algemene-voorwaarden"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline hover:no-underline inline-flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    algemene voorwaarden van Bureau Vlieland
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                  {partnerTerms.length > 0 && " en de voorwaarden van bovenstaande aanbieders"}
+                  Ik ga akkoord met:
+                  <br />
+                  – de bemiddelingsvoorwaarden van Bureau Vlieland
+                  {partnerTerms.length > 0 && (
+                    <>
+                      <br />
+                      – de voorwaarden van de hierboven genoemde aanbieders
+                    </>
+                  )}
                 </Label>
               </div>
-
             </div>
 
-            {/* Digital Signature Section */}
+            {/* Digital Signature Section - simplified per briefing */}
             <div className={cn(
               "border rounded-lg p-4 space-y-3",
               !isChecked ? "opacity-50 bg-muted/30" : "bg-background"
@@ -206,8 +239,6 @@ export const AcceptTermsCard = ({
               </div>
 
               <ul className="text-xs text-muted-foreground space-y-1 pl-4">
-                <li>• Je bent bevoegd namens de organisatie</li>
-                <li>• Je hebt de voorwaarden gelezen en gaat akkoord</li>
                 <li>• Reserveringen worden definitief bevestigd</li>
                 <li>• Annuleringsvoorwaarden zijn van toepassing</li>
               </ul>

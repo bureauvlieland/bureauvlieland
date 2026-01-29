@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      accepted_terms_log: {
+        Row: {
+          accepted_at: string
+          created_at: string | null
+          id: string
+          partner_id: string
+          partner_name: string
+          request_id: string
+          terms_pdf_path: string | null
+          terms_type: string
+          terms_version: string
+        }
+        Insert: {
+          accepted_at: string
+          created_at?: string | null
+          id?: string
+          partner_id: string
+          partner_name: string
+          request_id: string
+          terms_pdf_path?: string | null
+          terms_type: string
+          terms_version: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string | null
+          id?: string
+          partner_id?: string
+          partner_name?: string
+          request_id?: string
+          terms_pdf_path?: string | null
+          terms_type?: string
+          terms_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accepted_terms_log_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accommodation_quotes: {
         Row: {
           accommodation_name: string
@@ -696,6 +740,7 @@ export type Database = {
           terms_pdf_path: string | null
           terms_uploaded_at: string | null
           updated_at: string
+          uses_default_terms: boolean | null
         }
         Insert: {
           accommodation_commission_percentage?: number | null
@@ -723,6 +768,7 @@ export type Database = {
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
+          uses_default_terms?: boolean | null
         }
         Update: {
           accommodation_commission_percentage?: number | null
@@ -750,6 +796,7 @@ export type Database = {
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
+          uses_default_terms?: boolean | null
         }
         Relationships: []
       }
