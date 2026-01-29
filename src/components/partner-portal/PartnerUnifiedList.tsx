@@ -1,4 +1,4 @@
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { 
   Activity, 
@@ -10,6 +10,7 @@ import {
   Receipt,
   Users,
   Calendar,
+  FileSignature,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,7 @@ export interface UnifiedListItem {
   isModified?: boolean;
   hasCounter?: boolean;
   canInvoice?: boolean;
+  awaitingTerms?: boolean; // Customer accepted but waiting for terms signature
   originalItem: PartnerItem | PartnerAccommodationQuote;
 }
 
@@ -123,6 +125,11 @@ export const PartnerUnifiedList = ({
       const hasCustomerAccepted = !!i.customer_accepted_at;
       const effectiveStatus = (i.status === "confirmed" && hasCustomerAccepted) ? "accepted" : i.status;
       
+      // Check if item is waiting for terms acceptance
+      const awaitingTerms = hasCustomerAccepted && 
+        !i.invoiced_number && 
+        !i.program_requests.terms_accepted_at;
+      
       return {
         id: i.id,
         type: "activity" as const,
@@ -136,6 +143,7 @@ export const PartnerUnifiedList = ({
         isModified: isModifiedByCustomer(i),
         hasCounter: i.status === "counter_proposed",
         canInvoice,
+        awaitingTerms,
         originalItem: i,
       };
     }),
@@ -274,16 +282,24 @@ export const PartnerUnifiedList = ({
                 </div>
 
                 {/* Status badge */}
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "font-normal border-0 shrink-0",
-                    statusInfo.color,
-                    statusInfo.bgColor
+                <div className="flex items-center gap-2 shrink-0">
+                  {item.awaitingTerms && !item.canInvoice && (
+                    <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                      <FileSignature className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Wacht op AV</span>
+                    </div>
                   )}
-                >
-                  {item.canInvoice ? "Te factureren" : statusInfo.label}
-                </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "font-normal border-0",
+                      statusInfo.color,
+                      statusInfo.bgColor
+                    )}
+                  >
+                    {item.canInvoice ? "Te factureren" : statusInfo.label}
+                  </Badge>
+                </div>
 
                 {/* Chevron */}
                 <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
