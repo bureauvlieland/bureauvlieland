@@ -1,11 +1,12 @@
 import { Helmet } from "react-helmet";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { AccommodationWizard } from "@/components/accommodation/AccommodationWizard";
-import { BedDouble, CheckCircle, Clock, Euro, Info } from "lucide-react";
+import { BedDouble, CheckCircle, Clock, Euro, Info, ArrowLeft } from "lucide-react";
 import { parseISO, isValid } from "date-fns";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
 
 const LogiesAanvragen = () => {
   const [searchParams] = useSearchParams();
@@ -113,7 +114,7 @@ const LogiesAanvragen = () => {
               <div className="max-w-4xl mx-auto mb-6">
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-start gap-3">
                   <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-foreground text-sm">
                       Gegevens overgenomen uit uw programma
                     </p>
@@ -121,6 +122,12 @@ const LogiesAanvragen = () => {
                       De datums en groepsgrootte zijn automatisch ingevuld. U kunt deze indien nodig aanpassen.
                     </p>
                   </div>
+                  <Button variant="ghost" size="sm" asChild className="shrink-0">
+                    <Link to="/programma-samenstellen">
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Terug naar programma
+                    </Link>
+                  </Button>
                 </div>
               </div>
             )}
