@@ -82,7 +82,8 @@ export const CounterProposalDialog = ({
     onClose();
   };
 
-  const proposedTime = item.proposed_time || item.preferred_time;
+  const currentTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+  const isAcceptedItem = !!item.customer_accepted_at;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -90,8 +91,10 @@ export const CounterProposalDialog = ({
         <DialogHeader>
           <DialogTitle>Andere tijd voorstellen</DialogTitle>
           <DialogDescription>
-            De voorgestelde tijd ({proposedTime || "flexibel"}) past niet? 
-            Geef hieronder aan welke tijd jou beter uitkomt.
+            {isAcceptedItem 
+              ? `De huidige tijd (${currentTime || "flexibel"}) past niet meer? De prijs blijft ongewijzigd, je stelt alleen een andere tijd voor.`
+              : `De voorgestelde tijd (${currentTime || "flexibel"}) past niet? Geef hieronder aan welke tijd jou beter uitkomt.`
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -104,6 +107,12 @@ export const CounterProposalDialog = ({
               <p className="text-muted-foreground flex items-center gap-1 mt-1">
                 <Clock className="h-3.5 w-3.5" />
                 Duur: {item.duration}
+              </p>
+            )}
+            {/* Show confirmed price for accepted items */}
+            {isAcceptedItem && item.quoted_price && (
+              <p className="text-green-700 dark:text-green-400 font-medium mt-1">
+                Prijs: €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} (blijft ongewijzigd)
               </p>
             )}
           </div>

@@ -342,28 +342,49 @@ export const CustomerProgramItem = ({
               <div>
                 <Label className="text-sm">Gewenste tijd</Label>
                 {isEditingTime || isEditing ? (
-                  <Select
-                    value={item.preferred_time || "flexibel"}
-                    onValueChange={(value) => {
-                      onUpdate({ preferred_time: value === "flexibel" ? null : value });
-                      setIsEditingTime(false);
-                    }}
-                  >
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeSlots.map((slot) => (
-                        <SelectItem key={slot.value} value={slot.value}>
-                          {slot.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  // For accepted items, use counter-proposal dialog instead of direct edit
+                  item.customer_accepted_at && onCounterProposal ? (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="text-sm">
+                        {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        onClick={() => {
+                          setShowCounterDialog(true);
+                          setIsEditingTime(false);
+                        }}
+                      >
+                        <ArrowLeftRight className="h-3 w-3 mr-1" />
+                        Andere tijd voorstellen
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={item.preferred_time || "flexibel"}
+                      onValueChange={(value) => {
+                        onUpdate({ preferred_time: value === "flexibel" ? null : value });
+                        setIsEditingTime(false);
+                      }}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeSlots.map((slot) => (
+                          <SelectItem key={slot.value} value={slot.value}>
+                            {slot.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
                 ) : (
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-sm">
-                      {item.preferred_time || "Flexibel"}
+                      {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
                     </span>
                     <Button
                       size="sm"
