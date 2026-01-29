@@ -1,180 +1,331 @@
 
-
-# Plan: Partners importeren vanuit Excel
+# Plan: Voorwaarden & Akkoordflow Upgrade
 
 ## Samenvatting
-Importeer de leverancierslijst uit de Excel (43 bedrijven) naar de `partners` tabel. Dit omvat:
-1. Bestaande partners bijwerken met ontbrekende gegevens
-2. Nieuwe partners toevoegen met de juiste `partner_type`
-3. Automatisch het type toewijzen op basis van de "Soort" kolom
+Dit plan implementeert een volledige upgrade van de voorwaarden- en akkoordflow conform de juridische briefing, met:
+1. **Partner settings**: Optie voor eigen voorwaarden-PDF OF standaardvoorwaarden
+2. **Checkout flow**: Herschreven teksten en facturatie-blok
+3. **Na akkoord**: Permanente zichtbaarheid van geaccepteerde voorwaarden
+4. **Versioning**: Opslag van welke voorwaarden-versies zijn geaccepteerd
 
 ---
 
-## Analyse Excel vs Database
+## Deel 1: Database Uitbreiding
 
-### Huidige partners (12 in database)
-| Database ID | Naam | Match in Excel | Actie |
-|-------------|------|----------------|-------|
-| `bureau` | Bureau Vlieland | ✅ Ja | Update |
-| `fortuna` | Brouwerij Fortuna | ✅ Ja (Fortvna Vlieland) | Update |
-| `cafe-boven` | Café Boven | ✅ Ja (Trattoria Oliva & Café Boven) | Update |
-| `fietsverhuur` | Fietsverhuur Jan Van Vlieland | ✅ Ja | Update |
-| `rederij` | Rederij Doeksen | ✅ Ja | Update |
-| `trattoria-oliva` | Trattoria Oliva | ✅ Ja | Update |
-| `vliehors-expres` | Vliehors Expres | ✅ Ja | Update |
-| `vlieland-outdoor-center` | Vlieland Outdoor Center | ✅ Ja | Update |
-| `zeehonden` | Zeehondentochten Vlieland | ✅ Ja | Update |
-| `zuiver` | Zuiver Traiteur | ✅ Ja | Update |
-| `hotel-seeduyn` | Hotel Seeduyn | ✅ Ja (Westcord Strandhotel Seeduyn) | Update |
-| `hotel-vlieland` | Strandhotel Vlieland | ❌ Niet gevonden | Geen actie |
-
-### Nieuwe partners uit Excel (31 bedrijven)
-Categorisering op basis van "Soort" en "Type" kolommen:
-
-**Logies (11 nieuwe):**
-- Badhotel Bruin (Hotel)
-- De Herbergh van Flielant (Hotel)
-- Het Vlielandhotel (Hotel)
-- Hotel De Wadden (Hotel)
-- Hotel Doniastate (Hotel)
-- Kampeerterrein Stortemelk (Camping)
-- Loodshotel (Hotel)
-- Pension Hotelletje De Veerman (Hotel)
-- Het Posthuys (Hotel)
-- Vlierijck Appartementen (Hotel)
-- Torenzicht (Groepsaccommodatie)
-- Zeezicht Vlieland (Hotel)
-
-**Activiteiten (20 nieuwe):**
-- Badhuys Vlieland (Eten en drinken)
-- Bagagevervoer Vlieland (Service)
-- Bunkermuseum (Activiteit)
-- De Bazuin Watertaxi (Vervoer)
-- De Oude Stoep (Eten en drinken)
-- De Vlielander Kaasbunker (Activiteit)
-- Eetwinkeltje van Renee (Eten en drinken)
-- Gerrit de Oesterman (Activiteit)
-- Gestrand (Eten en drinken)
-- Havenpaviljoen De Dining (Eten en drinken)
-- Manege De Seeruyter (Activiteit)
-- met Linde fotografie (Service)
-- Paal 50 (Activiteit)
-- Rederij Noordgat (Vervoer)
-- Stichting Flidunen (Activiteit)
-- Stichting Nicolaaskerk (Activiteit)
-- Taxi van Koot (Service)
-- TUKTUK Vlieland (Activiteit)
-- Vlieland Yoga (Activiteit)
-- Waddenrecreatiebedrijf Neptunus (Vervoer)
-- Zuiver-Vlieland (Eten en drinken)
-
----
-
-## Mapping: Excel Type → Partner Type
-
-| Excel "Soort" | Partner Type |
-|---------------|--------------|
-| Logies | `accommodation` |
-| Activiteiten | `activity_provider` |
-| (Beide) | `both` |
-
-| Excel "Type" (voor Logies) | accommodation_types |
-|----------------------------|---------------------|
-| Hotel | `["hotel"]` |
-| Camping | `["camping"]` |
-| Groepsaccommodatie | `["group"]` |
-
----
-
-## Technische implementatie
-
-### Stap 1: SQL Script genereren
-Genereer INSERT/UPDATE statements voor alle partners:
-
+### Nieuwe kolommen in `partners` tabel
 ```sql
--- Updates voor bestaande partners (ontbrekende gegevens aanvullen)
-UPDATE partners SET 
-  phone = '+31562700208',
-  address_street = 'Sikkelduin 11',
-  address_postal = '8899CG',
-  address_city = 'Vlieland'
-WHERE id = 'bureau' AND phone IS NULL;
+ALTER TABLE partners ADD COLUMN uses_default_terms boolean DEFAULT false;
+```
+- `uses_default_terms`: Partner geeft aan standaardvoorwaarden Bureau Vlieland te hanteren
 
--- Inserts voor nieuwe partners
-INSERT INTO partners (id, name, email, phone, address_street, address_postal, address_city, partner_type, is_active)
-VALUES 
-  ('badhotel-bruin', 'Badhotel Bruin', 'receptie@badhotelbruin.com', NULL, 'Dorpsstraat 88', '8899AL', 'Vlieland', 'accommodation', true),
-  ('gestrand', 'Gestrand B.V.', 'info@gestrandvlieland.nl', NULL, 'Havenweg 3 a', '8899BB', 'Vlieland', 'activity_provider', true),
-  -- etc...
+### Nieuwe tabel: `accepted_terms_log`
+```sql
+CREATE TABLE accepted_terms_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES program_requests(id),
+  partner_id text NOT NULL,
+  partner_name text NOT NULL,
+  terms_type text NOT NULL, -- 'partner_custom', 'partner_default', 'bureau_vlieland', 'uvh_2024'
+  terms_version text NOT NULL,
+  terms_pdf_path text, -- Snapshot of PDF path at moment of acceptance
+  accepted_at timestamptz NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Index voor snelle lookups per request
+CREATE INDEX idx_accepted_terms_request ON accepted_terms_log(request_id);
 ```
 
-### Stap 2: ID generatie
-Partner ID's worden gegenereerd volgens bestaand patroon:
-- Naam in lowercase
-- Spaties en speciale tekens vervangen door `-`
-- Maximaal 30 karakters
-
-Voorbeelden:
-- "Badhotel Bruin" → `badhotel-bruin`
-- "De Herbergh van Flielant V.O.F." → `de-herbergh-van-flielant`
-- "Kampeerterrein Stortemelk" → `kampeerterrein-stortemelk`
-
-### Stap 3: Data cleaning
-- Telefoon formatteren (bijv. "0639269444" → "06 39 26 94 44")
-- Email valideren en `<>` verwijderen
-- Postcode formatteren (bijv. "8899AL" → "8899 AL")
-- Plaatsnaam normaliseren (bijv. "VLIELAND" → "Vlieland")
+Dit slaat per boeking exact op welke voorwaarden-versies zijn geaccepteerd.
 
 ---
 
-## Commissie defaults
+## Deel 2: Partner Settings Uitbreiden
 
-| Partner Type | Default commissie |
-|--------------|-------------------|
-| activity_provider | 15% |
-| accommodation | 10% |
-| both | 15% (activiteiten), 10% (logies) |
+### PartnerTermsUpload.tsx aanpassen
+
+Huidige situatie: Partner kan alleen PDF uploaden.
+
+Nieuwe situatie:
+```
+┌─────────────────────────────────────────────────────┐
+│  📄 Algemene Voorwaarden                            │
+│                                                     │
+│  Kies hoe je voorwaarden worden getoond:            │
+│                                                     │
+│  ○ Eigen voorwaarden uploaden (PDF)                 │
+│    ┌───────────────────────────────────────┐        │
+│    │ algemene-voorwaarden.pdf    [Bekijk]  │        │
+│    │ Geüpload op 15 januari 2026           │        │
+│    └───────────────────────────────────────┘        │
+│    [Nieuwe PDF uploaden]                            │
+│                                                     │
+│  ○ Standaardvoorwaarden Bureau Vlieland             │
+│    ℹ️ De standaard bemiddelingsvoorwaarden van      │
+│    Bureau Vlieland worden getoond aan klanten.      │
+│    Deze dekken de meeste situaties.                 │
+│    [Bekijk standaardvoorwaarden →]                  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+Logica:
+- Radio button keuze: `uses_default_terms = true/false`
+- Bij "Eigen voorwaarden": bestaande upload-functionaliteit
+- Bij "Standaard": link naar Bureau Vlieland standaard-PDF
 
 ---
 
-## Wat wordt NIET geïmporteerd
+## Deel 3: AcceptTermsCard Herschrijven
 
-1. **Bureau Vlieland zelf** - Is al admin/eigenaar, niet als "partner"
-2. Bedrijven zonder email-adres
-3. Bedrijven buiten Vlieland (Harlingen, Terschelling) - optioneel (vervoerders zijn wel relevant)
+### Huidige teksten vervangen:
+
+**Voorwaardenblok (herschrijven)**
+
+Van:
+```
+Let op: voor de activiteiten in je programma zijn ook de voorwaarden 
+van de volgende aanbieders van toepassing:
+```
+
+Naar:
+```
+Voor dit programma gelden de volgende voorwaarden:
+```
+
+**Per partner tonen:**
+- Partnernaam + link naar PDF
+- Als partner geen eigen voorwaarden heeft maar `uses_default_terms = true`: 
+  "Standaardvoorwaarden Partneraanbod Bureau Vlieland" met link
+- Als partner geen voorwaarden heeft: automatisch standaardvoorwaarden tonen
+
+**Checkbox tekst (herschrijven)**
+
+Van:
+```
+Ik ga akkoord met de algemene voorwaarden van Bureau Vlieland 
+en de voorwaarden van bovenstaande aanbieders
+```
+
+Naar:
+```
+Ik ga akkoord met:
+– de bemiddelingsvoorwaarden van Bureau Vlieland
+– de voorwaarden van de hierboven genoemde aanbieders
+```
+
+**Digitale ondertekening sectie (vereenvoudigen)**
+
+Van:
+```
+• Je bent bevoegd namens de organisatie
+• Je hebt de voorwaarden gelezen en gaat akkoord
+• Reserveringen worden definitief bevestigd
+• Annuleringsvoorwaarden zijn van toepassing
+```
+
+Naar:
+```
+• Reserveringen worden definitief bevestigd
+• Annuleringsvoorwaarden zijn van toepassing
+```
 
 ---
 
-## Uitvoering
+## Deel 4: InvoiceProvidersCard Herschrijven
 
-### Bestanden die worden aangepast
-Geen code-wijzigingen nodig - dit is een data-import via SQL migration.
+### Tekst aanpassingen
 
-### SQL Migration
-Eén migratie met:
-1. UPDATE statements voor bestaande partners
-2. INSERT statements voor nieuwe partners
-3. ON CONFLICT handling voor veilige re-runs
+**Kop wijzigen:**
+
+Van: "Wie stuurt je een factuur?"
+
+Naar: "Facturatie per onderdeel"
+
+**Subtekst wijzigen:**
+
+Van: "Voor dit programma ontvang je facturen van de volgende partijen:"
+
+Naar: "Voor dit programma ontvang je afzonderlijke facturen van de onderstaande partijen."
+
+**Per partner toevoegen:**
+```
+Uitvoering & factuur door: [Partnernaam]
+```
+
+**Bureau Vlieland sectie:**
+```
+Coördinatie & handling
+Factuur door: Bureau Vlieland
+```
 
 ---
 
-## Overzicht acties per partner
+## Deel 5: Permanente Zichtbaarheid Na Akkoord
 
-### Updates (11 partners)
-| ID | Wat wordt bijgewerkt |
-|----|---------------------|
-| bureau | Telefoon, adres bijwerken |
-| fortuna | Adres controleren |
-| cafe-boven | Contactpersoon toevoegen |
-| fietsverhuur | Adres bevestigen |
-| rederij | Adres, email bijwerken |
-| trattoria-oliva | Contactpersoon toevoegen |
-| vliehors-expres | Email wijzigen naar hallo@paal50.nl |
-| vlieland-outdoor-center | Adres bevestigen |
-| zeehonden | Contactpersoon toevoegen |
-| zuiver | Contactpersoon toevoegen |
-| hotel-seeduyn | Naam, adres, email bijwerken |
+### Nieuwe component: AcceptedTermsCard.tsx
 
-### Nieuwe inserts (31 partners)
-Alle bedrijven uit de Excel die nog niet in de database staan.
+Wordt getoond in plaats van AcceptTermsCard wanneer `terms_accepted_at` is gevuld:
 
+```
+┌─────────────────────────────────────────────────────┐
+│  ✓ Boeking definitief bevestigd                     │
+├─────────────────────────────────────────────────────┤
+│  Geaccepteerde voorwaarden                          │
+│                                                     │
+│  Geaccepteerd op: 28 januari 2026 om 14:32          │
+│  Door: Jan de Vries                                 │
+│  Ondertekening ID: SIG-2026-001234                  │
+│                                                     │
+│  De volgende voorwaarden zijn van toepassing:       │
+│                                                     │
+│  📄 Bemiddelingsvoorwaarden Bureau Vlieland         │
+│     Versie 2026-01 · Download PDF                   │
+│                                                     │
+│  📄 Voorwaarden Brouwerij Fortuna                   │
+│     Versie 2026-01 · Download PDF                   │
+│                                                     │
+│  📄 Voorwaarden Vliehors Expres                     │
+│     Standaardvoorwaarden · Download PDF             │
+│                                                     │
+│  📄 Uniforme Voorwaarden Horeca 2024                │
+│     (Koninklijke Horeca Nederland) · Download PDF   │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Implementatie:
+
+1. **Bij acceptatie**: Edge function slaat snapshot op van alle voorwaarden in `accepted_terms_log`
+2. **Na acceptatie**: Frontend toont AcceptedTermsCard met data uit log
+3. **PDF links**: Blijven permanent downloadbaar
+
+---
+
+## Deel 6: Edge Function Uitbreiden
+
+### update-customer-program/index.ts
+
+Bij `acceptTerms = true`:
+
+1. **Verzamel alle partners** uit de items
+2. **Voor elke partner**: Log naar `accepted_terms_log`:
+   ```typescript
+   {
+     request_id: program.id,
+     partner_id: partner.id,
+     partner_name: partner.name,
+     terms_type: partner.terms_pdf_path ? 'partner_custom' : 'partner_default',
+     terms_version: new Date().toISOString().slice(0,7), // 2026-01
+     terms_pdf_path: partner.terms_pdf_path || 'default/standaard-partnervoorwaarden.pdf',
+     accepted_at: new Date().toISOString(),
+   }
+   ```
+3. **Bureau Vlieland voorwaarden**: Log apart
+4. **UVH 2024**: Log indien horeca-items aanwezig
+
+---
+
+## Deel 7: Vaste Voorwaarden-bestanden
+
+### Aanmaken in storage bucket `partner-terms`:
+
+1. `default/bemiddelingsvoorwaarden-bureau-vlieland.pdf` - Bureau Vlieland's eigen voorwaarden
+2. `default/standaard-partnervoorwaarden.pdf` - Fallback voor partners zonder eigen voorwaarden
+3. `default/uvh-2024.pdf` - Uniforme Voorwaarden Horeca
+
+Deze worden éénmalig geüpload en blijven permanent beschikbaar.
+
+---
+
+## Bestanden die worden aangepast
+
+### Database
+- Migratie: kolom `uses_default_terms` toevoegen aan `partners`
+- Migratie: nieuwe tabel `accepted_terms_log`
+
+### Frontend componenten
+| Bestand | Wijziging |
+|---------|-----------|
+| `PartnerTermsUpload.tsx` | Radio-keuze toevoegen: eigen PDF of standaard |
+| `AcceptTermsCard.tsx` | Teksten herschrijven conform briefing |
+| `InvoiceProvidersCard.tsx` | Kop en teksten aanpassen |
+| `DesktopProgramView.tsx` | AcceptedTermsCard tonen na akkoord |
+| `MobileProgramView.tsx` | AcceptedTermsCard tonen na akkoord |
+
+### Nieuwe componenten
+| Bestand | Doel |
+|---------|------|
+| `AcceptedTermsCard.tsx` | Permanente weergave geaccepteerde voorwaarden |
+
+### Backend
+| Bestand | Wijziging |
+|---------|-----------|
+| `update-customer-program/index.ts` | Voorwaarden-snapshot opslaan bij acceptatie |
+| `get-customer-program/index.ts` | Accepted terms log meesturen |
+
+### Types
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/types/partner.ts` | `uses_default_terms` toevoegen |
+| `src/types/programRequest.ts` | `AcceptedTermsEntry` type toevoegen |
+
+---
+
+## Visuele samenvatting flow
+
+```
+PARTNER SETTINGS
+     │
+     ├─ Eigen PDF uploaden ──────────────────────┐
+     │                                            │
+     └─ Standaardvoorwaarden selecteren ─────────┤
+                                                  │
+                                                  ▼
+KLANT CHECKOUT ──────────────────────────────────┐
+│                                                 │
+│  "Voor dit programma gelden de volgende         │
+│   voorwaarden:"                                 │
+│                                                 │
+│   • Bemiddelingsvoorwaarden Bureau Vlieland    │
+│   • Voorwaarden [Partner A] (PDF)              │
+│   • Standaardvoorwaarden [Partner B]           │
+│   • UVH 2024 (indien horeca)                   │
+│                                                 │
+│  ☐ Ik ga akkoord met:                          │
+│    – de bemiddelingsvoorwaarden van BV         │
+│    – de voorwaarden van bovenstaande aanbieders│
+│                                                 │
+│  [Ondertekenen & Definitief boeken]            │
+└─────────────────────────────────────────────────┘
+                    │
+                    ▼
+NA AKKOORD ──────────────────────────────────────┐
+│                                                 │
+│  ✓ Boeking definitief bevestigd                │
+│                                                 │
+│  Geaccepteerd op: 28 jan 2026, 14:32           │
+│  Door: Jan de Vries                            │
+│  ID: SIG-2026-001234                           │
+│                                                 │
+│  📄 Bemiddelingsvoorwaarden BV (v2026-01)      │
+│  📄 Voorwaarden Partner A (v2026-01)           │
+│  📄 Standaardvoorwaarden Partner B             │
+│  📄 UVH 2024                                   │
+│                                                 │
+│  [Download alle voorwaarden als ZIP]            │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## Implementatievolgorde
+
+1. **Database migraties** - Kolom en tabel aanmaken
+2. **Partner settings** - uses_default_terms optie toevoegen
+3. **AcceptTermsCard** - Teksten herschrijven
+4. **InvoiceProvidersCard** - Teksten aanpassen
+5. **Edge function** - Voorwaarden-snapshot bij acceptatie
+6. **AcceptedTermsCard** - Nieuwe component voor na akkoord
+7. **Desktop/Mobile views** - AcceptedTermsCard integreren
+8. **get-customer-program** - Accepted terms log meesturen
