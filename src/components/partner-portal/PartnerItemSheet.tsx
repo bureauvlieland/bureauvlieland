@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -34,6 +34,12 @@ import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { PartnerItem } from "@/types/partner";
+import { 
+  generateTimeSlots, 
+  getBlockedTimeSlotsFromPartnerItems, 
+  isTimeSlotBlocked,
+  type PartnerConflictItem 
+} from "@/lib/timeUtils";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
@@ -49,6 +55,7 @@ interface PartnerItemSheetProps {
   ) => Promise<boolean>;
   onRegisterInvoice: () => void;
   commissionPercentage: number;
+  allDayItems?: PartnerItem[]; // All items on the same day for conflict checking
 }
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
@@ -71,6 +78,7 @@ export const PartnerItemSheet = ({
   onClose,
   onStatusUpdate,
   onRegisterInvoice,
+  allDayItems = [],
 }: PartnerItemSheetProps) => {
   const [showResponseForm, setShowResponseForm] = useState(false);
   const [responseType, setResponseType] = useState<ResponseType>("confirmed");
@@ -80,7 +88,31 @@ export const PartnerItemSheet = ({
   const [statusNote, setStatusNote] = useState("");
   const [priceError, setPriceError] = useState("");
   const [noteError, setNoteError] = useState("");
+  const [timeError, setTimeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Calculate blocked time slots from other items on same day
+  const blockedTimeSlots = useMemo(() => {
+    if (!item) return [];
+    // Convert PartnerItem to PartnerConflictItem for timeUtils
+    const compatibleItems: PartnerConflictItem[] = allDayItems.map(i => ({
+      id: i.id,
+      day_index: i.day_index,
+      block_name: i.block_name,
+      confirmed_time: i.confirmed_time,
+      proposed_time: i.proposed_time,
+      preferred_time: i.preferred_time,
+      duration: i.duration,
+      status: i.status,
+    }));
+    return getBlockedTimeSlotsFromPartnerItems(compatibleItems, item.day_index, item.id);
+  }, [allDayItems, item]);
+
+  // Generate available time slots (exclude blocked ones)
+  const availableTimeSlots = useMemo(() => {
+    const allSlots = generateTimeSlots();
+    return allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
+  }, [blockedTimeSlots, item?.duration]);
 
   if (!item) return null;
 
@@ -105,6 +137,17 @@ export const PartnerItemSheet = ({
   const handleSubmitResponse = async () => {
     // Validate based on response type
     let hasError = false;
+
+    // Time is required for both confirmed and alternative
+    if (responseType === "confirmed" || responseType === "alternative") {
+      if (!proposedTime) {
+        setTimeError("Tijd is verplicht");
+        hasError = true;
+      } else if (isTimeSlotBlocked(proposedTime, item.duration || null, blockedTimeSlots)) {
+        setTimeError("Deze tijd conflicteert met een andere activiteit");
+        hasError = true;
+      }
+    }
 
     if (responseType === "confirmed") {
       const priceValue = parseFloat(quotedPrice.replace(",", "."));
@@ -160,6 +203,7 @@ export const PartnerItemSheet = ({
     setStatusNote("");
     setPriceError("");
     setNoteError("");
+    setTimeError("");
   };
 
   const handleClose = () => {
@@ -512,6 +556,51 @@ export const PartnerItemSheet = ({
                 {/* Conditional fields based on response type */}
                 {responseType === "confirmed" && (
                   <div className="space-y-4 pt-2">
+                    {/* Blocked time slots warning */}
+                    {blockedTimeSlots.length > 0 && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                          <Clock className="h-4 w-4 inline mr-1" />
+                          Bezette tijden op deze dag:
+                        </p>
+                        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                          {blockedTimeSlots.map(slot => (
+                            <li key={slot.itemId}>
+                              {slot.startTime} - {slot.endTime}: {slot.itemName}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="proposedTime" className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        Tijdsvoorstel *
+                      </Label>
+                      <select
+                        id="proposedTime"
+                        value={proposedTime}
+                        onChange={(e) => {
+                          setProposedTime(e.target.value);
+                          setTimeError("");
+                        }}
+                        className={cn(
+                          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          timeError && "border-destructive"
+                        )}
+                      >
+                        <option value="">Selecteer een tijd...</option>
+                        {availableTimeSlots.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                      {timeError && <p className="text-sm text-destructive">{timeError}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        Kies een beschikbare tijd (30 min marge tussen activiteiten)
+                      </p>
+                    </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="quotedPrice" className="flex items-center gap-1">
                         <Euro className="h-4 w-4" />
@@ -537,16 +626,6 @@ export const PartnerItemSheet = ({
                         Prijs voor {request.number_of_people} personen
                       </p>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="proposedTime">Voorgestelde tijd (optioneel)</Label>
-                      <Input
-                        id="proposedTime"
-                        placeholder="Bijv. 10:00 of 'ochtend'"
-                        value={proposedTime}
-                        onChange={(e) => setProposedTime(e.target.value)}
-                      />
-                    </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="quotedNotes">Toelichting (optioneel)</Label>
@@ -563,14 +642,46 @@ export const PartnerItemSheet = ({
 
                 {responseType === "alternative" && (
                   <div className="space-y-4 pt-2">
+                    {/* Blocked time slots warning */}
+                    {blockedTimeSlots.length > 0 && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                          <Clock className="h-4 w-4 inline mr-1" />
+                          Bezette tijden op deze dag:
+                        </p>
+                        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                          {blockedTimeSlots.map(slot => (
+                            <li key={slot.itemId}>
+                              {slot.startTime} - {slot.endTime}: {slot.itemName}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
-                      <Label htmlFor="proposedTimeAlt">Voorgestelde tijd (optioneel)</Label>
-                      <Input
+                      <Label htmlFor="proposedTimeAlt" className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        Voorgestelde tijd *
+                      </Label>
+                      <select
                         id="proposedTimeAlt"
-                        placeholder="Bijv. 14:00 in plaats van 10:00"
                         value={proposedTime}
-                        onChange={(e) => setProposedTime(e.target.value)}
-                      />
+                        onChange={(e) => {
+                          setProposedTime(e.target.value);
+                          setTimeError("");
+                        }}
+                        className={cn(
+                          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          timeError && "border-destructive"
+                        )}
+                      >
+                        <option value="">Selecteer een tijd...</option>
+                        {availableTimeSlots.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                      {timeError && <p className="text-sm text-destructive">{timeError}</p>}
                     </div>
 
                     <div className="space-y-2">

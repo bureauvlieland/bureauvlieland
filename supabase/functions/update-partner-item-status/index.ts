@@ -211,6 +211,14 @@ Deno.serve(async (req) => {
     }
 
     // Require price for confirmed status, require note for alternative status
+    // Require proposed time for both confirmed and alternative
+    if ((status === "confirmed" || status === "alternative") && !proposedTime) {
+      return new Response(
+        JSON.stringify({ error: "Proposed time is required when confirming or proposing alternative" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (status === "confirmed" && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
       return new Response(
         JSON.stringify({ error: "Quoted price is required when confirming" }),
@@ -275,9 +283,9 @@ Deno.serve(async (req) => {
       updateData.quoted_price = quotedPrice;
       updateData.quoted_at = new Date().toISOString();
       updateData.quoted_notes = quotedNotes || null;
-      // Clear any previous proposed values when confirming
-      updateData.proposed_time = null;
-      updateData.proposed_date = null;
+      // Store proposed time as the confirmed time for this proposal
+      updateData.proposed_time = proposedTime || null;
+      updateData.proposed_date = proposedDate || null;
     }
 
     if (status === "alternative") {

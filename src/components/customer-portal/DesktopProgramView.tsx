@@ -219,6 +219,8 @@ export const DesktopProgramView = ({
                           onUpdate={(updates) => onUpdateItem(item.id, updates)}
                           onRemove={() => onRemoveItem(item.id)}
                           onAccept={() => onAcceptItem(item.id)}
+                          onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                          allItems={program.items}
                           hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                         />
                       ))}
@@ -248,6 +250,8 @@ export const DesktopProgramView = ({
                         onUpdate={(updates) => onUpdateItem(item.id, updates)}
                         onRemove={() => onRemoveItem(item.id)}
                         onAccept={() => onAcceptItem(item.id)}
+                        onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                        allItems={program.items}
                         hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                       />
                     ))}
