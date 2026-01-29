@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,14 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CheckCircle, XCircle, MessageSquare, Loader2, Euro } from "lucide-react";
+import { CheckCircle, XCircle, MessageSquare, Loader2, Euro, Clock } from "lucide-react";
 import type { PartnerItem } from "@/types/partner";
+import { generateTimeSlots, getBlockedTimeSlotsFromPartnerItems, isTimeSlotBlocked, type PartnerConflictItem } from "@/lib/timeUtils";
+import { cn } from "@/lib/utils";
 
 interface StatusUpdateDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => Promise<void>;
+  onSubmit: (status: string, note?: string, quotedPrice?: number, quotedNotes?: string, proposedTime?: string) => Promise<void>;
   item: PartnerItem | null;
+  allDayItems?: PartnerItem[]; // For conflict checking
 }
 
 export const StatusUpdateDialog = ({
@@ -27,26 +30,63 @@ export const StatusUpdateDialog = ({
   onClose,
   onSubmit,
   item,
+  allDayItems = [],
 }: StatusUpdateDialogProps) => {
   const [status, setStatus] = useState<string>("confirmed");
   const [note, setNote] = useState("");
   const [quotedPrice, setQuotedPrice] = useState("");
   const [quotedNotes, setQuotedNotes] = useState("");
+  const [proposedTime, setProposedTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [priceError, setPriceError] = useState("");
+  const [timeError, setTimeError] = useState("");
+
+  // Calculate blocked time slots
+  const blockedTimeSlots = useMemo(() => {
+    if (!item) return [];
+    const compatibleItems: PartnerConflictItem[] = allDayItems.map(i => ({
+      id: i.id,
+      day_index: i.day_index,
+      block_name: i.block_name,
+      confirmed_time: i.confirmed_time,
+      proposed_time: i.proposed_time,
+      preferred_time: i.preferred_time,
+      duration: i.duration,
+      status: i.status,
+    }));
+    return getBlockedTimeSlotsFromPartnerItems(compatibleItems, item.day_index, item.id);
+  }, [allDayItems, item]);
+
+  // Generate available time slots
+  const availableTimeSlots = useMemo(() => {
+    const allSlots = generateTimeSlots();
+    return allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
+  }, [blockedTimeSlots, item?.duration]);
 
   const handleSubmit = async () => {
+    let hasError = false;
+
+    // Time is required for confirmed and alternative
+    if (status === "confirmed" || status === "alternative") {
+      if (!proposedTime) {
+        setTimeError("Tijd is verplicht");
+        hasError = true;
+      } else if (isTimeSlotBlocked(proposedTime, item?.duration || null, blockedTimeSlots)) {
+        setTimeError("Deze tijd conflicteert met een andere activiteit");
+        hasError = true;
+      }
+    }
+
     // Validate price is required for confirmed status
     if (status === "confirmed") {
       const priceValue = parseFloat(quotedPrice.replace(",", "."));
       if (!quotedPrice || isNaN(priceValue) || priceValue <= 0) {
         setPriceError("Vul een geldige prijs in");
-        return;
+        hasError = true;
       }
-      setPriceError("");
     }
 
-    setIsSubmitting(true);
+    if (hasError) return;
     try {
       const priceValue = status === "confirmed" 
         ? parseFloat(quotedPrice.replace(",", ".")) 
@@ -62,7 +102,9 @@ export const StatusUpdateDialog = ({
     setNote("");
     setQuotedPrice("");
     setQuotedNotes("");
+    setProposedTime("");
     setPriceError("");
+    setTimeError("");
     onClose();
   };
 
@@ -124,6 +166,48 @@ export const StatusUpdateDialog = ({
           {/* Price input for confirmed status */}
           {status === "confirmed" && (
             <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
+              {/* Blocked time slots warning */}
+              {blockedTimeSlots.length > 0 && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                    <Clock className="h-4 w-4 inline mr-1" />
+                    Bezette tijden:
+                  </p>
+                  <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                    {blockedTimeSlots.map(slot => (
+                      <li key={slot.itemId}>
+                        {slot.startTime} - {slot.endTime}: {slot.itemName}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="proposedTime" className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  Tijdsvoorstel *
+                </Label>
+                <select
+                  id="proposedTime"
+                  value={proposedTime}
+                  onChange={(e) => {
+                    setProposedTime(e.target.value);
+                    setTimeError("");
+                  }}
+                  className={cn(
+                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    timeError && "border-destructive"
+                  )}
+                >
+                  <option value="">Selecteer een tijd...</option>
+                  {availableTimeSlots.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+                {timeError && <p className="text-sm text-destructive">{timeError}</p>}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="quotedPrice" className="flex items-center gap-1">
                   <Euro className="h-4 w-4" />
@@ -141,7 +225,7 @@ export const StatusUpdateDialog = ({
                       setQuotedPrice(e.target.value);
                       setPriceError("");
                     }}
-                    className={`pl-7 ${priceError ? "border-destructive" : ""}`}
+                    className={cn("pl-7", priceError && "border-destructive")}
                   />
                 </div>
                 {priceError && (
@@ -166,18 +250,71 @@ export const StatusUpdateDialog = ({
             </div>
           )}
 
-          {(status === "alternative" || status === "unavailable") && (
+          {status === "alternative" && (
+            <div className="space-y-4 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+              {/* Blocked time slots warning */}
+              {blockedTimeSlots.length > 0 && (
+                <div className="p-3 bg-background rounded-lg border">
+                  <p className="text-sm font-medium mb-2">
+                    <Clock className="h-4 w-4 inline mr-1" />
+                    Bezette tijden:
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {blockedTimeSlots.map(slot => (
+                      <li key={slot.itemId}>
+                        {slot.startTime} - {slot.endTime}: {slot.itemName}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="proposedTimeAlt" className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  Voorgestelde tijd *
+                </Label>
+                <select
+                  id="proposedTimeAlt"
+                  value={proposedTime}
+                  onChange={(e) => {
+                    setProposedTime(e.target.value);
+                    setTimeError("");
+                  }}
+                  className={cn(
+                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    timeError && "border-destructive"
+                  )}
+                >
+                  <option value="">Selecteer een tijd...</option>
+                  {availableTimeSlots.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+                {timeError && <p className="text-sm text-destructive">{timeError}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="note">
+                  Alternatief voorstel *
+                </Label>
+                <Textarea
+                  id="note"
+                  placeholder="Bijv. 'Beschikbaar op 14:00 in plaats van 10:00'"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          {status === "unavailable" && (
             <div className="space-y-2">
-              <Label htmlFor="note">
-                {status === "alternative" ? "Alternatief voorstel" : "Reden"}
-              </Label>
+              <Label htmlFor="note">Reden (optioneel)</Label>
               <Textarea
                 id="note"
-                placeholder={
-                  status === "alternative"
-                    ? "Bijv. 'Beschikbaar op 10:00 of 14:00 in plaats van 12:00'"
-                    : "Bijv. 'Volgeboekt op deze datum'"
-                }
+                placeholder="Bijv. 'Volgeboekt op deze datum'"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={3}

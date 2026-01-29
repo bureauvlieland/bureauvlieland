@@ -134,6 +134,41 @@ export const hasTimeConflict = (
 };
 
 /**
+ * Generate all time slots (30 min increments from 08:00 to 22:00)
+ */
+export const generateTimeSlots = (): string[] => {
+  const slots: string[] = [];
+  for (let hour = 8; hour <= 22; hour++) {
+    for (const minutes of [0, 30]) {
+      if (hour === 22 && minutes === 30) continue; // Skip 22:30
+      slots.push(`${String(hour).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+    }
+  }
+  return slots;
+};
+
+/**
+ * Check if a specific time slot is blocked
+ */
+export const isTimeSlotBlocked = (
+  time: string,
+  duration: string | null,
+  blockedSlots: TimeSlot[],
+  marginMinutes: number = 30
+): boolean => {
+  const startMinutes = parseTimeToMinutes(time);
+  const durationMinutes = parseDuration(duration);
+  const endMinutes = startMinutes + durationMinutes + marginMinutes;
+
+  for (const slot of blockedSlots) {
+    if (timeRangesOverlap(startMinutes, endMinutes, slot.startMinutes, slot.endMinutes)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
  * Generate available time slots (30 min increments from 08:00 to 22:00)
  * Excludes blocked slots
  */
@@ -170,4 +205,55 @@ export const getAvailableTimeSlots = (
   }
 
   return availableSlots;
+};
+
+// Minimal item interface for partner conflict checking (subset of ProgramRequestItem)
+export interface PartnerConflictItem {
+  id: string;
+  day_index: number;
+  block_name: string;
+  confirmed_time: string | null;
+  proposed_time: string | null;
+  preferred_time?: string | null;
+  duration: string | null;
+  status: string;
+}
+
+/**
+ * Get blocked time slots from partner items (simplified version for partner portal)
+ */
+export const getBlockedTimeSlotsFromPartnerItems = (
+  items: PartnerConflictItem[],
+  dayIndex: number,
+  excludeItemId: string,
+  marginMinutes: number = 30
+): TimeSlot[] => {
+  return items
+    .filter(
+      (item) =>
+        item.day_index === dayIndex &&
+        item.id !== excludeItemId &&
+        item.status !== "cancelled" &&
+        item.status !== "unavailable" &&
+        (item.confirmed_time || item.proposed_time || item.preferred_time)
+    )
+    .map((item) => {
+      // Priority: confirmed_time > proposed_time > preferred_time
+      const startTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+      if (!startTime || startTime === "flexibel") return null;
+
+      const durationMinutes = parseDuration(item.duration);
+      const startMinutes = parseTimeToMinutes(startTime);
+      const endMinutes = startMinutes + durationMinutes + marginMinutes;
+
+      return {
+        itemId: item.id,
+        itemName: item.block_name,
+        startTime,
+        endTime: minutesToTime(endMinutes),
+        startMinutes,
+        endMinutes,
+      };
+    })
+    .filter((slot): slot is TimeSlot => slot !== null);
 };

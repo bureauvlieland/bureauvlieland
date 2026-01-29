@@ -38,6 +38,7 @@ export interface PartnerItem {
   // Proposed alternative fields (set when partner proposes alternative)
   proposed_time: string | null;
   proposed_date: string | null;
+  confirmed_time: string | null; // Final confirmed time after customer acceptance
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;
