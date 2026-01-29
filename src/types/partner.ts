@@ -43,6 +43,10 @@ export interface PartnerItem {
   quoted_price: number | null;
   quoted_at: string | null;
   quoted_notes: string | null;
+  // Customer counter proposal fields (when customer proposes alternative time)
+  customer_counter_time: string | null;
+  customer_counter_note: string | null;
+  customer_counter_at: string | null;
   // Invoice fields
   invoiced_amount: number | null;
   invoiced_number: string | null;

@@ -365,7 +365,7 @@ export const PartnerItemSheet = ({
           )}
 
           {/* Customer counter proposal */}
-          {item.status === "counter_proposed" && (item as any).customer_counter_time && (
+          {item.status === "counter_proposed" && item.customer_counter_time && (
             <>
               <Separator />
               <div className="space-y-3">
@@ -379,11 +379,11 @@ export const PartnerItemSheet = ({
                   <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400">
                     <Clock className="h-4 w-4" />
                     <span>Klant wil liever:</span>
-                    <span>{(item as any).customer_counter_time}</span>
+                    <span>{item.customer_counter_time}</span>
                   </div>
-                  {(item as any).customer_counter_note && (
+                  {item.customer_counter_note && (
                     <p className="text-sm text-purple-800 dark:text-purple-300 mt-2 italic">
-                      "{(item as any).customer_counter_note}"
+                      "{item.customer_counter_note}"
                     </p>
                   )}
                 </div>
