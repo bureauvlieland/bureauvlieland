@@ -119,7 +119,8 @@ export const MobileProgramView = ({
   );
 
   // Determine which sections should be open by default
-  const allConfirmed = statusSummary.pending === 0 && statusSummary.confirmed > 0;
+  // Show AcceptTermsCard when no pending/alternative items and at least one item exists
+  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.total > 0;
   const shouldOpenBilling = allConfirmed && !termsAccepted && !billingComplete;
 
   return (
