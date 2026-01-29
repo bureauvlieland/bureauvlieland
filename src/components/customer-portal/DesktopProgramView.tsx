@@ -162,6 +162,7 @@ export const DesktopProgramView = ({
             isBillingComplete={billingComplete}
             onOpenBilling={onOpenBilling}
             items={program.items}
+            accommodationQuotes={accommodationQuotes}
           />
         )}
 

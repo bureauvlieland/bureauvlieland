@@ -665,9 +665,36 @@ Deno.serve(async (req) => {
           }
         }
 
-        // 3. Check if any catering items - add UVH 2024 if so
+        // 3. Check if UVH terms should be added:
+        // - If there are catering items
+        // - If there's a selected accommodation where partner has no custom terms
         const hasCatering = programItems.some(i => i.block_category === "catering");
-        if (hasCatering) {
+        
+        // Check for accommodation without custom terms
+        let addUvhForAccommodation = false;
+        if (program.linked_accommodation_id) {
+          const { data: selectedQuote } = await supabase
+            .from("accommodation_quotes")
+            .select("partner_id")
+            .eq("request_id", program.linked_accommodation_id)
+            .eq("status", "selected")
+            .maybeSingle();
+          
+          if (selectedQuote) {
+            const { data: accPartner } = await supabase
+              .from("partners")
+              .select("terms_pdf_path, uses_default_terms")
+              .eq("id", selectedQuote.partner_id)
+              .single();
+            
+            // Add UVH if partner has no custom terms
+            if (!accPartner?.terms_pdf_path || accPartner?.uses_default_terms) {
+              addUvhForAccommodation = true;
+            }
+          }
+        }
+
+        if (hasCatering || addUvhForAccommodation) {
           termsLogEntries.push({
             request_id: program.id,
             partner_id: "uvh",
