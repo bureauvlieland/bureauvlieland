@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
+import { AdminPartnerRevenueChart } from "@/components/admin/AdminPartnerRevenueChart";
 
 interface Partner {
   id: string;
@@ -671,26 +672,26 @@ const AdminPartnerDetail = () => {
             </div>
           </div>
 
-          {/* Unavailability and Related Requests */}
+          {/* Revenue Chart and Unavailability */}
           {!isNew && id && (
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Unavailability - takes 1/3 */}
-              <div>
-                <AdminPartnerUnavailability partnerId={id} />
-              </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <AdminPartnerRevenueChart partnerId={id} />
+              <AdminPartnerUnavailability partnerId={id} />
+            </div>
+          )}
 
-              {/* Related Requests - takes 2/3 */}
-              <div className="md:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Gerelateerde aanvragen
-                    </CardTitle>
-                    <CardDescription>
-                      Programma aanvragen met activiteiten van deze partner
-                    </CardDescription>
-                  </CardHeader>
+          {/* Related Requests */}
+          {!isNew && id && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Gerelateerde aanvragen
+                </CardTitle>
+                <CardDescription>
+                  Programma aanvragen met activiteiten van deze partner
+                </CardDescription>
+              </CardHeader>
                   <CardContent className="p-0">
                     {isLoadingRequests ? (
                       <div className="p-6">
@@ -777,8 +778,6 @@ const AdminPartnerDetail = () => {
                     )}
                   </CardContent>
                 </Card>
-              </div>
-            </div>
           )}
         </div>
       </AdminLayout>

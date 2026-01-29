@@ -61,11 +61,13 @@ Deno.serve(async (req) => {
     let statusFilter = "pending";
     let typeFilter = "all"; // "all" | "activity" | "accommodation"
     let monthFilter: string | null = null; // Format: "2026-06" or null for all
+    let partnerIdFilter: string | null = null; // Filter by specific partner
     try {
       const body = await req.json();
       if (body.status) statusFilter = body.status;
       if (body.type) typeFilter = body.type;
       if (body.month) monthFilter = body.month;
+      if (body.partnerId) partnerIdFilter = body.partnerId;
     } catch {
       // No body or invalid JSON, use defaults
     }
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
 
       // ACTIVITY ITEMS - Confirmed/accepted/executed but not invoiced
       if (typeFilter === "all" || typeFilter === "activity") {
-        const { data: items, error: itemsError } = await adminClient
+        let query = adminClient
           .from("program_request_items")
           .select(`
             *,
@@ -108,8 +110,14 @@ Deno.serve(async (req) => {
           `)
           .in("status", ["confirmed", "accepted", "executed"])
           .is("invoiced_number", null)
-          .not("quoted_price", "is", null)
-          .order("created_at", { ascending: false });
+          .not("quoted_price", "is", null);
+
+        // Apply partner filter
+        if (partnerIdFilter) {
+          query = query.eq("provider_id", partnerIdFilter);
+        }
+
+        const { data: items, error: itemsError } = await query.order("created_at", { ascending: false });
 
         if (itemsError) {
           console.error("Error fetching expected activity items:", itemsError);
@@ -150,7 +158,7 @@ Deno.serve(async (req) => {
 
       // ACCOMMODATION QUOTES - Selected but not invoiced
       if (typeFilter === "all" || typeFilter === "accommodation") {
-        const { data: quotes, error: quotesError } = await adminClient
+        let query = adminClient
           .from("accommodation_quotes")
           .select(`
             *,
@@ -163,8 +171,14 @@ Deno.serve(async (req) => {
             )
           `)
           .eq("status", "selected")
-          .is("invoiced_number", null)
-          .order("created_at", { ascending: false });
+          .is("invoiced_number", null);
+
+        // Apply partner filter
+        if (partnerIdFilter) {
+          query = query.eq("partner_id", partnerIdFilter);
+        }
+
+        const { data: quotes, error: quotesError } = await query.order("created_at", { ascending: false });
 
         if (quotesError) {
           console.error("Error fetching expected accommodation quotes:", quotesError);
@@ -277,7 +291,7 @@ Deno.serve(async (req) => {
     // ====== EXISTING STATUS FILTERS: pending, invoiced, paid ======
     let activityItems: unknown[] = [];
     if (typeFilter === "all" || typeFilter === "activity") {
-      const { data: items, error: itemsError } = await adminClient
+      let query = adminClient
         .from("program_request_items")
         .select(`
           *,
@@ -290,8 +304,14 @@ Deno.serve(async (req) => {
         `)
         .eq("commission_status", statusFilter)
         .gt("commission_percentage", 0)
-        .not("invoiced_number", "is", null)
-        .order("invoiced_date", { ascending: false });
+        .not("invoiced_number", "is", null);
+
+      // Apply partner filter
+      if (partnerIdFilter) {
+        query = query.eq("provider_id", partnerIdFilter);
+      }
+
+      const { data: items, error: itemsError } = await query.order("invoiced_date", { ascending: false });
 
       if (itemsError) {
         console.error("Error fetching activity items:", itemsError);
@@ -320,7 +340,7 @@ Deno.serve(async (req) => {
     // ====== ACCOMMODATION QUOTES ======
     let accommodationItems: unknown[] = [];
     if (typeFilter === "all" || typeFilter === "accommodation") {
-      const { data: quotes, error: quotesError } = await adminClient
+      let query = adminClient
         .from("accommodation_quotes")
         .select(`
           *,
@@ -335,8 +355,14 @@ Deno.serve(async (req) => {
         .eq("commission_status", statusFilter)
         .eq("status", "selected")
         .gt("commission_percentage", 0)
-        .not("invoiced_number", "is", null)
-        .order("invoiced_date", { ascending: false });
+        .not("invoiced_number", "is", null);
+
+      // Apply partner filter
+      if (partnerIdFilter) {
+        query = query.eq("partner_id", partnerIdFilter);
+      }
+
+      const { data: quotes, error: quotesError } = await query.order("invoiced_date", { ascending: false });
 
       if (quotesError) {
         console.error("Error fetching accommodation quotes:", quotesError);

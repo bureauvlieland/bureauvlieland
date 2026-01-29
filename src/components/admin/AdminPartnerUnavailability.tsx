@@ -5,7 +5,32 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarOff, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { CalendarOff, AlertTriangle, CheckCircle2, Plus, Trash2, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 
 interface UnavailabilityPeriod {
   id: string;
@@ -23,6 +48,17 @@ interface AdminPartnerUnavailabilityProps {
 export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabilityProps) {
   const [periods, setPeriods] = useState<UnavailabilityPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState<UnavailabilityPeriod | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [periodToDelete, setPeriodToDelete] = useState<UnavailabilityPeriod | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    start_date: "",
+    end_date: "",
+    reason: "",
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchUnavailability();
@@ -66,6 +102,148 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
     return status === "active" || status === "upcoming";
   });
 
+  const resetForm = () => {
+    setFormData({ start_date: "", end_date: "", reason: "" });
+    setEditingPeriod(null);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (period: UnavailabilityPeriod) => {
+    setEditingPeriod(period);
+    setFormData({
+      start_date: period.start_date,
+      end_date: period.end_date,
+      reason: period.reason || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.start_date || !formData.end_date) {
+      toast({
+        title: "Vul alle velden in",
+        description: "Start- en einddatum zijn verplicht",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (new Date(formData.end_date) < new Date(formData.start_date)) {
+      toast({
+        title: "Ongeldige datums",
+        description: "Einddatum moet na startdatum liggen",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (editingPeriod) {
+        // Update existing
+        const { error } = await supabase
+          .from("partner_unavailability")
+          .update({
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            reason: formData.reason || null,
+          })
+          .eq("id", editingPeriod.id);
+
+        if (error) throw error;
+
+        await logAdminActivity({
+          action: "unavailability_updated",
+          entityType: EntityTypes.PARTNER,
+          entityId: partnerId,
+          details: {
+            period_id: editingPeriod.id,
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+          },
+        });
+
+        toast({ title: "Periode bijgewerkt" });
+      } else {
+        // Create new
+        const { error } = await supabase
+          .from("partner_unavailability")
+          .insert({
+            partner_id: partnerId,
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+            reason: formData.reason || null,
+          });
+
+        if (error) throw error;
+
+        await logAdminActivity({
+          action: "unavailability_created",
+          entityType: EntityTypes.PARTNER,
+          entityId: partnerId,
+          details: {
+            start_date: formData.start_date,
+            end_date: formData.end_date,
+          },
+        });
+
+        toast({ title: "Periode toegevoegd" });
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+      fetchUnavailability();
+    } catch (error) {
+      console.error("Error saving unavailability:", error);
+      toast({
+        title: "Fout bij opslaan",
+        description: "Kon periode niet opslaan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!periodToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("partner_unavailability")
+        .delete()
+        .eq("id", periodToDelete.id);
+
+      if (error) throw error;
+
+      await logAdminActivity({
+        action: "unavailability_deleted",
+        entityType: EntityTypes.PARTNER,
+        entityId: partnerId,
+        details: {
+          period_id: periodToDelete.id,
+          start_date: periodToDelete.start_date,
+          end_date: periodToDelete.end_date,
+        },
+      });
+
+      toast({ title: "Periode verwijderd" });
+      setDeleteDialogOpen(false);
+      setPeriodToDelete(null);
+      fetchUnavailability();
+    } catch (error) {
+      console.error("Error deleting unavailability:", error);
+      toast({
+        title: "Fout bij verwijderen",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -85,13 +263,77 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarOff className="h-5 w-5" />
-          Niet beschikbaar periodes
-        </CardTitle>
-        <CardDescription>
-          Periodes waarin deze partner niet inzetbaar is
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarOff className="h-5 w-5" />
+              Niet beschikbaar periodes
+            </CardTitle>
+            <CardDescription>
+              Periodes waarin deze partner niet inzetbaar is
+            </CardDescription>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            if (!open) resetForm();
+            setIsDialogOpen(open);
+          }}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" onClick={openCreateDialog}>
+                <Plus className="h-4 w-4 mr-1" />
+                Toevoegen
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingPeriod ? "Periode bewerken" : "Nieuwe periode"}
+                </DialogTitle>
+                <DialogDescription>
+                  Voeg een periode toe waarin de partner niet beschikbaar is
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_date">Startdatum</Label>
+                    <Input
+                      id="start_date"
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_date">Einddatum</Label>
+                    <Input
+                      id="end_date"
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Reden (optioneel)</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Bijv. vakantie, onderhoud, etc."
+                    value={formData.reason}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Annuleren
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? "Opslaan..." : "Opslaan"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {relevantPeriods.length === 0 ? (
@@ -108,34 +350,57 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
               return (
                 <div
                   key={period.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border ${
+                  className={`flex items-start justify-between gap-3 p-3 rounded-lg border ${
                     isActive
                       ? "bg-amber-50 border-amber-200"
                       : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  {isActive && (
-                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">
-                        {format(new Date(period.start_date), "d MMM", { locale: nl })}
-                        {" – "}
-                        {format(new Date(period.end_date), "d MMM yyyy", { locale: nl })}
-                      </span>
-                      <Badge
-                        variant={isActive ? "destructive" : "secondary"}
-                        className="text-xs"
-                      >
-                        {isActive ? "Nu actief" : "Gepland"}
-                      </Badge>
-                    </div>
-                    {period.reason && (
-                      <p className="text-sm text-slate-600 mt-1">
-                        {period.reason}
-                      </p>
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {isActive && (
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">
+                          {format(new Date(period.start_date), "d MMM", { locale: nl })}
+                          {" – "}
+                          {format(new Date(period.end_date), "d MMM yyyy", { locale: nl })}
+                        </span>
+                        <Badge
+                          variant={isActive ? "destructive" : "secondary"}
+                          className="text-xs"
+                        >
+                          {isActive ? "Nu actief" : "Gepland"}
+                        </Badge>
+                      </div>
+                      {period.reason && (
+                        <p className="text-sm text-slate-600 mt-1">
+                          {period.reason}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEditDialog(period)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setPeriodToDelete(period);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               );
@@ -149,6 +414,22 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
           </p>
         )}
       </CardContent>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Periode verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Weet je zeker dat je deze blokkering wilt verwijderen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Verwijderen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
