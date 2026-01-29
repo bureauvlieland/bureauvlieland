@@ -46,6 +46,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
 
 interface Partner {
   id: string;
@@ -670,104 +671,114 @@ const AdminPartnerDetail = () => {
             </div>
           </div>
 
-          {/* Related Requests Section */}
-          {!isNew && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Gerelateerde aanvragen
-                </CardTitle>
-                <CardDescription>
-                  Programma aanvragen met activiteiten van deze partner
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isLoadingRequests ? (
-                  <div className="p-6">
-                    <Skeleton className="h-20 w-full" />
-                  </div>
-                ) : relatedRequests.length === 0 ? (
-                  <div className="p-6 text-center text-slate-500">
-                    Geen gerelateerde aanvragen gevonden
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Klant</TableHead>
-                          <TableHead>Datum(s)</TableHead>
-                          <TableHead>Personen</TableHead>
-                          <TableHead>Items</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="w-12"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {relatedRequests.map((req) => (
-                          <TableRow key={req.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{req.customer_name}</p>
-                                {req.customer_company && (
-                                  <p className="text-sm text-slate-500">{req.customer_company}</p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4 text-slate-400" />
-                                <span className="text-sm">
-                                  {req.selected_dates.length > 0
-                                    ? format(new Date(req.selected_dates[0]), "d MMM yyyy", { locale: nl })
-                                    : "-"}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4 text-slate-400" />
-                                {req.number_of_people}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">
-                                {req.item_count} {req.item_count === 1 ? "item" : "items"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  req.status === "active"
-                                    ? "default"
-                                    : req.status === "cancelled"
-                                    ? "destructive"
-                                    : "secondary"
-                                }
-                              >
-                                {req.status === "active"
-                                  ? "Actief"
-                                  : req.status === "cancelled"
-                                  ? "Geannuleerd"
-                                  : req.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link to={`/admin/aanvragen/${req.id}`}>
-                                  <ExternalLink className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          {/* Unavailability and Related Requests */}
+          {!isNew && id && (
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Unavailability - takes 1/3 */}
+              <div>
+                <AdminPartnerUnavailability partnerId={id} />
+              </div>
+
+              {/* Related Requests - takes 2/3 */}
+              <div className="md:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Gerelateerde aanvragen
+                    </CardTitle>
+                    <CardDescription>
+                      Programma aanvragen met activiteiten van deze partner
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {isLoadingRequests ? (
+                      <div className="p-6">
+                        <Skeleton className="h-20 w-full" />
+                      </div>
+                    ) : relatedRequests.length === 0 ? (
+                      <div className="p-6 text-center text-slate-500">
+                        Geen gerelateerde aanvragen gevonden
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Klant</TableHead>
+                              <TableHead>Datum(s)</TableHead>
+                              <TableHead>Personen</TableHead>
+                              <TableHead>Items</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="w-12"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {relatedRequests.map((req) => (
+                              <TableRow key={req.id}>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{req.customer_name}</p>
+                                    {req.customer_company && (
+                                      <p className="text-sm text-slate-500">{req.customer_company}</p>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-4 w-4 text-slate-400" />
+                                    <span className="text-sm">
+                                      {req.selected_dates.length > 0
+                                        ? format(new Date(req.selected_dates[0]), "d MMM yyyy", { locale: nl })
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Users className="h-4 w-4 text-slate-400" />
+                                    {req.number_of_people}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">
+                                    {req.item_count} {req.item_count === 1 ? "item" : "items"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      req.status === "active"
+                                        ? "default"
+                                        : req.status === "cancelled"
+                                        ? "destructive"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {req.status === "active"
+                                      ? "Actief"
+                                      : req.status === "cancelled"
+                                      ? "Geannuleerd"
+                                      : req.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" asChild>
+                                    <Link to={`/admin/aanvragen/${req.id}`}>
+                                      <ExternalLink className="h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           )}
         </div>
       </AdminLayout>
