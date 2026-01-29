@@ -44,6 +44,7 @@ interface UseCustomerProgramReturn {
   cancelRequest: (reason?: string) => Promise<boolean>;
   acceptItem: (itemId: string) => Promise<boolean>;
   cancelItem: (itemId: string) => Promise<boolean>;
+  submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
   // Accommodation data
   accommodation: AccommodationRequest | null;
@@ -380,6 +381,11 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       quoted_notes: null,
       proposed_time: null,
       proposed_date: null,
+      // Customer counter-proposal fields
+      customer_counter_time: null,
+      customer_counter_note: null,
+      customer_counter_at: null,
+      confirmed_time: null,
       // Image data for display
       image_url: block.image_url,
       image_asset: block.image_asset,
@@ -661,6 +667,33 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  // Submit counter proposal for an item
+  const submitCounterProposal = useCallback(async (itemId: string, counterTime: string, counterNote: string): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token: token,
+          counterProposal: {
+            itemId,
+            counterTime,
+            counterNote,
+          },
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error submitting counter proposal:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, progress: 0 };
@@ -696,6 +729,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     cancelRequest,
     acceptItem,
     cancelItem,
+    submitCounterProposal,
     statusSummary,
     // Accommodation
     accommodation,

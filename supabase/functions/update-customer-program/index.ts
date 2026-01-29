@@ -38,6 +38,12 @@ interface BillingDetailsUpdate {
   billing_reference: string;
 }
 
+interface CounterProposal {
+  itemId: string;
+  counterTime: string;
+  counterNote: string;
+}
+
 interface ProgramRequestItem {
   id: string;
   request_id: string;
@@ -125,7 +131,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, acceptTerms, signatureName, acceptItemId, cancelItemId, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
@@ -135,6 +141,7 @@ Deno.serve(async (req) => {
       signatureName?: string;
       acceptItemId?: string;
       cancelItemId?: string;
+      counterProposal?: CounterProposal;
       origin?: string;
     };
     
@@ -159,7 +166,7 @@ Deno.serve(async (req) => {
     }
     
     // Must have at least one type of update
-    if ((!changes || !items) && !programDetails && !billingDetails && !acceptTerms && !acceptItemId && !cancelItemId) {
+    if ((!changes || !items) && !programDetails && !billingDetails && !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -434,7 +441,80 @@ Deno.serve(async (req) => {
       console.log(`Customer cancelled item ${cancelItemId}`);
     }
 
-    // Handle terms acceptance with digital signature
+    // Handle counter proposal from customer
+    if (counterProposal) {
+      const { itemId, counterTime, counterNote } = counterProposal;
+      
+      const { data: item, error: itemError } = await supabase
+        .from("program_request_items")
+        .select("*")
+        .eq("id", itemId)
+        .eq("request_id", program.id)
+        .single();
+
+      if (itemError || !item) {
+        return new Response(
+          JSON.stringify({ error: "Item not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update item with counter proposal
+      await supabase
+        .from("program_request_items")
+        .update({
+          status: "counter_proposed",
+          customer_counter_time: counterTime,
+          customer_counter_note: counterNote || null,
+          customer_counter_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", itemId);
+
+      // Log to history
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        item_id: itemId,
+        action: "counter_proposed",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Klant stelt andere tijd voor: ${counterTime}${counterNote ? ` - "${counterNote}"` : ""}`,
+        old_value: { proposed_time: item.proposed_time },
+        new_value: { customer_counter_time: counterTime, customer_counter_note: counterNote },
+      });
+
+      // Email partner about counter proposal
+      if (item.provider_email && item.block_type !== "self_arranged") {
+        emailMessages.push({
+          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
+          Subject: `${subjectPrefix}Tegenvoorstel van klant - ${sanitizeHtml(item.block_name)}`,
+          HTMLPart: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1a365d; padding: 24px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
+              </div>
+              <div style="padding: 32px;">
+                <h2 style="color: #1a365d; margin-bottom: 16px;">Tegenvoorstel van klant</h2>
+                <p>Beste ${sanitizeHtml(item.provider_name)},</p>
+                <p>De klant heeft een tegenvoorstel gedaan voor:</p>
+                <div style="background: #f3e8ff; border: 1px solid #c4b5fd; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                  <p style="margin: 0 0 8px; font-weight: bold;">${sanitizeHtml(item.block_name)}</p>
+                  <p style="margin: 0 0 8px;">Jouw voorstel: ${item.proposed_time || "niet opgegeven"}</p>
+                  <p style="margin: 0; color: #7c3aed; font-weight: bold;">Klant wil liever: ${counterTime}</p>
+                  ${counterNote ? `<p style="margin: 8px 0 0; font-style: italic;">"${sanitizeHtml(counterNote)}"</p>` : ""}
+                </div>
+                <p>Graag je reactie via het Partner Portal.</p>
+                <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+              </div>
+            </div>
+          `,
+        });
+      }
+
+      console.log(`Customer submitted counter proposal for item ${itemId}: ${counterTime}`);
+    }
+
     if (acceptTerms) {
       const termsVersion = "2026-01"; // Version identifier for tracking
       

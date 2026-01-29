@@ -16,8 +16,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ItemStatusBadge } from "./ItemStatusBadge";
+import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2 } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -32,6 +33,8 @@ interface CustomerProgramItemProps {
   onUpdate: (updates: Partial<ProgramRequestItem>) => void;
   onRemove: () => void;
   onAccept?: () => Promise<boolean>;
+  onCounterProposal?: (counterTime: string, counterNote: string) => Promise<boolean>;
+  allItems?: ProgramRequestItem[];
   isEditing?: boolean;
   hasChanges?: boolean;
   isAccepting?: boolean;
@@ -43,6 +46,8 @@ export const CustomerProgramItem = ({
   onUpdate,
   onRemove,
   onAccept,
+  onCounterProposal,
+  allItems = [],
   isEditing = false,
   hasChanges = false,
   isAccepting = false,
@@ -50,6 +55,7 @@ export const CustomerProgramItem = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [localAccepting, setLocalAccepting] = useState(false);
+  const [showCounterDialog, setShowCounterDialog] = useState(false);
   
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
@@ -132,9 +138,14 @@ export const CustomerProgramItem = ({
             )}
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {item.preferred_time 
-                ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
-                : "Flexibel"}
+              {/* Display time priority: confirmed_time > proposed_time (as proposal) > preferred_time */}
+              {item.confirmed_time 
+                ? item.confirmed_time
+                : item.proposed_time && (item.status === "confirmed" || item.status === "alternative")
+                  ? `${item.proposed_time} (voorstel)`
+                  : item.preferred_time 
+                    ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
+                    : "Flexibel"}
             </span>
             {item.duration && (
               <span className="flex items-center gap-1">
@@ -185,29 +196,39 @@ export const CustomerProgramItem = ({
                 ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
                 : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900"
             )}>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
+              <div className="flex-1 mb-3">
+                <p className={cn(
+                  "font-medium",
+                  item.status === "confirmed" 
+                    ? "text-green-800 dark:text-green-300"
+                    : "text-amber-800 dark:text-amber-300"
+                )}>
+                  {item.status === "confirmed" 
+                    ? "Bevestigd door aanbieder" 
+                    : "Alternatief voorstel van aanbieder"}
+                </p>
+                {item.proposed_time && (
                   <p className={cn(
-                    "font-medium",
-                    item.status === "confirmed" 
-                      ? "text-green-800 dark:text-green-300"
-                      : "text-amber-800 dark:text-amber-300"
+                    "text-sm mt-0.5",
+                    item.status === "confirmed"
+                      ? "text-green-700/80 dark:text-green-400/80"
+                      : "text-amber-700/80 dark:text-amber-400/80"
                   )}>
-                    {item.status === "confirmed" 
-                      ? "Bevestigd door aanbieder" 
-                      : "Alternatief voorstel van aanbieder"}
+                    Voorgestelde tijd: {item.proposed_time}
                   </p>
-                  {item.quoted_price && (
-                    <p className={cn(
-                      "text-sm mt-0.5",
-                      item.status === "confirmed"
-                        ? "text-green-700/80 dark:text-green-400/80"
-                        : "text-amber-700/80 dark:text-amber-400/80"
-                    )}>
-                      Totaalprijs: €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
-                    </p>
-                  )}
-                </div>
+                )}
+                {item.quoted_price && (
+                  <p className={cn(
+                    "text-sm mt-0.5",
+                    item.status === "confirmed"
+                      ? "text-green-700/80 dark:text-green-400/80"
+                      : "text-amber-700/80 dark:text-amber-400/80"
+                  )}>
+                    Totaalprijs: €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={async () => {
                     setLocalAccepting(true);
@@ -215,8 +236,7 @@ export const CustomerProgramItem = ({
                     setLocalAccepting(false);
                   }}
                   disabled={localAccepting || isAccepting}
-                  className="shrink-0"
-                  variant={item.status === "alternative" ? "default" : "default"}
+                  size="sm"
                 >
                   {localAccepting ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -225,6 +245,39 @@ export const CustomerProgramItem = ({
                   )}
                   Akkoord
                 </Button>
+                {onCounterProposal && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCounterDialog(true)}
+                    disabled={localAccepting || isAccepting}
+                  >
+                    <ArrowLeftRight className="h-4 w-4 mr-2" />
+                    Andere tijd voorstellen
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Counter proposal pending - waiting for partner response */}
+          {item.status === "counter_proposed" && (
+            <div className="mt-3 p-4 rounded-lg border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
+              <div className="flex items-start gap-2">
+                <ArrowLeftRight className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-purple-800 dark:text-purple-300">
+                    Jouw tegenvoorstel: {item.customer_counter_time}
+                  </p>
+                  {item.customer_counter_note && (
+                    <p className="text-sm text-purple-700/80 dark:text-purple-400/80 mt-1">
+                      "{item.customer_counter_note}"
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Wachten op reactie van aanbieder...
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -375,6 +428,17 @@ export const CustomerProgramItem = ({
           </CollapsibleContent>
         </CardContent>
       </Collapsible>
+
+      {/* Counter Proposal Dialog */}
+      {onCounterProposal && (
+        <CounterProposalDialog
+          item={item}
+          isOpen={showCounterDialog}
+          onClose={() => setShowCounterDialog(false)}
+          onSubmit={onCounterProposal}
+          allItems={allItems}
+        />
+      )}
     </Card>
   );
 };

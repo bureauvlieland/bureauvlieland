@@ -1,5 +1,5 @@
 // Status types for program request items
-export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced";
+export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced" | "counter_proposed";
 
 export interface ItemStatusInfo {
   label: string;
@@ -66,6 +66,13 @@ export const itemStatusConfig: Record<ItemStatus, ItemStatusInfo> = {
     icon: "FileText",
     description: "Deze activiteit is gefactureerd",
   },
+  counter_proposed: {
+    label: "Tegenvoorstel",
+    color: "text-purple-700 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-950/50",
+    icon: "ArrowLeftRight",
+    description: "Je hebt een andere tijd voorgesteld",
+  },
 };
 
 // Database types
@@ -109,6 +116,12 @@ export interface ProgramRequestItem {
   executed_at: string | null;
   // Customer acceptance
   customer_accepted_at: string | null;
+  // Customer counter-proposal fields
+  customer_counter_time: string | null;
+  customer_counter_note: string | null;
+  customer_counter_at: string | null;
+  // Confirmed time (final time after acceptance)
+  confirmed_time: string | null;
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;
