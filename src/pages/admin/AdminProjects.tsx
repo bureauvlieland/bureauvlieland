@@ -295,9 +295,17 @@ const AdminProjectsContent = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Klantprojecten</h1>
-        <p className="text-slate-600">Centraal overzicht van alle klantopdrachten (logies + activiteiten)</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Klantprojecten</h1>
+          <p className="text-slate-600">Centraal overzicht van alle klantopdrachten (logies + activiteiten)</p>
+        </div>
+        <Link to="/admin/programma-nieuw">
+          <Button>
+            <FolderKanban className="h-4 w-4 mr-2" />
+            Nieuw programma
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}

@@ -54,6 +54,7 @@ import AdminInvoicing from "./pages/admin/AdminInvoicing";
 import AdminAccommodation from "./pages/admin/AdminAccommodation";
 import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
 import AdminProjects from "./pages/admin/AdminProjects";
+import AdminProgramNew from "./pages/admin/AdminProgramNew";
 import AdminSettings from "./pages/admin/AdminSettings";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
@@ -108,6 +109,7 @@ const App = () => (
             {/* Admin routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/projecten" element={<AdminProjects />} />
+            <Route path="/admin/programma-nieuw" element={<AdminProgramNew />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
             <Route path="/admin/aanvragen" element={<AdminRequests />} />
             <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
