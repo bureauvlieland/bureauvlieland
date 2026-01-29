@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerActionBanner } from "@/components/partner-portal/PartnerActionBanner";
-import { PartnerCompactStats } from "@/components/partner-portal/PartnerCompactStats";
+import { PartnerCompactStats, type StatType } from "@/components/partner-portal/PartnerCompactStats";
 import { PartnerYtdModule } from "@/components/partner-portal/PartnerYtdModule";
 import { PartnerUnifiedList } from "@/components/partner-portal/PartnerUnifiedList";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
+import { PartnerUpcomingActivities } from "@/components/partner-portal/PartnerUpcomingActivities";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -537,9 +538,30 @@ const PartnerDashboardContent = () => {
             waitingOnCustomer={waitingOnCustomer}
             accepted={acceptedTotal}
             toInvoice={toInvoiceCount}
+            onStatClick={(stat: StatType) => {
+              if (stat === "invoice") {
+                // Navigate to finance page, preserve impersonate param
+                const impersonate = searchParams.get("impersonate");
+                navigate(`/partner/finance${impersonate ? `?impersonate=${impersonate}` : ""}`);
+              } else if (stat === "pending") {
+                setActiveTab("action");
+              } else {
+                // waiting and accepted -> in_progress tab
+                setActiveTab("in_progress");
+              }
+            }}
           />
           <PartnerYtdModule ytdRevenue={ytdRevenue} pendingCommission={pendingCommission} />
         </div>
+
+        {/* Upcoming activities widget */}
+        <PartnerUpcomingActivities
+          items={data.items}
+          onSelectItem={(item) => {
+            setSelectedItem(item);
+            setShowSheet(true);
+          }}
+        />
 
         {/* Workflow tabs with unified list */}
         <Tabs
