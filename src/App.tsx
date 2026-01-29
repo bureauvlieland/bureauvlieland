@@ -8,6 +8,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { GlobalCartDrawer } from "@/components/configurator/GlobalCartDrawer";
 import Index from "./pages/Index";
 import { Terms } from "./pages/Terms";
+import { PartnerTerms } from "./pages/PartnerTerms";
 import NotFound from "./pages/NotFound";
 import Catering from "./pages/Catering";
 import Voorbeeldprogrammas from "./pages/Voorbeeldprogrammas";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/offerte" element={<Offerte />} />
             <Route path="/algemene-voorwaarden" element={<Terms />} />
+            <Route path="/partner-voorwaarden" element={<PartnerTerms />} />
             <Route path="/bedrijfsuitje-vlieland" element={<BedrijfsuitjeVlieland />} />
             <Route path="/teamuitje-vlieland" element={<TeamuitjeVlieland />} />
             <Route path="/meerdaags-bedrijfsuitje-vlieland" element={<MeerdaagsBedrijfsuitjeVlieland />} />
