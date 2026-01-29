@@ -90,8 +90,15 @@ const isModifiedByCustomer = (item: PartnerItem): boolean => {
 };
 
 const canItemBeInvoiced = (item: PartnerItem): boolean => {
+  // Item can be invoiced if:
+  // - Status is accepted/executed OR status is confirmed but customer has accepted
+  // - Not yet invoiced
+  // - Customer has accepted terms
+  const hasCustomerAccepted = !!item.customer_accepted_at;
+  const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
+  
   return (
-    (item.status === "accepted" || item.status === "executed") &&
+    (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
     !item.invoiced_number &&
     !!item.program_requests.terms_accepted_at
   );
@@ -111,14 +118,19 @@ export const PartnerUnifiedList = ({
       const activityDate = dates[i.day_index] || "";
       const canInvoice = canItemBeInvoiced(i);
       
+      // Determine effective status - if customer has accepted but status is still confirmed,
+      // treat it as "accepted" for display purposes
+      const hasCustomerAccepted = !!i.customer_accepted_at;
+      const effectiveStatus = (i.status === "confirmed" && hasCustomerAccepted) ? "accepted" : i.status;
+      
       return {
         id: i.id,
         type: "activity" as const,
         name: i.block_name,
         customer: i.program_requests.customer_company || i.program_requests.customer_name,
         date: activityDate,
-        status: i.status,
-        urgencyScore: getUrgencyScore(i.status, canInvoice),
+        status: effectiveStatus,
+        urgencyScore: getUrgencyScore(effectiveStatus, canInvoice),
         peopleCount: i.program_requests.number_of_people,
         isNew: isNewItem(i),
         isModified: isModifiedByCustomer(i),
