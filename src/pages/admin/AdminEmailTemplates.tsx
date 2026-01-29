@@ -42,6 +42,7 @@ const templateCategories: Record<string, string> = {
   status_alternative: "Status",
   customer_program_update_partner: "Wijziging",
   counter_proposal_partner: "Wijziging",
+  counter_proposal_response: "Wijziging",
   cancellation_customer: "Annulering",
   cancellation_partner: "Annulering",
   cancellation_bureau: "Annulering",
