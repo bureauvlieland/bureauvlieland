@@ -247,7 +247,7 @@ export const Footer = () => {
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
-                Technologie Partner: No Risk Software
+                Technologie Partner: NORISK Software
               </a>
               <Link 
                 to="/algemene-voorwaarden" 
