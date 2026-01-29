@@ -213,7 +213,7 @@ export const PartnerItemSheet = ({
     onClose();
   };
 
-  // Pre-fill form when editing alternative
+  // Pre-fill form when editing alternative or responding to counter-proposal
   const handleOpenResponseForm = () => {
     if (item.status === "alternative") {
       setResponseType("alternative");
@@ -221,6 +221,13 @@ export const PartnerItemSheet = ({
       if (item.quoted_notes) setQuotedNotes(item.quoted_notes);
       if (item.proposed_time) setProposedTime(item.proposed_time);
       if (item.status_note) setStatusNote(item.status_note);
+    } else if (item.status === "counter_proposed") {
+      // Pre-fill with existing price and set time to customer's proposed time
+      setResponseType("confirmed");
+      if (item.quoted_price) setQuotedPrice(item.quoted_price.toString().replace(".", ","));
+      if (item.quoted_notes) setQuotedNotes(item.quoted_notes);
+      // Default to customer's counter-proposed time
+      if (item.customer_counter_time) setProposedTime(item.customer_counter_time);
     }
     setShowResponseForm(true);
   };
