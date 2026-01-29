@@ -8,6 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -46,10 +52,15 @@ import {
   Trash2,
   FileCheck2,
   FileX,
+  AlertTriangle,
+  CalendarOff,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity } from "@/lib/adminLogger";
+import { usePartnerUnavailability } from "@/hooks/usePartnerUnavailability";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 
 interface Partner {
   id: string;
@@ -84,6 +95,10 @@ const AdminPartnersContent = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [partnerToDelete, setPartnerToDelete] = useState<Partner | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Get unavailability data for all partners
+  const partnerIds = useMemo(() => partners.map(p => p.id), [partners]);
+  const { unavailabilityMap, isLoading: unavailabilityLoading } = usePartnerUnavailability(partnerIds);
 
   const fetchPartners = async () => {
     try {
@@ -283,15 +298,69 @@ const AdminPartnersContent = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPartners.map((partner) => (
-                  <TableRow key={partner.id}>
+                filteredPartners.map((partner) => {
+                  const unavailability = unavailabilityMap[partner.id];
+                  const isCurrentlyUnavailable = unavailability?.isCurrentlyUnavailable || false;
+                  const hasUpcoming = unavailability?.hasUpcoming || false;
+                  const currentPeriod = unavailability?.periods?.find(p => {
+                    const today = new Date();
+                    const start = new Date(p.start_date);
+                    const end = new Date(p.end_date);
+                    return today >= start && today <= end;
+                  });
+                  
+                  return (
+                  <TableRow key={partner.id} className={isCurrentlyUnavailable ? "bg-amber-50/50" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-slate-600" />
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          isCurrentlyUnavailable ? "bg-amber-100" : "bg-slate-100"
+                        }`}>
+                          {isCurrentlyUnavailable ? (
+                            <CalendarOff className="h-5 w-5 text-amber-600" />
+                          ) : (
+                            <Building2 className="h-5 w-5 text-slate-600" />
+                          )}
                         </div>
                         <div>
-                          <p className="font-medium">{partner.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{partner.name}</p>
+                            {isCurrentlyUnavailable && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                                      <AlertTriangle className="h-3 w-3 mr-1" />
+                                      Niet beschikbaar
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="text-sm">
+                                      <p className="font-medium">Geblokkeerd tot {currentPeriod && format(new Date(currentPeriod.end_date), "d MMM yyyy", { locale: nl })}</p>
+                                      {currentPeriod?.reason && (
+                                        <p className="text-slate-400">{currentPeriod.reason}</p>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {!isCurrentlyUnavailable && hasUpcoming && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0.5 text-amber-700 border-amber-300 bg-amber-50">
+                                      <CalendarOff className="h-3 w-3 mr-1" />
+                                      Binnenkort
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-sm">Heeft geplande onbeschikbaarheid</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                           {partner.kvk_number && (
                             <p className="text-xs text-slate-500">KvK: {partner.kvk_number}</p>
                           )}
@@ -393,7 +462,8 @@ const AdminPartnersContent = () => {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

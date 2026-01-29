@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { PendingCommissionsCard } from "@/components/admin/PendingCommissionsCard";
+import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilityWidget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,8 +277,11 @@ const AdminDashboardContent = () => {
         </Card>
       </div>
 
-      {/* Pending Commissions */}
-      <PendingCommissionsCard />
+      {/* Partner Availability and Pending Commissions */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <AdminUnavailabilityWidget />
+        <PendingCommissionsCard />
+      </div>
 
       {/* Recent requests grid */}
       <div className="grid lg:grid-cols-2 gap-6">
