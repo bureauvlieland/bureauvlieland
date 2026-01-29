@@ -1,81 +1,139 @@
 
-# Standaardvoorwaarden Partneraanbod Webpagina
+
+# Uniforme Voorwaarden Horeca - Conditioneel tonen
 
 ## Samenvatting
-Een nieuwe webpagina toevoegen voor de Standaardvoorwaarden Partneraanbod en alle verwijzingen naar de PDF bijwerken naar deze nieuwe pagina. Dit zorgt ervoor dat de voorwaarden direct op de website bekeken kunnen worden in plaats van een PDF te moeten downloaden.
-
-## Huidige situatie
-- De standaard partnervoorwaarden verwijzen nu naar een PDF: `partner-terms/default/standaard-partnervoorwaarden.pdf`
-- Deze PDF wordt gerefereerd in 4 bestanden:
-  - `AcceptTermsCard.tsx` - Checkout voorwaarden klantportaal
-  - `AcceptedTermsCard.tsx` - Na acceptatie zichtbaar
-  - `PartnerTermsUpload.tsx` - Partner instellingen
-  - `update-customer-program` Edge Function - Logging
+De UVH voorwaarden worden conditioneel getoond: alleen als een accommodatiepartner geen eigen voorwaarden heeft geüpload of bij catering items. De PDF-link blijft behouden.
 
 ## Wat er gaat gebeuren
 
-### 1. Nieuwe webpagina aanmaken
-**Bestand:** `src/pages/PartnerTerms.tsx`
-- Dezelfde structuur als de huidige `Terms.tsx` (Algemene Voorwaarden)
-- Navigatie + Footer componenten
-- "Terug" knop
-- Nette opmaak met dezelfde styling als de bestaande voorwaardenpagina
-- Alle 10 artikelen van de tekst die je hebt aangeleverd
+### 1. AcceptTermsCard.tsx uitbreiden
+Nieuwe props toevoegen voor accommodation data:
+- `selectedAccommodationQuote`: de geselecteerde logiesofferte (indien van toepassing)
+- Partner terms info ophalen voor de geselecteerde accommodatie
 
-### 2. Route toevoegen
-**Bestand:** `src/App.tsx`
-- Nieuwe route: `/partner-voorwaarden`
-- De pagina wordt publiek toegankelijk (geen login vereist)
+**Conditionele UVH weergave:**
+| Situatie | UVH tonen? |
+|----------|------------|
+| Er zijn catering items | ✅ Ja |
+| Accommodatie partner heeft **eigen voorwaarden** | ❌ Nee |
+| Accommodatie partner gebruikt **standaardvoorwaarden** | ✅ Ja |
+| Geen accommodatie of geen selectie | Alleen als catering |
 
-### 3. Alle verwijzingen bijwerken
-De `DEFAULT_TERMS_URL` in de volgende bestanden wordt gewijzigd van de PDF-link naar `/partner-voorwaarden`:
+### 2. AcceptedTermsCard.tsx - Geen wijzigingen nodig
+De UVH wordt al correct getoond als het in de `acceptedTerms` array staat. De logica voor conditioneel loggen zit in de edge function.
+
+### 3. DesktopProgramView.tsx & MobileProgramView.tsx
+Extra props doorgeven aan `AcceptTermsCard`:
+- `accommodationQuotes` (al beschikbaar in viewProps)
+
+### 4. Edge Function update-customer-program aanpassen
+Uitbreiden van de UVH logging logica:
+
+**Huidige logica (regel 668-680):**
+```typescript
+// Check if any catering items - add UVH 2024 if so
+const hasCatering = programItems.some(i => i.block_category === "catering");
+if (hasCatering) {
+  termsLogEntries.push({ ... uvh_2024 ... });
+}
+```
+
+**Nieuwe logica:**
+```typescript
+// Check if UVH terms should be added:
+// 1. If there are catering items
+// 2. If there's a selected accommodation where partner has no custom terms
+const hasCatering = programItems.some(i => i.block_category === "catering");
+
+// Check for accommodation without custom terms
+let addUvhForAccommodation = false;
+if (program.linked_accommodation_id) {
+  const { data: selectedQuote } = await supabase
+    .from("accommodation_quotes")
+    .select("partner_id")
+    .eq("request_id", program.linked_accommodation_id)
+    .eq("status", "selected")
+    .maybeSingle();
+  
+  if (selectedQuote) {
+    const { data: accPartner } = await supabase
+      .from("partners")
+      .select("terms_pdf_path, uses_default_terms")
+      .eq("id", selectedQuote.partner_id)
+      .single();
+    
+    // Add UVH if partner has no custom terms
+    if (!accPartner?.terms_pdf_path || accPartner?.uses_default_terms) {
+      addUvhForAccommodation = true;
+    }
+  }
+}
+
+if (hasCatering || addUvhForAccommodation) {
+  termsLogEntries.push({
+    request_id: program.id,
+    partner_id: "uvh",
+    partner_name: "Koninklijke Horeca Nederland",
+    terms_type: "uvh_2024",
+    terms_version: "2024",
+    terms_pdf_path: null,
+    accepted_at: acceptedAt,
+  });
+}
+```
+
+## Overzicht wijzigingen
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `AcceptTermsCard.tsx` | "Download PDF" → "Bekijken" met link naar webpagina |
-| `AcceptedTermsCard.tsx` | "Download PDF" → "Bekijken" met link naar webpagina |
-| `PartnerTermsUpload.tsx` | Link naar webpagina in plaats van PDF |
+| `AcceptTermsCard.tsx` | Nieuwe prop `accommodationQuotes`, conditionele UVH weergave toevoegen |
+| `DesktopProgramView.tsx` | Prop `accommodationQuotes` doorgeven aan AcceptTermsCard |
+| `MobileProgramView.tsx` | Prop `accommodationQuotes` doorgeven aan AcceptTermsCard |
+| `update-customer-program/index.ts` | UVH logging uitbreiden met accommodatie check |
 
-### 4. Redirect toevoegen (optioneel)
-**Bestand:** `public/_redirects`
-- Eventueel een redirect van de oude PDF-path naar de nieuwe pagina voor bestaande links
-
-## Technische details
-
-```text
-Nieuwe bestandsstructuur:
-├── src/pages/
-│   ├── Terms.tsx                 (bestaand - Algemene Voorwaarden Bureau Vlieland)
-│   └── PartnerTerms.tsx          (nieuw - Standaardvoorwaarden Partneraanbod)
-
-Routing:
-/algemene-voorwaarden  →  Terms.tsx (bestaand)
-/partner-voorwaarden   →  PartnerTerms.tsx (nieuw)
+## PDF Link blijft behouden
+De bestaande PDF link in `AcceptedTermsCard.tsx` blijft ongewijzigd:
+```typescript
+const UVH_TERMS_URL = "https://assets.khn.nl/uploads/downloads/UVH_Nederlands_vanaf_2024_2024-10-18-082210_zkdv.pdf";
 ```
 
-## Voorbeeld code snippets
+## Nieuwe UVH sectie in AcceptTermsCard
 
-**Nieuwe pagina header:**
 ```tsx
-<h1>Standaardvoorwaarden Partneraanbod</h1>
-<p className="text-muted-foreground">
-  Van toepassing indien Partner geen eigen algemene voorwaarden 
-  heeft gepubliceerd via het platform van Bureau Vlieland
-</p>
+{/* UVH 2024 - only if catering or accommodation without custom terms */}
+{showUvhTerms && (
+  <li className="flex items-center gap-2 text-sm">
+    <span>•</span>
+    <span className="font-medium">Uniforme Voorwaarden Horeca 2024</span>
+    <Button variant="link" size="sm" asChild>
+      <a href={UVH_TERMS_URL} target="_blank" rel="noopener noreferrer">
+        <FileText className="h-3 w-3 mr-1" />
+        Download PDF
+      </a>
+    </Button>
+  </li>
+)}
 ```
 
-**Bijgewerkte link in AcceptTermsCard:**
-```tsx
-// Was:
-onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+## Technisch detail: UVH conditionele logica
 
-// Wordt:
-onClick={() => window.open("/partner-voorwaarden", "_blank")}
+```typescript
+// In AcceptTermsCard.tsx
+const UVH_TERMS_URL = "https://assets.khn.nl/uploads/downloads/UVH_Nederlands_vanaf_2024_2024-10-18-082210_zkdv.pdf";
+
+// Check if any items have catering category
+const hasCateringItems = items.some(item => 
+  item.block_category === "catering" && item.status !== "cancelled"
+);
+
+// Check if selected accommodation partner uses default terms
+const selectedQuote = accommodationQuotes?.find(q => q.status === "selected");
+const accommodationPartnerInfo = partnerTerms.find(p => p.id === selectedQuote?.partner_id);
+const accommodationUsesDefaultTerms = selectedQuote && 
+  (!accommodationPartnerInfo?.terms_pdf_path || accommodationPartnerInfo?.uses_default_terms);
+
+// Show UVH if catering OR accommodation without custom terms
+const showUvhTerms = hasCateringItems || accommodationUsesDefaultTerms;
 ```
 
-## Voordelen van deze aanpak
-- Voorwaarden zijn doorzoekbaar en indexeerbaar door zoekmachines
-- Sneller laden dan een PDF
-- Consistent met de bestaande "Algemene Voorwaarden" pagina
-- Makkelijker te onderhouden (tekst direct in de code)
-- Toegankelijker voor alle gebruikers
