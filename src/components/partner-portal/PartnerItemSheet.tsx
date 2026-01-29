@@ -32,6 +32,7 @@ import {
   Hash,
   Play,
 } from "lucide-react";
+import { CopyReferenceButton } from "./CopyReferenceButton";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -292,6 +293,7 @@ export const PartnerItemSheet = ({
                 <span className="flex items-center gap-1 font-mono text-xs">
                   <Hash className="h-3 w-3" />
                   {request.reference_number}
+                  <CopyReferenceButton reference={request.reference_number} />
                 </span>
               </>
             )}
