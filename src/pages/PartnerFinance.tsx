@@ -241,12 +241,22 @@ const PartnerFinanceContent = () => {
     return amountExclVat * (commissionRate / 100);
   };
 
+  // Helper function to determine effective status (same logic as dashboard)
+  const getEffectiveStatus = (item: PartnerItem): string => {
+    const hasCustomerAccepted = !!item.customer_accepted_at;
+    return (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
+  };
+
   // Calculate financial metrics for activities
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
   // Show both "accepted" and "executed" items as "to be invoiced" once customer has accepted terms
-  const toBeInvoicedItems = data.items.filter(
-    (i) => (i.status === "accepted" || i.status === "executed") && !i.invoiced_number && i.program_requests.terms_accepted_at !== null
-  );
+  // Also include "confirmed" items where customer has accepted (effectiveStatus = accepted)
+  const toBeInvoicedItems = data.items.filter((i) => {
+    const effectiveStatus = getEffectiveStatus(i);
+    return (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
+      !i.invoiced_number && 
+      i.program_requests.terms_accepted_at !== null;
+  });
   
   // Calculate financial metrics for accommodations
   const accommodationQuotes = (data.accommodationQuotes || []) as AccommodationQuoteWithInvoice[];
