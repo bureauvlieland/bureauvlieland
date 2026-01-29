@@ -1,161 +1,180 @@
 
 
-# Plan: Facturatiegegevens verstrekken bij factuurregistratie
+# Plan: Partners importeren vanuit Excel
 
 ## Samenvatting
-Breid de factuurregistratie-dialog uit zodat partners de volledige facturatiegegevens van de klant zien zodra ze op "Factureren" klikken. Dit combineert privacy (gegevens pas tonen bij intent) met efficiëntie (alles in één scherm).
+Importeer de leverancierslijst uit de Excel (43 bedrijven) naar de `partners` tabel. Dit omvat:
+1. Bestaande partners bijwerken met ontbrekende gegevens
+2. Nieuwe partners toevoegen met de juiste `partner_type`
+3. Automatisch het type toewijzen op basis van de "Soort" kolom
 
 ---
 
-## Visueel ontwerp
+## Analyse Excel vs Database
 
-### Nieuwe Invoice Registration Dialog
-```
-┌─────────────────────────────────────────────────────┐
-│  [Receipt icon] Facturatie registreren              │
-│  Silent Disco Beach - Testbedrijf B.V.              │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  ▼ FACTUREER AAN                                    │
-│  ┌─────────────────────────────────────────────────┐│
-│  │ Testbedrijf B.V.                                ││
-│  │ Dorpsstraat 54, 7788 AJ Amsterdam               ││
-│  │                                                 ││
-│  │ KvK: 12345678                                   ││
-│  │ BTW: NL123456789B01                             ││
-│  │                                                 ││
-│  │ Facturatiecontact: Piet de Leeuw                ││
-│  │ p.de.leeuw@vlie.com                             ││
-│  │                                                 ││
-│  │ Referentie: PO-2026-001                         ││
-│  └─────────────────────────────────────────────────┘│
-│                                                     │
-│  ▼ JOUW FACTUUR                                     │
-│  ┌─────────────────────────────────────────────────┐│
-│  │ Factuurnummer *        [FA-2026-0042          ] ││
-│  │                                                 ││
-│  │ Bedrag excl. BTW *     Factuurdatum *          ││
-│  │ [€ 500,00           ]  [28-01-2026          ]  ││
-│  │                                                 ││
-│  │ ℹ️ Commissie Bureau Vlieland (15%): €82,64      ││
-│  │    Je ontvangt hiervoor een factuur van BV.     ││
-│  │                                                 ││
-│  │ Opmerkingen (optioneel)                         ││
-│  │ [                                             ] ││
-│  └─────────────────────────────────────────────────┘│
-│                                                     │
-│                    [Annuleren]  [Registreren]       │
-└─────────────────────────────────────────────────────┘
-```
+### Huidige partners (12 in database)
+| Database ID | Naam | Match in Excel | Actie |
+|-------------|------|----------------|-------|
+| `bureau` | Bureau Vlieland | ✅ Ja | Update |
+| `fortuna` | Brouwerij Fortuna | ✅ Ja (Fortvna Vlieland) | Update |
+| `cafe-boven` | Café Boven | ✅ Ja (Trattoria Oliva & Café Boven) | Update |
+| `fietsverhuur` | Fietsverhuur Jan Van Vlieland | ✅ Ja | Update |
+| `rederij` | Rederij Doeksen | ✅ Ja | Update |
+| `trattoria-oliva` | Trattoria Oliva | ✅ Ja | Update |
+| `vliehors-expres` | Vliehors Expres | ✅ Ja | Update |
+| `vlieland-outdoor-center` | Vlieland Outdoor Center | ✅ Ja | Update |
+| `zeehonden` | Zeehondentochten Vlieland | ✅ Ja | Update |
+| `zuiver` | Zuiver Traiteur | ✅ Ja | Update |
+| `hotel-seeduyn` | Hotel Seeduyn | ✅ Ja (Westcord Strandhotel Seeduyn) | Update |
+| `hotel-vlieland` | Strandhotel Vlieland | ❌ Niet gevonden | Geen actie |
+
+### Nieuwe partners uit Excel (31 bedrijven)
+Categorisering op basis van "Soort" en "Type" kolommen:
+
+**Logies (11 nieuwe):**
+- Badhotel Bruin (Hotel)
+- De Herbergh van Flielant (Hotel)
+- Het Vlielandhotel (Hotel)
+- Hotel De Wadden (Hotel)
+- Hotel Doniastate (Hotel)
+- Kampeerterrein Stortemelk (Camping)
+- Loodshotel (Hotel)
+- Pension Hotelletje De Veerman (Hotel)
+- Het Posthuys (Hotel)
+- Vlierijck Appartementen (Hotel)
+- Torenzicht (Groepsaccommodatie)
+- Zeezicht Vlieland (Hotel)
+
+**Activiteiten (20 nieuwe):**
+- Badhuys Vlieland (Eten en drinken)
+- Bagagevervoer Vlieland (Service)
+- Bunkermuseum (Activiteit)
+- De Bazuin Watertaxi (Vervoer)
+- De Oude Stoep (Eten en drinken)
+- De Vlielander Kaasbunker (Activiteit)
+- Eetwinkeltje van Renee (Eten en drinken)
+- Gerrit de Oesterman (Activiteit)
+- Gestrand (Eten en drinken)
+- Havenpaviljoen De Dining (Eten en drinken)
+- Manege De Seeruyter (Activiteit)
+- met Linde fotografie (Service)
+- Paal 50 (Activiteit)
+- Rederij Noordgat (Vervoer)
+- Stichting Flidunen (Activiteit)
+- Stichting Nicolaaskerk (Activiteit)
+- Taxi van Koot (Service)
+- TUKTUK Vlieland (Activiteit)
+- Vlieland Yoga (Activiteit)
+- Waddenrecreatiebedrijf Neptunus (Vervoer)
+- Zuiver-Vlieland (Eten en drinken)
 
 ---
 
-## Technische wijzigingen
+## Mapping: Excel Type → Partner Type
 
-### 1. Backend: get-partner-dashboard uitbreiden
-**Bestand**: `supabase/functions/get-partner-dashboard/index.ts`
+| Excel "Soort" | Partner Type |
+|---------------|--------------|
+| Logies | `accommodation` |
+| Activiteiten | `activity_provider` |
+| (Beide) | `both` |
 
-De Edge Function moet de facturatiegegevens ophalen, maar deze alleen meesturen voor items die "factureerbaar" zijn (status accepted/executed + terms_accepted_at niet null).
+| Excel "Type" (voor Logies) | accommodation_types |
+|----------------------------|---------------------|
+| Hotel | `["hotel"]` |
+| Camping | `["camping"]` |
+| Groepsaccommodatie | `["group"]` |
 
-**Aanpassing**:
-- Bij het ophalen van `program_requests` ook de billing-velden meenemen:
-  - `billing_company_name`
-  - `billing_kvk_number`
-  - `billing_vat_number`
-  - `billing_address_street`
-  - `billing_address_postal`
-  - `billing_address_city`
-  - `billing_contact_name`
-  - `billing_contact_email`
-  - `billing_reference`
+---
 
-- Filter: Alleen billing-data meesturen als `terms_accepted_at !== null`
+## Technische implementatie
 
-### 2. TypeScript types bijwerken
-**Bestand**: `src/types/partner.ts`
+### Stap 1: SQL Script genereren
+Genereer INSERT/UPDATE statements voor alle partners:
 
-Voeg de billing-velden toe aan het `ProgramRequest` type binnen `PartnerItem`:
+```sql
+-- Updates voor bestaande partners (ontbrekende gegevens aanvullen)
+UPDATE partners SET 
+  phone = '+31562700208',
+  address_street = 'Sikkelduin 11',
+  address_postal = '8899CG',
+  address_city = 'Vlieland'
+WHERE id = 'bureau' AND phone IS NULL;
 
-```typescript
-interface PartnerItemRequest {
-  // ... bestaande velden
-  billing_company_name?: string | null;
-  billing_kvk_number?: string | null;
-  billing_vat_number?: string | null;
-  billing_address_street?: string | null;
-  billing_address_postal?: string | null;
-  billing_address_city?: string | null;
-  billing_contact_name?: string | null;
-  billing_contact_email?: string | null;
-  billing_reference?: string | null;
-}
-```
-
-### 3. Frontend: InvoiceRegistrationDialog uitbreiden
-**Bestand**: `src/components/partner-portal/InvoiceRegistrationDialog.tsx`
-
-Voeg een informatiesectie toe boven het formulier:
-
-```tsx
-{/* Billing Details Section */}
-{request.billing_company_name && (
-  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-      Factureer aan
-    </h4>
-    <div className="space-y-1">
-      <p className="font-medium">{request.billing_company_name}</p>
-      {request.billing_address_street && (
-        <p className="text-sm text-muted-foreground">
-          {request.billing_address_street}, {request.billing_address_postal} {request.billing_address_city}
-        </p>
-      )}
-      {/* KvK, BTW, Contact, Referentie */}
-    </div>
-  </div>
-)}
+-- Inserts voor nieuwe partners
+INSERT INTO partners (id, name, email, phone, address_street, address_postal, address_city, partner_type, is_active)
+VALUES 
+  ('badhotel-bruin', 'Badhotel Bruin', 'receptie@badhotelbruin.com', NULL, 'Dorpsstraat 88', '8899AL', 'Vlieland', 'accommodation', true),
+  ('gestrand', 'Gestrand B.V.', 'info@gestrandvlieland.nl', NULL, 'Havenweg 3 a', '8899BB', 'Vlieland', 'activity_provider', true),
+  -- etc...
 ```
 
-### 4. Props aanpassen
-De dialog heeft nu alleen toegang tot `item` maar niet tot de volledige request-gegevens. We moeten de `request` (inclusief billing-velden) meegeven aan de dialog.
+### Stap 2: ID generatie
+Partner ID's worden gegenereerd volgens bestaand patroon:
+- Naam in lowercase
+- Spaties en speciale tekens vervangen door `-`
+- Maximaal 30 karakters
 
-**Bestanden om aan te passen**:
-- `PartnerItemSheet.tsx` - request data doorgeven
-- `PartnerFinance.tsx` - bij het openen van factuurregistratie
+Voorbeelden:
+- "Badhotel Bruin" → `badhotel-bruin`
+- "De Herbergh van Flielant V.O.F." → `de-herbergh-van-flielant`
+- "Kampeerterrein Stortemelk" → `kampeerterrein-stortemelk`
 
----
-
-## Privacy-overwegingen
-
-| Gegeven | Zichtbaar voor partner? | Wanneer? |
-|---------|------------------------|----------|
-| Klantnaam | Ja | Altijd |
-| E-mail/Telefoon | Ja | Altijd (nodig voor contact) |
-| Factuurbedrijfsnaam | Ja | Pas bij factureren |
-| KvK/BTW-nummer | Ja | Pas bij factureren |
-| Factuuradres | Ja | Pas bij factureren |
-| Facturatiecontact | Ja | Pas bij factureren |
-
-De privacy wordt gewaarborgd doordat:
-1. Facturatiegegevens pas worden getoond wanneer de partner actief kiest voor "Factureren"
-2. De Edge Function deze data alleen meestuurt als de klant de voorwaarden heeft geaccepteerd
-3. Partners kunnen niet bij gegevens van andere partners/klanten
+### Stap 3: Data cleaning
+- Telefoon formatteren (bijv. "0639269444" → "06 39 26 94 44")
+- Email valideren en `<>` verwijderen
+- Postcode formatteren (bijv. "8899AL" → "8899 AL")
+- Plaatsnaam normaliseren (bijv. "VLIELAND" → "Vlieland")
 
 ---
 
-## Bestanden die worden aangepast
+## Commissie defaults
 
-1. `supabase/functions/get-partner-dashboard/index.ts` - Billing-velden ophalen
-2. `src/types/partner.ts` - TypeScript types uitbreiden
-3. `src/components/partner-portal/InvoiceRegistrationDialog.tsx` - Billing-info tonen
-4. `src/components/partner-portal/PartnerItemSheet.tsx` - Request data doorgeven
+| Partner Type | Default commissie |
+|--------------|-------------------|
+| activity_provider | 15% |
+| accommodation | 10% |
+| both | 15% (activiteiten), 10% (logies) |
 
 ---
 
-## Voordelen van deze aanpak
+## Wat wordt NIET geïmporteerd
 
-1. **Eén actie, alle info**: Partner hoeft niet apart facturatiegegevens op te vragen
-2. **Privacy by design**: Gevoelige data pas zichtbaar bij intent om te factureren
-3. **Tracking**: Bureau Vlieland weet dat een partner gaat factureren zodra ze de dialog openen (optioneel: loggen)
-4. **Efficiënt**: Minste aantal clicks voor de partner
+1. **Bureau Vlieland zelf** - Is al admin/eigenaar, niet als "partner"
+2. Bedrijven zonder email-adres
+3. Bedrijven buiten Vlieland (Harlingen, Terschelling) - optioneel (vervoerders zijn wel relevant)
+
+---
+
+## Uitvoering
+
+### Bestanden die worden aangepast
+Geen code-wijzigingen nodig - dit is een data-import via SQL migration.
+
+### SQL Migration
+Eén migratie met:
+1. UPDATE statements voor bestaande partners
+2. INSERT statements voor nieuwe partners
+3. ON CONFLICT handling voor veilige re-runs
+
+---
+
+## Overzicht acties per partner
+
+### Updates (11 partners)
+| ID | Wat wordt bijgewerkt |
+|----|---------------------|
+| bureau | Telefoon, adres bijwerken |
+| fortuna | Adres controleren |
+| cafe-boven | Contactpersoon toevoegen |
+| fietsverhuur | Adres bevestigen |
+| rederij | Adres, email bijwerken |
+| trattoria-oliva | Contactpersoon toevoegen |
+| vliehors-expres | Email wijzigen naar hallo@paal50.nl |
+| vlieland-outdoor-center | Adres bevestigen |
+| zeehonden | Contactpersoon toevoegen |
+| zuiver | Contactpersoon toevoegen |
+| hotel-seeduyn | Naam, adres, email bijwerken |
+
+### Nieuwe inserts (31 partners)
+Alle bedrijven uit de Excel die nog niet in de database staan.
 
