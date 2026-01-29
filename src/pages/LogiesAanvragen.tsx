@@ -1,10 +1,55 @@
 import { Helmet } from "react-helmet";
+import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { AccommodationWizard } from "@/components/accommodation/AccommodationWizard";
-import { BedDouble, CheckCircle, Clock, Euro } from "lucide-react";
+import { BedDouble, CheckCircle, Clock, Euro, Info } from "lucide-react";
+import { parseISO, isValid } from "date-fns";
+import { useMemo } from "react";
 
 const LogiesAanvragen = () => {
+  const [searchParams] = useSearchParams();
+
+  // Parse URL parameters for pre-filling
+  const initialData = useMemo(() => {
+    const arrivalParam = searchParams.get("arrival");
+    const departureParam = searchParams.get("departure");
+    const guestsParam = searchParams.get("guests");
+
+    const result: {
+      arrival_date?: Date;
+      departure_date?: Date;
+      number_of_guests?: number;
+    } = {};
+
+    // Parse arrival date
+    if (arrivalParam) {
+      const parsed = parseISO(arrivalParam);
+      if (isValid(parsed)) {
+        result.arrival_date = parsed;
+      }
+    }
+
+    // Parse departure date
+    if (departureParam) {
+      const parsed = parseISO(departureParam);
+      if (isValid(parsed)) {
+        result.departure_date = parsed;
+      }
+    }
+
+    // Parse guests
+    if (guestsParam) {
+      const parsed = parseInt(guestsParam, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        result.number_of_guests = parsed;
+      }
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined;
+  }, [searchParams]);
+
+  const hasPrefilledData = !!initialData;
 
   return (
     <>
@@ -63,7 +108,24 @@ const LogiesAanvragen = () => {
         {/* Wizard Section */}
         <section className="py-12">
           <div className="container mx-auto px-4">
+            {/* Show info banner when data is pre-filled */}
+            {hasPrefilledData && (
+              <div className="max-w-4xl mx-auto mb-6">
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-start gap-3">
+                  <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground text-sm">
+                      Gegevens overgenomen uit uw programma
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      De datums en groepsgrootte zijn automatisch ingevuld. U kunt deze indien nodig aanpassen.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <AccommodationWizard 
+              initialData={initialData}
               onSuccess={(token) => {
                 // Could navigate to a confirmation/tracking page
                 console.log("Request submitted with token:", token);
