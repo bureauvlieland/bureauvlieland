@@ -47,6 +47,19 @@ export interface PartnerItem {
   customer_counter_time: string | null;
   customer_counter_note: string | null;
   customer_counter_at: string | null;
+  // Sibling items on same request (for conflict detection)
+  sibling_items?: {
+    id: string;
+    request_id: string;
+    block_name: string;
+    day_index: number;
+    preferred_time: string | null;
+    proposed_time: string | null;
+    confirmed_time: string | null;
+    duration: string | null;
+    status: string;
+    provider_name: string;
+  }[];
   // Invoice fields
   invoiced_amount: number | null;
   invoiced_number: string | null;

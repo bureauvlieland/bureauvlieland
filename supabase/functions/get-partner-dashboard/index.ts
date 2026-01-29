@@ -86,16 +86,57 @@ Deno.serve(async (req) => {
       (item) => item.program_requests?.status !== "cancelled"
     ) || [];
 
+    // Get all request IDs to fetch sibling items for conflict detection
+    const requestIds = [...new Set(activeItems.map(i => i.request_id))];
+    
+    // Fetch all items from the same requests for conflict detection
+    // This includes items from OTHER partners on the same day
+    let allRequestItems: Record<string, any[]> = {};
+    if (requestIds.length > 0) {
+      const { data: siblingItems, error: siblingError } = await supabase
+        .from("program_request_items")
+        .select(`
+          id,
+          request_id,
+          block_name,
+          day_index,
+          preferred_time,
+          proposed_time,
+          confirmed_time,
+          duration,
+          status,
+          provider_name
+        `)
+        .in("request_id", requestIds)
+        .not("status", "in", '("cancelled","unavailable")');
+      
+      if (!siblingError && siblingItems) {
+        // Group by request_id for easy lookup
+        for (const item of siblingItems) {
+          if (!allRequestItems[item.request_id]) {
+            allRequestItems[item.request_id] = [];
+          }
+          allRequestItems[item.request_id].push(item);
+        }
+      }
+    }
+
+    // Attach sibling items to each partner item for conflict detection
+    const itemsWithSiblings = activeItems.map(item => ({
+      ...item,
+      sibling_items: allRequestItems[item.request_id] || []
+    }));
+
     // Group items by status for easy display (new status flow)
-    const pendingConfirmation = activeItems.filter((i) => i.status === "pending");
-    const confirmed = activeItems.filter((i) => i.status === "confirmed"); // Waiting for customer acceptance
-    const accepted = activeItems.filter((i) => i.status === "accepted");
-    const executed = activeItems.filter((i) => i.status === "executed");
-    const invoiced = activeItems.filter((i) => i.status === "invoiced" || i.invoiced_number !== null);
-    const closed = activeItems.filter((i) => ["unavailable", "cancelled"].includes(i.status));
+    const pendingConfirmation = itemsWithSiblings.filter((i) => i.status === "pending");
+    const confirmed = itemsWithSiblings.filter((i) => i.status === "confirmed"); // Waiting for customer acceptance
+    const accepted = itemsWithSiblings.filter((i) => i.status === "accepted");
+    const executed = itemsWithSiblings.filter((i) => i.status === "executed");
+    const invoiced = itemsWithSiblings.filter((i) => i.status === "invoiced" || i.invoiced_number !== null);
+    const closed = itemsWithSiblings.filter((i) => ["unavailable", "cancelled"].includes(i.status));
     
     // Items ready for invoice: executed AND customer has accepted terms
-    const readyForInvoice = activeItems.filter(
+    const readyForInvoice = itemsWithSiblings.filter(
       (i) => i.status === "executed" && 
              !i.invoiced_number && 
              i.program_requests?.terms_accepted_at !== null
@@ -169,7 +210,7 @@ Deno.serve(async (req) => {
           accommodation_commission_percentage: partner.accommodation_commission_percentage,
           partner_type: partnerType,
         },
-        items: activeItems,
+        items: itemsWithSiblings,
         summary: {
           pending: pendingConfirmation.length,
           confirmed: confirmed.length,
