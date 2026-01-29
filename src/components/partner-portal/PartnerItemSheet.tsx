@@ -28,6 +28,8 @@ import {
   FileText,
   Hourglass,
   Loader2,
+  RefreshCw,
+  Hash,
   Play,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -123,13 +125,17 @@ export const PartnerItemSheet = ({
   const activityDate = dates[item.day_index];
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
 
+  // Calculate effective status (same as dashboard logic)
+  const hasCustomerAccepted = !!item.customer_accepted_at;
+  const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
+
   // Can invoice when accepted/executed and customer accepted terms
-  const canInvoice = (item.status === "accepted" || item.status === "executed") && 
+  const canInvoice = (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
     !item.invoiced_number && 
     request.terms_accepted_at !== null;
 
   // Waiting for customer to accept terms before invoicing
-  const awaitingTerms = (item.status === "accepted" || item.status === "executed") && 
+  const awaitingTerms = (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
     !item.invoiced_number && 
     request.terms_accepted_at === null;
 
@@ -232,6 +238,27 @@ export const PartnerItemSheet = ({
     setShowResponseForm(true);
   };
 
+  // Get confirmed/effective time
+  const effectiveTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+  const timeLabel = item.confirmed_time 
+    ? "Bevestigde tijd" 
+    : item.proposed_time 
+      ? "Voorgestelde tijd" 
+      : "Gewenste tijd";
+
+  // Check if customer modified (version > 1)
+  const isModifiedByCustomer = item.version > 1;
+
+  // Calculate expected commission
+  const calculateExpectedCommission = () => {
+    if (!item.quoted_price) return null;
+    const vatRate = 21;
+    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
+    const commissionRate = item.commission_percentage ?? 10;
+    return amountExclVat * (commissionRate / 100);
+  };
+  const expectedCommission = calculateExpectedCommission();
+
   return (
     <Sheet open={isOpen} onOpenChange={handleClose}>
       <SheetContent className="sm:max-w-lg overflow-y-auto">
@@ -250,8 +277,25 @@ export const PartnerItemSheet = ({
                 Klant akkoord
               </Badge>
             )}
+            {isModifiedByCustomer && (
+              <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Gewijzigd (v{item.version})
+              </Badge>
+            )}
           </div>
-          <SheetDescription>{item.block_category}</SheetDescription>
+          <SheetDescription className="flex items-center gap-2">
+            <span>{item.block_category}</span>
+            {request.reference_number && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-1 font-mono text-xs">
+                  <Hash className="h-3 w-3" />
+                  {request.reference_number}
+                </span>
+              </>
+            )}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
@@ -294,10 +338,23 @@ export const PartnerItemSheet = ({
                     : `Dag ${item.day_index + 1}`}
                 </span>
               </div>
-              {item.preferred_time && (
+              {effectiveTime && (
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{item.preferred_time}</span>
+                  <Clock className={cn(
+                    "h-4 w-4",
+                    item.confirmed_time ? "text-green-600" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(item.confirmed_time && "font-medium text-green-700 dark:text-green-400")}>
+                    {effectiveTime}
+                  </span>
+                  <Badge variant="outline" className={cn(
+                    "text-xs py-0 px-1.5",
+                    item.confirmed_time 
+                      ? "border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30" 
+                      : "border-muted text-muted-foreground"
+                  )}>
+                    {timeLabel}
+                  </Badge>
                 </div>
               )}
               {item.duration && (
@@ -329,15 +386,22 @@ export const PartnerItemSheet = ({
               <Separator />
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Bevestigde prijs</h3>
-                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <Euro className="h-4 w-4 text-green-600" />
-                    <span className="text-green-700 dark:text-green-400 font-semibold text-lg">
-                      €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-4 w-4 text-green-600" />
+                      <span className="text-green-700 dark:text-green-400 font-semibold text-lg">
+                        €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {expectedCommission && !item.invoiced_number && (
+                      <span className="text-xs text-muted-foreground">
+                        Commissie: €{expectedCommission.toFixed(2)}
+                      </span>
+                    )}
                   </div>
                   {item.quoted_notes && (
-                    <p className="text-sm text-muted-foreground mt-2">{item.quoted_notes}</p>
+                    <p className="text-sm text-muted-foreground">{item.quoted_notes}</p>
                   )}
                 </div>
               </div>
@@ -475,8 +539,34 @@ export const PartnerItemSheet = ({
 
           <Separator />
 
-          {/* Actions */}
+          {/* Quick Actions */}
           <div className="space-y-3">
+            {/* Email link */}
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1"
+                asChild
+              >
+                <a href={`mailto:${request.customer_email}?subject=Betreft: ${item.block_name} - ${request.reference_number || request.customer_company || request.customer_name}`}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email klant
+                </a>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1"
+                asChild
+              >
+                <a href={`tel:${request.customer_phone}`}>
+                  <Phone className="h-4 w-4 mr-2" />
+                  Bellen
+                </a>
+              </Button>
+            </div>
+
             {/* Can respond: show response button or form */}
             {canRespond && !showResponseForm && (
               <Button 
@@ -769,8 +859,8 @@ export const PartnerItemSheet = ({
             )}
 
             {/* Accepted: Mark as executed */}
-            {item.status === "accepted" && (
-              <Button onClick={handleMarkExecuted} className="w-full" disabled={isSubmitting}>
+            {(item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number && (
+              <Button onClick={handleMarkExecuted} className="w-full" variant="secondary" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
                 Markeer als uitgevoerd
               </Button>
@@ -778,7 +868,7 @@ export const PartnerItemSheet = ({
 
             {/* Executed: Register invoice */}
             {canInvoice && (
-              <Button onClick={onRegisterInvoice} variant="outline" className="w-full">
+              <Button onClick={onRegisterInvoice} className="w-full">
                 <FileText className="h-4 w-4 mr-2" />
                 Factuur registreren
               </Button>

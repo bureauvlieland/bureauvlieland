@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
           number_of_people,
           selected_dates,
           status,
+          reference_number,
           cancelled_at,
           terms_accepted_at,
           billing_company_name,

@@ -77,6 +77,7 @@ export interface PartnerItem {
     number_of_people: number;
     selected_dates: string[];
     status: string;
+    reference_number: string | null;
     terms_accepted_at: string | null;
     // Billing details (only populated when terms_accepted_at is set)
     billing_company_name?: string | null;
