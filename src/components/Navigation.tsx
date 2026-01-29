@@ -18,23 +18,26 @@ export const Navigation = () => {
     setOpenMobileDropdown(openMobileDropdown === dropdown ? null : dropdown);
   };
 
-  const dienstenItems = [
-    { label: "Overzicht diensten", href: "/diensten", isOverview: true },
+  const voorBedrijvenItems = [
     { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland", highlight: true },
-    { label: "Teamuitje Vlieland", href: "/teamuitje-vlieland" },
     { label: "Meerdaags bedrijfsuitje", href: "/meerdaags-bedrijfsuitje-vlieland" },
-    { label: "Heisessie Vlieland", href: "/heisessie-vlieland" },
-    { label: "Zakelijk evenement Vlieland", href: "/zakelijk-evenement-vlieland" },
-    { label: "Incentive reis Vlieland", href: "/incentive-reis-vlieland" },
-    { label: "Trouwen op Vlieland", href: "/trouwen-op-vlieland" },
+    { label: "Teambuilding", href: "/teamuitje-vlieland" },
+    { label: "Heisessie", href: "/heisessie-vlieland" },
+    { label: "Zakelijk evenement", href: "/zakelijk-evenement-vlieland" },
+    { label: "Incentive reis", href: "/incentive-reis-vlieland" },
   ];
 
-  const voorWieItems = [
-    { label: "Overzicht voor wie", href: "/voor-wie", isOverview: true },
-    { label: "Bedrijven & teams", href: "/voor-wie#bedrijven" },
-    { label: "Management & directie", href: "/voor-wie#management" },
-    { label: "Organisaties & instellingen", href: "/voor-wie#organisaties" },
-    { label: "Evenementenbureaus & trainers", href: "/voor-wie#partners" },
+  const priveItems = [
+    { label: "Trouwen op Vlieland", href: "/trouwen-op-vlieland" },
+    { label: "Groepsweekend", href: "/groepsweekend-vlieland" },
+    { label: "Jubileum vieren", href: "/jubileum-vlieland" },
+    { label: "Familieweekend", href: "/familieweekend-vlieland" },
+  ];
+
+  const overOnsItems = [
+    { label: "Over Bureau Vlieland", href: "/over-ons" },
+    { label: "Samenwerken", href: "/samenwerken" },
+    { label: "Contact", href: "/contact" },
   ];
 
   return (
@@ -56,17 +59,17 @@ export const Navigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-5">
-            {/* Diensten Dropdown */}
+            {/* Voor bedrijven Dropdown */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-                Diensten <ChevronDown className="h-4 w-4" />
+              <DropdownMenuTrigger className="text-sm font-semibold text-foreground hover:text-primary transition-colors flex items-center gap-1">
+                Voor bedrijven <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-card border-border min-w-[220px]">
-                {dienstenItems.map((item, index) => (
-                  <DropdownMenuItem key={item.href} asChild className={item.isOverview ? 'border-b border-border mb-1' : ''}>
+                {voorBedrijvenItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
                     <Link 
                       to={item.href} 
-                      className={`cursor-pointer ${item.highlight ? 'font-semibold text-foreground' : ''} ${item.isOverview ? 'text-muted-foreground text-sm' : ''}`}
+                      className={`cursor-pointer ${item.highlight ? 'font-semibold text-foreground' : ''}`}
                     >
                       {item.label}
                     </Link>
@@ -75,15 +78,15 @@ export const Navigation = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Voor wie Dropdown */}
+            {/* Privé & Trouwen Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-                Voor wie <ChevronDown className="h-4 w-4" />
+                Voor privé & trouwen <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-card border-border">
-                {voorWieItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild className={item.isOverview ? 'border-b border-border mb-1' : ''}>
-                    <Link to={item.href} className={`cursor-pointer ${item.isOverview ? 'text-muted-foreground text-sm' : ''}`}>
+              <DropdownMenuContent className="bg-card border-border min-w-[200px]">
+                {priveItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link to={item.href} className="cursor-pointer">
                       {item.label}
                     </Link>
                   </DropdownMenuItem>
@@ -91,26 +94,38 @@ export const Navigation = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Bouwstenen - direct link */}
+            {/* Direct links */}
             <Link
-              to="/bouwstenen"
+              to="/programma-samenstellen"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Bouwstenen
+              Programma samenstellen
             </Link>
 
-            <Link
-              to="/catering"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Catering
-            </Link>
             <Link
               to="/logies-vlieland"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Logies
             </Link>
+
+            {/* Over ons Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                Over ons <ChevronDown className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-card border-border min-w-[180px]">
+                {overOnsItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link to={item.href} className="cursor-pointer">
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Right side buttons */}
             <Link to="/contact">
               <Button
                 variant="outline"
@@ -158,23 +173,23 @@ export const Navigation = () => {
                 </Button>
               </Link>
 
-              {/* Diensten Dropdown Mobile */}
+              {/* Voor bedrijven Dropdown Mobile */}
               <div className="px-4">
                 <button
-                  onClick={() => toggleMobileDropdown('diensten')}
-                  className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => toggleMobileDropdown('bedrijven')}
+                  className="flex items-center justify-between w-full py-2 font-semibold text-foreground"
                 >
-                  <span>Diensten</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'diensten' ? 'rotate-180' : ''}`} />
+                  <span>Voor bedrijven</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'bedrijven' ? 'rotate-180' : ''}`} />
                 </button>
-                {openMobileDropdown === 'diensten' && (
+                {openMobileDropdown === 'bedrijven' && (
                   <div className="pl-4 pb-2 space-y-1">
-                    {dienstenItems.map((item) => (
+                    {voorBedrijvenItems.map((item) => (
                       <Link
                         key={item.href}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`block py-2 text-sm transition-colors ${item.isOverview ? 'text-muted-foreground border-b border-border pb-3 mb-2' : ''} ${item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
+                        className={`block py-2 text-sm transition-colors ${item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'}`}
                       >
                         {item.label}
                       </Link>
@@ -183,23 +198,23 @@ export const Navigation = () => {
                 )}
               </div>
 
-              {/* Voor wie Dropdown Mobile */}
+              {/* Privé & Trouwen Dropdown Mobile */}
               <div className="px-4">
                 <button
-                  onClick={() => toggleMobileDropdown('voorwie')}
+                  onClick={() => toggleMobileDropdown('prive')}
                   className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <span>Voor wie</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'voorwie' ? 'rotate-180' : ''}`} />
+                  <span>Voor privé & trouwen</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'prive' ? 'rotate-180' : ''}`} />
                 </button>
-                {openMobileDropdown === 'voorwie' && (
+                {openMobileDropdown === 'prive' && (
                   <div className="pl-4 pb-2 space-y-1">
-                    {voorWieItems.map((item) => (
+                    {priveItems.map((item) => (
                       <Link
                         key={item.href}
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`block py-2 text-sm transition-colors ${item.isOverview ? 'text-muted-foreground border-b border-border pb-3 mb-2' : 'text-muted-foreground hover:text-foreground'}`}
+                        className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {item.label}
                       </Link>
@@ -208,22 +223,15 @@ export const Navigation = () => {
                 )}
               </div>
 
-              {/* Bouwstenen - direct link Mobile */}
+              {/* Direct links Mobile */}
               <Link
-                to="/bouwstenen"
+                to="/programma-samenstellen"
                 onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                Bouwstenen
+                Programma samenstellen
               </Link>
 
-              <Link
-                to="/catering"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Catering
-              </Link>
               <Link
                 to="/logies-vlieland"
                 onClick={() => setIsMenuOpen(false)}
@@ -231,6 +239,32 @@ export const Navigation = () => {
               >
                 Logies
               </Link>
+
+              {/* Over ons Dropdown Mobile */}
+              <div className="px-4">
+                <button
+                  onClick={() => toggleMobileDropdown('overons')}
+                  className="flex items-center justify-between w-full py-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span>Over ons</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${openMobileDropdown === 'overons' ? 'rotate-180' : ''}`} />
+                </button>
+                {openMobileDropdown === 'overons' && (
+                  <div className="pl-4 pb-2 space-y-1">
+                    {overOnsItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <Link
                 to="/contact"
                 onClick={() => setIsMenuOpen(false)}

@@ -56,7 +56,7 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Zakelijke uitjes</h4>
+            <h4 className="font-semibold text-foreground mb-4">Voor bedrijven</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link 
@@ -68,18 +68,18 @@ export const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/teamuitje-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Teamuitje Vlieland
-                </Link>
-              </li>
-              <li>
-                <Link 
                   to="/meerdaags-bedrijfsuitje-vlieland" 
                   className="hover:text-primary transition-colors"
                 >
                   Meerdaags bedrijfsuitje
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/teamuitje-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Teambuilding
                 </Link>
               </li>
               <li>
@@ -98,11 +98,55 @@ export const Footer = () => {
                   Zakelijk evenement
                 </Link>
               </li>
+              <li>
+                <Link 
+                  to="/incentive-reis-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Incentive reis
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Direct aan de slag</h4>
+            <h4 className="font-semibold text-foreground mb-4">Privé & trouwen</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link 
+                  to="/trouwen-op-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Trouwen op Vlieland
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/groepsweekend-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Groepsweekend
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/jubileum-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Jubileum vieren
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/familieweekend-vlieland" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Familieweekend
+                </Link>
+              </li>
+            </ul>
+
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Direct aan de slag</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link 
@@ -114,46 +158,40 @@ export const Footer = () => {
               </li>
               <li>
                 <Link 
-                  to="/bouwstenen" 
+                  to="/logies-vlieland" 
                   className="hover:text-primary transition-colors"
                 >
-                  Bouwstenen bekijken
+                  Logies regelen
                 </Link>
               </li>
               <li>
                 <Link 
-                  to="/offerte" 
+                  to="/contact" 
                   className="hover:text-primary transition-colors"
                 >
-                  Maatwerkofferte aanvragen
+                  Maatwerk aanvragen
                 </Link>
               </li>
             </ul>
+          </div>
 
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Meer informatie</h4>
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Over ons</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link 
+                  to="/over-ons" 
+                  className="hover:text-primary transition-colors"
+                >
+                  Over Bureau Vlieland
+                </Link>
+              </li>
               <li>
                 <Link 
                   to="/samenwerken" 
                   className="hover:text-primary transition-colors"
                 >
                   Samenwerken
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/catering" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Catering
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/over-ons" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Over ons
                 </Link>
               </li>
               <li>
@@ -165,24 +203,8 @@ export const Footer = () => {
                 </Link>
               </li>
             </ul>
-
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Onze Horeca</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <a href="https://cafeboven.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Café Boven
-                </a>
-              </li>
-              <li>
-                <a href="https://olivavlieland.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Oliva Vlieland
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-foreground mb-4">Online Boeken</h4>
+            
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Online Boeken</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a href="https://verhuur.bureauvlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
@@ -195,27 +217,22 @@ export const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="https://linnenverhuurvlieland.com/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Linnenverhuur
-                </a>
-              </li>
-              <li>
                 <a href="https://boeking.mijnactiviteitenplanner.nl/activiteiten-vlieland" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                   Losse activiteiten
                 </a>
               </li>
             </ul>
-            
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Vakantiewoningen</h4>
+
+            <h4 className="font-semibold text-foreground mb-4 mt-6">Onze horeca</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a href="https://voorondervlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Vooronder Vlieland
+                <a href="https://cafeboven.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Café Boven
                 </a>
               </li>
               <li>
-                <a href="https://noordkaapvlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Noordkaap Vlieland
+                <a href="https://olivavlieland.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  Oliva Vlieland
                 </a>
               </li>
             </ul>
