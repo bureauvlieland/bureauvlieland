@@ -895,6 +895,8 @@ export type Database = {
       program_request_items: {
         Row: {
           actual_invoiced_excl_vat: number | null
+          admin_price_notes: string | null
+          admin_price_override: number | null
           block_category: string
           block_id: string
           block_name: string
@@ -920,6 +922,7 @@ export type Database = {
           invoiced_date: string | null
           invoiced_file_path: string | null
           invoiced_number: string | null
+          item_quote_status: string | null
           preferred_time: string | null
           price_indication: string | null
           proforma_amount_excl_vat: number | null
@@ -935,6 +938,7 @@ export type Database = {
           quoted_notes: string | null
           quoted_price: number | null
           request_id: string
+          skip_partner_notification: boolean | null
           status: string
           status_note: string | null
           status_updated_at: string | null
@@ -944,6 +948,8 @@ export type Database = {
         }
         Insert: {
           actual_invoiced_excl_vat?: number | null
+          admin_price_notes?: string | null
+          admin_price_override?: number | null
           block_category: string
           block_id: string
           block_name: string
@@ -969,6 +975,7 @@ export type Database = {
           invoiced_date?: string | null
           invoiced_file_path?: string | null
           invoiced_number?: string | null
+          item_quote_status?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           proforma_amount_excl_vat?: number | null
@@ -984,6 +991,7 @@ export type Database = {
           quoted_notes?: string | null
           quoted_price?: number | null
           request_id: string
+          skip_partner_notification?: boolean | null
           status?: string
           status_note?: string | null
           status_updated_at?: string | null
@@ -993,6 +1001,8 @@ export type Database = {
         }
         Update: {
           actual_invoiced_excl_vat?: number | null
+          admin_price_notes?: string | null
+          admin_price_override?: number | null
           block_category?: string
           block_id?: string
           block_name?: string
@@ -1018,6 +1028,7 @@ export type Database = {
           invoiced_date?: string | null
           invoiced_file_path?: string | null
           invoiced_number?: string | null
+          item_quote_status?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           proforma_amount_excl_vat?: number | null
@@ -1033,6 +1044,7 @@ export type Database = {
           quoted_notes?: string | null
           quoted_price?: number | null
           request_id?: string
+          skip_partner_notification?: boolean | null
           status?: string
           status_note?: string | null
           status_updated_at?: string | null
@@ -1052,6 +1064,7 @@ export type Database = {
       }
       program_requests: {
         Row: {
+          admin_created_by: string | null
           billing_address_city: string | null
           billing_address_postal: string | null
           billing_address_street: string | null
@@ -1075,6 +1088,12 @@ export type Database = {
           id: string
           linked_accommodation_id: string | null
           number_of_people: number
+          program_type: string
+          quote_personal_message: string | null
+          quote_sent_at: string | null
+          quote_sent_by: string | null
+          quote_status: string | null
+          quote_valid_until: string | null
           reference_number: string | null
           selected_dates: Json
           signature_id: string | null
@@ -1087,6 +1106,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_created_by?: string | null
           billing_address_city?: string | null
           billing_address_postal?: string | null
           billing_address_street?: string | null
@@ -1110,6 +1130,12 @@ export type Database = {
           id?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          program_type?: string
+          quote_personal_message?: string | null
+          quote_sent_at?: string | null
+          quote_sent_by?: string | null
+          quote_status?: string | null
+          quote_valid_until?: string | null
           reference_number?: string | null
           selected_dates?: Json
           signature_id?: string | null
@@ -1122,6 +1148,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_created_by?: string | null
           billing_address_city?: string | null
           billing_address_postal?: string | null
           billing_address_street?: string | null
@@ -1145,6 +1172,12 @@ export type Database = {
           id?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          program_type?: string
+          quote_personal_message?: string | null
+          quote_sent_at?: string | null
+          quote_sent_by?: string | null
+          quote_status?: string | null
+          quote_valid_until?: string | null
           reference_number?: string | null
           selected_dates?: Json
           signature_id?: string | null
