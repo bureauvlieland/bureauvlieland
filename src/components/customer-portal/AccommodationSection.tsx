@@ -62,26 +62,30 @@ export const AccommodationSection = ({
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
 
-  // State 1: No accommodation linked - show CTA
+  // State 1: No accommodation linked - show CTA with partner-oriented tone
   if (!accommodation) {
     return (
       <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex items-center gap-4 flex-1">
+          <div className="flex flex-col md:flex-row md:items-start gap-4">
+            <div className="flex items-start gap-4 flex-1">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <BedDouble className="h-6 w-6 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold">Meerdaags programma? Begin met logies!</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Vind eerst passende accommodatie voor je groep. Daarna vul je het programma aan met activiteiten.
+              <div className="space-y-2">
+                <h3 className="font-semibold">Meerdaags verblijf? Wij helpen graag met passende logies.</h3>
+                <p className="text-sm text-muted-foreground">
+                  Een sterk programma begint met comfortabele en beschikbare accommodatie.
+                  Wij vragen vrijblijvend offertes aan bij geschikte locaties en voegen deze toe aan uw programma.
+                </p>
+                <p className="text-xs text-muted-foreground/80 italic">
+                  Vrijblijvend. U ontvangt binnen 2 werkdagen passende voorstellen.
                 </p>
               </div>
             </div>
-            <Button asChild>
+            <Button asChild className="shrink-0">
               <Link to="/logies-aanvragen">
-                Zoek logies
+                Logies laten regelen
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>

@@ -15,6 +15,7 @@ import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
 import { AccommodationSection } from "./AccommodationSection";
 import { ExtrasSection } from "./ExtrasSection";
+import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -123,29 +124,42 @@ export const DesktopProgramView = ({
   // Show AcceptTermsCard when no pending/alternative items and at least one confirmed or accepted
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.total > 0;
 
+  const isMultiDay = selectedDates.length > 1;
+
   return (
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
-        {/* Accommodation section - always first */}
-        <div id="accommodation" className="scroll-mt-20">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BedDouble className="h-5 w-5 text-primary" />
-                Logies
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AccommodationSection
-                accommodation={accommodation}
-                quotes={accommodationQuotes}
-                onSelectQuote={onSelectAccommodationQuote}
-                selectedDates={selectedDates}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        {/* Program Overview Card - always first */}
+        <ProgramOverviewCard
+          selectedDates={selectedDates}
+          numberOfPeople={program.number_of_people}
+          customerCompany={program.customer_company}
+          accommodation={accommodation}
+          accommodationQuotes={accommodationQuotes}
+        />
+
+        {/* Accommodation section - show for multi-day programs */}
+        {isMultiDay && (
+          <div id="accommodation" className="scroll-mt-20">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BedDouble className="h-5 w-5 text-primary" />
+                  Logies
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AccommodationSection
+                  accommodation={accommodation}
+                  quotes={accommodationQuotes}
+                  onSelectQuote={onSelectAccommodationQuote}
+                  selectedDates={selectedDates}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Next steps card - always visible, shows full workflow */}
         <NextStepsCard
@@ -163,6 +177,7 @@ export const DesktopProgramView = ({
             onOpenBilling={onOpenBilling}
             items={program.items}
             accommodationQuotes={accommodationQuotes}
+            selectedDates={selectedDates}
           />
         )}
 
@@ -438,6 +453,7 @@ export const DesktopProgramView = ({
         items={program.items}
         numberOfPeople={program.number_of_people}
         selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+        isMultiDay={isMultiDay}
       />
 
       {/* Add Activity Sheet */}
