@@ -1,344 +1,138 @@
 
 
-# Plan: Klant Tegenvoorstel Flow
+# Fix: Partner Portal Zichtbaarheid voor Klant Tegenvoorstel
 
 ## Samenvatting
-Naast het accepteren van een partner-voorstel, kan de klant ook een **tegenvoorstel** doen door zelf een andere tijd voor te stellen. Dit wordt expliciet als onderhandelings-flow vormgegeven in plaats van alleen "wijziging".
+Het klant tegenvoorstel (`counter_proposed` status) is niet zichtbaar in de partner portal omdat:
+1. De TypeScript types de nieuwe velden niet bevatten
+2. De status badge configuratie ontbreekt
+3. De dashboard filtering deze status niet meeneemt
 
 ---
 
-## Huidige situatie
+## Wijziging 1: PartnerItem Type Uitbreiden
 
-Wanneer de partner een voorstel doet (status `confirmed` of `alternative`), kan de klant:
-- ✅ **Akkoord** geven → status wordt `accepted`
-- ⚠️ Tijd/dag aanpassen → status gaat terug naar `pending` (maar dit is niet duidelijk als "tegenvoorstel" gepresenteerd)
+### src/types/partner.ts
 
-## Gewenste situatie
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 🎯 Zeehondentocht                    [Alternatief]  │
-│                                                     │
-│ 💬 Reactie aanbieder:                               │
-│ "We kunnen wel op 15:00 in plaats van 10:00"        │
-│                                                     │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ Voorgestelde tijd: 15:00    Prijs: €450,00      │ │
-│ │                                                 │ │
-│ │ [✓ Akkoord]     [Andere tijd voorstellen]       │ │
-│ └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-
-       ↓ Klant klikt "Andere tijd voorstellen" ↓
-
-┌─────────────────────────────────────────────────────┐
-│ Andere tijd voorstellen                         ✕   │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ De voorgestelde tijd (15:00) past niet?             │
-│ Geef hieronder aan welke tijd jou beter uitkomt.    │
-│                                                     │
-│ Gewenste tijd                                       │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ 11:00                                         ▼ │ │
-│ └─────────────────────────────────────────────────┘ │
-│                                                     │
-│ Toelichting (optioneel)                             │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ We hebben om 13:00 al de Vliehors Expres...     │ │
-│ └─────────────────────────────────────────────────┘ │
-│                                                     │
-│ [Tegenvoorstel versturen]              [Annuleren]  │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## Deel 1: Database - Klant Tegenvoorstel Velden
-
-### Nieuwe kolommen in program_request_items
-
-```sql
-ALTER TABLE program_request_items 
-ADD COLUMN customer_counter_time text DEFAULT NULL,
-ADD COLUMN customer_counter_note text DEFAULT NULL,
-ADD COLUMN customer_counter_at timestamp with time zone DEFAULT NULL;
-```
-
-- `customer_counter_time`: De tijd die de klant voorstelt
-- `customer_counter_note`: Toelichting van de klant
-- `customer_counter_at`: Wanneer het tegenvoorstel is gedaan
-
-### Nieuwe status: "counter_proposed"
-
-De status-flow wordt uitgebreid:
-
-```
-pending → confirmed/alternative → (klant kiest):
-                                   ├── accepted (akkoord)
-                                   ├── counter_proposed (tegenvoorstel) → partner reageert opnieuw
-                                   └── cancelled (annuleren)
-```
-
----
-
-## Deel 2: UI - Tegenvoorstel Dialog
-
-### Nieuw component: CounterProposalDialog.tsx
-
-```tsx
-interface CounterProposalDialogProps {
-  item: ProgramRequestItem;
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (time: string, note: string) => Promise<boolean>;
-  blockedTimeSlots: TimeSlot[]; // Voor conflict-check
-}
-```
-
-Bevat:
-- Dropdown met beschikbare tijdslots (exclusief geblokkeerde tijden)
-- Tekstveld voor toelichting
-- Verstuur/Annuleer knoppen
-
-### CustomerProgramItem.tsx Aanpassen
-
-Naast de "Akkoord" knop, een tweede knop toevoegen:
-
-```tsx
-{(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && (
-  <div className="flex gap-2">
-    <Button onClick={handleAccept}>
-      <Check className="h-4 w-4 mr-2" />
-      Akkoord
-    </Button>
-    <Button variant="outline" onClick={() => setShowCounterDialog(true)}>
-      Andere tijd voorstellen
-    </Button>
-  </div>
-)}
-```
-
----
-
-## Deel 3: Backend - Edge Function Updates
-
-### update-customer-program/index.ts
-
-Nieuwe actie: `counterProposal`
+Toevoegen aan de `PartnerItem` interface (rond lijn 45):
 
 ```typescript
-interface CounterProposal {
-  itemId: string;
-  counterTime: string;
-  counterNote: string;
-}
-
-// Handle counter proposal
-if (counterProposal) {
-  const { itemId, counterTime, counterNote } = counterProposal;
-  
-  // Update item
-  await supabase
-    .from("program_request_items")
-    .update({
-      status: "counter_proposed",
-      customer_counter_time: counterTime,
-      customer_counter_note: counterNote,
-      customer_counter_at: new Date().toISOString(),
-    })
-    .eq("id", itemId);
-  
-  // Log to history
-  await supabase.from("program_request_history").insert({...});
-  
-  // Email partner about counter proposal
-  emailMessages.push({...});
-}
-```
-
-### Email naar Partner
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 📧 Tegenvoorstel van klant                          │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ Beste [Partner],                                    │
-│                                                     │
-│ De klant heeft een tegenvoorstel gedaan voor:       │
-│ [Activiteit Naam]                                   │
-│                                                     │
-│ Jouw voorstel: 15:00                                │
-│ Klant wil liever: 11:00                             │
-│                                                     │
-│ Toelichting klant:                                  │
-│ "We hebben om 13:00 al de Vliehors Expres..."       │
-│                                                     │
-│ [Reageren in Partner Portal]                        │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+// Customer counter proposal fields (when customer proposes alternative time)
+customer_counter_time: string | null;
+customer_counter_note: string | null;
+customer_counter_at: string | null;
 ```
 
 ---
 
-## Deel 4: Partner Portal - Counter Proposal Weergave
+## Wijziging 2: StatusConfig Aanpassen in PartnerItemRow
 
-### PartnerItemSheet.tsx
+### src/components/partner-portal/PartnerItemRow.tsx
 
-Wanneer status = `counter_proposed`:
-- Toon klant-tegenvoorstel prominent
-- Partner kan kiezen:
-  - Akkoord met klant-voorstel → status naar `confirmed` met klant-tijd
-  - Eigen alternatief → status naar `alternative`
-  - Niet beschikbaar → status naar `unavailable`
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 🔄 Tegenvoorstel van klant                          │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ Jouw voorstel was: 15:00                            │
-│ Klant wil liever: 11:00                             │
-│                                                     │
-│ 💬 Toelichting klant:                               │
-│ "We hebben om 13:00 al de Vliehors Expres..."       │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│ Jouw reactie:                                       │
-│                                                     │
-│ ○ Akkoord met 11:00                                 │
-│ ○ Alternatief voorstellen                           │
-│ ○ Niet beschikbaar                                  │
-│                                                     │
-│ [Versturen]                                         │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## Deel 5: Status Configuratie Uitbreiden
-
-### src/types/programRequest.ts
+Toevoegen aan `statusConfig` (lijn 15-24):
 
 ```typescript
-export type ItemStatus = 
-  | "pending" 
-  | "confirmed" 
-  | "accepted" 
-  | "unavailable" 
-  | "alternative" 
-  | "cancelled" 
-  | "executed" 
-  | "invoiced"
-  | "counter_proposed"; // NIEUW
-
-export const itemStatusConfig: Record<ItemStatus, ItemStatusInfo> = {
-  // ... bestaande statussen
-  counter_proposed: {
-    label: "Tegenvoorstel",
-    color: "text-purple-700 dark:text-purple-400",
-    bgColor: "bg-purple-100 dark:bg-purple-950/50",
-    icon: "ArrowLeftRight",
-    description: "Je hebt een andere tijd voorgesteld",
+const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+  // ... bestaande statussen ...
+  counter_proposed: { 
+    label: "Tegenvoorstel klant", 
+    color: "text-purple-700 dark:text-purple-400", 
+    bgColor: "bg-purple-100 dark:bg-purple-950/50" 
   },
 };
 ```
 
 ---
 
-## Deel 6: Klant Weergave na Tegenvoorstel
+## Wijziging 3: Dashboard Filtering Aanpassen
 
-### CustomerProgramItem.tsx - Counter Proposed Status
+### src/pages/PartnerDashboard.tsx
 
+De `counter_proposed` status moet in de juiste categorie komen. Aangezien dit een actie vereist van de partner, hoort het bij de "Nieuw" / "Actie vereist" tab.
+
+**Huidige code (lijn 398):**
+```typescript
+const pendingItems = data.items.filter((i) => i.status === "pending");
 ```
-┌─────────────────────────────────────────────────────┐
-│ 🎯 Zeehondentocht                  [Tegenvoorstel]  │
-│    Zeehondentochten Vlieland                        │
-│                                                     │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ 🔄 Jouw tegenvoorstel: 11:00                    │ │
-│ │    "We hebben om 13:00 al de Vliehors Expres"   │ │
-│ │                                                 │ │
-│ │    Wachten op reactie van aanbieder...          │ │
-│ └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+
+**Nieuwe code:**
+```typescript
+const pendingItems = data.items.filter((i) => 
+  i.status === "pending" || i.status === "counter_proposed"
+);
+```
+
+Dit zorgt ervoor dat items met een klant tegenvoorstel in de "Nieuw" tab verschijnen waar de partner ze kan zien en beantwoorden.
+
+---
+
+## Wijziging 4: Visuele Indicatie voor Counter Proposals
+
+### src/components/partner-portal/PartnerItemRow.tsx
+
+Voeg een extra indicator toe voor counter proposals, vergelijkbaar met de bestaande `isNew` en `isModified` checks:
+
+```typescript
+// Check if customer has submitted a counter proposal
+const hasCounterProposal = (item: PartnerItem): boolean => {
+  return item.status === "counter_proposed";
+};
+
+// In de component:
+const hasCounter = hasCounterProposal(item);
+
+// In de render:
+{hasCounter && (
+  <ArrowLeftRight className="h-4 w-4 text-purple-500 shrink-0" />
+)}
+```
+
+---
+
+## Wijziging 5: PartnerItemSheet Type Cast Verwijderen
+
+### src/components/partner-portal/PartnerItemSheet.tsx
+
+De huidige code gebruikt `(item as any)` voor de counter proposal velden (lijn 368, 382-385). Na het updaten van de types kan dit veilig worden:
+
+```typescript
+// Van:
+{(item as any).customer_counter_time}
+
+// Naar:
+{item.customer_counter_time}
 ```
 
 ---
 
 ## Bestanden die worden aangepast
 
-### Database
-| Actie | Wijziging |
-|-------|-----------|
-| Migratie | `customer_counter_time`, `customer_counter_note`, `customer_counter_at` kolommen |
-
-### Types
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/types/programRequest.ts` | `counter_proposed` status toevoegen |
-
-### Nieuwe Componenten
-| Bestand | Beschrijving |
-|---------|--------------|
-| `src/components/customer-portal/CounterProposalDialog.tsx` | Dialog voor tegenvoorstel invoeren |
-
-### Bestaande Componenten
-| Bestand | Wijziging |
-|---------|-----------|
-| `CustomerProgramItem.tsx` | "Andere tijd voorstellen" knop + counter_proposed weergave |
-| `PartnerItemSheet.tsx` | Counter proposal sectie + reactie-opties |
-| `ItemStatusBadge.tsx` | Nieuwe status badge |
-
-### Edge Functions
-| Bestand | Wijziging |
-|---------|-----------|
-| `update-customer-program/index.ts` | counterProposal handling + partner email |
-| `update-partner-item-status/index.ts` | Reageren op counter_proposed |
+| `src/types/partner.ts` | `customer_counter_*` velden toevoegen aan PartnerItem |
+| `src/components/partner-portal/PartnerItemRow.tsx` | `counter_proposed` status + visuele indicator |
+| `src/pages/PartnerDashboard.tsx` | Filtering aanpassen zodat counter_proposed zichtbaar is |
+| `src/components/partner-portal/PartnerItemSheet.tsx` | Type cast verwijderen |
 
 ---
 
-## Flow Samenvatting
+## Resultaat na implementatie
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   PARTNER    │     │    KLANT     │     │   PARTNER    │
-│  bevestigt   │────▶│   bekijkt    │────▶│  reageert    │
-│  (confirmed) │     │   voorstel   │     │   opnieuw    │
-└──────────────┘     └──────┬───────┘     └──────────────┘
-                            │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-        ┌──────────┐  ┌──────────┐  ┌──────────┐
-        │ Akkoord  │  │ Tegen-   │  │Annuleren │
-        │ (accept) │  │ voorstel │  │(cancel)  │
-        └──────────┘  └────┬─────┘  └──────────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │   counter_   │
-                    │   proposed   │
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │ Partner  │ │ Partner  │ │ Partner  │
-        │ akkoord  │ │alternatief│ │ niet     │
-        │(confirmed)│ │          │ │beschikbaar│
-        └──────────┘ └──────────┘ └──────────┘
+┌─────────────────────────────────────────────────────┐
+│ 📋 Partner Dashboard                                │
+├─────────────────────────────────────────────────────┤
+│ [Nieuw (2)] [Voorstel verstuurd] [Akkoord] [Archief]│
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ 🔄 Zeehondentocht    | TestBedrijf | 15 mrt | [Tegenvoorstel klant] │
+│ ✨ Vliehors Expres   | ACME Inc.   | 16 mrt | [Nieuw]               │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
----
-
-## Implementatievolgorde
-
-1. **Database migratie** - Nieuwe kolommen voor klant-tegenvoorstel
-2. **Types** - `counter_proposed` status toevoegen
-3. **CounterProposalDialog.tsx** - Nieuwe dialog component
-4. **CustomerProgramItem.tsx** - Knop en tegenvoorstel-weergave
-5. **update-customer-program** - Backend handling
-6. **PartnerItemSheet.tsx** - Partner-reactie op tegenvoorstel
-7. **update-partner-item-status** - Backend voor partner-reactie
+De partner ziet nu:
+- Een paars "Tegenvoorstel klant" badge
+- Een 🔄 icoon in de rij
+- Bij klikken: de volledige counter proposal details met klant-tijd en toelichting
 
