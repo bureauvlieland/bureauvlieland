@@ -22,7 +22,7 @@ const STEPS = [
   { id: 5, title: "Contactgegevens", description: "Hoe kunnen we u bereiken?" },
 ];
 
-const initialFormData: AccommodationWizardData = {
+const defaultFormData: AccommodationWizardData = {
   arrival_date: undefined,
   departure_date: undefined,
   number_of_guests: 20,
@@ -41,13 +41,29 @@ const initialFormData: AccommodationWizardData = {
   wants_activities: false,
 };
 
-interface AccommodationWizardProps {
-  onSuccess?: (token: string) => void;
+interface InitialData {
+  arrival_date?: Date;
+  departure_date?: Date;
+  number_of_guests?: number;
 }
 
-export const AccommodationWizard = ({ onSuccess }: AccommodationWizardProps) => {
+interface AccommodationWizardProps {
+  onSuccess?: (token: string) => void;
+  initialData?: InitialData;
+}
+
+export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<AccommodationWizardData>(initialFormData);
+  const [formData, setFormData] = useState<AccommodationWizardData>(() => {
+    // Merge initial data with defaults
+    if (initialData) {
+      return {
+        ...defaultFormData,
+        ...initialData,
+      };
+    }
+    return defaultFormData;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 

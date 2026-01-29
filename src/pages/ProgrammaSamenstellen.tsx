@@ -184,7 +184,11 @@ const ProgrammaSamenstellen = () => {
             <HowItWorksBlock />
 
             {/* Logies suggestion banner (conditional) */}
-            <LogiesSuggestionBanner isVisible={showLogiesBanner} />
+            <LogiesSuggestionBanner 
+              isVisible={showLogiesBanner} 
+              selectedDates={selectedDates}
+              numberOfPeople={numberOfPeople}
+            />
 
             <div className="grid lg:grid-cols-3 gap-8">
               {/* Left: Building blocks grid */}
