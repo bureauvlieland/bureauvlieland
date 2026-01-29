@@ -427,26 +427,44 @@ const PartnerDashboardContent = () => {
   // Calculate stats
   const accommodationQuotes = data.accommodationQuotes || [];
 
+  // Helper to determine effective status - if customer has accepted but status is still confirmed,
+  // treat it as "accepted" for display purposes
+  const getEffectiveStatus = (item: PartnerItem) => {
+    const hasCustomerAccepted = !!item.customer_accepted_at;
+    return (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
+  };
+
   // Pending counts (need action)
   const pendingActivityCount = data.items.filter((i) => i.status === "pending").length;
   const pendingAccommodationCount = accommodationQuotes.filter((q) => q.status === "pending").length;
   const counterProposedCount = data.items.filter((i) => i.status === "counter_proposed").length;
 
-  // To invoice count
-  const toInvoiceCount = data.items.filter(
-    (i) =>
-      (i.status === "accepted" || i.status === "executed") &&
+  // To invoice count - includes items where customer has accepted (via customer_accepted_at)
+  const toInvoiceCount = data.items.filter((i) => {
+    const effectiveStatus = getEffectiveStatus(i);
+    return (
+      (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
       !i.invoiced_number &&
       i.program_requests.terms_accepted_at
-  ).length;
+    );
+  }).length;
 
   // Stats for compact grid
   const pendingTotal = pendingActivityCount + pendingAccommodationCount + counterProposedCount;
+  
+  // Waiting on customer: confirmed/alternative WITHOUT customer_accepted_at
   const waitingOnCustomer =
-    data.items.filter((i) => i.status === "confirmed" || i.status === "alternative").length +
+    data.items.filter((i) => 
+      (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at
+    ).length +
     accommodationQuotes.filter((q) => q.status === "submitted").length;
+  
+  // Accepted: items where customer has accepted (either via status or customer_accepted_at)
   const acceptedTotal =
-    data.items.filter((i) => i.status === "accepted" || i.status === "executed").length +
+    data.items.filter((i) => {
+      const effectiveStatus = getEffectiveStatus(i);
+      return effectiveStatus === "accepted" || effectiveStatus === "executed";
+    }).length +
     accommodationQuotes.filter((q) => q.status === "selected").length;
 
   // YTD financials
@@ -467,12 +485,21 @@ const PartnerDashboardContent = () => {
 
   // Tab counts for badges
   const actionCount = pendingTotal + toInvoiceCount;
+  
+  // In progress: items in confirmed/alternative (without customer acceptance), accepted, executed
+  // that are NOT ready for invoicing
   const inProgressCount =
-    data.items.filter((i) =>
-      ["confirmed", "alternative", "accepted", "executed"].includes(i.status)
-    ).length +
-    accommodationQuotes.filter((q) => ["submitted", "selected"].includes(q.status)).length -
-    toInvoiceCount;
+    data.items.filter((i) => {
+      const effectiveStatus = getEffectiveStatus(i);
+      // Include if in progress but not yet invoiceable
+      const isInProgress = ["confirmed", "alternative", "accepted", "executed"].includes(effectiveStatus);
+      const canInvoice = (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
+        !i.invoiced_number && i.program_requests.terms_accepted_at;
+      // Exclude items waiting on customer that haven't been accepted
+      const isWaitingOnCustomer = (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at;
+      return isInProgress && !canInvoice && !isWaitingOnCustomer;
+    }).length +
+    accommodationQuotes.filter((q) => ["submitted", "selected"].includes(q.status)).length;
 
   return (
     <>
