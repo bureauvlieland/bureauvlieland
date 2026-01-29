@@ -319,10 +319,6 @@ const CustomerProgram = () => {
         {/* Page header */}
         <div className="mb-6 lg:mb-8">
           <h1 className="text-2xl lg:text-3xl font-display font-bold mb-1">Jouw Programma</h1>
-          <p className="text-muted-foreground">
-            {program.customer_company && `${program.customer_company} • `}
-            {program.number_of_people} personen
-          </p>
         </div>
 
         {/* Responsive content */}
