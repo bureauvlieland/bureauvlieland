@@ -316,10 +316,6 @@ const CustomerProgram = () => {
       {!isMobile && <ProgramNavigation />}
 
       <main className="container mx-auto px-4 py-8">
-        {/* Page header */}
-        <div className="mb-6 lg:mb-8">
-          <h1 className="text-2xl lg:text-3xl font-display font-bold mb-1">Jouw Programma</h1>
-        </div>
 
         {/* Responsive content */}
         {isMobile ? (
