@@ -1,5 +1,5 @@
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Clock, MessageSquare } from "lucide-react";
+import { CheckCircle, Clock, MessageSquare, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatusSummaryProps {
@@ -9,7 +9,12 @@ interface StatusSummaryProps {
   alternative: number;
   progress: number;
   className?: string;
-  variant?: "default" | "compact";
+  variant?: "default" | "compact" | "checklist";
+  // Additional props for checklist variant
+  billingComplete?: boolean;
+  hasAccommodation?: boolean;
+  termsAccepted?: boolean;
+  isMultiDay?: boolean;
 }
 
 export const StatusSummary = ({
@@ -20,7 +25,66 @@ export const StatusSummary = ({
   progress,
   className,
   variant = "default",
+  billingComplete = false,
+  hasAccommodation = false,
+  termsAccepted = false,
+  isMultiDay = false,
 }: StatusSummaryProps) => {
+  // Checklist variant - new design per repositioning
+  if (variant === "checklist") {
+    const activitiesConfirmed = pending === 0 && alternative === 0 && total > 0;
+    
+    return (
+      <div className={cn("bg-muted/50 rounded-lg p-4 space-y-3", className)}>
+        <h3 className="text-sm font-medium">Status programma</h3>
+        <ul className="space-y-2 text-sm">
+          <li className="flex items-center gap-2">
+            {activitiesConfirmed ? (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            ) : (
+              <Circle className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className={activitiesConfirmed ? "text-foreground" : "text-muted-foreground"}>
+              Activiteiten bevestigd
+            </span>
+          </li>
+          <li className="flex items-center gap-2">
+            {billingComplete ? (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            ) : (
+              <Circle className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className={billingComplete ? "text-foreground" : "text-muted-foreground"}>
+              Facturatiegegevens compleet
+            </span>
+          </li>
+          {isMultiDay && (
+            <li className="flex items-center gap-2">
+              {hasAccommodation ? (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              ) : (
+                <Circle className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className={hasAccommodation ? "text-foreground" : "text-muted-foreground"}>
+                Logies geregeld
+              </span>
+            </li>
+          )}
+          <li className="flex items-center gap-2">
+            {termsAccepted ? (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            ) : (
+              <Circle className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className={termsAccepted ? "text-foreground" : "text-muted-foreground"}>
+              Voorwaarden geaccepteerd
+            </span>
+          </li>
+        </ul>
+      </div>
+    );
+  }
+
   // Compact variant for sidebar
   if (variant === "compact") {
     return (

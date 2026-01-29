@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { CheckCircle, ExternalLink, Loader2, AlertCircle, FileText, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { AccommodationWarningDialog } from "./AccommodationWarningDialog";
 import type { ProgramRequestItem } from "@/types/programRequest";
 
 interface PartnerTermsInfo {
@@ -28,6 +30,7 @@ interface AcceptTermsCardProps {
   onOpenBilling: () => void;
   items: ProgramRequestItem[];
   accommodationQuotes?: AccommodationQuote[];
+  selectedDates?: Date[];
 }
 
 const DEFAULT_TERMS_URL = "/partner-voorwaarden";
@@ -40,12 +43,19 @@ export const AcceptTermsCard = ({
   onOpenBilling,
   items,
   accommodationQuotes = [],
+  selectedDates = [],
 }: AcceptTermsCardProps) => {
+  const navigate = useNavigate();
   const [isChecked, setIsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signatureName, setSignatureName] = useState("");
   const [partnerTerms, setPartnerTerms] = useState<PartnerTermsInfo[]>([]);
   const [isLoadingPartners, setIsLoadingPartners] = useState(true);
+  const [showAccommodationWarning, setShowAccommodationWarning] = useState(false);
+
+  // Check if this is a multi-day program without accommodation
+  const isMultiDay = selectedDates.length > 1;
+  const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
 
   // Get unique partner IDs from items (excluding self_arranged and bureau types)
   // Also include accommodation partner if there's a selected quote
@@ -87,15 +97,36 @@ export const AcceptTermsCard = ({
     return data.publicUrl;
   };
 
-  const handleAccept = async () => {
+  const handleAcceptClick = () => {
     if (!isChecked || !isBillingComplete || !signatureName.trim()) return;
 
+    // Check if multi-day without accommodation - show warning
+    if (isMultiDay && !hasSelectedAccommodation) {
+      setShowAccommodationWarning(true);
+      return;
+    }
+
+    // Proceed with acceptance
+    handleAccept();
+  };
+
+  const handleAccept = async () => {
     setIsSubmitting(true);
     try {
       await onAccept(signatureName.trim());
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleContinueWithAccommodation = () => {
+    setShowAccommodationWarning(false);
+    navigate("/logies-aanvragen");
+  };
+
+  const handleContinueWithoutAccommodation = () => {
+    setShowAccommodationWarning(false);
+    handleAccept();
   };
 
   const canSubmit = isChecked && isBillingComplete && signatureName.trim().length >= 2;
@@ -328,7 +359,7 @@ export const AcceptTermsCard = ({
             </div>
 
             <Button
-              onClick={handleAccept}
+              onClick={handleAcceptClick}
               disabled={!canSubmit || isSubmitting}
               className="w-full sm:w-auto"
             >
@@ -339,6 +370,14 @@ export const AcceptTermsCard = ({
           </div>
         </div>
       </CardContent>
+
+      {/* Accommodation Warning Dialog */}
+      <AccommodationWarningDialog
+        open={showAccommodationWarning}
+        onOpenChange={setShowAccommodationWarning}
+        onContinueWithAccommodation={handleContinueWithAccommodation}
+        onContinueWithout={handleContinueWithoutAccommodation}
+      />
     </Card>
   );
 };

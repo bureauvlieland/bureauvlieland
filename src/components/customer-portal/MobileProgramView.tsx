@@ -15,6 +15,7 @@ import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
 import { AccommodationSection } from "./AccommodationSection";
 import { ExtrasSection } from "./ExtrasSection";
+import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import {
   Calendar,
@@ -124,23 +125,35 @@ export const MobileProgramView = ({
   // Show AcceptTermsCard when no pending/alternative items and at least one item exists
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.total > 0;
   const shouldOpenBilling = allConfirmed && !termsAccepted && !billingComplete;
+  const isMultiDay = selectedDates.length > 1;
 
   return (
     <div className="space-y-4">
-      {/* Accommodation section - always first */}
-      <ProgramSection
-        id="accommodation"
-        title="Logies"
-        icon={<BedDouble className="h-4 w-4 text-primary" />}
-        defaultOpen
-      >
-        <AccommodationSection
-          accommodation={accommodation}
-          quotes={accommodationQuotes}
-          onSelectQuote={onSelectAccommodationQuote}
-          selectedDates={selectedDates}
-        />
-      </ProgramSection>
+      {/* Program Overview Card - always first */}
+      <ProgramOverviewCard
+        selectedDates={selectedDates}
+        numberOfPeople={program.number_of_people}
+        customerCompany={program.customer_company}
+        accommodation={accommodation}
+        accommodationQuotes={accommodationQuotes}
+      />
+
+      {/* Accommodation section - show for multi-day programs */}
+      {isMultiDay && (
+        <ProgramSection
+          id="accommodation"
+          title="Logies"
+          icon={<BedDouble className="h-4 w-4 text-primary" />}
+          defaultOpen
+        >
+          <AccommodationSection
+            accommodation={accommodation}
+            quotes={accommodationQuotes}
+            onSelectQuote={onSelectAccommodationQuote}
+            selectedDates={selectedDates}
+          />
+        </ProgramSection>
+      )}
 
       {/* Next steps - always open */}
       <NextStepsCard
@@ -158,6 +171,7 @@ export const MobileProgramView = ({
           onOpenBilling={onOpenBilling}
           items={program.items}
           accommodationQuotes={accommodationQuotes}
+          selectedDates={selectedDates}
         />
       )}
 

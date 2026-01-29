@@ -1,4 +1,5 @@
 import { StatusSummary } from "./StatusSummary";
+import { NextStepsCard } from "./NextStepsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban } from "lucide-react";
@@ -22,19 +23,26 @@ interface ProgramSidebarProps {
   items: ProgramRequestItem[];
   numberOfPeople: number;
   selectedAccommodationQuote?: AccommodationQuote | null;
+  isMultiDay?: boolean;
   className?: string;
 }
 
 export const ProgramSidebar = ({
   statusSummary,
   termsAccepted,
+  billingComplete,
+  onOpenBilling,
   onRefresh,
   onCancel,
   items,
   numberOfPeople,
   selectedAccommodationQuote,
+  isMultiDay = false,
   className,
 }: ProgramSidebarProps) => {
+  // Determine if accommodation is arranged
+  const hasAccommodation = !!selectedAccommodationQuote;
+
   return (
     <aside
       className={cn(
@@ -42,14 +50,27 @@ export const ProgramSidebar = ({
         className
       )}
     >
-      {/* Status summary - compact */}
+      {/* Status summary - checklist variant */}
       <StatusSummary
         total={statusSummary.total}
         confirmed={statusSummary.confirmed}
         pending={statusSummary.pending}
         alternative={statusSummary.alternative}
         progress={statusSummary.progress}
-        variant="compact"
+        variant="checklist"
+        billingComplete={billingComplete}
+        hasAccommodation={hasAccommodation}
+        termsAccepted={termsAccepted}
+        isMultiDay={isMultiDay}
+      />
+
+      {/* Next steps - sidebar variant */}
+      <NextStepsCard
+        statusSummary={statusSummary}
+        termsAccepted={termsAccepted}
+        billingComplete={billingComplete}
+        onOpenBilling={onOpenBilling}
+        variant="sidebar"
       />
 
       {/* Price summary - compact */}
