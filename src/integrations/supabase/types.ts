@@ -866,8 +866,12 @@ export type Database = {
           commission_notes: string | null
           commission_percentage: number | null
           commission_status: string | null
+          confirmed_time: string | null
           created_at: string
           customer_accepted_at: string | null
+          customer_counter_at: string | null
+          customer_counter_note: string | null
+          customer_counter_time: string | null
           customer_notes: string | null
           day_index: number
           deviation_reason: string | null
@@ -911,8 +915,12 @@ export type Database = {
           commission_notes?: string | null
           commission_percentage?: number | null
           commission_status?: string | null
+          confirmed_time?: string | null
           created_at?: string
           customer_accepted_at?: string | null
+          customer_counter_at?: string | null
+          customer_counter_note?: string | null
+          customer_counter_time?: string | null
           customer_notes?: string | null
           day_index?: number
           deviation_reason?: string | null
@@ -956,8 +964,12 @@ export type Database = {
           commission_notes?: string | null
           commission_percentage?: number | null
           commission_status?: string | null
+          confirmed_time?: string | null
           created_at?: string
           customer_accepted_at?: string | null
+          customer_counter_at?: string | null
+          customer_counter_note?: string | null
+          customer_counter_time?: string | null
           customer_notes?: string | null
           day_index?: number
           deviation_reason?: string | null

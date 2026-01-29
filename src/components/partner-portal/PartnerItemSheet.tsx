@@ -60,6 +60,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
   cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
   alternative: { label: "Alternatief voorgesteld", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
+  counter_proposed: { label: "Tegenvoorstel klant", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
 };
 
 type ResponseType = "confirmed" | "alternative" | "unavailable";
@@ -98,8 +99,8 @@ export const PartnerItemSheet = ({
     !item.invoiced_number && 
     request.terms_accepted_at === null;
 
-  // Can respond if pending or has alternative status (allow re-proposal)
-  const canRespond = item.status === "pending" || item.status === "alternative";
+  // Can respond if pending, alternative, or counter_proposed status
+  const canRespond = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
 
   const handleSubmitResponse = async () => {
     // Validate based on response type
@@ -319,7 +320,33 @@ export const PartnerItemSheet = ({
             </>
           )}
 
-          {/* Customer notes */}
+          {/* Customer counter proposal */}
+          {item.status === "counter_proposed" && (item as any).customer_counter_time && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tegenvoorstel van klant</h3>
+                <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-purple-600" />
+                    <span className="font-medium">Jouw voorstel was:</span>
+                    <span>{item.proposed_time || "niet opgegeven"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400">
+                    <Clock className="h-4 w-4" />
+                    <span>Klant wil liever:</span>
+                    <span>{(item as any).customer_counter_time}</span>
+                  </div>
+                  {(item as any).customer_counter_note && (
+                    <p className="text-sm text-purple-800 dark:text-purple-300 mt-2 italic">
+                      "{(item as any).customer_counter_note}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           {item.customer_notes && (
             <>
               <Separator />

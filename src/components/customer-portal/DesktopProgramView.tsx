@@ -71,6 +71,7 @@ interface DesktopProgramViewProps {
   onUpdateItem: (itemId: string, updates: Partial<ProgramRequestItem>) => void;
   onRemoveItem: (itemId: string) => void;
   onAcceptItem: (itemId: string) => Promise<boolean>;
+  onCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   onOpenBilling: () => void;
   onOpenEdit: () => void;
   onOpenCancel: () => void;
@@ -98,6 +99,7 @@ export const DesktopProgramView = ({
   onUpdateItem,
   onRemoveItem,
   onAcceptItem,
+  onCounterProposal,
   onOpenBilling,
   onOpenEdit,
   onOpenCancel,
