@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileText, Download, ExternalLink } from "lucide-react";
@@ -37,50 +38,15 @@ export const AcceptedTermsCard = ({
     return data.publicUrl;
   };
 
-  const getTermsUrl = (entry: AcceptedTermsEntry): string => {
-    switch (entry.terms_type) {
-      case "bureau_vlieland":
-        return BUREAU_TERMS_URL;
-      case "uvh_2024":
-        return UVH_TERMS_URL;
-      case "partner_default":
-        return DEFAULT_TERMS_URL;
-      case "partner_custom":
-        return entry.terms_pdf_path ? getPublicUrl(entry.terms_pdf_path) : DEFAULT_TERMS_URL;
-      default:
-        return DEFAULT_TERMS_URL;
-    }
-  };
-
-  const getTermsLabel = (entry: AcceptedTermsEntry): string => {
-    switch (entry.terms_type) {
-      case "bureau_vlieland":
-        return "Bemiddelingsvoorwaarden Bureau Vlieland";
-      case "uvh_2024":
-        return "Uniforme Voorwaarden Horeca 2024 (KHN)";
-      case "partner_default":
-        return `Standaardvoorwaarden Partneraanbod (${entry.partner_name})`;
-      case "partner_custom":
-        return `Voorwaarden ${entry.partner_name}`;
-      default:
-        return entry.partner_name;
-    }
-  };
-
-  const getVersionLabel = (entry: AcceptedTermsEntry): string => {
-    switch (entry.terms_type) {
-      case "bureau_vlieland":
-        return `Versie ${entry.terms_version}`;
-      case "uvh_2024":
-        return "KHN";
-      case "partner_default":
-        return "Standaardvoorwaarden";
-      case "partner_custom":
-        return `Versie ${entry.terms_version}`;
-      default:
-        return entry.terms_version;
-    }
-  };
+  // Group terms by type for bundled display
+  const groupedTerms = useMemo(() => {
+    const bureauEntry = acceptedTerms.find(e => e.terms_type === "bureau_vlieland");
+    const uvhEntry = acceptedTerms.find(e => e.terms_type === "uvh_2024");
+    const defaultEntries = acceptedTerms.filter(e => e.terms_type === "partner_default");
+    const customEntries = acceptedTerms.filter(e => e.terms_type === "partner_custom");
+    
+    return { bureauEntry, uvhEntry, defaultEntries, customEntries };
+  }, [acceptedTerms]);
 
   return (
     <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
@@ -122,32 +88,96 @@ export const AcceptedTermsCard = ({
           </div>
         </div>
 
-        {/* Terms list */}
+        {/* Terms list - bundled display */}
         <div className="space-y-2">
           <p className="text-sm font-medium">De volgende voorwaarden zijn van toepassing:</p>
           <ul className="space-y-2">
-            {acceptedTerms.map((entry) => (
-              <li key={entry.id} className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+            {/* Bureau Vlieland terms - always first */}
+            {groupedTerms.bureauEntry && (
+              <li className="flex items-start gap-3 p-3 bg-background rounded-lg border">
                 <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{getTermsLabel(entry)}</p>
-                  <p className="text-xs text-muted-foreground">{getVersionLabel(entry)}</p>
+                  <p className="font-medium text-sm">Bemiddelingsvoorwaarden Bureau Vlieland</p>
+                  <p className="text-xs text-muted-foreground">Versie {groupedTerms.bureauEntry.terms_version}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="shrink-0 h-8 text-xs"
-                  onClick={() => window.open(getTermsUrl(entry), "_blank")}
+                  onClick={() => window.open(BUREAU_TERMS_URL, "_blank")}
                 >
-                  {entry.terms_type === "bureau_vlieland" ? (
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                  ) : (
-                    <Download className="h-3 w-3 mr-1" />
-                  )}
-                  {entry.terms_type === "bureau_vlieland" ? "Bekijken" : "Download PDF"}
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Bekijken
+                </Button>
+              </li>
+            )}
+
+            {/* Bundled default terms - consolidated into one entry */}
+            {groupedTerms.defaultEntries.length > 0 && (
+              <li className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">Standaardvoorwaarden Partneraanbod Bureau Vlieland</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Van toepassing op:
+                  </p>
+                  <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                    {groupedTerms.defaultEntries.map((entry) => (
+                      <li key={entry.id}>• {entry.partner_name}</li>
+                    ))}
+                  </ul>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-8 text-xs"
+                  onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Download PDF
+                </Button>
+              </li>
+            )}
+
+            {/* Custom partner terms - each shown separately */}
+            {groupedTerms.customEntries.map((entry) => (
+              <li key={entry.id} className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">Voorwaarden {entry.partner_name}</p>
+                  <p className="text-xs text-muted-foreground">Versie {entry.terms_version}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-8 text-xs"
+                  onClick={() => window.open(entry.terms_pdf_path ? getPublicUrl(entry.terms_pdf_path) : DEFAULT_TERMS_URL, "_blank")}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Download PDF
                 </Button>
               </li>
             ))}
+
+            {/* UVH 2024 terms - if applicable */}
+            {groupedTerms.uvhEntry && (
+              <li className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                <FileText className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">Uniforme Voorwaarden Horeca 2024</p>
+                  <p className="text-xs text-muted-foreground">Koninklijke Horeca Nederland</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-8 text-xs"
+                  onClick={() => window.open(UVH_TERMS_URL, "_blank")}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Download PDF
+                </Button>
+              </li>
+            )}
           </ul>
         </div>
       </CardContent>
