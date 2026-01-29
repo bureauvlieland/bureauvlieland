@@ -134,6 +134,7 @@ export const TemplateIds = {
   // Status update emails
   STATUS_CONFIRMED: "status_confirmed",
   STATUS_UNAVAILABLE: "status_unavailable",
+  STATUS_ALTERNATIVE: "status_alternative",
   
   // Cancellation emails
   CANCELLATION_CUSTOMER: "cancellation_customer",
