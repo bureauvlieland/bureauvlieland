@@ -1,13 +1,28 @@
 
 
-# Usability Analyse & Herontwerp Klantportaal "Jouw Programma"
+# Usability Herontwerp Klantportaal - VOLTOOID
 
-## Geïdentificeerde Problemen
+## Geïmplementeerde Wijzigingen
 
-Na analyse van de huidige pagina-opzet heb ik de volgende usability-problemen vastgesteld:
+### Nieuwe Componenten
+1. ✅ `ActionRequiredCard.tsx` - Intelligent actie-blok dat prioriteit-gebaseerd de volgende stap toont
+2. ✅ `MobileStickyStatus.tsx` - Sticky statusbar voor mobile met voortgang en CTA
+3. ✅ `CompactBillingSection.tsx` - Altijd zichtbare facturatie-sectie (geen accordion)
 
-### 1. **Onduidelijke Informatiehiërarchie**
-De pagina toont te veel blokken van vergelijkbare visuele zwaarte:
+### Aangepaste Componenten
+1. ✅ `DesktopProgramView.tsx` - Nieuwe layout met verbeterde hiërarchie
+2. ✅ `MobileProgramView.tsx` - Sticky status + nieuwe structuur
+3. ✅ `ProgramSidebar.tsx` - Versterkt met CTA en totaal kosten
+4. ✅ `ProgramOverviewCard.tsx` - Compacte hero header (eerder geïmplementeerd)
+5. ✅ `StatusSummary.tsx` - Checklist variant (eerder geïmplementeerd)
+
+## Resultaat
+- Duidelijke informatiehiërarchie met 1 actie-focus
+- Geen duplicatie van status-informatie
+- Facturatie altijd zichtbaar
+- Mobile sticky status voor voortgang
+- Sidebar met primaire CTA
+- Secundaire info (details, geschiedenis) naar footer/collapsible
 - `ProgramOverviewCard` (lichte primary gradient)
 - Logies sectie (Card in Card)  
 - `NextStepsCard` (wit met stappen)
