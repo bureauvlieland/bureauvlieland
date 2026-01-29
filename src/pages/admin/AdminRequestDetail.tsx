@@ -410,37 +410,6 @@ const AdminRequestDetail = () => {
     }
   };
 
-  const handleSendQuote = async (data: { validUntil: Date; personalMessage: string }) => {
-    try {
-      const { error } = await supabase
-        .from("program_requests")
-        .update({
-          quote_status: "offerte_verstuurd",
-          quote_valid_until: format(data.validUntil, "yyyy-MM-dd"),
-          quote_sent_at: new Date().toISOString(),
-          quote_personal_message: data.personalMessage || null,
-        })
-        .eq("id", request.id);
-
-      if (error) throw error;
-
-      // TODO: Trigger edge function to send email
-      
-      await logAdminActivity({
-        action: "quote_sent",
-        entityType: EntityTypes.REQUEST,
-        entityId: request.id,
-        details: { valid_until: format(data.validUntil, "yyyy-MM-dd") },
-      });
-
-      toast.success("Offerte verstuurd naar klant");
-      fetchRequestData();
-    } catch (error) {
-      console.error("Error sending quote:", error);
-      toast.error("Fout bij versturen offerte");
-    }
-  };
-
   return (
     <>
       <Helmet>
@@ -486,11 +455,12 @@ const AdminRequestDetail = () => {
               {/* Quote mode actions */}
               {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
                 <AdminSendQuoteDialog
+                  requestId={request.id}
                   customerName={request.customer_name}
                   customerEmail={request.customer_email}
                   programDates={request.selected_dates as string[]}
                   currentValidUntil={request.quote_valid_until}
-                  onSend={handleSendQuote}
+                  onSuccess={fetchRequestData}
                 />
               )}
               <Button variant="outline" asChild>

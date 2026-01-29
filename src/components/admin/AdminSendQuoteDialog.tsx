@@ -21,25 +21,26 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AdminSendQuoteDialogProps {
+  requestId: string;
   customerName: string;
   customerEmail: string;
   programDates: string[];
   currentValidUntil?: string | null;
-  onSend: (data: {
-    validUntil: Date;
-    personalMessage: string;
-  }) => Promise<void>;
+  onSuccess?: () => void;
   trigger?: React.ReactNode;
 }
 
 export const AdminSendQuoteDialog = ({
+  requestId,
   customerName,
   customerEmail,
   programDates,
   currentValidUntil,
-  onSend,
+  onSuccess,
   trigger,
 }: AdminSendQuoteDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,11 +66,23 @@ export const AdminSendQuoteDialog = ({
   const handleSend = async () => {
     setIsSending(true);
     try {
-      await onSend({
-        validUntil,
-        personalMessage,
+      const { error } = await supabase.functions.invoke("send-quote-offer", {
+        body: {
+          requestId,
+          validUntil: format(validUntil, "yyyy-MM-dd"),
+          personalMessage: personalMessage || undefined,
+          origin: window.location.origin,
+        },
       });
+
+      if (error) throw error;
+
+      toast.success("Offerte verstuurd naar klant");
       setIsOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      console.error("Error sending quote:", error);
+      toast.error("Fout bij versturen offerte");
     } finally {
       setIsSending(false);
     }
