@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2, FileCheck } from "lucide-react";
+import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucide-react";
 import { ShareProgramDialog } from "./ShareProgramDialog";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
@@ -275,8 +275,8 @@ export const ProgramEditor = ({
     return (
       <div className="text-center text-muted-foreground py-8">
         <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
-        <p className="font-medium">Je programma is nog leeg</p>
-        <p className="text-sm mt-1">Voeg bouwstenen toe om te beginnen</p>
+        <p className="font-medium">Uw programma is nog leeg</p>
+        <p className="text-sm mt-1">Voeg onderdelen toe om te beginnen</p>
       </div>
     );
   }
@@ -354,20 +354,6 @@ export const ProgramEditor = ({
                 <p className="text-xs text-muted-foreground mt-2">
                   * Prijzen zijn indicatief incl. 21% BTW. Exacte prijzen na bevestiging door aanbieders.
                 </p>
-                
-                {/* Workflow explanation */}
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 mt-3 text-xs text-blue-800 dark:text-blue-200">
-                  <div className="flex items-start gap-2">
-                    <FileCheck className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium mb-1">Hoe werkt het?</p>
-                      <p>
-                        Deze aanvraag is vrijblijvend. Aanbieders bevestigen beschikbaarheid en definitieve prijzen. 
-                        Pas wanneer je akkoord gaat met de voorwaarden worden reserveringen definitief en ontvang je facturen.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -428,7 +414,7 @@ export const ProgramEditor = ({
                         {renderBlockGroup(groupedBlocks.self_arranged, "self")}
                       </div>
                       <p className="text-xs text-muted-foreground ml-6">
-                        Links ontvang je na het versturen van je aanvraag
+                        Links ontvangt u na het versturen van uw aanvraag
                       </p>
                     </div>
                   )}
@@ -626,21 +612,6 @@ export const ProgramEditor = ({
         </div>
       )}
 
-      {/* Workflow explanation */}
-      {hasBillableItems && (
-        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-200">
-          <div className="flex items-start gap-2">
-            <FileCheck className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium mb-1">Hoe werkt het?</p>
-              <p>
-                Deze aanvraag is vrijblijvend. Aanbieders bevestigen beschikbaarheid en definitieve prijzen. 
-                Pas wanneer je akkoord gaat met de voorwaarden worden reserveringen definitief en ontvang je facturen.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Self-arranged only message */}
       {!hasBillableItems && groupedBlocks.self_arranged.length > 0 && (
