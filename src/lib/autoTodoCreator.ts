@@ -4,7 +4,8 @@ export type AutoTodoType =
   | "partner_reminder" 
   | "commission_pending" 
   | "terms_reminder" 
-  | "invoicing_ready";
+  | "invoicing_ready"
+  | "availability_conflict";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -122,6 +123,9 @@ export const autoTodoTitles = {
   
   invoicing_ready: (customerName: string, amount: number) =>
     `Facturatie: ${customerName} - €${amount.toFixed(2)}`,
+  
+  availability_conflict: (partnerName: string, activityName: string) =>
+    `Beschikbaarheidsconflict: ${partnerName} niet beschikbaar voor "${activityName}"`,
 };
 
 /**
@@ -151,5 +155,10 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Facturatie",
     color: "text-green-700",
     bgColor: "bg-green-100",
+  },
+  availability_conflict: {
+    label: "Beschikbaarheid",
+    color: "text-amber-700",
+    bgColor: "bg-amber-100",
   },
 };

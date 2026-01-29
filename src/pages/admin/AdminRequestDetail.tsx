@@ -52,6 +52,7 @@ import { itemStatusConfig, type ItemStatus } from "@/types/programRequest";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
+import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConflictBanner";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
@@ -534,6 +535,18 @@ const AdminRequestDetail = () => {
               </Card>
             )}
           </div>
+
+          {/* Partner Conflict Detection */}
+          <AdminPartnerConflictBanner
+            items={items.map(item => ({
+              id: item.id,
+              block_name: item.block_name,
+              provider_id: item.provider_id,
+              provider_name: item.provider_name,
+              day_index: item.day_index,
+            }))}
+            selectedDates={request.selected_dates as string[]}
+          />
 
           {/* Completion Status and Financial Overview */}
           <div className="grid md:grid-cols-2 gap-6">
