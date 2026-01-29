@@ -152,4 +152,8 @@ export const TemplateIds = {
   ACCOMMODATION_QUOTE_NOTIFICATION: "accommodation_quote_notification",
   ACCOMMODATION_SELECTED_PARTNER: "accommodation_selected_partner",
   ACCOMMODATION_SELECTED_CUSTOMER: "accommodation_selected_customer",
+  
+  // Counter proposal emails
+  COUNTER_PROPOSAL_PARTNER: "counter_proposal_partner",
+  COUNTER_PROPOSAL_RESPONSE: "counter_proposal_response",
 } as const;

@@ -349,6 +349,136 @@ Deno.serve(async (req) => {
       console.log(`Resolved partner_reminder todo for item ${itemId}`);
     }
 
+    // Check if this is a response to a counter-proposal and send customer notification
+    if (oldStatus === "counter_proposed" && (status === "confirmed" || status === "alternative" || status === "unavailable")) {
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
+      
+      // Status-specific configuration
+      const statusConfig: Record<string, { text: string; color: string; bgColor: string; borderColor: string; actionText: string }> = {
+        confirmed: {
+          text: "Bevestigd",
+          color: "#38a169",
+          bgColor: "#f0fff4",
+          borderColor: "#9ae6b4",
+          actionText: "De partner heeft uw tegenvoorstel geaccepteerd. Bekijk de details en bevestig uw akkoord in het klantenportaal.",
+        },
+        alternative: {
+          text: "Alternatief voorgesteld",
+          color: "#805ad5",
+          bgColor: "#faf5ff",
+          borderColor: "#d6bcfa",
+          actionText: "De partner heeft een alternatief voorgesteld. Bekijk het voorstel en geef uw reactie in het klantenportaal.",
+        },
+        unavailable: {
+          text: "Niet beschikbaar",
+          color: "#e53e3e",
+          bgColor: "#fff5f5",
+          borderColor: "#feb2b2",
+          actionText: "Helaas is de activiteit niet beschikbaar op de voorgestelde datum/tijd. Neem contact op voor alternatieven.",
+        },
+      };
+      
+      const config = statusConfig[status];
+      
+      // Build dynamic sections
+      const proposedTimeSection = proposedTime
+        ? `<p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Voorgestelde tijd</p>
+           <p style="margin: 0 0 16px; color: #2d3748; font-size: 16px;">${sanitizeHtml(proposedTime)}${proposedDate ? ` op ${proposedDate}` : ""}</p>`
+        : "";
+      
+      const priceSection = quotedPrice
+        ? `<p style="margin: 0 0 8px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Prijs</p>
+           <p style="margin: 0 0 16px; color: ${config.color}; font-size: 24px; font-weight: 700;">${formatCurrencyNL(quotedPrice)}</p>`
+        : "";
+      
+      const noteSection = statusNote
+        ? `<p style="margin: 16px 0 0; padding-top: 16px; border-top: 1px solid ${config.borderColor}; color: #4a5568; font-size: 14px;">
+             <strong>Toelichting:</strong><br/>"${sanitizeHtml(statusNote)}"
+           </p>`
+        : "";
+      
+      const templateVariables = {
+        customer_name: sanitizeHtml(programRequest.customer_name),
+        partner_name: sanitizeHtml(partner.name),
+        block_name: sanitizeHtml(item.block_name),
+        status_text: config.text,
+        status_color: config.color,
+        status_bg_color: config.bgColor,
+        status_border_color: config.borderColor,
+        proposed_time_section: proposedTimeSection,
+        price_section: priceSection,
+        note_section: noteSection,
+        action_text: config.actionText,
+        portal_link: portalUrl,
+      };
+      
+      const template = await getRenderedTemplate(TemplateIds.COUNTER_PROPOSAL_RESPONSE, templateVariables);
+      
+      // Fallback email if template not found
+      const emailSubject = template?.subject || `Reactie op uw tegenvoorstel: ${item.block_name}`;
+      const emailBody = template?.body || `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family: 'Segoe UI', sans-serif; background-color: #f5f5f5; padding: 40px;">
+          <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #1a365d; padding: 30px; text-align: center;">
+              <h1 style="color: white; margin: 0;">Bureau Vlieland</h1>
+            </div>
+            <div style="padding: 40px;">
+              <h2 style="color: #1a365d;">Beste ${sanitizeHtml(programRequest.customer_name)},</h2>
+              <p>${sanitizeHtml(partner.name)} heeft gereageerd op uw tegenvoorstel voor <strong>${sanitizeHtml(item.block_name)}</strong>.</p>
+              <div style="background: ${config.bgColor}; border: 1px solid ${config.borderColor}; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <p style="color: ${config.color}; font-weight: bold; font-size: 18px;">${config.text}</p>
+                ${proposedTimeSection}
+                ${priceSection}
+                ${noteSection}
+              </div>
+              <p>${config.actionText}</p>
+              <p style="text-align: center; margin-top: 30px;">
+                <a href="${portalUrl}" style="background: #1a365d; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk uw programma</a>
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const counterResponseRecipient = programRequest.customer_email;
+      
+      const emailSent = await sendEmailViaMailjet(
+        counterResponseRecipient,
+        programRequest.customer_name,
+        emailSubject,
+        emailBody
+      );
+      
+      if (emailSent) {
+        console.log(`Counter-proposal response email sent to ${counterResponseRecipient}`);
+        // Log email
+        await supabase.from("email_log").insert({
+          email_type: "counter_proposal_response",
+          subject: emailSubject,
+          recipient_email: counterResponseRecipient,
+          recipient_name: programRequest.customer_name,
+          related_request_id: item.request_id,
+          related_item_id: itemId,
+          related_partner_id: partner.id,
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          metadata: {
+            old_status: oldStatus,
+            new_status: status,
+            quoted_price: quotedPrice,
+            proposed_time: proposedTime,
+          },
+        });
+      } else {
+        console.warn(`Failed to send counter-proposal response email to ${counterResponseRecipient}`);
+      }
+    }
+
     // Check if all items are now confirmed for terms_reminder
     if (status === "confirmed") {
       const { data: allItems } = await supabase
