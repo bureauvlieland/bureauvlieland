@@ -97,8 +97,8 @@ export const ConfiguratorCart = ({
       <Card className={cn("p-5 bg-muted/30 border-dashed", isInDrawer && "border-0 shadow-none bg-transparent")}>
         <div className="text-center text-muted-foreground">
           <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
-          <p className="font-medium">Je programma is nog leeg</p>
-          <p className="text-sm mt-1">Voeg bouwstenen toe om te beginnen</p>
+          <p className="font-medium">Uw programma is nog leeg</p>
+          <p className="text-sm mt-1">Voeg onderdelen toe om te beginnen</p>
         </div>
       </Card>
     );
@@ -109,9 +109,9 @@ export const ConfiguratorCart = ({
       <Card className={cn("p-5", isInDrawer && "border-0 shadow-none px-1 py-2")}>
         {!isInDrawer && (
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
-              Jouw Programma
+              Uw Programma
               <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                 {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
               </span>

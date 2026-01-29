@@ -71,7 +71,7 @@ export const GlobalCartDrawer = () => {
             className={`fixed bottom-4 right-4 z-40 shadow-lg gap-2 transition-transform ${isOnConfiguratorPage ? 'lg:hidden' : ''} ${itemJustAdded ? 'animate-cart-pulse' : ''}`}
           >
             <ShoppingCart className="h-5 w-5" />
-            <span className="hidden sm:inline">Jouw programma</span>
+            <span className="hidden sm:inline">Uw programma</span>
             {cartItems.length > 0 && (
               <span className={`bg-white text-primary text-xs font-bold px-2 py-0.5 rounded-full ${itemJustAdded ? 'animate-badge-pop' : ''}`}>
                 {cartItems.length}
@@ -83,7 +83,7 @@ export const GlobalCartDrawer = () => {
           <DrawerHeader className="text-left pb-2 border-b">
             <DrawerTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
-              Jouw Programma
+              Uw Programma
               {cartItems.length > 0 && (
                 <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                   {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
@@ -97,12 +97,12 @@ export const GlobalCartDrawer = () => {
             )}
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6 pt-4">
-            {cartItems.length === 0 ? (
+          {cartItems.length === 0 ? (
               <div className="py-8 text-center">
                 <ShoppingCart className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
-                <p className="font-medium text-foreground mb-1.5">Je programma is nog leeg</p>
+                <p className="font-medium text-foreground mb-1.5">Uw programma is nog leeg</p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Stel je eigen programma samen uit activiteiten, catering en vervoer.
+                  Stel uw eigen programma samen uit activiteiten, catering en vervoer.
                 </p>
                 <Link to="/programma-samenstellen" onClick={() => setIsOpen(false)}>
                   <Button className="gap-2">
