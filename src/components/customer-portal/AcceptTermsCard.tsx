@@ -137,7 +137,7 @@ export const AcceptTermsCard = ({
               </div>
             )}
 
-            {/* Terms Section - rewritten per briefing */}
+            {/* Terms Section - rewritten per briefing with bundled default terms */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <p className="text-sm font-medium">
                 Voor dit programma gelden de volgende voorwaarden:
@@ -158,30 +158,54 @@ export const AcceptTermsCard = ({
                   </Button>
                 </li>
 
-                {/* Partner terms */}
-                {!isLoadingPartners && partnerTerms.map((partner) => {
-                  const termsInfo = getPartnerTermsInfo(partner);
+                {/* Bundled default terms */}
+                {!isLoadingPartners && (() => {
+                  const defaultPartners = partnerTerms.filter(p => !p.terms_pdf_path || p.uses_default_terms);
+                  const customPartners = partnerTerms.filter(p => p.terms_pdf_path && !p.uses_default_terms);
+                  
                   return (
-                    <li key={partner.id} className="flex items-center gap-2 text-sm">
-                      <span>•</span>
-                      <span className="font-medium">
-                        {termsInfo.type === "default" 
-                          ? `Standaardvoorwaarden Partneraanbod (${partner.name})`
-                          : `Voorwaarden ${partner.name}`
-                        }
-                      </span>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-primary"
-                        onClick={() => window.open(termsInfo.url, "_blank")}
-                      >
-                        <FileText className="h-3 w-3 mr-1" />
-                        {termsInfo.label}
-                      </Button>
-                    </li>
+                    <>
+                      {/* Bundled standard terms - one entry for all default partners */}
+                      {defaultPartners.length > 0 && (
+                        <li className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <span>•</span>
+                            <span className="font-medium">Standaardvoorwaarden Partneraanbod Bureau Vlieland</span>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-primary"
+                              onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              Download PDF
+                            </Button>
+                          </div>
+                          <p className="ml-4 text-xs text-muted-foreground mt-1">
+                            Van toepassing op: {defaultPartners.map(p => p.name).join(", ")}
+                          </p>
+                        </li>
+                      )}
+
+                      {/* Custom partner terms - each shown separately */}
+                      {customPartners.map((partner) => (
+                        <li key={partner.id} className="flex items-center gap-2 text-sm">
+                          <span>•</span>
+                          <span className="font-medium">Voorwaarden {partner.name}</span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                            onClick={() => window.open(getPublicUrl(partner.terms_pdf_path!), "_blank")}
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            Bekijken
+                          </Button>
+                        </li>
+                      ))}
+                    </>
                   );
-                })}
+                })()}
               </ul>
             </div>
 

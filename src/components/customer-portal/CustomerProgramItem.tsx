@@ -177,17 +177,36 @@ export const CustomerProgramItem = ({
             </div>
           )}
           
-          {/* Accept action for confirmed items - shows if not yet accepted by customer */}
-          {item.status === "confirmed" && !item.customer_accepted_at && onAccept && (
-            <div className="mt-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+          {/* Accept action for confirmed OR alternative items - shows if not yet accepted by customer */}
+          {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
+            <div className={cn(
+              "mt-3 p-4 rounded-lg border",
+              item.status === "confirmed" 
+                ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
+                : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900"
+            )}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1">
-                  <p className="font-medium text-green-800 dark:text-green-300">
-                    Bevestigd door aanbieder
+                  <p className={cn(
+                    "font-medium",
+                    item.status === "confirmed" 
+                      ? "text-green-800 dark:text-green-300"
+                      : "text-amber-800 dark:text-amber-300"
+                  )}>
+                    {item.status === "confirmed" 
+                      ? "Bevestigd door aanbieder" 
+                      : "Alternatief voorstel van aanbieder"}
                   </p>
-                  <p className="text-sm text-green-700/80 dark:text-green-400/80 mt-0.5">
-                    Totaalprijs: €{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
-                  </p>
+                  {item.quoted_price && (
+                    <p className={cn(
+                      "text-sm mt-0.5",
+                      item.status === "confirmed"
+                        ? "text-green-700/80 dark:text-green-400/80"
+                        : "text-amber-700/80 dark:text-amber-400/80"
+                    )}>
+                      Totaalprijs: €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
+                    </p>
+                  )}
                 </div>
                 <Button
                   onClick={async () => {
@@ -197,6 +216,7 @@ export const CustomerProgramItem = ({
                   }}
                   disabled={localAccepting || isAccepting}
                   className="shrink-0"
+                  variant={item.status === "alternative" ? "default" : "default"}
                 >
                   {localAccepting ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
