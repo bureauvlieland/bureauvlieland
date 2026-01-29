@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +14,8 @@ import type { AccommodationWizardData } from "@/types/accommodation";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CART_HANDOFF_KEY, type CartHandoffData } from "@/components/configurator/LogiesSuggestionBanner";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 
 const STEPS = [
   { id: 1, title: "Datum & Gasten", description: "Wanneer en met hoeveel personen?" },
@@ -50,9 +53,13 @@ interface InitialData {
 interface AccommodationWizardProps {
   onSuccess?: (token: string) => void;
   initialData?: InitialData;
+  fromConfigurator?: boolean;
 }
 
-export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWizardProps) => {
+export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }: AccommodationWizardProps) => {
+  const navigate = useNavigate();
+  const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<AccommodationWizardData>(() => {
     // Merge initial data with defaults
@@ -66,6 +73,22 @@ export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWiz
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [cartHandoff, setCartHandoff] = useState<CartHandoffData | null>(null);
+
+  // Load cart handoff data from sessionStorage
+  useEffect(() => {
+    if (fromConfigurator) {
+      try {
+        const stored = sessionStorage.getItem(CART_HANDOFF_KEY);
+        if (stored) {
+          const data = JSON.parse(stored) as CartHandoffData;
+          setCartHandoff(data);
+        }
+      } catch (e) {
+        console.error("Failed to parse cart handoff data:", e);
+      }
+    }
+  }, [fromConfigurator]);
 
   const progress = (currentStep / STEPS.length) * 100;
 
@@ -125,13 +148,65 @@ export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWiz
           facilities_required: formData.facilities_required,
           budget_range: formData.budget_range || null,
           special_requests: formData.special_requests.trim() || null,
-          wants_activities: formData.wants_activities,
+          wants_activities: formData.wants_activities || (cartHandoff && cartHandoff.cartItems.length > 0),
           status: "submitted",
         })
-        .select("id, customer_token")
+        .select(`
+          id, 
+          customer_token,
+          linked_program:program_requests!accommodation_requests_linked_program_id_fkey(id, customer_token)
+        `)
         .single();
 
       if (error) throw error;
+
+      // If we have cart items from the configurator, create program_request_items
+      const linkedProgram = data.linked_program as { id: string; customer_token: string } | null;
+      
+      if (cartHandoff && cartHandoff.cartItems.length > 0 && linkedProgram) {
+        try {
+          // Create program request items from cart
+          const itemsToInsert = cartHandoff.cartItems.map((cartItem) => {
+            const block = getBlockById(allBlocks, cartItem.blockId);
+            if (!block) return null;
+
+            return {
+              request_id: linkedProgram.id,
+              block_id: block.id,
+              block_name: block.name,
+              block_category: block.category,
+              block_type: block.block_type,
+              provider_id: block.provider_id || "bureau-vlieland",
+              provider_name: block.provider?.name || "Bureau Vlieland",
+              provider_email: block.provider?.email || null,
+              day_index: cartItem.dayIndex,
+              preferred_time: cartItem.preferredTime,
+              customer_notes: cartItem.notes || null,
+              price_indication: block.price_adult 
+                ? `€${block.price_adult}${block.price_type === "per_person" ? " p.p." : ""}` 
+                : "Op aanvraag",
+              duration: block.duration || null,
+              status: "pending",
+            };
+          }).filter(Boolean);
+
+          if (itemsToInsert.length > 0) {
+            const { error: itemsError } = await supabase
+              .from("program_request_items")
+              .insert(itemsToInsert);
+
+            if (itemsError) {
+              console.error("Failed to create program items:", itemsError);
+              // Don't fail the whole submission
+            }
+          }
+
+          // Clear the cart handoff data
+          sessionStorage.removeItem(CART_HANDOFF_KEY);
+        } catch (itemsError) {
+          console.error("Failed to create program items:", itemsError);
+        }
+      }
 
       // Send confirmation emails
       try {
@@ -146,8 +221,18 @@ export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWiz
       setIsComplete(true);
       toast.success("Uw aanvraag is succesvol verzonden!");
       
-      if (onSuccess && data?.customer_token) {
-        onSuccess(data.customer_token);
+      // Use the linked program token for the customer portal
+      const portalToken = linkedProgram?.customer_token || data.customer_token;
+      
+      if (onSuccess && portalToken) {
+        onSuccess(portalToken);
+      }
+
+      // If coming from configurator with items, redirect to customer portal
+      if (cartHandoff && cartHandoff.cartItems.length > 0 && linkedProgram) {
+        setTimeout(() => {
+          navigate(`/mijn-programma/${linkedProgram.customer_token}`);
+        }, 2000);
       }
     } catch (error) {
       console.error("Error submitting accommodation request:", error);
@@ -158,6 +243,8 @@ export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWiz
   };
 
   if (isComplete) {
+    const hasLinkedActivities = cartHandoff && cartHandoff.cartItems.length > 0;
+    
     return (
       <Card className="max-w-2xl mx-auto">
         <CardContent className="pt-8 pb-8 text-center">
@@ -169,6 +256,21 @@ export const AccommodationWizard = ({ onSuccess, initialData }: AccommodationWiz
             Bedankt voor uw aanvraag, {formData.customer_name}. Wij gaan voor u op zoek 
             naar de beste verblijfsmogelijkheden op Vlieland.
           </p>
+          
+          {hasLinkedActivities && (
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 text-left">
+              <h3 className="font-medium mb-2 flex items-center gap-2">
+                <Check className="w-4 h-4 text-primary" />
+                Uw programma is ook aangevraagd
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                De {cartHandoff.cartItems.length} activiteit{cartHandoff.cartItems.length !== 1 ? "en" : ""} uit uw programma 
+                {cartHandoff.cartItems.length !== 1 ? " zijn" : " is"} gekoppeld aan deze logies-aanvraag. 
+                U wordt zo doorgestuurd naar uw persoonlijke omgeving.
+              </p>
+            </div>
+          )}
+          
           <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
             <h3 className="font-medium mb-2">Wat gebeurt er nu?</h3>
             <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">

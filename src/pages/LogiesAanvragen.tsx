@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 const LogiesAanvragen = () => {
   const [searchParams] = useSearchParams();
 
+  // Check if coming from configurator
+  const fromConfigurator = searchParams.get("fromConfigurator") === "true";
+
   // Parse URL parameters for pre-filling
   const initialData = useMemo(() => {
     const arrivalParam = searchParams.get("arrival");
@@ -133,6 +136,7 @@ const LogiesAanvragen = () => {
             )}
             <AccommodationWizard 
               initialData={initialData}
+              fromConfigurator={fromConfigurator}
               onSuccess={(token) => {
                 // Could navigate to a confirmation/tracking page
                 console.log("Request submitted with token:", token);

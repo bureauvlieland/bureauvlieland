@@ -188,6 +188,7 @@ const ProgrammaSamenstellen = () => {
               isVisible={showLogiesBanner} 
               selectedDates={selectedDates}
               numberOfPeople={numberOfPeople}
+              cartItems={cartItems}
             />
 
             <div className="grid lg:grid-cols-3 gap-8">
