@@ -55,7 +55,6 @@ interface PartnerItemSheetProps {
   ) => Promise<boolean>;
   onRegisterInvoice: () => void;
   commissionPercentage: number;
-  allDayItems?: PartnerItem[]; // All items on the same day for conflict checking
 }
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
@@ -78,7 +77,6 @@ export const PartnerItemSheet = ({
   onClose,
   onStatusUpdate,
   onRegisterInvoice,
-  allDayItems = [],
 }: PartnerItemSheetProps) => {
   const [showResponseForm, setShowResponseForm] = useState(false);
   const [responseType, setResponseType] = useState<ResponseType>("confirmed");
@@ -91,22 +89,26 @@ export const PartnerItemSheet = ({
   const [timeError, setTimeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Calculate blocked time slots from other items on same day
+  // Calculate blocked time slots from sibling items on same day (includes other partners)
   const blockedTimeSlots = useMemo(() => {
-    if (!item) return [];
-    // Convert PartnerItem to PartnerConflictItem for timeUtils
-    const compatibleItems: PartnerConflictItem[] = allDayItems.map(i => ({
-      id: i.id,
-      day_index: i.day_index,
-      block_name: i.block_name,
-      confirmed_time: i.confirmed_time,
-      proposed_time: i.proposed_time,
-      preferred_time: i.preferred_time,
-      duration: i.duration,
-      status: i.status,
-    }));
-    return getBlockedTimeSlotsFromPartnerItems(compatibleItems, item.day_index, item.id);
-  }, [allDayItems, item]);
+    if (!item || !item.sibling_items) return [];
+    
+    // Filter sibling items to same day, convert to conflict format
+    const sameDayItems: PartnerConflictItem[] = item.sibling_items
+      .filter(s => s.day_index === item.day_index && s.id !== item.id)
+      .map(s => ({
+        id: s.id,
+        day_index: s.day_index,
+        block_name: s.block_name,
+        confirmed_time: s.confirmed_time,
+        proposed_time: s.proposed_time,
+        preferred_time: s.preferred_time,
+        duration: s.duration,
+        status: s.status,
+      }));
+    
+    return getBlockedTimeSlotsFromPartnerItems(sameDayItems, item.day_index, item.id);
+  }, [item]);
 
   // Generate available time slots (exclude blocked ones)
   const availableTimeSlots = useMemo(() => {
