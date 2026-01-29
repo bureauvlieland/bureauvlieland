@@ -395,7 +395,9 @@ const PartnerDashboardContent = () => {
   const isBothPartner = partnerType === "both";
 
   // Activity items filtering
-  const pendingItems = data.items.filter((i) => i.status === "pending");
+  const pendingItems = data.items.filter((i) => 
+    i.status === "pending" || i.status === "counter_proposed"
+  );
   const proposalSentItems = data.items.filter((i) => i.status === "confirmed" || i.status === "alternative");
   const acceptedItems = data.items.filter((i) => i.status === "accepted" || i.status === "executed");
   const closedItems = data.items.filter((i) => 

@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { ChevronRight, Sparkles, RefreshCw } from "lucide-react";
+import { ChevronRight, Sparkles, RefreshCw, ArrowLeftRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -21,6 +21,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
   cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
   alternative: { label: "Wacht op klant", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
+  counter_proposed: { label: "Tegenvoorstel klant", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
 };
 
 // Check if newly added (within 24 hours and pending)
@@ -37,6 +38,11 @@ const isModifiedByCustomer = (item: PartnerItem): boolean => {
   return hoursSinceUpdate < 48;
 };
 
+// Check if customer has submitted a counter proposal
+const hasCounterProposal = (item: PartnerItem): boolean => {
+  return item.status === "counter_proposed";
+};
+
 export const PartnerItemRow = ({ item, onClick }: PartnerItemRowProps) => {
   const request = item.program_requests;
   const dates = request.selected_dates || [];
@@ -44,6 +50,7 @@ export const PartnerItemRow = ({ item, onClick }: PartnerItemRowProps) => {
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
   const isNew = isNewlyAdded(item);
   const isModified = isModifiedByCustomer(item);
+  const hasCounter = hasCounterProposal(item);
 
   return (
     <TableRow 
@@ -60,6 +67,9 @@ export const PartnerItemRow = ({ item, onClick }: PartnerItemRowProps) => {
           )}
           {isModified && (
             <RefreshCw className="h-4 w-4 text-amber-500 shrink-0" />
+          )}
+          {hasCounter && (
+            <ArrowLeftRight className="h-4 w-4 text-purple-500 shrink-0" />
           )}
           <span className="truncate max-w-[200px]">{item.block_name}</span>
         </div>
