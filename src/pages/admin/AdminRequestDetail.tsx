@@ -26,6 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
@@ -46,13 +53,26 @@ import {
   XCircle,
   HelpCircle,
   Ban,
+  Send,
+  Sparkles,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
-import { itemStatusConfig, type ItemStatus } from "@/types/programRequest";
+import { 
+  itemStatusConfig, 
+  type ItemStatus, 
+  type ProgramType,
+  type QuoteStatus,
+  type ItemQuoteStatus,
+  quoteStatusConfig,
+} from "@/types/programRequest";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
 import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConflictBanner";
+import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
+import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
+import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
+import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
@@ -77,6 +97,12 @@ interface ProgramRequest {
   cancelled_at: string | null;
   cancellation_reason: string | null;
   linked_accommodation_id: string | null;
+  // Quote mode fields
+  program_type: ProgramType;
+  quote_status: QuoteStatus | null;
+  quote_valid_until: string | null;
+  quote_sent_at: string | null;
+  quote_personal_message: string | null;
 }
 
 interface LinkedAccommodation {
@@ -104,6 +130,10 @@ interface ProgramRequestItem {
   invoiced_amount: number | null;
   invoiced_number: string | null;
   commission_status: string | null;
+  // Quote mode fields
+  item_quote_status: ItemQuoteStatus | null;
+  admin_price_override: number | null;
+  admin_price_notes: string | null;
 }
 
 interface HistoryEntry {
@@ -319,6 +349,97 @@ const AdminRequestDetail = () => {
 
   const statusSummary = getStatusSummary();
   const customerPortalUrl = `/mijn-programma/${request.customer_token}`;
+  const isQuoteMode = request.program_type === "quote";
+
+  const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
+    try {
+      const { error } = await supabase
+        .from("program_requests")
+        .update({ quote_status: newStatus })
+        .eq("id", request.id);
+
+      if (error) throw error;
+
+      await logAdminActivity({
+        action: "quote_status_changed",
+        entityType: EntityTypes.REQUEST,
+        entityId: request.id,
+        details: { old_status: request.quote_status, new_status: newStatus },
+      });
+
+      toast.success("Offerte-status bijgewerkt");
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error updating quote status:", error);
+      toast.error("Fout bij bijwerken status");
+    }
+  };
+
+  const handleItemQuoteStatusChange = async (itemId: string, newStatus: ItemQuoteStatus) => {
+    try {
+      const { error } = await supabase
+        .from("program_request_items")
+        .update({ item_quote_status: newStatus })
+        .eq("id", itemId);
+
+      if (error) throw error;
+      toast.success("Item status bijgewerkt");
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error updating item status:", error);
+      toast.error("Fout bij bijwerken status");
+    }
+  };
+
+  const handleItemPriceUpdate = async (itemId: string, price: number | null, notes: string) => {
+    try {
+      const { error } = await supabase
+        .from("program_request_items")
+        .update({ 
+          admin_price_override: price,
+          admin_price_notes: notes || null,
+        })
+        .eq("id", itemId);
+
+      if (error) throw error;
+      toast.success("Prijs bijgewerkt");
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error updating item price:", error);
+      toast.error("Fout bij bijwerken prijs");
+    }
+  };
+
+  const handleSendQuote = async (data: { validUntil: Date; personalMessage: string }) => {
+    try {
+      const { error } = await supabase
+        .from("program_requests")
+        .update({
+          quote_status: "offerte_verstuurd",
+          quote_valid_until: format(data.validUntil, "yyyy-MM-dd"),
+          quote_sent_at: new Date().toISOString(),
+          quote_personal_message: data.personalMessage || null,
+        })
+        .eq("id", request.id);
+
+      if (error) throw error;
+
+      // TODO: Trigger edge function to send email
+      
+      await logAdminActivity({
+        action: "quote_sent",
+        entityType: EntityTypes.REQUEST,
+        entityId: request.id,
+        details: { valid_until: format(data.validUntil, "yyyy-MM-dd") },
+      });
+
+      toast.success("Offerte verstuurd naar klant");
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error sending quote:", error);
+      toast.error("Fout bij versturen offerte");
+    }
+  };
 
   return (
     <>
@@ -331,11 +452,11 @@ const AdminRequestDetail = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/admin/aanvragen")}>
+              <Button variant="ghost" size="icon" onClick={() => navigate("/admin/projecten")}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-2xl font-bold text-slate-900">
                     {request.customer_name}
                   </h1>
@@ -344,17 +465,38 @@ const AdminRequestDetail = () => {
                       {request.reference_number}
                     </code>
                   )}
+                  {isQuoteMode && (
+                    <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
+                      <Sparkles className="h-3 w-3" />
+                      Maatwerk
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-slate-500">
-                  Aanvraag van {format(new Date(request.created_at), "d MMMM yyyy", { locale: nl })}
-                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-slate-500">
+                    Aanvraag van {format(new Date(request.created_at), "d MMMM yyyy", { locale: nl })}
+                  </p>
+                  {isQuoteMode && request.quote_status && (
+                    <AdminQuoteStatusBadge status={request.quote_status} />
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Quote mode actions */}
+              {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
+                <AdminSendQuoteDialog
+                  customerName={request.customer_name}
+                  customerEmail={request.customer_email}
+                  programDates={request.selected_dates as string[]}
+                  currentValidUntil={request.quote_valid_until}
+                  onSend={handleSendQuote}
+                />
+              )}
               <Button variant="outline" asChild>
                 <Link to={customerPortalUrl} target="_blank">
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Klantportaal openen
+                  Klantportaal
                 </Link>
               </Button>
               {request.status !== "cancelled" && (
@@ -365,6 +507,55 @@ const AdminRequestDetail = () => {
               )}
             </div>
           </div>
+
+          {/* Quote mode info banner */}
+          {isQuoteMode && (
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium text-primary">Maatwerkofferte</p>
+                      <p className="text-sm text-muted-foreground">
+                        Geen automatische partner-notificaties. Stem handmatig af en verstuur offerte wanneer gereed.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Status: </span>
+                      <Select
+                        value={request.quote_status || "concept"}
+                        onValueChange={(v) => handleQuoteStatusChange(v as QuoteStatus)}
+                      >
+                        <SelectTrigger className="h-8 w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="concept">Concept</SelectItem>
+                          <SelectItem value="in_afstemming">In afstemming</SelectItem>
+                          <SelectItem value="offerte_verstuurd">Offerte verstuurd</SelectItem>
+                          <SelectItem value="akkoord_ontvangen">Akkoord ontvangen</SelectItem>
+                          <SelectItem value="definitief_bevestigd">Definitief bevestigd</SelectItem>
+                          <SelectItem value="verlopen">Verlopen</SelectItem>
+                          <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {request.quote_valid_until && (
+                      <div>
+                        <span className="text-muted-foreground">Geldig tot: </span>
+                        <span className="font-medium">
+                          {format(new Date(request.quote_valid_until), "d MMM yyyy", { locale: nl })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Status banner if cancelled */}
           {request.status === "cancelled" && (
@@ -570,7 +761,10 @@ const AdminRequestDetail = () => {
             <CardHeader>
               <CardTitle>Activiteiten</CardTitle>
               <CardDescription>
-                Alle activiteiten in dit programma
+                {isQuoteMode 
+                  ? "Beheer de activiteiten en prijzen in deze offerte"
+                  : "Alle activiteiten in dit programma"
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -582,9 +776,18 @@ const AdminRequestDetail = () => {
                       <TableHead>Activiteit</TableHead>
                       <TableHead>Partner</TableHead>
                       <TableHead>Tijd</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Prijs</TableHead>
-                      <TableHead>Factuur</TableHead>
+                      {isQuoteMode ? (
+                        <>
+                          <TableHead>Offerte-status</TableHead>
+                          <TableHead>Prijs (aanpasbaar)</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Prijs</TableHead>
+                          <TableHead>Factuur</TableHead>
+                        </>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -612,38 +815,64 @@ const AdminRequestDetail = () => {
                           <TableCell>
                             {item.preferred_time || "-"}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {statusIcons[item.status]}
-                              <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                {statusInfo.label}
-                              </Badge>
-                            </div>
-                            {item.status_note && (
-                              <p className="text-xs text-slate-500 mt-1">{item.status_note}</p>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {item.quoted_price ? (
-                              <span className="font-medium">
-                                €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {item.invoiced_number ? (
-                              <div className="text-sm">
-                                <div className="font-medium">{item.invoiced_number}</div>
-                                <div className="text-slate-500">
-                                  €{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                          
+                          {isQuoteMode ? (
+                            <>
+                              {/* Quote mode: editable item status */}
+                              <TableCell>
+                                <AdminItemQuoteStatusSelect
+                                  status={item.item_quote_status}
+                                  onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
+                                />
+                              </TableCell>
+                              {/* Quote mode: editable price */}
+                              <TableCell>
+                                <AdminQuotePriceEditor
+                                  originalPrice={item.quoted_price}
+                                  overridePrice={item.admin_price_override}
+                                  priceNotes={item.admin_price_notes}
+                                  numberOfPeople={request.number_of_people}
+                                  onSave={(price, notes) => handleItemPriceUpdate(item.id, price, notes)}
+                                />
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              {/* Self-service mode: readonly status */}
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {statusIcons[item.status]}
+                                  <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
+                                    {statusInfo.label}
+                                  </Badge>
                                 </div>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
-                          </TableCell>
+                                {item.status_note && (
+                                  <p className="text-xs text-slate-500 mt-1">{item.status_note}</p>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {item.quoted_price ? (
+                                  <span className="font-medium">
+                                    €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {item.invoiced_number ? (
+                                  <div className="text-sm">
+                                    <div className="font-medium">{item.invoiced_number}</div>
+                                    <div className="text-slate-500">
+                                      €{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
+                              </TableCell>
+                            </>
+                          )}
                         </TableRow>
                       );
                     })}
