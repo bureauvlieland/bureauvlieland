@@ -356,6 +356,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       },
     });
 
+    // Update program request status to 'offerte_verstuurd'
+    const { error: updateError } = await supabase
+      .from("program_requests")
+      .update({
+        quote_status: "offerte_verstuurd",
+        quote_sent_at: new Date().toISOString(),
+        quote_valid_until: validUntil,
+        quote_personal_message: personalMessage || null,
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      console.error("Error updating program request status:", updateError);
+      // Don't fail the request, email was already sent
+    }
+
     console.log(`Quote offer sent successfully to ${recipientEmail}`);
 
     return new Response(
