@@ -48,6 +48,7 @@ import {
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
 import { AdminPartnerRevenueChart } from "@/components/admin/AdminPartnerRevenueChart";
+import { AdminPartnerTimeline } from "@/components/admin/AdminPartnerTimeline";
 
 interface Partner {
   id: string;
@@ -678,6 +679,11 @@ const AdminPartnerDetail = () => {
               <AdminPartnerRevenueChart partnerId={id} />
               <AdminPartnerUnavailability partnerId={id} />
             </div>
+          )}
+
+          {/* Partner Activity Timeline */}
+          {!isNew && id && (
+            <AdminPartnerTimeline partnerId={id} />
           )}
 
           {/* Related Requests */}

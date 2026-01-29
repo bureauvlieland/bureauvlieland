@@ -34,6 +34,7 @@ import {
   ClipboardList,
   RefreshCw,
   Calendar,
+  CalendarOff,
 } from "lucide-react";
 
 interface ActivityLog {
@@ -64,6 +65,9 @@ const actionLabels: Record<string, { label: string; color: string }> = {
   todo_completed: { label: "Todo afgerond", color: "bg-green-100 text-green-800" },
   admin_login: { label: "Admin ingelogd", color: "bg-slate-100 text-slate-800" },
   admin_logout: { label: "Admin uitgelogd", color: "bg-slate-100 text-slate-800" },
+  unavailability_created: { label: "Blokkering toegevoegd", color: "bg-orange-100 text-orange-800" },
+  unavailability_updated: { label: "Blokkering bijgewerkt", color: "bg-orange-100 text-orange-800" },
+  unavailability_deleted: { label: "Blokkering verwijderd", color: "bg-orange-100 text-orange-800" },
 };
 
 const entityIcons: Record<string, React.ReactNode> = {
@@ -72,12 +76,33 @@ const entityIcons: Record<string, React.ReactNode> = {
   program_request_item: <FileText className="h-4 w-4" />,
   admin_todo: <ClipboardList className="h-4 w-4" />,
   user: <User className="h-4 w-4" />,
+  partner_unavailability: <CalendarOff className="h-4 w-4" />,
 };
+
+interface PartnerOption {
+  id: string;
+  name: string;
+}
 
 const AdminLogs = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
+  const [partnerFilter, setPartnerFilter] = useState<string>("all");
+
+  // Fetch partners for filter dropdown
+  const { data: partners = [] } = useQuery({
+    queryKey: ["partners-for-logs-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+      return data as PartnerOption[];
+    },
+  });
 
   const { data: logs = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-activity-logs"],
@@ -105,6 +130,18 @@ const AdminLogs = () => {
         return false;
       }
 
+      // Partner filter - check if log is related to the selected partner
+      if (partnerFilter !== "all") {
+        const isPartnerRelated =
+          (log.entity_type === "partner" && log.entity_id === partnerFilter) ||
+          (log.details && (log.details as Record<string, unknown>).partner_id === partnerFilter) ||
+          (log.details && (log.details as Record<string, unknown>).partnerId === partnerFilter);
+        
+        if (!isPartnerRelated) {
+          return false;
+        }
+      }
+
       // Search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -122,7 +159,7 @@ const AdminLogs = () => {
 
       return true;
     });
-  }, [logs, entityFilter, actionFilter, searchQuery]);
+  }, [logs, entityFilter, actionFilter, searchQuery, partnerFilter]);
 
   const uniqueActions = useMemo(() => {
     const actions = new Set(logs.map((log) => log.action));
@@ -211,6 +248,19 @@ const AdminLogs = () => {
                     {uniqueActions.map((action) => (
                       <SelectItem key={action} value={action}>
                         {actionLabels[action]?.label || action}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Partner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle partners</SelectItem>
+                    {partners.map((partner) => (
+                      <SelectItem key={partner.id} value={partner.id}>
+                        {partner.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
