@@ -23,8 +23,8 @@ interface AcceptTermsCardProps {
   items: ProgramRequestItem[];
 }
 
-const DEFAULT_TERMS_URL = "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/partner-terms/default/standaard-partnervoorwaarden.pdf";
-const BUREAU_TERMS_URL = "https://bureauvlieland.nl/algemene-voorwaarden";
+const DEFAULT_TERMS_URL = "/partner-voorwaarden";
+const BUREAU_TERMS_URL = "/algemene-voorwaarden";
 
 export const AcceptTermsCard = ({
   onAccept,
@@ -175,10 +175,12 @@ export const AcceptTermsCard = ({
                               variant="link"
                               size="sm"
                               className="h-auto p-0 text-primary"
-                              onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+                              asChild
                             >
-                              <FileText className="h-3 w-3 mr-1" />
-                              Download PDF
+                              <a href={DEFAULT_TERMS_URL} target="_blank" rel="noopener noreferrer">
+                                <FileText className="h-3 w-3 mr-1" />
+                                Bekijken
+                              </a>
                             </Button>
                           </div>
                           <p className="ml-4 text-xs text-muted-foreground mt-1">

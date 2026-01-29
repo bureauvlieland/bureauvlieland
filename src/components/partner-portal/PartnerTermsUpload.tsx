@@ -17,7 +17,7 @@ interface PartnerTermsUploadProps {
   onUpdate: () => void;
 }
 
-const DEFAULT_TERMS_URL = "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/partner-terms/default/standaard-partnervoorwaarden.pdf";
+const DEFAULT_TERMS_URL = "/partner-voorwaarden";
 
 export const PartnerTermsUpload = ({
   partnerId,

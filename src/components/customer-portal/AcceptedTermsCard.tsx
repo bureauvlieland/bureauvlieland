@@ -23,8 +23,8 @@ interface AcceptedTermsCardProps {
   acceptedTerms: AcceptedTermsEntry[];
 }
 
-const DEFAULT_TERMS_URL = "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/partner-terms/default/standaard-partnervoorwaarden.pdf";
-const BUREAU_TERMS_URL = "https://bureauvlieland.nl/algemene-voorwaarden";
+const DEFAULT_TERMS_URL = "/partner-voorwaarden";
+const BUREAU_TERMS_URL = "/algemene-voorwaarden";
 const UVH_TERMS_URL = "https://assets.khn.nl/uploads/downloads/UVH_Nederlands_vanaf_2024_2024-10-18-082210_zkdv.pdf";
 
 export const AcceptedTermsCard = ({
@@ -131,10 +131,12 @@ export const AcceptedTermsCard = ({
                   variant="ghost"
                   size="sm"
                   className="shrink-0 h-8 text-xs"
-                  onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+                  asChild
                 >
-                  <Download className="h-3 w-3 mr-1" />
-                  Download PDF
+                  <a href={DEFAULT_TERMS_URL} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Bekijken
+                  </a>
                 </Button>
               </li>
             )}
