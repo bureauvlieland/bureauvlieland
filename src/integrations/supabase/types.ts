@@ -713,6 +713,44 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_unavailability: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          partner_id: string
+          reason: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          partner_id: string
+          reason?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          partner_id?: string
+          reason?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_unavailability_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           accommodation_commission_percentage: number | null

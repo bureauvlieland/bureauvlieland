@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, Calendar } from "lucide-react";
+import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, CalendarOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
+import { PartnerUnavailabilityManager } from "./PartnerUnavailabilityManager";
 
 interface PartnerDetails {
   id: string;
@@ -441,12 +442,15 @@ export const PartnerSettingsForm = () => {
         </CardContent>
       </Card>
 
+      {/* Unavailability blocking */}
+      <PartnerUnavailabilityManager partnerId={partner.id} />
+
       {/* Availability notes */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            <CardTitle>Beschikbaarheid</CardTitle>
+            <CalendarOff className="h-5 w-5 text-primary" />
+            <CardTitle>Beschikbaarheid notities</CardTitle>
           </div>
           <CardDescription>
             Notities over openingstijden, seizoensgebonden beschikbaarheid of andere opmerkingen.
@@ -454,7 +458,7 @@ export const PartnerSettingsForm = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="availability_notes">Beschikbaarheid notities</Label>
+            <Label htmlFor="availability_notes">Algemene notities</Label>
             <Textarea
               id="availability_notes"
               value={formData.availability_notes}

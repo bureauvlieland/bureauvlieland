@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerMonthlyRevenueChart } from "@/components/partner-portal/PartnerMonthlyRevenueChart";
+import { ExportInvoicesButton } from "@/components/partner-portal/ExportInvoicesButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -368,22 +370,42 @@ const PartnerFinanceContent = () => {
         </Card>
       </div>
 
+      {/* Monthly revenue chart */}
+      <PartnerMonthlyRevenueChart 
+        items={data.items} 
+        accommodationQuotes={accommodationQuotes}
+      />
+
       {/* Tabs for invoice status */}
       <Tabs defaultValue="to-invoice" className="mt-6">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="to-invoice" className="flex-1 sm:flex-none">
-            Nog te factureren
-            {toBeInvoicedCount > 0 && (
-              <Badge variant="secondary" className="ml-2">{toBeInvoicedCount}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="invoiced" className="flex-1 sm:flex-none">
-            Gefactureerd
-            {invoicedCount > 0 && (
-              <Badge variant="secondary" className="ml-2">{invoicedCount}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="to-invoice" className="flex-1 sm:flex-none">
+              Nog te factureren
+              {toBeInvoicedCount > 0 && (
+                <Badge variant="secondary" className="ml-2">{toBeInvoicedCount}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="invoiced" className="flex-1 sm:flex-none">
+              Gefactureerd
+              {invoicedCount > 0 && (
+                <Badge variant="secondary" className="ml-2">{invoicedCount}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex gap-2">
+            <ExportInvoicesButton 
+              items={toBeInvoicedItems} 
+              accommodationQuotes={toBeInvoicedAccommodations}
+              variant="to-invoice"
+            />
+            <ExportInvoicesButton 
+              items={invoicedItems} 
+              accommodationQuotes={invoicedAccommodations}
+              variant="invoiced"
+            />
+          </div>
+        </div>
 
         <TabsContent value="to-invoice" className="mt-6">
           {toBeInvoicedCount === 0 ? (
