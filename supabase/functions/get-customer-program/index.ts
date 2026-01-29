@@ -26,10 +26,23 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch program request
+    // Fetch program request with linked accommodation
     const { data: program, error: programError } = await supabase
       .from("program_requests")
-      .select("*")
+      .select(`
+        *,
+        linked_accommodation:accommodation_requests!program_requests_linked_accommodation_id_fkey(
+          id,
+          customer_token,
+          reference_number,
+          arrival_date,
+          departure_date,
+          number_of_guests,
+          accommodation_type,
+          status,
+          created_at
+        )
+      `)
       .eq("customer_token", token)
       .gt("expires_at", new Date().toISOString())
       .single();

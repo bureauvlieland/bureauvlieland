@@ -1,19 +1,33 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bed } from "lucide-react";
 import { format } from "date-fns";
+import type { CartItemDetail } from "@/types/buildingBlock";
+
+// Session storage key for passing cart items to accommodation wizard
+export const CART_HANDOFF_KEY = "bv_cart_handoff";
+
+export interface CartHandoffData {
+  cartItems: CartItemDetail[];
+  numberOfPeople: number;
+  selectedDates: string[]; // ISO strings
+}
 
 interface LogiesSuggestionBannerProps {
   isVisible: boolean;
   selectedDates?: Date[];
   numberOfPeople?: number;
+  cartItems?: CartItemDetail[];
 }
 
 export const LogiesSuggestionBanner = ({ 
   isVisible, 
   selectedDates = [], 
-  numberOfPeople 
+  numberOfPeople,
+  cartItems = []
 }: LogiesSuggestionBannerProps) => {
+  const navigate = useNavigate();
+
   if (!isVisible) return null;
 
   // Build URL with query parameters
@@ -30,9 +44,28 @@ export const LogiesSuggestionBanner = ({
     if (numberOfPeople && numberOfPeople > 0) {
       params.set("guests", numberOfPeople.toString());
     }
+
+    // Flag that cart data is available in sessionStorage
+    if (cartItems.length > 0) {
+      params.set("fromConfigurator", "true");
+    }
     
     const queryString = params.toString();
     return queryString ? `/logies-aanvragen?${queryString}` : "/logies-aanvragen";
+  };
+
+  const handleClick = () => {
+    // Store cart data in sessionStorage before navigating
+    if (cartItems.length > 0) {
+      const handoffData: CartHandoffData = {
+        cartItems,
+        numberOfPeople: numberOfPeople || 20,
+        selectedDates: selectedDates.map(d => d.toISOString()),
+      };
+      sessionStorage.setItem(CART_HANDOFF_KEY, JSON.stringify(handoffData));
+    }
+    
+    navigate(buildLogiesUrl());
   };
 
   return (
@@ -48,11 +81,9 @@ export const LogiesSuggestionBanner = ({
           </p>
         </div>
       </div>
-      <Link to={buildLogiesUrl()} className="shrink-0">
-        <Button variant="outline" size="sm">
-          Logies laten regelen
-        </Button>
-      </Link>
+      <Button variant="outline" size="sm" onClick={handleClick}>
+        Logies laten regelen
+      </Button>
     </div>
   );
 };
