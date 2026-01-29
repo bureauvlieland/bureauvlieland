@@ -127,6 +127,7 @@ const statusColors: Record<string, string> = {
 export default function AdminCommissions() {
   const [statusFilter, setStatusFilter] = useState("expected");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [partnerFilter, setPartnerFilter] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -136,6 +137,21 @@ export default function AdminCommissions() {
   const queryClient = useQueryClient();
 
   const isExpectedView = statusFilter === "expected";
+
+  // Fetch all partners for filter dropdown
+  const { data: partners = [] } = useQuery({
+    queryKey: ["partners-for-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Generate month options (current + next 12 months)
   const monthOptions = (() => {
@@ -153,7 +169,7 @@ export default function AdminCommissions() {
 
   // Fetch commissions via edge function
   const { data, isLoading, error, refetch } = useQuery<CommissionsResponse>({
-    queryKey: ["admin-commissions", statusFilter, typeFilter, selectedMonth],
+    queryKey: ["admin-commissions", statusFilter, typeFilter, selectedMonth, partnerFilter],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
@@ -163,6 +179,7 @@ export default function AdminCommissions() {
           status: statusFilter,
           type: typeFilter,
           month: selectedMonth,
+          partnerId: partnerFilter,
         },
       });
 
@@ -511,6 +528,28 @@ export default function AdminCommissions() {
                 {monthOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Partner Filter */}
+            <Select 
+              value={partnerFilter || "all"} 
+              onValueChange={(val) => {
+                setPartnerFilter(val === "all" ? null : val);
+                setSelectedItems(new Set());
+              }}
+            >
+              <SelectTrigger className="w-56">
+                <Building2 className="h-4 w-4 mr-2 shrink-0" />
+                <SelectValue placeholder="Alle partners" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle partners</SelectItem>
+                {partners.map((partner) => (
+                  <SelectItem key={partner.id} value={partner.id}>
+                    {partner.name}
                   </SelectItem>
                 ))}
               </SelectContent>
