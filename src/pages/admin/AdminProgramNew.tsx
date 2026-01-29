@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateCustomerToken, type ProgramType } from "@/types/programRequest";
+import { ExistingCustomerSelect, type ExistingCustomer } from "@/components/admin/ExistingCustomerSelect";
 
 type WizardStep = "type" | "customer" | "settings";
 
@@ -281,8 +282,28 @@ const AdminProgramNewContent = () => {
               <div>
                 <CardTitle className="mb-2">Klantgegevens</CardTitle>
                 <CardDescription>
-                  Vul de contactgegevens van de klant in
+                  Selecteer een bestaande klant of voer nieuwe gegevens in
                 </CardDescription>
+              </div>
+
+              {/* Existing customer selector */}
+              <div className="space-y-2">
+                <Label>Bestaande klant selecteren</Label>
+                <ExistingCustomerSelect
+                  selectedEmail={formData.customerEmail || undefined}
+                  onSelect={(customer: ExistingCustomer | null) => {
+                    if (customer) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        customerName: customer.customer_name,
+                        customerEmail: customer.customer_email,
+                        customerPhone: customer.customer_phone,
+                        customerCompany: customer.customer_company || "",
+                      }));
+                    }
+                    // If null, user wants to enter new customer - keep form as is
+                  }}
+                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
