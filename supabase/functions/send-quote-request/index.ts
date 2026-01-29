@@ -109,13 +109,13 @@ function getFallbackCustomerHtml(data: QuoteRequest, quoteDetails: string): stri
 
   return `
     <h2>Beste ${safeName},</h2>
-    <p>Bedankt voor je offerteaanvraag bij Bureau Vlieland!</p>
-    <p>We hebben je aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met je opnemen met een passende offerte.</p>
+    <p>Bedankt voor uw offerteaanvraag bij Bureau Vlieland!</p>
+    <p>Wij hebben uw aanvraag goed ontvangen en zullen <strong>binnen 5 werkdagen</strong> contact met u opnemen met een passende offerte.</p>
     
-    <h3>Jouw aanvraag:</h3>
+    <h3>Uw aanvraag:</h3>
     ${quoteDetails}
     
-    <p>Heb je nog vragen? Neem gerust contact met ons op via:</p>
+    <p>Heeft u nog vragen? Neem gerust contact met ons op via:</p>
     <ul>
       <li>Email: hallo@bureauvlieland.nl</li>
       <li>Telefoon: +31 (0)562 45 27 00</li>

@@ -369,12 +369,12 @@ const handler = async (req: Request): Promise<Response> => {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a365d;">Beste ${safeName},</h2>
         
-        <p>Bedankt voor je programma aanvraag bij Bureau Vlieland!</p>
+        <p>Bedankt voor uw programma-aanvraag bij Bureau Vlieland!</p>
         
-        <p>We hebben je aanvraag goed ontvangen. De betreffende aanbieders zullen je aanvraag behandelen en eventueel contact opnemen om details te bespreken. <strong>Je betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van de aanbieder.</p>
+        <p>Wij hebben uw aanvraag goed ontvangen. De betreffende aanbieders zullen uw aanvraag behandelen en eventueel contact opnemen om details te bespreken. <strong>U betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van de aanbieder.</p>
         
         <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #2d3748;">Jouw aanvraag</h3>
+          <h3 style="margin-top: 0; color: #2d3748;">Uw aanvraag</h3>
           <p><strong>Datum:</strong> ${safeDate || 'Nog niet gekozen'}</p>
           <p><strong>Aantal personen:</strong> ${requestData.numberOfPeople}</p>
         </div>
@@ -393,7 +393,7 @@ const handler = async (req: Request): Promise<Response> => {
         ${groupedBlocks.self_arranged.length > 0 ? `
         <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
           <h3 style="margin-top: 0; color: #92400e;">🔗 Zelf te regelen</h3>
-          <p style="color: #78350f; font-size: 14px;">Onderstaande onderdelen regel je zelf. Klik op de links om te boeken:</p>
+          <p style="color: #78350f; font-size: 14px;">Onderstaande onderdelen regelt u zelf. Klik op de links om te boeken:</p>
           <ul style="padding-left: 20px;">
             ${groupedBlocks.self_arranged.map(block => `
               <li style="margin-bottom: 10px;">
@@ -408,22 +408,22 @@ const handler = async (req: Request): Promise<Response> => {
         
         ${safeNotes ? `
         <div style="margin: 20px 0;">
-          <h3 style="color: #2d3748;">Jouw opmerkingen</h3>
+          <h3 style="color: #2d3748;">Uw opmerkingen</h3>
           <p style="color: #4a5568; background: #f7fafc; padding: 15px; border-radius: 8px;">${safeNotes.replace(/\n/g, '<br>')}</p>
         </div>
         ` : ''}
         
         ${portalUrl ? `
         <div style="background-color: #edf2f7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-          <h3 style="margin-top: 0; color: #2d3748;">📊 Volg je programma</h3>
+          <h3 style="margin-top: 0; color: #2d3748;">📊 Volg uw programma</h3>
           <p style="color: #4a5568;">
-            Bekijk de status van je aanvraag en voer eventuele wijzigingen door in je persoonlijke klantomgeving:
+            Bekijk de status van uw aanvraag en voer eventuele wijzigingen door in uw persoonlijke klantomgeving:
           </p>
           <a href="${portalUrl}" 
              style="display: inline-block; background-color: #1a365d; color: white; 
                     padding: 12px 24px; border-radius: 6px; text-decoration: none; 
                     font-weight: bold; margin-top: 10px;">
-            Bekijk je programma →
+            Bekijk uw programma →
           </a>
           <p style="color: #718096; font-size: 12px; margin-top: 15px;">
             Deze link is persoonlijk en 90 dagen geldig.
@@ -433,7 +433,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
         
-        <p>Heb je nog vragen? Neem gerust contact met ons op:</p>
+        <p>Heeft u nog vragen? Neem gerust contact met ons op:</p>
         <ul style="list-style: none; padding: 0;">
           <li>📧 Email: <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></li>
           <li>📞 Telefoon: +31 (0)562 45 27 00</li>

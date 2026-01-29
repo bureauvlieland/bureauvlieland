@@ -271,9 +271,9 @@ Deno.serve(async (req) => {
                 <h2>Datumwijziging</h2>
                 <p>Beste ${sanitizeHtml(provider.name)},</p>
                 <p>De klant heeft de datum(s) gewijzigd naar: <strong>${newDates}</strong></p>
-                <p>Graag je beschikbaarheid opnieuw bevestigen.</p>
+                <p>Graag uw beschikbaarheid opnieuw bevestigen.</p>
                 <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                  <p><strong>Jouw activiteit(en):</strong></p>
+                  <p><strong>Activiteit(en):</strong></p>
                   <ul>${provider.items.map(i => `<li>${sanitizeHtml(i)}</li>`).join("")}</ul>
                 </div>
                 <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -292,11 +292,11 @@ Deno.serve(async (req) => {
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Datumwijziging bevestigd</h2>
               <p>Beste ${sanitizeHtml(program.customer_name)},</p>
-              <p>Je hebt de datum(s) gewijzigd naar: <strong>${newDates}</strong></p>
-              <p>Alle ${providerItems.size} betrokken aanbieder(s) zijn op de hoogte gesteld en we wachten op hun bevestiging.</p>
+              <p>U heeft de datum(s) gewijzigd naar: <strong>${newDates}</strong></p>
+              <p>Alle ${providerItems.size} betrokken aanbieder(s) zijn op de hoogte gesteld en wij wachten op hun bevestiging.</p>
               <p>
                 <a href="https://bureauvlieland.nl/mijn-programma/${token}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
-                  Bekijk je programma
+                  Bekijk uw programma
                 </a>
               </p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -535,12 +535,12 @@ Deno.serve(async (req) => {
                 <p>De klant <strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> heeft een tegenvoorstel gedaan voor:</p>
                 <div style="background: #f3e8ff; border: 1px solid #c4b5fd; padding: 16px; border-radius: 8px; margin: 16px 0;">
                   <p style="margin: 0 0 8px; font-weight: bold;">${sanitizeHtml(item.block_name)}</p>
-                  <p style="margin: 0 0 8px;">Jouw voorstel: <strong>${originalTime}</strong></p>
+                  <p style="margin: 0 0 8px;">Uw voorstel: <strong>${originalTime}</strong></p>
                   <p style="margin: 0; color: #7c3aed; font-weight: bold;">Klant wil liever: ${counterTime}</p>
                   ${counterNoteSection}
                   ${priceSection}
                 </div>
-                <p>Graag je reactie via het Partner Portal:</p>
+                <p>Graag uw reactie via het Partner Portal:</p>
                 <p style="text-align: center; margin: 24px 0;">
                   <a href="${partnerPortalLink}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Partner Portal</a>
                 </p>
