@@ -118,7 +118,8 @@ export const DesktopProgramView = ({
     program.billing_address_city &&
     program.billing_contact_name
   );
-  const allConfirmed = statusSummary.pending === 0 && statusSummary.confirmed > 0;
+  // Show AcceptTermsCard when no pending/alternative items and at least one confirmed or accepted
+  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.total > 0;
 
   return (
     <div className="grid grid-cols-[1fr,320px] gap-8">
