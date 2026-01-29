@@ -1,138 +1,81 @@
 
-
-# Fix: Partner Portal Zichtbaarheid voor Klant Tegenvoorstel
+# Standaardvoorwaarden Partneraanbod Webpagina
 
 ## Samenvatting
-Het klant tegenvoorstel (`counter_proposed` status) is niet zichtbaar in de partner portal omdat:
-1. De TypeScript types de nieuwe velden niet bevatten
-2. De status badge configuratie ontbreekt
-3. De dashboard filtering deze status niet meeneemt
+Een nieuwe webpagina toevoegen voor de Standaardvoorwaarden Partneraanbod en alle verwijzingen naar de PDF bijwerken naar deze nieuwe pagina. Dit zorgt ervoor dat de voorwaarden direct op de website bekeken kunnen worden in plaats van een PDF te moeten downloaden.
 
----
+## Huidige situatie
+- De standaard partnervoorwaarden verwijzen nu naar een PDF: `partner-terms/default/standaard-partnervoorwaarden.pdf`
+- Deze PDF wordt gerefereerd in 4 bestanden:
+  - `AcceptTermsCard.tsx` - Checkout voorwaarden klantportaal
+  - `AcceptedTermsCard.tsx` - Na acceptatie zichtbaar
+  - `PartnerTermsUpload.tsx` - Partner instellingen
+  - `update-customer-program` Edge Function - Logging
 
-## Wijziging 1: PartnerItem Type Uitbreiden
+## Wat er gaat gebeuren
 
-### src/types/partner.ts
+### 1. Nieuwe webpagina aanmaken
+**Bestand:** `src/pages/PartnerTerms.tsx`
+- Dezelfde structuur als de huidige `Terms.tsx` (Algemene Voorwaarden)
+- Navigatie + Footer componenten
+- "Terug" knop
+- Nette opmaak met dezelfde styling als de bestaande voorwaardenpagina
+- Alle 10 artikelen van de tekst die je hebt aangeleverd
 
-Toevoegen aan de `PartnerItem` interface (rond lijn 45):
+### 2. Route toevoegen
+**Bestand:** `src/App.tsx`
+- Nieuwe route: `/partner-voorwaarden`
+- De pagina wordt publiek toegankelijk (geen login vereist)
 
-```typescript
-// Customer counter proposal fields (when customer proposes alternative time)
-customer_counter_time: string | null;
-customer_counter_note: string | null;
-customer_counter_at: string | null;
-```
-
----
-
-## Wijziging 2: StatusConfig Aanpassen in PartnerItemRow
-
-### src/components/partner-portal/PartnerItemRow.tsx
-
-Toevoegen aan `statusConfig` (lijn 15-24):
-
-```typescript
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
-  // ... bestaande statussen ...
-  counter_proposed: { 
-    label: "Tegenvoorstel klant", 
-    color: "text-purple-700 dark:text-purple-400", 
-    bgColor: "bg-purple-100 dark:bg-purple-950/50" 
-  },
-};
-```
-
----
-
-## Wijziging 3: Dashboard Filtering Aanpassen
-
-### src/pages/PartnerDashboard.tsx
-
-De `counter_proposed` status moet in de juiste categorie komen. Aangezien dit een actie vereist van de partner, hoort het bij de "Nieuw" / "Actie vereist" tab.
-
-**Huidige code (lijn 398):**
-```typescript
-const pendingItems = data.items.filter((i) => i.status === "pending");
-```
-
-**Nieuwe code:**
-```typescript
-const pendingItems = data.items.filter((i) => 
-  i.status === "pending" || i.status === "counter_proposed"
-);
-```
-
-Dit zorgt ervoor dat items met een klant tegenvoorstel in de "Nieuw" tab verschijnen waar de partner ze kan zien en beantwoorden.
-
----
-
-## Wijziging 4: Visuele Indicatie voor Counter Proposals
-
-### src/components/partner-portal/PartnerItemRow.tsx
-
-Voeg een extra indicator toe voor counter proposals, vergelijkbaar met de bestaande `isNew` en `isModified` checks:
-
-```typescript
-// Check if customer has submitted a counter proposal
-const hasCounterProposal = (item: PartnerItem): boolean => {
-  return item.status === "counter_proposed";
-};
-
-// In de component:
-const hasCounter = hasCounterProposal(item);
-
-// In de render:
-{hasCounter && (
-  <ArrowLeftRight className="h-4 w-4 text-purple-500 shrink-0" />
-)}
-```
-
----
-
-## Wijziging 5: PartnerItemSheet Type Cast Verwijderen
-
-### src/components/partner-portal/PartnerItemSheet.tsx
-
-De huidige code gebruikt `(item as any)` voor de counter proposal velden (lijn 368, 382-385). Na het updaten van de types kan dit veilig worden:
-
-```typescript
-// Van:
-{(item as any).customer_counter_time}
-
-// Naar:
-{item.customer_counter_time}
-```
-
----
-
-## Bestanden die worden aangepast
+### 3. Alle verwijzingen bijwerken
+De `DEFAULT_TERMS_URL` in de volgende bestanden wordt gewijzigd van de PDF-link naar `/partner-voorwaarden`:
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/types/partner.ts` | `customer_counter_*` velden toevoegen aan PartnerItem |
-| `src/components/partner-portal/PartnerItemRow.tsx` | `counter_proposed` status + visuele indicator |
-| `src/pages/PartnerDashboard.tsx` | Filtering aanpassen zodat counter_proposed zichtbaar is |
-| `src/components/partner-portal/PartnerItemSheet.tsx` | Type cast verwijderen |
+| `AcceptTermsCard.tsx` | "Download PDF" → "Bekijken" met link naar webpagina |
+| `AcceptedTermsCard.tsx` | "Download PDF" → "Bekijken" met link naar webpagina |
+| `PartnerTermsUpload.tsx` | Link naar webpagina in plaats van PDF |
 
----
+### 4. Redirect toevoegen (optioneel)
+**Bestand:** `public/_redirects`
+- Eventueel een redirect van de oude PDF-path naar de nieuwe pagina voor bestaande links
 
-## Resultaat na implementatie
+## Technische details
 
+```text
+Nieuwe bestandsstructuur:
+├── src/pages/
+│   ├── Terms.tsx                 (bestaand - Algemene Voorwaarden Bureau Vlieland)
+│   └── PartnerTerms.tsx          (nieuw - Standaardvoorwaarden Partneraanbod)
+
+Routing:
+/algemene-voorwaarden  →  Terms.tsx (bestaand)
+/partner-voorwaarden   →  PartnerTerms.tsx (nieuw)
 ```
-┌─────────────────────────────────────────────────────┐
-│ 📋 Partner Dashboard                                │
-├─────────────────────────────────────────────────────┤
-│ [Nieuw (2)] [Voorstel verstuurd] [Akkoord] [Archief]│
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│ 🔄 Zeehondentocht    | TestBedrijf | 15 mrt | [Tegenvoorstel klant] │
-│ ✨ Vliehors Expres   | ACME Inc.   | 16 mrt | [Nieuw]               │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+
+## Voorbeeld code snippets
+
+**Nieuwe pagina header:**
+```tsx
+<h1>Standaardvoorwaarden Partneraanbod</h1>
+<p className="text-muted-foreground">
+  Van toepassing indien Partner geen eigen algemene voorwaarden 
+  heeft gepubliceerd via het platform van Bureau Vlieland
+</p>
 ```
 
-De partner ziet nu:
-- Een paars "Tegenvoorstel klant" badge
-- Een 🔄 icoon in de rij
-- Bij klikken: de volledige counter proposal details met klant-tijd en toelichting
+**Bijgewerkte link in AcceptTermsCard:**
+```tsx
+// Was:
+onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
 
+// Wordt:
+onClick={() => window.open("/partner-voorwaarden", "_blank")}
+```
+
+## Voordelen van deze aanpak
+- Voorwaarden zijn doorzoekbaar en indexeerbaar door zoekmachines
+- Sneller laden dan een PDF
+- Consistent met de bestaande "Algemene Voorwaarden" pagina
+- Makkelijker te onderhouden (tekst direct in de code)
+- Toegankelijker voor alle gebruikers
