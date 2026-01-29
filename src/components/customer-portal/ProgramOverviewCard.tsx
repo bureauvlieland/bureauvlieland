@@ -1,9 +1,10 @@
-import { format } from "date-fns";
+import { format, isPast, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, BedDouble, Briefcase } from "lucide-react";
+import { Calendar, Users, BedDouble, Briefcase, Sparkles, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import type { ProgramType, QuoteStatus } from "@/types/programRequest";
 
 interface ProgramOverviewCardProps {
   selectedDates: Date[];
@@ -11,6 +12,11 @@ interface ProgramOverviewCardProps {
   customerCompany?: string;
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
+  // Quote mode props
+  programType?: ProgramType;
+  quoteStatus?: QuoteStatus | null;
+  quoteValidUntil?: string | null;
+  termsAcceptedAt?: string | null;
 }
 
 export const ProgramOverviewCard = ({
@@ -19,9 +25,49 @@ export const ProgramOverviewCard = ({
   customerCompany,
   accommodation,
   accommodationQuotes,
+  programType = "self_service",
+  quoteStatus,
+  quoteValidUntil,
+  termsAcceptedAt,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
-  const programType = isMultiDay ? "Meerdaags verblijf" : "Eendaags programma";
+  const isQuoteMode = programType === "quote";
+  
+  // Calculate quote validity
+  const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;
+  const isExpired = validUntilDate ? isPast(validUntilDate) : false;
+  const daysUntilExpiry = validUntilDate ? differenceInDays(validUntilDate, new Date()) : null;
+  
+  // Determine program type label
+  const getProgramTypeLabel = () => {
+    if (isQuoteMode) {
+      if (termsAcceptedAt) return "Boeking bevestigd";
+      if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
+      return "Maatwerkvoorstel";
+    }
+    return isMultiDay ? "Meerdaags verblijf" : "Eendaags programma";
+  };
+
+  // Determine quote status for display
+  const getQuoteDisplayStatus = () => {
+    if (!isQuoteMode) return null;
+    
+    if (termsAcceptedAt) {
+      return { label: "Definitief", variant: "success" as const, icon: CheckCircle2 };
+    }
+    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") {
+      return { label: "Akkoord", variant: "success" as const, icon: CheckCircle2 };
+    }
+    if (isExpired) {
+      return { label: "Verlopen", variant: "destructive" as const, icon: AlertTriangle };
+    }
+    if (quoteStatus === "offerte_verstuurd") {
+      return { label: "Wacht op akkoord", variant: "warning" as const, icon: Clock };
+    }
+    return { label: "In voorbereiding", variant: "muted" as const, icon: Clock };
+  };
+
+  const quoteDisplayStatus = getQuoteDisplayStatus();
 
   // Determine accommodation status
   const getAccommodationStatus = () => {
@@ -53,7 +99,7 @@ export const ProgramOverviewCard = ({
     return `${format(firstDate, "d", { locale: nl })} – ${format(lastDate, "d MMMM yyyy", { locale: nl })}`;
   };
 
-  const getStatusBadgeVariant = (variant: "success" | "info" | "warning" | "muted") => {
+  const getStatusBadgeVariant = (variant: "success" | "info" | "warning" | "muted" | "destructive") => {
     switch (variant) {
       case "success":
         return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
@@ -61,24 +107,72 @@ export const ProgramOverviewCard = ({
         return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
       case "warning":
         return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+      case "destructive":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
       default:
         return "bg-muted text-muted-foreground";
     }
   };
 
   return (
-    <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+    <Card className={`border-primary/20 ${isQuoteMode ? "bg-gradient-to-br from-amber-50/50 to-primary/5" : "bg-gradient-to-br from-primary/5 to-primary/10"}`}>
       <CardContent className="p-6">
         <div className="space-y-4">
           {/* Header */}
-          <div>
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-              Jouw zakelijke programma op Vlieland
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt.
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
+                  {isQuoteMode ? "Jouw maatwerkvoorstel" : "Jouw zakelijke programma op Vlieland"}
+                </h1>
+                {isQuoteMode && (
+                  <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                    <Sparkles className="h-3 w-3" />
+                    Maatwerk
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isQuoteMode 
+                  ? "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
+                  : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
+                }
+              </p>
+            </div>
+            
+            {/* Quote status badge */}
+            {quoteDisplayStatus && (
+              <Badge 
+                variant="secondary" 
+                className={`shrink-0 gap-1.5 ${getStatusBadgeVariant(quoteDisplayStatus.variant)}`}
+              >
+                <quoteDisplayStatus.icon className="h-3.5 w-3.5" />
+                {quoteDisplayStatus.label}
+              </Badge>
+            )}
           </div>
+
+          {/* Quote validity warning */}
+          {isQuoteMode && quoteStatus === "offerte_verstuurd" && validUntilDate && !termsAcceptedAt && (
+            <div className={`flex items-center gap-2 p-3 rounded-lg ${isExpired ? "bg-red-50 dark:bg-red-900/20" : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-blue-50 dark:bg-blue-900/20"}`}>
+              {isExpired ? (
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+              ) : (
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              )}
+              <p className={`text-sm ${isExpired ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}>
+                {isExpired ? (
+                  <>Dit voorstel is verlopen op {format(validUntilDate, "d MMMM yyyy", { locale: nl })}. Neem contact op voor een nieuw voorstel.</>
+                ) : daysUntilExpiry === 0 ? (
+                  <>Dit voorstel is vandaag geldig. Geef vandaag nog akkoord om de beschikbaarheid te garanderen.</>
+                ) : daysUntilExpiry === 1 ? (
+                  <>Dit voorstel is nog 1 dag geldig (t/m {format(validUntilDate, "d MMMM", { locale: nl })}).</>
+                ) : (
+                  <>Dit voorstel is geldig t/m {format(validUntilDate, "d MMMM yyyy", { locale: nl })} ({daysUntilExpiry} dagen).</>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Info grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -107,11 +201,15 @@ export const ProgramOverviewCard = ({
             {/* Type */}
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Briefcase className="h-4 w-4 text-primary" />
+                {isQuoteMode ? (
+                  <Sparkles className="h-4 w-4 text-primary" />
+                ) : (
+                  <Briefcase className="h-4 w-4 text-primary" />
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Type</p>
-                <p className="font-medium text-sm">{programType}</p>
+                <p className="font-medium text-sm">{getProgramTypeLabel()}</p>
               </div>
             </div>
 
@@ -137,7 +235,7 @@ export const ProgramOverviewCard = ({
           {/* Company name if available */}
           {customerCompany && (
             <p className="text-sm text-muted-foreground pt-2 border-t">
-              Programma voor <span className="font-medium text-foreground">{customerCompany}</span>
+              {isQuoteMode ? "Voorstel voor" : "Programma voor"} <span className="font-medium text-foreground">{customerCompany}</span>
             </p>
           )}
         </div>

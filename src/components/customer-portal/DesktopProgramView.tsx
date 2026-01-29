@@ -57,6 +57,10 @@ interface DesktopProgramViewProps {
     billing_contact_email?: string;
     billing_reference?: string;
     acceptedTerms?: AcceptedTermsEntry[];
+    // Quote mode fields
+    program_type?: string;
+    quote_status?: string | null;
+    quote_valid_until?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -174,6 +178,10 @@ export const DesktopProgramView = ({
           customerCompany={program.customer_company}
           accommodation={accommodation}
           accommodationQuotes={accommodationQuotes}
+          programType={program.program_type as any}
+          quoteStatus={program.quote_status as any}
+          quoteValidUntil={program.quote_valid_until}
+          termsAcceptedAt={program.terms_accepted_at}
         />
 
         {/* 2. Action required card - intelligent priority-based alert */}
