@@ -157,6 +157,7 @@ export const MobileProgramView = ({
           isBillingComplete={billingComplete}
           onOpenBilling={onOpenBilling}
           items={program.items}
+          accommodationQuotes={accommodationQuotes}
         />
       )}
 

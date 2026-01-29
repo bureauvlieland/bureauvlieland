@@ -16,21 +16,30 @@ interface PartnerTermsInfo {
   uses_default_terms: boolean;
 }
 
+interface AccommodationQuote {
+  id: string;
+  partner_id: string;
+  status: string;
+}
+
 interface AcceptTermsCardProps {
   onAccept: (signatureName: string) => Promise<boolean>;
   isBillingComplete: boolean;
   onOpenBilling: () => void;
   items: ProgramRequestItem[];
+  accommodationQuotes?: AccommodationQuote[];
 }
 
 const DEFAULT_TERMS_URL = "/partner-voorwaarden";
 const BUREAU_TERMS_URL = "/algemene-voorwaarden";
+const UVH_TERMS_URL = "https://assets.khn.nl/uploads/downloads/UVH_Nederlands_vanaf_2024_2024-10-18-082210_zkdv.pdf";
 
 export const AcceptTermsCard = ({
   onAccept,
   isBillingComplete,
   onOpenBilling,
   items,
+  accommodationQuotes = [],
 }: AcceptTermsCardProps) => {
   const [isChecked, setIsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,13 +48,20 @@ export const AcceptTermsCard = ({
   const [isLoadingPartners, setIsLoadingPartners] = useState(true);
 
   // Get unique partner IDs from items (excluding self_arranged and bureau types)
+  // Also include accommodation partner if there's a selected quote
   useEffect(() => {
     const fetchPartnerTerms = async () => {
-      const uniquePartnerIds = [...new Set(
-        items
-          .filter(item => item.block_type === "partner" && item.status !== "cancelled")
-          .map(item => item.provider_id)
-      )];
+      const itemPartnerIds = items
+        .filter(item => item.block_type === "partner" && item.status !== "cancelled")
+        .map(item => item.provider_id);
+      
+      // Add accommodation partner if there's a selected quote
+      const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
+      if (selectedQuote) {
+        itemPartnerIds.push(selectedQuote.partner_id);
+      }
+      
+      const uniquePartnerIds = [...new Set(itemPartnerIds)];
 
       if (uniquePartnerIds.length === 0) {
         setIsLoadingPartners(false);
@@ -64,7 +80,7 @@ export const AcceptTermsCard = ({
     };
 
     fetchPartnerTerms();
-  }, [items]);
+  }, [items, accommodationQuotes]);
 
   const getPublicUrl = (path: string) => {
     const { data } = supabase.storage.from("partner-terms").getPublicUrl(path);
@@ -100,6 +116,28 @@ export const AcceptTermsCard = ({
       type: "default" as const,
     };
   };
+
+  // Determine if UVH terms should be shown:
+  // 1. If there are catering items
+  // 2. If there's a selected accommodation where partner has no custom terms
+  const hasCateringItems = items.some(item => 
+    item.block_category === "catering" && item.status !== "cancelled"
+  );
+  
+  const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
+  const selectedAccommodationPartner = selectedQuote 
+    ? partnerTerms.find(p => p.id === selectedQuote.partner_id)
+    : null;
+  
+  // Show UVH if:
+  // - There are catering items, OR
+  // - There's a selected accommodation AND the partner uses default terms (no custom PDF)
+  const accommodationUsesDefaultTerms = selectedQuote && (
+    !selectedAccommodationPartner?.terms_pdf_path || 
+    selectedAccommodationPartner?.uses_default_terms
+  );
+  
+  const showUvhTerms = hasCateringItems || accommodationUsesDefaultTerms;
 
   return (
     <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
@@ -205,6 +243,25 @@ export const AcceptTermsCard = ({
                           </Button>
                         </li>
                       ))}
+
+                      {/* UVH 2024 - only if catering or accommodation without custom terms */}
+                      {showUvhTerms && (
+                        <li className="flex items-center gap-2 text-sm">
+                          <span>•</span>
+                          <span className="font-medium">Uniforme Voorwaarden Horeca 2024</span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                            asChild
+                          >
+                            <a href={UVH_TERMS_URL} target="_blank" rel="noopener noreferrer">
+                              <FileText className="h-3 w-3 mr-1" />
+                              Download PDF
+                            </a>
+                          </Button>
+                        </li>
+                      )}
                     </>
                   );
                 })()}
