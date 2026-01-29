@@ -56,7 +56,7 @@ function getFallbackEmailHtml(
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #0f766e;">Goed nieuws, ${safeName}!</h2>
       
-      <p>Er is een nieuwe offerte beschikbaar voor je logies aanvraag op Vlieland.</p>
+      <p>Er is een nieuwe offerte beschikbaar voor uw logies aanvraag op Vlieland.</p>
       
       <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); padding: 24px; border-radius: 12px; margin: 20px 0; border: 1px solid #86efac;">
         <h3 style="margin-top: 0; color: #166534; font-size: 20px;">${safeAccommodationName}</h3>
@@ -117,7 +117,7 @@ function getFallbackEmailHtml(
       </div>
       
       <p style="color: #666; font-size: 14px;">
-        In je persoonlijke omgeving kun je alle ontvangen offertes vergelijken en je keuze maken.
+        In uw persoonlijke omgeving kunt u alle ontvangen offertes vergelijken en uw keuze maken.
       </p>
       
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">

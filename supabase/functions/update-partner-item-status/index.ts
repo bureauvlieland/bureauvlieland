@@ -171,7 +171,7 @@ const generateFallbackStatusEmailHtml = (
           <tr>
             <td style="background-color: #f7fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
               <p style="margin: 0 0 10px; color: #718096; font-size: 14px; text-align: center;">
-                Vragen? Neem contact met ons op via <a href="mailto:info@bureauvlieland.nl" style="color: #1a365d;">info@bureauvlieland.nl</a>
+                Vragen? Neem contact met ons op via <a href="mailto:hallo@bureauvlieland.nl" style="color: #1a365d;">hallo@bureauvlieland.nl</a>
               </p>
               <p style="margin: 0; color: #a0aec0; font-size: 12px; text-align: center;">
                 © ${new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.
@@ -562,9 +562,9 @@ Deno.serve(async (req) => {
       );
 
       const subjectMap: Record<string, string> = {
-        confirmed: `Activiteit bevestigd: ${item.block_name} - Jouw akkoord gevraagd`,
+        confirmed: `Activiteit bevestigd: ${item.block_name} - Uw akkoord gevraagd`,
         unavailable: `Activiteit niet beschikbaar: ${item.block_name}`,
-        alternative: `Alternatief voorstel voor: ${item.block_name} - Reactie gevraagd`,
+        alternative: `Alternatief voorstel voor: ${item.block_name} - Uw reactie gevraagd`,
       };
 
       const emailSubject = template?.subject || subjectMap[status];

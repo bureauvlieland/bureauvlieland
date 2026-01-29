@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
         
         <p>Beste ${sanitizeHtml(program.customer_name)},</p>
         
-        <p>Je aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
+        <p>Uw aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
         
         ${reason ? `
         <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
         
         <p>Alle ${providers.size} betrokken aanbieder(s) zijn automatisch op de hoogte gesteld.</p>
         
-        <p>Wil je toch een programma samenstellen? Je kunt altijd een nieuwe aanvraag indienen via onze website.</p>
+        <p>Wilt u toch een programma samenstellen? U kunt altijd een nieuwe aanvraag indienen via onze website.</p>
         
         <p style="color: #718096; font-size: 14px; margin-top: 30px;">
           Met vriendelijke groet,<br>
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     emails.push({
       From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: program.customer_email, Name: program.customer_name }],
-      Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Jouw aanvraag is geannuleerd`,
+      Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Uw aanvraag is geannuleerd`,
       HTMLPart: customerHtml,
     });
 
