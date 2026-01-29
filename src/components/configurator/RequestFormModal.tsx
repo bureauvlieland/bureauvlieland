@@ -339,7 +339,7 @@ export const RequestFormModal = ({
         <DialogHeader>
           <DialogTitle>Programma Aanvraag Versturen</DialogTitle>
           <DialogDescription>
-            Vul je gegevens in zodat we contact kunnen opnemen om de details te bespreken.
+            Vul uw gegevens in zodat we contact kunnen opnemen om de details te bespreken.
           </DialogDescription>
         </DialogHeader>
 
@@ -350,9 +350,9 @@ export const RequestFormModal = ({
             <div className="text-sm">
               <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Dit is een vrijblijvende aanvraag</p>
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Je betaalt nu nog niets – facturatie volgt pas na bevestiging van een activiteit</li>
+                <li>• U betaalt nu nog niets – facturatie volgt pas na bevestiging van een activiteit</li>
                 <li>• Prijzen zijn indicatief (per persoon of per activiteit, afhankelijk van de aanbieder)</li>
-                <li>• Elke aanbieder bevestigt apart – je ontvangt dus mogelijk meerdere facturen</li>
+                <li>• Elke aanbieder bevestigt apart – u ontvangt dus mogelijk meerdere facturen</li>
               </ul>
             </div>
           </div>
@@ -360,7 +360,7 @@ export const RequestFormModal = ({
 
         {/* Summary grouped by invoice type */}
         <div className="bg-muted/50 rounded-lg p-4 mb-4">
-          <h4 className="font-medium mb-3">Je aanvraag wordt verstuurd naar:</h4>
+          <h4 className="font-medium mb-3">Uw aanvraag wordt verstuurd naar:</h4>
           
           <div className="space-y-3 text-sm">
             {/* Bureau Vlieland */}
@@ -445,7 +445,7 @@ export const RequestFormModal = ({
                 value={formData.name}
                 onChange={handleChange}
                 required
-                placeholder="Je volledige naam"
+                placeholder="Uw volledige naam"
               />
             </div>
             <div>
@@ -455,7 +455,7 @@ export const RequestFormModal = ({
                 name="company"
                 value={formData.company}
                 onChange={handleChange}
-                placeholder="Naam van je bedrijf"
+                placeholder="Naam van uw bedrijf"
               />
             </div>
           </div>
@@ -470,7 +470,7 @@ export const RequestFormModal = ({
                 value={formData.email}
                 onChange={handleChange}
                 required
-                placeholder="je@email.nl"
+                placeholder="uw@email.nl"
               />
             </div>
             <div>
