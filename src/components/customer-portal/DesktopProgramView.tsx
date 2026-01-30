@@ -43,6 +43,7 @@ interface DesktopProgramViewProps {
     customer_company?: string;
     customer_email: string;
     customer_phone: string;
+    customer_token?: string;
     number_of_people: number;
     items: ProgramRequestItem[];
     terms_accepted_at?: string;
@@ -236,6 +237,8 @@ export const DesktopProgramView = ({
                   onSelectQuote={onSelectAccommodationQuote}
                   selectedDates={selectedDates}
                   onEditAccommodation={onOpenEdit}
+                  customerToken={program.customer_token}
+                  numberOfPeople={program.number_of_people}
                 />
               </CardContent>
             </Card>

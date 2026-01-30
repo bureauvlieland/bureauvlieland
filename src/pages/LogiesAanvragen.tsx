@@ -14,6 +14,9 @@ const LogiesAanvragen = () => {
   // Check if coming from configurator
   const fromConfigurator = searchParams.get("fromConfigurator") === "true";
 
+  // Get program token if coming from customer portal
+  const linkedProgramToken = searchParams.get("programToken") || undefined;
+
   // Parse URL parameters for pre-filling
   const initialData = useMemo(() => {
     const arrivalParam = searchParams.get("arrival");
@@ -137,6 +140,7 @@ const LogiesAanvragen = () => {
             <AccommodationWizard 
               initialData={initialData}
               fromConfigurator={fromConfigurator}
+              linkedProgramToken={linkedProgramToken}
               onSuccess={(token) => {
                 // Could navigate to a confirmation/tracking page
                 console.log("Request submitted with token:", token);

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { differenceInDays, format, isPast } from "date-fns";
+import { differenceInDays, format, isPast, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   BedDouble,
@@ -29,6 +29,9 @@ interface AccommodationSectionProps {
   onSelectQuote: (quoteId: string) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;
+  // For linking purposes
+  customerToken?: string;
+  numberOfPeople?: number;
 }
 
 export const AccommodationSection = ({
@@ -37,10 +40,37 @@ export const AccommodationSection = ({
   onSelectQuote,
   selectedDates,
   onEditAccommodation,
+  customerToken,
+  numberOfPeople,
 }: AccommodationSectionProps) => {
   const [selectedQuoteForDetails, setSelectedQuoteForDetails] = useState<AccommodationQuote | null>(null);
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+
+  // Build URL with all parameters for seamless handoff
+  const logiesUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    
+    // Add dates if multi-day
+    if (selectedDates.length > 1) {
+      const sorted = [...selectedDates].sort((a, b) => a.getTime() - b.getTime());
+      params.set("arrival", format(sorted[0], "yyyy-MM-dd"));
+      params.set("departure", format(sorted[sorted.length - 1], "yyyy-MM-dd"));
+    }
+    
+    // Add guests
+    if (numberOfPeople) {
+      params.set("guests", numberOfPeople.toString());
+    }
+    
+    // Add program token for linking
+    if (customerToken) {
+      params.set("programToken", customerToken);
+    }
+    
+    const paramString = params.toString();
+    return paramString ? `/logies-aanvragen?${paramString}` : "/logies-aanvragen";
+  }, [selectedDates, numberOfPeople, customerToken]);
 
   const handleSelectQuote = async () => {
     if (!selectedQuoteForConfirm) return;
@@ -87,7 +117,7 @@ export const AccommodationSection = ({
               </div>
             </div>
             <Button asChild className="shrink-0">
-              <Link to="/logies-aanvragen">
+              <Link to={logiesUrl}>
                 Logies laten regelen
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Link>
