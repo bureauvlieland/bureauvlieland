@@ -130,7 +130,8 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase
+      // Step 1: Insert the accommodation request (trigger creates linked program)
+      const { data: insertedData, error: insertError } = await supabase
         .from("accommodation_requests")
         .insert({
           customer_name: formData.customer_name.trim(),
@@ -151,17 +152,33 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
           wants_activities: formData.wants_activities || (cartHandoff && cartHandoff.cartItems.length > 0),
           status: "submitted",
         })
+        .select("id, customer_token")
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Step 2: Fetch the linked program (created by AFTER INSERT trigger)
+      // Small delay to ensure trigger has completed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const { data: accommodationWithProgram, error: fetchError } = await supabase
+        .from("accommodation_requests")
         .select(`
           id, 
           customer_token,
+          linked_program_id,
           linked_program:program_requests!accommodation_requests_linked_program_id_fkey(id, customer_token)
         `)
+        .eq("id", insertedData.id)
         .single();
 
-      if (error) throw error;
+      if (fetchError) {
+        console.error("Failed to fetch linked program:", fetchError);
+      }
 
       // If we have cart items from the configurator, create program_request_items
-      const linkedProgram = data.linked_program as { id: string; customer_token: string } | null;
+      const linkedProgram = accommodationWithProgram?.linked_program as { id: string; customer_token: string } | null;
+      const data = { id: insertedData.id, customer_token: insertedData.customer_token };
       
       if (cartHandoff && cartHandoff.cartItems.length > 0 && linkedProgram) {
         try {
