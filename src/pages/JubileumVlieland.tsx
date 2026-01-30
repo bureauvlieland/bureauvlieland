@@ -32,7 +32,7 @@ const JubileumVlieland = () => {
         canonicalUrl="https://bureauvlieland.nl/jubileum-vlieland"
         breadcrumbItems={[
           { name: "Home", url: "https://bureauvlieland.nl" },
-          { name: "Privé & Trouwen", url: "https://bureauvlieland.nl/trouwen-op-vlieland" },
+          { name: "Voor wie", url: "https://bureauvlieland.nl/voor-wie" },
           { name: "Jubileum Vlieland", url: "https://bureauvlieland.nl/jubileum-vlieland" }
         ]}
       />
@@ -40,7 +40,7 @@ const JubileumVlieland = () => {
       <Navigation />
       <LandingBreadcrumb 
         items={[
-          { label: "Privé & Trouwen", href: "/trouwen-op-vlieland" },
+          { label: "Voor wie", href: "/voor-wie" },
           { label: "Jubileum Vlieland" }
         ]} 
       />
