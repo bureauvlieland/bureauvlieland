@@ -1,0 +1,375 @@
+import { useState, useMemo } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, ArrowLeft, Plus } from "lucide-react";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { getBlockImage } from "@/lib/buildingBlockUtils";
+import { timeSlots, type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
+import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+
+interface AdminAddActivitySheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  requestId: string;
+  selectedDates: string[];
+  existingBlockIds: string[];
+  onSuccess: () => void;
+}
+
+type CategoryFilter = "all" | BuildingBlockCategory;
+
+export const AdminAddActivitySheet = ({
+  open,
+  onOpenChange,
+  requestId,
+  selectedDates,
+  existingBlockIds,
+  onSuccess,
+}: AdminAddActivitySheetProps) => {
+  const { data: blocks = [], isLoading } = useAdminBuildingBlocks();
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [selectedBlock, setSelectedBlock] = useState<BuildingBlock | null>(null);
+  
+  // Form state
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
+  const [preferredTime, setPreferredTime] = useState<string>("flexibel");
+  const [notes, setNotes] = useState("");
+  const [priceOverride, setPriceOverride] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Filter blocks: active blocks only
+  const availableBlocks = useMemo(() => {
+    return blocks.filter((block) => {
+      // Only show active blocks
+      if (!block.is_active) return false;
+      
+      // Optionally exclude blocks already in program
+      // (admin might want to add duplicate blocks)
+      
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = block.name.toLowerCase().includes(query);
+        const matchesDescription = block.short_description?.toLowerCase().includes(query);
+        const matchesProvider = block.provider?.name?.toLowerCase().includes(query);
+        if (!matchesName && !matchesDescription && !matchesProvider) return false;
+      }
+      
+      // Category filter
+      if (categoryFilter !== "all" && block.category !== categoryFilter) return false;
+      
+      return true;
+    });
+  }, [blocks, searchQuery, categoryFilter]);
+
+  const handleSelectBlock = (block: BuildingBlock) => {
+    setSelectedBlock(block);
+    setSelectedDayIndex(0);
+    setPreferredTime("flexibel");
+    setNotes("");
+    setPriceOverride(block.price_adult ? String(block.price_adult) : "");
+  };
+
+  const handleBack = () => {
+    setSelectedBlock(null);
+  };
+
+  const handleConfirmAdd = async () => {
+    if (!selectedBlock) return;
+    
+    setIsSubmitting(true);
+    try {
+      const time = preferredTime === "flexibel" ? null : preferredTime;
+      const price = priceOverride ? parseFloat(priceOverride) : null;
+      
+      // Insert the new item
+      const { data: newItem, error } = await supabase
+        .from("program_request_items")
+        .insert({
+          request_id: requestId,
+          block_id: selectedBlock.id,
+          block_name: selectedBlock.name,
+          block_category: selectedBlock.category,
+          block_type: selectedBlock.block_type,
+          provider_id: selectedBlock.provider_id || "bureau-vlieland",
+          provider_name: selectedBlock.provider?.name || "Bureau Vlieland",
+          provider_email: selectedBlock.provider?.email || null,
+          day_index: selectedDayIndex,
+          preferred_time: time,
+          customer_notes: notes || null,
+          duration: selectedBlock.duration,
+          status: "pending",
+          item_quote_status: "concept",
+          admin_price_override: price,
+          skip_partner_notification: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Log admin activity
+      await logAdminActivity({
+        action: AdminActions.ITEM_STATUS_CHANGED,
+        entityType: EntityTypes.REQUEST,
+        entityId: requestId,
+        details: {
+          action: "activity_added",
+          block_name: selectedBlock.name,
+          item_id: newItem.id,
+        },
+      });
+      
+      toast.success(`${selectedBlock.name} toegevoegd aan de offerte`);
+      
+      // Reset and close
+      setSelectedBlock(null);
+      setSearchQuery("");
+      setCategoryFilter("all");
+      onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      console.error("Error adding activity:", error);
+      toast.error("Fout bij toevoegen activiteit");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedBlock(null);
+    setSearchQuery("");
+    setCategoryFilter("all");
+    onOpenChange(false);
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={handleClose}>
+      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+        <SheetHeader className="p-6 pb-4 border-b shrink-0">
+          {selectedBlock ? (
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <SheetTitle>{selectedBlock.name} toevoegen</SheetTitle>
+                <SheetDescription>Kies dag, tijd en prijs</SheetDescription>
+              </div>
+            </div>
+          ) : (
+            <>
+              <SheetTitle>Activiteit toevoegen</SheetTitle>
+              <SheetDescription>
+                Kies een activiteit om toe te voegen aan deze offerte
+              </SheetDescription>
+            </>
+          )}
+        </SheetHeader>
+
+        {selectedBlock ? (
+          // Add form
+          <div className="flex-1 overflow-auto p-6 space-y-6">
+            {/* Day selection */}
+            {selectedDates.length > 1 && (
+              <div className="space-y-3">
+                <Label>Op welke dag?</Label>
+                <RadioGroup
+                  value={String(selectedDayIndex)}
+                  onValueChange={(v) => setSelectedDayIndex(Number(v))}
+                >
+                  {selectedDates.map((date, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <RadioGroupItem value={String(index)} id={`day-${index}`} />
+                      <Label htmlFor={`day-${index}`} className="font-normal cursor-pointer">
+                        Dag {index + 1} - {format(new Date(date), "d MMMM yyyy", { locale: nl })}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Time preference */}
+            <div className="space-y-2">
+              <Label htmlFor="time">Voorkeurstijd (optioneel)</Label>
+              <Select value={preferredTime} onValueChange={setPreferredTime}>
+                <SelectTrigger id="time">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot.value} value={slot.value}>
+                      {slot.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price override */}
+            <div className="space-y-2">
+              <Label htmlFor="price">Prijs voor klant (€)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceOverride}
+                onChange={(e) => setPriceOverride(e.target.value)}
+                placeholder="Laat leeg voor standaard prijs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Standaard: €{selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}
+              </p>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Opmerking (optioneel)</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Interne notitie of specifieke wensen..."
+                rows={3}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" onClick={handleBack} className="flex-1">
+                Terug
+              </Button>
+              <Button onClick={handleConfirmAdd} disabled={isSubmitting} className="flex-1">
+                <Plus className="h-4 w-4 mr-2" />
+                Toevoegen
+              </Button>
+            </div>
+          </div>
+        ) : (
+          // Browse blocks
+          <>
+            {/* Search and filters */}
+            <div className="p-4 pb-2 space-y-3 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Zoek op naam, partner..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={categoryFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("all")}
+                >
+                  Alle
+                </Button>
+                <Button
+                  variant={categoryFilter === "activiteiten" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("activiteiten")}
+                >
+                  Activiteiten
+                </Button>
+                <Button
+                  variant={categoryFilter === "catering" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("catering")}
+                >
+                  Catering
+                </Button>
+                <Button
+                  variant={categoryFilter === "vervoer" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("vervoer")}
+                >
+                  Vervoer
+                </Button>
+              </div>
+            </div>
+
+            {/* Blocks list */}
+            <ScrollArea className="flex-1">
+              <div className="p-4 pt-2 space-y-2">
+                {isLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Laden...
+                  </div>
+                ) : availableBlocks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {searchQuery || categoryFilter !== "all"
+                      ? "Geen activiteiten gevonden met deze filters"
+                      : "Geen activiteiten beschikbaar"}
+                  </div>
+                ) : (
+                  availableBlocks.map((block) => (
+                    <div
+                      key={block.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
+                      onClick={() => handleSelectBlock(block)}
+                    >
+                      <img
+                        src={getBlockImage(block)}
+                        alt={block.name}
+                        className="w-16 h-16 rounded-md object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium truncate">{block.name}</h4>
+                          {!block.is_published && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                              Concept
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {block.provider?.name || "Bureau Vlieland"}
+                        </p>
+                        <p className="text-sm font-medium text-primary">
+                          {block.price_adult ? `€${block.price_adult}` : "Op aanvraag"}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="ghost">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+};

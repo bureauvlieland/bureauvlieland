@@ -55,6 +55,7 @@ import {
   Ban,
   Send,
   Sparkles,
+  Plus,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { 
@@ -73,6 +74,7 @@ import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge"
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
+import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
@@ -116,6 +118,7 @@ interface LinkedAccommodation {
 
 interface ProgramRequestItem {
   id: string;
+  block_id: string;
   block_name: string;
   block_category: string;
   block_type: string;
@@ -166,6 +169,7 @@ const AdminRequestDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -728,14 +732,22 @@ const AdminRequestDetail = () => {
 
           {/* Items table */}
           <Card>
-            <CardHeader>
-              <CardTitle>Activiteiten</CardTitle>
-              <CardDescription>
-                {isQuoteMode 
-                  ? "Beheer de activiteiten en prijzen in deze offerte"
-                  : "Alle activiteiten in dit programma"
-                }
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>Activiteiten</CardTitle>
+                <CardDescription>
+                  {isQuoteMode 
+                    ? "Beheer de activiteiten en prijzen in deze offerte"
+                    : "Alle activiteiten in dit programma"
+                  }
+                </CardDescription>
+              </div>
+              {isQuoteMode && (
+                <Button onClick={() => setAddActivityOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Activiteit toevoegen
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -934,6 +946,18 @@ const AdminRequestDetail = () => {
         suggestedAmount={calculateOutstandingAmount()}
         onSuccess={fetchRequestData}
       />
+
+      {/* Add activity sheet */}
+      {request && (
+        <AdminAddActivitySheet
+          open={addActivityOpen}
+          onOpenChange={setAddActivityOpen}
+          requestId={request.id}
+          selectedDates={request.selected_dates as string[]}
+          existingBlockIds={items.map(item => item.block_id)}
+          onSuccess={fetchRequestData}
+        />
+      )}
     </>
   );
 };
