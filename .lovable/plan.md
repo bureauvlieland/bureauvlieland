@@ -1,275 +1,195 @@
 
+# Plan: Navigatie Anchors + Datum Bewerken Verbeteren
 
-# Plan: Akkoord-Workflow voor Maatwerkvoorstellen + Partner-notificaties
+## Geïdentificeerde Problemen
 
-## Huidige Situatie
+### 1. Navigatie-items werken niet
+**Huidige situatie:**
+- De `ProgramNavigation` component zoekt naar elementen met id's: `program`, `invoicing`, `details`, `history`
+- In `DesktopProgramView` bestaan alleen:
+  - `id="program"` (Programma sectie, regel 245)
+  - `id="accommodation"` (Logies sectie, regel 223)
+  - `id="terms-section"` (Voorwaarden, regel 342)
+- De id's `invoicing`, `details`, en `history` ontbreken volledig
 
-### Wat WEL werkt:
-- Admin maakt maatwerk programma aan (`program_type: "quote"`)
-- Admin voegt activiteiten toe met `skip_partner_notification: true` (partners worden NIET genotificeerd)
-- Admin stuurt PDF-voorstel naar klant via `send-quote-offer` 
-- `quote_status` wordt bijgewerkt naar `offerte_verstuurd`
-
-### Wat ONTBREEKT:
-1. **Klant-akkoord knop**: Er is geen "Ik ga akkoord met dit voorstel" knop in het klantportaal
-2. **Partner-notificatie trigger**: Na klant-akkoord moeten partners genotificeerd worden over hun activiteiten
-3. **Tekst correctie**: PDF en e-mail vermelden "beschikbaarheidsgarantie" terwijl partners nog niet uitgevraagd zijn
+### 2. Datum bewerken is niet duidelijk
+**Huidige situatie:**
+- De datum wordt als platte tekst getoond in `ProgramOverviewCard`
+- Geen visuele indicatie dat het klikbaar/bewerkbaar is
+- De edit-functie zit verstopt onderaan de pagina in een klein tekst-linkje en een dropdown menu
 
 ---
 
-## Oplossing: Nieuwe Akkoord-Flow
+## Oplossing
 
-```text
-WORKFLOW NA IMPLEMENTATIE:
+### A. Navigatie anchors toevoegen
 
-┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
-│  Admin stuurt       │────▶│  Klant ziet         │────▶│  Partners ontvangen │
-│  programmavoorstel  │     │  voorstel + geeft   │     │  notificatie        │
-│                     │     │  akkoord            │     │                     │
-│  quote_status:      │     │  quote_status:      │     │  items worden       │
-│  offerte_verstuurd  │     │  akkoord_ontvangen  │     │  'pending'          │
-└─────────────────────┘     └─────────────────────┘     └─────────────────────┘
-```
+| Navigatie-item | Huidige id | Te koppelen aan |
+|----------------|------------|-----------------|
+| Programma | `program` | Programma sectie (al correct) |
+| Facturatie | `invoicing` | `CompactBillingSection` wrapper |
+| Details | `details` | Nieuwe sectie met programma details |
+| Geschiedenis | `history` | Geschiedenis sectie |
+
+### B. Datum/groepsgrootte bewerkbaar maken in ProgramOverviewCard
+
+**Visuele aanpassingen:**
+- Voeg een kleine "Bewerken" knop toe naast datum en groepsgrootte
+- Of: maak de hele datum/groep sectie klikbaar met hover-effect
+- Tooltip: "Klik om datum en groepsgrootte aan te passen"
 
 ---
 
 ## Technische Implementatie
 
-### 1. Nieuwe Component: `AcceptQuoteProposalCard`
+### Stap 1: ProgramOverviewCard aanpassen
 
-**Doel:** Toont een duidelijke call-to-action aan de klant om het voorstel te accepteren.
+Voeg een `onEdit` prop toe en maak de datum/groep sectie klikbaar:
 
-**Tonen wanneer:**
-- `program_type === "quote"`
-- `quote_status === "offerte_verstuurd"`
-- `quote_valid_until` is nog niet verstreken
-
-**Inhoud:**
-- Samenvatting: aantal activiteiten, totaal geschat bedrag
-- Geldigheidsdatum prominente weergave
-- "Akkoord, start reserveringen" primaire knop
-- Uitleg: "Na uw akkoord worden de leveranciers benaderd voor definitieve bevestiging"
-
-### 2. Hook Update: `useCustomerProgram`
-
-**Nieuwe functie toevoegen:**
-```typescript
-acceptQuoteProposal: () => Promise<boolean>;
-```
-
-**Actie:**
-- Roept nieuwe edge function aan: `accept-quote-proposal`
-- Retourneert success/error
-
-### 3. Nieuwe Edge Function: `accept-quote-proposal`
-
-**Input:**
-```typescript
-{ token: string; origin?: string }
-```
-
-**Acties:**
-1. Valideer dat programma bestaat en `quote_status === "offerte_verstuurd"`
-2. Controleer of `quote_valid_until` niet verstreken is
-3. Update `quote_status` naar `akkoord_ontvangen`
-4. Voor elk item met `skip_partner_notification: true`:
-   - Zet `skip_partner_notification` naar `false`
-   - Zet status naar `pending` (indien nog niet)
-   - Stuur notificatie naar partner
-5. Log in `program_request_history`
-6. Stuur bevestigingsmail naar klant
-
-### 4. Partner Notificatie E-mail
-
-**Hergebruik bestaande logica** uit `send-program-request`:
-- "Nieuwe aanvraag via Bureau Vlieland"
-- Klantgegevens + datum + aantal personen
-- Lijst van aangevraagde activiteiten
-- Link naar Partner Portal
-
-### 5. Tekst Correcties
-
-**AdminQuotePreview.tsx (PDF):**
-```
-Oud: "Na deze datum kunnen wij de beschikbaarheid niet garanderen."
-Nieuw: "Als u akkoord bent met dit programmavoorstel, kunt u dit bevestigen 
-       in uw klantomgeving. Hierna worden de leveranciers op de hoogte gebracht."
-```
-
-**send-quote-offer/index.ts (E-mail):**
-```
-Oud: Rode waarschuwing over beschikbaarheid
-Nieuw: Amber informatieve melding over workflow
-```
-
----
-
-## UI Plaatsing
-
-### Desktop (DesktopProgramView):
-- `AcceptQuoteProposalCard` bovenaan, direct onder `ProgramOverviewCard`
-- Vervangt `ActionRequiredCard` wanneer quote-modus actief is
-
-### Mobile (MobileProgramView):
-- Prominent bovenaan, boven de dag-tabbladen
-- Sticky "Akkoord" knop onderaan scherm (optioneel)
-
----
-
-## Implementatiestappen
-
-| # | Bestand | Actie |
-|---|---------|-------|
-| 1 | `src/components/customer-portal/AcceptQuoteProposalCard.tsx` | **Nieuw** - Akkoord component voor klant |
-| 2 | `src/hooks/useCustomerProgram.ts` | Voeg `acceptQuoteProposal()` functie toe |
-| 3 | `supabase/functions/accept-quote-proposal/index.ts` | **Nieuw** - Edge function voor akkoord + partner notificaties |
-| 4 | `supabase/config.toml` | Registreer nieuwe edge function |
-| 5 | `src/components/customer-portal/DesktopProgramView.tsx` | Integreer AcceptQuoteProposalCard |
-| 6 | `src/components/customer-portal/MobileProgramView.tsx` | Integreer AcceptQuoteProposalCard |
-| 7 | `src/pages/admin/AdminQuotePreview.tsx` | Corrigeer validiteitstekst |
-| 8 | `supabase/functions/send-quote-offer/index.ts` | Corrigeer e-mail validiteitstekst |
-
----
-
-## Gedetailleerde Technische Specificaties
-
-### AcceptQuoteProposalCard Component
-
-```typescript
-interface AcceptQuoteProposalCardProps {
-  program: ProgramRequestWithItems;
-  onAccept: () => Promise<boolean>;
-  isLoading?: boolean;
+```tsx
+interface ProgramOverviewCardProps {
+  // ... bestaande props
+  onEdit?: () => void;  // Nieuw
 }
 
-// Visueel ontwerp:
-// - Achtergrond: gradient van blauw naar wit
-// - Icoon: groot vinkje of handshake
-// - Titel: "Uw maatwerkvoorstel"
-// - Subtitel: "[X] activiteiten • Geschat totaal €[bedrag]"
-// - Geldig tot: badge met datum
-// - Primaire knop: "Akkoord, start reserveringen"
-// - Secundaire tekst: "De leveranciers worden hierna benaderd"
+// In de component:
+<div 
+  className="grid grid-cols-2 md:grid-cols-4 gap-4 cursor-pointer group" 
+  onClick={onEdit}
+>
+  {/* Datum - met edit indicator */}
+  <div className="flex items-center gap-3 relative">
+    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+      <Calendar className="h-4 w-4 text-primary" />
+    </div>
+    <div className="min-w-0 flex-1">
+      <p className="text-xs text-muted-foreground">Datum</p>
+      <p className="font-medium text-sm truncate">{formatDateRange()}</p>
+    </div>
+    {onEdit && (
+      <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+    )}
+  </div>
+  
+  {/* Groep - met edit indicator */}
+  <div className="flex items-center gap-3 relative">
+    // ... vergelijkbaar met edit indicator
+  </div>
+</div>
 ```
 
-### accept-quote-proposal Edge Function
+**Alternatief (explicieter):** Voeg een dedicated "Bewerken" knop toe in de header:
 
-```typescript
-// Pseudo-code structuur:
-Deno.serve(async (req) => {
-  // 1. Parse token
-  const { token, origin } = await req.json();
+```tsx
+<div className="flex items-start justify-between gap-4">
+  <div className="flex-1">
+    <h1>Jouw maatwerkvoorstel</h1>
+    // ...
+  </div>
   
-  // 2. Fetch program
-  const program = await fetchProgramByToken(token);
-  
-  // 3. Validaties
-  if (program.quote_status !== "offerte_verstuurd") {
-    return error("Voorstel kan niet geaccepteerd worden");
-  }
-  if (new Date(program.quote_valid_until) < new Date()) {
-    return error("Dit voorstel is verlopen");
-  }
-  
-  // 4. Update quote_status
-  await supabase.from("program_requests").update({
-    quote_status: "akkoord_ontvangen",
-    updated_at: new Date().toISOString(),
-  }).eq("id", program.id);
-  
-  // 5. Fetch items met skip_partner_notification
-  const items = await supabase.from("program_request_items")
-    .select("*")
-    .eq("request_id", program.id)
-    .eq("skip_partner_notification", true);
-  
-  // 6. Groepeer per partner
-  const partnerGroups = groupItemsByProvider(items);
-  
-  // 7. Stuur notificaties per partner
-  for (const [partnerId, partnerData] of partnerGroups) {
-    // Update items
-    await supabase.from("program_request_items")
-      .update({ 
-        skip_partner_notification: false,
-        status: "pending",
-        status_updated_at: new Date().toISOString(),
-      })
-      .in("id", partnerData.itemIds);
-    
-    // Stuur e-mail
-    await sendPartnerNotification(partner, program, partnerData.items);
-  }
-  
-  // 8. Log history
-  await supabase.from("program_request_history").insert({
-    request_id: program.id,
-    action: "quote_accepted",
-    actor: "customer",
-    actor_name: program.customer_name,
-    notes: `Klant heeft voorstel geaccepteerd. ${items.length} partners genotificeerd.`,
-  });
-  
-  // 9. Bevestigingsmail naar klant
-  await sendCustomerConfirmation(program);
-  
-  return success();
-});
+  {/* Edit button - duidelijk zichtbaar */}
+  {onEdit && (
+    <Button variant="ghost" size="sm" onClick={onEdit}>
+      <Pencil className="h-4 w-4 mr-1" />
+      Bewerken
+    </Button>
+  )}
+</div>
 ```
 
-### Partner Notificatie E-mail Template
+### Stap 2: DesktopProgramView - Anchors toevoegen
 
-Hergebruikt styling van bestaande `program_request_partner` template:
-- Koptekst: Navy blauw met "Bureau Vlieland"
-- Klantgegevens sectie
-- Datums + aantal personen
-- Aangevraagde activiteiten lijst
-- Link naar Partner Portal
-- Disclaimer: "Dit is een vrijblijvende aanvraag"
+```tsx
+{/* Facturatie sectie - id toevoegen */}
+<div id="invoicing" className="scroll-mt-20">
+  <CompactBillingSection ... />
+</div>
 
----
+{/* Details sectie - nieuwe wrapper */}
+<div id="details" className="scroll-mt-20">
+  <Card className="border-dashed">
+    {/* Programma details, contact, etc. */}
+  </Card>
+</div>
 
-## Klant-ervaring na implementatie
+{/* Geschiedenis - id toevoegen */}
+{showHistory && history.length > 0 && (
+  <div id="history" className="mt-4 pt-4 border-t scroll-mt-20">
+    <ProgramHistoryTimeline ... />
+  </div>
+)}
+```
 
-```text
-STAP 1: Klant ontvangt e-mail met PDF voorstel
-        └── "Bekijk voorstel & geef akkoord" knop
+### Stap 3: Geschiedenis altijd tonen (optioneel)
 
-STAP 2: Klant opent klantportaal
-        └── Ziet AcceptQuoteProposalCard bovenaan
-        └── "X activiteiten • Geschat €X.XXX"
-        └── "Geldig tot [datum]"
-        └── [AKKOORD, START RESERVERINGEN] knop
+Omdat de navigatie naar "Geschiedenis" verwijst, moet deze sectie altijd bestaan:
 
-STAP 3: Na klik op Akkoord
-        └── Laadstatus: "Partners worden geïnformeerd..."
-        └── Succes: Toast "Voorstel geaccepteerd! De leveranciers zijn geïnformeerd."
-        └── AcceptQuoteProposalCard verdwijnt
-        └── ActionRequiredCard toont: "Wachten op bevestiging van X aanbieders"
-
-STAP 4: Normale workflow
-        └── Partners reageren (bevestigen/alternatief)
-        └── Klant accepteert per activiteit
-        └── Facturatiegegevens invullen
-        └── Voorwaarden accepteren
-        └── Boeking compleet
+```tsx
+{/* History section - altijd renderen, eventueel leeg */}
+<div id="history" className="scroll-mt-20">
+  {history.length > 0 ? (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <History className="h-5 w-5 text-primary" />
+          Geschiedenis
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ProgramHistoryTimeline history={history} variant="embedded" />
+      </CardContent>
+    </Card>
+  ) : (
+    <Card className="border-dashed">
+      <CardContent className="py-6 text-center text-muted-foreground">
+        <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Nog geen geschiedenis</p>
+      </CardContent>
+    </Card>
+  )}
+</div>
 ```
 
 ---
 
-## Randgevallen
+## Bestanden te wijzigen
 
-### Verlopen voorstel
-- Toon `AcceptQuoteProposalCard` met disabled state
-- Tekst: "Dit voorstel is verlopen op [datum]. Neem contact op voor een nieuw voorstel."
-- Geen akkoord-knop
+| # | Bestand | Wijziging |
+|---|---------|-----------|
+| 1 | `src/components/customer-portal/ProgramOverviewCard.tsx` | Voeg `onEdit` prop toe, maak datum/groep sectie klikbaar met visuele feedback |
+| 2 | `src/components/customer-portal/DesktopProgramView.tsx` | Voeg ontbrekende id's toe (`invoicing`, `details`, `history`), pass `onEdit` naar ProgramOverviewCard |
+| 3 | `src/components/customer-portal/MobileProgramView.tsx` | Zelfde aanpassingen voor mobiele weergave |
 
-### Geen items in voorstel
-- Toon geen AcceptQuoteProposalCard
-- Edge case: zou niet moeten voorkomen
+---
 
-### Klant is al akkoord
-- `quote_status === "akkoord_ontvangen"`
-- Toon geen AcceptQuoteProposalCard
-- Normale ActionRequiredCard toont voortgang
+## Visueel Resultaat
+
+### ProgramOverviewCard na wijziging:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Jouw maatwerkvoorstel  #REF-2501-0008   [Maatwerk]          │
+│                                              [Bewerken] ✏   │ ← Nieuwe knop
+│ Dit voorstel is speciaal voor jullie...                     │
+├─────────────────────────────────────────────────────────────┤
+│ ┌──────────────┐ ┌──────────────┐ ┌────────────┐            │
+│ │ 📅 Datum     │ │ 👥 Groep     │ │ ✨ Type    │            │
+│ │ 20 feb 2026 ✏│ │ 20 personen ✏│ │ Akkoord    │            │ ← Hover effect
+│ └──────────────┘ └──────────────┘ └────────────┘            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Navigatie na wijziging:
+- [Programma] → scrollt naar `#program` (Programma card)
+- [Facturatie] → scrollt naar `#invoicing` (Facturatie & Kosten card)
+- [Details] → scrollt naar `#details` (Programma details sectie)
+- [Geschiedenis] → scrollt naar `#history` (Geschiedenis card)
+
+Edit/ aanvulling om nog nieuwe oplossing te maken: 
+
+Ik denk dat we die navigatie items moeten herovewegen naar wellicht wel andere navigatie items. IK denk dat details en geschiedenis in principe wel weg kunnen en dat we logies moeten toevoegen als dat aan de orde is. 
+
+En zullen we fietsen huren wat prominenter in beeld maken? 
+
+En ik zie niets terug van de voorlopige kosten uit het programma voorstel. Is het niet vriendelijk om die te tonen bij "Facturatie per onderdeel"? 
 
