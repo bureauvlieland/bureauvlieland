@@ -1,49 +1,159 @@
 
+# Plan: Uitbreiden Building Block Categorieën
 
-# Plan: Illustratie genereren voor Vlieland Outdoor Center activiteiten
+## Samenvatting
 
-## Doel
+De huidige categorie "Activiteiten" bevat een mix van sportieve activiteiten, excursies, entertainment en locatieverhuur. Door de categorieën uit te breiden wordt het voor klanten makkelijker om relevante bouwstenen te vinden in de configurator.
 
-Een voorbeeldillustratie genereren in een moderne, vlakke illustratiestijl voor één van de 17 activiteiten van Vlieland Outdoor Center.
+## Nieuwe categoriestructuur
 
-## Voorbeeld activiteit
+| Categorie | Beschrijving | Icoon |
+|-----------|--------------|-------|
+| **outdoor** | Sportieve buitenactiviteiten | Mountain (berg) |
+| **excursies** | Rondleidingen en tours | Map (kaart) |
+| **entertainment** | Muziek, DJ, Silent Disco | Music (muzieknoot) |
+| **locaties** | Zaalhuur, tenten, techniek | Building (gebouw) |
+| **catering** | Eten en drinken (bestaand) | Utensils (bestek) |
+| **vervoer** | Transport (bestaand) | Ship (boot) |
 
-**Blokarten** - Een populaire en visueel aantrekkelijke activiteit die goed werkt als illustratie.
+## Toewijzing huidige bouwstenen
 
-## Technische aanpak
+### Naar `outdoor` (17 items)
+Alle Vlieland Outdoor Center activiteiten:
+- Blokarten, SUP, Bootcamp, Golfsurfen, Kitesurfen
+- Beach Golf, Beachtennis, Disc Golf
+- Handboog Schieten, Bijl Werpen, Lasergamen
+- Power Vliegeren, Branding Raften, Branding Kanoën
+- Outdoor Cooking, Viking Expeditie, Kubb
+- Teambuilding, Powerkiten, Surfles, Beach Games
 
-### Stap 1: Illustratie genereren
+### Naar `excursies` (4 items)
+- Vliehors Expres
+- Vuurtorenbezoek
+- Zeehondentocht
+- Fietstocht met begeleiding
 
-Gebruik van Lovable AI image generation (google/gemini-2.5-flash-image) met een prompt zoals:
+### Naar `entertainment` (3 items)
+- DJ Timothy
+- Live muziek
+- Silent Disco Beach
 
-```
-Modern flat illustration style, beach land sailing (blokart) activity on 
-Vlieland beach, colorful minimalist design, people racing on sand yachts, 
-Dutch island setting with dunes in background, vibrant colors, 
-clean vector-style illustration, no text
-```
+### Naar `locaties` (8 items)
+- Zaalhuur De Bolder
+- Locatiehuur Lange Paal
+- Easy-up tenten
+- Stretchtent incl. op- en afbouw
+- Techniek & installatie
+- Schoonmaak zaal
+- Personeelskosten Bureau Vlieland
+- Barfaciliteiten & glaswerk (verplaatst van catering)
 
-### Stap 2: Afbeelding opslaan
+### Blijft `catering` (11 items)
+Alle overige catering items
 
-- Upload naar de `building-block-images` storage bucket
-- Bestandsnaam: `voc-blokarten.webp`
+### Blijft `vervoer` (bestaand)
+Geen wijzigingen
 
-### Stap 3: Database bijwerken
+## Technische wijzigingen
 
+### 1. Database: ENUM type uitbreiden
 ```sql
-UPDATE building_blocks 
-SET image_url = '[storage-url]/voc-blokarten.webp'
-WHERE id = 'voc-blokarten';
+-- Nieuwe categorieën toevoegen aan het ENUM type
+ALTER TYPE building_block_category ADD VALUE 'outdoor';
+ALTER TYPE building_block_category ADD VALUE 'excursies';
+ALTER TYPE building_block_category ADD VALUE 'entertainment';
+ALTER TYPE building_block_category ADD VALUE 'locaties';
 ```
 
-## Resultaat
+### 2. Database: Bouwstenen migreren
+```sql
+-- Outdoor activiteiten
+UPDATE building_blocks SET category = 'outdoor' 
+WHERE id IN ('voc-blokarten', 'voc-sup', 'voc-bootcamp', ...);
 
-Na goedkeuring genereer ik één voorbeeldillustratie voor Blokarten. Als de stijl bevalt, kan ik daarna alle 17 activiteiten van dezelfde illustraties voorzien.
+-- Excursies
+UPDATE building_blocks SET category = 'excursies' 
+WHERE id IN ('vliehors-expres', 'vuurtoren', 'zeehondentocht', ...);
 
-## Illustratiestijl kenmerken
+-- Entertainment
+UPDATE building_blocks SET category = 'entertainment' 
+WHERE id IN ('dj-timothy', 'live-muziek', 'silent-disco');
 
-- **Kleurenpalet**: Warme, levendige kleuren (zandtinten, zeeblauw, zonnig geel)
-- **Vormgeving**: Vlakke, geometrische vormen zonder complexe schaduwen
-- **Sfeer**: Energiek, uitnodigend, professioneel
-- **Consistentie**: Alle illustraties in dezelfde stijl voor een samenhangend geheel
+-- Locaties
+UPDATE building_blocks SET category = 'locaties' 
+WHERE id IN ('zaalhuur-de-bolder', 'locatiehuur-lange-paal', ...);
+```
 
+### 3. TypeScript types bijwerken
+**Bestand:** `src/types/buildingBlock.ts`
+```typescript
+export type BuildingBlockCategory = 
+  | "outdoor" 
+  | "excursies" 
+  | "entertainment" 
+  | "locaties" 
+  | "catering" 
+  | "vervoer";
+
+export const categoryLabels: Record<BuildingBlockCategory, string> = {
+  outdoor: "Outdoor & Sport",
+  excursies: "Excursies",
+  entertainment: "Entertainment",
+  locaties: "Locaties",
+  catering: "Catering",
+  vervoer: "Vervoer",
+};
+```
+
+### 4. CategoryFilter component bijwerken
+**Bestand:** `src/components/configurator/CategoryFilter.tsx`
+```typescript
+const categories = [
+  { id: "all", label: "Alles", icon: null },
+  { id: "outdoor", label: "Outdoor & Sport", icon: Mountain },
+  { id: "excursies", label: "Excursies", icon: Map },
+  { id: "entertainment", label: "Entertainment", icon: Music },
+  { id: "locaties", label: "Locaties", icon: Building2 },
+  { id: "catering", label: "Catering", icon: Utensils },
+  { id: "vervoer", label: "Vervoer", icon: Ship },
+];
+```
+
+### 5. Admin BuildingBlockSheet bijwerken
+**Bestand:** `src/components/admin/BuildingBlockSheet.tsx`
+
+Nieuwe categorieën toevoegen aan:
+- Zod schema validatie (regel 61)
+- Select dropdown opties (regels 421-425)
+
+### 6. Admin BuildingBlocks filter bijwerken
+**Bestand:** `src/pages/admin/AdminBuildingBlocks.tsx`
+
+Nieuwe categorieën toevoegen aan het filter dropdown.
+
+### 7. Customer portal AddActivitySheet bijwerken
+**Bestand:** `src/components/customer-portal/AddActivitySheet.tsx`
+
+Category filter opties uitbreiden.
+
+### 8. Admin AddActivitySheet bijwerken
+**Bestand:** `src/components/admin/AdminAddActivitySheet.tsx`
+
+Category filter opties uitbreiden.
+
+## Risico's en mitigatie
+
+| Risico | Impact | Mitigatie |
+|--------|--------|-----------|
+| Bestaande data in `program_request_items` | Laag | Items slaan `block_category` op als text, geen ENUM |
+| ENUM wijziging | Middel | Nieuwe waarden toevoegen is veilig (geen data verlies) |
+| Tijdelijke inconsistentie | Laag | Alle wijzigingen in één migratie |
+
+## Volgorde van implementatie
+
+1. Database migratie uitvoeren (ENUM + data updates)
+2. TypeScript types bijwerken
+3. CategoryFilter component bijwerken
+4. Admin formulieren bijwerken
+5. Customer portal filters bijwerken
+6. Testen in configurator
