@@ -41,15 +41,23 @@ export const EditProgramDetailsDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const hasDateChanges = JSON.stringify(dates.map(d => d.toISOString().split("T")[0])) !== 
-    JSON.stringify(initialDates.map(d => d.toISOString().split("T")[0]));
+  // Use local date formatting to avoid timezone shifts
+  const formatLocalDate = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const hasDateChanges = JSON.stringify(dates.map(formatLocalDate)) !== 
+    JSON.stringify(initialDates.map(formatLocalDate));
   const hasPeopleChanges = people !== initialPeople;
   const hasChanges = hasDateChanges || hasPeopleChanges;
 
   const handleAddDate = (date: Date | undefined) => {
     if (!date || dates.length >= MAX_DAYS) return;
     const exists = dates.some(d => 
-      d.toISOString().split("T")[0] === date.toISOString().split("T")[0]
+      formatLocalDate(d) === formatLocalDate(date)
     );
     if (!exists) {
       setDates([...dates, date].sort((a, b) => a.getTime() - b.getTime()));
@@ -87,7 +95,7 @@ export const EditProgramDetailsDialog = ({
   const disabledDates = (date: Date) => {
     const isPast = isBefore(date, startOfDay(new Date()));
     const isSelected = dates.some(d => 
-      d.toISOString().split("T")[0] === date.toISOString().split("T")[0]
+      formatLocalDate(d) === formatLocalDate(date)
     );
     return isPast || isSelected;
   };
