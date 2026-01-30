@@ -220,6 +220,7 @@ export const MobileProgramView = ({
         quoteStatus={program.quote_status as any}
         quoteValidUntil={program.quote_valid_until}
         termsAcceptedAt={program.terms_accepted_at}
+        onEdit={onOpenEdit}
       />
 
       {/* 2. Quote Proposal Card - only for maatwerk quotes awaiting approval */}

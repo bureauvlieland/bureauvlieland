@@ -194,6 +194,7 @@ export const DesktopProgramView = ({
           quoteStatus={program.quote_status as any}
           quoteValidUntil={program.quote_valid_until}
           termsAcceptedAt={program.terms_accepted_at}
+          onEdit={onOpenEdit}
         />
 
         {/* 2. Quote Proposal Card - only for maatwerk quotes awaiting approval */}
@@ -328,14 +329,16 @@ export const DesktopProgramView = ({
         </div>
 
         {/* 5. Billing & Costs section - always visible, not in accordion */}
-        <CompactBillingSection
-          program={program}
-          items={program.items}
-          numberOfPeople={program.number_of_people}
-          termsAccepted={termsAccepted}
-          selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
-          onEditBilling={onOpenBilling}
-        />
+        <div id="billing" className="scroll-mt-20">
+          <CompactBillingSection
+            program={program}
+            items={program.items}
+            numberOfPeople={program.number_of_people}
+            termsAccepted={termsAccepted}
+            selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+            onEditBilling={onOpenBilling}
+          />
+        </div>
 
         {/* 6. Accept terms - only when ready */}
         {allConfirmed && !termsAccepted && (
