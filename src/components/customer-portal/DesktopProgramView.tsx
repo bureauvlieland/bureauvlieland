@@ -136,6 +136,8 @@ export const DesktopProgramView = ({
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isMultiDay = selectedDates.length > 1;
   const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
+  // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
+  const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
 
   // Calculate total cost for sidebar
   const totalCost = useMemo(() => {
@@ -188,7 +190,7 @@ export const DesktopProgramView = ({
         <ActionRequiredCard
           statusSummary={statusSummary}
           isMultiDay={isMultiDay}
-          hasAccommodation={hasSelectedAccommodation}
+          hasAccommodation={hasActiveAccommodation}
           billingComplete={billingComplete}
           termsAccepted={termsAccepted}
           onOpenBilling={onOpenBilling}
