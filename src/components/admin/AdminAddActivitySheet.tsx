@@ -60,6 +60,7 @@ export const AdminAddActivitySheet = ({
   const [notes, setNotes] = useState("");
   const [priceOverride, setPriceOverride] = useState<string>("");
   const [customName, setCustomName] = useState<string>("");
+  const [customDescription, setCustomDescription] = useState<string>("");
   const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -95,6 +96,7 @@ export const AdminAddActivitySheet = ({
     setNotes("");
     setPriceOverride(block.price_adult ? String(block.price_adult) : "");
     setCustomName(block.name);
+    setCustomDescription(block.short_description || "");
     setInvoicedBy(block.block_type === "bureau" ? "bureau" : "partner");
   };
 
@@ -136,6 +138,7 @@ export const AdminAddActivitySheet = ({
           status: "pending",
           item_quote_status: "concept",
           admin_price_override: price,
+          admin_price_notes: customDescription || null,
           skip_partner_notification: true,
         })
         .select()
@@ -176,6 +179,7 @@ export const AdminAddActivitySheet = ({
     setSearchQuery("");
     setCategoryFilter("all");
     setCustomName("");
+    setCustomDescription("");
     setInvoicedBy("partner");
     onOpenChange(false);
   };
@@ -215,6 +219,18 @@ export const AdminAddActivitySheet = ({
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="Naam van de activiteit..."
+              />
+            </div>
+
+            {/* Custom description for customer */}
+            <div className="space-y-2">
+              <Label htmlFor="customDescription">Beschrijving voor klant (optioneel)</Label>
+              <Textarea
+                id="customDescription"
+                value={customDescription}
+                onChange={(e) => setCustomDescription(e.target.value)}
+                placeholder="Bijv. 'Met 2 boten' of 'Inclusief gids'..."
+                rows={2}
               />
             </div>
 
