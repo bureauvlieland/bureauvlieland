@@ -1,125 +1,212 @@
 
+# Plan: PDF-bijlage bij E-mail + BTW-correcties + Financieel Overzicht Uitbreiding
 
-# Plan: Facturatie-Flow Validatie bij Bureau Vlieland Items
+## Geïdentificeerde Problemen
 
-## Huidige Situatie Geanalyseerd
+### 1. PDF wordt niet meegestuurd als bijlage
+**Huidig gedrag:** De `send-quote-offer` Edge Function stuurt alleen een HTML-e-mail met een link naar het klantportaal. De PDF wordt wel gegenereerd in de browser, maar niet bijgevoegd aan de e-mail.
 
-De code werkt technisch correct, maar er zijn enkele onduidelijkheden die verduidelijking nodig hebben:
+### 2. BTW-berekening in PDF is incorrect
+**Probleem in `AdminQuotePreview.tsx` regel 131-137:**
+```typescript
+const subtotal = itemsTotal * (request?.number_of_people || 1);  // Vermenigvuldigt pp-prijs
+const vatAmount = (subtotal + bureauFee) * 0.21;  // Berekent 21% BTW OVER het totaal
+const total = subtotal + bureauFee + vatAmount;   // Telt BTW erbij op
+```
 
-### Wat gebeurt er wanneer "Bureau Vlieland" wordt gekozen als facturerende partij?
+**Maar:** Prijzen in het systeem zijn al inclusief BTW. De berekening zou dus moeten zijn:
+- Subtotaal = prijzen (incl. BTW)
+- BTW = subtotaal / 1.21 × 0.21 (terugrekenen)
+- Excl. BTW = subtotaal - BTW
 
-| Aspect | Partner facturatie | Bureau Vlieland facturatie |
-|--------|-------------------|---------------------------|
-| `block_type` | `"partner"` | `"bureau"` |
-| `provider_id` | Originele partner ID | `"bureau-vlieland"` |
-| Partner ziet item? | ✅ Ja | ❌ Nee |
-| Klant ziet juiste groepering? | ✅ Ja (onder "Aanbieders") | ✅ Ja (onder "Bureau Vlieland") |
-| Admin factureert klant | ❌ Nee | ✅ Ja |
-
-## Problemen Geïdentificeerd
-
-### 1. Partner Verliest Zichtbaarheid
-Wanneer een admin kiest voor "Bureau Vlieland" als facturerende partij, verdwijnt het item uit de partner dashboard. Dit is **by design**, maar:
-- Partner krijgt geen notificatie over de activiteit
-- Partner kan de activiteit niet markeren als "uitgevoerd"
-- Alle coördinatie moet via Bureau Vlieland lopen
-
-### 2. Ontbrekende Admin-zijde Weergave
-In de AdminRequestDetail pagina is niet duidelijk zichtbaar wie er moet factureren en aan wie:
-- Bureau items zouden een indicator moeten hebben "Te factureren door: Bureau Vlieland → Klant"
-- Partner items zouden moeten tonen "Te factureren door: [Partner] → Klant"
+### 3. Financieel Overzicht in AdminRequestDetail mist voorlopige prijzen
+**Huidig:** `FinancialOverviewCard` toont alleen bevestigde bureau-items (`status === "confirmed"`).
+**Gewenst:** Voor maatwerk-offertes wil je ook de voorlopige prijzen zien, zelfs als items nog niet bevestigd zijn.
 
 ---
 
-## Voorgestelde Verbeteringen
+## Voorgestelde Oplossingen
 
-### A. Visuele Indicator in AdminRequestDetail
-Voeg een badge toe bij elk item dat aangeeft wie factureert:
-- 🏢 "Bureau → Klant" voor bureau items
-- 👥 "Partner → Klant" voor partner items
+### A. PDF als bijlage meesturen
 
-### B. Waarschuwing in AdminAddActivitySheet
-Wanneer admin "Bureau Vlieland" kiest als facturerende partij, toon een waarschuwing:
-> "Let op: De partner ontvangt geen notificatie en ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland."
+| Stap | Actie |
+|------|-------|
+| 1 | Frontend genereert PDF als Base64-string |
+| 2 | Base64 wordt meegestuurd naar `send-quote-offer` Edge Function |
+| 3 | Edge Function voegt PDF als bijlage toe aan Mailjet-bericht |
 
-### C. Behoud Originele Provider Info (optioneel)
-Voeg velden toe om de "uitvoerende partner" te tracken, los van de "facturerende partij":
-- `invoiced_by`: `"bureau"` | `"partner"`
-- `executed_by_partner_id`: Originele partner ID (voor coördinatie)
+**Technische aanpak:**
+```typescript
+// Frontend: PDF genereren en als base64 meesturen
+const pdfBlob = await generatePDF();
+const base64 = await blobToBase64(pdfBlob);
+
+await supabase.functions.invoke("send-quote-offer", {
+  body: {
+    requestId,
+    validUntil,
+    personalMessage,
+    pdfBase64: base64,  // Nieuwe parameter
+    pdfFilename: `Voorstel-${referenceNumber}.pdf`
+  }
+});
+
+// Edge Function: Mailjet attachment
+{
+  From: { ... },
+  To: [ ... ],
+  Subject: "...",
+  HTMLPart: emailHtml,
+  Attachments: [
+    {
+      ContentType: "application/pdf",
+      Filename: pdfFilename,
+      Base64Content: pdfBase64
+    }
+  ]
+}
+```
+
+### B. BTW-berekening corrigeren
+
+**Huidige (fout):**
+```
+Prijs p.p.: €50 (incl. BTW)
+Subtotaal (20 pers.): €1000
+BTW (21%): €210    ← FOUT: berekent 21% over incl-prijs
+Totaal: €1210      ← Onjuist
+```
+
+**Correct:**
+```
+Prijs p.p.: €50 (incl. BTW)
+Subtotaal incl. BTW (20 pers.): €1000
+Subtotaal excl. BTW: €826,45 (= €1000 / 1.21)
+BTW (21%): €173,55 (= €1000 - €826,45)
+Totaal incl. BTW: €1000  ← Gelijk aan subtotaal, want al incl.
+```
+
+**Aangepaste logica:**
+```typescript
+const calculateTotals = () => {
+  const itemsTotal = items.reduce((sum, item) => sum + getItemPrice(item), 0);
+  const bureauFee = calculateBureauFee(request?.number_of_people || 0);
+  
+  // Prijzen zijn per persoon, vermenigvuldigen
+  const subtotalInclVat = (itemsTotal * (request?.number_of_people || 1)) + bureauFee;
+  
+  // Terugrekenen van BTW (prijzen zijn al inclusief)
+  const subtotalExclVat = subtotalInclVat / 1.21;
+  const vatAmount = subtotalInclVat - subtotalExclVat;
+  
+  return { 
+    subtotalInclVat,   // Totaal incl. BTW
+    subtotalExclVat,   // Totaal excl. BTW
+    vatAmount,         // BTW-bedrag
+    bureauFee 
+  };
+};
+```
+
+### C. Financieel Overzicht uitbreiden voor maatwerk-offertes
+
+**Nieuwe sectie toevoegen:** "VOORLOPIGE PROGRAMMAKOSTEN"
+
+| Element | Weergave |
+|---------|----------|
+| Alle activiteiten (ongeacht status) | Met indicatieve prijs |
+| Badge per item | "Concept" / "Bevestigd" / "Optioneel" |
+| Subtotaal voorlopig | Som van alle indicatieve prijzen |
+| Coordinatiefee | Gebaseerd op groepsgrootte |
+
+**Nieuwe component-props:**
+```typescript
+interface FinancialOverviewCardProps {
+  numberOfPeople: number;
+  items: ProgramRequestItem[];
+  invoices: BureauInvoice[];
+  onRegisterInvoice: () => void;
+  isQuoteMode?: boolean;  // Nieuw: toon alle items, niet alleen bevestigde
+}
+```
 
 ---
 
 ## Implementatiestappen
 
-| # | Actie | Bestand |
-|---|-------|---------|
-| 1 | Voeg waarschuwingsbanner toe wanneer "Bureau Vlieland" wordt gekozen | `AdminAddActivitySheet.tsx` |
-| 2 | Voeg facturatie-indicator badge toe in AdminRequestDetail | `AdminRequestDetail.tsx` |
-| 3 | Voeg "Gefactureerd door" kolom toe in item-lijst | `AdminRequestDetail.tsx` |
+| # | Bestand | Actie |
+|---|---------|-------|
+| 1 | `AdminQuotePreview.tsx` | Corrigeer BTW-berekening (prijzen zijn incl. BTW) |
+| 2 | `AdminQuotePreview.tsx` | Voeg PDF base64 conversie toe en stuur mee naar Edge Function |
+| 3 | `send-quote-offer/index.ts` | Accepteer PDF-bijlage en voeg toe aan Mailjet-bericht |
+| 4 | `FinancialOverviewCard.tsx` | Voeg "VOORLOPIGE PROGRAMMAKOSTEN" sectie toe voor quote-modus |
+| 5 | `AdminRequestDetail.tsx` | Geef `isQuoteMode={true}` door aan FinancialOverviewCard voor maatwerk-projecten |
 
 ---
 
-## Test Scenarios (Handmatig)
+## PDF Weergave na correctie
 
-### Scenario 1: Bureau Vlieland Facturatie
-1. Open AdminRequestDetail voor een maatwerkofferte
-2. Klik "Activiteit toevoegen"
-3. Selecteer een activiteit (bijv. Zeehondentocht)
-4. Kies "Bureau Vlieland" als facturerende partij
-5. Bevestig toevoeging
-6. **Verificatie Admin**: Item toont `block_type: bureau` en `provider_id: bureau-vlieland`
-7. **Verificatie Partner Portal**: Log in als Zeehondentochten Vlieland → Item mag NIET zichtbaar zijn
-8. **Verificatie Klantpagina**: Item staat onder "Factuur Bureau Vlieland"
-
-### Scenario 2: Partner Facturatie
-1. Voeg dezelfde activiteit toe maar kies de partner als facturerende partij
-2. **Verificatie Partner Portal**: Item IS zichtbaar bij partner
-3. **Verificatie Klantpagina**: Item staat onder "Facturen aanbieders"
+```text
+╔════════════════════════════════════════════════════╗
+║ BUREAU VLIELAND - Maatwerkvoorstel                 ║
+╠════════════════════════════════════════════════════╣
+║ Klant: Bedrijf X                                   ║
+║ Datum: 15-16 maart 2025                            ║
+║ Aantal: 25 personen                                ║
+╠════════════════════════════════════════════════════╣
+║ DAG 1 - 15 maart 2025                              ║
+╠────────────────────────────────────────────────────╣
+║ 10:00  Zeehondentocht (met 2 boten)      €45 p.p.  ║
+║        Rederij Doeksen                             ║
+║ 14:00  Wadlopen                          €35 p.p.  ║
+║        Wadloopcentrum                              ║
+╠════════════════════════════════════════════════════╣
+║ Subtotaal (25 pers.)              €2.000,00        ║
+║ Coördinatiekosten                    €100,00       ║
+║ ──────────────────────────────────────────         ║
+║ Subtotaal excl. BTW               €1.735,54        ║
+║ BTW (21%)                           €364,46        ║
+║ ──────────────────────────────────────────         ║
+║ TOTAAL INCL. BTW                  €2.100,00        ║
+╠════════════════════════════════════════════════════╣
+║ ⚠ Dit voorstel is geldig tot 14 februari 2025     ║
+║   Prijzen zijn onder voorbehoud.                   ║
+║   Facturatie kan geschieden door partners.         ║
+╚════════════════════════════════════════════════════╝
+```
 
 ---
 
 ## Technische Details
 
-### AdminAddActivitySheet.tsx - Huidige logica (correct)
-```typescript
-// Regel 115-120
-const isBureauInvoiced = invoicedBy === "bureau";
-const providerId = isBureauInvoiced 
-  ? "bureau-vlieland" 
-  : (selectedBlock.provider_id || "bureau-vlieland");
-const blockType = isBureauInvoiced 
-  ? "bureau" 
-  : selectedBlock.block_type;
+### Mailjet Attachment Format
+```javascript
+{
+  Messages: [{
+    From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+    To: [{ Email: customerEmail, Name: customerName }],
+    Subject: "Uw maatwerkvoorstel van Bureau Vlieland",
+    HTMLPart: emailHtml,
+    Attachments: [{
+      ContentType: "application/pdf",
+      Filename: "Voorstel-BV-2501-0001.pdf",
+      Base64Content: "JVBERi0xLjQKJ..."  // Base64-encoded PDF
+    }]
+  }]
+}
 ```
 
-### get-partner-dashboard - Filter logica (correct)
+### Base64 Helper Function
 ```typescript
-// Regel 73-74 - Partner ziet alleen items waar provider_id = eigen ID
-.eq("provider_id", partner.id)
-.neq("block_type", "self_arranged")
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
 ```
-
-### PriceSummaryCard.tsx - Groepering (correct)
-```typescript
-// Regel 50-57 - Bureau vs Partner items gescheiden
-const confirmedBureauItems = confirmedItems.filter(
-  (item) => item.block_type === "bureau"
-);
-const confirmedPartnerItems = confirmedItems.filter(
-  (item) => item.block_type === "partner"
-);
-```
-
----
-
-## Conclusie
-
-De huidige implementatie is **functioneel correct**:
-- ✅ Bureau items worden correct gefilterd uit partner dashboard
-- ✅ Klant ziet correcte facturatie-groepering
-- ✅ Admin kan kiezen wie factureert
-
-**Aanbevelingen voor UX-verbetering:**
-1. Voeg visuele indicator toe in admin interface
-2. Toon waarschuwing wanneer partner niet genotificeerd wordt
-
