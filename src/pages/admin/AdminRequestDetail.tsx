@@ -460,14 +460,22 @@ const AdminRequestDetail = () => {
             <div className="flex items-center gap-2 flex-wrap">
               {/* Quote mode actions */}
               {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
-                <AdminSendQuoteDialog
-                  requestId={request.id}
-                  customerName={request.customer_name}
-                  customerEmail={request.customer_email}
-                  programDates={request.selected_dates as string[]}
-                  currentValidUntil={request.quote_valid_until}
-                  onSuccess={fetchRequestData}
-                />
+                <>
+                  <Button variant="outline" asChild>
+                    <Link to={`/admin/projecten/${request.id}/offerte-preview`}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Preview PDF
+                    </Link>
+                  </Button>
+                  <AdminSendQuoteDialog
+                    requestId={request.id}
+                    customerName={request.customer_name}
+                    customerEmail={request.customer_email}
+                    programDates={request.selected_dates as string[]}
+                    currentValidUntil={request.quote_valid_until}
+                    onSuccess={fetchRequestData}
+                  />
+                </>
               )}
               <Button variant="outline" asChild>
                 <Link to={customerPortalUrl} target="_blank">

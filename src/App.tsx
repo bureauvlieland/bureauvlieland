@@ -58,6 +58,7 @@ import AdminAccommodation from "./pages/admin/AdminAccommodation";
 import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
 import AdminProjects from "./pages/admin/AdminProjects";
 import AdminProgramNew from "./pages/admin/AdminProgramNew";
+import AdminQuotePreview from "./pages/admin/AdminQuotePreview";
 import AdminSettings from "./pages/admin/AdminSettings";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
@@ -119,6 +120,8 @@ const App = () => (
             <Route path="/admin/crm" element={<AdminCRM />} />
             <Route path="/admin/aanvragen" element={<AdminRequests />} />
             <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
+            <Route path="/admin/projecten/:id" element={<AdminRequestDetail />} />
+            <Route path="/admin/projecten/:id/offerte-preview" element={<AdminQuotePreview />} />
             <Route path="/admin/partners" element={<AdminPartners />} />
             <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
             <Route path="/admin/todos" element={<AdminTodos />} />
