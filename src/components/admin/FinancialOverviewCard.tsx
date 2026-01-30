@@ -14,6 +14,8 @@ interface ProgramRequestItem {
   block_type: string;
   status: string;
   quoted_price: number | null;
+  admin_price_override?: number | null;
+  item_quote_status?: string | null;
 }
 
 interface FinancialOverviewCardProps {
@@ -21,6 +23,7 @@ interface FinancialOverviewCardProps {
   items: ProgramRequestItem[];
   invoices: BureauInvoice[];
   onRegisterInvoice: () => void;
+  isQuoteMode?: boolean; // Show preliminary prices for all items
 }
 
 export const FinancialOverviewCard = ({
@@ -28,13 +31,24 @@ export const FinancialOverviewCard = ({
   items,
   invoices,
   onRegisterInvoice,
+  isQuoteMode = false,
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   
+  // Helper to get item price (admin override or quoted price)
+  const getItemPrice = (item: ProgramRequestItem) => {
+    return item.admin_price_override ?? item.quoted_price ?? 0;
+  };
+
   // Calculate items to be invoiced by Bureau Vlieland
   const bureauItems = items.filter(
     (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price
   );
+  
+  // In quote mode, show all items with their preliminary prices
+  const quoteItems = isQuoteMode 
+    ? items.filter((item) => item.status !== "cancelled")
+    : [];
 
   // Calculate totals
   const itemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
@@ -75,6 +89,20 @@ export const FinancialOverviewCard = ({
     credit: "Creditnota",
   };
 
+  // Calculate quote mode totals (preliminary)
+  const quoteItemsTotal = quoteItems.reduce((sum, item) => sum + getItemPrice(item), 0);
+  const quoteSubtotalInclVat = (quoteItemsTotal * numberOfPeople) + coordinationFee;
+  const quoteSubtotalExclVat = quoteSubtotalInclVat / vatMultiplier;
+  const quoteVat = quoteSubtotalInclVat - quoteSubtotalExclVat;
+
+  // Status badge helper for quote mode
+  const getQuoteStatusBadge = (item: ProgramRequestItem) => {
+    const status = item.item_quote_status;
+    if (status === "bevestigd") return <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Bevestigd</Badge>;
+    if (status === "optioneel") return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Optioneel</Badge>;
+    return <Badge variant="outline" className="text-xs">Concept</Badge>;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -84,48 +112,105 @@ export const FinancialOverviewCard = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Items to invoice */}
-        <div>
-          <h4 className="text-sm font-semibold text-slate-700 mb-2">
-            TE FACTUREREN DOOR BUREAU VLIELAND
-          </h4>
-          <div className="space-y-1.5">
-            {bureauItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                  <span>{item.block_name}</span>
+        {/* Quote mode: Preliminary program costs */}
+        {isQuoteMode && quoteItems.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-2">
+              VOORLOPIGE PROGRAMMAKOSTEN
+            </h4>
+            <div className="space-y-1.5">
+              {quoteItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    {getQuoteStatusBadge(item)}
+                    <span className="truncate max-w-[180px]">{item.block_name}</span>
+                  </div>
+                  <span className="font-medium">
+                    {getItemPrice(item) > 0 
+                      ? `${formatCurrency(getItemPrice(item))} p.p.` 
+                      : "Op aanvraag"
+                    }
+                  </span>
                 </div>
-                <span className="font-medium">{formatCurrency(item.quoted_price || 0)}</span>
+              ))}
+              <div className="flex items-center justify-between text-sm pt-1">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Coordinatiefee ({numberOfPeople} pers.)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(coordinationFee)}</span>
               </div>
-            ))}
-            {bureauItems.length === 0 && (
-              <p className="text-sm text-slate-500">Geen bevestigde bureau items</p>
-            )}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                <span>Coordinatiefee ({numberOfPeople} pers.)</span>
+            </div>
+            <Separator className="my-3" />
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Subtotaal excl. BTW (indicatief)</span>
+                <span>{formatCurrency(quoteSubtotalExclVat)}</span>
               </div>
-              <span className="font-medium">{formatCurrency(coordinationFee)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">BTW (21%)</span>
+                <span>{formatCurrency(quoteVat)}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>Totaal incl. BTW (indicatief)</span>
+                <span>{formatCurrency(quoteSubtotalInclVat)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              * Prijzen zijn onder voorbehoud en kunnen wijzigen na bevestiging door partners.
+            </p>
+          </div>
+        )}
+
+        {/* Regular mode or separator in quote mode */}
+        {isQuoteMode && quoteItems.length > 0 && bureauItems.length > 0 && (
+          <Separator />
+        )}
+
+        {/* Items to invoice (confirmed bureau items) */}
+        {(!isQuoteMode || bureauItems.length > 0) && (
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-2">
+              TE FACTUREREN DOOR BUREAU VLIELAND
+            </h4>
+            <div className="space-y-1.5">
+              {bureauItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                    <span>{item.block_name}</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(item.quoted_price || 0)}</span>
+                </div>
+              ))}
+              {bureauItems.length === 0 && (
+                <p className="text-sm text-slate-500">Geen bevestigde bureau items</p>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Coordinatiefee ({numberOfPeople} pers.)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(coordinationFee)}</span>
+              </div>
+            </div>
+            <Separator className="my-3" />
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Subtotaal excl. BTW</span>
+                <span>{formatCurrency(totalExclVat)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">BTW (21%)</span>
+                <span>{formatCurrency(totalVat)}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>Totaal incl. BTW</span>
+                <span>{formatCurrency(totalInclVat)}</span>
+              </div>
             </div>
           </div>
-          <Separator className="my-3" />
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Subtotaal excl. BTW</span>
-              <span>{formatCurrency(totalExclVat)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">BTW (21%)</span>
-              <span>{formatCurrency(totalVat)}</span>
-            </div>
-            <div className="flex justify-between font-semibold">
-              <span>Totaal incl. BTW</span>
-              <span>{formatCurrency(totalInclVat)}</span>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Invoiced amounts */}
         {invoices.length > 0 && (

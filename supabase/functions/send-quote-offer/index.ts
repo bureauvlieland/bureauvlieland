@@ -26,6 +26,8 @@ const SendQuoteOfferSchema = z.object({
   validUntil: z.string(), // ISO date string
   personalMessage: z.string().optional(),
   origin: z.string().optional(),
+  pdfBase64: z.string().optional(), // Base64-encoded PDF
+  pdfFilename: z.string().optional(), // PDF filename
 });
 
 interface ProgramItem {
@@ -264,7 +266,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { requestId, validUntil, personalMessage, origin } = validationResult.data;
+    const { requestId, validUntil, personalMessage, origin, pdfBase64, pdfFilename } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
 
@@ -319,23 +321,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Get recipient email (redirect in test mode)
     const recipientEmail = getRecipientEmail(programRequest.customer_email, origin);
 
-    // Send the email
-    const mailjetResponse = await sendEmailViaMailjet([
-      {
-        From: {
-          Email: "noreply@bureauvlieland.nl",
-          Name: "Bureau Vlieland",
-        },
-        To: [
-          {
-            Email: recipientEmail,
-            Name: programRequest.customer_name,
-          },
-        ],
-        Subject: `${subjectPrefix}Uw maatwerkvoorstel van Bureau Vlieland`,
-        HTMLPart: emailHtml,
+    // Build email message with optional PDF attachment
+    const emailMessage: any = {
+      From: {
+        Email: "noreply@bureauvlieland.nl",
+        Name: "Bureau Vlieland",
       },
-    ]);
+      To: [
+        {
+          Email: recipientEmail,
+          Name: programRequest.customer_name,
+        },
+      ],
+      Subject: `${subjectPrefix}Uw maatwerkvoorstel van Bureau Vlieland`,
+      HTMLPart: emailHtml,
+    };
+
+    // Add PDF attachment if provided
+    if (pdfBase64 && pdfFilename) {
+      emailMessage.Attachments = [
+        {
+          ContentType: "application/pdf",
+          Filename: pdfFilename,
+          Base64Content: pdfBase64,
+        },
+      ];
+      console.log(`Attaching PDF: ${pdfFilename} (${Math.round(pdfBase64.length / 1024)}KB base64)`);
+    }
+
+    // Send the email
+    const mailjetResponse = await sendEmailViaMailjet([emailMessage]);
 
     // Log the email
     const messageId = mailjetResponse?.Messages?.[0]?.MessageID || null;
