@@ -1193,7 +1193,7 @@ export type Database = {
           {
             foreignKeyName: "program_requests_linked_accommodation_id_fkey"
             columns: ["linked_accommodation_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "accommodation_requests"
             referencedColumns: ["id"]
           },
