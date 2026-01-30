@@ -370,11 +370,32 @@ export const AdminAddActivitySheet = ({
                   Alle
                 </Button>
                 <Button
-                  variant={categoryFilter === "activiteiten" ? "default" : "outline"}
+                  variant={categoryFilter === "outdoor" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCategoryFilter("activiteiten")}
+                  onClick={() => setCategoryFilter("outdoor")}
                 >
-                  Activiteiten
+                  Outdoor
+                </Button>
+                <Button
+                  variant={categoryFilter === "excursies" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("excursies")}
+                >
+                  Excursies
+                </Button>
+                <Button
+                  variant={categoryFilter === "entertainment" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("entertainment")}
+                >
+                  Entertainment
+                </Button>
+                <Button
+                  variant={categoryFilter === "locaties" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter("locaties")}
+                >
+                  Locaties
                 </Button>
                 <Button
                   variant={categoryFilter === "catering" ? "default" : "outline"}

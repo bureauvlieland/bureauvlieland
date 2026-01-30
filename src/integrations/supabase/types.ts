@@ -1268,7 +1268,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "partner"
-      building_block_category: "activiteiten" | "catering" | "vervoer"
+      building_block_category:
+        | "activiteiten"
+        | "catering"
+        | "vervoer"
+        | "outdoor"
+        | "excursies"
+        | "entertainment"
+        | "locaties"
       building_block_price_type:
         | "per_person"
         | "total"
@@ -1404,7 +1411,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "partner"],
-      building_block_category: ["activiteiten", "catering", "vervoer"],
+      building_block_category: [
+        "activiteiten",
+        "catering",
+        "vervoer",
+        "outdoor",
+        "excursies",
+        "entertainment",
+        "locaties",
+      ],
       building_block_price_type: [
         "per_person",
         "total",

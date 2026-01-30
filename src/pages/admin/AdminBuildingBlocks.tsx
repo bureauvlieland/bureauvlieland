@@ -141,7 +141,10 @@ const AdminBuildingBlocks = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle categorieën</SelectItem>
-                <SelectItem value="activiteiten">Activiteiten</SelectItem>
+                <SelectItem value="outdoor">Outdoor & Sport</SelectItem>
+                <SelectItem value="excursies">Excursies</SelectItem>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="locaties">Locaties</SelectItem>
                 <SelectItem value="catering">Catering</SelectItem>
                 <SelectItem value="vervoer">Vervoer</SelectItem>
               </SelectContent>

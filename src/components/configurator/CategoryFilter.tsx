@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Compass, Utensils, Ship } from "lucide-react";
+import { Mountain, Map, Music, Building2, Utensils, Ship } from "lucide-react";
 import type { BuildingBlockCategory } from "@/types/buildingBlock";
 
 interface CategoryFilterProps {
@@ -9,7 +9,10 @@ interface CategoryFilterProps {
 
 const categories = [
   { id: "all" as const, label: "Alles", icon: null },
-  { id: "activiteiten" as const, label: "Activiteiten", icon: Compass },
+  { id: "outdoor" as const, label: "Outdoor & Sport", icon: Mountain },
+  { id: "excursies" as const, label: "Excursies", icon: Map },
+  { id: "entertainment" as const, label: "Entertainment", icon: Music },
+  { id: "locaties" as const, label: "Locaties", icon: Building2 },
   { id: "catering" as const, label: "Catering", icon: Utensils },
   { id: "vervoer" as const, label: "Vervoer", icon: Ship },
 ];
