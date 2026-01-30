@@ -58,7 +58,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
   description: z.string().optional(),
   short_description: z.string().max(100, "Maximaal 100 tekens").optional(),
-  category: z.enum(["activiteiten", "catering", "vervoer"]),
+  category: z.enum(["outdoor", "excursies", "entertainment", "locaties", "catering", "vervoer"]),
   block_type: z.enum(["bureau", "partner", "self_arranged"]),
   provider_id: z.string().optional(),
   min_people: z.coerce.number().nullable().optional(),
@@ -126,7 +126,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       name: "",
       description: "",
       short_description: "",
-      category: "activiteiten",
+      category: "outdoor",
       block_type: "partner",
       provider_id: "",
       min_people: null,
@@ -198,7 +198,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         name: "",
         description: "",
         short_description: "",
-        category: "activiteiten",
+        category: "outdoor",
         block_type: "partner",
         provider_id: "",
         min_people: null,
@@ -419,7 +419,10 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="activiteiten">Activiteiten</SelectItem>
+                              <SelectItem value="outdoor">Outdoor & Sport</SelectItem>
+                              <SelectItem value="excursies">Excursies</SelectItem>
+                              <SelectItem value="entertainment">Entertainment</SelectItem>
+                              <SelectItem value="locaties">Locaties</SelectItem>
                               <SelectItem value="catering">Catering</SelectItem>
                               <SelectItem value="vervoer">Vervoer</SelectItem>
                             </SelectContent>
