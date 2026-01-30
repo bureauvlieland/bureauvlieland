@@ -73,6 +73,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [portalToken, setPortalToken] = useState<string | null>(null);
   const [cartHandoff, setCartHandoff] = useState<CartHandoffData | null>(null);
 
   // Load cart handoff data from sessionStorage
@@ -235,21 +236,21 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
         // Don't fail the whole submission if emails fail
       }
 
+      // Use the linked program token for the customer portal
+      const customerPortalToken = linkedProgram?.customer_token || data.customer_token;
+      setPortalToken(customerPortalToken);
       setIsComplete(true);
       toast.success("Uw aanvraag is succesvol verzonden!");
       
-      // Use the linked program token for the customer portal
-      const portalToken = linkedProgram?.customer_token || data.customer_token;
-      
-      if (onSuccess && portalToken) {
-        onSuccess(portalToken);
+      if (onSuccess && customerPortalToken) {
+        onSuccess(customerPortalToken);
       }
 
-      // If coming from configurator with items, redirect to customer portal
-      if (cartHandoff && cartHandoff.cartItems.length > 0 && linkedProgram) {
+      // Always redirect to customer portal after 2.5 seconds
+      if (customerPortalToken) {
         setTimeout(() => {
-          navigate(`/mijn-programma/${linkedProgram.customer_token}`);
-        }, 2000);
+          navigate(`/mijn-programma/${customerPortalToken}`);
+        }, 2500);
       }
     } catch (error) {
       console.error("Error submitting accommodation request:", error);
@@ -282,11 +283,20 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
               </h3>
               <p className="text-sm text-muted-foreground">
                 De {cartHandoff.cartItems.length} activiteit{cartHandoff.cartItems.length !== 1 ? "en" : ""} uit uw programma 
-                {cartHandoff.cartItems.length !== 1 ? " zijn" : " is"} gekoppeld aan deze logies-aanvraag. 
-                U wordt zo doorgestuurd naar uw persoonlijke omgeving.
+                {cartHandoff.cartItems.length !== 1 ? " zijn" : " is"} gekoppeld aan deze logies-aanvraag.
               </p>
             </div>
           )}
+          
+          {/* Redirect indicator */}
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              <p className="text-sm font-medium">
+                U wordt doorgestuurd naar uw persoonlijke programma-overzicht...
+              </p>
+            </div>
+          </div>
           
           <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
             <h3 className="font-medium mb-2">Wat gebeurt er nu?</h3>
@@ -297,9 +307,19 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
               <li>U kiest de optie die het beste past</li>
             </ol>
           </div>
-          <p className="text-sm text-muted-foreground">
+          
+          <p className="text-sm text-muted-foreground mb-4">
             U ontvangt binnen 2 werkdagen bericht op <strong>{formData.customer_email}</strong>
           </p>
+          
+          {/* Fallback link */}
+          {portalToken && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/mijn-programma/${portalToken}`}>
+                Direct naar uw programma →
+              </a>
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
