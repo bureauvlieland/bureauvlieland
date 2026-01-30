@@ -517,7 +517,14 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       const programDetails: { selectedDates?: string[]; numberOfPeople?: number } = {};
       
       if (updates.selectedDates) {
-        programDetails.selectedDates = updates.selectedDates.map(d => d.toISOString().split("T")[0]);
+        // Use local date formatting to avoid timezone shifts
+        // toISOString() converts to UTC which can shift the date backwards
+        programDetails.selectedDates = updates.selectedDates.map(d => {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        });
       }
       if (updates.numberOfPeople) {
         programDetails.numberOfPeople = updates.numberOfPeople;
