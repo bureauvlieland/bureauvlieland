@@ -71,7 +71,7 @@ const OverOns = () => {
               Laten we kennismaken
             </h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
-              Neem contact op met Erwin voor een vrijblijvend gesprek over jouw evenement op Vlieland
+              Neem contact op met Erwin voor een vrijblijvend gesprek over uw evenement op Vlieland
             </p>
             <Link to="/contact">
               <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">

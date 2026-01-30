@@ -298,7 +298,7 @@ const CustomerProgram = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Jouw Programma | Bureau Vlieland</title>
+        <title>Uw Programma | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       

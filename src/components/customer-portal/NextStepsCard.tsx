@@ -81,7 +81,7 @@ export const NextStepsCard = ({
       title: "Facturatiegegevens invullen",
       description: billingComplete 
         ? "Facturatiegegevens zijn compleet"
-        : "Vul je bedrijfsgegevens in voor de facturatie",
+        : "Vul uw bedrijfsgegevens in voor de facturatie",
       icon: billingComplete 
         ? <CheckCircle className="h-5 w-5 text-green-600" />
         : <FileText className="h-5 w-5 text-muted-foreground" />,
@@ -112,8 +112,8 @@ export const NextStepsCard = ({
       id: "complete",
       title: "Boeking compleet",
       description: termsAccepted 
-        ? "Je programma is definitief bevestigd!"
-        : "Na acceptatie is je boeking compleet",
+        ? "Uw programma is definitief bevestigd!"
+        : "Na acceptatie is uw boeking compleet",
       icon: termsAccepted 
         ? <PartyPopper className="h-5 w-5 text-green-600" />
         : <PartyPopper className="h-5 w-5 text-muted-foreground" />,
@@ -137,10 +137,10 @@ export const NextStepsCard = ({
             </div>
             <div>
               <h3 className="font-semibold text-green-800 dark:text-green-200">
-                Je boeking is compleet!
+                Uw boeking is compleet!
               </h3>
               <p className="text-sm text-green-700 dark:text-green-300">
-                Je ontvangt de facturen van de verschillende aanbieders. Veel plezier op Vlieland!
+                U ontvangt de facturen van de verschillende aanbieders. Veel plezier op Vlieland!
               </p>
             </div>
           </div>
@@ -250,7 +250,7 @@ export const NextStepsCard = ({
           <div className="flex items-start gap-2 mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg text-sm">
             <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-amber-800 dark:text-amber-200">
-              Je ontvangt een e-mail zodra een aanbieder reageert op je aanvraag.
+              U ontvangt een e-mail zodra een aanbieder reageert op uw aanvraag.
             </p>
           </div>
         )}

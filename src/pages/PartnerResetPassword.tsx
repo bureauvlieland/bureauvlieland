@@ -120,7 +120,7 @@ const PartnerResetPassword = () => {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Nieuw wachtwoord instellen</CardTitle>
             <CardDescription>
-              Kies een sterk wachtwoord voor je partner account
+              Kies een sterk wachtwoord voor uw partner account
             </CardDescription>
           </CardHeader>
           <CardContent>

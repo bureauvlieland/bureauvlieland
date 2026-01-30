@@ -267,13 +267,13 @@ const FamilieweekendVlieland = () => {
                 Plan jullie familieweekend
               </h2>
               <p className="text-lg opacity-90 mb-10 leading-relaxed">
-                Stel zelf je programma samen of vraag een maatwerk offerte aan – wij denken graag 
-                met je mee over het perfecte weekend voor jullie familie.
+                Stel zelf uw programma samen of vraag een maatwerk offerte aan – wij denken graag 
+                met u mee over het perfecte weekend voor uw familie.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" variant="secondary" className="gap-2">
                   <Link to="/programma-samenstellen">
-                    Stel je programma samen
+                    Stel uw programma samen
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>

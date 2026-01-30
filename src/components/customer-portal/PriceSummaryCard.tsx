@@ -381,7 +381,7 @@ export const PriceSummaryCard = ({
         {/* Fee explanation */}
         <div className="text-xs text-muted-foreground border-t pt-3">
           <p>
-            💡 De coördinatiefee dekt de organisatie en afstemming van je programma door Bureau Vlieland.
+            💡 De coördinatiefee dekt de organisatie en afstemming van uw programma door Bureau Vlieland.
           </p>
         </div>
       </CardContent>

@@ -55,7 +55,7 @@ export const CounterProposalDialog = ({
     setError("");
 
     if (!counterTime) {
-      setError("Kies een tijd voor je tegenvoorstel");
+      setError("Kies een tijd voor uw tegenvoorstel");
       return;
     }
 

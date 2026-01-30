@@ -156,14 +156,14 @@ const Voorbeeldprogrammas = () => {
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>Bouwstenen voor jouw programma | Bureau Vlieland</title>
+        <title>Onderdelen voor uw programma | Bureau Vlieland</title>
         <meta 
           name="description" 
-          content="Stel jouw ideale programma samen uit onze bouwstenen: activiteiten, catering, teamontwikkeling en ontspanning op Vlieland." 
+          content="Stel uw ideale programma samen uit onze onderdelen: activiteiten, catering, teamontwikkeling en ontspanning op Vlieland." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/bouwstenen" />
-        <meta property="og:title" content="Bouwstenen voor jouw programma | Bureau Vlieland" />
-        <meta property="og:description" content="Stel jouw ideale programma samen uit onze bouwstenen: activiteiten, catering, teamontwikkeling en ontspanning op Vlieland." />
+        <meta property="og:title" content="Onderdelen voor uw programma | Bureau Vlieland" />
+        <meta property="og:description" content="Stel uw ideale programma samen uit onze onderdelen: activiteiten, catering, teamontwikkeling en ontspanning op Vlieland." />
         <meta property="og:url" content="https://bureauvlieland.nl/bouwstenen" />
       </Helmet>
       <Navigation />
@@ -194,10 +194,10 @@ const Voorbeeldprogrammas = () => {
 
           <div className="relative z-10 text-center text-primary-foreground px-4 max-w-5xl">
             <h1 className="text-5xl md:text-7xl font-display font-bold mb-6">
-              Bouwstenen voor jouw programma
+              Onderdelen voor uw programma
             </h1>
             <p className="text-xl md:text-2xl mb-8">
-              Kies uit verschillende modules en creëer het perfecte programma voor jouw groep
+              Kies uit verschillende modules en creëer het perfecte programma voor uw groep
             </p>
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-3xl mx-auto mb-8">
               Wij verzorgen alles - van transfers en accommodatie tot activiteiten en catering

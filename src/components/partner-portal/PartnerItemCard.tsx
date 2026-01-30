@@ -228,7 +228,7 @@ export const PartnerItemCard = ({
                 ? "text-amber-800 dark:text-amber-300" 
                 : "text-muted-foreground"
             }`}>
-              {item.status === "alternative" ? "Jouw voorstel:" : "Reden:"}
+              {item.status === "alternative" ? "Uw voorstel:" : "Reden:"}
             </p>
             <p className={item.status === "alternative" ? "text-amber-700 dark:text-amber-400" : ""}>
               {item.status_note}

@@ -136,7 +136,7 @@ export const AddActivitySheet = ({
             <>
               <SheetTitle>Activiteit toevoegen</SheetTitle>
               <SheetDescription>
-                Kies een activiteit om aan je programma toe te voegen
+                Kies een activiteit om aan uw programma toe te voegen
               </SheetDescription>
             </>
           )}
@@ -262,7 +262,7 @@ export const AddActivitySheet = ({
                   <div className="text-center py-8 text-muted-foreground">
                     {searchQuery || categoryFilter !== "all"
                       ? "Geen activiteiten gevonden met deze filters"
-                      : "Alle beschikbare activiteiten zitten al in je programma"}
+                      : "Alle beschikbare activiteiten zitten al in uw programma"}
                   </div>
                 ) : (
                   availableBlocks.map((block) => (

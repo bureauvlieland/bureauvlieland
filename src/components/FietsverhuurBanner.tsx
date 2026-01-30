@@ -50,7 +50,7 @@ export const FietsverhuurBanner = ({
             <div>
               <h3 className="text-lg font-semibold">Ontdek Vlieland op de fiets</h3>
               <p className="text-muted-foreground text-sm mt-1">
-                Reserveer eenvoudig fietsen voor je hele groep via Bureau Vlieland.
+                Reserveer eenvoudig fietsen voor uw hele groep via Bureau Vlieland.
               </p>
             </div>
           </div>
