@@ -60,6 +60,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
         customer_email: requestData.customer_email,
         customer_phone: requestData.customer_phone,
         customer_company: requestData.customer_company,
+        reference_number: requestData.reference_number,
         arrival_date: requestData.arrival_date,
         departure_date: requestData.departure_date,
         number_of_guests: requestData.number_of_guests,

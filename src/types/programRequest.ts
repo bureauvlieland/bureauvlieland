@@ -208,6 +208,7 @@ export interface ProgramRequest {
   created_at: string;
   updated_at: string;
   expires_at: string;
+  reference_number: string | null;
   // Quote mode fields
   program_type: ProgramType;
   quote_status: QuoteStatus | null;

@@ -12,6 +12,9 @@ interface ProgramOverviewCardProps {
   customerCompany?: string;
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
+  // Reference numbers
+  referenceNumber?: string | null;
+  accommodationReferenceNumber?: string | null;
   // Quote mode props
   programType?: ProgramType;
   quoteStatus?: QuoteStatus | null;
@@ -25,6 +28,8 @@ export const ProgramOverviewCard = ({
   customerCompany,
   accommodation,
   accommodationQuotes,
+  referenceNumber,
+  accommodationReferenceNumber,
   programType = "self_service",
   quoteStatus,
   quoteValidUntil,
@@ -118,13 +123,18 @@ export const ProgramOverviewCard = ({
     <Card className={`border-primary/20 ${isQuoteMode ? "bg-gradient-to-br from-amber-50/50 to-primary/5" : "bg-gradient-to-br from-primary/5 to-primary/10"}`}>
       <CardContent className="p-6">
         <div className="space-y-4">
-          {/* Header */}
+        {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
                   {isQuoteMode ? "Jouw maatwerkvoorstel" : "Jouw zakelijke programma op Vlieland"}
                 </h1>
+                {referenceNumber && (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    #{referenceNumber}
+                  </Badge>
+                )}
                 {isQuoteMode && (
                   <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
                     <Sparkles className="h-3 w-3" />

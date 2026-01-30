@@ -179,6 +179,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
             customer_email: accomData.customer_email,
             customer_phone: accomData.customer_phone,
             customer_company: accomData.customer_company,
+            reference_number: accomData.reference_number,
             arrival_date: accomData.arrival_date,
             departure_date: accomData.departure_date,
             number_of_guests: accomData.number_of_guests,
