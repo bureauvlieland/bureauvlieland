@@ -12,6 +12,7 @@ import {
   Eye,
   Check,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface AccommodationSectionProps {
   quotes: AccommodationQuote[];
   onSelectQuote: (quoteId: string) => Promise<boolean>;
   selectedDates: Date[];
+  onEditAccommodation?: () => void;
 }
 
 export const AccommodationSection = ({
@@ -34,6 +36,7 @@ export const AccommodationSection = ({
   quotes,
   onSelectQuote,
   selectedDates,
+  onEditAccommodation,
 }: AccommodationSectionProps) => {
   const [selectedQuoteForDetails, setSelectedQuoteForDetails] = useState<AccommodationQuote | null>(null);
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
@@ -313,13 +316,26 @@ export const AccommodationSection = ({
         {/* Status message */}
         <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm text-amber-800 dark:text-amber-200">
               We verzamelen offertes voor je. Je ontvangt een email zodra accommodaties reageren.
             </p>
             <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
           </div>
         </div>
+
+        {/* Edit button */}
+        {onEditAccommodation && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onEditAccommodation}
+            className="w-full sm:w-auto"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Gegevens wijzigen
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

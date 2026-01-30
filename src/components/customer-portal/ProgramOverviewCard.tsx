@@ -135,6 +135,12 @@ export const ProgramOverviewCard = ({
                     #{referenceNumber}
                   </Badge>
                 )}
+                {accommodationReferenceNumber && (
+                  <Badge variant="outline" className="font-mono text-xs border-primary/30">
+                    <BedDouble className="h-3 w-3 mr-1" />
+                    #{accommodationReferenceNumber}
+                  </Badge>
+                )}
                 {isQuoteMode && (
                   <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
                     <Sparkles className="h-3 w-3" />

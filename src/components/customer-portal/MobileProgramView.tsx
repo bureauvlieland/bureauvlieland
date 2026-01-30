@@ -240,6 +240,7 @@ export const MobileProgramView = ({
             quotes={accommodationQuotes}
             onSelectQuote={onSelectAccommodationQuote}
             selectedDates={selectedDates}
+            onEditAccommodation={onOpenEdit}
           />
         </ProgramSection>
       )}

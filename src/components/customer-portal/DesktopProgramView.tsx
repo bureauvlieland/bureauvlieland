@@ -217,6 +217,7 @@ export const DesktopProgramView = ({
                   quotes={accommodationQuotes}
                   onSelectQuote={onSelectAccommodationQuote}
                   selectedDates={selectedDates}
+                  onEditAccommodation={onOpenEdit}
                 />
               </CardContent>
             </Card>
