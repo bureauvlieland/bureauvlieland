@@ -1,165 +1,125 @@
 
-# Plan: Logiesbewerking Validatie en Data-integriteit
+
+# Plan: Facturatie-Flow Validatie bij Bureau Vlieland Items
+
+## Huidige Situatie Geanalyseerd
+
+De code werkt technisch correct, maar er zijn enkele onduidelijkheden die verduidelijking nodig hebben:
+
+### Wat gebeurt er wanneer "Bureau Vlieland" wordt gekozen als facturerende partij?
+
+| Aspect | Partner facturatie | Bureau Vlieland facturatie |
+|--------|-------------------|---------------------------|
+| `block_type` | `"partner"` | `"bureau"` |
+| `provider_id` | Originele partner ID | `"bureau-vlieland"` |
+| Partner ziet item? | ✅ Ja | ❌ Nee |
+| Klant ziet juiste groepering? | ✅ Ja (onder "Aanbieders") | ✅ Ja (onder "Bureau Vlieland") |
+| Admin factureert klant | ❌ Nee | ✅ Ja |
 
 ## Problemen Geïdentificeerd
 
-### 1. Dubbele Logies-koppelingen in Database
-De database analyse toont:
-- BV-2601-0006 EN BV-2601-0007 verwijzen beide naar LOG-2601-0003
-- BV-2601-0004 EN BV-2601-0005 verwijzen naar dezelfde logiesaanvraag
-- Beiden zijn op exact hetzelfde moment aangemaakt (trigger heeft dubbel gevuurd)
+### 1. Partner Verliest Zichtbaarheid
+Wanneer een admin kiest voor "Bureau Vlieland" als facturerende partij, verdwijnt het item uit de partner dashboard. Dit is **by design**, maar:
+- Partner krijgt geen notificatie over de activiteit
+- Partner kan de activiteit niet markeren als "uitgevoerd"
+- Alle coördinatie moet via Bureau Vlieland lopen
 
-**Oorzaak**: Er is geen UNIQUE constraint op `program_requests.linked_accommodation_id`, waardoor meerdere programma's naar dezelfde logiesaanvraag kunnen verwijzen.
-
-### 2. Datum Synchronisatie Status
-De edge function `update-customer-program` is correct geïmplementeerd:
-- Update `accommodation_requests.arrival_date` en `departure_date`
-- Notificeert logiespartners via email
-- Reset offerte statussen naar "pending"
-
-Maar de **AccommodationSection** toont de datums uit de `accommodation` prop, niet uit de opnieuw opgehaalde data na een update.
-
-### 3. Ontbrekende Referentienummer Weergave
-De referentienummer badge voor logies is toegevoegd aan `ProgramOverviewCard`, maar moet correct worden weergegeven.
+### 2. Ontbrekende Admin-zijde Weergave
+In de AdminRequestDetail pagina is niet duidelijk zichtbaar wie er moet factureren en aan wie:
+- Bureau items zouden een indicator moeten hebben "Te factureren door: Bureau Vlieland → Klant"
+- Partner items zouden moeten tonen "Te factureren door: [Partner] → Klant"
 
 ---
 
-## Deel 1: Database Integriteit Herstellen
+## Voorgestelde Verbeteringen
 
-### A. Unique Constraint Toevoegen
-Voeg een unique constraint toe op `linked_accommodation_id`:
+### A. Visuele Indicator in AdminRequestDetail
+Voeg een badge toe bij elk item dat aangeeft wie factureert:
+- 🏢 "Bureau → Klant" voor bureau items
+- 👥 "Partner → Klant" voor partner items
 
-```sql
--- Eerst duplicaten verwijderen (behoud alleen het programma dat de accommodatie als linked_program_id heeft)
--- Dan constraint toevoegen
+### B. Waarschuwing in AdminAddActivitySheet
+Wanneer admin "Bureau Vlieland" kiest als facturerende partij, toon een waarschuwing:
+> "Let op: De partner ontvangt geen notificatie en ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland."
 
--- Optie 1: Verwijder duplicaat koppelingen (niet de programma's zelf)
-UPDATE program_requests pr
-SET linked_accommodation_id = NULL
-WHERE linked_accommodation_id IS NOT NULL
-  AND id NOT IN (
-    SELECT ar.linked_program_id 
-    FROM accommodation_requests ar 
-    WHERE ar.linked_program_id IS NOT NULL
-  );
+### C. Behoud Originele Provider Info (optioneel)
+Voeg velden toe om de "uitvoerende partner" te tracken, los van de "facturerende partij":
+- `invoiced_by`: `"bureau"` | `"partner"`
+- `executed_by_partner_id`: Originele partner ID (voor coördinatie)
 
--- Voeg unique constraint toe
-ALTER TABLE program_requests
-ADD CONSTRAINT program_requests_linked_accommodation_id_unique 
-UNIQUE (linked_accommodation_id);
+---
+
+## Implementatiestappen
+
+| # | Actie | Bestand |
+|---|-------|---------|
+| 1 | Voeg waarschuwingsbanner toe wanneer "Bureau Vlieland" wordt gekozen | `AdminAddActivitySheet.tsx` |
+| 2 | Voeg facturatie-indicator badge toe in AdminRequestDetail | `AdminRequestDetail.tsx` |
+| 3 | Voeg "Gefactureerd door" kolom toe in item-lijst | `AdminRequestDetail.tsx` |
+
+---
+
+## Test Scenarios (Handmatig)
+
+### Scenario 1: Bureau Vlieland Facturatie
+1. Open AdminRequestDetail voor een maatwerkofferte
+2. Klik "Activiteit toevoegen"
+3. Selecteer een activiteit (bijv. Zeehondentocht)
+4. Kies "Bureau Vlieland" als facturerende partij
+5. Bevestig toevoeging
+6. **Verificatie Admin**: Item toont `block_type: bureau` en `provider_id: bureau-vlieland`
+7. **Verificatie Partner Portal**: Log in als Zeehondentochten Vlieland → Item mag NIET zichtbaar zijn
+8. **Verificatie Klantpagina**: Item staat onder "Factuur Bureau Vlieland"
+
+### Scenario 2: Partner Facturatie
+1. Voeg dezelfde activiteit toe maar kies de partner als facturerende partij
+2. **Verificatie Partner Portal**: Item IS zichtbaar bij partner
+3. **Verificatie Klantpagina**: Item staat onder "Facturen aanbieders"
+
+---
+
+## Technische Details
+
+### AdminAddActivitySheet.tsx - Huidige logica (correct)
+```typescript
+// Regel 115-120
+const isBureauInvoiced = invoicedBy === "bureau";
+const providerId = isBureauInvoiced 
+  ? "bureau-vlieland" 
+  : (selectedBlock.provider_id || "bureau-vlieland");
+const blockType = isBureauInvoiced 
+  ? "bureau" 
+  : selectedBlock.block_type;
 ```
 
-### B. Bestaande Duplicaten Opschonen
-Huidige foutieve koppelingen corrigeren:
-- BV-2601-0006 moet `linked_accommodation_id = NULL` krijgen (LOG-2601-0003 hoort bij BV-2601-0007)
-- BV-2601-0004 moet `linked_accommodation_id = NULL` krijgen
+### get-partner-dashboard - Filter logica (correct)
+```typescript
+// Regel 73-74 - Partner ziet alleen items waar provider_id = eigen ID
+.eq("provider_id", partner.id)
+.neq("block_type", "self_arranged")
+```
 
----
-
-## Deel 2: Frontend Data Refresh na Wijziging
-
-### A. AccommodationSection Datums
-Het probleem is dat de `accommodation` object in de UI niet opnieuw wordt opgehaald na een datumwijziging. 
-
-**Huidige flow:**
-1. Klant klikt "Gegevens wijzigen" → EditProgramDetailsDialog
-2. Dialog submit → `updateProgramDetails()` → edge function
-3. Edge function update `program_requests.selected_dates` EN `accommodation_requests.arrival_date/departure_date`
-4. `useCustomerProgram` roept `fetchProgram()` aan → dit haalt de accommodatie opnieuw op
-
-**Te controleren:**
-- Werkt de `refetch()` call correct na `updateProgramDetails()`?
-
-**Bestand: `src/hooks/useCustomerProgram.ts`**
-De `updateProgramDetails` functie roept al `fetchProgram()` aan bij succes. Dit zou de nieuwe accommodatie datums moeten ophalen.
-
-Echter, ik zie dat de `accommodation.arrival_date` en `accommodation.departure_date` los van de `selected_dates` worden weergegeven in de `AccommodationSection`. Als de fetch goed werkt, moet dit ook updaten.
-
-**Mogelijke oorzaak:** React Query cache of de state wordt niet correct gerefresht.
-
----
-
-## Deel 3: Admin Interface Validatie
-
-### A. AdminProjects.tsx Duplicaat Weergave
-De huidige code toont elk programma als aparte regel. Bij dubbele `linked_accommodation_id` verschijnt dezelfde logies bij meerdere programma's.
-
-Na het toevoegen van de unique constraint zal dit probleem verdwijnen.
-
-### B. Toevoeging: Duplicaat Detectie
-Optioneel: Voeg een warning toe als er duplicaat-koppelingen worden gedetecteerd.
-
----
-
-## Deel 4: Partner Portal Validatie
-
-De `update-customer-program` edge function stuurt emails naar partners bij datumwijziging:
-- Activiteitenpartners ontvangen "Datumwijziging aanvraag"
-- Logiespartners ontvangen "Datumwijziging logiesaanvraag"
-
-Dit is correct geïmplementeerd.
-
----
-
-## Implementatie Stappen
-
-| # | Actie | Bestand/Tool |
-|---|-------|--------------|
-| 1 | Corrigeer duplicaat koppelingen in database | SQL migratie |
-| 2 | Voeg unique constraint toe | SQL migratie |
-| 3 | Verifieer data refresh na updateProgramDetails | `useCustomerProgram.ts` - debug log toevoegen |
-| 4 | Deploy en test edge function | `update-customer-program` |
-
----
-
-## Migratie SQL
-
-```sql
--- Stap 1: Corrigeer foutieve linked_accommodation_id koppelingen
--- Behoud alleen de programma's die daadwerkelijk als linked_program_id in accommodation_requests staan
-UPDATE public.program_requests pr
-SET linked_accommodation_id = NULL,
-    updated_at = now()
-WHERE linked_accommodation_id IS NOT NULL
-  AND id NOT IN (
-    SELECT ar.linked_program_id 
-    FROM public.accommodation_requests ar 
-    WHERE ar.linked_program_id IS NOT NULL
-  );
-
--- Stap 2: Voeg unique constraint toe om toekomstige duplicaten te voorkomen
-ALTER TABLE public.program_requests
-ADD CONSTRAINT program_requests_linked_accommodation_id_unique 
-UNIQUE (linked_accommodation_id);
+### PriceSummaryCard.tsx - Groepering (correct)
+```typescript
+// Regel 50-57 - Bureau vs Partner items gescheiden
+const confirmedBureauItems = confirmedItems.filter(
+  (item) => item.block_type === "bureau"
+);
+const confirmedPartnerItems = confirmedItems.filter(
+  (item) => item.block_type === "partner"
+);
 ```
 
 ---
 
-## Verwacht Resultaat
+## Conclusie
 
-Na implementatie:
-1. **Klantpagina**: Referentienummers voor zowel programma als logies zichtbaar
-2. **Klantpagina**: Datumwijzigingen worden correct gesynchroniseerd naar logiesaanvraag
-3. **Admin**: Geen dubbele verwijzingen meer naar dezelfde logiesaanvraag
-4. **Partner Portal**: Partners ontvangen notificatie bij datumwijziging
+De huidige implementatie is **functioneel correct**:
+- ✅ Bureau items worden correct gefilterd uit partner dashboard
+- ✅ Klant ziet correcte facturatie-groepering
+- ✅ Admin kan kiezen wie factureert
 
----
+**Aanbevelingen voor UX-verbetering:**
+1. Voeg visuele indicator toe in admin interface
+2. Toon waarschuwing wanneer partner niet genotificeerd wordt
 
-## Test Scenario's
-
-### Klantportaal
-1. Open een programma met gekoppelde logiesaanvraag
-2. Controleer of beide referentienummers zichtbaar zijn
-3. Klik "Gegevens wijzigen" bij logies of programma
-4. Wijzig de datums
-5. Controleer of de nieuwe datums worden getoond in AccommodationSection
-6. Controleer of logiespartners een email ontvangen
-
-### Admin
-1. Open Projecten overzicht
-2. Controleer dat elke logiesaanvraag maar bij één programma verschijnt
-
-### Partner Portal
-1. Log in als logiespartner
-2. Controleer of datumwijziging notificatie is ontvangen
-3. Controleer of offerte status is gereset naar "pending"
