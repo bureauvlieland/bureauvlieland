@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { PositioningBlock } from "@/components/PositioningBlock";
+
 import heroImage from "@/assets/cycling-group.jpg";
 
 const TeamuitjeVlieland = () => {
@@ -138,10 +138,6 @@ const TeamuitjeVlieland = () => {
             </div>
           </div>
         </section>
-
-        <PositioningBlock />
-
-        {/* CTA Section */}
         <section className="py-16 md:py-24 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
