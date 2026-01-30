@@ -59,6 +59,8 @@ export const AdminAddActivitySheet = ({
   const [preferredTime, setPreferredTime] = useState<string>("flexibel");
   const [notes, setNotes] = useState("");
   const [priceOverride, setPriceOverride] = useState<string>("");
+  const [customName, setCustomName] = useState<string>("");
+  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter blocks: active blocks only
@@ -92,6 +94,8 @@ export const AdminAddActivitySheet = ({
     setPreferredTime("flexibel");
     setNotes("");
     setPriceOverride(block.price_adult ? String(block.price_adult) : "");
+    setCustomName(block.name);
+    setInvoicedBy(block.block_type === "bureau" ? "bureau" : "partner");
   };
 
   const handleBack = () => {
@@ -106,18 +110,25 @@ export const AdminAddActivitySheet = ({
       const time = preferredTime === "flexibel" ? null : preferredTime;
       const price = priceOverride ? parseFloat(priceOverride) : null;
       
+      // Determine provider based on invoicedBy selection
+      const isBureauInvoiced = invoicedBy === "bureau";
+      const providerId = isBureauInvoiced ? "bureau-vlieland" : (selectedBlock.provider_id || "bureau-vlieland");
+      const providerName = isBureauInvoiced ? "Bureau Vlieland" : (selectedBlock.provider?.name || "Bureau Vlieland");
+      const providerEmail = isBureauInvoiced ? null : (selectedBlock.provider?.email || null);
+      const blockType = isBureauInvoiced ? "bureau" : selectedBlock.block_type;
+      
       // Insert the new item
       const { data: newItem, error } = await supabase
         .from("program_request_items")
         .insert({
           request_id: requestId,
           block_id: selectedBlock.id,
-          block_name: selectedBlock.name,
+          block_name: customName || selectedBlock.name,
           block_category: selectedBlock.category,
-          block_type: selectedBlock.block_type,
-          provider_id: selectedBlock.provider_id || "bureau-vlieland",
-          provider_name: selectedBlock.provider?.name || "Bureau Vlieland",
-          provider_email: selectedBlock.provider?.email || null,
+          block_type: blockType,
+          provider_id: providerId,
+          provider_name: providerName,
+          provider_email: providerEmail,
           day_index: selectedDayIndex,
           preferred_time: time,
           customer_notes: notes || null,
@@ -164,6 +175,8 @@ export const AdminAddActivitySheet = ({
     setSelectedBlock(null);
     setSearchQuery("");
     setCategoryFilter("all");
+    setCustomName("");
+    setInvoicedBy("partner");
     onOpenChange(false);
   };
 
@@ -194,6 +207,39 @@ export const AdminAddActivitySheet = ({
         {selectedBlock ? (
           // Add form
           <div className="flex-1 overflow-auto p-6 space-y-6">
+            {/* Custom name */}
+            <div className="space-y-2">
+              <Label htmlFor="customName">Omschrijving</Label>
+              <Input
+                id="customName"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="Naam van de activiteit..."
+              />
+            </div>
+
+            {/* Invoiced by */}
+            <div className="space-y-3">
+              <Label>Gefactureerd door</Label>
+              <RadioGroup
+                value={invoicedBy}
+                onValueChange={(v) => setInvoicedBy(v as "bureau" | "partner")}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="bureau" id="invoice-bureau" />
+                  <Label htmlFor="invoice-bureau" className="font-normal cursor-pointer">
+                    Bureau Vlieland
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="partner" id="invoice-partner" />
+                  <Label htmlFor="invoice-partner" className="font-normal cursor-pointer">
+                    {selectedBlock.provider?.name || "Partner"}
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Day selection */}
             {selectedDates.length > 1 && (
               <div className="space-y-3">
