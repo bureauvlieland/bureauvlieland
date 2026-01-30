@@ -47,6 +47,7 @@ interface UseCustomerProgramReturn {
   acceptItem: (itemId: string) => Promise<boolean>;
   cancelItem: (itemId: string) => Promise<boolean>;
   submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
+  acceptQuoteProposal: () => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
   // Accommodation data
   accommodation: AccommodationRequest | null;
@@ -711,6 +712,28 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  // Accept quote proposal (for maatwerk quotes)
+  const acceptQuoteProposal = useCallback(async (): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("accept-quote-proposal", {
+        body: {
+          token: token,
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error accepting quote proposal:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, progress: 0 };
@@ -747,6 +770,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     acceptItem,
     cancelItem,
     submitCounterProposal,
+    acceptQuoteProposal,
     statusSummary,
     // Accommodation
     accommodation,

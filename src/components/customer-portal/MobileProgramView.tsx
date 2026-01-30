@@ -8,6 +8,7 @@ import { BillingDetailsCard } from "./BillingDetailsCard";
 import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
+import { AcceptQuoteProposalCard } from "./AcceptQuoteProposalCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
@@ -34,7 +35,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { ProgramRequestItem, ProgramRequestHistory } from "@/types/programRequest";
+import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 interface MobileProgramViewProps {
@@ -94,6 +95,8 @@ interface MobileProgramViewProps {
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
   onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
+  // Quote proposal
+  onAcceptQuoteProposal: () => Promise<boolean>;
 }
 
 export const MobileProgramView = ({
@@ -120,6 +123,7 @@ export const MobileProgramView = ({
   accommodation,
   accommodationQuotes,
   onSelectAccommodationQuote,
+  onAcceptQuoteProposal,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const termsAccepted = !!program.terms_accepted_at;
@@ -136,6 +140,9 @@ export const MobileProgramView = ({
   const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
+  
+  // Check if this is a quote awaiting customer approval
+  const isQuoteAwaitingApproval = program.program_type === "quote" && program.quote_status === "offerte_verstuurd";
 
   // Calculate total cost
   const totalCost = useMemo(() => {
@@ -215,17 +222,27 @@ export const MobileProgramView = ({
         termsAcceptedAt={program.terms_accepted_at}
       />
 
-      {/* 2. Action Required Card */}
-      <ActionRequiredCard
-        statusSummary={statusSummary}
-        isMultiDay={isMultiDay}
-        hasAccommodation={hasActiveAccommodation}
-        billingComplete={billingComplete}
-        termsAccepted={termsAccepted}
-        onOpenBilling={onOpenBilling}
-        onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
-        onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
-      />
+      {/* 2. Quote Proposal Card - only for maatwerk quotes awaiting approval */}
+      {isQuoteAwaitingApproval && (
+        <AcceptQuoteProposalCard
+          program={program as unknown as ProgramRequestWithItems}
+          onAccept={onAcceptQuoteProposal}
+        />
+      )}
+
+      {/* 3. Action Required Card (hide when quote awaiting approval) */}
+      {!isQuoteAwaitingApproval && (
+        <ActionRequiredCard
+          statusSummary={statusSummary}
+          isMultiDay={isMultiDay}
+          hasAccommodation={hasActiveAccommodation}
+          billingComplete={billingComplete}
+          termsAccepted={termsAccepted}
+          onOpenBilling={onOpenBilling}
+          onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
+          onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
+        />
+      )}
 
       {/* 3. Accommodation section - only for multi-day */}
       {isMultiDay && (
