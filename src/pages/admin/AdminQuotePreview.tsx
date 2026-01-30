@@ -131,10 +131,34 @@ const AdminQuotePreview = () => {
   const calculateTotals = () => {
     const itemsTotal = items.reduce((sum, item) => sum + getItemPrice(item), 0);
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
-    const subtotal = itemsTotal * (request?.number_of_people || 1);
-    const vatAmount = (subtotal + bureauFee) * 0.21;
-    const total = subtotal + bureauFee + vatAmount;
-    return { itemsTotal, bureauFee, subtotal, vatAmount, total };
+    
+    // Prijzen zijn per persoon en inclusief BTW
+    const subtotalInclVat = (itemsTotal * (request?.number_of_people || 1)) + bureauFee;
+    
+    // Terugrekenen van BTW (prijzen zijn al inclusief 21% BTW)
+    const subtotalExclVat = subtotalInclVat / 1.21;
+    const vatAmount = subtotalInclVat - subtotalExclVat;
+    
+    return { 
+      itemsTotal, 
+      bureauFee, 
+      subtotalInclVat,   // Totaal incl. BTW
+      subtotalExclVat,   // Totaal excl. BTW
+      vatAmount,         // BTW-bedrag
+    };
+  };
+
+  // Helper function to convert blob to base64
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
 
   const generatePDF = async (): Promise<Blob | null> => {
@@ -204,18 +228,31 @@ const AdminQuotePreview = () => {
 
     setIsSending(true);
     try {
+      // Generate PDF as base64
+      const pdfBlob = await generatePDF();
+      if (!pdfBlob) {
+        toast.error("Kon PDF niet genereren");
+        setIsSending(false);
+        return;
+      }
+      
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      const pdfFilename = `Voorstel-${request.reference_number || request.customer_name}.pdf`;
+
       const { error } = await supabase.functions.invoke("send-quote-offer", {
         body: {
           requestId: request.id,
           validUntil: format(validUntil, "yyyy-MM-dd"),
           personalMessage: personalMessage || undefined,
           origin: window.location.origin,
+          pdfBase64,
+          pdfFilename,
         },
       });
 
       if (error) throw error;
 
-      toast.success("Offerte verstuurd naar klant");
+      toast.success("Offerte met PDF verstuurd naar klant");
       navigate(`/admin/projecten/${request.id}`);
     } catch (error) {
       console.error("Error sending quote:", error);
@@ -472,8 +509,8 @@ const AdminQuotePreview = () => {
                       {/* Totals */}
                       <div className="border-t-2 border-[#1e3a5f] pt-4 mt-6">
                         <div className="flex justify-between text-sm mb-1">
-                          <span>Subtotaal ({request.number_of_people} personen)</span>
-                          <span>{formatCurrency(totals.subtotal)}</span>
+                          <span>Subtotaal ({request.number_of_people} personen) incl. BTW</span>
+                          <span>{formatCurrency(totals.subtotalInclVat - totals.bureauFee)}</span>
                         </div>
                         {totals.bureauFee > 0 && (
                           <div className="flex justify-between text-sm mb-1">
@@ -481,13 +518,18 @@ const AdminQuotePreview = () => {
                             <span>{formatCurrency(totals.bureauFee)}</span>
                           </div>
                         )}
+                        <Separator className="my-2" />
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Subtotaal excl. BTW</span>
+                          <span>{formatCurrency(totals.subtotalExclVat)}</span>
+                        </div>
                         <div className="flex justify-between text-sm mb-2 text-gray-500">
                           <span>BTW (21%)</span>
                           <span>{formatCurrency(totals.vatAmount)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg text-[#1e3a5f]">
                           <span>Totaal incl. BTW</span>
-                          <span>{formatCurrency(totals.total)}</span>
+                          <span>{formatCurrency(totals.subtotalInclVat)}</span>
                         </div>
                       </div>
 

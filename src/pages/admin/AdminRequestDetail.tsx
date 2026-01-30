@@ -737,6 +737,7 @@ const AdminRequestDetail = () => {
               items={items}
               invoices={bureauInvoices}
               onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+              isQuoteMode={isQuoteMode}
             />
           </div>
 
