@@ -91,7 +91,7 @@ const Index = () => {
                 Onvergetelijke ervaringen op het eiland
               </h1>
               <p className="text-base sm:text-lg lg:text-xl text-primary-foreground/90 mb-4 leading-relaxed max-w-2xl">
-                Stel in 5 minuten je eigen programma samen. Kies uit activiteiten, catering en vervoer – wij regelen de rest.
+                Stel in 5 minuten uw eigen programma samen. Kies uit activiteiten, catering en vervoer – wij regelen de rest.
               </p>
               <p className="text-sm sm:text-base text-primary-foreground/80 mb-8 max-w-xl">
                 Onder leiding van Erwin Soolsma combineren we professionele inhoud met lokale regie, gidsen en catering.
