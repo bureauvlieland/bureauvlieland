@@ -2,7 +2,8 @@ import { format, isPast, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, BedDouble, Briefcase, Sparkles, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Users, BedDouble, Briefcase, Sparkles, Clock, AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import type { ProgramType, QuoteStatus } from "@/types/programRequest";
 
@@ -20,6 +21,8 @@ interface ProgramOverviewCardProps {
   quoteStatus?: QuoteStatus | null;
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string | null;
+  // Edit callback
+  onEdit?: () => void;
 }
 
 export const ProgramOverviewCard = ({
@@ -34,6 +37,7 @@ export const ProgramOverviewCard = ({
   quoteStatus,
   quoteValidUntil,
   termsAcceptedAt,
+  onEdit,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
   const isQuoteMode = programType === "quote";
@@ -156,16 +160,24 @@ export const ProgramOverviewCard = ({
               </p>
             </div>
             
-            {/* Quote status badge */}
-            {quoteDisplayStatus && (
-              <Badge 
-                variant="secondary" 
-                className={`shrink-0 gap-1.5 ${getStatusBadgeVariant(quoteDisplayStatus.variant)}`}
-              >
-                <quoteDisplayStatus.icon className="h-3.5 w-3.5" />
-                {quoteDisplayStatus.label}
-              </Badge>
-            )}
+            {/* Edit button + Quote status */}
+            <div className="flex items-center gap-2 shrink-0">
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={onEdit} className="gap-1.5">
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Bewerken</span>
+                </Button>
+              )}
+              {quoteDisplayStatus && (
+                <Badge 
+                  variant="secondary" 
+                  className={`gap-1.5 ${getStatusBadgeVariant(quoteDisplayStatus.variant)}`}
+                >
+                  <quoteDisplayStatus.icon className="h-3.5 w-3.5" />
+                  {quoteDisplayStatus.label}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Quote validity warning */}

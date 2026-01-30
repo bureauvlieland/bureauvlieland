@@ -2,32 +2,31 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  ClipboardList,
   Calendar,
   FileText,
-  Settings,
-  History,
+  BedDouble,
 } from "lucide-react";
 
 interface Section {
   id: string;
   label: string;
-  icon: typeof ClipboardList;
+  icon: typeof Calendar;
 }
-
-const sections: Section[] = [
-  { id: "program", label: "Programma", icon: Calendar },
-  { id: "invoicing", label: "Facturatie", icon: FileText },
-  { id: "details", label: "Details", icon: Settings },
-  { id: "history", label: "Geschiedenis", icon: History },
-];
 
 interface ProgramNavigationProps {
   className?: string;
+  isMultiDay?: boolean;
 }
 
-export const ProgramNavigation = ({ className }: ProgramNavigationProps) => {
+export const ProgramNavigation = ({ className, isMultiDay = false }: ProgramNavigationProps) => {
   const [activeSection, setActiveSection] = useState("program");
+
+  // Build sections dynamically based on whether it's multi-day
+  const sections: Section[] = [
+    { id: "program", label: "Programma", icon: Calendar },
+    ...(isMultiDay ? [{ id: "accommodation", label: "Logies", icon: BedDouble }] : []),
+    { id: "billing", label: "Facturatie", icon: FileText },
+  ];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -52,7 +51,7 @@ export const ProgramNavigation = ({ className }: ProgramNavigationProps) => {
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [isMultiDay]);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);

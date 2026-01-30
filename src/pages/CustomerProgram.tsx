@@ -316,7 +316,7 @@ const CustomerProgram = () => {
       </header>
 
       {/* Desktop navigation - only show on lg screens */}
-      {!isMobile && <ProgramNavigation />}
+      {!isMobile && <ProgramNavigation isMultiDay={selectedDates.length > 1} />}
 
       <main className="container mx-auto px-4 py-8">
 

@@ -40,7 +40,9 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
           };
         }
         acc[key].itemCount++;
-        acc[key].totalAmount += item.quoted_price || 0;
+        // Use quoted_price if available, otherwise use admin_price_override as preliminary price
+        const itemPrice = item.quoted_price ?? item.admin_price_override ?? 0;
+        acc[key].totalAmount += itemPrice;
         acc[key].itemNames.push(item.block_name);
         return acc;
       }, {} as Record<string, ProviderInfo>);
@@ -142,39 +144,51 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
           )}
 
           {/* Partner items - each provider separately with amounts */}
-          {partnerProviders.map((provider) => (
-            <div
-              key={provider.id}
-              className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
-            >
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">{provider.name}</p>
-                  {provider.totalAmount > 0 && (
-                    <div className="flex items-center gap-1 font-semibold">
-                      <Euro className="h-3.5 w-3.5" />
-                      <span>{formatPrice(provider.totalAmount)}</span>
-                    </div>
+          {partnerProviders.map((provider) => {
+            // Check if any item for this provider uses preliminary pricing
+            const providerItems = items.filter(i => i.provider_id === provider.id && i.status !== "cancelled");
+            const hasPreliminaryPrice = providerItems.some(i => !i.quoted_price && i.admin_price_override);
+            
+            return (
+              <div
+                key={provider.id}
+                className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
+              >
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{provider.name}</p>
+                    {provider.totalAmount > 0 && (
+                      <div className="flex items-center gap-1 font-semibold">
+                        {hasPreliminaryPrice && <span className="text-xs text-muted-foreground mr-1">ca.</span>}
+                        <Euro className="h-3.5 w-3.5" />
+                        <span>{formatPrice(provider.totalAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {provider.itemNames.slice(0, 2).join(", ")}
+                    {provider.itemNames.length > 2 && ` +${provider.itemNames.length - 2} meer`}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Uitvoering & factuur door: {provider.name}
+                  </p>
+                  {provider.totalAmount === 0 && (
+                    <p className="text-xs text-muted-foreground italic">
+                      Prijs nog te bevestigen
+                    </p>
+                  )}
+                  {hasPreliminaryPrice && provider.totalAmount > 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                      Voorlopige prijsindicatie
+                    </p>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {provider.itemNames.slice(0, 2).join(", ")}
-                  {provider.itemNames.length > 2 && ` +${provider.itemNames.length - 2} meer`}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Uitvoering & factuur door: {provider.name}
-                </p>
-                {provider.totalAmount === 0 && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Prijs nog te bevestigen
-                  </p>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Self-arranged items info */}
           {selfArrangedItems.length > 0 && (
