@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ProgramSidebar } from "./ProgramSidebar";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
+import { AcceptQuoteProposalCard } from "./AcceptQuoteProposalCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
@@ -33,7 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { ProgramRequestItem, ProgramRequestHistory } from "@/types/programRequest";
+import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 interface DesktopProgramViewProps {
@@ -94,6 +95,8 @@ interface DesktopProgramViewProps {
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
   onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
+  // Quote proposal
+  onAcceptQuoteProposal: () => Promise<boolean>;
 }
 
 export const DesktopProgramView = ({
@@ -121,6 +124,7 @@ export const DesktopProgramView = ({
   accommodation,
   accommodationQuotes,
   onSelectAccommodationQuote,
+  onAcceptQuoteProposal,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -139,6 +143,9 @@ export const DesktopProgramView = ({
   const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
+  
+  // Check if this is a quote awaiting customer approval
+  const isQuoteAwaitingApproval = program.program_type === "quote" && program.quote_status === "offerte_verstuurd";
 
   // Calculate total cost for sidebar
   const totalCost = useMemo(() => {
@@ -189,17 +196,27 @@ export const DesktopProgramView = ({
           termsAcceptedAt={program.terms_accepted_at}
         />
 
-        {/* 2. Action required card - intelligent priority-based alert */}
-        <ActionRequiredCard
-          statusSummary={statusSummary}
-          isMultiDay={isMultiDay}
-          hasAccommodation={hasActiveAccommodation}
-          billingComplete={billingComplete}
-          termsAccepted={termsAccepted}
-          onOpenBilling={onOpenBilling}
-          onScrollToTerms={scrollToTerms}
-          onScrollToAccommodation={scrollToAccommodation}
-        />
+        {/* 2. Quote Proposal Card - only for maatwerk quotes awaiting approval */}
+        {isQuoteAwaitingApproval && (
+          <AcceptQuoteProposalCard
+            program={program as unknown as ProgramRequestWithItems}
+            onAccept={onAcceptQuoteProposal}
+          />
+        )}
+
+        {/* 3. Action required card - intelligent priority-based alert (hide when quote awaiting approval) */}
+        {!isQuoteAwaitingApproval && (
+          <ActionRequiredCard
+            statusSummary={statusSummary}
+            isMultiDay={isMultiDay}
+            hasAccommodation={hasActiveAccommodation}
+            billingComplete={billingComplete}
+            termsAccepted={termsAccepted}
+            onOpenBilling={onOpenBilling}
+            onScrollToTerms={scrollToTerms}
+            onScrollToAccommodation={scrollToAccommodation}
+          />
+        )}
 
         {/* 3. Accommodation section - only for multi-day, only if not yet selected */}
         {isMultiDay && (

@@ -180,11 +180,12 @@ function generateQuoteEmailHtml(
             * Prijzen zijn onder voorbehoud van wijzigingen en exclusief eventuele aanpassingen.
           </p>
 
-          <!-- Validity warning -->
-          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #ef4444;">
-            <p style="margin: 0; color: #991b1b;">
-              <strong>⏰ Dit voorstel is geldig tot ${formatDateNL(validUntil)}</strong><br>
-              Na deze datum kunnen wij de beschikbaarheid niet garanderen.
+          <!-- Validity info -->
+          <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; color: #78350f;">
+              <strong>Dit voorstel is geldig tot ${formatDateNL(validUntil)}</strong><br>
+              Bent u akkoord? Bevestig het voorstel in uw klantomgeving. 
+              Hierna worden de leveranciers op de hoogte gebracht.
             </p>
           </div>
 

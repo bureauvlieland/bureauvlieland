@@ -540,7 +540,8 @@ const AdminQuotePreview = () => {
                           {format(validUntil, "d MMMM yyyy", { locale: nl })}
                         </p>
                         <p className="text-amber-700 mt-1">
-                          Na deze datum kunnen wij de beschikbaarheid niet garanderen.
+                          Als u akkoord bent met dit programmavoorstel, kunt u dit bevestigen 
+                          in uw klantomgeving. Hierna worden de leveranciers op de hoogte gebracht.
                         </p>
                       </div>
 

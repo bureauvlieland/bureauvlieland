@@ -45,6 +45,7 @@ const CustomerProgram = () => {
     cancelRequest,
     acceptItem,
     submitCounterProposal,
+    acceptQuoteProposal,
     statusSummary,
     // Accommodation
     accommodation,
@@ -290,6 +291,8 @@ const CustomerProgram = () => {
     accommodation,
     accommodationQuotes,
     onSelectAccommodationQuote: selectAccommodationQuote,
+    // Quote proposal
+    onAcceptQuoteProposal: acceptQuoteProposal,
   };
 
   return (
