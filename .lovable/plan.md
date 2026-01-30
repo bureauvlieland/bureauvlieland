@@ -1,196 +1,170 @@
 
 
-## Hybride Navigatiemodel voor Bureau Vlieland
+## Productie-Readiness: Afbeeldingen & Testdata
 
-Dit plan beschrijft de complete herstructurering van de navigatie en sitearchitectuur naar een hybride model dat zowel de bureau-identiteit als de platform-mogelijkheden combineert.
+Dit plan behandelt twee onderdelen voor productie-readiness:
+1. Partners in staat stellen om afbeeldingen te uploaden met kwaliteitseisen
+2. Overzicht van testdata die opgeschoond kan worden
 
 ---
 
-### Samenvatting van wijzigingen
+### Deel 1: Partner Afbeelding Upload
 
-De nieuwe navigatiestructuur:
+#### Huidige situatie
+
+De PartnerBlockSheet (`src/components/partner-portal/PartnerBlockSheet.tsx`) heeft **geen** afbeelding upload functionaliteit. Partners zien hun bouwstenen met placeholder afbeeldingen.
+
+De admin BuildingBlockSheet heeft deze functionaliteit al:
+- Upload naar `building-block-images` bucket (publieke bucket)
+- Opslaan als `{blockId}.{ext}` in storage
+- Automatisch updaten van `image_url` veld
+
+#### Implementatie
+
+**1. PartnerBlockSheet uitbreiden met afbeelding upload**
 
 ```text
-HOOFDMENU (links)              RECHTS
----------------------          ----------------------
-Voor bedrijven (dropdown)      Contact (outline button)
-Voor privé & trouwen (dropdown)    Programma samenstellen (primary CTA)
-Programma samenstellen (link)
-Logies (link)
-Over ons (dropdown)
+Nieuwe velden toevoegen:
+- Afbeelding preview (huidige of placeholder)
+- Upload knop met kwaliteitseisen label
+- Progress indicator tijdens upload
 ```
 
----
-
-### Fase 1: Nieuwe Pagina's Aanmaken
-
-Drie nieuwe SEO-landingspagina's voor de "Voor privé & trouwen" sectie:
-
-| Pagina | Route | Beschrijving |
-|--------|-------|--------------|
-| Groepsweekend Vlieland | `/groepsweekend-vlieland` | Vrienden, verenigingen, sportclubs |
-| Jubileum Vlieland | `/jubileum-vlieland` | Verjaardagen, jubilea, pensioenfeesten |
-| Familieweekend Vlieland | `/familieweekend-vlieland` | Familie-reünies, grote familieuitjes |
-
-Elke pagina volgt dezelfde structuur als bestaande landingspagina's:
-- Hero sectie met relevante afbeelding
-- Breadcrumb navigatie
-- Gestructureerde data (JSON-LD)
-- Twee CTA's onderaan: "Zelf samenstellen" en "Maatwerk aanvragen"
-
----
-
-### Fase 2: Navigatie Component Herstructureren
-
-De `Navigation.tsx` wordt volledig herschreven met de nieuwe menustructuur:
-
-**1. Voor bedrijven (dropdown)**
-```text
-├─ Bedrijfsuitje Vlieland (highlighted)
-├─ Meerdaags bedrijfsuitje
-├─ Teambuilding
-├─ Heisessie
-├─ Zakelijk evenement
-└─ Incentive reis
-```
-
-**2. Voor privé & trouwen (dropdown)**
-```text
-├─ Trouwen op Vlieland
-├─ Groepsweekend (NIEUW)
-├─ Jubileum (NIEUW)
-└─ Familieweekend (NIEUW)
-```
-
-**3. Programma samenstellen**
-- Direct link naar `/programma-samenstellen`
-- Geen dropdown
-
-**4. Logies**
-- Direct link naar `/logies-vlieland`
-- Geen dropdown
-
-**5. Over ons (dropdown)**
-```text
-├─ Over Bureau Vlieland
-├─ Werkwijze
-├─ Samenwerken
-├─ Partners (→ horeca links)
-└─ Contact
-```
-
----
-
-### Fase 3: CTA-structuur Harmoniseren
-
-Alle zakelijke en privé landingspagina's krijgen dezelfde dubbele CTA-structuur:
+**2. Kwaliteitseisen communiceren**
 
 ```text
-┌─────────────────────────────────────────┐
-│  Klaar om te beginnen?                  │
-│                                         │
-│  [Stel je programma samen]  [Maatwerk]  │
-│       (primary)              (outline)  │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  📷 Afbeelding                           │
+│  ┌────────────────────────────────────┐  │
+│  │     [Preview afbeelding]          │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  [Nieuwe afbeelding uploaden]            │
+│                                          │
+│  Vereisten:                              │
+│  • Minimaal 800 x 600 pixels             │
+│  • Formaat: JPG, PNG of WebP             │
+│  • Maximaal 5 MB                         │
+│  • Landschapsoriëntatie (liggend)        │
+│  • Geen tekst of logo's in de afbeelding │
+└──────────────────────────────────────────┘
 ```
 
-Dit wordt toegepast op:
-- Alle "Voor bedrijven" pagina's (7 stuks)
-- Alle "Voor privé & trouwen" pagina's (4 stuks)
+**3. Client-side validatie toevoegen**
+
+- Controleren bestandstype (image/jpeg, image/png, image/webp)
+- Controleren bestandsgrootte (max 5MB)
+- Controleren afmetingen na laden (min 800x600, aspect ratio ~16:9 of ~4:3)
+- Waarschuwing bij niet-liggend formaat
+
+**4. Gebruik bestaande hook**
+
+De `useUploadBlockImage` hook in `useBuildingBlocks.ts` kan hergebruikt worden.
+
+#### Bestanden aan te passen
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/components/partner-portal/PartnerBlockSheet.tsx` | Afbeelding upload sectie toevoegen |
+| `src/types/partner.ts` | `PartnerBuildingBlock` type controleren (heeft al `image_url`) |
 
 ---
 
-### Fase 4: Footer Aanpassen
+### Deel 2: Testdata Overzicht
 
-De footer wordt gereorganiseerd om de nieuwe structuur te weerspiegelen:
+#### Huidige testdata in de database
 
-```text
-Kolom 1: Contact + socials
-Kolom 2: Zakelijke uitjes (bestaand)
-Kolom 3: Privé & trouwen (NIEUW)
-Kolom 4: Direct aan de slag (Programma samenstellen, Maatwerkofferte)
-Kolom 5: Over ons + Online Boeken + Partners
+**Program Requests (7 records)**
+| Reference | Klant | Status | Actie |
+|-----------|-------|--------|-------|
+| BV-2601-0007 | Test Klant (Test Bedrijf B.V.) | active | Verwijderen |
+| BV-2601-0006 | Test Klant Bureau Vlieland | active | Verwijderen |
+| BV-2601-0005 | Test Klant Bureau Vlieland | active | Verwijderen |
+| BV-2601-0004 | Jan de Vries | active | Verwijderen |
+| BV-2601-0003 | Erwin Soolsma (NORISK) | active | Behouden (echte klant?) |
+| BV-2601-0002 | Jan de Vries | active | Verwijderen |
+| BV-2601-0001 | Jan de Vries | active | Verwijderen |
+
+**Accommodation Requests (3 records)**
+| Reference | Klant | Status | Actie |
+|-----------|-------|--------|-------|
+| LOG-2601-0003 | Jan de Vries | accepted | Verwijderen |
+| LOG-2601-0002 | Jan de Vries | quoted | Verwijderen |
+| LOG-2601-0001 | Erwin Soolsma | processing | Behouden? |
+
+**Building Blocks met placeholder images**
+
+De meeste bouwstenen hebben `image_asset` maar geen `image_url`. Dit is geen probleem - de `getBlockImage()` utility in `buildingBlockUtils.ts` valt terug op lokale assets. De placeholder wordt alleen getoond als:
+- Er geen `image_url` is (storage)
+- En het `image_asset` niet in de `assetMap` staat
+
+Bouwstenen met correcte afbeeldingen (via asset of storage):
+- beach-games, borrel, ebike-tour, fiets-huur, luxe-lunch
+- boot-retour (heeft storage URL)
+- vliegeren, rescueboat, silent-disco, strand-bbq
+- sunset-dinner, surfen, vliehors-expres, vuurtoren, zeehondentocht
+
+#### Opschoon script (handmatig uit te voeren)
+
+Je kunt de testdata verwijderen via de Cloud View SQL editor:
+
+```sql
+-- VOORZICHTIG: Alleen uitvoeren na bevestiging welke records test zijn
+
+-- Verwijder test program request items eerst (cascade)
+DELETE FROM program_request_items 
+WHERE request_id IN (
+  SELECT id FROM program_requests 
+  WHERE customer_name LIKE 'Test%' 
+     OR customer_name = 'Jan de Vries'
+);
+
+-- Verwijder test program request history
+DELETE FROM program_request_history 
+WHERE request_id IN (
+  SELECT id FROM program_requests 
+  WHERE customer_name LIKE 'Test%' 
+     OR customer_name = 'Jan de Vries'
+);
+
+-- Verwijder test program requests
+DELETE FROM program_requests 
+WHERE customer_name LIKE 'Test%' 
+   OR customer_name = 'Jan de Vries';
+
+-- Verwijder test accommodation requests
+DELETE FROM accommodation_requests 
+WHERE customer_name = 'Jan de Vries';
+
+-- (Optioneel) Verwijder test accommodation quotes
+DELETE FROM accommodation_quotes 
+WHERE request_id IN (
+  SELECT id FROM accommodation_requests 
+  WHERE customer_name = 'Jan de Vries'
+);
 ```
 
 ---
 
-### Fase 5: App.tsx Routes Toevoegen
+### Samenvatting implementatie
 
-Nieuwe routes toevoegen:
-```typescript
-<Route path="/groepsweekend-vlieland" element={<GroepsweekendVlieland />} />
-<Route path="/jubileum-vlieland" element={<JubileumVlieland />} />
-<Route path="/familieweekend-vlieland" element={<FamilieweekendVlieland />} />
-```
-
----
-
-### Fase 6: Redirects Updaten
-
-`public/_redirects` uitbreiden voor eventuele legacy-links.
+| Prioriteit | Onderdeel | Impact |
+|------------|-----------|--------|
+| Hoog | Partner afbeelding upload | Partners kunnen eigen afbeeldingen aanleveren |
+| Medium | Testdata opschonen | Schone productie-database |
+| Laag | Building block assets verifiëren | Cosmetisch - assets werken al correct |
 
 ---
 
-### Fase 7: Taalkundige Aanpassingen
+### Technisch overzicht
 
-Conform de strategie-instructies worden termen aangepast:
-- "Diensten" → verdwijnt uit navigatie (te generiek)
-- "Bouwstenen" → alleen binnen de tool, niet in navigatie
-- "Catering" → binnen zakelijke context, niet los
-- Alle labels: oplossingsgerichte formulering
+**Nieuwe functionaliteit:**
+- Afbeelding upload met preview in PartnerBlockSheet
+- Client-side validatie voor bestandstype, grootte en dimensies
+- Kwaliteitseisen communicatie naar partners
 
----
-
-### Technisch Overzicht
-
-**Nieuwe bestanden:**
-```text
-src/pages/GroepsweekendVlieland.tsx
-src/pages/JubileumVlieland.tsx
-src/pages/FamilieweekendVlieland.tsx
-```
-
-**Aangepaste bestanden:**
-```text
-src/components/Navigation.tsx (volledig herschreven)
-src/components/Footer.tsx (kolommen gereorganiseerd)
-src/App.tsx (3 nieuwe routes)
-public/_redirects (optioneel)
-```
-
-**Pagina's met CTA-update:**
-- `TrouwenOpVlieland.tsx` - CTA's aanpassen
-- Bestaande zakelijke pagina's behouden hun huidige CTA's
-
----
-
-### Visuele Hiërarchie
-
-```text
-Desktop navigatie:
-┌──────────────────────────────────────────────────────────────────────┐
-│ [Logo]  Voor bedrijven ▾  Voor privé ▾  Samenstellen  Logies  Over ▾│ Contact  [Programma samenstellen]
-└──────────────────────────────────────────────────────────────────────┘
-
-- "Voor bedrijven" krijgt font-weight: semibold
-- "Programma samenstellen" CTA rechts blijft accent-kleur
-- "Logies" iets minder prominent (geen bold)
-```
-
----
-
-### Impact op SEO
-
-De nieuwe structuur verbetert de interne linkstructuur:
-- Duidelijke hiërarchie voor zoekmachines
-- Thematische clustering (zakelijk vs. privé)
-- Sterke interne links via dropdowns
-
----
-
-### Niet inbegrepen in dit plan
-
-- Inhoudelijke wijzigingen aan bestaande pagina's (behalve CTA's)
-- Verwijdering van de `/diensten` of `/voor-wie` pagina's (blijven bestaan voor SEO)
-- Wijzigingen aan de configurator
+**Bestaande infrastructuur (hergebruik):**
+- `building-block-images` storage bucket (publiek)
+- `useUploadBlockImage` hook
+- `getBlockImage()` utility voor fallback logica
 
