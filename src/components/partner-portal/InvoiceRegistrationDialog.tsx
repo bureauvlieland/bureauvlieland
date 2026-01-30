@@ -304,7 +304,7 @@ export const InvoiceRegistrationDialog = ({
                     €{commissionAmount.toFixed(2)}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    Je ontvangt hiervoor een factuur van Bureau Vlieland.
+                    U ontvangt hiervoor een factuur van Bureau Vlieland.
                   </p>
                 </div>
               </AlertDescription>

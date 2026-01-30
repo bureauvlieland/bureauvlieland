@@ -17,18 +17,18 @@ const JubileumVlieland = () => {
         <title>Jubileum vieren op Vlieland – Verjaardag, pensioen of huwelijksjubileum | Bureau Vlieland</title>
         <meta 
           name="description" 
-          content="Vier je jubileum, verjaardag of pensioen op Vlieland. Van intiem diner tot groot feest – wij verzorgen locatie, catering en activiteiten." 
+          content="Vier uw jubileum, verjaardag of pensioen op Vlieland. Van intiem diner tot groot feest – wij verzorgen locatie, catering en activiteiten." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/jubileum-vlieland" />
         <meta property="og:title" content="Jubileum vieren op Vlieland – Bureau Vlieland" />
-        <meta property="og:description" content="Vier je jubileum, verjaardag of pensioen op Vlieland. Wij verzorgen locatie, catering en activiteiten." />
+        <meta property="og:description" content="Vier uw jubileum, verjaardag of pensioen op Vlieland. Wij verzorgen locatie, catering en activiteiten." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bureauvlieland.nl/jubileum-vlieland" />
         <meta name="keywords" content="jubileum Vlieland, verjaardag vieren Waddeneiland, pensioenfeest eiland, huwelijksjubileum, feest op Vlieland" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Jubileum vieren op Vlieland"
-        serviceDescription="Vier je jubileum, verjaardag, pensioen of huwelijksjubileum op Vlieland. Wij verzorgen locatie, catering en activiteiten voor een onvergetelijk feest."
+        serviceDescription="Vier uw jubileum, verjaardag, pensioen of huwelijksjubileum op Vlieland. Wij verzorgen locatie, catering en activiteiten voor een onvergetelijk feest."
         canonicalUrl="https://bureauvlieland.nl/jubileum-vlieland"
         breadcrumbItems={[
           { name: "Home", url: "https://bureauvlieland.nl" },

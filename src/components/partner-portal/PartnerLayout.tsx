@@ -235,7 +235,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
     await supabase.auth.signOut();
     toast({
       title: "Uitgelogd",
-      description: "Je bent succesvol uitgelogd.",
+      description: "U bent succesvol uitgelogd.",
     });
     navigate("/partner/login");
   };

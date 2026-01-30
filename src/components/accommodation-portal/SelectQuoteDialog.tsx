@@ -46,7 +46,7 @@ export function SelectQuoteDialog({
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-4">
             <p>
-              Je staat op het punt om de volgende offerte te kiezen:
+              U staat op het punt om de volgende offerte te kiezen:
             </p>
             
             <div className="bg-muted p-4 rounded-lg space-y-2">

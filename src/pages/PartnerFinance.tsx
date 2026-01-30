@@ -444,7 +444,7 @@ const PartnerFinanceContent = () => {
               <CardContent className="py-12 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-lg font-medium">Nog geen facturen</p>
-                <p className="text-muted-foreground">Je hebt nog geen facturen geregistreerd.</p>
+                <p className="text-muted-foreground">U hebt nog geen facturen geregistreerd.</p>
               </CardContent>
             </Card>
           ) : (

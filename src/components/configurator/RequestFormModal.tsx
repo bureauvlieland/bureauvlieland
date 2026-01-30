@@ -277,14 +277,14 @@ export const RequestFormModal = ({
               <div className="w-full bg-primary/10 border border-primary/20 rounded-lg p-4 mt-2 text-left">
                 <p className="font-medium text-foreground mb-2 flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-primary" />
-                  Volg je aanvraag
+                  Volg uw aanvraag
                 </p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Bekijk de status van je activiteiten en voer eventuele wijzigingen door:
+                  Bekijk de status van uw activiteiten en voer eventuele wijzigingen door:
                 </p>
                 <Link to={`/mijn-programma/${customerToken}`} onClick={handleClose}>
                   <Button className="w-full">
-                    Bekijk je programma
+                    Bekijk uw programma
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>

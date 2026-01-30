@@ -75,7 +75,7 @@ export const AcceptProposalCard = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg">{item.block_name}</CardTitle>
                 <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-0">
-                  Wacht op jouw akkoord
+                  Wacht op uw akkoord
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-1">{item.provider_name}</p>

@@ -59,11 +59,11 @@ const Programmas = () => {
   const targetGroups = [
     {
       title: "Evenementenbureaus",
-      description: "Je hebt een klant die naar Vlieland wil, maar geen lokale kennis. Wij zijn je verlengstuk op het eiland."
+      description: "U hebt een klant die naar Vlieland wil, maar geen lokale kennis. Wij zijn uw verlengstuk op het eiland."
     },
     {
       title: "Trainers & coaches",
-      description: "Jij levert de inhoud, wij de setting. Focus op je training terwijl wij alles eromheen regelen."
+      description: "U levert de inhoud, wij de setting. Focus op uw training terwijl wij alles eromheen regelen."
     },
     {
       title: "Incentive-bureaus",
@@ -304,7 +304,7 @@ const Programmas = () => {
                 Laten we kennismaken
               </h2>
               <p className="text-lg mb-8 text-primary-foreground/90">
-                Wil je verkennen hoe Bureau Vlieland jouw lokale partner kan zijn? 
+                Wilt u verkennen hoe Bureau Vlieland uw lokale partner kan zijn? 
                 Neem contact op voor een vrijblijvend gesprek over de mogelijkheden.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">

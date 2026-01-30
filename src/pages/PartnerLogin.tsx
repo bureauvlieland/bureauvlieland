@@ -77,7 +77,7 @@ const PartnerLogin = () => {
         if (adminRole) {
           toast({
             title: "Welkom Admin!",
-            description: "Je bent succesvol ingelogd.",
+            description: "U bent succesvol ingelogd.",
           });
           navigate("/admin/dashboard");
           return;
@@ -104,7 +104,7 @@ const PartnerLogin = () => {
 
         toast({
           title: `Welkom ${partner.name}!`,
-          description: "Je bent succesvol ingelogd.",
+          description: "U bent succesvol ingelogd.",
         });
 
         navigate("/partner/dashboard");

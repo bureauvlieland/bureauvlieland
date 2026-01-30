@@ -616,7 +616,7 @@ export const ProgramEditor = ({
       {/* Self-arranged only message */}
       {!hasBillableItems && groupedBlocks.self_arranged.length > 0 && (
         <div className="border-t pt-3 text-sm text-muted-foreground">
-          <p>Je hebt alleen "zelf te regelen" items geselecteerd. Voeg activiteiten of catering toe voor een complete aanvraag.</p>
+          <p>U hebt alleen "zelf te regelen" items geselecteerd. Voeg activiteiten of catering toe voor een complete aanvraag.</p>
         </div>
       )}
 

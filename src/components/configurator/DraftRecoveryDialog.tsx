@@ -35,11 +35,11 @@ export const DraftRecoveryDialog = ({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Save className="h-5 w-5 text-primary" />
-            Je hebt een eerder concept
+            U hebt een eerder concept
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Je had een programma met {itemCount} {itemCount === 1 ? "item" : "items"} opgeslagen ({timeAgo}).
-            Wil je hiermee verder of opnieuw beginnen?
+            U had een programma met {itemCount} {itemCount === 1 ? "item" : "items"} opgeslagen ({timeAgo}).
+            Wilt u hiermee verder of opnieuw beginnen?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

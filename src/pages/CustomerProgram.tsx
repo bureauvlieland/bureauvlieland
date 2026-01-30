@@ -173,7 +173,7 @@ const CustomerProgram = () => {
     if (success) {
       toast({
         title: "Boeking ondertekend",
-        description: "Je boeking is nu definitief bevestigd. Je ontvangt een bevestigingsmail.",
+        description: "Uw boeking is nu definitief bevestigd. U ontvangt een bevestigingsmail.",
       });
     } else {
       toast({

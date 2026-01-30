@@ -14,7 +14,7 @@ const PartnerSettings = () => {
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Instellingen</h1>
           <p className="text-muted-foreground">
-            Beheer je account- en bedrijfsgegevens.
+            Beheer uw account- en bedrijfsgegevens.
           </p>
         </div>
 

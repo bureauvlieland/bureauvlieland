@@ -62,7 +62,7 @@ const PartnerBlocksContent = () => {
           .single();
 
         if (partnerError || !partner) {
-          setError("Je account is niet gekoppeld aan een partner.");
+          setError("Uw account is niet gekoppeld aan een partner.");
           setIsLoading(false);
           return;
         }
@@ -81,7 +81,7 @@ const PartnerBlocksContent = () => {
 
       if (blocksError) {
         console.error("Error fetching blocks:", blocksError);
-        setError("Kon je aanbod niet laden.");
+        setError("Kon uw aanbod niet laden.");
         setIsLoading(false);
         return;
       }
@@ -156,7 +156,7 @@ const PartnerBlocksContent = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Mijn Aanbod</h1>
-          <p className="text-muted-foreground">Beheer je activiteiten en diensten</p>
+          <p className="text-muted-foreground">Beheer uw activiteiten en diensten</p>
         </div>
         <Button onClick={handleNewBlock}>
           <Plus className="h-4 w-4 mr-2" />
@@ -170,7 +170,7 @@ const PartnerBlocksContent = () => {
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-lg font-medium mb-2">Nog geen aanbod</h2>
             <p className="text-muted-foreground mb-4">
-              Je hebt nog geen activiteiten of diensten toegevoegd.
+              U hebt nog geen activiteiten of diensten toegevoegd.
             </p>
             <Button onClick={handleNewBlock}>
               <Plus className="h-4 w-4 mr-2" />

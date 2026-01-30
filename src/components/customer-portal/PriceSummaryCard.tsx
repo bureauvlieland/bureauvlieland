@@ -346,7 +346,7 @@ export const PriceSummaryCard = ({
             <HelpCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <p>
               Het definitieve totaalbedrag wordt bekend zodra alle activiteiten zijn bevestigd. 
-              Je ontvangt bericht wanneer een aanbieder bevestigt.
+              U ontvangt bericht wanneer een aanbieder bevestigt.
             </p>
           </div>
         )}
@@ -359,8 +359,8 @@ export const PriceSummaryCard = ({
               <p className="font-medium">Wanneer wordt er gefactureerd?</p>
               <p>
                 {termsAccepted 
-                  ? "Je hebt de voorwaarden geaccepteerd. De facturen worden binnenkort verstuurd."
-                  : "Facturatie vindt pas plaats nadat je akkoord gaat met de algemene voorwaarden. Op dat moment worden de reserveringen definitief en is kosteloos annuleren niet meer mogelijk."}
+                  ? "U hebt de voorwaarden geaccepteerd. De facturen worden binnenkort verstuurd."
+                  : "Facturatie vindt pas plaats nadat u akkoord gaat met de algemene voorwaarden. Op dat moment worden de reserveringen definitief en is kosteloos annuleren niet meer mogelijk."}
               </p>
             </div>
           </div>
