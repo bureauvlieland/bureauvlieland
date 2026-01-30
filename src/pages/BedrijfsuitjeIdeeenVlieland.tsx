@@ -217,7 +217,7 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                     Zelf combineren
                   </h3>
                   <p className="text-muted-foreground leading-relaxed mb-4">
-                    Stel je eigen programma samen uit alle beschikbare onderdelen. 
+                    Stel uw eigen programma samen uit alle beschikbare onderdelen. 
                     Wij zorgen voor de perfecte afstemming.
                   </p>
                   <Link 
@@ -305,12 +305,12 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                 Klaar om te beginnen?
               </h2>
               <p className="text-lg opacity-90 mb-10 leading-relaxed">
-                Stel zelf je programma samen of vraag een maatwerk offerte aan voor persoonlijk advies.
+                Stel zelf uw programma samen of vraag een maatwerk offerte aan voor persoonlijk advies.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" variant="secondary" className="gap-2">
                   <Link to="/programma-samenstellen">
-                    Stel je programma samen
+                    Stel uw programma samen
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>

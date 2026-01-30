@@ -160,7 +160,7 @@ export default function AccommodationQuotes() {
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Page title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Jouw Logies Aanvraag</h1>
+          <h1 className="text-2xl font-bold">Uw Logies Aanvraag</h1>
           {request.customer_company && (
             <p className="text-muted-foreground">
               {request.customer_company} • {request.number_of_guests} gasten • {numberOfNights} nachten

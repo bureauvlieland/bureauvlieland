@@ -136,7 +136,7 @@ export const AccommodationSection = ({
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <BedDouble className="h-5 w-5 text-green-600" />
-              Jouw Logies
+              Uw Logies
             </CardTitle>
             <Badge className="bg-green-500">
               <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -183,7 +183,7 @@ export const AccommodationSection = ({
           </div>
 
           <p className="text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-            De accommodatie neemt contact met je op om de reservering definitief te maken.
+            De accommodatie neemt contact met u op om de reservering definitief te maken.
           </p>
         </CardContent>
       </Card>
@@ -207,7 +207,7 @@ export const AccommodationSection = ({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Bekijk en vergelijk de offertes. Kies de optie die het beste bij je past.
+            Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
           </p>
 
           {/* Compact quote cards */}
@@ -307,7 +307,7 @@ export const AccommodationSection = ({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <BedDouble className="h-5 w-5 text-amber-600" />
-            Jouw Logiesaanvraag
+            Uw Logiesaanvraag
           </CardTitle>
           <Badge variant="outline" className="border-amber-500 text-amber-700">
             <Clock className="h-3 w-3 mr-1" />
@@ -348,7 +348,7 @@ export const AccommodationSection = ({
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              We verzamelen offertes voor je. Je ontvangt een email zodra accommodaties reageren.
+              Wij verzamelen offertes voor u. U ontvangt een email zodra accommodaties reageren.
             </p>
             <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
           </div>

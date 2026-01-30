@@ -178,7 +178,7 @@ const JubileumVlieland = () => {
                       <div>
                         <h3 className="font-display font-bold text-foreground mb-1">Activiteiten</h3>
                         <p className="text-muted-foreground">
-                          Organiseer een eilandtour, zeehondentocht of creatieve workshop voor je gasten.
+                          Organiseer een eilandtour, zeehondentocht of creatieve workshop voor uw gasten.
                         </p>
                       </div>
                     </div>
@@ -228,13 +228,13 @@ const JubileumVlieland = () => {
                 Begin met plannen
               </h2>
               <p className="text-lg opacity-90 mb-10 leading-relaxed">
-                Stel zelf je programma samen of vraag een maatwerk offerte aan voor persoonlijk advies 
-                over jouw jubileumviering.
+                Stel zelf uw programma samen of vraag een maatwerk offerte aan voor persoonlijk advies 
+                over uw jubileumviering.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" variant="secondary" className="gap-2">
                   <Link to="/programma-samenstellen">
-                    Stel je programma samen
+                    Stel uw programma samen
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>

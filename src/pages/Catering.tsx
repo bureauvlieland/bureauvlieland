@@ -109,12 +109,12 @@ const Catering = () => {
               </h2>
               <p className="text-lg text-muted-foreground mb-4">
                 Bureau Vlieland en Zuiver Traiteur slaan de handen ineen als de cateraar 
-                op Vlieland. Samen verzorgen wij de volledige culinaire beleving voor jouw 
+                op Vlieland. Samen verzorgen wij de volledige culinaire beleving voor uw 
                 zakelijke evenement — van lunch tot diner, van borrel tot BBQ op het strand.
               </p>
               <p className="text-lg text-muted-foreground">
                 Met lokale kennis, verse ingrediënten en oog voor detail zorgen wij voor 
-                een culinaire ervaring die past bij de unieke sfeer van Vlieland. Of je nu 
+                een culinaire ervaring die past bij de unieke sfeer van Vlieland. Of u nu 
                 kiest voor een eenvoudige lunch of een uitgebreid walking dinner, wij 
                 regelen het vanuit eigen huis.
               </p>
@@ -214,9 +214,9 @@ const Catering = () => {
                 </h2>
                 <p className="text-lg text-muted-foreground mb-6">
                   Een absolute aanrader is onze strand BBQ experience. Samen met Zuiver 
-                  Traiteur verzorgen wij een complete barbecue op het strand — met je 
+                  Traiteur verzorgen wij een complete barbecue op het strand — met uw 
                   voeten in het zand en het geluid van de zee op de achtergrond. Deze 
-                  unieke setting maakt jouw evenement onvergetelijk.
+                  unieke setting maakt uw evenement onvergetelijk.
                 </p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-start gap-3">
@@ -256,8 +256,8 @@ const Catering = () => {
                 Klaar om te beginnen?
               </h2>
               <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
-                Stel in 5 minuten je eigen programma samen inclusief catering. 
-                Kies je bouwstenen en ontvang binnen 5 werkdagen bevestiging.
+                Stel in 5 minuten uw eigen programma samen inclusief catering. 
+                Kies uw onderdelen en ontvang binnen 5 werkdagen bevestiging.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
@@ -266,7 +266,7 @@ const Catering = () => {
                   variant="heroPrimary"
                   className="text-lg px-8"
                 >
-                  <Link to="/programma-samenstellen">Stel je programma samen</Link>
+                  <Link to="/programma-samenstellen">Stel uw programma samen</Link>
                 </Button>
                 <Button 
                   asChild 

@@ -415,7 +415,7 @@ export const PartnerItemSheet = ({
             <>
               <Separator />
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Jouw alternatief voorstel</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Uw alternatief voorstel</h3>
                 <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 space-y-2">
                   {item.proposed_time && (
                     <div className="flex items-center gap-2 text-sm">

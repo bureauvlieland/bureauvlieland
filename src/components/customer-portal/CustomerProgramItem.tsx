@@ -267,7 +267,7 @@ export const CustomerProgramItem = ({
                 <ArrowLeftRight className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-purple-800 dark:text-purple-300">
-                    Jouw tegenvoorstel: {item.customer_counter_time}
+                    Uw tegenvoorstel: {item.customer_counter_time}
                   </p>
                   {item.customer_counter_note && (
                     <p className="text-sm text-purple-700/80 dark:text-purple-400/80 mt-1">
@@ -286,7 +286,7 @@ export const CustomerProgramItem = ({
           {item.customer_accepted_at && (
             <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4" />
-              <span>Je hebt akkoord gegeven op dit voorstel</span>
+              <span>U hebt akkoord gegeven op dit voorstel</span>
             </div>
           )}
           

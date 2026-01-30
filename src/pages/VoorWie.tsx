@@ -79,10 +79,10 @@ const VoorWie = () => {
         <section className="py-16 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-center">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Herken jij je groep hierin?
+              Herkent u uw groep hierin?
             </h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
-              Neem contact op om te ontdekken wat Bureau Vlieland voor jouw groep kan betekenen
+              Neem contact op om te ontdekken wat Bureau Vlieland voor uw groep kan betekenen
             </p>
             <Link to="/contact">
               <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">

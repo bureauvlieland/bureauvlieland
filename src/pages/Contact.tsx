@@ -11,7 +11,7 @@ const Contact = () => {
     <div className="min-h-screen">
       <Helmet>
         <title>Contact - Bureau Vlieland</title>
-        <meta name="description" content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor jouw bedrijfsevenement op Vlieland. Telefonisch, per e-mail of kom langs op het eiland." />
+        <meta name="description" content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw bedrijfsevenement op Vlieland. Telefonisch, per e-mail of kom langs op het eiland." />
       </Helmet>
       
       <Navigation />
@@ -89,7 +89,7 @@ const Contact = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-8 text-center">
-                Je hebt te maken met Erwin
+                U hebt te maken met Erwin
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -116,8 +116,8 @@ const Contact = () => {
                     passen bij het dorp, de natuur en de mensen die hier wonen.
                   </p>
                   <p className="text-base text-foreground leading-relaxed">
-                    Bij Bureau Vlieland ben je verzekerd van persoonlijk contact en maatwerk. Ik denk graag met 
-                    je mee over het perfecte programma voor jouw groep.
+                    Bij Bureau Vlieland bent u verzekerd van persoonlijk contact en maatwerk. Ik denk graag met 
+                    u mee over het perfecte programma voor uw groep.
                   </p>
                 </div>
               </div>

@@ -167,7 +167,7 @@ export const PartnerSettingsForm = () => {
 
       toast({
         title: "Gegevens opgeslagen",
-        description: "Je bedrijfsgegevens zijn bijgewerkt.",
+        description: "Uw bedrijfsgegevens zijn bijgewerkt.",
       });
     } catch (err) {
       console.error("Error saving partner details:", err);
@@ -208,7 +208,7 @@ export const PartnerSettingsForm = () => {
       setPasswordData({ newPassword: "", confirmPassword: "" });
       toast({
         title: "Wachtwoord gewijzigd",
-        description: "Je wachtwoord is succesvol bijgewerkt.",
+        description: "Uw wachtwoord is succesvol bijgewerkt.",
       });
     } catch (err: any) {
       console.error("Error changing password:", err);

@@ -102,7 +102,7 @@ const Index = () => {
                     size="lg"
                     className="bg-card text-primary hover:bg-card/90 shadow-medium text-base px-8"
                   >
-                    Stel je programma samen
+                    Stel uw programma samen
                   </Button>
                 </Link>
                 <Link to="/diensten">
@@ -163,15 +163,15 @@ const Index = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Begin vandaag nog met je programma
+                Begin vandaag nog met uw programma
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Kies je bouwstenen, geef je wensen door, en ontvang binnen 5 werkdagen bevestiging. Je aanvraag is vrijblijvend.
+                Kies uw onderdelen, geef uw wensen door, en ontvang binnen 5 werkdagen bevestiging. Uw aanvraag is vrijblijvend.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/programma-samenstellen">
                   <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Stel je programma samen
+                    Stel uw programma samen
                   </Button>
                 </Link>
                 <Link to="/contact">

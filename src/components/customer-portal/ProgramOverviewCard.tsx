@@ -132,7 +132,7 @@ export const ProgramOverviewCard = ({
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-                  {isQuoteMode ? "Uw maatwerkvoorstel" : "Jouw zakelijke programma op Vlieland"}
+                  {isQuoteMode ? "Uw maatwerkvoorstel" : "Uw zakelijke programma op Vlieland"}
                 </h1>
                 {referenceNumber && (
                   <Badge variant="outline" className="font-mono text-xs">

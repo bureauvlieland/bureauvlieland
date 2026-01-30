@@ -26,10 +26,10 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
             </div>
             <div>
               <h3 className="font-semibold text-green-800 dark:text-green-200">
-                Je hebt een keuze gemaakt!
+                U hebt een keuze gemaakt!
               </h3>
               <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                De accommodatie neemt binnenkort contact met je op om de reservering definitief te maken.
+                De accommodatie neemt binnenkort contact met u op om de reservering definitief te maken.
               </p>
             </div>
           </div>
@@ -51,7 +51,7 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                 {received === 1 ? '1 offerte ontvangen' : `${received} offertes ontvangen`}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Bekijk en vergelijk de offertes hieronder. Kies de optie die het beste bij je past.
+                Bekijk en vergelijk de offertes hieronder. Kies de optie die het beste bij u past.
               </p>
             </div>
           </div>
@@ -68,14 +68,14 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
           <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900">
             <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-amber-800 dark:text-amber-200">
-              We verzamelen offertes voor je
-            </h3>
-            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-              We hebben je aanvraag doorgestuurd naar geschikte accommodaties. 
-              Je ontvangt een email zodra er offertes binnenkomen.
-            </p>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+                Wij verzamelen offertes voor u
+              </h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                Wij hebben uw aanvraag doorgestuurd naar geschikte accommodaties. 
+                U ontvangt een email zodra er offertes binnenkomen.
+              </p>
             {request.status === 'processing' && (
               <div className="mt-4">
                 <Progress value={30} className="h-2" />
