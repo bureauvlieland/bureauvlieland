@@ -13,6 +13,7 @@ export interface AccommodationRequest {
   customer_email: string;
   customer_phone: string;
   customer_company: string | null;
+  reference_number: string | null;
   
   // Dates and guests
   arrival_date: string;

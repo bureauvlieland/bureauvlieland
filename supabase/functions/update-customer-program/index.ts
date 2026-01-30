@@ -281,8 +281,119 @@ Deno.serve(async (req) => {
             `,
           });
         }
+
+        // === SYNC ACCOMMODATION DATES AND NOTIFY LODGING PARTNERS ===
+        if (program.linked_accommodation_id) {
+          const sortedDates = [...programDetails.selectedDates].sort();
+          const newArrivalDate = sortedDates[0];
+          const newDepartureDate = sortedDates[sortedDates.length - 1];
+
+          // Update accommodation request dates
+          await supabase
+            .from("accommodation_requests")
+            .update({
+              arrival_date: newArrivalDate,
+              departure_date: newDepartureDate,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", program.linked_accommodation_id);
+
+          console.log(`Updated accommodation dates: ${newArrivalDate} - ${newDepartureDate}`);
+
+          // Get all active quotes (pending or submitted) for this accommodation
+          const { data: activeQuotes } = await supabase
+            .from("accommodation_quotes")
+            .select(`
+              id,
+              partner_id,
+              accommodation_name,
+              status,
+              partner:partners(id, name, email)
+            `)
+            .eq("request_id", program.linked_accommodation_id)
+            .in("status", ["pending", "submitted"]);
+
+          if (activeQuotes && activeQuotes.length > 0) {
+            // Reset quotes to pending so partners can re-submit
+            const quoteIds = activeQuotes.map(q => q.id);
+            await supabase
+              .from("accommodation_quotes")
+              .update({ 
+                status: "pending",
+                submitted_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .in("id", quoteIds);
+
+            // Notify each accommodation partner
+            for (const quote of activeQuotes) {
+              const partnerData = quote.partner as unknown;
+              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string } | null;
+              if (partner?.email) {
+                const formattedArrival = new Date(newArrivalDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+                const formattedDeparture = new Date(newDepartureDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+
+                emailMessages.push({
+                  From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                  To: [{ Email: getRecipientEmail(partner.email, origin), Name: partner.name }],
+                  Subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+                  HTMLPart: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                      <div style="background: #0d9488; padding: 24px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
+                      </div>
+                      <div style="padding: 32px;">
+                        <h2 style="color: #0d9488; margin-bottom: 16px;">Datumwijziging logiesaanvraag</h2>
+                        <p>Beste ${sanitizeHtml(partner.name)},</p>
+                        <p>De klant <strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> heeft de datums van hun verblijf gewijzigd.</p>
+                        <div style="background: #f0fdfa; border: 1px solid #99f6e4; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                          <p style="margin: 0 0 8px;"><strong>Nieuwe periode:</strong></p>
+                          <p style="margin: 0; font-size: 18px; color: #0d9488;">
+                            ${formattedArrival} — ${formattedDeparture}
+                          </p>
+                          <p style="margin: 8px 0 0;"><strong>Accommodatie:</strong> ${sanitizeHtml(quote.accommodation_name)}</p>
+                          <p style="margin: 4px 0 0;"><strong>Aantal gasten:</strong> ${program.number_of_people}</p>
+                        </div>
+                        <p>Graag uw offerte herzien of opnieuw indienen via het Partner Portal:</p>
+                        <p style="text-align: center; margin: 24px 0;">
+                          <a href="https://bureauvlieland.nl/partner/login" style="display: inline-block; background: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                            Open Partner Portal
+                          </a>
+                        </p>
+                        <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+                      </div>
+                    </div>
+                  `,
+                });
+
+                // Log the accommodation date change email
+                await supabase.from("email_log").insert({
+                  email_type: "accommodation_date_change",
+                  subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${program.customer_company || program.customer_name}`,
+                  recipient_email: getRecipientEmail(partner.email, origin),
+                  recipient_name: partner.name,
+                  related_request_id: program.id,
+                  related_accommodation_id: program.linked_accommodation_id,
+                  related_partner_id: partner.id,
+                  status: "pending",
+                  sent_by: "update-customer-program",
+                  metadata: {
+                    new_arrival_date: newArrivalDate,
+                    new_departure_date: newDepartureDate,
+                    accommodation_name: quote.accommodation_name,
+                    customer_name: program.customer_company || program.customer_name,
+                  },
+                });
+              }
+            }
+            console.log(`Notified ${activeQuotes.length} accommodation partner(s) about date change`);
+          }
+        }
         
         // Customer confirmation for date change
+        // Count both activity providers and accommodation partners for the message
+        let totalNotifiedProviders = providerItems.size;
+        
         // Customer confirmation (always to real customer email)
         emailMessages.push({
           From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
@@ -293,7 +404,7 @@ Deno.serve(async (req) => {
               <h2>Datumwijziging bevestigd</h2>
               <p>Beste ${sanitizeHtml(program.customer_name)},</p>
               <p>U heeft de datum(s) gewijzigd naar: <strong>${newDates}</strong></p>
-              <p>Alle ${providerItems.size} betrokken aanbieder(s) zijn op de hoogte gesteld en wij wachten op hun bevestiging.</p>
+              <p>Alle ${totalNotifiedProviders > 0 ? totalNotifiedProviders + " " : ""}betrokken aanbieder(s)${program.linked_accommodation_id ? " en logiespartner(s)" : ""} zijn op de hoogte gesteld en wij wachten op hun bevestiging.</p>
               <p>
                 <a href="https://bureauvlieland.nl/mijn-programma/${token}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
                   Bekijk uw programma

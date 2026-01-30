@@ -57,6 +57,7 @@ interface DesktopProgramViewProps {
     billing_contact_email?: string;
     billing_reference?: string;
     acceptedTerms?: AcceptedTermsEntry[];
+    reference_number?: string | null;
     // Quote mode fields
     program_type?: string;
     quote_status?: string | null;
@@ -180,6 +181,8 @@ export const DesktopProgramView = ({
           customerCompany={program.customer_company}
           accommodation={accommodation}
           accommodationQuotes={accommodationQuotes}
+          referenceNumber={program.reference_number}
+          accommodationReferenceNumber={accommodation?.reference_number}
           programType={program.program_type as any}
           quoteStatus={program.quote_status as any}
           quoteValidUntil={program.quote_valid_until}

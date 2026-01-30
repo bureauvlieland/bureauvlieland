@@ -24,6 +24,7 @@ interface EditProgramDetailsDialogProps {
   onClose: () => void;
   selectedDates: Date[];
   numberOfPeople: number;
+  hasActiveAccommodation?: boolean;
   onSave: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
 }
 
@@ -32,6 +33,7 @@ export const EditProgramDetailsDialog = ({
   onClose,
   selectedDates: initialDates,
   numberOfPeople: initialPeople,
+  hasActiveAccommodation = false,
   onSave,
 }: EditProgramDetailsDialogProps) => {
   const [dates, setDates] = useState<Date[]>(initialDates);
@@ -182,9 +184,9 @@ export const EditProgramDetailsDialog = ({
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">
                 {hasDateChanges && hasPeopleChanges 
-                  ? "Bij wijziging van datum en aantal worden alle aanbieders opnieuw gecontacteerd voor beschikbaarheid."
+                  ? `Bij wijziging van datum en aantal worden alle aanbieders opnieuw gecontacteerd voor beschikbaarheid.${hasActiveAccommodation ? " Ook de logiesaanbieders worden geïnformeerd." : ""}`
                   : hasDateChanges 
-                    ? "Bij datumwijziging worden alle aanbieders opnieuw gecontacteerd voor beschikbaarheid."
+                    ? `Bij datumwijziging worden alle aanbieders opnieuw gecontacteerd voor beschikbaarheid.${hasActiveAccommodation ? " Ook de logiesaanbieders worden geïnformeerd." : ""}`
                     : "De aanbieders worden op de hoogte gesteld van het gewijzigde aantal personen."
                 }
               </AlertDescription>
