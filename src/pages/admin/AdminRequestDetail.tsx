@@ -757,6 +757,7 @@ const AdminRequestDetail = () => {
                       <TableHead>Dag</TableHead>
                       <TableHead>Activiteit</TableHead>
                       <TableHead>Partner</TableHead>
+                      <TableHead>Gefactureerd door</TableHead>
                       <TableHead>Tijd</TableHead>
                       {isQuoteMode ? (
                         <>
@@ -775,6 +776,7 @@ const AdminRequestDetail = () => {
                   <TableBody>
                     {items.map((item) => {
                       const statusInfo = itemStatusConfig[item.status];
+                      const isBureauInvoiced = item.block_type === "bureau";
                       return (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
@@ -784,6 +786,9 @@ const AdminRequestDetail = () => {
                             <div>
                               <div className="font-medium">{item.block_name}</div>
                               <div className="text-xs text-slate-500">{item.block_category}</div>
+                              {item.admin_price_notes && (
+                                <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -793,6 +798,19 @@ const AdminRequestDetail = () => {
                             >
                               {item.provider_name}
                             </Link>
+                          </TableCell>
+                          <TableCell>
+                            {isBureauInvoiced ? (
+                              <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary whitespace-nowrap">
+                                <Building2 className="h-3 w-3" />
+                                Bureau → Klant
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="gap-1 border-slate-300 bg-slate-50 text-slate-700 whitespace-nowrap">
+                                <Users className="h-3 w-3" />
+                                Partner → Klant
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {item.preferred_time || "-"}

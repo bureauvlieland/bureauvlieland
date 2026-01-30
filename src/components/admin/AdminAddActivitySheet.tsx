@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ArrowLeft, Plus } from "lucide-react";
+import { Search, ArrowLeft, Plus, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -254,6 +254,19 @@ export const AdminAddActivitySheet = ({
                   </Label>
                 </div>
               </RadioGroup>
+              
+              {/* Warning when Bureau invoicing is selected */}
+              {invoicedBy === "bureau" && selectedBlock.provider_id && selectedBlock.provider_id !== "bureau-vlieland" && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="text-amber-800">
+                    <p className="font-medium">Let op: Partner wordt niet genotificeerd</p>
+                    <p className="text-amber-700 mt-1">
+                      {selectedBlock.provider?.name} ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Day selection */}
