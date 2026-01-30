@@ -5,11 +5,19 @@ import { LandingPageStructuredData } from "@/components/LandingPageStructuredDat
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-
+import { ArrowRight, Moon, Coffee, Users, Utensils, MapPin, CheckCircle, Bed } from "lucide-react";
 import heroImage from "@/assets/vlieland-group.jpg";
+import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
+import beachBonfireImage from "@/assets/beach-bonfire.jpg";
+import vlielandMorningImage from "@/assets/vlieland-morning.jpg";
 
 const MeerdaagsBedrijfsuitjeVlieland = () => {
+  const uspItems = [
+    { icon: Moon, title: "Meer tijd", description: "Ruimte voor verdieping en informele momenten" },
+    { icon: Coffee, title: "Ontspanning", description: "Van vroege ochtend tot late avond" },
+    { icon: Users, title: "Verbinding", description: "Teams groeien dichter naar elkaar toe" },
+  ];
+
   return (
     <>
       <Helmet>
@@ -41,7 +49,7 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
 
       <main>
         {/* Hero Section */}
-        <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
+        <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0">
             <img
               src={heroImage}
@@ -59,92 +67,236 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
               Meerdaags bedrijfsuitje op Vlieland
             </h1>
             <p className="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed opacity-95">
-              Wie echt de diepte in wil, kiest voor een meerdaags bedrijfsuitje op Vlieland. 
-              Door te blijven slapen ontstaat ruimte voor verdieping, ontspanning en onderlinge verbinding.
+              Wie echt de diepte in wil, kiest voor een meerdaags programma. Door te blijven slapen 
+              ontstaat ruimte voor verdieping, ontspanning en onderlinge verbinding.
             </p>
           </div>
         </section>
 
-        {/* Waarom meerdere dagen */}
-        <section className="py-16 md:py-24 bg-background">
+        {/* Introductie */}
+        <section className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Waarom meerdere dagen?
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
+            <div className="max-w-3xl mx-auto text-center">
+              <p className="text-lg md:text-xl text-foreground leading-relaxed">
                 Meerdaagse programma's zorgen voor minder haast en meer aandacht. Teams hebben 
-                de tijd om te landen, samen te werken en tot inzichten te komen. Ideaal voor een{" "}
-                <Link to="/heisessie-vlieland" className="text-primary hover:underline font-medium">
-                  heisessie gericht op strategie
-                </Link>{" "}
-                of een{" "}
-                <Link to="/incentive-reis-vlieland" className="text-primary hover:underline font-medium">
-                  exclusieve incentive reis
-                </Link>.
+                de tijd om te landen, samen te werken en tot inzichten te komen.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Volledig verzorgd */}
-        <section className="py-16 md:py-24 bg-muted/30">
+        {/* USP Cards */}
+        <section className="py-16 md:py-24 bg-muted/50">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Volledig verzorgd
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-12 text-center">
+                Waarom meerdere dagen?
               </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Wij regelen overnachtingen, programma's, activiteiten en catering. Van aankomst 
-                tot vertrek is alles op elkaar afgestemd. Lees meer over hoe wij{" "}
-                <Link to="/bedrijfsuitje-vlieland" className="text-primary hover:underline font-medium">
-                  bedrijfsuitjes organiseren
-                </Link>.
+
+              <div className="grid md:grid-cols-3 gap-8">
+                {uspItems.map((item, index) => (
+                  <div key={index} className="bg-background rounded-2xl p-8 shadow-lg border border-border/50 text-center">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                      <item.icon className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-3">
+                      {item.title}
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Image Grid */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-6xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4 text-center">
+                Van aankomst tot vertrek verzorgd
+              </h2>
+              <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+                Wij regelen overnachtingen, programma's, activiteiten en catering. Alles op elkaar afgestemd.
               </p>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="relative overflow-hidden rounded-2xl aspect-[4/3]">
+                  <img 
+                    src={sunsetDinnerImage} 
+                    alt="Diner bij zonsondergang"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-6">
+                    <div>
+                      <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center mb-3">
+                        <Utensils className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                      <h3 className="text-xl font-display font-bold text-primary-foreground mb-2">
+                        Gezamenlijk diner
+                      </h3>
+                      <p className="text-primary-foreground/90 text-sm">
+                        Van borrel tot meergangen menu – de avond als bindend moment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden rounded-2xl aspect-[4/3]">
+                  <img 
+                    src={beachBonfireImage} 
+                    alt="Kampvuur op het strand"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-6">
+                    <div>
+                      <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center mb-3">
+                        <Moon className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                      <h3 className="text-xl font-display font-bold text-primary-foreground mb-2">
+                        Avondprogramma
+                      </h3>
+                      <p className="text-primary-foreground/90 text-sm">
+                        Strandvuur, silent disco of sterren kijken – informele verbinding.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden rounded-2xl aspect-[4/3]">
+                  <img 
+                    src={vlielandMorningImage} 
+                    alt="Ochtend op Vlieland"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-6">
+                    <div>
+                      <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center mb-3">
+                        <Coffee className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                      <h3 className="text-xl font-display font-bold text-primary-foreground mb-2">
+                        Ontbijt & ochtend
+                      </h3>
+                      <p className="text-primary-foreground/90 text-sm">
+                        Rustig starten, fris de dag in – of vroeg actief op het strand.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 rounded-2xl p-8 flex flex-col justify-center">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                    <Bed className="w-7 h-7 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-foreground mb-3">
+                    Logies op maat
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    Van hotels tot groepsaccommodaties – wij vinden de perfecte overnachting voor jullie team.
+                  </p>
+                  <Link 
+                    to="/logies-vlieland" 
+                    className="text-primary font-medium inline-flex items-center gap-2 hover:underline"
+                  >
+                    Bekijk logiesopties
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Geschikt voor */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-muted/50">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Geschikt voor
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Directies, managementteams, afdelingen en organisaties die willen investeren 
-                in samenwerking en focus.
-              </p>
+            <div className="max-w-5xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                  <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                    Geschikt voor
+                  </h2>
+                  <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                    Directies, managementteams, afdelingen en organisaties die willen investeren 
+                    in samenwerking en focus.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    {[
+                      "Heisessies en strategiedagen",
+                      "Teambuilding met verdieping",
+                      "Incentive reizen",
+                      "Afdelingsuitjes met overnachting"
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+                        <span className="text-foreground">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 mt-8">
+                    <Link 
+                      to="/heisessie-vlieland" 
+                      className="text-primary font-medium inline-flex items-center gap-2 hover:underline"
+                    >
+                      Heisessie
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <Link 
+                      to="/incentive-reis-vlieland" 
+                      className="text-primary font-medium inline-flex items-center gap-2 hover:underline"
+                    >
+                      Incentive reis
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="aspect-[4/3] overflow-hidden rounded-2xl">
+                    <img 
+                      src={heroImage} 
+                      alt="Team op Vlieland"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
+
+        {/* CTA Section */}
         <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Klaar om te beginnen?
-            </h2>
-            <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
-              Stel in 5 minuten je eigen programma samen. Kies je bouwstenen en ontvang 
-              binnen 5 werkdagen bevestiging. Vrijblijvend en zonder verplichtingen.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                asChild 
-                size="lg" 
-                variant="heroPrimary"
-                className="text-lg px-8"
-              >
-                <Link to="/programma-samenstellen">Stel je programma samen</Link>
-              </Button>
-              <Button 
-                asChild 
-                size="lg" 
-                variant="heroOutline"
-                className="text-lg px-8"
-              >
-                <Link to="/contact">Liever persoonlijk advies?</Link>
-              </Button>
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
+                Klaar om te beginnen?
+              </h2>
+              <p className="text-lg opacity-90 mb-10 leading-relaxed">
+                Stel zelf je programma samen of vraag een maatwerk offerte aan voor persoonlijk advies.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" variant="secondary" className="gap-2">
+                  <Link to="/programma-samenstellen">
+                    Stel je programma samen
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="gap-2 bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
+                  <Link to="/contact">
+                    Maatwerk aanvragen
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
