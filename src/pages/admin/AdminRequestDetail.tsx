@@ -53,9 +53,9 @@ import {
   XCircle,
   HelpCircle,
   Ban,
-  Send,
   Sparkles,
   Plus,
+  Pencil,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { 
@@ -64,7 +64,6 @@ import {
   type ProgramType,
   type QuoteStatus,
   type ItemQuoteStatus,
-  quoteStatusConfig,
 } from "@/types/programRequest";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
@@ -75,6 +74,7 @@ import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteSta
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
+import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
@@ -124,6 +124,7 @@ interface ProgramRequestItem {
   block_type: string;
   provider_name: string;
   provider_id: string;
+  provider_email: string | null;
   day_index: number;
   preferred_time: string | null;
   customer_notes: string | null;
@@ -170,6 +171,7 @@ const AdminRequestDetail = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [addActivityOpen, setAddActivityOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -763,6 +765,7 @@ const AdminRequestDetail = () => {
                         <>
                           <TableHead>Offerte-status</TableHead>
                           <TableHead>Prijs (aanpasbaar)</TableHead>
+                          <TableHead className="w-[80px]"></TableHead>
                         </>
                       ) : (
                         <>
@@ -834,6 +837,17 @@ const AdminRequestDetail = () => {
                                   numberOfPeople={request.number_of_people}
                                   onSave={(price, notes) => handleItemPriceUpdate(item.id, price, notes)}
                                 />
+                              </TableCell>
+                              {/* Quote mode: edit button */}
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setEditingItem(item)}
+                                  className="h-8 w-8"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </>
                           ) : (
@@ -973,6 +987,18 @@ const AdminRequestDetail = () => {
           requestId={request.id}
           selectedDates={request.selected_dates as string[]}
           existingBlockIds={items.map(item => item.block_id)}
+          onSuccess={fetchRequestData}
+        />
+      )}
+
+      {/* Edit activity sheet */}
+      {request && (
+        <AdminEditActivitySheet
+          open={editingItem !== null}
+          onOpenChange={(open) => !open && setEditingItem(null)}
+          item={editingItem}
+          requestId={request.id}
+          selectedDates={request.selected_dates as string[]}
           onSuccess={fetchRequestData}
         />
       )}
