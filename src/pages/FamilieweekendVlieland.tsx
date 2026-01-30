@@ -33,7 +33,7 @@ const FamilieweekendVlieland = () => {
         canonicalUrl="https://bureauvlieland.nl/familieweekend-vlieland"
         breadcrumbItems={[
           { name: "Home", url: "https://bureauvlieland.nl" },
-          { name: "Privé & Trouwen", url: "https://bureauvlieland.nl/trouwen-op-vlieland" },
+          { name: "Voor wie", url: "https://bureauvlieland.nl/voor-wie" },
           { name: "Familieweekend Vlieland", url: "https://bureauvlieland.nl/familieweekend-vlieland" }
         ]}
       />
@@ -41,7 +41,7 @@ const FamilieweekendVlieland = () => {
       <Navigation />
       <LandingBreadcrumb 
         items={[
-          { label: "Privé & Trouwen", href: "/trouwen-op-vlieland" },
+          { label: "Voor wie", href: "/voor-wie" },
           { label: "Familieweekend Vlieland" }
         ]} 
       />

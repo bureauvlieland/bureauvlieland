@@ -33,7 +33,7 @@ const GroepsweekendVlieland = () => {
         canonicalUrl="https://bureauvlieland.nl/groepsweekend-vlieland"
         breadcrumbItems={[
           { name: "Home", url: "https://bureauvlieland.nl" },
-          { name: "Privé & Trouwen", url: "https://bureauvlieland.nl/groepsweekend-vlieland" },
+          { name: "Voor wie", url: "https://bureauvlieland.nl/voor-wie" },
           { name: "Groepsweekend Vlieland", url: "https://bureauvlieland.nl/groepsweekend-vlieland" }
         ]}
       />
@@ -41,7 +41,7 @@ const GroepsweekendVlieland = () => {
       <Navigation />
       <LandingBreadcrumb 
         items={[
-          { label: "Privé & Trouwen", href: "/trouwen-op-vlieland" },
+          { label: "Voor wie", href: "/voor-wie" },
           { label: "Groepsweekend Vlieland" }
         ]} 
       />
