@@ -40,16 +40,88 @@ export async function getRenderedTemplate(
 }
 
 /**
+ * Process conditional blocks {{#if var}}...{{/if}} and {{#if var}}...{{else}}...{{/if}}
+ * Supports nested conditionals
+ */
+export function processConditionals(text: string, variables: TemplateVariables): string {
+  // Process {{#if var}}...{{else}}...{{/if}} blocks (most specific first)
+  let result = text;
+  
+  // Keep processing until no more conditionals are found (handles nested)
+  let maxIterations = 50; // Prevent infinite loops
+  let iterations = 0;
+  
+  while (iterations < maxIterations) {
+    // Match innermost {{#if ...}}...{{/if}} blocks first (non-greedy)
+    const ifElsePattern = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/;
+    const ifOnlyPattern = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/;
+    
+    const elseMatch = result.match(ifElsePattern);
+    const ifMatch = result.match(ifOnlyPattern);
+    
+    // Determine which match to process (prefer if-else if it appears first or is the only one)
+    let matchToProcess: RegExpMatchArray | null = null;
+    let hasElse = false;
+    
+    if (elseMatch && ifMatch) {
+      // Check if the else match is contained within the if match (meaning it's an if-else)
+      if (elseMatch.index !== undefined && ifMatch.index !== undefined) {
+        if (elseMatch.index <= ifMatch.index) {
+          matchToProcess = elseMatch;
+          hasElse = true;
+        } else {
+          matchToProcess = ifMatch;
+          hasElse = false;
+        }
+      }
+    } else if (elseMatch) {
+      matchToProcess = elseMatch;
+      hasElse = true;
+    } else if (ifMatch) {
+      matchToProcess = ifMatch;
+      hasElse = false;
+    }
+    
+    if (!matchToProcess) {
+      break; // No more conditionals to process
+    }
+    
+    const varName = matchToProcess[1];
+    const value = variables[varName];
+    const isTruthy = value !== undefined && value !== null && value !== "" && value !== 0 && value !== "0";
+    
+    if (hasElse) {
+      const truthyContent = matchToProcess[2];
+      const falsyContent = matchToProcess[3];
+      result = result.replace(matchToProcess[0], isTruthy ? truthyContent : falsyContent);
+    } else {
+      const content = matchToProcess[2];
+      result = result.replace(matchToProcess[0], isTruthy ? content : "");
+    }
+    
+    iterations++;
+  }
+  
+  return result;
+}
+
+/**
  * Replace {{variable}} placeholders with actual values
  */
 export function replaceVariables(text: string, variables: TemplateVariables): string {
-  return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+  // First, process conditionals
+  let result = processConditionals(text, variables);
+  
+  // Then, replace simple {{variable}} placeholders
+  result = result.replace(/\{\{(\w+)\}\}/g, (match, key) => {
     const value = variables[key];
     if (value === undefined || value === null) {
       return "";
     }
     return String(value);
   });
+  
+  return result;
 }
 
 /**
