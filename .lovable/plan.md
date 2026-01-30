@@ -1,134 +1,118 @@
 
-# Plan: PDF-bijlage bij E-mail + BTW-correcties + Financieel Overzicht Uitbreiding
 
-## Geïdentificeerde Problemen
+# Plan: Akkoord-Workflow voor Maatwerkvoorstellen + Partner-notificaties
 
-### 1. PDF wordt niet meegestuurd als bijlage
-**Huidig gedrag:** De `send-quote-offer` Edge Function stuurt alleen een HTML-e-mail met een link naar het klantportaal. De PDF wordt wel gegenereerd in de browser, maar niet bijgevoegd aan de e-mail.
+## Huidige Situatie
 
-### 2. BTW-berekening in PDF is incorrect
-**Probleem in `AdminQuotePreview.tsx` regel 131-137:**
-```typescript
-const subtotal = itemsTotal * (request?.number_of_people || 1);  // Vermenigvuldigt pp-prijs
-const vatAmount = (subtotal + bureauFee) * 0.21;  // Berekent 21% BTW OVER het totaal
-const total = subtotal + bureauFee + vatAmount;   // Telt BTW erbij op
-```
+### Wat WEL werkt:
+- Admin maakt maatwerk programma aan (`program_type: "quote"`)
+- Admin voegt activiteiten toe met `skip_partner_notification: true` (partners worden NIET genotificeerd)
+- Admin stuurt PDF-voorstel naar klant via `send-quote-offer` 
+- `quote_status` wordt bijgewerkt naar `offerte_verstuurd`
 
-**Maar:** Prijzen in het systeem zijn al inclusief BTW. De berekening zou dus moeten zijn:
-- Subtotaal = prijzen (incl. BTW)
-- BTW = subtotaal / 1.21 × 0.21 (terugrekenen)
-- Excl. BTW = subtotaal - BTW
-
-### 3. Financieel Overzicht in AdminRequestDetail mist voorlopige prijzen
-**Huidig:** `FinancialOverviewCard` toont alleen bevestigde bureau-items (`status === "confirmed"`).
-**Gewenst:** Voor maatwerk-offertes wil je ook de voorlopige prijzen zien, zelfs als items nog niet bevestigd zijn.
+### Wat ONTBREEKT:
+1. **Klant-akkoord knop**: Er is geen "Ik ga akkoord met dit voorstel" knop in het klantportaal
+2. **Partner-notificatie trigger**: Na klant-akkoord moeten partners genotificeerd worden over hun activiteiten
+3. **Tekst correctie**: PDF en e-mail vermelden "beschikbaarheidsgarantie" terwijl partners nog niet uitgevraagd zijn
 
 ---
 
-## Voorgestelde Oplossingen
+## Oplossing: Nieuwe Akkoord-Flow
 
-### A. PDF als bijlage meesturen
+```text
+WORKFLOW NA IMPLEMENTATIE:
 
-| Stap | Actie |
-|------|-------|
-| 1 | Frontend genereert PDF als Base64-string |
-| 2 | Base64 wordt meegestuurd naar `send-quote-offer` Edge Function |
-| 3 | Edge Function voegt PDF als bijlage toe aan Mailjet-bericht |
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│  Admin stuurt       │────▶│  Klant ziet         │────▶│  Partners ontvangen │
+│  programmavoorstel  │     │  voorstel + geeft   │     │  notificatie        │
+│                     │     │  akkoord            │     │                     │
+│  quote_status:      │     │  quote_status:      │     │  items worden       │
+│  offerte_verstuurd  │     │  akkoord_ontvangen  │     │  'pending'          │
+└─────────────────────┘     └─────────────────────┘     └─────────────────────┘
+```
 
-**Technische aanpak:**
+---
+
+## Technische Implementatie
+
+### 1. Nieuwe Component: `AcceptQuoteProposalCard`
+
+**Doel:** Toont een duidelijke call-to-action aan de klant om het voorstel te accepteren.
+
+**Tonen wanneer:**
+- `program_type === "quote"`
+- `quote_status === "offerte_verstuurd"`
+- `quote_valid_until` is nog niet verstreken
+
+**Inhoud:**
+- Samenvatting: aantal activiteiten, totaal geschat bedrag
+- Geldigheidsdatum prominente weergave
+- "Akkoord, start reserveringen" primaire knop
+- Uitleg: "Na uw akkoord worden de leveranciers benaderd voor definitieve bevestiging"
+
+### 2. Hook Update: `useCustomerProgram`
+
+**Nieuwe functie toevoegen:**
 ```typescript
-// Frontend: PDF genereren en als base64 meesturen
-const pdfBlob = await generatePDF();
-const base64 = await blobToBase64(pdfBlob);
-
-await supabase.functions.invoke("send-quote-offer", {
-  body: {
-    requestId,
-    validUntil,
-    personalMessage,
-    pdfBase64: base64,  // Nieuwe parameter
-    pdfFilename: `Voorstel-${referenceNumber}.pdf`
-  }
-});
-
-// Edge Function: Mailjet attachment
-{
-  From: { ... },
-  To: [ ... ],
-  Subject: "...",
-  HTMLPart: emailHtml,
-  Attachments: [
-    {
-      ContentType: "application/pdf",
-      Filename: pdfFilename,
-      Base64Content: pdfBase64
-    }
-  ]
-}
+acceptQuoteProposal: () => Promise<boolean>;
 ```
 
-### B. BTW-berekening corrigeren
+**Actie:**
+- Roept nieuwe edge function aan: `accept-quote-proposal`
+- Retourneert success/error
 
-**Huidige (fout):**
-```
-Prijs p.p.: €50 (incl. BTW)
-Subtotaal (20 pers.): €1000
-BTW (21%): €210    ← FOUT: berekent 21% over incl-prijs
-Totaal: €1210      ← Onjuist
-```
+### 3. Nieuwe Edge Function: `accept-quote-proposal`
 
-**Correct:**
-```
-Prijs p.p.: €50 (incl. BTW)
-Subtotaal incl. BTW (20 pers.): €1000
-Subtotaal excl. BTW: €826,45 (= €1000 / 1.21)
-BTW (21%): €173,55 (= €1000 - €826,45)
-Totaal incl. BTW: €1000  ← Gelijk aan subtotaal, want al incl.
-```
-
-**Aangepaste logica:**
+**Input:**
 ```typescript
-const calculateTotals = () => {
-  const itemsTotal = items.reduce((sum, item) => sum + getItemPrice(item), 0);
-  const bureauFee = calculateBureauFee(request?.number_of_people || 0);
-  
-  // Prijzen zijn per persoon, vermenigvuldigen
-  const subtotalInclVat = (itemsTotal * (request?.number_of_people || 1)) + bureauFee;
-  
-  // Terugrekenen van BTW (prijzen zijn al inclusief)
-  const subtotalExclVat = subtotalInclVat / 1.21;
-  const vatAmount = subtotalInclVat - subtotalExclVat;
-  
-  return { 
-    subtotalInclVat,   // Totaal incl. BTW
-    subtotalExclVat,   // Totaal excl. BTW
-    vatAmount,         // BTW-bedrag
-    bureauFee 
-  };
-};
+{ token: string; origin?: string }
 ```
 
-### C. Financieel Overzicht uitbreiden voor maatwerk-offertes
+**Acties:**
+1. Valideer dat programma bestaat en `quote_status === "offerte_verstuurd"`
+2. Controleer of `quote_valid_until` niet verstreken is
+3. Update `quote_status` naar `akkoord_ontvangen`
+4. Voor elk item met `skip_partner_notification: true`:
+   - Zet `skip_partner_notification` naar `false`
+   - Zet status naar `pending` (indien nog niet)
+   - Stuur notificatie naar partner
+5. Log in `program_request_history`
+6. Stuur bevestigingsmail naar klant
 
-**Nieuwe sectie toevoegen:** "VOORLOPIGE PROGRAMMAKOSTEN"
+### 4. Partner Notificatie E-mail
 
-| Element | Weergave |
-|---------|----------|
-| Alle activiteiten (ongeacht status) | Met indicatieve prijs |
-| Badge per item | "Concept" / "Bevestigd" / "Optioneel" |
-| Subtotaal voorlopig | Som van alle indicatieve prijzen |
-| Coordinatiefee | Gebaseerd op groepsgrootte |
+**Hergebruik bestaande logica** uit `send-program-request`:
+- "Nieuwe aanvraag via Bureau Vlieland"
+- Klantgegevens + datum + aantal personen
+- Lijst van aangevraagde activiteiten
+- Link naar Partner Portal
 
-**Nieuwe component-props:**
-```typescript
-interface FinancialOverviewCardProps {
-  numberOfPeople: number;
-  items: ProgramRequestItem[];
-  invoices: BureauInvoice[];
-  onRegisterInvoice: () => void;
-  isQuoteMode?: boolean;  // Nieuw: toon alle items, niet alleen bevestigde
-}
+### 5. Tekst Correcties
+
+**AdminQuotePreview.tsx (PDF):**
 ```
+Oud: "Na deze datum kunnen wij de beschikbaarheid niet garanderen."
+Nieuw: "Als u akkoord bent met dit programmavoorstel, kunt u dit bevestigen 
+       in uw klantomgeving. Hierna worden de leveranciers op de hoogte gebracht."
+```
+
+**send-quote-offer/index.ts (E-mail):**
+```
+Oud: Rode waarschuwing over beschikbaarheid
+Nieuw: Amber informatieve melding over workflow
+```
+
+---
+
+## UI Plaatsing
+
+### Desktop (DesktopProgramView):
+- `AcceptQuoteProposalCard` bovenaan, direct onder `ProgramOverviewCard`
+- Vervangt `ActionRequiredCard` wanneer quote-modus actief is
+
+### Mobile (MobileProgramView):
+- Prominent bovenaan, boven de dag-tabbladen
+- Sticky "Akkoord" knop onderaan scherm (optioneel)
 
 ---
 
@@ -136,77 +120,156 @@ interface FinancialOverviewCardProps {
 
 | # | Bestand | Actie |
 |---|---------|-------|
-| 1 | `AdminQuotePreview.tsx` | Corrigeer BTW-berekening (prijzen zijn incl. BTW) |
-| 2 | `AdminQuotePreview.tsx` | Voeg PDF base64 conversie toe en stuur mee naar Edge Function |
-| 3 | `send-quote-offer/index.ts` | Accepteer PDF-bijlage en voeg toe aan Mailjet-bericht |
-| 4 | `FinancialOverviewCard.tsx` | Voeg "VOORLOPIGE PROGRAMMAKOSTEN" sectie toe voor quote-modus |
-| 5 | `AdminRequestDetail.tsx` | Geef `isQuoteMode={true}` door aan FinancialOverviewCard voor maatwerk-projecten |
+| 1 | `src/components/customer-portal/AcceptQuoteProposalCard.tsx` | **Nieuw** - Akkoord component voor klant |
+| 2 | `src/hooks/useCustomerProgram.ts` | Voeg `acceptQuoteProposal()` functie toe |
+| 3 | `supabase/functions/accept-quote-proposal/index.ts` | **Nieuw** - Edge function voor akkoord + partner notificaties |
+| 4 | `supabase/config.toml` | Registreer nieuwe edge function |
+| 5 | `src/components/customer-portal/DesktopProgramView.tsx` | Integreer AcceptQuoteProposalCard |
+| 6 | `src/components/customer-portal/MobileProgramView.tsx` | Integreer AcceptQuoteProposalCard |
+| 7 | `src/pages/admin/AdminQuotePreview.tsx` | Corrigeer validiteitstekst |
+| 8 | `supabase/functions/send-quote-offer/index.ts` | Corrigeer e-mail validiteitstekst |
 
 ---
 
-## PDF Weergave na correctie
+## Gedetailleerde Technische Specificaties
+
+### AcceptQuoteProposalCard Component
+
+```typescript
+interface AcceptQuoteProposalCardProps {
+  program: ProgramRequestWithItems;
+  onAccept: () => Promise<boolean>;
+  isLoading?: boolean;
+}
+
+// Visueel ontwerp:
+// - Achtergrond: gradient van blauw naar wit
+// - Icoon: groot vinkje of handshake
+// - Titel: "Uw maatwerkvoorstel"
+// - Subtitel: "[X] activiteiten • Geschat totaal €[bedrag]"
+// - Geldig tot: badge met datum
+// - Primaire knop: "Akkoord, start reserveringen"
+// - Secundaire tekst: "De leveranciers worden hierna benaderd"
+```
+
+### accept-quote-proposal Edge Function
+
+```typescript
+// Pseudo-code structuur:
+Deno.serve(async (req) => {
+  // 1. Parse token
+  const { token, origin } = await req.json();
+  
+  // 2. Fetch program
+  const program = await fetchProgramByToken(token);
+  
+  // 3. Validaties
+  if (program.quote_status !== "offerte_verstuurd") {
+    return error("Voorstel kan niet geaccepteerd worden");
+  }
+  if (new Date(program.quote_valid_until) < new Date()) {
+    return error("Dit voorstel is verlopen");
+  }
+  
+  // 4. Update quote_status
+  await supabase.from("program_requests").update({
+    quote_status: "akkoord_ontvangen",
+    updated_at: new Date().toISOString(),
+  }).eq("id", program.id);
+  
+  // 5. Fetch items met skip_partner_notification
+  const items = await supabase.from("program_request_items")
+    .select("*")
+    .eq("request_id", program.id)
+    .eq("skip_partner_notification", true);
+  
+  // 6. Groepeer per partner
+  const partnerGroups = groupItemsByProvider(items);
+  
+  // 7. Stuur notificaties per partner
+  for (const [partnerId, partnerData] of partnerGroups) {
+    // Update items
+    await supabase.from("program_request_items")
+      .update({ 
+        skip_partner_notification: false,
+        status: "pending",
+        status_updated_at: new Date().toISOString(),
+      })
+      .in("id", partnerData.itemIds);
+    
+    // Stuur e-mail
+    await sendPartnerNotification(partner, program, partnerData.items);
+  }
+  
+  // 8. Log history
+  await supabase.from("program_request_history").insert({
+    request_id: program.id,
+    action: "quote_accepted",
+    actor: "customer",
+    actor_name: program.customer_name,
+    notes: `Klant heeft voorstel geaccepteerd. ${items.length} partners genotificeerd.`,
+  });
+  
+  // 9. Bevestigingsmail naar klant
+  await sendCustomerConfirmation(program);
+  
+  return success();
+});
+```
+
+### Partner Notificatie E-mail Template
+
+Hergebruikt styling van bestaande `program_request_partner` template:
+- Koptekst: Navy blauw met "Bureau Vlieland"
+- Klantgegevens sectie
+- Datums + aantal personen
+- Aangevraagde activiteiten lijst
+- Link naar Partner Portal
+- Disclaimer: "Dit is een vrijblijvende aanvraag"
+
+---
+
+## Klant-ervaring na implementatie
 
 ```text
-╔════════════════════════════════════════════════════╗
-║ BUREAU VLIELAND - Maatwerkvoorstel                 ║
-╠════════════════════════════════════════════════════╣
-║ Klant: Bedrijf X                                   ║
-║ Datum: 15-16 maart 2025                            ║
-║ Aantal: 25 personen                                ║
-╠════════════════════════════════════════════════════╣
-║ DAG 1 - 15 maart 2025                              ║
-╠────────────────────────────────────────────────────╣
-║ 10:00  Zeehondentocht (met 2 boten)      €45 p.p.  ║
-║        Rederij Doeksen                             ║
-║ 14:00  Wadlopen                          €35 p.p.  ║
-║        Wadloopcentrum                              ║
-╠════════════════════════════════════════════════════╣
-║ Subtotaal (25 pers.)              €2.000,00        ║
-║ Coördinatiekosten                    €100,00       ║
-║ ──────────────────────────────────────────         ║
-║ Subtotaal excl. BTW               €1.735,54        ║
-║ BTW (21%)                           €364,46        ║
-║ ──────────────────────────────────────────         ║
-║ TOTAAL INCL. BTW                  €2.100,00        ║
-╠════════════════════════════════════════════════════╣
-║ ⚠ Dit voorstel is geldig tot 14 februari 2025     ║
-║   Prijzen zijn onder voorbehoud.                   ║
-║   Facturatie kan geschieden door partners.         ║
-╚════════════════════════════════════════════════════╝
+STAP 1: Klant ontvangt e-mail met PDF voorstel
+        └── "Bekijk voorstel & geef akkoord" knop
+
+STAP 2: Klant opent klantportaal
+        └── Ziet AcceptQuoteProposalCard bovenaan
+        └── "X activiteiten • Geschat €X.XXX"
+        └── "Geldig tot [datum]"
+        └── [AKKOORD, START RESERVERINGEN] knop
+
+STAP 3: Na klik op Akkoord
+        └── Laadstatus: "Partners worden geïnformeerd..."
+        └── Succes: Toast "Voorstel geaccepteerd! De leveranciers zijn geïnformeerd."
+        └── AcceptQuoteProposalCard verdwijnt
+        └── ActionRequiredCard toont: "Wachten op bevestiging van X aanbieders"
+
+STAP 4: Normale workflow
+        └── Partners reageren (bevestigen/alternatief)
+        └── Klant accepteert per activiteit
+        └── Facturatiegegevens invullen
+        └── Voorwaarden accepteren
+        └── Boeking compleet
 ```
 
 ---
 
-## Technische Details
+## Randgevallen
 
-### Mailjet Attachment Format
-```javascript
-{
-  Messages: [{
-    From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
-    To: [{ Email: customerEmail, Name: customerName }],
-    Subject: "Uw maatwerkvoorstel van Bureau Vlieland",
-    HTMLPart: emailHtml,
-    Attachments: [{
-      ContentType: "application/pdf",
-      Filename: "Voorstel-BV-2501-0001.pdf",
-      Base64Content: "JVBERi0xLjQKJ..."  // Base64-encoded PDF
-    }]
-  }]
-}
-```
+### Verlopen voorstel
+- Toon `AcceptQuoteProposalCard` met disabled state
+- Tekst: "Dit voorstel is verlopen op [datum]. Neem contact op voor een nieuw voorstel."
+- Geen akkoord-knop
 
-### Base64 Helper Function
-```typescript
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = (reader.result as string).split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-```
+### Geen items in voorstel
+- Toon geen AcceptQuoteProposalCard
+- Edge case: zou niet moeten voorkomen
+
+### Klant is al akkoord
+- `quote_status === "akkoord_ontvangen"`
+- Toon geen AcceptQuoteProposalCard
+- Normale ActionRequiredCard toont voortgang
+
