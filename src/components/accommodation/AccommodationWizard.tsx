@@ -48,15 +48,21 @@ interface InitialData {
   arrival_date?: Date;
   departure_date?: Date;
   number_of_guests?: number;
+  // Contact details for pre-fill from linked program
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
+  customer_company?: string;
 }
 
 interface AccommodationWizardProps {
   onSuccess?: (token: string) => void;
   initialData?: InitialData;
   fromConfigurator?: boolean;
+  linkedProgramToken?: string;
 }
 
-export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }: AccommodationWizardProps) => {
+export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, linkedProgramToken }: AccommodationWizardProps) => {
   const navigate = useNavigate();
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   
@@ -66,7 +72,13 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
     if (initialData) {
       return {
         ...defaultFormData,
-        ...initialData,
+        arrival_date: initialData.arrival_date,
+        departure_date: initialData.departure_date,
+        number_of_guests: initialData.number_of_guests || defaultFormData.number_of_guests,
+        customer_name: initialData.customer_name || "",
+        customer_email: initialData.customer_email || "",
+        customer_phone: initialData.customer_phone || "",
+        customer_company: initialData.customer_company || "",
       };
     }
     return defaultFormData;
@@ -75,6 +87,38 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
   const [isComplete, setIsComplete] = useState(false);
   const [portalToken, setPortalToken] = useState<string | null>(null);
   const [cartHandoff, setCartHandoff] = useState<CartHandoffData | null>(null);
+  const [linkedProgramId, setLinkedProgramId] = useState<string | null>(null);
+
+  // Fetch program data if linkedProgramToken is provided
+  useEffect(() => {
+    if (linkedProgramToken) {
+      const fetchProgramData = async () => {
+        const { data, error } = await supabase
+          .from("program_requests")
+          .select("id, customer_name, customer_email, customer_phone, customer_company")
+          .eq("customer_token", linkedProgramToken)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Failed to fetch program data:", error);
+          return;
+        }
+
+        if (data) {
+          setLinkedProgramId(data.id);
+          // Pre-fill contact details from the linked program
+          setFormData(prev => ({
+            ...prev,
+            customer_name: prev.customer_name || data.customer_name || "",
+            customer_email: prev.customer_email || data.customer_email || "",
+            customer_phone: prev.customer_phone || data.customer_phone || "",
+            customer_company: prev.customer_company || data.customer_company || "",
+          }));
+        }
+      };
+      fetchProgramData();
+    }
+  }, [linkedProgramToken]);
 
   // Load cart handoff data from sessionStorage
   useEffect(() => {
@@ -131,7 +175,70 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator }
 
     setIsSubmitting(true);
     try {
-      // Step 1: Insert the accommodation request (trigger creates linked program)
+      // If we have a linked program ID, we need to link to existing program instead of creating new one
+      if (linkedProgramId && linkedProgramToken) {
+        // Step 1: Insert accommodation request with linked_program_id
+        // This bypasses the trigger that creates a new program
+        const { data: insertedData, error: insertError } = await supabase
+          .from("accommodation_requests")
+          .insert({
+            customer_name: formData.customer_name.trim(),
+            customer_email: formData.customer_email.trim().toLowerCase(),
+            customer_phone: formData.customer_phone.trim(),
+            customer_company: formData.customer_company.trim() || null,
+            arrival_date: format(formData.arrival_date!, "yyyy-MM-dd"),
+            departure_date: format(formData.departure_date!, "yyyy-MM-dd"),
+            number_of_guests: formData.number_of_guests,
+            accommodation_type: formData.accommodation_type,
+            room_count: formData.room_count,
+            room_occupancy: formData.room_occupancy,
+            room_types: formData.room_types,
+            location_preference: formData.location_preference,
+            facilities_required: formData.facilities_required,
+            budget_range: formData.budget_range || null,
+            special_requests: formData.special_requests.trim() || null,
+            wants_activities: true, // Already has activities
+            linked_program_id: linkedProgramId, // Link to existing program
+            status: "submitted",
+          })
+          .select("id, customer_token")
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Step 2: Update the existing program to link back to accommodation
+        const { error: updateError } = await supabase
+          .from("program_requests")
+          .update({ linked_accommodation_id: insertedData.id })
+          .eq("id", linkedProgramId);
+
+        if (updateError) {
+          console.error("Failed to update program link:", updateError);
+        }
+
+        // Send confirmation emails
+        try {
+          await supabase.functions.invoke("send-accommodation-request", {
+            body: { accommodationRequestId: insertedData.id },
+          });
+        } catch (emailError) {
+          console.error("Failed to send confirmation emails:", emailError);
+        }
+
+        // Use the existing program token for redirect
+        setPortalToken(linkedProgramToken);
+        setIsComplete(true);
+        toast.success("Logiesaanvraag gekoppeld aan uw programma!");
+
+        // Redirect to customer portal
+        setTimeout(() => {
+          navigate(`/mijn-programma/${linkedProgramToken}`);
+        }, 2500);
+
+        return;
+      }
+
+      // Original flow: Insert the accommodation request (trigger creates linked program)
       const { data: insertedData, error: insertError } = await supabase
         .from("accommodation_requests")
         .insert({
