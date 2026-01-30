@@ -497,7 +497,11 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
                 <StepWishes formData={formData} updateFormData={updateFormData} />
               )}
               {currentStep === 5 && (
-                <StepContact formData={formData} updateFormData={updateFormData} />
+                <StepContact 
+                  formData={formData} 
+                  updateFormData={updateFormData} 
+                  hideActivitiesOption={!!linkedProgramToken}
+                />
               )}
 
               {/* Navigation */}

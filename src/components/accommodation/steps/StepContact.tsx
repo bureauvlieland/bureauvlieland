@@ -7,9 +7,10 @@ import type { AccommodationWizardData } from "@/types/accommodation";
 interface StepContactProps {
   formData: AccommodationWizardData;
   updateFormData: (updates: Partial<AccommodationWizardData>) => void;
+  hideActivitiesOption?: boolean;
 }
 
-export const StepContact = ({ formData, updateFormData }: StepContactProps) => {
+export const StepContact = ({ formData, updateFormData, hideActivitiesOption }: StepContactProps) => {
   return (
     <div className="space-y-6">
       {/* Name */}
@@ -83,27 +84,29 @@ export const StepContact = ({ formData, updateFormData }: StepContactProps) => {
         </div>
       </div>
 
-      {/* Activities checkbox */}
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <Checkbox
-            checked={formData.wants_activities}
-            onCheckedChange={(checked) => 
-              updateFormData({ wants_activities: checked === true })
-            }
-            className="mt-0.5"
-          />
-          <div>
-            <p className="font-medium text-sm">
-              Wij willen ook activiteiten boeken
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Na bevestiging van de accommodatie helpen wij u graag met het 
-              samenstellen van een compleet programma met activiteiten, catering en vervoer.
-            </p>
-          </div>
-        </label>
-      </div>
+      {/* Activities checkbox - hide when linked to existing program */}
+      {!hideActivitiesOption && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <Checkbox
+              checked={formData.wants_activities}
+              onCheckedChange={(checked) => 
+                updateFormData({ wants_activities: checked === true })
+              }
+              className="mt-0.5"
+            />
+            <div>
+              <p className="font-medium text-sm">
+                Wij willen ook activiteiten boeken
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Na bevestiging van de accommodatie helpen wij u graag met het 
+                samenstellen van een compleet programma met activiteiten, catering en vervoer.
+              </p>
+            </div>
+          </label>
+        </div>
+      )}
 
       {/* Privacy notice */}
       <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
