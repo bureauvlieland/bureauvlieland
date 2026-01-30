@@ -41,11 +41,12 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 };
 
 // Fallback templates if database templates not found
-function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>): string {
+function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>, budgetLabels: Record<string, string>): string {
   const safeName = sanitizeHtml(request.customer_name);
   const safeCompany = sanitizeHtml(request.customer_company);
   const safePhone = sanitizeHtml(request.customer_phone);
   const safeSpecialRequests = sanitizeHtml(request.special_requests);
+  const budgetDisplay = request.budget_range ? (budgetLabels[request.budget_range] || request.budget_range) : "";
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -71,7 +72,7 @@ function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>)
           <tr><td style="padding: 5px 0; color: #666;">Aantal gasten:</td><td><strong>${request.number_of_guests}</strong></td></tr>
           <tr><td style="padding: 5px 0; color: #666;">Type:</td><td>${typeLabels[request.accommodation_type] || request.accommodation_type}</td></tr>
           ${request.room_count ? `<tr><td style="padding: 5px 0; color: #666;">Kamers:</td><td>${request.room_count}</td></tr>` : ''}
-          ${request.budget_range ? `<tr><td style="padding: 5px 0; color: #666;">Budget:</td><td>${request.budget_range}</td></tr>` : ''}
+          ${budgetDisplay ? `<tr><td style="padding: 5px 0; color: #666;">Budget:</td><td>${budgetDisplay}</td></tr>` : ''}
         </table>
       </div>
       
@@ -194,10 +195,21 @@ Deno.serve(async (req) => {
     // Format accommodation type
     const typeLabels: Record<string, string> = {
       hotel: "Hotel",
+      vacation_home: "Vakantiewoning",
       vakantiehuis: "Vakantiehuis",
       groepsaccommodatie: "Groepsaccommodatie",
+      group_accommodation: "Groepsaccommodatie",
       camping: "Camping",
       no_preference: "Geen voorkeur",
+    };
+
+    // Format budget labels
+    const budgetLabels: Record<string, string> = {
+      "50-75": "€50 - €75 p.p.p.n.",
+      "75-100": "€75 - €100 p.p.p.n.",
+      "100-150": "€100 - €150 p.p.p.n.",
+      "150+": "€150+ p.p.p.n.",
+      "no_max": "Geen maximum",
     };
 
     // Prepare template variables
@@ -211,7 +223,7 @@ Deno.serve(async (req) => {
       number_of_guests: String(request.number_of_guests),
       accommodation_type: typeLabels[request.accommodation_type] || request.accommodation_type,
       room_count: request.room_count ? String(request.room_count) : "",
-      budget_range: request.budget_range || "",
+      budget_range: request.budget_range ? (budgetLabels[request.budget_range] || request.budget_range) : "",
       special_requests: sanitizeHtml(request.special_requests) || "",
       portal_link: portalUrl,
       admin_link: `https://bureauvlieland.nl/admin/logies/${request.id}`,
@@ -224,7 +236,7 @@ Deno.serve(async (req) => {
     ]);
 
     // Use database templates or fallback
-    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels);
+    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels, budgetLabels);
     const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe logies aanvraag - ${request.number_of_guests} gasten`;
 
     const customerEmailHtml = customerTemplate?.body || getFallbackCustomerHtml(request, typeLabels, portalUrl);
