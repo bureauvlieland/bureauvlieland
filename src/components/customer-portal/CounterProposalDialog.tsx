@@ -92,8 +92,8 @@ export const CounterProposalDialog = ({
           <DialogTitle>Andere tijd voorstellen</DialogTitle>
           <DialogDescription>
             {isAcceptedItem 
-              ? `De huidige tijd (${currentTime || "flexibel"}) past niet meer? De prijs blijft ongewijzigd, je stelt alleen een andere tijd voor.`
-              : `De voorgestelde tijd (${currentTime || "flexibel"}) past niet? Geef hieronder aan welke tijd jou beter uitkomt.`
+              ? `De huidige tijd (${currentTime || "flexibel"}) past niet meer? De prijs blijft ongewijzigd, u stelt alleen een andere tijd voor.`
+              : `De voorgestelde tijd (${currentTime || "flexibel"}) past niet? Geef hieronder aan welke tijd u beter uitkomt.`
             }
           </DialogDescription>
         </DialogHeader>
@@ -161,7 +161,7 @@ export const CounterProposalDialog = ({
             <Label htmlFor="counter-note">Toelichting (optioneel)</Label>
             <Textarea
               id="counter-note"
-              placeholder="Waarom past deze tijd je beter?"
+              placeholder="Waarom past deze tijd u beter?"
               value={counterNote}
               onChange={(e) => setCounterNote(e.target.value)}
               rows={3}

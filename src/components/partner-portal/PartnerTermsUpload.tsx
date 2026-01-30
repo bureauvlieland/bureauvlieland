@@ -63,7 +63,7 @@ export const PartnerTermsUpload = ({
 
         toast({
           title: "Opgeslagen",
-          description: "Je gebruikt nu de standaardvoorwaarden van Bureau Vlieland.",
+          description: "U gebruikt nu de standaardvoorwaarden van Bureau Vlieland.",
         });
         onUpdate();
       } catch (err) {
@@ -151,7 +151,7 @@ export const PartnerTermsUpload = ({
 
       toast({
         title: "Voorwaarden geüpload",
-        description: "Je algemene voorwaarden zijn succesvol opgeslagen.",
+        description: "Uw algemene voorwaarden zijn succesvol opgeslagen.",
       });
 
       onUpdate();
@@ -196,7 +196,7 @@ export const PartnerTermsUpload = ({
 
       toast({
         title: "Voorwaarden verwijderd",
-        description: "Je algemene voorwaarden zijn verwijderd.",
+        description: "Uw algemene voorwaarden zijn verwijderd.",
       });
 
       onUpdate();
@@ -220,7 +220,7 @@ export const PartnerTermsUpload = ({
           <CardTitle>Algemene Voorwaarden</CardTitle>
         </div>
         <CardDescription>
-          Kies hoe je voorwaarden worden getoond aan klanten.
+          Kies hoe uw voorwaarden worden getoond aan klanten.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

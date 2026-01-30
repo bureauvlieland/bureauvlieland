@@ -168,7 +168,7 @@ export const PartnerBlockSheet = ({
     if (!block?.id && isNew) {
       toast({
         title: "Eerst opslaan",
-        description: "Sla eerst je activiteit op voordat je een afbeelding uploadt.",
+        description: "Sla eerst uw activiteit op voordat u een afbeelding uploadt.",
         variant: "destructive",
       });
       return;
@@ -313,7 +313,7 @@ export const PartnerBlockSheet = ({
 
         toast({
           title: "Voorstel ingediend",
-          description: "Je nieuwe activiteit is ingediend ter goedkeuring door Bureau Vlieland. Je kunt nu een afbeelding toevoegen.",
+          description: "Uw nieuwe activiteit is ingediend ter goedkeuring door Bureau Vlieland. U kunt nu een afbeelding toevoegen.",
         });
       } else if (block) {
         // Update existing block (partners can only update certain fields)
@@ -335,7 +335,7 @@ export const PartnerBlockSheet = ({
 
         toast({
           title: "Wijzigingen opgeslagen",
-          description: "Je activiteit is bijgewerkt.",
+          description: "Uw activiteit is bijgewerkt.",
         });
       }
 
@@ -361,8 +361,8 @@ export const PartnerBlockSheet = ({
           </SheetTitle>
           <SheetDescription>
             {isNew
-              ? "Stel een nieuwe activiteit voor. Bureau Vlieland beoordeelt je voorstel en publiceert het na goedkeuring."
-              : "Pas de gegevens van je activiteit aan."}
+              ? "Stel een nieuwe activiteit voor. Bureau Vlieland beoordeelt uw voorstel en publiceert het na goedkeuring."
+              : "Pas de gegevens van uw activiteit aan."}
           </SheetDescription>
         </SheetHeader>
 
@@ -456,7 +456,7 @@ export const PartnerBlockSheet = ({
           {isNew && (
             <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm">
               <p className="text-blue-800 dark:text-blue-200">
-                <strong>Tip:</strong> Na het opslaan kun je een afbeelding toevoegen aan je activiteit.
+                <strong>Tip:</strong> Na het opslaan kunt u een afbeelding toevoegen aan uw activiteit.
               </p>
             </div>
           )}
@@ -517,7 +517,7 @@ export const PartnerBlockSheet = ({
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Uitgebreide beschrijving van je activiteit..."
+              placeholder="Uitgebreide beschrijving van uw activiteit..."
               rows={4}
             />
           </div>

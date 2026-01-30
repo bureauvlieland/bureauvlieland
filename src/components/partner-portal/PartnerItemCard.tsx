@@ -211,7 +211,7 @@ export const PartnerItemCard = ({
               <span>Wacht op klantbevestiging</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              De klant moet eerst de voorwaarden accepteren voordat je kunt factureren.
+              De klant moet eerst de voorwaarden accepteren voordat u kunt factureren.
             </p>
           </div>
         )}

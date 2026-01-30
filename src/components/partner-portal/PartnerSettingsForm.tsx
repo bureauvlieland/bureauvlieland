@@ -241,10 +241,10 @@ export const PartnerSettingsForm = () => {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-center gap-2 text-amber-800">
             <ShieldCheck className="h-5 w-5" />
-            <span className="font-medium">Je bekijkt dit als admin</span>
+            <span className="font-medium">U bekijkt dit als admin</span>
           </div>
           <p className="text-sm text-amber-700 mt-1">
-            Wijzigingen die je maakt worden direct opgeslagen voor deze partner.
+            Wijzigingen die u maakt worden direct opgeslagen voor deze partner.
           </p>
         </div>
       )}
@@ -268,7 +268,7 @@ export const PartnerSettingsForm = () => {
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="Naam van je bedrijf"
+                placeholder="Naam van uw bedrijf"
               />
             </div>
             <div className="space-y-2">
@@ -485,7 +485,7 @@ export const PartnerSettingsForm = () => {
         <CardHeader>
           <CardTitle>Commissie</CardTitle>
           <CardDescription>
-            Overzicht van je commissiepercentage.
+            Overzicht van uw commissiepercentage.
           </CardDescription>
         </CardHeader>
         <CardContent>

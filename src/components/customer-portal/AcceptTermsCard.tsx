@@ -193,7 +193,7 @@ export const AcceptTermsCard = ({
                 <div className="text-sm">
                   <p className="font-medium">Facturatiegegevens vereist</p>
                   <p className="text-amber-700 dark:text-amber-300">
-                    Vul eerst je facturatiegegevens in voordat je kunt bevestigen.
+                    Vul eerst uw facturatiegegevens in voordat u kunt bevestigen.
                   </p>
                   <Button
                     variant="link"

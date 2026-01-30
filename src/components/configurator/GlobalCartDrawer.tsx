@@ -53,7 +53,7 @@ export const GlobalCartDrawer = () => {
     if (cartItems.length === 0) {
       toast({
         title: "Geen items geselecteerd",
-        description: "Voeg eerst bouwstenen toe aan je programma.",
+        description: "Voeg eerst onderdelen toe aan uw programma.",
         variant: "destructive",
       });
       return;

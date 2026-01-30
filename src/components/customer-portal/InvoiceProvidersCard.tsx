@@ -211,7 +211,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
 
         <div className="pt-2 border-t">
           <p className="text-xs text-muted-foreground">
-            💡 <strong>Tip:</strong> Je ontvangt van elke partij een aparte factuur. 
+            💡 <strong>Tip:</strong> U ontvangt van elke partij een aparte factuur. 
             Bedragen zijn gebaseerd op bevestigde prijzen en kunnen wijzigen bij nog openstaande aanvragen.
           </p>
         </div>

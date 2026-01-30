@@ -265,7 +265,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       setHistory((historyData || []) as ProgramRequestHistory[]);
     } catch (err) {
       console.error("Error fetching program:", err);
-      setError("Er ging iets mis bij het ophalen van je programma");
+      setError("Er ging iets mis bij het ophalen van uw programma");
     } finally {
       setIsLoading(false);
     }

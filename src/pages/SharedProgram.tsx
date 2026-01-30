@@ -101,7 +101,7 @@ const SharedProgram = () => {
 
     toast({
       title: "Programma geladen",
-      description: `${addedCount} items toegevoegd aan je programma.`,
+      description: `${addedCount} items toegevoegd aan uw programma.`,
     });
   };
 
@@ -135,7 +135,7 @@ const SharedProgram = () => {
             <p className="text-muted-foreground mb-6">{error}</p>
             <Link to="/programma-samenstellen">
               <Button>
-                Stel je eigen programma samen
+                Stel uw eigen programma samen
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>

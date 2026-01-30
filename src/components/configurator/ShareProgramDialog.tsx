@@ -106,7 +106,7 @@ export const ShareProgramDialog = ({
       setTimeout(() => setCopied(false), 2000);
       toast({
         title: "Link gekopieerd",
-        description: "De deellink is naar je klembord gekopieerd.",
+        description: "De deellink is naar uw klembord gekopieerd.",
       });
     } catch {
       toast({
@@ -150,10 +150,10 @@ export const ShareProgramDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5" />
-            Deel je programma
+            Deel uw programma
           </DialogTitle>
           <DialogDescription>
-            Deel je samengestelde programma met collega's of sla het op voor later.
+            Deel uw samengestelde programma met collega's of sla het op voor later.
           </DialogDescription>
         </DialogHeader>
 

@@ -5,12 +5,12 @@ const onlineServices = [
   {
     title: "Materiaalbeheer & Verhuur",
     url: "https://verhuur.bureauvlieland.nl/",
-    description: "Huur professionele materialen en apparatuur voor je evenement"
+    description: "Huur professionele materialen en apparatuur voor uw evenement"
   },
   {
     title: "Fietsverhuur",
     url: "https://bureauvlieland.fietsreserveren.nl/",
-    description: "Reserveer fietsen voor je groep om het eiland te verkennen"
+    description: "Reserveer fietsen voor uw groep om het eiland te verkennen"
   },
   {
     title: "Linnenverhuur",
@@ -20,7 +20,7 @@ const onlineServices = [
   {
     title: "Losse Activiteiten",
     url: "https://boeking.mijnactiviteitenplanner.nl/activiteiten-vlieland",
-    description: "Boek individuele activiteiten voor je groep"
+    description: "Boek individuele activiteiten voor uw groep"
   }
 ];
 

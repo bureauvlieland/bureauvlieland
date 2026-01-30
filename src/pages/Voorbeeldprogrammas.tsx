@@ -466,11 +466,11 @@ const Voorbeeldprogrammas = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                Laten we samen jouw ideale programma creëren
+                Laten we samen uw ideale programma creëren
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Vertel ons over je groep, doelen en wensen. Wij stellen een programma samen dat 
-                perfect bij jullie past - met de juiste mix van activiteit, ontspanning en inhoud.
+                Vertel ons over uw groep, doelen en wensen. Wij stellen een programma samen dat 
+                perfect bij u past - met de juiste mix van activiteit, ontspanning en inhoud.
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Link to="/programma-samenstellen">

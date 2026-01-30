@@ -448,7 +448,7 @@ export const PartnerItemSheet = ({
                 <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium">Jouw voorstel was:</span>
+                    <span className="font-medium">Uw voorstel was:</span>
                     <span>{item.proposed_time || "niet opgegeven"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400">
@@ -481,7 +481,7 @@ export const PartnerItemSheet = ({
             <>
               <Separator />
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Jouw reactie</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Uw reactie</h3>
                 <p className="text-sm bg-destructive/10 rounded-lg p-3 text-destructive">
                   {item.status_note}
                 </p>

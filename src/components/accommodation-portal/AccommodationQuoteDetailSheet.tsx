@@ -67,7 +67,7 @@ export function AccommodationQuoteDetailSheet({
             <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
               <Check className="h-5 w-5 text-green-600" />
               <span className="font-medium text-green-800 dark:text-green-200">
-                Je hebt deze offerte gekozen
+                U hebt deze offerte gekozen
               </span>
             </div>
           )}

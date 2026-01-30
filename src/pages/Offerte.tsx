@@ -71,7 +71,7 @@ export default function Offerte() {
     
     toast({
       title: "Chat info beschikbaar",
-      description: "Vul het formulier in met je contactgegevens en evenement details.",
+      description: "Vul het formulier in met uw contactgegevens en evenement details.",
     });
   };
 
@@ -89,7 +89,7 @@ export default function Offerte() {
       
       toast({
         title: "Chat info beschikbaar",
-        description: "Vul het formulier in met je contactgegevens en evenement details.",
+        description: "Vul het formulier in met uw contactgegevens en evenement details.",
       });
     }
   }, []);
@@ -116,7 +116,7 @@ export default function Offerte() {
 
       toast({
         title: "Offerte aanvraag verstuurd!",
-        description: "We nemen binnen 5 werkdagen contact met je op.",
+        description: "We nemen binnen 5 werkdagen contact met u op.",
       });
 
       form.reset();
@@ -327,8 +327,8 @@ export default function Offerte() {
 
               <div className="mt-8 p-4 bg-secondary/20 rounded-lg">
                 <p className="text-sm text-muted-foreground text-center">
-                  <strong>Let op:</strong> We nemen binnen 5 werkdagen contact met je op. 
-                  Voor spoedvragen kun je ons bellen op{" "}
+                  <strong>Let op:</strong> We nemen binnen 5 werkdagen contact met u op. 
+                  Voor spoedvragen kunt u ons bellen op{" "}
                   <a href="tel:+31562452700" className="text-primary hover:underline">
                     +31 (0)562 45 27 00
                   </a>
