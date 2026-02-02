@@ -1,159 +1,59 @@
 
-# Plan: Uitbreiden Building Block Categorieën
+# Fix: Dubbele Trigger Veroorzaakt 409 Conflict Error
 
-## Samenvatting
+## Probleem Analyse
 
-De huidige categorie "Activiteiten" bevat een mix van sportieve activiteiten, excursies, entertainment en locatieverhuur. Door de categorieën uit te breiden wordt het voor klanten makkelijker om relevante bouwstenen te vinden in de configurator.
+Bij het indienen van een logiesaanvraag krijg je een **409 Conflict** error met de melding:
+```
+duplicate key value violates unique constraint "program_requests_linked_accommodation_id_unique"
+Key (linked_accommodation_id)=(cbd79a05-...) already exists
+```
 
-## Nieuwe categoriestructuur
+### Oorzaak
 
-| Categorie | Beschrijving | Icoon |
-|-----------|--------------|-------|
-| **outdoor** | Sportieve buitenactiviteiten | Mountain (berg) |
-| **excursies** | Rondleidingen en tours | Map (kaart) |
-| **entertainment** | Muziek, DJ, Silent Disco | Music (muzieknoot) |
-| **locaties** | Zaalhuur, tenten, techniek | Building (gebouw) |
-| **catering** | Eten en drinken (bestaand) | Utensils (bestek) |
-| **vervoer** | Transport (bestaand) | Ship (boot) |
+Er zijn **twee database triggers** die dezelfde functie `create_program_for_accommodation()` aanroepen:
 
-## Toewijzing huidige bouwstenen
+| Trigger | Type | Probleem |
+|---------|------|----------|
+| `auto_create_program_for_accommodation` | BEFORE INSERT | ❌ Foutief - wordt te vroeg uitgevoerd |
+| `create_program_for_accommodation_trigger` | AFTER INSERT | ✅ Correct - dit is de bedoelde trigger |
 
-### Naar `outdoor` (17 items)
-Alle Vlieland Outdoor Center activiteiten:
-- Blokarten, SUP, Bootcamp, Golfsurfen, Kitesurfen
-- Beach Golf, Beachtennis, Disc Golf
-- Handboog Schieten, Bijl Werpen, Lasergamen
-- Power Vliegeren, Branding Raften, Branding Kanoën
-- Outdoor Cooking, Viking Expeditie, Kubb
-- Teambuilding, Powerkiten, Surfles, Beach Games
+Wanneer een nieuwe logiesaanvraag wordt ingediend:
+1. **BEFORE INSERT trigger** probeert een program_request aan te maken
+2. **AFTER INSERT trigger** probeert opnieuw een program_request aan te maken
+3. → Dubbele insert leidt tot UNIQUE constraint violation
 
-### Naar `excursies` (4 items)
-- Vliehors Expres
-- Vuurtorenbezoek
-- Zeehondentocht
-- Fietstocht met begeleiding
+### Database Constraint
 
-### Naar `entertainment` (3 items)
-- DJ Timothy
-- Live muziek
-- Silent Disco Beach
+De tabel `program_requests` heeft een UNIQUE constraint op `linked_accommodation_id`, wat voorkomt dat meerdere programma's naar dezelfde logiesaanvraag verwijzen. Dit is correct gedrag, maar de dubbele trigger veroorzaakt dat dezelfde aanvraag twee keer wordt geprobeerd.
 
-### Naar `locaties` (8 items)
-- Zaalhuur De Bolder
-- Locatiehuur Lange Paal
-- Easy-up tenten
-- Stretchtent incl. op- en afbouw
-- Techniek & installatie
-- Schoonmaak zaal
-- Personeelskosten Bureau Vlieland
-- Barfaciliteiten & glaswerk (verplaatst van catering)
+## Oplossing
 
-### Blijft `catering` (11 items)
-Alle overige catering items
+Verwijder de incorrecte **BEFORE INSERT** trigger. De AFTER INSERT trigger is de juiste omdat:
+- Het `NEW.id` (de accommodation_request ID) dan gegarandeerd bestaat
+- De DEFERRABLE foreign key constraint correct kan worden gevalideerd
+- Dit overeenkomt met de documentatie in memory/infrastructure/database-constraint-architecture
 
-### Blijft `vervoer` (bestaand)
-Geen wijzigingen
+## Technische Wijziging
 
-## Technische wijzigingen
+### Database Migratie (1 SQL statement)
 
-### 1. Database: ENUM type uitbreiden
 ```sql
--- Nieuwe categorieën toevoegen aan het ENUM type
-ALTER TYPE building_block_category ADD VALUE 'outdoor';
-ALTER TYPE building_block_category ADD VALUE 'excursies';
-ALTER TYPE building_block_category ADD VALUE 'entertainment';
-ALTER TYPE building_block_category ADD VALUE 'locaties';
+-- Verwijder de incorrecte BEFORE INSERT trigger
+DROP TRIGGER IF EXISTS auto_create_program_for_accommodation ON accommodation_requests;
 ```
 
-### 2. Database: Bouwstenen migreren
-```sql
--- Outdoor activiteiten
-UPDATE building_blocks SET category = 'outdoor' 
-WHERE id IN ('voc-blokarten', 'voc-sup', 'voc-bootcamp', ...);
+Dat is alles - de `create_program_for_accommodation_trigger` (AFTER INSERT) blijft behouden en werkt correct.
 
--- Excursies
-UPDATE building_blocks SET category = 'excursies' 
-WHERE id IN ('vliehors-expres', 'vuurtoren', 'zeehondentocht', ...);
+## Verificatie
 
--- Entertainment
-UPDATE building_blocks SET category = 'entertainment' 
-WHERE id IN ('dj-timothy', 'live-muziek', 'silent-disco');
+Na de fix:
+- Nieuwe logiesaanvragen worden correct verwerkt
+- Één program_request wordt automatisch aangemaakt per logiesaanvraag
+- Geen duplicate key violations meer
 
--- Locaties
-UPDATE building_blocks SET category = 'locaties' 
-WHERE id IN ('zaalhuur-de-bolder', 'locatiehuur-lange-paal', ...);
-```
-
-### 3. TypeScript types bijwerken
-**Bestand:** `src/types/buildingBlock.ts`
-```typescript
-export type BuildingBlockCategory = 
-  | "outdoor" 
-  | "excursies" 
-  | "entertainment" 
-  | "locaties" 
-  | "catering" 
-  | "vervoer";
-
-export const categoryLabels: Record<BuildingBlockCategory, string> = {
-  outdoor: "Outdoor & Sport",
-  excursies: "Excursies",
-  entertainment: "Entertainment",
-  locaties: "Locaties",
-  catering: "Catering",
-  vervoer: "Vervoer",
-};
-```
-
-### 4. CategoryFilter component bijwerken
-**Bestand:** `src/components/configurator/CategoryFilter.tsx`
-```typescript
-const categories = [
-  { id: "all", label: "Alles", icon: null },
-  { id: "outdoor", label: "Outdoor & Sport", icon: Mountain },
-  { id: "excursies", label: "Excursies", icon: Map },
-  { id: "entertainment", label: "Entertainment", icon: Music },
-  { id: "locaties", label: "Locaties", icon: Building2 },
-  { id: "catering", label: "Catering", icon: Utensils },
-  { id: "vervoer", label: "Vervoer", icon: Ship },
-];
-```
-
-### 5. Admin BuildingBlockSheet bijwerken
-**Bestand:** `src/components/admin/BuildingBlockSheet.tsx`
-
-Nieuwe categorieën toevoegen aan:
-- Zod schema validatie (regel 61)
-- Select dropdown opties (regels 421-425)
-
-### 6. Admin BuildingBlocks filter bijwerken
-**Bestand:** `src/pages/admin/AdminBuildingBlocks.tsx`
-
-Nieuwe categorieën toevoegen aan het filter dropdown.
-
-### 7. Customer portal AddActivitySheet bijwerken
-**Bestand:** `src/components/customer-portal/AddActivitySheet.tsx`
-
-Category filter opties uitbreiden.
-
-### 8. Admin AddActivitySheet bijwerken
-**Bestand:** `src/components/admin/AdminAddActivitySheet.tsx`
-
-Category filter opties uitbreiden.
-
-## Risico's en mitigatie
+## Risico's
 
 | Risico | Impact | Mitigatie |
 |--------|--------|-----------|
-| Bestaande data in `program_request_items` | Laag | Items slaan `block_category` op als text, geen ENUM |
-| ENUM wijziging | Middel | Nieuwe waarden toevoegen is veilig (geen data verlies) |
-| Tijdelijke inconsistentie | Laag | Alle wijzigingen in één migratie |
-
-## Volgorde van implementatie
-
-1. Database migratie uitvoeren (ENUM + data updates)
-2. TypeScript types bijwerken
-3. CategoryFilter component bijwerken
-4. Admin formulieren bijwerken
-5. Customer portal filters bijwerken
-6. Testen in configurator
+| Geen | Laag | We verwijderen alleen de overbodige trigger, de correcte blijft behouden |
