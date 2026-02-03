@@ -60,6 +60,7 @@ import AdminProjects from "./pages/admin/AdminProjects";
 import AdminProgramNew from "./pages/admin/AdminProgramNew";
 import AdminQuotePreview from "./pages/admin/AdminQuotePreview";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminMedia from "./pages/admin/AdminMedia";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
@@ -131,6 +132,7 @@ const App = () => (
             <Route path="/admin/commissies" element={<AdminCommissions />} />
             <Route path="/admin/facturatie" element={<AdminInvoicing />} />
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />
+            <Route path="/admin/media" element={<AdminMedia />} />
             <Route path="/admin/logies" element={<AdminAccommodation />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />
