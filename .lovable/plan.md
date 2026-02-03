@@ -1,91 +1,110 @@
 
-# Mediabibliotheek voor Bouwstenen
 
-## Overzicht
-Een centrale mediabibliotheek toevoegen aan het admin panel waarmee je:
-1. Alle geüploade afbeeldingen kunt bekijken in een visueel overzicht
-2. Nieuwe afbeeldingen kunt uploaden naar de bibliotheek
-3. Bij het bewerken van een bouwsteen direct een afbeelding uit de bibliotheek kunt kiezen
+# Alle Website-afbeeldingen in de Mediabibliotheek
 
-## Wat wordt er gebouwd?
+## Huidige situatie
+De mediabibliotheek toont alleen afbeeldingen uit de `building-block-images` storage bucket. Maar er zijn ook 63 afbeeldingen in de `src/assets/` folder die overal op de website worden gebruikt (hero images, team foto's, activiteiten, etc.).
 
-### 1. Nieuwe admin pagina: `/admin/media`
-- Grid-weergave van alle afbeeldingen in de `building-block-images` bucket
-- Zoekfunctie op bestandsnaam
-- Upload-functionaliteit voor nieuwe afbeeldingen
-- Delete optie per afbeelding
-- Preview modal bij klikken op afbeelding
-- Metadata weergave (bestandsnaam, grootte, datum)
+## Oplossing
+De mediabibliotheek uitbreiden met twee secties/tabs:
+1. **Geüploade afbeeldingen** - Uit de storage bucket (huidige functionaliteit)
+2. **Website assets** - De statische afbeeldingen uit `src/assets/`
 
-### 2. Mediabibliotheek Picker Component
-Een herbruikbaar dialog/modal dat:
-- Geïntegreerd wordt in het "Media" tabblad van BuildingBlockSheet
-- Alle beschikbare afbeeldingen toont in een grid
-- Zoek/filter mogelijkheid biedt
-- Direct nieuwe afbeeldingen kan uploaden
-- Bij selectie de image_url invult in het formulier
+## Wat wordt aangepast
 
-### 3. Nieuwe hook: `useMediaLibrary`
-- `useMediaFiles()` - haalt alle bestanden uit de storage bucket
-- `useUploadMedia()` - upload nieuwe afbeelding
-- `useDeleteMedia()` - verwijder afbeelding
+### 1. Hook uitbreiden: `useMediaLibrary.ts`
+- Nieuwe functie `useAssetFiles()` toevoegen die alle bestanden uit `src/assets/` ophaalt
+- Een mapping maken van alle asset bestandsnamen naar hun import paths
+
+### 2. Assets index bestand maken
+Omdat Vite statische imports vereist, maken we een index bestand dat alle assets exporteert:
+
+```
+src/assets/index.ts
+```
+
+Dit bestand exporteert alle afbeeldingen met hun URLs zodat ze dynamisch kunnen worden geladen.
+
+### 3. MediaLibrary component aanpassen
+- Tabs toevoegen: "Uploads" en "Website Assets"
+- Website assets tab toont de 63 afbeeldingen uit src/assets
+- Assets zijn alleen selecteerbaar (niet te verwijderen, want ze zitten in de code)
+- Zoekfunctie werkt over beide bronnen
+
+### 4. MediaPickerDialog aanpassen
+- Dezelfde tabs toevoegen
+- Bij selectie van een asset wordt de juiste import path of URL gebruikt
 
 ## Gebruikerservaring
 
-**Bij het bewerken van een bouwsteen:**
-1. Ga naar het "Media" tabblad
-2. Klik op "Kies uit bibliotheek"
-3. Dialog opent met alle beschikbare afbeeldingen
-4. Zoek of scroll naar de juiste afbeelding
-5. Klik om te selecteren → image_url wordt automatisch ingevuld
+**In de mediabibliotheek:**
+- Standaard tab "Uploads" toont geüploade afbeeldingen
+- Tab "Website Assets" toont alle 63 bestaande afbeeldingen
+- Beide tabs hebben zoekfunctie
+- Assets kunnen niet verwijderd worden (grijs icoontje)
 
-**Mediabibliotheek beheren:**
-1. Admin → Media in het navigatiemenu
-2. Bekijk alle geüploade afbeeldingen
-3. Upload nieuwe afbeeldingen via drag-and-drop of bestandskeuze
-4. Verwijder ongebruikte afbeeldingen
+**Bij kiezen voor bouwsteen:**
+- Beide bronnen beschikbaar
+- Duidelijk onderscheid tussen uploads en assets
 
-## Navigatie
-Nieuwe menu-item "Media" toevoegen aan AdminLayout sidebar (tussen "Bouwstenen" en "Partners")
+## Categorieën voor assets (bonus)
+De assets kunnen ook gecategoriseerd worden op basis van hun naam:
+- **Activiteiten**: beach-*, cycling-*, surf-*, etc.
+- **Catering**: catering-*, food-*, lunch-*
+- **Locaties**: vlieland-*, lighthouse-*, dunes-*
+- **Events**: event-*, wedding-*, team-*
+- **Profielen**: *-profile.*
+- **Logo's**: logo*
 
 ---
 
 ## Technische details
 
-### Nieuwe bestanden
-```
-src/pages/admin/AdminMedia.tsx          # Volledige mediabibliotheek pagina
-src/components/admin/MediaLibrary.tsx   # Grid component voor afbeeldingen
-src/components/admin/MediaPickerDialog.tsx  # Picker dialog voor BuildingBlockSheet
-src/hooks/useMediaLibrary.ts            # React Query hooks voor storage operaties
-```
-
-### Aanpassingen bestaande bestanden
-- `src/App.tsx` - Route toevoegen voor /admin/media
-- `src/components/admin/AdminLayout.tsx` - Menu-item toevoegen
-- `src/components/admin/BuildingBlockSheet.tsx` - MediaPickerDialog integreren
-
-### Storage API gebruik
+### Nieuw bestand: `src/assets/index.ts`
 ```typescript
-// Bestanden ophalen
-const { data } = await supabase.storage.from("building-block-images").list();
+// Auto-generated asset index
+import amuseTour from "./amuse-tour.jpg";
+import beachActivity from "./beach-activity.jpg";
+// ... alle 63 assets
 
-// Bestand uploaden (met unieke naam)
-const filePath = `${Date.now()}-${fileName}`;
-await supabase.storage.from("building-block-images").upload(filePath, file);
-
-// Public URL ophalen
-const { data: { publicUrl } } = supabase.storage
-  .from("building-block-images")
-  .getPublicUrl(filePath);
-
-// Bestand verwijderen
-await supabase.storage.from("building-block-images").remove([filePath]);
+export const assetFiles = [
+  { name: "amuse-tour.jpg", url: amuseTour, category: "activiteiten" },
+  { name: "beach-activity.jpg", url: beachActivity, category: "activiteiten" },
+  // ... etc
+];
 ```
 
-### Component structuur MediaPickerDialog
-- Dialog met grid van afbeeldingen
-- Zoekbalk bovenaan
-- Upload zone (drag-and-drop)
-- Selectie highlight
-- "Selecteer" en "Annuleren" buttons
+### Aanpassingen `useMediaLibrary.ts`
+```typescript
+export interface AssetFile {
+  name: string;
+  url: string;
+  category: string;
+}
+
+export function useAssetFiles(): AssetFile[] {
+  // Import from assets/index.ts
+  return assetFiles;
+}
+```
+
+### Aanpassingen `MediaLibrary.tsx`
+```typescript
+// Tabs state
+const [activeTab, setActiveTab] = useState<"uploads" | "assets">("uploads");
+
+// Render tabs boven de grid
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+  <TabsList>
+    <TabsTrigger value="uploads">Uploads ({files?.length || 0})</TabsTrigger>
+    <TabsTrigger value="assets">Website Assets (63)</TabsTrigger>
+  </TabsList>
+</Tabs>
+```
+
+### Te wijzigen bestanden
+- `src/assets/index.ts` (nieuw) - Export alle assets
+- `src/hooks/useMediaLibrary.ts` - Voeg useAssetFiles toe
+- `src/components/admin/MediaLibrary.tsx` - Voeg tabs en assets weergave toe
+- `src/components/admin/MediaPickerDialog.tsx` - Voeg tabs toe voor selectie
+
