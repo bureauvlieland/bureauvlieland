@@ -40,7 +40,7 @@ import {
   useDeleteBuildingBlock,
   useUploadBlockImage,
 } from "@/hooks/useBuildingBlocks";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, ImageIcon } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import {
   AlertDialog,
@@ -52,6 +52,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { MediaPickerDialog } from "./MediaPickerDialog";
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
@@ -98,6 +99,7 @@ interface BuildingBlockSheetProps {
 export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockSheetProps) => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const isEditing = !!block;
   
   const createBlock = useCreateBuildingBlock();
@@ -867,9 +869,19 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Afbeelding URL</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="https://..." />
-                        </FormControl>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input {...field} placeholder="https://..." className="flex-1" />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setMediaPickerOpen(true)}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Bibliotheek
+                          </Button>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1026,6 +1038,12 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MediaPickerDialog
+        open={mediaPickerOpen}
+        onOpenChange={setMediaPickerOpen}
+        onSelect={(url) => form.setValue("image_url", url)}
+      />
     </>
   );
 };

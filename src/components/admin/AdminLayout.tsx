@@ -30,6 +30,7 @@ import {
   Blocks,
   Mail,
   FolderKanban,
+  ImageIcon,
   Settings,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -49,6 +50,7 @@ const menuItems = [
   { title: "CRM", url: "/admin/crm", icon: Users },
   { title: "Partners", url: "/admin/partners", icon: Building2 },
   { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+  { title: "Media", url: "/admin/media", icon: ImageIcon },
   { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
   { title: "Commissies", url: "/admin/commissies", icon: Euro },
   { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
