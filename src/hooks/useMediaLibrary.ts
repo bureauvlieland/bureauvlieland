@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { assetFiles, assetCategories, type AssetFile } from "@/assets";
 
 export interface MediaFile {
   id: string;
@@ -8,6 +9,8 @@ export interface MediaFile {
   size: number;
   createdAt: string;
 }
+
+export { type AssetFile, assetFiles, assetCategories };
 
 const BUCKET_NAME = "building-block-images";
 
@@ -42,6 +45,10 @@ export function useMediaFiles() {
       });
     },
   });
+}
+
+export function useAssetFiles() {
+  return assetFiles;
 }
 
 export function useUploadMedia() {
