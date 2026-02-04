@@ -11,6 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -28,6 +35,21 @@ import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLin
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
+import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+
+// Event type options for the dropdown
+const EVENT_TYPE_OPTIONS = [
+  { value: "bedrijfsuitje", label: "Bedrijfsuitje" },
+  { value: "teamuitje", label: "Teamuitje / Teambuilding" },
+  { value: "heisessie", label: "Heisessie / MT-dag" },
+  { value: "incentive", label: "Incentive reis" },
+  { value: "zakelijk_evenement", label: "Zakelijk evenement" },
+  { value: "bruiloft", label: "Bruiloft" },
+  { value: "familieweekend", label: "Familieweekend" },
+  { value: "groepsweekend", label: "Groepsweekend" },
+  { value: "jubileum", label: "Jubileum" },
+  { value: "anders", label: "Anders" },
+] as const;
 
 interface RequestFormModalProps {
   isOpen: boolean;
@@ -57,7 +79,12 @@ export const RequestFormModal = ({
     phone: "",
     company: "",
     notes: "",
+    eventType: "",
   });
+
+  // Pre-fill event type based on entry page
+  const entryPage = getEntryPage();
+  const inferredEventType = entryPage ? inferEventTypeFromPath(entryPage.path) : null;
 
   // Fetch blocks from database
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
@@ -106,6 +133,9 @@ export const RequestFormModal = ({
       const isoDates = effectiveDates.map(d => d.toISOString().split('T')[0]);
       
       // Create program request in database
+      // Determine event type: use form selection, or infer from entry page, or default
+      const finalEventType = formData.eventType || inferredEventType || 'niet_gespecificeerd';
+      
       const { data: requestData, error: insertError } = await supabase
         .from("program_requests")
         .insert({
@@ -117,6 +147,7 @@ export const RequestFormModal = ({
           number_of_people: numberOfPeople,
           selected_dates: isoDates,
           general_notes: formData.notes || null,
+          program_type: finalEventType,
         })
         .select()
         .single();
@@ -176,12 +207,17 @@ export const RequestFormModal = ({
 
       if (error) throw error;
 
-      // Track conversion event
+      // Track conversion event with event type and entry page
       const indicativeValue = calculateIndicativeTotal(blocks, numberOfPeople);
       trackProgramRequestSubmitted({
         value: indicativeValue,
         numberOfPeople,
         numberOfDays: effectiveDates.length,
+        eventType: finalEventType,
+        entryPage: entryPage?.path || 'direct',
+        utmSource: entryPage?.utm_source,
+        utmMedium: entryPage?.utm_medium,
+        utmCampaign: entryPage?.utm_campaign,
         items: blocksWithDetails.map(b => ({
           id: b.id,
           name: b.name,
@@ -230,6 +266,7 @@ export const RequestFormModal = ({
         phone: "",
         company: "",
         notes: "",
+        eventType: "",
       });
     }
     onClose();
@@ -487,6 +524,25 @@ export const RequestFormModal = ({
             </div>
           </div>
 
+          {/* Event type dropdown */}
+          <div>
+            <Label htmlFor="eventType">Type uitje (optioneel)</Label>
+            <Select
+              value={formData.eventType || inferredEventType || ""}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, eventType: value }))}
+            >
+              <SelectTrigger id="eventType">
+                <SelectValue placeholder="Selecteer type uitje..." />
+              </SelectTrigger>
+              <SelectContent>
+                {EVENT_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div>
             <Label htmlFor="notes">Opmerkingen / Wensen</Label>

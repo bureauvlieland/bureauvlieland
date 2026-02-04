@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { CartProvider } from "@/contexts/CartContext";
 import { GlobalCartDrawer } from "@/components/configurator/GlobalCartDrawer";
 import { FeatureGate } from "@/components/FeatureGate";
+import { recordEntryPage } from "@/lib/entryPageTracker";
 import Index from "./pages/Index";
 import { Terms } from "./pages/Terms";
 import { PartnerTerms } from "./pages/PartnerTerms";
@@ -69,12 +71,18 @@ import AccommodationQuotes from "./pages/AccommodationQuotes";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+const App = () => {
+  // Record entry page on first load for SEA attribution
+  useEffect(() => {
+    recordEntryPage();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <CartProvider>
           <ScrollToTop />
           <GlobalCartDrawer />
@@ -167,6 +175,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
