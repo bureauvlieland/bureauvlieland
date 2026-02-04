@@ -86,6 +86,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   submitted: { label: "Offerte ontvangen", variant: "default" },
   selected: { label: "Geselecteerd", variant: "default" },
   rejected: { label: "Afgewezen", variant: "destructive" },
+  declined: { label: "Afgewezen door partner", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
 };
 
