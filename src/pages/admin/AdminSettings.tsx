@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { 
   Euro, 
   Percent, 
@@ -14,6 +15,7 @@ import {
   Save, 
   RotateCcw,
   AlertCircle,
+  ToggleLeft,
 } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { SETTING_CATEGORIES } from "@/types/appSettings";
@@ -143,6 +145,25 @@ export default function AdminSettings() {
       );
     }
 
+    // Boolean settings (switches)
+    if (setting.value_type === "boolean") {
+      const isEnabled = setting.value === true || setting.value === "true";
+      return (
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={isEnabled}
+            onCheckedChange={(checked) => {
+              updateSetting.mutate({ id: setting.id, value: checked });
+            }}
+            disabled={updateSetting.isPending}
+          />
+          <span className="text-sm text-muted-foreground">
+            {isEnabled ? "Ingeschakeld" : "Uitgeschakeld"}
+          </span>
+        </div>
+      );
+    }
+
     // Number or percentage settings
     if (setting.value_type === "number") {
       const isPercentage = setting.category === "vat" || setting.category === "commission";
@@ -177,6 +198,8 @@ export default function AdminSettings() {
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
+      case "features":
+        return <ToggleLeft className="h-5 w-5" />;
       case "pricing":
         return <Euro className="h-5 w-5" />;
       case "vat":
@@ -212,6 +235,7 @@ export default function AdminSettings() {
                     {categoryLabel}
                   </CardTitle>
                   <CardDescription>
+                    {categoryKey === "features" && "Schakel functies in of uit voor de publieke website"}
                     {categoryKey === "pricing" && "Coördinatiefee staffel gebaseerd op groepsgrootte"}
                     {categoryKey === "vat" && "BTW tarieven voor verschillende diensten"}
                     {categoryKey === "commission" && "Standaard commissie percentages voor partners"}
@@ -241,36 +265,39 @@ export default function AdminSettings() {
                             </p>
                           )}
                         </div>
-                        <div className="flex gap-2">
-                          {editingId === setting.id ? (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleSave(setting)}
-                                disabled={updateSetting.isPending}
-                              >
-                                <Save className="h-4 w-4 mr-1" />
-                                Opslaan
-                              </Button>
+                        {/* Boolean settings don't need edit button - they use inline switch */}
+                        {setting.value_type !== "boolean" && (
+                          <div className="flex gap-2">
+                            {editingId === setting.id ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSave(setting)}
+                                  disabled={updateSetting.isPending}
+                                >
+                                  <Save className="h-4 w-4 mr-1" />
+                                  Opslaan
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancel}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-1" />
+                                  Annuleren
+                                </Button>
+                              </>
+                            ) : (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={handleCancel}
+                                onClick={() => handleEdit(setting)}
                               >
-                                <RotateCcw className="h-4 w-4 mr-1" />
-                                Annuleren
+                                Bewerken
                               </Button>
-                            </>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEdit(setting)}
-                            >
-                              Bewerken
-                            </Button>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -20,6 +20,7 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   default_partner_commission: 15,
   default_accommodation_commission: 10,
   request_expiry_days: 90,
+  customer_portal_enabled: false,
 };
 
 // ============================================
