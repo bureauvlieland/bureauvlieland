@@ -1,8 +1,20 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
+Disallow: /partner/
+Disallow: /mijn-programma/
+Disallow: /mijn-logies/
+Disallow: /programma/
+Disallow: /binnenkort
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin/
+Disallow: /partner/
+Disallow: /mijn-programma/
+Disallow: /mijn-logies/
+Disallow: /programma/
+Disallow: /binnenkort
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +24,11 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /partner/
+Disallow: /mijn-programma/
+Disallow: /mijn-logies/
+Disallow: /programma/
+Disallow: /binnenkort
+
+Sitemap: https://bureauvlieland.nl/sitemap.xml
