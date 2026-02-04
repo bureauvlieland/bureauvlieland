@@ -28,7 +28,7 @@ interface InviteResult {
 }
 
 // Fallback email template if database template not found
-function getFallbackInvitationHtml(partnerName: string, resetLink: string): string {
+function getFallbackInvitationHtml(partnerName: string, resetLink: string, portalLink: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -36,41 +36,108 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string): stri
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Partner Portaal</p>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 0; background: #f4f7fa;">
+  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 35px 30px; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 600;">Bureau Vlieland</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px;">Partner Portaal</p>
   </div>
   
-  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px;">
-    <h2 style="color: #1e3a5f; margin-top: 0;">Welkom ${sanitizeHtml(partnerName)}!</h2>
+  <div style="background: white; padding: 35px 30px;">
+    <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 20px;">Beste ${sanitizeHtml(partnerName)},</h2>
     
-    <p>Je bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal. Via dit portaal kun je:</p>
+    <p style="margin: 0 0 18px 0; color: #374151;">
+      We zijn verheugd u te verwelkomen bij het nieuwe <strong>Bureau Vlieland Partner Portaal</strong>. 
+      Dit digitale platform is ontwikkeld om onze jarenlange samenwerking nog efficiënter en transparanter te maken.
+    </p>
     
-    <ul style="color: #475569;">
-      <li>Activiteitsaanvragen bekijken en bevestigen</li>
-      <li>Prijzen doorgeven aan klanten</li>
-      <li>Facturen registreren</li>
-      <li>Je bedrijfsgegevens beheren</li>
-    </ul>
+    <p style="margin: 0 0 25px 0; color: #374151;">
+      Het portaal is een evolutie van hoe we samenwerken — geen vervanging van de persoonlijke relatie die we waarderen, 
+      maar een aanvulling die het administratieve werk verlicht en de communicatie verbetert.
+    </p>
     
-    <p>Klik op de onderstaande knop om je wachtwoord in te stellen en in te loggen:</p>
+    <div style="background: #f8fafc; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
+      <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 17px;">📋 Hoe werkt het?</h3>
+      
+      <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
+        <strong>1. Klanten stellen hun programma samen</strong><br>
+        Via onze online configurator kiezen gasten activiteiten, catering en logies voor hun verblijf op Vlieland.
+      </p>
+      
+      <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
+        <strong>2. U ontvangt automatisch een aanvraag</strong><br>
+        Wanneer een klant uw diensten selecteert, krijgt u direct bericht met alle relevante details: datum, tijd, aantal personen en speciale wensen.
+      </p>
+      
+      <p style="margin: 0; color: #374151; font-size: 14px;">
+        <strong>3. U reageert via het portaal</strong><br>
+        Met één klik bevestigt u de aanvraag, stelt u een alternatief voor, of geeft u aan dat u niet beschikbaar bent.
+      </p>
+    </div>
+    
+    <div style="background: #fef9e7; border-left: 4px solid #f59e0b; padding: 20px 25px; margin: 0 0 25px 0; border-radius: 0 8px 8px 0;">
+      <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">💼 Facturatie &amp; Commissie</h3>
+      
+      <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
+        U factureert uw diensten <strong>rechtstreeks aan de eindklant</strong>. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet:
+      </p>
+      
+      <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
+        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> 15% commissie (excl. BTW)</li>
+        <li><strong>Logies:</strong> 10% commissie (excl. BTW)</li>
+      </ul>
+      
+      <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
+        Deze commissie dekt de acquisitie, coördinatie en klantenservice die Bureau Vlieland voor u verzorgt.
+      </p>
+    </div>
+    
+    <div style="background: #ecfdf5; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
+      <h3 style="color: #065f46; margin: 0 0 15px 0; font-size: 17px;">✅ Wat kunt u nu doen?</h3>
+      
+      <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
+        <li style="margin-bottom: 10px;">
+          <strong>Activeer uw account</strong> door op onderstaande knop te klikken en een wachtwoord in te stellen
+        </li>
+        <li style="margin-bottom: 10px;">
+          <strong>Controleer uw aanbod</strong> — bekijk of uw activiteiten en diensten correct zijn weergegeven
+        </li>
+        <li>
+          <strong>Werk uw beschikbaarheid bij</strong> — geef eventuele periodes aan waarop u niet beschikbaar bent
+        </li>
+      </ol>
+      
+      <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 13px;">
+        We stellen het op prijs als u uw account binnen <strong>14 dagen</strong> activeert, zodat u geen aanvragen mist.
+      </p>
+    </div>
     
     <div style="text-align: center; margin: 30px 0;">
       <a href="${resetLink}" 
-         style="background: #1e3a5f; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-        Stel je wachtwoord in
+         style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);">
+        Account Activeren
       </a>
     </div>
     
-    <p style="color: #64748b; font-size: 14px;">
-      Deze link is 24 uur geldig. Als de link verlopen is, kun je op de loginpagina een nieuwe wachtwoord-reset aanvragen.
+    <p style="color: #6b7280; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
+      Deze link is 24 uur geldig. Na activatie vindt u het portaal op:<br>
+      <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
     </p>
     
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
     
-    <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">
-      Vragen? Neem contact op via <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a>
+    <p style="margin: 0 0 15px 0; color: #374151;">
+      Dit is het eerste jaar dat we met dit nieuwe systeem werken. Uw feedback is daarom bijzonder waardevol. 
+      Heeft u vragen, opmerkingen of suggesties? Laat het ons weten — we ontwikkelen dit platform samen.
+    </p>
+    
+    <p style="margin: 0 0 5px 0; color: #374151;">Met vriendelijke groet,</p>
+    <p style="margin: 0; color: #1e3a5f; font-weight: 600;">Erwin Bontje</p>
+    <p style="margin: 0; color: #6b7280; font-size: 14px;">Bureau Vlieland</p>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+    <p style="color: #6b7280; font-size: 13px; margin: 0;">
+      Vragen? Neem contact op via <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a> of bel 0562-452090
     </p>
   </div>
 </body>
@@ -180,7 +247,7 @@ async function invitePartner(
       // Try to get template from database
       const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
 
-      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink);
+      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink, `${origin}/partner`);
       const emailSubject = `${subjectPrefix}${template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal"}`;
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
