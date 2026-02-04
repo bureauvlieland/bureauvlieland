@@ -1,72 +1,110 @@
 
-# Fix: Afwijzen knop werkt niet
+# Fix: Partner verwijderen werkt niet door accommodation_quotes
 
-## Probleem geïdentificeerd
+## Probleem
 
-Bij analyse van de code zie ik dat de "Afwijzen" knop correct is gekoppeld aan de `handleDecline` functie en dat de `onDecline` prop wordt doorgegeven vanuit `PartnerAccommodation.tsx`. 
+Partner "Strandhotel Vlieland" (hotel-vlieland) kan niet worden verwijderd omdat:
 
-Het probleem is waarschijnlijk dat de `Button` componenten binnen de Sheet geen expliciete `type="button"` hebben. In HTML formulieren (en sheets/dialogen) worden buttons standaard behandeld als `type="submit"`, wat kan leiden tot onverwacht gedrag zoals het herladen van de pagina.
+1. De partner heeft 2 gekoppelde `accommodation_quotes` records
+2. De huidige `handleDeletePartner` functie controleert alleen op:
+   - `building_blocks` (0 gevonden)
+   - `program_request_items` (0 gevonden)
+3. **Ontbrekend**: controle op `accommodation_quotes` (2 gevonden)
+
+De database delete faalt waarschijnlijk door een constraint, maar de gebruiker krijgt alleen een generieke "Kon partner niet verwijderen" melding.
 
 ## Oplossing
 
-Voeg `type="button"` toe aan alle action buttons in de `PartnerAccommodationQuoteSheet`:
+Voeg een extra controle toe voor `accommodation_quotes` voordat de partner wordt verwijderd.
 
-### Wijzigingen in `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx`
+### Wijzigingen in `src/pages/admin/AdminPartners.tsx`
 
-**Regel 699-719 - De "Afwijzen" knop sectie:**
+**Regel 197-232 - handleDeletePartner functie:**
+
 ```typescript
-{canSubmit && responseType === "decline" && (
-  <div className="flex gap-2 pt-4">
-    <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-      Annuleren
-    </Button>
-    <Button 
-      type="button"   // <-- TOEVOEGEN
-      onClick={handleDecline} 
-      variant="destructive"
-      className="flex-1"
-      disabled={isSubmitting}
-    >
-      {isSubmitting ? (
-        "Bezig..."
-      ) : (
-        <>
-          <Ban className="h-4 w-4 mr-2" />
-          Afwijzen
-        </>
-      )}
-    </Button>
-  </div>
-)}
+const handleDeletePartner = async () => {
+  if (!partnerToDelete) return;
+  
+  setIsDeleting(true);
+  try {
+    // Check if partner has linked building blocks
+    const { data: blocks } = await supabase
+      .from("building_blocks")
+      .select("id")
+      .eq("provider_id", partnerToDelete.id)
+      .limit(1);
+    
+    if (blocks && blocks.length > 0) {
+      toast({
+        title: "Kan partner niet verwijderen",
+        description: "Deze partner heeft nog gekoppelde bouwstenen.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if partner has program request items
+    const { data: items } = await supabase
+      .from("program_request_items")
+      .select("id")
+      .eq("provider_id", partnerToDelete.id)
+      .limit(1);
+    
+    if (items && items.length > 0) {
+      toast({
+        title: "Kan partner niet verwijderen",
+        description: "Deze partner heeft nog gekoppelde aanvraag-items.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // NIEUW: Check if partner has accommodation quotes
+    const { data: quotes } = await supabase
+      .from("accommodation_quotes")
+      .select("id")
+      .eq("partner_id", partnerToDelete.id)
+      .limit(1);
+    
+    if (quotes && quotes.length > 0) {
+      toast({
+        title: "Kan partner niet verwijderen",
+        description: "Deze partner heeft nog gekoppelde logies offertes. Verwijder eerst de offertes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Delete the partner
+    const { error } = await supabase
+      .from("partners")
+      .delete()
+      .eq("id", partnerToDelete.id);
+
+    if (error) throw error;
+    // ... rest of function
+  }
+}
 ```
 
-**Regel 675-696 - De "Offerte indienen" knop sectie:**
+### Wijzigingen in `src/pages/admin/AdminCRM.tsx`
+
+Dezelfde controle toevoegen aan de `handleDeletePartner` functie daar (regels 198+).
+
+## Resultaat
+
+Na deze wijziging krijg je een duidelijke melding:
+> "Kan partner niet verwijderen: Deze partner heeft nog gekoppelde logies offertes."
+
+## Alternatief (optioneel)
+
+Als je wilt dat partners met afgewezen/verlopen quotes WEL verwijderd kunnen worden, kunnen we de controle aanpassen om alleen "actieve" quotes te checken:
+
 ```typescript
-<Button type="button" variant="outline" onClick={onClose} className="flex-1">
-  Annuleren
-</Button>
-<Button 
-  type="button"   // <-- TOEVOEGEN
-  onClick={handleSubmit} 
-  className="flex-1"
-  disabled={isSubmitting || !accommodationName.trim() || !priceTotal}
->
-  ...
-</Button>
+const { data: quotes } = await supabase
+  .from("accommodation_quotes")
+  .select("id")
+  .eq("partner_id", partnerToDelete.id)
+  .not("status", "in", '("declined","expired","rejected")')
+  .limit(1);
 ```
-
-## Verificatie
-
-Na deze wijziging:
-1. Log in als logiespartner
-2. Ga naar Logies Aanvragen
-3. Open een aanvraag met status "pending"
-4. Selecteer "Niet beschikbaar"
-5. Klik op de rode "Afwijzen" knop
-6. De aanvraag zou nu naar de "Afgerond" tab moeten verplaatsen met status "Afgewezen"
-
-## Debugging console logs
-
-De eerder toegevoegde console logs blijven behouden zodat bij eventuele verdere problemen de uitvoer zichtbaar is:
-- `"handleDecline called, onDecline: function, declineReason: ..."`
-- `"onDecline result: true/false"`
