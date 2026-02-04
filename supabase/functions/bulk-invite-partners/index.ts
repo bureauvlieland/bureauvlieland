@@ -37,9 +37,9 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 0; background: #f4f7fa;">
-  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 35px 30px; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 600;">Bureau Vlieland</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 15px;">Partner Portaal</p>
+  <div style="background: #1e3a5f; padding: 35px 30px; text-align: center;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 600;">Bureau Vlieland</h1>
+    <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 15px;">Partner Portaal</p>
   </div>
   
   <div style="background: white; padding: 35px 30px;">
@@ -55,7 +55,7 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       maar een aanvulling die het administratieve werk verlicht en de communicatie verbetert.
     </p>
     
-    <div style="background: #f8fafc; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
+    <div style="background: #e8f0f8; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
       <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 17px;">📋 Hoe werkt het?</h3>
       
       <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
@@ -71,6 +71,13 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       <p style="margin: 0; color: #374151; font-size: 14px;">
         <strong>3. U reageert via het portaal</strong><br>
         Met één klik bevestigt u de aanvraag, stelt u een alternatief voor, of geeft u aan dat u niet beschikbaar bent.
+      </p>
+    </div>
+    
+    <div style="background: #e8f0f8; border-radius: 8px; padding: 20px 25px; margin: 0 0 25px 0;">
+      <p style="margin: 0; color: #374151; font-size: 14px;">
+        <strong>💡 Goed om te weten:</strong> Naast programma's die klanten zelf samenstellen, gebruiken wij het portaal 
+        ook voor maatwerk programma's die we op verzoek van de klant uitwerken. De werkwijze voor aanvragen en facturatie blijft hetzelfde.
       </p>
     </div>
     
@@ -91,8 +98,8 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </p>
     </div>
     
-    <div style="background: #ecfdf5; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
-      <h3 style="color: #065f46; margin: 0 0 15px 0; font-size: 17px;">✅ Wat kunt u nu doen?</h3>
+    <div style="background: #d1fae5; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
+      <h3 style="color: #064e3b; margin: 0 0 15px 0; font-size: 17px;">✅ Wat kunt u nu doen?</h3>
       
       <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
         <li style="margin-bottom: 10px;">
@@ -106,19 +113,19 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
         </li>
       </ol>
       
-      <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 13px;">
+      <p style="margin: 15px 0 0 0; color: #374151; font-size: 13px;">
         We stellen het op prijs als u uw account binnen <strong>14 dagen</strong> activeert, zodat u geen aanvragen mist.
       </p>
     </div>
     
     <div style="text-align: center; margin: 30px 0;">
       <a href="${resetLink}" 
-         style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);">
+         style="background: #1e3a5f; color: #ffffff; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
         Account Activeren
       </a>
     </div>
     
-    <p style="color: #6b7280; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
+    <p style="color: #374151; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
       Deze link is 24 uur geldig. Na activatie vindt u het portaal op:<br>
       <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
     </p>
@@ -131,12 +138,12 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
     </p>
     
     <p style="margin: 0 0 5px 0; color: #374151;">Met vriendelijke groet,</p>
-    <p style="margin: 0; color: #1e3a5f; font-weight: 600;">Erwin Bontje</p>
+    <p style="margin: 0; color: #1e3a5f; font-weight: 600;">Erwin Soolsma</p>
     <p style="margin: 0; color: #6b7280; font-size: 14px;">Bureau Vlieland</p>
   </div>
   
-  <div style="background: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-    <p style="color: #6b7280; font-size: 13px; margin: 0;">
+  <div style="background: #e8f0f8; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+    <p style="color: #374151; font-size: 13px; margin: 0;">
       Vragen? Neem contact op via <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a> of bel 0562-452090
     </p>
   </div>
@@ -248,7 +255,7 @@ async function invitePartner(
       const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
 
       const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink, `${origin}/partner`);
-      const emailSubject = `${subjectPrefix}${template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal"}`;
+      const emailSubject = `${subjectPrefix}${template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek"}`;
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -274,15 +281,17 @@ async function invitePartner(
               TextPart: `
 Welkom ${partner.name}!
 
-Je bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal.
+U bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal.
 
-Via dit portaal kun je:
+Via dit portaal kunt u:
 - Activiteitsaanvragen bekijken en bevestigen
 - Prijzen doorgeven aan klanten
 - Facturen registreren
-- Je bedrijfsgegevens beheren
+- Uw bedrijfsgegevens beheren
 
-Klik op de volgende link om je wachtwoord in te stellen:
+Naast programma's die klanten zelf samenstellen, gebruiken wij het portaal ook voor maatwerk programma's die we op verzoek van de klant uitwerken. De werkwijze voor aanvragen en facturatie blijft hetzelfde.
+
+Klik op de volgende link om uw wachtwoord in te stellen:
 ${resetLink}
 
 Deze link is 24 uur geldig.
@@ -290,6 +299,7 @@ Deze link is 24 uur geldig.
 Vragen? Neem contact op via erwin@bureauvlieland.nl
 
 Met vriendelijke groet,
+Erwin Soolsma
 Bureau Vlieland
               `,
             },
@@ -445,7 +455,7 @@ Deno.serve(async (req) => {
       if (partner) {
         await adminClient.from("email_log").insert({
           email_type: "partner_invitation",
-          subject: "Welkom bij het Bureau Vlieland Partner Portaal",
+          subject: "Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek",
           recipient_email: partner.email,
           recipient_name: partner.name,
           related_partner_id: partner.id,
