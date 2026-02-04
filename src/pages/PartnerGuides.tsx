@@ -55,16 +55,20 @@ const PartnerGuides = () => {
               </AccordionItem>
 
               <AccordionItem value="wachtwoord-wijzigen">
-                <AccordionTrigger>Wachtwoord wijzigen</AccordionTrigger>
+                <AccordionTrigger>Wachtwoord vergeten of wijzigen</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground space-y-3">
                   <p>
-                    U kunt uw wachtwoord op elk moment wijzigen via de instellingen:
+                    Wilt u uw wachtwoord wijzigen? Dit kunt u doen via de wachtwoord reset functie:
                   </p>
                   <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Ga naar <strong>Instellingen</strong> in het menu</li>
-                    <li>Klik op "Wachtwoord wijzigen"</li>
-                    <li>Voer uw huidige wachtwoord in en kies een nieuw wachtwoord</li>
+                    <li>Ga naar de <strong>Partner Login</strong> pagina</li>
+                    <li>Vul uw emailadres in</li>
+                    <li>Klik op "Wachtwoord vergeten?"</li>
+                    <li>U ontvangt een email met een link om een nieuw wachtwoord in te stellen</li>
                   </ol>
+                  <p className="text-sm bg-muted p-3 rounded-lg">
+                    <strong>Let op:</strong> De reset link in de email is 1 uur geldig.
+                  </p>
                 </AccordionContent>
               </AccordionItem>
 
