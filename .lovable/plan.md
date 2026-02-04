@@ -1,91 +1,55 @@
 
 
-# Opmaak Verbetering: Coming Soon Pagina
+# Plan: Sitemap.xml Bijwerken voor B2B Landingspagina's
 
-## Huidige Problemen
-
-De `/binnenkort` pagina heeft enkele styling inconsistenties:
-
-1. **Header padding**: De header padding is kleiner dan standaard (`py-4` vs typisch `py-5` of `py-6`)
-2. **Content sectie**: Ontbreekt verticale padding waardoor de content tegen de header/footer aan kan komen
-3. **Content container**: Geen `max-w-7xl` en inconsistente container styling
-4. **Mobile spacing**: De `px-4` op main is te krap, zou moeten matchen met de rest van de site
+## Samenvatting
+De sitemap.xml wordt geactualiseerd met alle ontbrekende publieke landingspagina's en de lastmod datums worden bijgewerkt naar de huidige datum.
 
 ---
 
-## Verbeteringen
+## Wijzigingen
 
-### Header
-- Padding verhogen naar `py-5` voor betere verticale ruimte
-- Container styling consistent maken met Footer (`max-w-7xl`)
+### Nieuwe URL's toevoegen
 
-### Content Sectie
-- Verticale padding toevoegen (`py-16 md:py-24`) voor ademruimte
-- Container uitbreiden met `sm:px-6 lg:px-8 max-w-7xl`
-- Card-achtige achtergrond toevoegen voor meer visuele structuur
+| URL | Priority | Changefreq | Categorie |
+|-----|----------|------------|-----------|
+| `/bedrijfsuitje-ideeen-vlieland` | 0.8 | monthly | B2B |
+| `/groepsweekend-vlieland` | 0.8 | monthly | B2C |
+| `/jubileum-vlieland` | 0.8 | monthly | B2C |
+| `/familieweekend-vlieland` | 0.8 | monthly | B2C |
+| `/programma-samenstellen` | 0.9 | weekly | Conversie |
+| `/logies-aanvragen` | 0.8 | monthly | Conversie |
 
-### Knoppen
-- `w-full sm:w-auto` toevoegen zodat knoppen op mobile de volle breedte pakken
-- Spacing verbeteren tussen icon en tekst
+### Lastmod datums actualiseren
+Alle bestaande URL's krijgen `lastmod` bijgewerkt naar **2026-02-04** (vandaag).
 
----
-
-## Technische Wijzigingen
-
-### `src/pages/ComingSoon.tsx`
-
-```tsx
-// Header - betere padding en container
-<header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-5 flex items-center justify-between">
-    ...
-  </div>
-</header>
-
-// Main - meer verticale ruimte en betere container
-<main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-  <div className="text-center max-w-lg w-full">
-    // Icon cirkel iets groter
-    <div className="mb-8 flex justify-center">
-      <div className="rounded-full bg-primary/10 p-8">
-        <Construction className="h-16 w-16 text-primary" />
-      </div>
-    </div>
-    
-    // Titel met meer spacing
-    <h1 className="text-3xl md:text-4xl font-bold mb-6">...</h1>
-    
-    // Paragraph met meer margin
-    <p className="text-muted-foreground text-lg mb-10 leading-relaxed">...</p>
-
-    // Buttons met betere mobile styling
-    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-      <Button className="w-full sm:w-auto">...</Button>
-    </div>
-  </div>
-</main>
-```
+### Priority structuur
+- **1.0**: Homepage
+- **0.9**: Hoofddiensten (diensten, samenwerken, bouwstenen, bedrijfsuitje-vlieland, programma-samenstellen)
+- **0.8**: Landingspagina's (alle specifieke event-types)
+- **0.7**: Contact & offerte pagina's
+- **0.6**: Over ons
+- **0.3**: Juridisch (algemene voorwaarden)
 
 ---
 
-## Visueel Resultaat
-
-| Element | Was | Wordt |
-|---------|-----|-------|
-| Header padding | `py-4` | `py-5` |
-| Content padding | `px-4` | `px-4 sm:px-6 lg:px-8 py-16 md:py-24` |
-| Icon container | `p-6`, `h-12 w-12` | `p-8`, `h-16 w-16` |
-| Titel | `text-3xl mb-4` | `text-3xl md:text-4xl mb-6` |
-| Paragraaf | `mb-8` | `text-lg mb-10` |
-| Button gap | `gap-3` | `gap-4` |
-| Buttons mobile | default | `w-full sm:w-auto` |
-| Max width content | `max-w-md` | `max-w-lg` |
+## Pagina's die NIET worden toegevoegd (geen SEO-waarde)
+- `/partner/*` - Partnerportaal (niet-publiek)
+- `/admin/*` - Adminpaneel (niet-publiek)
+- `/mijn-programma/*` - Klantportaal (token-based)
+- `/programma/:shareCode` - Gedeelde programma's (dynamisch)
+- `/binnenkort` - Tijdelijke pagina
 
 ---
 
-## Te Wijzigen Bestanden
+## Technische details
 
-| Bestand | Actie |
-|---------|-------|
-| `src/pages/ComingSoon.tsx` | Styling aanpassen voor betere padding, margin en responsive gedrag |
+**Bestand:** `public/sitemap.xml`
+
+De sitemap wordt gestructureerd met URL's gegroepeerd op:
+1. Hoofdpagina's
+2. B2B landingspagina's (bedrijfsuitje hub + spokes)
+3. B2C landingspagina's (privé events)
+4. Conversie pagina's
+5. Ondersteunende pagina's
 
