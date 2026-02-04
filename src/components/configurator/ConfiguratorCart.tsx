@@ -8,6 +8,7 @@ import { ProgramEditor } from "./ProgramEditor";
 import { ProgramEditorSheet } from "./ProgramEditorSheet";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { trackBeginCheckout } from "@/lib/analytics";
+import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 
 interface ConfiguratorCartProps {
   cartItems: CartItemDetail[];
@@ -60,11 +61,20 @@ export const ConfiguratorCart = ({
     
     const indicativeValue = calculateIndicativeTotal(blocks as any[], numberOfPeople);
     
+    // Get entry page data for attribution
+    const entryPage = getEntryPage();
+    const inferredEventType = entryPage ? inferEventTypeFromPath(entryPage.path) : null;
+    
     trackBeginCheckout({
       itemsCount: cartItems.length,
       value: indicativeValue,
       numberOfPeople,
       numberOfDays: effectiveDates.length || 1,
+      eventType: inferredEventType || undefined,
+      entryPage: entryPage?.path,
+      utmSource: entryPage?.utm_source,
+      utmMedium: entryPage?.utm_medium,
+      utmCampaign: entryPage?.utm_campaign,
     });
     
     onSubmit();
