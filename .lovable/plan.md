@@ -1,118 +1,72 @@
 
+# Fix: Afwijzen knop werkt niet
 
-# Plan: Afwijzen van Logies Aanvragen door Partner
+## Probleem geïdentificeerd
 
-## Samenvatting
+Bij analyse van de code zie ik dat de "Afwijzen" knop correct is gekoppeld aan de `handleDecline` functie en dat de `onDecline` prop wordt doorgegeven vanuit `PartnerAccommodation.tsx`. 
 
-Momenteel kunnen logiespartners alleen een offerte indienen voor een logiesaanvraag. Er ontbreekt de mogelijkheid om een aanvraag **af te wijzen** (bijvoorbeeld wanneer er geen beschikbaarheid is). Dit plan voegt deze functionaliteit toe, consistent met hoe activiteitenpartners kunnen reageren.
+Het probleem is waarschijnlijk dat de `Button` componenten binnen de Sheet geen expliciete `type="button"` hebben. In HTML formulieren (en sheets/dialogen) worden buttons standaard behandeld als `type="submit"`, wat kan leiden tot onverwacht gedrag zoals het herladen van de pagina.
 
 ## Oplossing
 
-De `PartnerAccommodationQuoteSheet` wordt uitgebreid met een **"Niet beschikbaar" optie**, vergelijkbaar met de `PartnerItemSheet` voor activiteiten. Wanneer een logiespartner kiest voor afwijzen, wordt de quote status op "declined" gezet en wordt optioneel een reden opgeslagen.
+Voeg `type="button"` toe aan alle action buttons in de `PartnerAccommodationQuoteSheet`:
 
-## Wijzigingen
+### Wijzigingen in `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx`
 
-### 1. Database: Nieuwe status toevoegen
-
-De `accommodation_quotes.status` kolom ondersteunt al vrije tekst. We voegen "declined" toe als geldige status.
-
-- **Status "declined"** wordt gebruikt wanneer een partner aangeeft niet beschikbaar te zijn
-- Het `partner_notes` veld wordt gebruikt om een optionele reden op te slaan
-
-### 2. Frontend: PartnerAccommodationQuoteSheet.tsx
-
-Aanpassingen aan het quote formulier:
-
-```text
-┌─────────────────────────────────────────────────┐
-│  Aanvraag details (bestaand)                    │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  ○ Offerte indienen                             │
-│    Vul onderstaand formulier in                 │
-│                                                 │
-│  ○ Niet beschikbaar                             │
-│    Deze aanvraag afwijzen                       │
-│                                                 │
-├─────────────────────────────────────────────────┤
-│  [Als "Offerte indienen" geselecteerd]          │
-│  - Bestaande offerte velden                     │
-│                                                 │
-│  [Als "Niet beschikbaar" geselecteerd]          │
-│  - Reden voor afwijzing (optioneel) textarea    │
-│                                                 │
-├─────────────────────────────────────────────────┤
-│  [Annuleren]        [Versturen]                 │
-└─────────────────────────────────────────────────┘
-```
-
-Technische wijzigingen:
-- `RadioGroup` toevoegen met opties: "submit_quote" en "decline"
-- Conditioneel tonen: offerte formulier OF afwijzingsformulier
-- Bij "decline": `status` updaten naar "declined" + `partner_notes` voor reden
-- Submitted_at timestamp bijwerken bij afwijzing
-
-### 3. Frontend: PartnerAccommodationRequestCard.tsx
-
-- Nieuwe status "declined" toevoegen aan `QUOTE_STATUS_CONFIG`
-- Label: "Afgewezen" met `destructive` variant
-- Kaart tonen in "Afgerond" tab (niet in "Te beantwoorden")
-
-### 4. Frontend: PartnerAccommodation.tsx
-
-- `handleQuoteDecline` functie toevoegen
-- Of bestaande `handleQuoteSubmit` uitbreiden met decline logica
-- Afgewezen aanvragen in de "Afgerond" tab tonen
-
-### 5. Types: accommodation.ts
-
-- Status "declined" toevoegen aan `AccommodationQuoteStatus` type
-
-## Technische Details
-
-### Database Update Query (bij afwijzing)
+**Regel 699-719 - De "Afwijzen" knop sectie:**
 ```typescript
-await supabase
-  .from("accommodation_quotes")
-  .update({
-    status: "declined",
-    partner_notes: declineReason || null,
-    submitted_at: new Date().toISOString(), // Markeer als verwerkt
-  })
-  .eq("id", quoteId);
+{canSubmit && responseType === "decline" && (
+  <div className="flex gap-2 pt-4">
+    <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+      Annuleren
+    </Button>
+    <Button 
+      type="button"   // <-- TOEVOEGEN
+      onClick={handleDecline} 
+      variant="destructive"
+      className="flex-1"
+      disabled={isSubmitting}
+    >
+      {isSubmitting ? (
+        "Bezig..."
+      ) : (
+        <>
+          <Ban className="h-4 w-4 mr-2" />
+          Afwijzen
+        </>
+      )}
+    </Button>
+  </div>
+)}
 ```
 
-### UI Componenten te wijzigen:
-1. **PartnerAccommodationQuoteSheet.tsx** - Hoofdwijziging: RadioGroup met keuze + conditionele formulieren
-2. **PartnerAccommodationRequestCard.tsx** - Status badge + actieknoppen
-3. **PartnerAccommodation.tsx** - Filter logica voor tabs
-
-### Status Badge Configuratie
+**Regel 675-696 - De "Offerte indienen" knop sectie:**
 ```typescript
-declined: { 
-  label: "Afgewezen", 
-  variant: "destructive" 
-}
+<Button type="button" variant="outline" onClick={onClose} className="flex-1">
+  Annuleren
+</Button>
+<Button 
+  type="button"   // <-- TOEVOEGEN
+  onClick={handleSubmit} 
+  className="flex-1"
+  disabled={isSubmitting || !accommodationName.trim() || !priceTotal}
+>
+  ...
+</Button>
 ```
 
-### Tab Filtering
-```typescript
-// "Afgerond" tab toont nu ook declined:
-const closedRequests = requests.filter(r => 
-  r.quote?.status === "selected" || 
-  r.quote?.status === "rejected" || 
-  r.quote?.status === "declined" ||  // NIEUW
-  r.quote?.status === "expired"
-);
-```
+## Verificatie
 
-## Gebruikerservaring
+Na deze wijziging:
+1. Log in als logiespartner
+2. Ga naar Logies Aanvragen
+3. Open een aanvraag met status "pending"
+4. Selecteer "Niet beschikbaar"
+5. Klik op de rode "Afwijzen" knop
+6. De aanvraag zou nu naar de "Afgerond" tab moeten verplaatsen met status "Afgewezen"
 
-1. Logiespartner opent een aanvraag in "Te beantwoorden"
-2. Sheet toont twee opties bovenaan: "Offerte indienen" of "Niet beschikbaar"
-3. Bij "Niet beschikbaar":
-   - Optioneel veld voor reden (bijv. "Volgeboekt in deze periode")
-   - Klik op "Afwijzen" knop
-4. Aanvraag verdwijnt uit "Te beantwoorden" en verschijnt in "Afgerond" met status "Afgewezen"
-5. Partner kan later nog de details bekijken maar niet meer reageren
+## Debugging console logs
 
+De eerder toegevoegde console logs blijven behouden zodat bij eventuele verdere problemen de uitvoer zichtbaar is:
+- `"handleDecline called, onDecline: function, declineReason: ..."`
+- `"onDecline result: true/false"`
