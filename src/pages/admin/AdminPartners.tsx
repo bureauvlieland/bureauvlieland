@@ -231,11 +231,12 @@ const AdminPartnersContent = () => {
         return;
       }
 
-      // Check if partner has accommodation quotes
+      // Check if partner has active accommodation quotes (not declined/expired/rejected)
       const { data: quotes } = await supabase
         .from("accommodation_quotes")
         .select("id")
         .eq("partner_id", partnerToDelete.id)
+        .not("status", "in", '("declined","expired","rejected")')
         .limit(1);
       
       if (quotes && quotes.length > 0) {
@@ -246,6 +247,14 @@ const AdminPartnersContent = () => {
         });
         return;
       }
+
+
+      // Delete any declined/expired/rejected quotes first (they don't block deletion conceptually)
+      await supabase
+        .from("accommodation_quotes")
+        .delete()
+        .eq("partner_id", partnerToDelete.id)
+        .in("status", ["declined", "expired", "rejected"]);
 
       // Delete the partner
       const { error } = await supabase
