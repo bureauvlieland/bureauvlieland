@@ -1,110 +1,91 @@
 
 
-# Alle Website-afbeeldingen in de Mediabibliotheek
+# Opmaak Verbetering: Coming Soon Pagina
 
-## Huidige situatie
-De mediabibliotheek toont alleen afbeeldingen uit de `building-block-images` storage bucket. Maar er zijn ook 63 afbeeldingen in de `src/assets/` folder die overal op de website worden gebruikt (hero images, team foto's, activiteiten, etc.).
+## Huidige Problemen
 
-## Oplossing
-De mediabibliotheek uitbreiden met twee secties/tabs:
-1. **Geüploade afbeeldingen** - Uit de storage bucket (huidige functionaliteit)
-2. **Website assets** - De statische afbeeldingen uit `src/assets/`
+De `/binnenkort` pagina heeft enkele styling inconsistenties:
 
-## Wat wordt aangepast
-
-### 1. Hook uitbreiden: `useMediaLibrary.ts`
-- Nieuwe functie `useAssetFiles()` toevoegen die alle bestanden uit `src/assets/` ophaalt
-- Een mapping maken van alle asset bestandsnamen naar hun import paths
-
-### 2. Assets index bestand maken
-Omdat Vite statische imports vereist, maken we een index bestand dat alle assets exporteert:
-
-```
-src/assets/index.ts
-```
-
-Dit bestand exporteert alle afbeeldingen met hun URLs zodat ze dynamisch kunnen worden geladen.
-
-### 3. MediaLibrary component aanpassen
-- Tabs toevoegen: "Uploads" en "Website Assets"
-- Website assets tab toont de 63 afbeeldingen uit src/assets
-- Assets zijn alleen selecteerbaar (niet te verwijderen, want ze zitten in de code)
-- Zoekfunctie werkt over beide bronnen
-
-### 4. MediaPickerDialog aanpassen
-- Dezelfde tabs toevoegen
-- Bij selectie van een asset wordt de juiste import path of URL gebruikt
-
-## Gebruikerservaring
-
-**In de mediabibliotheek:**
-- Standaard tab "Uploads" toont geüploade afbeeldingen
-- Tab "Website Assets" toont alle 63 bestaande afbeeldingen
-- Beide tabs hebben zoekfunctie
-- Assets kunnen niet verwijderd worden (grijs icoontje)
-
-**Bij kiezen voor bouwsteen:**
-- Beide bronnen beschikbaar
-- Duidelijk onderscheid tussen uploads en assets
-
-## Categorieën voor assets (bonus)
-De assets kunnen ook gecategoriseerd worden op basis van hun naam:
-- **Activiteiten**: beach-*, cycling-*, surf-*, etc.
-- **Catering**: catering-*, food-*, lunch-*
-- **Locaties**: vlieland-*, lighthouse-*, dunes-*
-- **Events**: event-*, wedding-*, team-*
-- **Profielen**: *-profile.*
-- **Logo's**: logo*
+1. **Header padding**: De header padding is kleiner dan standaard (`py-4` vs typisch `py-5` of `py-6`)
+2. **Content sectie**: Ontbreekt verticale padding waardoor de content tegen de header/footer aan kan komen
+3. **Content container**: Geen `max-w-7xl` en inconsistente container styling
+4. **Mobile spacing**: De `px-4` op main is te krap, zou moeten matchen met de rest van de site
 
 ---
 
-## Technische details
+## Verbeteringen
 
-### Nieuw bestand: `src/assets/index.ts`
-```typescript
-// Auto-generated asset index
-import amuseTour from "./amuse-tour.jpg";
-import beachActivity from "./beach-activity.jpg";
-// ... alle 63 assets
+### Header
+- Padding verhogen naar `py-5` voor betere verticale ruimte
+- Container styling consistent maken met Footer (`max-w-7xl`)
 
-export const assetFiles = [
-  { name: "amuse-tour.jpg", url: amuseTour, category: "activiteiten" },
-  { name: "beach-activity.jpg", url: beachActivity, category: "activiteiten" },
-  // ... etc
-];
+### Content Sectie
+- Verticale padding toevoegen (`py-16 md:py-24`) voor ademruimte
+- Container uitbreiden met `sm:px-6 lg:px-8 max-w-7xl`
+- Card-achtige achtergrond toevoegen voor meer visuele structuur
+
+### Knoppen
+- `w-full sm:w-auto` toevoegen zodat knoppen op mobile de volle breedte pakken
+- Spacing verbeteren tussen icon en tekst
+
+---
+
+## Technische Wijzigingen
+
+### `src/pages/ComingSoon.tsx`
+
+```tsx
+// Header - betere padding en container
+<header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-5 flex items-center justify-between">
+    ...
+  </div>
+</header>
+
+// Main - meer verticale ruimte en betere container
+<main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+  <div className="text-center max-w-lg w-full">
+    // Icon cirkel iets groter
+    <div className="mb-8 flex justify-center">
+      <div className="rounded-full bg-primary/10 p-8">
+        <Construction className="h-16 w-16 text-primary" />
+      </div>
+    </div>
+    
+    // Titel met meer spacing
+    <h1 className="text-3xl md:text-4xl font-bold mb-6">...</h1>
+    
+    // Paragraph met meer margin
+    <p className="text-muted-foreground text-lg mb-10 leading-relaxed">...</p>
+
+    // Buttons met betere mobile styling
+    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <Button className="w-full sm:w-auto">...</Button>
+    </div>
+  </div>
+</main>
 ```
 
-### Aanpassingen `useMediaLibrary.ts`
-```typescript
-export interface AssetFile {
-  name: string;
-  url: string;
-  category: string;
-}
+---
 
-export function useAssetFiles(): AssetFile[] {
-  // Import from assets/index.ts
-  return assetFiles;
-}
-```
+## Visueel Resultaat
 
-### Aanpassingen `MediaLibrary.tsx`
-```typescript
-// Tabs state
-const [activeTab, setActiveTab] = useState<"uploads" | "assets">("uploads");
+| Element | Was | Wordt |
+|---------|-----|-------|
+| Header padding | `py-4` | `py-5` |
+| Content padding | `px-4` | `px-4 sm:px-6 lg:px-8 py-16 md:py-24` |
+| Icon container | `p-6`, `h-12 w-12` | `p-8`, `h-16 w-16` |
+| Titel | `text-3xl mb-4` | `text-3xl md:text-4xl mb-6` |
+| Paragraaf | `mb-8` | `text-lg mb-10` |
+| Button gap | `gap-3` | `gap-4` |
+| Buttons mobile | default | `w-full sm:w-auto` |
+| Max width content | `max-w-md` | `max-w-lg` |
 
-// Render tabs boven de grid
-<Tabs value={activeTab} onValueChange={setActiveTab}>
-  <TabsList>
-    <TabsTrigger value="uploads">Uploads ({files?.length || 0})</TabsTrigger>
-    <TabsTrigger value="assets">Website Assets (63)</TabsTrigger>
-  </TabsList>
-</Tabs>
-```
+---
 
-### Te wijzigen bestanden
-- `src/assets/index.ts` (nieuw) - Export alle assets
-- `src/hooks/useMediaLibrary.ts` - Voeg useAssetFiles toe
-- `src/components/admin/MediaLibrary.tsx` - Voeg tabs en assets weergave toe
-- `src/components/admin/MediaPickerDialog.tsx` - Voeg tabs toe voor selectie
+## Te Wijzigen Bestanden
+
+| Bestand | Actie |
+|---------|-------|
+| `src/pages/ComingSoon.tsx` | Styling aanpassen voor betere padding, margin en responsive gedrag |
 
