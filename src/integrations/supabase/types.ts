@@ -768,11 +768,14 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          invited_at: string | null
           is_active: boolean
           kvk_number: string | null
+          last_login_at: string | null
           name: string
           partner_token: string
           partner_type: string | null
+          password_set_at: string | null
           phone: string | null
           reference_number: string | null
           terms_pdf_path: string | null
@@ -796,11 +799,14 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          invited_at?: string | null
           is_active?: boolean
           kvk_number?: string | null
+          last_login_at?: string | null
           name: string
           partner_token?: string
           partner_type?: string | null
+          password_set_at?: string | null
           phone?: string | null
           reference_number?: string | null
           terms_pdf_path?: string | null
@@ -824,11 +830,14 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          invited_at?: string | null
           is_active?: boolean
           kvk_number?: string | null
+          last_login_at?: string | null
           name?: string
           partner_token?: string
           partner_type?: string | null
+          password_set_at?: string | null
           phone?: string | null
           reference_number?: string | null
           terms_pdf_path?: string | null
