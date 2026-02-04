@@ -341,6 +341,41 @@ const PartnerDashboardContent = () => {
     }
   };
 
+  const handleQuoteDecline = async (declineReason: string) => {
+    if (!selectedRequest?.quote) return false;
+
+    try {
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({
+          status: "declined",
+          partner_notes: declineReason || null,
+          submitted_at: new Date().toISOString(),
+        })
+        .eq("id", selectedRequest.quote.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Aanvraag afgewezen",
+        description: "De aanvraag is gemarkeerd als niet beschikbaar.",
+      });
+
+      await refetchDashboard();
+      setShowQuoteSheet(false);
+      setSelectedRequest(null);
+      return true;
+    } catch (err) {
+      console.error("Error declining quote:", err);
+      toast({
+        title: "Fout",
+        description: "Kon aanvraag niet afwijzen. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleInvoiceRegister = async (
     amount: number,
     invoiceNumber: string,
@@ -684,6 +719,7 @@ const PartnerDashboardContent = () => {
         partnerToken={partnerToken || ""}
         partnerName={partnerName}
         onSubmit={handleQuoteSubmit}
+        onDecline={handleQuoteDecline}
         onRefresh={refetchDashboard}
       />
     </>
