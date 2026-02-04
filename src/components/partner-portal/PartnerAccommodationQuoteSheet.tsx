@@ -676,10 +676,11 @@ export const PartnerAccommodationQuoteSheet = ({
           {/* Actions */}
           {canSubmit && responseType === "submit_quote" && (
             <div className="flex gap-2 pt-4">
-              <Button variant="outline" onClick={onClose} className="flex-1">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Annuleren
               </Button>
               <Button 
+                type="button"
                 onClick={handleSubmit} 
                 className="flex-1"
                 disabled={isSubmitting || !accommodationName.trim() || !priceTotal}
@@ -698,10 +699,11 @@ export const PartnerAccommodationQuoteSheet = ({
 
           {canSubmit && responseType === "decline" && (
             <div className="flex gap-2 pt-4">
-              <Button variant="outline" onClick={onClose} className="flex-1">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Annuleren
               </Button>
               <Button 
+                type="button"
                 onClick={handleDecline} 
                 variant="destructive"
                 className="flex-1"
