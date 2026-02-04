@@ -101,13 +101,25 @@ export interface PartnerBuildingBlock {
   block_type: string;
   duration: string | null;
   price_adult: number | null;
+  price_adult_note: string | null;
   price_type: string | null;
+  price_child: number | null;
+  price_child_note: string | null;
+  price_child_min_age: number | null;
+  price_child_max_age: number | null;
+  price_pet: number | null;
+  price_pet_note: string | null;
+  is_from_price: boolean;
+  price_includes_vat: boolean | null;
+  vat_rate: number | null;
   min_people: number | null;
   max_people: number | null;
   is_published: boolean;
   is_active: boolean;
   image_url: string | null;
   image_asset: string | null;
+  seasonal_notes: string | null;
+  tags: string[] | null;
 }
 
 export interface PartnerDashboardData {

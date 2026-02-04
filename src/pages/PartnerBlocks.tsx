@@ -75,7 +75,15 @@ const PartnerBlocksContent = () => {
       // Fetch building blocks for this partner
       const { data: blocksData, error: blocksError } = await supabase
         .from("building_blocks")
-        .select("id, name, description, short_description, category, block_type, duration, price_adult, price_type, min_people, max_people, is_published, is_active, image_url, image_asset")
+        .select(`
+          id, name, description, short_description, category, block_type, 
+          duration, price_adult, price_adult_note, price_type, 
+          price_child, price_child_note, price_child_min_age, price_child_max_age,
+          price_pet, price_pet_note, 
+          min_people, max_people, is_published, is_active, 
+          image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
+          seasonal_notes, tags
+        `)
         .eq("provider_id", currentPartnerId)
         .order("name");
 
@@ -117,7 +125,15 @@ const PartnerBlocksContent = () => {
 
     const { data: blocksData } = await supabase
       .from("building_blocks")
-      .select("id, name, description, short_description, category, block_type, duration, price_adult, price_type, min_people, max_people, is_published, is_active, image_url, image_asset")
+      .select(`
+        id, name, description, short_description, category, block_type, 
+        duration, price_adult, price_adult_note, price_type, 
+        price_child, price_child_note, price_child_min_age, price_child_max_age,
+        price_pet, price_pet_note, 
+        min_people, max_people, is_published, is_active, 
+        image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
+        seasonal_notes, tags
+      `)
       .eq("provider_id", partnerId)
       .order("name");
 
