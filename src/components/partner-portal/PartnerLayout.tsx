@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Receipt,
   Package,
+  BookOpen,
   BedDouble,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +65,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
     // Alleen tonen als partner logies levert
     ...(isAccommodationPartner ? [{ title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble }] : []),
     { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
+    { title: "Handleidingen", url: `/partner/handleidingen${urlSuffix}`, icon: BookOpen },
     { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
   ];
 
