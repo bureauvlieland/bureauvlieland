@@ -71,3 +71,12 @@ verify_jwt = false
 
 [functions.accept-quote-proposal]
 verify_jwt = false
+
+[functions.reset-partner-connections]
+verify_jwt = false
+
+[functions.bulk-invite-partners]
+verify_jwt = false
+
+[functions.update-partner-password-set]
+verify_jwt = false

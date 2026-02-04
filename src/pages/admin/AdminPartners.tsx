@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +39,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
@@ -54,6 +62,7 @@ import {
   FileX,
   AlertTriangle,
   CalendarOff,
+  RotateCcw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +70,9 @@ import { logAdminActivity } from "@/lib/adminLogger";
 import { usePartnerUnavailability } from "@/hooks/usePartnerUnavailability";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { PartnerOnboardingStats } from "@/components/admin/PartnerOnboardingStats";
+import { BulkInviteDialog } from "@/components/admin/BulkInviteDialog";
+import { ResetPartnerConnectionsDialog } from "@/components/admin/ResetPartnerConnectionsDialog";
 
 interface Partner {
   id: string;
@@ -78,13 +90,35 @@ interface Partner {
   created_at: string;
   partner_type: string | null;
   terms_pdf_path: string | null;
+  invited_at: string | null;
+  password_set_at: string | null;
+  last_login_at: string | null;
 }
+
+type OnboardingFilter = "all" | "not_invited" | "pending" | "active";
 
 const PARTNER_TYPE_LABELS: Record<string, string> = {
   activity_provider: "Activiteiten",
   accommodation: "Logies",
   both: "Activiteiten & Logies",
 };
+
+function getOnboardingStatus(partner: Partner): "not_invited" | "pending" | "active" {
+  if (!partner.auth_user_id) return "not_invited";
+  if (!partner.password_set_at) return "pending";
+  return "active";
+}
+
+function OnboardingBadge({ status }: { status: "not_invited" | "pending" | "active" }) {
+  switch (status) {
+    case "not_invited":
+      return <Badge variant="secondary">Niet uitgenodigd</Badge>;
+    case "pending":
+      return <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">Wacht op activatie</Badge>;
+    case "active":
+      return <Badge variant="default" className="bg-green-600">Actief</Badge>;
+  }
+}
 
 const AdminPartnersContent = () => {
   const navigate = useNavigate();
@@ -95,10 +129,16 @@ const AdminPartnersContent = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [partnerToDelete, setPartnerToDelete] = useState<Partner | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [onboardingFilter, setOnboardingFilter] = useState<OnboardingFilter>("all");
+  
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
+  const [resetConnectionsOpen, setResetConnectionsOpen] = useState(false);
   
   // Get unavailability data for all partners
   const partnerIds = useMemo(() => partners.map(p => p.id), [partners]);
-  const { unavailabilityMap, isLoading: unavailabilityLoading } = usePartnerUnavailability(partnerIds);
+  const { unavailabilityMap } = usePartnerUnavailability(partnerIds);
 
   const fetchPartners = async () => {
     try {
@@ -228,16 +268,75 @@ const AdminPartnersContent = () => {
     }
   };
 
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = partners.length;
+    const notInvited = partners.filter(p => !p.auth_user_id).length;
+    const pendingActivation = partners.filter(p => p.auth_user_id && !p.password_set_at).length;
+    const active = partners.filter(p => p.password_set_at).length;
+    const connectedCount = partners.filter(p => p.auth_user_id).length;
+    return { total, notInvited, pendingActivation, active, connectedCount };
+  }, [partners]);
+
+  // Filter partners
   const filteredPartners = useMemo(() => {
-    return partners.filter((p) => {
+    let result = partners;
+    
+    // Apply onboarding filter
+    if (onboardingFilter !== "all") {
+      result = result.filter(p => getOnboardingStatus(p) === onboardingFilter);
+    }
+    
+    // Apply search filter
+    if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return (
+      result = result.filter((p) =>
         p.name.toLowerCase().includes(query) ||
         p.email.toLowerCase().includes(query) ||
         (p.address_city?.toLowerCase().includes(query) ?? false)
       );
-    });
-  }, [partners, searchQuery]);
+    }
+    
+    return result;
+  }, [partners, searchQuery, onboardingFilter]);
+
+  // Selectable partners (only not invited)
+  const selectablePartners = useMemo(() => 
+    filteredPartners.filter(p => !p.auth_user_id),
+    [filteredPartners]
+  );
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(selectablePartners.map(p => p.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (partnerId: string, checked: boolean) => {
+    const newSet = new Set(selectedIds);
+    if (checked) {
+      newSet.add(partnerId);
+    } else {
+      newSet.delete(partnerId);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const selectedPartners = useMemo(() => 
+    partners.filter(p => selectedIds.has(p.id)),
+    [partners, selectedIds]
+  );
+
+  const handleBulkInviteComplete = () => {
+    setSelectedIds(new Set());
+    fetchPartners();
+  };
+
+  const handleResetComplete = () => {
+    fetchPartners();
+  };
 
   if (isLoading) {
     return (
@@ -256,21 +355,59 @@ const AdminPartnersContent = () => {
           <h1 className="text-2xl font-bold text-slate-900">Partners</h1>
           <p className="text-slate-600">Beheer partners en hun gegevens</p>
         </div>
-        <Button onClick={() => navigate("/admin/partners/nieuw")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Partner toevoegen
-        </Button>
+        <div className="flex items-center gap-2">
+          {stats.connectedCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setResetConnectionsOpen(true)}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset koppelingen
+            </Button>
+          )}
+          <Button onClick={() => navigate("/admin/partners/nieuw")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Partner toevoegen
+          </Button>
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input
-          placeholder="Zoek op naam, email of plaats..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Onboarding stats */}
+      <PartnerOnboardingStats
+        total={stats.total}
+        notInvited={stats.notInvited}
+        pendingActivation={stats.pendingActivation}
+        active={stats.active}
+      />
+
+      {/* Search and filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Zoek op naam, email of plaats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={onboardingFilter} onValueChange={(v) => setOnboardingFilter(v as OnboardingFilter)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter op status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle partners</SelectItem>
+            <SelectItem value="not_invited">Niet uitgenodigd</SelectItem>
+            <SelectItem value="pending">Wacht op activatie</SelectItem>
+            <SelectItem value="active">Actief</SelectItem>
+          </SelectContent>
+        </Select>
+        {selectedIds.size > 0 && (
+          <Button onClick={() => setBulkInviteOpen(true)}>
+            <Mail className="h-4 w-4 mr-2" />
+            {selectedIds.size} partner{selectedIds.size === 1 ? "" : "s"} uitnodigen
+          </Button>
+        )}
       </div>
 
       {/* Partners table */}
@@ -279,13 +416,20 @@ const AdminPartnersContent = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectablePartners.length > 0 && selectedIds.size === selectablePartners.length}
+                    onCheckedChange={handleSelectAll}
+                    disabled={selectablePartners.length === 0}
+                  />
+                </TableHead>
                 <TableHead>Partner</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Adres</TableHead>
                 <TableHead>Commissie</TableHead>
                 <TableHead>Voorwaarden</TableHead>
-                <TableHead>Login</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actief</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
@@ -293,7 +437,7 @@ const AdminPartnersContent = () => {
             <TableBody>
               {filteredPartners.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                     Geen partners gevonden
                   </TableCell>
                 </TableRow>
@@ -308,9 +452,18 @@ const AdminPartnersContent = () => {
                     const end = new Date(p.end_date);
                     return today >= start && today <= end;
                   });
+                  const onboardingStatus = getOnboardingStatus(partner);
+                  const isSelectable = !partner.auth_user_id;
                   
                   return (
                   <TableRow key={partner.id} className={isCurrentlyUnavailable ? "bg-amber-50/50" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(partner.id)}
+                        onCheckedChange={(checked) => handleSelectOne(partner.id, !!checked)}
+                        disabled={!isSelectable}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
@@ -405,13 +558,7 @@ const AdminPartnersContent = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {partner.auth_user_id ? (
-                        <Badge variant="default" className="bg-green-600">
-                          Gekoppeld
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Niet gekoppeld</Badge>
-                      )}
+                      <OnboardingBadge status={onboardingStatus} />
                     </TableCell>
                     <TableCell>
                       <Switch
@@ -435,7 +582,10 @@ const AdminPartnersContent = () => {
                           </DropdownMenuItem>
                           {!partner.auth_user_id && (
                             <DropdownMenuItem
-                              onClick={() => navigate(`/admin/partners/${partner.id}/uitnodigen`)}
+                              onClick={() => {
+                                setSelectedIds(new Set([partner.id]));
+                                setBulkInviteOpen(true);
+                              }}
                             >
                               <UserPlus className="h-4 w-4 mr-2" />
                               Uitnodigen
@@ -492,6 +642,22 @@ const AdminPartnersContent = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk invite dialog */}
+      <BulkInviteDialog
+        open={bulkInviteOpen}
+        onOpenChange={setBulkInviteOpen}
+        partners={selectedPartners}
+        onComplete={handleBulkInviteComplete}
+      />
+
+      {/* Reset connections dialog */}
+      <ResetPartnerConnectionsDialog
+        open={resetConnectionsOpen}
+        onOpenChange={setResetConnectionsOpen}
+        connectedCount={stats.connectedCount}
+        onComplete={handleResetComplete}
+      />
     </div>
   );
 };

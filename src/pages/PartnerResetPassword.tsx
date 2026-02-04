@@ -63,6 +63,14 @@ const PartnerResetPassword = () => {
 
       if (error) throw error;
 
+      // Update password_set_at timestamp in partners table
+      try {
+        await supabase.functions.invoke("update-partner-password-set");
+      } catch (updateErr) {
+        console.error("Error updating password_set_at:", updateErr);
+        // Don't fail the password reset if this fails
+      }
+
       setIsSuccess(true);
       toast({
         title: "Wachtwoord gewijzigd",
