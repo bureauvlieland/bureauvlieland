@@ -551,7 +551,7 @@ export const MobileProgramView = ({
                     E-mail
                   </Button>
                 </a>
-                <a href="tel:+31562452700">
+                <a href="tel:+31562700208">
                   <Button variant="outline" size="sm">
                     <Phone className="h-4 w-4 mr-2" />
                     Bellen

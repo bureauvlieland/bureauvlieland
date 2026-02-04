@@ -83,7 +83,7 @@ function wrapInEmailTemplate(body: string, partnerName: string): string {
     <p style="margin: 0;">Bureau Vlieland - Uw partner voor Vlieland evenementen</p>
     <p style="margin: 4px 0 0;">
       <a href="mailto:hallo@bureauvlieland.nl" style="color: #0f766e;">hallo@bureauvlieland.nl</a> | 
-      +31 (0)562 45 27 00
+      0562 700 208
     </p>
   </div>
 </body>
