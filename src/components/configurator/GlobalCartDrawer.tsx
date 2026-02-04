@@ -11,12 +11,30 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { ConfiguratorCart } from "./ConfiguratorCart";
 import { RequestFormModal } from "./RequestFormModal";
-import { useCart } from "@/contexts/CartContext";
+import { useCartSafe } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 
 export const GlobalCartDrawer = () => {
   const location = useLocation();
   const { toast } = useToast();
+  const cart = useCartSafe();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Don't show on the programma-samenstellen page (it has its own implementation)
+  // Also hide on partner, customer, and admin pages
+  const isOnConfiguratorPage = location.pathname === "/programma-samenstellen";
+  const isOnPortalPage = location.pathname.startsWith("/partner") || 
+                         location.pathname.startsWith("/admin") || 
+                         location.pathname.startsWith("/programma/") ||
+                         location.pathname.startsWith("/mijn-programma/");
+
+  // Don't render on portal pages or if cart context not available (HMR edge case)
+  if (isOnPortalPage || !cart) {
+    return null;
+  }
+
   const {
     cartItems,
     numberOfPeople,
@@ -31,23 +49,7 @@ export const GlobalCartDrawer = () => {
     addDate,
     removeDate,
     reorderItems,
-  } = useCart();
-
-  const [isOpen, setIsOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Don't show on the programma-samenstellen page (it has its own implementation)
-  // Also hide on partner, customer, and admin pages
-  const isOnConfiguratorPage = location.pathname === "/programma-samenstellen";
-  const isOnPortalPage = location.pathname.startsWith("/partner") || 
-                         location.pathname.startsWith("/admin") || 
-                         location.pathname.startsWith("/programma/") ||
-                         location.pathname.startsWith("/mijn-programma/");
-
-  // Don't render on portal pages
-  if (isOnPortalPage) {
-    return null;
-  }
+  } = cart;
 
   const handleSubmit = () => {
     if (cartItems.length === 0) {

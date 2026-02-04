@@ -275,3 +275,9 @@ export const useCart = () => {
   }
   return context;
 };
+
+// Safe version that returns null instead of throwing - useful for components that may render outside provider during HMR
+export const useCartSafe = () => {
+  const context = useContext(CartContext);
+  return context ?? null;
+};
