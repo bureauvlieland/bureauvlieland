@@ -232,6 +232,22 @@ const AdminCRMContent = () => {
         return;
       }
 
+      // Check if partner has accommodation quotes
+      const { data: quotes } = await supabase
+        .from("accommodation_quotes")
+        .select("id")
+        .eq("partner_id", partnerToDelete.id)
+        .limit(1);
+      
+      if (quotes && quotes.length > 0) {
+        toast({
+          title: "Kan partner niet verwijderen",
+          description: "Deze partner heeft nog gekoppelde logies offertes. Verwijder eerst de offertes.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Delete the partner
       const { error } = await supabase
         .from("partners")
