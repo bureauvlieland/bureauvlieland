@@ -11,14 +11,14 @@ export const usePublishedBuildingBlocks = () => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners(id, name, email)
+          provider:partners_public!building_blocks_provider_id_fkey(id, name, email)
         `)
         .eq("is_published", true)
         .eq("is_active", true)
         .order("sort_order");
       
       if (error) throw error;
-      return data as BuildingBlock[];
+      return data as unknown as BuildingBlock[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
@@ -38,13 +38,13 @@ export const useAdminBuildingBlocks = () => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners(id, name)
+          provider:partners_public!building_blocks_provider_id_fkey(id, name)
         `)
         .order("category")
         .order("sort_order");
       
       if (error) throw error;
-      return data as BuildingBlock[];
+      return data as unknown as BuildingBlock[];
     },
   });
 };
@@ -59,13 +59,13 @@ export const useBuildingBlock = (id: string | undefined) => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners(id, name)
+          provider:partners_public!building_blocks_provider_id_fkey(id, name)
         `)
         .eq("id", id)
         .maybeSingle();
       
       if (error) throw error;
-      return data as BuildingBlock | null;
+      return data as unknown as BuildingBlock | null;
     },
     enabled: !!id,
   });
