@@ -6,10 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { CartProvider } from "@/contexts/CartContext";
 import { GlobalCartDrawer } from "@/components/configurator/GlobalCartDrawer";
+import { FeatureGate } from "@/components/FeatureGate";
 import Index from "./pages/Index";
 import { Terms } from "./pages/Terms";
 import { PartnerTerms } from "./pages/PartnerTerms";
 import NotFound from "./pages/NotFound";
+import ComingSoon from "./pages/ComingSoon";
 import Catering from "./pages/Catering";
 import Voorbeeldprogrammas from "./pages/Voorbeeldprogrammas";
 import Programmas from "./pages/Programmas";
@@ -100,12 +102,34 @@ const App = () => (
             <Route path="/groepsweekend-vlieland" element={<GroepsweekendVlieland />} />
             <Route path="/jubileum-vlieland" element={<JubileumVlieland />} />
             <Route path="/familieweekend-vlieland" element={<FamilieweekendVlieland />} />
-            <Route path="/programma-samenstellen" element={<ProgrammaSamenstellen />} />
+            <Route path="/programma-samenstellen" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <ProgrammaSamenstellen />
+              </FeatureGate>
+            } />
             <Route path="/logies-vlieland" element={<LogiesVlieland />} />
-            <Route path="/logies-aanvragen" element={<LogiesAanvragen />} />
-            <Route path="/programma/:shareCode" element={<SharedProgram />} />
-            <Route path="/mijn-programma/:token" element={<CustomerProgram />} />
-            <Route path="/mijn-logies/:token" element={<AccommodationQuotes />} />
+            <Route path="/logies-aanvragen" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <LogiesAanvragen />
+              </FeatureGate>
+            } />
+            <Route path="/programma/:shareCode" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <SharedProgram />
+              </FeatureGate>
+            } />
+            <Route path="/mijn-programma/:token" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <CustomerProgram />
+              </FeatureGate>
+            } />
+            <Route path="/mijn-logies/:token" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <AccommodationQuotes />
+              </FeatureGate>
+            } />
+            {/* Coming soon page */}
+            <Route path="/binnenkort" element={<ComingSoon />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
             <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
