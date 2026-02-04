@@ -5,29 +5,31 @@ export const Footer = () => {
   return (
     <footer className="bg-card border-t border-border py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
-          <div>
-            <img src={logo} alt="Bureau Vlieland" className="h-16 w-auto mb-4" loading="lazy" />
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Professionele evenementenorganisatie op het mooiste Waddeneiland van Nederland.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="font-semibold text-foreground mb-4">Contact</h4>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>Sikkelduin 11</p>
-              <p>8899 CG Vlieland</p>
-              <p>
-                <a href="tel:0562700208" className="hover:text-primary transition-colors">
-                  0562 700 208
-                </a>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-8">
+          {/* Column 1: Logo & Contact */}
+          <div className="space-y-6">
+            <div>
+              <img src={logo} alt="Bureau Vlieland" className="h-16 w-auto mb-4" loading="lazy" />
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Professionele evenementenorganisatie op het mooiste Waddeneiland van Nederland.
               </p>
-              <p>
-                <a href="mailto:hallo@bureauvlieland.nl" className="hover:text-primary transition-colors">
-                  hallo@bureauvlieland.nl
-                </a>
-              </p>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold text-foreground mb-3">Contact</h4>
+              <div className="space-y-1.5 text-sm text-muted-foreground">
+                <p>Sikkelduin 11, 8899 CG Vlieland</p>
+                <p>
+                  <a href="tel:0562700208" className="hover:text-primary transition-colors">
+                    0562 700 208
+                  </a>
+                </p>
+                <p>
+                  <a href="mailto:hallo@bureauvlieland.nl" className="hover:text-primary transition-colors">
+                    hallo@bureauvlieland.nl
+                  </a>
+                </p>
+              </div>
               <div className="flex gap-3 mt-4">
                 <a 
                   href="https://www.instagram.com/bureau_vlieland/" 
@@ -55,164 +57,116 @@ export const Footer = () => {
             </div>
           </div>
 
+          {/* Column 2: Voor bedrijven */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Voor bedrijven</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link 
-                  to="/bedrijfsuitje-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/bedrijfsuitje-vlieland" className="hover:text-primary transition-colors">
                   Bedrijfsuitje Vlieland
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/meerdaags-bedrijfsuitje-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/meerdaags-bedrijfsuitje-vlieland" className="hover:text-primary transition-colors">
                   Meerdaags bedrijfsuitje
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/teamuitje-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/teamuitje-vlieland" className="hover:text-primary transition-colors">
                   Teambuilding
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/heisessie-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/heisessie-vlieland" className="hover:text-primary transition-colors">
                   Heisessie Vlieland
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/zakelijk-evenement-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/zakelijk-evenement-vlieland" className="hover:text-primary transition-colors">
                   Zakelijk evenement
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/incentive-reis-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/incentive-reis-vlieland" className="hover:text-primary transition-colors">
                   Incentive reis
                 </Link>
               </li>
             </ul>
           </div>
 
+          {/* Column 3: Privé & trouwen */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Privé & trouwen</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link 
-                  to="/trouwen-op-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/trouwen-op-vlieland" className="hover:text-primary transition-colors">
                   Trouwen op Vlieland
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/groepsweekend-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/groepsweekend-vlieland" className="hover:text-primary transition-colors">
                   Groepsweekend
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/jubileum-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/jubileum-vlieland" className="hover:text-primary transition-colors">
                   Jubileum vieren
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/familieweekend-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
+                <Link to="/familieweekend-vlieland" className="hover:text-primary transition-colors">
                   Familieweekend
                 </Link>
               </li>
             </ul>
 
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Direct aan de slag</h4>
+            <h4 className="font-semibold text-foreground mb-4 mt-8">Over ons</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link 
-                  to="/programma-samenstellen" 
-                  className="hover:text-primary transition-colors font-medium text-foreground"
-                >
-                  Programma samenstellen
+                <Link to="/over-ons" className="hover:text-primary transition-colors">
+                  Over Bureau Vlieland
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/logies-vlieland" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Logies regelen
+                <Link to="/samenwerken" className="hover:text-primary transition-colors">
+                  Samenwerken
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/catering" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Catering
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/contact" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Maatwerk aanvragen
+                <Link to="/contact" className="hover:text-primary transition-colors">
+                  Contact
                 </Link>
               </li>
             </ul>
           </div>
 
+          {/* Column 4: Aan de slag */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Over ons</h4>
+            <h4 className="font-semibold text-foreground mb-4">Direct aan de slag</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link 
-                  to="/over-ons" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Over Bureau Vlieland
+                <Link to="/programma-samenstellen" className="hover:text-primary transition-colors font-medium text-foreground">
+                  Programma samenstellen
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/samenwerken" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Samenwerken
+                <Link to="/logies-vlieland" className="hover:text-primary transition-colors">
+                  Logies regelen
                 </Link>
               </li>
               <li>
-                <Link 
-                  to="/contact" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Contact
+                <Link to="/catering" className="hover:text-primary transition-colors">
+                  Catering
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-primary transition-colors">
+                  Maatwerk aanvragen
                 </Link>
               </li>
             </ul>
-            
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Online Boeken</h4>
+
+            <h4 className="font-semibold text-foreground mb-4 mt-8">Online boeken</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a href="https://verhuur.bureauvlieland.nl/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
@@ -231,7 +185,7 @@ export const Footer = () => {
               </li>
             </ul>
 
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Onze horeca</h4>
+            <h4 className="font-semibold text-foreground mb-4 mt-8">Onze horeca</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a href="https://cafeboven.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
@@ -244,18 +198,6 @@ export const Footer = () => {
                 </a>
               </li>
             </ul>
-            
-            <h4 className="font-semibold text-foreground mb-4 mt-6">Partners</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link 
-                  to="/partner/login" 
-                  className="hover:text-primary transition-colors"
-                >
-                  Partner Login
-                </Link>
-              </li>
-            </ul>
           </div>
         </div>
 
@@ -263,6 +205,9 @@ export const Footer = () => {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.</p>
             <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Link to="/partner/login" className="hover:text-primary transition-colors">
+                Partner Login
+              </Link>
               <a 
                 href="https://norisksoftware.nl/" 
                 target="_blank" 
@@ -274,10 +219,7 @@ export const Footer = () => {
                 </svg>
                 Technologie Partner: NORISK Software
               </a>
-              <Link 
-                to="/algemene-voorwaarden" 
-                className="hover:text-primary transition-colors"
-              >
+              <Link to="/algemene-voorwaarden" className="hover:text-primary transition-colors">
                 Algemene Voorwaarden
               </Link>
             </div>
