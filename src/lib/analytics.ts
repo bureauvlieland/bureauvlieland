@@ -63,12 +63,19 @@ export const trackRemoveFromCart = (item: {
 
 /**
  * Track when user starts the checkout/request process
+ * 
+ * Includes event_type for filtering in GA4 and entry_page for campaign attribution.
  */
 export const trackBeginCheckout = (data: {
   itemsCount: number;
   value: number;
   numberOfPeople: number;
   numberOfDays: number;
+  eventType?: string;
+  entryPage?: string;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
 }) => {
   trackEvent('begin_checkout', {
     currency: 'EUR',
@@ -76,6 +83,11 @@ export const trackBeginCheckout = (data: {
     items_count: data.itemsCount,
     number_of_people: data.numberOfPeople,
     number_of_days: data.numberOfDays,
+    event_type: data.eventType || 'niet_gespecificeerd',
+    entry_page: data.entryPage || 'direct',
+    utm_source: data.utmSource || null,
+    utm_medium: data.utmMedium || null,
+    utm_campaign: data.utmCampaign || null,
   });
 };
 
