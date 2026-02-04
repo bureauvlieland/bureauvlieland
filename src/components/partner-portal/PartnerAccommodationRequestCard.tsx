@@ -28,6 +28,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   selected: { label: "Geaccepteerd", variant: "default" },
   rejected: { label: "Niet gekozen", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
+  declined: { label: "Afgewezen", variant: "destructive" },
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -200,6 +201,13 @@ export const PartnerAccommodationRequestCard = ({
           </div>
         )}
 
+        {quote?.status === "declined" && (
+          <div className="flex items-center gap-2 p-2 bg-muted text-muted-foreground rounded-lg text-sm">
+            <X className="h-4 w-4" />
+            <span>U heeft deze aanvraag afgewezen.</span>
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="flex gap-2">
           {canSubmit && (
@@ -214,7 +222,7 @@ export const PartnerAccommodationRequestCard = ({
               Bekijken / Aanpassen
             </Button>
           )}
-          {(isSelected || isRejected) && (
+          {(isSelected || isRejected || quote?.status === "declined") && (
             <Button onClick={onSubmitQuote} variant="ghost" className="flex-1">
               <Eye className="h-4 w-4 mr-2" />
               Details bekijken
