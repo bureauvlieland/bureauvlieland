@@ -11,7 +11,7 @@ export const usePublishedBuildingBlocks = () => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners_public!building_blocks_provider_id_fkey(id, name, email)
+          provider:partners!building_blocks_provider_id_fkey(id, name, email)
         `)
         .eq("is_published", true)
         .eq("is_active", true)
@@ -38,7 +38,7 @@ export const useAdminBuildingBlocks = () => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners_public!building_blocks_provider_id_fkey(id, name)
+          provider:partners!building_blocks_provider_id_fkey(id, name)
         `)
         .order("category")
         .order("sort_order");
@@ -59,7 +59,7 @@ export const useBuildingBlock = (id: string | undefined) => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners_public!building_blocks_provider_id_fkey(id, name)
+          provider:partners!building_blocks_provider_id_fkey(id, name)
         `)
         .eq("id", id)
         .maybeSingle();
