@@ -4,7 +4,7 @@ export type AccommodationType = 'hotel' | 'vacation_home' | 'group_accommodation
 
 export type AccommodationRequestStatus = 'draft' | 'submitted' | 'processing' | 'quoted' | 'accepted' | 'cancelled' | 'expired';
 
-export type AccommodationQuoteStatus = 'pending' | 'submitted' | 'selected' | 'rejected' | 'expired';
+export type AccommodationQuoteStatus = 'pending' | 'submitted' | 'selected' | 'rejected' | 'expired' | 'declined';
 
 export interface AccommodationRequest {
   id: string;

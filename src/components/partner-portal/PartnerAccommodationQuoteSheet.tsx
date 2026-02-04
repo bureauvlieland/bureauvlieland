@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format, differenceInDays, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -28,6 +29,7 @@ import {
   Check,
   X,
   FileText,
+  Ban,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
@@ -106,6 +108,7 @@ interface PartnerAccommodationQuoteSheetProps {
     roomConfiguration: RoomConfig[];
     quoteExternalUrl: string;
   }) => Promise<boolean>;
+  onDecline?: (reason: string) => Promise<boolean>;
   onRefresh?: () => void;
 }
 
@@ -129,9 +132,12 @@ export const PartnerAccommodationQuoteSheet = ({
   partnerToken,
   partnerName = "",
   onSubmit,
+  onDecline,
   onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [responseType, setResponseType] = useState<"submit_quote" | "decline">("submit_quote");
+  const [declineReason, setDeclineReason] = useState("");
   const [accommodationName, setAccommodationName] = useState("");
   const [description, setDescription] = useState("");
   const [priceTotal, setPriceTotal] = useState<string>("");
@@ -161,6 +167,8 @@ export const PartnerAccommodationQuoteSheet = ({
         ? (existingQuote.room_configuration as unknown as RoomConfig[])
         : []);
       setQuoteExternalUrl(existingQuote.quote_external_url || "");
+      setResponseType("submit_quote");
+      setDeclineReason(existingQuote.status === "declined" ? existingQuote.partner_notes || "" : "");
     } else if (isOpen) {
       // Default values for new quote - use partner name as default accommodation name
       setAccommodationName(partnerName);
@@ -174,6 +182,8 @@ export const PartnerAccommodationQuoteSheet = ({
       setPartnerNotes("");
       setRoomConfiguration([]);
       setQuoteExternalUrl("");
+      setResponseType("submit_quote");
+      setDeclineReason("");
     }
   }, [isOpen, existingQuote, partnerName]);
 
@@ -244,8 +254,20 @@ export const PartnerAccommodationQuoteSheet = ({
     }
   };
 
-  const isReadOnly = existingQuote?.status === "selected" || existingQuote?.status === "rejected";
+  const handleDecline = async () => {
+    if (!onDecline) return;
+    
+    setIsSubmitting(true);
+    const success = await onDecline(declineReason.trim());
+    setIsSubmitting(false);
+    if (success) {
+      onClose();
+    }
+  };
+
+  const isReadOnly = existingQuote?.status === "selected" || existingQuote?.status === "rejected" || existingQuote?.status === "declined";
   const canSubmit = existingQuote?.status === "pending" || existingQuote?.status === "submitted";
+  const isDeclined = existingQuote?.status === "declined";
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -363,10 +385,86 @@ export const PartnerAccommodationQuoteSheet = ({
             </div>
           )}
 
-          <Separator />
+          {isDeclined && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-muted text-muted-foreground rounded-lg">
+                <Ban className="h-5 w-5" />
+                <span className="font-medium">U heeft deze aanvraag afgewezen.</span>
+              </div>
+              {existingQuote?.partner_notes && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium mb-1">Reden:</p>
+                  <p className="text-sm text-muted-foreground">{existingQuote.partner_notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isReadOnly && <Separator />}
+
+          {/* Response Type Selection for pending quotes */}
+          {canSubmit && (
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Uw reactie</Label>
+              <RadioGroup
+                value={responseType}
+                onValueChange={(value) => setResponseType(value as "submit_quote" | "decline")}
+                className="space-y-3"
+              >
+                <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="submit_quote" id="submit_quote" className="mt-0.5" />
+                  <div className="flex-1">
+                    <Label htmlFor="submit_quote" className="font-medium cursor-pointer">
+                      Offerte indienen
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Vul onderstaand formulier in met uw prijsopgave
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="decline" id="decline" className="mt-0.5" />
+                  <div className="flex-1">
+                    <Label htmlFor="decline" className="font-medium cursor-pointer">
+                      Niet beschikbaar
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Deze aanvraag afwijzen (bijv. geen beschikbaarheid)
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
+          {/* Decline Form */}
+          {canSubmit && responseType === "decline" && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="declineReason">Reden voor afwijzing (optioneel)</Label>
+                  <Textarea
+                    id="declineReason"
+                    placeholder="Bijv. Volgeboekt in deze periode, Geen geschikte kamers beschikbaar..."
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    rows={3}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Deze informatie wordt gedeeld met Bureau Vlieland
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Quote Form - only show when submitting quote */}
+          {canSubmit && responseType === "submit_quote" && <Separator />}
 
           {/* Quote Form */}
-          <div className="space-y-4">
+          {(!canSubmit || responseType === "submit_quote") && !isDeclined && <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="accommodationName">Naam accommodatie *</Label>
               <Input
@@ -563,10 +661,10 @@ export const PartnerAccommodationQuoteSheet = ({
                 maxLength={500}
               />
             </div>
-          </div>
+          </div>}
 
           {/* Actions */}
-          {canSubmit && (
+          {canSubmit && responseType === "submit_quote" && (
             <div className="flex gap-2 pt-4">
               <Button variant="outline" onClick={onClose} className="flex-1">
                 Annuleren
@@ -582,6 +680,29 @@ export const PartnerAccommodationQuoteSheet = ({
                   <>
                     <Send className="h-4 w-4 mr-2" />
                     {existingQuote?.submitted_at ? "Offerte bijwerken" : "Offerte indienen"}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {canSubmit && responseType === "decline" && (
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={onClose} className="flex-1">
+                Annuleren
+              </Button>
+              <Button 
+                onClick={handleDecline} 
+                variant="destructive"
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  "Bezig..."
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4 mr-2" />
+                    Afwijzen
                   </>
                 )}
               </Button>

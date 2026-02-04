@@ -263,6 +263,41 @@ const PartnerAccommodationContent = () => {
     }
   };
 
+  const handleQuoteDecline = async (declineReason: string) => {
+    if (!selectedRequest?.quote) return false;
+
+    try {
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({
+          status: "declined",
+          partner_notes: declineReason || null,
+          submitted_at: new Date().toISOString(),
+        })
+        .eq("id", selectedRequest.quote.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Aanvraag afgewezen",
+        description: "De aanvraag is gemarkeerd als niet beschikbaar.",
+      });
+
+      await fetchData();
+      setShowQuoteSheet(false);
+      setSelectedRequest(null);
+      return true;
+    } catch (err) {
+      console.error("Error declining quote:", err);
+      toast({
+        title: "Fout",
+        description: "Kon aanvraag niet afwijzen. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -286,7 +321,7 @@ const PartnerAccommodationContent = () => {
   const pendingRequests = requests.filter(r => r.quote?.status === "pending");
   const submittedRequests = requests.filter(r => r.quote?.status === "submitted");
   const closedRequests = requests.filter(r => 
-    r.quote?.status === "selected" || r.quote?.status === "rejected" || r.quote?.status === "expired"
+    r.quote?.status === "selected" || r.quote?.status === "rejected" || r.quote?.status === "expired" || r.quote?.status === "declined"
   );
 
   return (
@@ -432,6 +467,7 @@ const PartnerAccommodationContent = () => {
         partnerToken={partnerToken || ""}
         partnerName={partnerName}
         onSubmit={handleQuoteSubmit}
+        onDecline={handleQuoteDecline}
         onRefresh={fetchData}
       />
     </>
