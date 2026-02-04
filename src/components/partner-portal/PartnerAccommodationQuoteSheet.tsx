@@ -255,13 +255,23 @@ export const PartnerAccommodationQuoteSheet = ({
   };
 
   const handleDecline = async () => {
-    if (!onDecline) return;
+    console.log("handleDecline called, onDecline:", typeof onDecline, "declineReason:", declineReason);
+    if (!onDecline) {
+      console.error("onDecline is not provided!");
+      return;
+    }
     
     setIsSubmitting(true);
-    const success = await onDecline(declineReason.trim());
-    setIsSubmitting(false);
-    if (success) {
-      onClose();
+    try {
+      const success = await onDecline(declineReason.trim());
+      console.log("onDecline result:", success);
+      if (success) {
+        onClose();
+      }
+    } catch (err) {
+      console.error("Error in handleDecline:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
