@@ -1,140 +1,220 @@
 
-
-# Plan: Uitgebreide Partner Uitnodigingsmail
+# Plan: Email Leesbaarheid, Naamswijziging, Maatwerk Toevoeging & Partner Handleidingen
 
 ## Samenvatting
 
-De huidige `partner_invitation` email template is kort en functioneel, maar mist de inhoudelijke briefing die nodig is om partners goed te informeren over de nieuwe werkwijze. Dit plan vervangt de template met een uitgebreide, professionele briefing die partners voorbereidt op de samenwerking.
+Dit plan lost vier problemen op:
+1. **Leesbaarheid emails** - Header tekst en button zijn nauwelijks zichtbaar
+2. **Naamswijziging** - "Erwin Bontje" → "Erwin Soolsma"
+3. **Maatwerk programma's** - Toevoegen dat Bureau Vlieland ook maatwerk maakt via het portaal
+4. **Partner Handleidingen** - Nieuwe pagina met documentatie voor partners
 
 ---
 
-## Huidige Situatie
+## Stap 1: Email Leesbaarheid Verbeteren
 
-De huidige template bevat alleen:
-- Korte welkomstboodschap
-- Opsomming van 4 features (activiteitsaanvragen, prijzen, facturen, bedrijfsgegevens)
-- Link om wachtwoord in te stellen
+### Geïdentificeerde Problemen
 
-**Wat ontbreekt:**
-- Uitleg over de nieuwe digitale werkwijze
-- Beschrijving van de klantflow (configurator → aanvraag → partner respons)
-- Commissiemodel (15% activiteiten, 10% logies)
-- Verwachtingen rondom reactietijd en activatie
-- Collegiale toon die de langdurige relatie benadrukt
+Op basis van de screenshot:
+- **Header**: Witte/lichte tekst op lichtgrijze gradient is onleesbaar
+- **CTA Button**: De "Account Activeren" knop is nauwelijks zichtbaar
+- **Sectie headers**: Groene tekst op groene achtergrond (ecfdf5) is te zacht
+
+### Aanpassingen per Template
+
+**Partner Invitation Template (database + fallbacks):**
+
+| Element | Huidige stijl | Nieuwe stijl |
+|---------|--------------|--------------|
+| Header achtergrond | linear-gradient #1e3a5f → #2d5a87 | Solid #1e3a5f (donkerder navy) |
+| Header tekst | white + rgba(255,255,255,0.9) | white + white (volle opacity) |
+| "Hoe werkt het" sectie | bg #f8fafc, tekst #1e3a5f | bg #eef4fa, tekst #1e3a5f (donkerder) |
+| "Wat kunt u nu doen" sectie | bg #ecfdf5, tekst #065f46 | bg #d1fae5, tekst #064e3b (donkerder) |
+| CTA Button | gradient + box-shadow | Solid #1e3a5f + dikker padding |
+
+**Alle Email Templates:**
+- Controleer alle templates in de database op contrast problemen
+- Specifiek aanpassen: teal headers (#0f766e) zijn goed, deze blijven
 
 ---
 
-## Nieuwe Template Inhoud
+## Stap 2: Naamswijziging
 
-### Structuur
+### Locaties met "Erwin Bontje"
+
+1. **Database template**: `partner_invitation` - regel 107
+2. **Edge function fallback**: `invite-partner/index.ts` - regel 125
+3. **Edge function fallback**: `bulk-invite-partners/index.ts` - regel 134
+
+### Wijziging
+
+```
+Erwin Bontje → Erwin Soolsma
+```
+
+---
+
+## Stap 3: Maatwerk Programma's Toevoegen
+
+### Nieuwe Sectie in Partner Invitation
+
+Na de "Hoe werkt het?" sectie, toevoegen:
+
+**Nieuwe tekst:**
+```
+Naast programma's die klanten zelf samenstellen, gebruiken wij het portaal 
+ook voor maatwerk programma's die we op verzoek van de klant uitwerken. 
+De werkwijze voor aanvragen en facturatie blijft hetzelfde.
+```
+
+### Locaties
+
+- Database template: `partner_invitation`
+- Fallback in `invite-partner/index.ts`
+- Fallback in `bulk-invite-partners/index.ts`
+
+---
+
+## Stap 4: Partner Handleidingen Pagina
+
+### Nieuwe Route
+
+`/partner/handleidingen` - Toegankelijk via de partner sidebar
+
+### Pagina Structuur
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  HEADER: Bureau Vlieland Partner Portaal                    │
+│  Partner Handleidingen                                      │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Persoonlijke aanhef                                     │
-│  2. Context: Evolutie van samenwerking, niet disruptie      │
-│  3. Hoe het werkt:                                          │
-│     - Klant stelt programma samen via configurator          │
-│     - Partner ontvangt automatische aanvraag                │
-│     - Partner reageert: Bevestigen / Alternatief / Afwijzen │
-│  4. Facturatie & commissie:                                 │
-│     - Partner factureert direct aan eindklant               │
-│     - Bureau Vlieland stuurt periodieke commissiefactuur    │
-│     - 15% op activiteiten, 10% op logies (excl. BTW)        │
-│  5. Wat te doen nu:                                         │
-│     - Account activeren (link)                              │
-│     - Aanbod controleren en bijwerken                       │
-│     - Binnen 14 dagen actief                                │
-│  6. Afsluiting: Eerste jaar, feedback welkom                │
+│                                                             │
+│  📋 Aan de slag                                             │
+│  ├─ Account activeren                                       │
+│  ├─ Wachtwoord wijzigen                                     │
+│  └─ Bedrijfsgegevens bijwerken                              │
+│                                                             │
+│  📨 Aanvragen verwerken                                     │
+│  ├─ Nieuwe aanvraag ontvangen                               │
+│  ├─ Aanvraag bevestigen                                     │
+│  ├─ Alternatief voorstellen                                 │
+│  ├─ Niet beschikbaar melden                                 │
+│  └─ Reageren op tegenvoorstel                               │
+│                                                             │
+│  📅 Beschikbaarheid beheren                                 │
+│  ├─ Niet-beschikbare periodes instellen                     │
+│  └─ Beschikbaarheid per activiteit                          │
+│                                                             │
+│  💰 Facturatie                                              │
+│  ├─ Factuur registreren                                     │
+│  ├─ Commissiepercentages                                    │
+│  ├─ Overzicht commissies                                    │
+│  └─ Uitbetaling door Bureau Vlieland                        │
+│                                                             │
+│  🏨 Logies (voor logiespartners)                            │
+│  ├─ Offerte indienen                                        │
+│  ├─ Offerte wijzigen                                        │
+│  └─ Kamerindeling opgeven                                   │
+│                                                             │
+│  ❓ Veelgestelde vragen                                     │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Toonzetting
+### Inhoud per Sectie
 
-- Formeel Nederlands ("u" in plaats van "je") conform de projectrichtlijnen
-- Collegiale en respectvolle toon
-- Erkent langdurige samenwerking
-- Positioneert digitalisering als verbetering, niet vervanging
+**Aan de slag:**
+- Stap-voor-stap uitleg account activatie
+- Waar instellingen te vinden
+- Hoe beschikbaarheid in te stellen
 
----
+**Aanvragen verwerken:**
+- Uitleg van elk status type
+- Wat de klant ziet na reactie
+- Tijdlijnen en verwachtingen
 
-## Technische Wijzigingen
+**Beschikbaarheid beheren:**
+- Hoe blokken aan te maken/verwijderen
+- Relatie met automatische aanvragen
 
-### 1. Database Template Update
+**Facturatie:**
+- Uitleg commissiemodel (15% activiteiten, 10% logies)
+- Hoe factuur te registreren
+- Wanneer commissie wordt afgerekend
+- Referentienummers op facturen
 
-De `partner_invitation` template in de `email_templates` tabel wordt bijgewerkt met:
+**Logies:**
+- Alleen zichtbaar voor logiespartners
+- Offerte flow uitleg
+- Kamerindeling optie
 
-**Nieuw onderwerp:**
-```
-Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek
-```
+**Veelgestelde vragen:**
+- "Wat als ik per ongeluk een aanvraag afwijs?"
+- "Hoe kan ik mijn commissiepercentage aanpassen?"
+- "Wat gebeurt er als de klant annuleert?"
 
-**Nieuwe body_html:**
-Uitgebreide HTML email met alle bovenstaande secties, professioneel opgemaakt met:
-- Navy blue header (bestaande stijl)
-- Duidelijke secties met iconen
-- Overzichtelijke bullet points
-- Call-to-action knop voor account activatie
-- Commissiemodel in een highlighted box
-- Afsluitende paragraaf over feedback en samenwerking
+### Technische Implementatie
 
-### 2. Extra Variabelen
-
-Toevoegen aan de template variables:
-- `partner_portal_link` (al beschikbaar in de code)
-
-De bestaande variabelen (`partner_name`, `reset_link`) blijven behouden.
-
----
-
-## Voorbeeld Sectie: Commissiemodel
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  💼 Facturatie & Commissie                                  │
-├─────────────────────────────────────────────────────────────┤
-│  U factureert uw diensten rechtstreeks aan de eindklant.    │
-│                                                             │
-│  Bureau Vlieland stuurt u periodiek een commissiefactuur    │
-│  over de gerealiseerde omzet:                               │
-│                                                             │
-│  • Activiteiten: 15% commissie (excl. BTW)                  │
-│  • Logies: 10% commissie (excl. BTW)                        │
-│                                                             │
-│  Deze commissie dekt de acquisitie, coördinatie en          │
-│  klantenservice die Bureau Vlieland verzorgt.               │
-└─────────────────────────────────────────────────────────────┘
-```
+1. **Nieuwe pagina**: `src/pages/PartnerGuides.tsx`
+2. **Layout**: Gebruikt `PartnerLayout` voor consistentie
+3. **Navigatie**: Toevoegen aan sidebar in `PartnerLayout.tsx`
+4. **Routing**: Toevoegen aan `App.tsx`
 
 ---
 
-## Implementatie
+## Implementatie Volgorde
 
-### Stap 1: Template Update Query
-Een SQL update om de bestaande `partner_invitation` template te vervangen met de nieuwe, uitgebreide versie.
+### Fase 1: Database Template Update
+SQL UPDATE voor `partner_invitation` met:
+- Verbeterde kleuren/contrast
+- Naam wijziging
+- Maatwerk sectie toevoeging
 
-### Stap 2: Fallback Synchronisatie
-De fallback template in `bulk-invite-partners/index.ts` en `invite-partner/index.ts` bijwerken zodat deze ook de uitgebreide versie gebruikt (voor het geval de database template niet beschikbaar is).
+### Fase 2: Edge Function Fallbacks
+Update beide fallback templates in:
+- `supabase/functions/invite-partner/index.ts`
+- `supabase/functions/bulk-invite-partners/index.ts`
 
-### Stap 3: Variables Array Update
-De `variables` array in de database uitbreiden met eventuele nieuwe variabelen.
+### Fase 3: Partner Handleidingen
+1. Creëer `src/pages/PartnerGuides.tsx`
+2. Update `PartnerLayout.tsx` met nieuwe menu-item
+3. Update `App.tsx` met route
+
+### Fase 4: Deploy & Test
+- Deploy edge functions
+- Test email via preview (gaat naar jouw emailadres)
+- Controleer handleidingen pagina
 
 ---
 
-## Veiligheid & Testen
+## Bestanden die worden gewijzigd
 
-- **Preview modus actief:** Alle emails vanuit de lovable.app omgeving gaan naar erwin@bureauvlieland.nl
-- **Subject prefix:** "[TEST]" wordt automatisch toegevoegd in preview
-- **Na goedkeuring:** Template kan direct via Admin → Berichten worden bijgewerkt en getest
+| Bestand | Wijziging |
+|---------|-----------|
+| `supabase/functions/invite-partner/index.ts` | Fallback template: contrast, naam, maatwerk |
+| `supabase/functions/bulk-invite-partners/index.ts` | Fallback template: contrast, naam, maatwerk |
+| `src/pages/PartnerGuides.tsx` | **Nieuw**: Handleidingen pagina |
+| `src/components/partner-portal/PartnerLayout.tsx` | Sidebar menu uitbreiden |
+| `src/App.tsx` | Route toevoegen |
+| Database `email_templates` | Template update via SQL |
 
 ---
 
-## Verwacht Resultaat
+## Handleidingen Content (Excerpt)
 
-Partners ontvangen een complete, informatieve uitnodiging die:
-1. De nieuwe werkwijze helder uitlegt
-2. Vertrouwen wekt door transparantie over commissies
-3. Concrete vervolgstappen geeft (activeren, aanbod bijwerken)
-4. De collegiale relatie benadrukt
+### Aanvraag Bevestigen
 
+> Wanneer u een aanvraag bevestigt, ontvangt de klant direct een bevestigingsmail. 
+> De activiteit wordt in hun programma gemarkeerd als "Bevestigd".
+>
+> **Let op:** Na bevestiging kunt u de datum/tijd niet meer wijzigen. 
+> Neem bij wijzigingen contact op met Bureau Vlieland.
+
+### Commissiemodel
+
+> Bureau Vlieland rekent commissie over de door u gefactureerde omzet (excl. BTW):
+>
+> - **Activiteiten**: 15% commissie
+> - **Logies**: 10% commissie
+>
+> U factureert rechtstreeks aan de eindklant. Bureau Vlieland stuurt u periodiek 
+> een commissiefactuur op basis van de geregistreerde facturen in het portaal.
