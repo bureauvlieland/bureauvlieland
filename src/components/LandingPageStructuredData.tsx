@@ -27,7 +27,7 @@ export const LandingPageStructuredData = ({
         "@type": "LocalBusiness",
         name: "Bureau Vlieland",
         url: "https://bureauvlieland.nl",
-        telephone: "+31562452700",
+        telephone: "+31562700208",
         email: "hallo@bureauvlieland.nl",
         address: {
           "@type": "PostalAddress",

@@ -550,7 +550,7 @@ const AdminQuotePreview = () => {
                         <div className="flex justify-between">
                           <div>
                             <p className="font-semibold text-gray-700">Bureau Vlieland</p>
-                            <p>hallo@bureauvlieland.nl | 0562-452700</p>
+                            <p>hallo@bureauvlieland.nl | 0562 700 208</p>
                           </div>
                           <div className="text-right">
                             <p>Prijzen zijn onder voorbehoud.</p>

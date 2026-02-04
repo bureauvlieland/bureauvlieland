@@ -125,7 +125,7 @@ function getFallbackEmailHtml(
       <p>Vragen over deze offerte? Neem contact op via:</p>
       <ul style="list-style: none; padding: 0;">
         <li>📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></li>
-        <li>📞 +31 (0)562 45 27 00</li>
+        <li>📞 0562 700 208</li>
       </ul>
       
       <p style="margin-top: 30px;">Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>

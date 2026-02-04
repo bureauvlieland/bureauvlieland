@@ -381,8 +381,8 @@ export default function Offerte() {
                 <p className="text-sm text-muted-foreground text-center">
                   <strong>Let op:</strong> We nemen binnen 5 werkdagen contact met u op. 
                   Voor spoedvragen kunt u ons bellen op{" "}
-                  <a href="tel:+31562452700" className="text-primary hover:underline">
-                    +31 (0)562 45 27 00
+                  <a href="tel:+31562700208" className="text-primary hover:underline">
+                    0562 700 208
                   </a>
                 </p>
               </div>

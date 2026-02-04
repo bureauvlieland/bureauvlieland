@@ -167,7 +167,7 @@ function generatePartnerNotificationEmail(
         Met vriendelijke groet,<br>
         <strong>Bureau Vlieland</strong><br>
         📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a><br>
-        📞 0562-452700
+        📞 0562 700 208
       </p>
     </div>
   `;
@@ -216,7 +216,7 @@ function generateCustomerConfirmationEmail(
           Met vriendelijke groet,<br>
           <strong>Bureau Vlieland</strong><br>
           📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #1e3a5f;">hallo@bureauvlieland.nl</a><br>
-          📞 0562-452700
+          📞 0562 700 208
         </p>
       </div>
     </div>

@@ -137,7 +137,7 @@ function getFallbackCustomerHtml(request: any, typeLabels: Record<string, string
       <p>Heeft u nog vragen? Neem gerust contact met ons op:</p>
       <ul style="list-style: none; padding: 0;">
         <li>📧 Email: <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></li>
-        <li>📞 Telefoon: +31 (0)562 45 27 00</li>
+        <li>📞 Telefoon: 0562 700 208</li>
       </ul>
       
       <p style="margin-top: 30px;">Met vriendelijke groet,<br><strong>Erwin & Team Bureau Vlieland</strong></p>

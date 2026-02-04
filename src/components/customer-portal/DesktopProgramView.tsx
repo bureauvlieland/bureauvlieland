@@ -461,10 +461,10 @@ export const DesktopProgramView = ({
                       hallo@bureauvlieland.nl
                     </Button>
                   </a>
-                  <a href="tel:+31562452700">
+                  <a href="tel:+31562700208">
                     <Button variant="outline" size="sm">
                       <Phone className="h-4 w-4 mr-2" />
-                      0562-452700
+                      0562 700 208
                     </Button>
                   </a>
                 </div>
