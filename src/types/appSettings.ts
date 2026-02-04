@@ -25,10 +25,12 @@ export interface AppSettingsMap {
   default_partner_commission: number;
   default_accommodation_commission: number;
   request_expiry_days: number;
+  customer_portal_enabled: boolean;
 }
 
 // Setting categories for grouping in admin UI
 export const SETTING_CATEGORIES = {
+  features: "Functies",
   pricing: "Prijzen",
   vat: "BTW Tarieven",
   commission: "Commissies",
