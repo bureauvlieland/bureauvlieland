@@ -29,6 +29,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { trackQuoteRequestSubmitted } from "@/lib/analytics";
+import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+
+// Event type options for the dropdown
+const EVENT_TYPE_OPTIONS = [
+  { value: "bedrijfsuitje", label: "Bedrijfsuitje" },
+  { value: "teamuitje", label: "Teamuitje / Teambuilding" },
+  { value: "heisessie", label: "Heisessie / MT-dag" },
+  { value: "incentive", label: "Incentive reis" },
+  { value: "zakelijk_evenement", label: "Zakelijk evenement" },
+  { value: "bruiloft", label: "Bruiloft" },
+  { value: "familieweekend", label: "Familieweekend" },
+  { value: "groepsweekend", label: "Groepsweekend" },
+  { value: "jubileum", label: "Jubileum" },
+  { value: "anders", label: "Anders" },
+] as const;
 
 const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
@@ -39,6 +54,7 @@ const formSchema = z.object({
   startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
   numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
   budgetPerPerson: z.string().min(1, "Budget indicatie is verplicht"),
+  eventType: z.string().optional(),
   description: z.string().max(2000, "Maximaal 2000 karakters").optional(),
 });
 
@@ -47,6 +63,10 @@ type FormValues = z.infer<typeof formSchema>;
 export default function Offerte() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
+  
+  // Get entry page data for attribution
+  const entryPage = getEntryPage();
+  const inferredEventType = entryPage ? inferEventTypeFromPath(entryPage.path) : null;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -59,6 +79,7 @@ export default function Offerte() {
       startDate: "",
       numberOfDays: "",
       budgetPerPerson: "",
+      eventType: inferredEventType || "",
       description: "",
     },
   });
@@ -107,11 +128,17 @@ export default function Offerte() {
 
       if (error) throw error;
 
-      // Track conversion event
+      // Track conversion event with event type and entry page
+      const finalEventType = data.eventType || inferredEventType || 'niet_gespecificeerd';
       trackQuoteRequestSubmitted({
         numberOfPeople: parseInt(data.numberOfPeople, 10) || 0,
         numberOfDays: data.numberOfDays,
         budgetPerPerson: data.budgetPerPerson,
+        eventType: finalEventType,
+        entryPage: entryPage?.path || 'direct',
+        utmSource: entryPage?.utm_source,
+        utmMedium: entryPage?.utm_medium,
+        utmCampaign: entryPage?.utm_campaign,
       });
 
       toast({
@@ -292,6 +319,31 @@ export default function Offerte() {
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="eventType"
+                      render={({ field }) => (
+                        <FormItem className="mt-6">
+                          <FormLabel>Type uitje (optioneel)</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer type uitje..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EVENT_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div className="border-t pt-6">

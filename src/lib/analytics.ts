@@ -125,16 +125,28 @@ export const trackProgramRequestSubmitted = (data: {
 
 /**
  * Track when a quote request is submitted (primary conversion)
+ * 
+ * Includes event_type for filtering in GA4 and entry_page for campaign attribution.
  */
 export const trackQuoteRequestSubmitted = (data: {
   numberOfPeople: number;
   numberOfDays: string;
   budgetPerPerson: string;
+  eventType?: string;
+  entryPage?: string;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
 }) => {
   trackEvent('quote_request_submitted', {
     number_of_people: data.numberOfPeople,
     number_of_days: data.numberOfDays,
     budget_per_person: data.budgetPerPerson,
+    event_type: data.eventType || 'niet_gespecificeerd',
+    entry_page: data.entryPage || 'direct',
+    utm_source: data.utmSource || null,
+    utm_medium: data.utmMedium || null,
+    utm_campaign: data.utmCampaign || null,
   });
 };
 
