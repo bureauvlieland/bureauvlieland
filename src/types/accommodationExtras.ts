@@ -14,8 +14,38 @@ export interface AccommodationQuoteExtra {
   category: ExtraCategory | null;
   notes: string | null;
   sort_order: number;
+  commission_percentage: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface PartnerExtraPreset {
+  id: string;
+  partner_id: string;
+  name: string;
+  description: string | null;
+  unit_price: number;
+  pricing_type: ExtraPricingType;
+  price_includes_vat: boolean;
+  vat_rate: number;
+  category: ExtraCategory | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PartnerExtraPresetInsert {
+  partner_id: string;
+  name: string;
+  description?: string | null;
+  unit_price: number;
+  pricing_type?: ExtraPricingType;
+  price_includes_vat?: boolean;
+  vat_rate?: number;
+  category?: ExtraCategory | null;
+  is_active?: boolean;
+  sort_order?: number;
 }
 
 export interface AccommodationQuoteExtraInsert {

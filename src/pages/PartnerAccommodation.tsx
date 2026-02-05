@@ -465,6 +465,7 @@ const PartnerAccommodationContent = () => {
         request={selectedRequest}
         existingQuote={selectedRequest?.quote ?? null}
         partnerToken={partnerToken || ""}
+        partnerId={partnerId || ""}
         partnerName={partnerName}
         onSubmit={handleQuoteSubmit}
         onDecline={handleQuoteDecline}

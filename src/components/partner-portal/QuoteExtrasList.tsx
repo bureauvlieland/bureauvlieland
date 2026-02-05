@@ -25,10 +25,11 @@ import {
 interface QuoteExtrasListProps {
   quoteId: string;
   numberOfGuests: number;
+  partnerId: string;
   readOnly?: boolean;
 }
 
-export function QuoteExtrasList({ quoteId, numberOfGuests, readOnly = false }: QuoteExtrasListProps) {
+export function QuoteExtrasList({ quoteId, numberOfGuests, partnerId, readOnly = false }: QuoteExtrasListProps) {
   const { data: extras = [], isLoading } = useQuoteExtras(quoteId);
   const deleteExtra = useDeleteQuoteExtra();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -165,6 +166,7 @@ export function QuoteExtrasList({ quoteId, numberOfGuests, readOnly = false }: Q
         }}
         quoteId={quoteId}
         numberOfGuests={numberOfGuests}
+        partnerId={partnerId}
         editingExtra={editingExtra}
       />
 

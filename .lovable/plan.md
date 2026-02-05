@@ -1,5 +1,5 @@
 
-# Plan: Partner Extra Presets + Commissie Per Extra
+# Plan: Partner Extra Presets + Commissie Per Extra ✅ GEÏMPLEMENTEERD
 
 ## Samenvatting
 Dit plan bevat drie onderdelen:
