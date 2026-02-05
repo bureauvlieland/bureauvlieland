@@ -1,157 +1,193 @@
 
-# Plan: Partner Building Block Sheet Uitbreiden
+# Plan: Realtime Updates, Tijdsortering en Logies-aanmaakknop voor AdminRequestDetail
 
 ## Samenvatting
-De Partner "Mijn Aanbod" sheet moet worden uitgebreid zodat partners alle relevante velden kunnen invullen die ook in de admin-omgeving beschikbaar zijn. **Kritiek probleem**: de huidige categorieën in de partner sheet (`activiteiten`, `catering`, `vervoer`) bestaan niet in de database ENUM en veroorzaken fouten bij opslaan.
+Drie verbeteringen voor de admin projectdetail-pagina:
+1. **Realtime updates** - Pagina updatet automatisch wanneer klanten wijzigingen maken
+2. **Tijdsortering** - Activiteiten worden gesorteerd op dag EN tijd
+3. **Logies aanmaken** - Admin kan direct een logiesaanvraag koppelen aan een project
 
 ## Overzicht wijzigingen
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                   Partner Block Sheet                        │
+│              AdminRequestDetail.tsx Wijzigingen             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. REALTIME SUBSCRIPTION                                   │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  Tab: Algemeen                                        │   │
-│  │  ├─ Naam                           (bestaand)         │   │
-│  │  ├─ Korte beschrijving             (bestaand)         │   │
-│  │  ├─ Volledige beschrijving         (bestaand)         │   │
-│  │  ├─ Categorie (FIXED!)             (6 opties)         │   │
-│  │  ├─ Duur                           (bestaand)         │   │
-│  │  ├─ Min/Max personen               (bestaand)         │   │
-│  │  ├─ Seizoensnotities               (NIEUW)            │   │
-│  │  └─ Tags                           (NIEUW)            │   │
+│  │  useEffect (on mount)                                 │   │
+│  │    ├─ fetchRequestData()                              │   │
+│  │    └─ Subscribe to Supabase channel                   │   │
+│  │        ├─ program_request_items → refetch            │   │
+│  │        └─ program_requests → refetch                  │   │
+│  │                                                        │   │
+│  │  useEffect (on unmount)                               │   │
+│  │    └─ Unsubscribe from channel                        │   │
 │  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  2. SORTERING                                               │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  Tab: Prijzen                                         │   │
-│  │  ├─ Prijstype                      (bestaand)         │   │
-│  │  ├─ Vanaf-prijs toggle             (NIEUW)            │   │
-│  │  ├─ BTW inclusief toggle           (NIEUW)            │   │
-│  │  ├─ BTW tarief                     (NIEUW)            │   │
-│  │  ├─ Volwassenen: prijs + notitie   (uitgebreid)       │   │
-│  │  ├─ Kinderen: prijs + notitie + leeftijd (NIEUW)      │   │
-│  │  └─ Huisdieren: prijs + notitie    (NIEUW)            │   │
+│  │  Query: .order("day_index").order("preferred_time")   │   │
 │  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  3. LOGIES AANMAKEN                                         │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  Tab: Media                                           │   │
-│  │  └─ Afbeelding upload              (bestaand)         │   │
+│  │  Als linkedAccommodation = null:                      │   │
+│  │  ├─ Toon CTA card met "Logies aanvragen" knop        │   │
+│  │  └─ Link naar /logies-aanvragen met parameters:       │   │
+│  │      ├─ arrival (eerste datum)                        │   │
+│  │      ├─ departure (laatste datum)                     │   │
+│  │      ├─ guests (aantal personen)                      │   │
+│  │      └─ programToken (customer_token)                 │   │
 │  └──────────────────────────────────────────────────────┘   │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Kritieke Fix: Categorieën
+## Technische Details
 
-**Huidige foutieve waarden:**
-- `activiteiten` → bestaat niet in database
-- `catering` → OK
-- `vervoer` → OK
+### Bestand: `src/pages/admin/AdminRequestDetail.tsx`
 
-**Correcte database ENUM waarden:**
-- `outdoor` - "Outdoor & Sport"
-- `excursies` - "Excursies"
-- `entertainment` - "Entertainment"
-- `locaties` - "Locaties"
-- `catering` - "Catering"
-- `vervoer` - "Vervoer"
+#### Wijziging 1: Realtime subscription toevoegen
 
-## Wijzigingen per bestand
+**Locatie: useEffect (regels 178-187)**
 
-### 1. `src/components/partner-portal/PartnerBlockSheet.tsx`
-
-**Grote herstructurering nodig:**
-
-1. **Type definitie herstellen** (regel 125):
-   ```typescript
-   // VAN
-   category: "activiteiten" as "activiteiten" | "catering" | "vervoer"
-   
-   // NAAR
-   category: "outdoor" as "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer"
-   ```
-
-2. **Formulier uitbreiden met ontbrekende velden**:
-   - `price_adult_note` (prijsnotitie volwassenen)
-   - `price_child`, `price_child_note`, `price_child_min_age`, `price_child_max_age`
-   - `price_pet`, `price_pet_note`
-   - `is_from_price` (boolean toggle)
-   - `price_includes_vat`, `vat_rate`
-   - `seasonal_notes`
-   - `tags` (als comma-separated string)
-
-3. **Tab-structuur toevoegen** (zoals admin sheet):
-   - Tab "Algemeen": naam, beschrijving, categorie, duur, personen, seizoen, tags
-   - Tab "Prijzen": prijstype, BTW, volwassenen, kinderen, huisdieren
-   - Tab "Media": afbeelding upload
-
-4. **Category selector vervangen** (regel 476-495):
-   ```typescript
-   <SelectContent>
-     <SelectItem value="outdoor">Outdoor & Sport</SelectItem>
-     <SelectItem value="excursies">Excursies</SelectItem>
-     <SelectItem value="entertainment">Entertainment</SelectItem>
-     <SelectItem value="locaties">Locaties</SelectItem>
-     <SelectItem value="catering">Catering</SelectItem>
-     <SelectItem value="vervoer">Vervoer</SelectItem>
-   </SelectContent>
-   ```
-
-5. **Categorie ook bewerkbaar maken voor bestaande blocks**:
-   - Verwijder de `{isNew && ...}` conditie rond de categorie selector
-   - Partners moeten ook na aanmaak de categorie kunnen wijzigen
-
-6. **Database insert/update uitbreiden** (regel 273-340):
-   - Alle nieuwe velden meenemen in zowel insert als update operaties
-
-### 2. `src/types/partner.ts` 
-
-**PartnerBuildingBlock interface uitbreiden** (regel 95-111):
+Huidige code:
 ```typescript
-export interface PartnerBuildingBlock {
-  // ... bestaande velden ...
+useEffect(() => {
+  if (id) {
+    fetchRequestData();
+    logAdminActivity({
+      action: AdminActions.REQUEST_VIEWED,
+      entityType: EntityTypes.REQUEST,
+      entityId: id,
+    });
+  }
+}, [id]);
+```
+
+Nieuwe code:
+```typescript
+useEffect(() => {
+  if (!id) return;
   
-  // Nieuwe velden toevoegen:
-  price_adult_note: string | null;
-  price_child: number | null;
-  price_child_note: string | null;
-  price_child_min_age: number | null;
-  price_child_max_age: number | null;
-  price_pet: number | null;
-  price_pet_note: string | null;
-  is_from_price: boolean;
-  price_includes_vat: boolean | null;
-  vat_rate: number | null;
-  seasonal_notes: string | null;
-  tags: string[] | null;
-}
+  fetchRequestData();
+  logAdminActivity({
+    action: AdminActions.REQUEST_VIEWED,
+    entityType: EntityTypes.REQUEST,
+    entityId: id,
+  });
+  
+  // Subscribe to realtime changes for live updates
+  const channel = supabase
+    .channel(`admin-request-${id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'program_request_items',
+        filter: `request_id=eq.${id}`,
+      },
+      () => fetchRequestData()
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'program_requests',
+        filter: `id=eq.${id}`,
+      },
+      () => fetchRequestData()
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [id]);
 ```
 
-### 3. `src/pages/PartnerBlocks.tsx`
+#### Wijziging 2: Items sorteren op dag + tijd
 
-**Select query uitbreiden** (regel 62-63):
+**Locatie: fetchRequestData query (regel 213)**
+
+Huidige code:
 ```typescript
-.select(`
-  id, name, description, short_description, category, block_type, 
-  duration, price_adult, price_adult_note, price_type, 
-  price_child, price_child_note, price_child_min_age, price_child_max_age,
-  price_pet, price_pet_note, 
-  min_people, max_people, is_published, is_active, 
-  image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-  seasonal_notes, tags
-`)
+.order("day_index", { ascending: true });
 ```
 
-## Niet wijzigen
+Nieuwe code:
+```typescript
+.order("day_index", { ascending: true })
+.order("preferred_time", { ascending: true, nullsFirst: false });
+```
 
-- **`is_published`**: Blijft alleen door admin te wijzigen (partners dienen voorstellen in)
-- **`block_type`**: Blijft hardcoded op `partner` (correct voor partner-aangemaakt aanbod)
-- **Media bibliotheek**: Niet nodig voor partners, eigen uploads zijn voldoende
+#### Wijziging 3: Logies aanmaken CTA
 
-## Samenvatting resultaat
+**Locatie: Na linkedAccommodation card (rond regel 711)**
 
-Na implementatie kunnen partners:
-- Correct categoriseren met de 6 database ENUM waarden
-- Kinderprijzen instellen met leeftijdsgrenzen
-- Huisdierprijzen instellen
-- BTW-instellingen beheren
-- Seizoensinformatie en tags toevoegen
-- Hun aanbod volledig professioneel beheren
+Toevoegen:
+```typescript
+{/* Logies CTA when no accommodation linked */}
+{!linkedAccommodation && (request.selected_dates as string[]).length > 1 && (
+  <Card className="border-dashed border-2 border-indigo-300 bg-indigo-50/30">
+    <CardHeader>
+      <CardTitle className="text-lg flex items-center gap-2">
+        <Hotel className="h-5 w-5 text-indigo-600" />
+        Logies regelen
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Dit is een meerdaags programma. Wilt u logies aanvragen voor deze groep?
+      </p>
+      <Button asChild>
+        <Link to={buildLogiesUrl()}>
+          <Plus className="h-4 w-4 mr-2" />
+          Logiesaanvraag maken
+        </Link>
+      </Button>
+    </CardContent>
+  </Card>
+)}
+```
 
-Bureau Vlieland behoudt controle over publicatie (goedkeuring workflow).
+**Helper functie toevoegen:**
+```typescript
+const buildLogiesUrl = () => {
+  const params = new URLSearchParams();
+  const dates = request.selected_dates as string[];
+  
+  if (dates.length > 0) {
+    // Sort dates and use first as arrival, last as departure
+    const sorted = [...dates].sort();
+    params.set("arrival", format(new Date(sorted[0]), "yyyy-MM-dd"));
+    params.set("departure", format(new Date(sorted[sorted.length - 1]), "yyyy-MM-dd"));
+  }
+  
+  params.set("guests", request.number_of_people.toString());
+  params.set("programToken", request.customer_token);
+  
+  return `/logies-aanvragen?${params.toString()}`;
+};
+```
+
+## Database vereisten
+
+De tabellen `program_request_items` en `program_requests` moeten aan de realtime publication zijn toegevoegd. Dit is al gedaan voor het klantportaal, maar als dit nog niet het geval is:
+
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.program_request_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.program_requests;
+```
+
+## Resultaat
+
+Na implementatie:
+- Admin ziet wijzigingen van klanten direct zonder pagina te verversen
+- Activiteiten worden gesorteerd op dag EN tijd (bijv. 09:00 voor 12:00)
+- Admin kan direct een logiesaanvraag maken voor meerdaagse projecten zonder naar klantpagina te hoeven
+- Logiesaanvraag wordt automatisch gekoppeld via `programToken` parameter
