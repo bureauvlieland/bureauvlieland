@@ -217,6 +217,8 @@ export interface ProgramRequest {
   quote_sent_by: string | null;
   quote_personal_message: string | null;
   admin_created_by: string | null;
+  // Program description
+  program_description: string | null;
 }
 
 export interface ProgramRequestItem {

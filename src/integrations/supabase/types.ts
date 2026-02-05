@@ -1097,6 +1097,7 @@ export type Database = {
           id: string
           linked_accommodation_id: string | null
           number_of_people: number
+          program_description: string | null
           program_type: string
           quote_personal_message: string | null
           quote_sent_at: string | null
@@ -1139,6 +1140,7 @@ export type Database = {
           id?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          program_description?: string | null
           program_type?: string
           quote_personal_message?: string | null
           quote_sent_at?: string | null
@@ -1181,6 +1183,7 @@ export type Database = {
           id?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          program_description?: string | null
           program_type?: string
           quote_personal_message?: string | null
           quote_sent_at?: string | null

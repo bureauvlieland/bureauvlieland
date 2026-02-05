@@ -105,6 +105,8 @@ interface ProgramRequest {
   quote_valid_until: string | null;
   quote_sent_at: string | null;
   quote_personal_message: string | null;
+  // Program description
+  program_description: string | null;
 }
 
 interface LinkedAccommodation {
@@ -673,6 +675,14 @@ const AdminRequestDetail = () => {
                 {request.general_notes && (
                   <div className="pt-2 border-t">
                     <p className="text-sm text-slate-600">{request.general_notes}</p>
+                  </div>
+                )}
+                {request.program_description && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-slate-400 mb-1">Omschrijving</p>
+                    <p className="text-sm text-slate-700 italic whitespace-pre-line">
+                      "{request.program_description}"
+                    </p>
                   </div>
                 )}
               </CardContent>

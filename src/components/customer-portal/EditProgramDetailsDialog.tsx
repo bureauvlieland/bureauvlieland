@@ -10,12 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format, isBefore, startOfDay } from "date-fns";
 import { nl } from "date-fns/locale";
-import { CalendarIcon, X, AlertTriangle, Users, Loader2 } from "lucide-react";
+import { CalendarIcon, X, AlertTriangle, Users, Loader2, FileText } from "lucide-react";
 
 const MAX_DAYS = 7;
 
@@ -24,8 +25,9 @@ interface EditProgramDetailsDialogProps {
   onClose: () => void;
   selectedDates: Date[];
   numberOfPeople: number;
+  programDescription?: string | null;
   hasActiveAccommodation?: boolean;
-  onSave: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
+  onSave: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
 }
 
 export const EditProgramDetailsDialog = ({
@@ -33,11 +35,13 @@ export const EditProgramDetailsDialog = ({
   onClose,
   selectedDates: initialDates,
   numberOfPeople: initialPeople,
+  programDescription: initialDescription,
   hasActiveAccommodation = false,
   onSave,
 }: EditProgramDetailsDialogProps) => {
   const [dates, setDates] = useState<Date[]>(initialDates);
   const [people, setPeople] = useState(initialPeople);
+  const [description, setDescription] = useState(initialDescription || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -52,7 +56,8 @@ export const EditProgramDetailsDialog = ({
   const hasDateChanges = JSON.stringify(dates.map(formatLocalDate)) !== 
     JSON.stringify(initialDates.map(formatLocalDate));
   const hasPeopleChanges = people !== initialPeople;
-  const hasChanges = hasDateChanges || hasPeopleChanges;
+  const hasDescriptionChanges = description !== (initialDescription || "");
+  const hasChanges = hasDateChanges || hasPeopleChanges || hasDescriptionChanges;
 
   const handleAddDate = (date: Date | undefined) => {
     if (!date || dates.length >= MAX_DAYS) return;
@@ -73,9 +78,10 @@ export const EditProgramDetailsDialog = ({
 
   const handleSave = async () => {
     setIsSubmitting(true);
-    const updates: { selectedDates?: Date[]; numberOfPeople?: number } = {};
+    const updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string } = {};
     if (hasDateChanges) updates.selectedDates = dates;
     if (hasPeopleChanges) updates.numberOfPeople = people;
+    if (hasDescriptionChanges) updates.programDescription = description;
     
     const success = await onSave(updates);
     setIsSubmitting(false);
@@ -89,6 +95,7 @@ export const EditProgramDetailsDialog = ({
     // Reset to initial values
     setDates(initialDates);
     setPeople(initialPeople);
+    setDescription(initialDescription || "");
     onClose();
   };
 
@@ -186,8 +193,26 @@ export const EditProgramDetailsDialog = ({
             )}
           </div>
 
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Omschrijving / doel (optioneel)
+            </Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Bijv. doel van het uitje, thema, specifieke wensen..."
+              className="min-h-[100px]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Deze omschrijving wordt getoond in het overzicht van uw programma.
+            </p>
+          </div>
+
           {/* Warning when changes detected */}
-          {hasChanges && (
+          {(hasDateChanges || hasPeopleChanges) && (
             <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">

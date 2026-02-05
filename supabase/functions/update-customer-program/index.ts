@@ -24,6 +24,7 @@ interface PendingChange {
 interface ProgramDetailsUpdate {
   selectedDates?: string[];
   numberOfPeople?: number;
+  programDescription?: string;
 }
 
 interface BillingDetailsUpdate {
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
 
     const emailMessages: any[] = [];
 
-    // Handle program details updates (dates/people changes)
+    // Handle program details updates (dates/people/description changes)
     if (programDetails) {
       const updateData: any = { updated_at: new Date().toISOString() };
       const historyNotes: string[] = [];
@@ -207,6 +208,11 @@ Deno.serve(async (req) => {
       if (programDetails.numberOfPeople) {
         updateData.number_of_people = programDetails.numberOfPeople;
         historyNotes.push(`Aantal personen: ${program.number_of_people} → ${programDetails.numberOfPeople}`);
+      }
+
+      if (programDetails.programDescription !== undefined) {
+        updateData.program_description = programDetails.programDescription || null;
+        historyNotes.push(`Omschrijving ${programDetails.programDescription ? 'bijgewerkt' : 'verwijderd'}`);
       }
       
       // Update program

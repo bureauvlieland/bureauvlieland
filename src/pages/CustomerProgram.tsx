@@ -344,6 +344,7 @@ const CustomerProgram = () => {
         onClose={() => setShowEditDialog(false)}
         selectedDates={selectedDates}
         numberOfPeople={program.number_of_people}
+        programDescription={program.program_description}
         hasActiveAccommodation={!!accommodation}
         onSave={handleSaveDetails}
       />

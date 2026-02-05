@@ -65,6 +65,8 @@ interface MobileProgramViewProps {
     program_type?: string;
     quote_status?: string | null;
     quote_valid_until?: string | null;
+    // Program description
+    program_description?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -221,6 +223,7 @@ export const MobileProgramView = ({
         quoteStatus={program.quote_status as any}
         quoteValidUntil={program.quote_valid_until}
         termsAcceptedAt={program.terms_accepted_at}
+        programDescription={program.program_description}
         onEdit={onOpenEdit}
       />
 
