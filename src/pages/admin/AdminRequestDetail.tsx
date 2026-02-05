@@ -176,14 +176,43 @@ const AdminRequestDetail = () => {
   const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchRequestData();
-      logAdminActivity({
-        action: AdminActions.REQUEST_VIEWED,
-        entityType: EntityTypes.REQUEST,
-        entityId: id,
-      });
-    }
+    if (!id) return;
+    
+    fetchRequestData();
+    logAdminActivity({
+      action: AdminActions.REQUEST_VIEWED,
+      entityType: EntityTypes.REQUEST,
+      entityId: id,
+    });
+    
+    // Subscribe to realtime changes for live updates
+    const channel = supabase
+      .channel(`admin-request-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'program_request_items',
+          filter: `request_id=eq.${id}`,
+        },
+        () => fetchRequestData()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'program_requests',
+          filter: `id=eq.${id}`,
+        },
+        () => fetchRequestData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   const fetchRequestData = async () => {
@@ -210,7 +239,8 @@ const AdminRequestDetail = () => {
         .from("program_request_items")
         .select("*")
         .eq("request_id", id)
-        .order("day_index", { ascending: true });
+        .order("day_index", { ascending: true })
+        .order("preferred_time", { ascending: true, nullsFirst: false });
 
       if (itemsError) throw itemsError;
       setItems(itemsData as ProgramRequestItem[]);
@@ -356,6 +386,24 @@ const AdminRequestDetail = () => {
   const statusSummary = getStatusSummary();
   const customerPortalUrl = `/mijn-programma/${request.customer_token}`;
   const isQuoteMode = request.program_type === "quote";
+
+  // Build URL for accommodation request with pre-filled data
+  const buildLogiesUrl = () => {
+    const params = new URLSearchParams();
+    const dates = request.selected_dates as string[];
+    
+    if (dates.length > 0) {
+      // Sort dates and use first as arrival, last as departure
+      const sorted = [...dates].sort();
+      params.set("arrival", format(new Date(sorted[0]), "yyyy-MM-dd"));
+      params.set("departure", format(new Date(sorted[sorted.length - 1]), "yyyy-MM-dd"));
+    }
+    
+    params.set("guests", request.number_of_people.toString());
+    params.set("programToken", request.customer_token);
+    
+    return `/logies-aanvragen?${params.toString()}`;
+  };
 
   const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
     try {
@@ -706,6 +754,29 @@ const AdminRequestDetail = () => {
                       </Link>
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Logies CTA when no accommodation linked */}
+            {!linkedAccommodation && (request.selected_dates as string[]).length > 1 && (
+              <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Hotel className="h-5 w-5 text-primary" />
+                    Logies regelen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Dit is een meerdaags programma. Wilt u logies aanvragen voor deze groep?
+                  </p>
+                  <Button asChild>
+                    <Link to={buildLogiesUrl()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Logiesaanvraag maken
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             )}
