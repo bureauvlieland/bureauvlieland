@@ -12,6 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { AccommodationQuote, RoomConfiguration } from '@/types/accommodation';
+import { useQuoteExtras } from '@/hooks/useQuoteExtras';
+import { 
+  calculateExtraTotal, 
+  calculateExtrasTotal, 
+  EXTRA_CATEGORY_ICONS 
+} from '@/types/accommodationExtras';
 
 interface AccommodationQuoteDetailSheetProps {
   quote: AccommodationQuote | null;
@@ -47,6 +53,10 @@ export function AccommodationQuoteDetailSheet({
   const isSelected = quote.status === 'selected';
   const roomConfig = quote.room_configuration || [];
   const includes = quote.includes || [];
+  
+  const { data: extras = [] } = useQuoteExtras(quote.id);
+  const extrasTotal = calculateExtrasTotal(extras);
+  const grandTotal = quote.price_total + extrasTotal;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -75,27 +85,48 @@ export function AccommodationQuoteDetailSheet({
           {/* Pricing */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-muted-foreground">Prijs per persoon per nacht</span>
+              <span className="text-muted-foreground">Verblijf ({numberOfGuests} gasten × {numberOfNights} nachten)</span>
               <span className="font-semibold">
-                {quote.price_per_person_per_night
-                  ? formatPrice(quote.price_per_person_per_night)
-                  : 'n.v.t.'}
+                {formatPrice(quote.price_total)}
               </span>
             </div>
-            <div className="flex justify-between items-baseline">
-              <span className="text-muted-foreground">
-                {numberOfGuests} gasten × {numberOfNights} nachten
-              </span>
-            </div>
+            
+            {/* Extras breakdown */}
+            {extras.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <span className="text-sm font-medium">Extra's inbegrepen:</span>
+                  {extras.map((extra) => (
+                    <div key={extra.id} className="flex justify-between items-start text-sm">
+                      <div className="flex items-start gap-2">
+                        <span>{EXTRA_CATEGORY_ICONS[extra.category as keyof typeof EXTRA_CATEGORY_ICONS] || '📦'}</span>
+                        <div>
+                          <span>{extra.name}</span>
+                          {extra.pricing_type === 'per_person' && (
+                            <span className="text-muted-foreground"> ({extra.quantity}×)</span>
+                          )}
+                          {extra.description && (
+                            <p className="text-xs text-muted-foreground">{extra.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="font-medium">{formatPrice(calculateExtraTotal(extra))}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            
             <Separator />
             <div className="flex justify-between items-baseline">
               <span className="font-medium">Totaalprijs</span>
               <div className="text-right">
                 <span className="text-xl font-bold text-primary">
-                  {formatPrice(quote.price_total)}
+                  {formatPrice(grandTotal)}
                 </span>
                 <p className="text-xs text-muted-foreground">
-                  {quote.price_includes_vat ? 'incl.' : 'excl.'} {quote.vat_rate}% BTW
+                  {quote.price_includes_vat ? 'incl.' : 'excl.'} BTW
                 </p>
               </div>
             </div>

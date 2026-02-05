@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
+import { QuoteExtrasList } from "./QuoteExtrasList";
 
 interface AccommodationRequest {
   id: string;
@@ -598,6 +599,17 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Quote Extras - only show when quote exists */}
+            {existingQuote && (
+              <QuoteExtrasList
+                quoteId={existingQuote.id}
+                numberOfGuests={request.number_of_guests}
+                readOnly={isReadOnly}
+              />
+            )}
 
             <Separator />
 

@@ -5,6 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AccommodationQuote } from '@/types/accommodation';
+import { useQuoteExtras } from '@/hooks/useQuoteExtras';
+import { calculateExtrasTotal, EXTRA_CATEGORY_ICONS } from '@/types/accommodationExtras';
 
 interface AccommodationQuoteCardProps {
   quote: AccommodationQuote;
@@ -29,6 +31,10 @@ export function AccommodationQuoteCard({
   const validUntil = new Date(quote.valid_until);
   const isExpired = isPast(validUntil);
   const includes = quote.includes || [];
+  
+  const { data: extras = [] } = useQuoteExtras(quote.id);
+  const extrasTotal = calculateExtrasTotal(extras);
+  const grandTotal = quote.price_total + extrasTotal;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('nl-NL', {
@@ -72,28 +78,59 @@ export function AccommodationQuoteCard({
 
       <CardContent className="space-y-4">
         {/* Pricing */}
-        <div className="bg-muted/50 rounded-lg p-4">
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
           <div className="flex items-baseline justify-between">
             <div>
-              {quote.price_per_person_per_night ? (
-                <>
-                  <span className="text-2xl font-bold text-primary">
-                    {formatPrice(quote.price_per_person_per_night)}
-                  </span>
-                  <span className="text-sm text-muted-foreground"> p.p.p.n.</span>
-                </>
-              ) : (
-                <span className="text-lg font-medium">Prijs op aanvraag</span>
-              )}
+              <span className="text-sm text-muted-foreground">Verblijf</span>
             </div>
             <div className="text-right">
-              <p className="text-lg font-semibold">{formatPrice(quote.price_total)}</p>
-              <p className="text-xs text-muted-foreground">
-                totaal ({quote.price_includes_vat ? 'incl.' : 'excl.'} BTW)
-              </p>
+              <p className="font-medium">{formatPrice(quote.price_total)}</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          
+          {/* Show extras if any */}
+          {extras.length > 0 && (
+            <>
+              <div className="text-sm space-y-1">
+                {extras.slice(0, 3).map((extra) => (
+                  <div key={extra.id} className="flex justify-between text-muted-foreground">
+                    <span>
+                      {EXTRA_CATEGORY_ICONS[extra.category as keyof typeof EXTRA_CATEGORY_ICONS] || '📦'} {extra.name}
+                    </span>
+                    <span>
+                      {formatPrice(extra.pricing_type === 'fixed' ? extra.unit_price : extra.unit_price * extra.quantity)}
+                    </span>
+                  </div>
+                ))}
+                {extras.length > 3 && (
+                  <p className="text-xs text-muted-foreground">+ {extras.length - 3} meer extra's</p>
+                )}
+              </div>
+              <div className="border-t pt-2 flex justify-between items-baseline">
+                <span className="font-medium">Totaal</span>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-primary">{formatPrice(grandTotal)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {quote.price_includes_vat ? 'incl.' : 'excl.'} BTW
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+          
+          {extras.length === 0 && (
+            <div className="flex justify-between items-baseline border-t pt-2">
+              <span className="font-medium">Totaal</span>
+              <div className="text-right">
+                <p className="text-lg font-bold text-primary">{formatPrice(quote.price_total)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {quote.price_includes_vat ? 'incl.' : 'excl.'} BTW
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <p className="text-xs text-muted-foreground">
             {numberOfGuests} gasten × {numberOfNights} nachten
           </p>
         </div>
