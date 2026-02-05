@@ -831,6 +831,71 @@ export type Database = {
           },
         ]
       }
+      partner_room_types: {
+        Row: {
+          bed_configuration: string | null
+          created_at: string | null
+          description: string | null
+          facilities: string[] | null
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          max_occupancy: number | null
+          name: string
+          partner_id: string
+          price_includes_vat: boolean | null
+          price_per_night: number | null
+          size_sqm: number | null
+          sort_order: number | null
+          updated_at: string | null
+          vat_rate: number | null
+        }
+        Insert: {
+          bed_configuration?: string | null
+          created_at?: string | null
+          description?: string | null
+          facilities?: string[] | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          max_occupancy?: number | null
+          name: string
+          partner_id: string
+          price_includes_vat?: boolean | null
+          price_per_night?: number | null
+          size_sqm?: number | null
+          sort_order?: number | null
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Update: {
+          bed_configuration?: string | null
+          created_at?: string | null
+          description?: string | null
+          facilities?: string[] | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          max_occupancy?: number | null
+          name?: string
+          partner_id?: string
+          price_includes_vat?: boolean | null
+          price_per_night?: number | null
+          size_sqm?: number | null
+          sort_order?: number | null
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_room_types_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_unavailability: {
         Row: {
           created_at: string

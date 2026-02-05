@@ -28,6 +28,7 @@ import {
   BookOpen,
   BedDouble,
   UtensilsCrossed,
+  DoorOpen,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -66,6 +67,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
     // Alleen tonen als partner logies levert
     ...(isAccommodationPartner ? [
       { title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble },
+      { title: "Kamersoorten", url: `/partner/kamersoorten${urlSuffix}`, icon: DoorOpen },
       { title: "Extra's", url: `/partner/extras${urlSuffix}`, icon: UtensilsCrossed },
     ] : []),
     { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
