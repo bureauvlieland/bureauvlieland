@@ -21,6 +21,8 @@ interface ProgramOverviewCardProps {
   quoteStatus?: QuoteStatus | null;
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string | null;
+  // Program description
+  programDescription?: string | null;
   // Edit callback
   onEdit?: () => void;
 }
@@ -37,6 +39,7 @@ export const ProgramOverviewCard = ({
   quoteStatus,
   quoteValidUntil,
   termsAcceptedAt,
+  programDescription,
   onEdit,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
@@ -158,6 +161,15 @@ export const ProgramOverviewCard = ({
                   : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
                 }
               </p>
+              
+              {/* Program description */}
+              {programDescription && (
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border/50">
+                  <p className="text-sm italic text-foreground/90 whitespace-pre-line">
+                    "{programDescription}"
+                  </p>
+                </div>
+              )}
             </div>
             
             {/* Edit button + Quote status */}

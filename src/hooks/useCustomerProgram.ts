@@ -40,7 +40,7 @@ interface UseCustomerProgramReturn {
   addItem: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
-  updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number }) => Promise<boolean>;
+  updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
   acceptTerms: (signatureName?: string) => Promise<boolean>;
   cancelRequest: (reason?: string) => Promise<boolean>;
@@ -510,12 +510,13 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
 
   const updateProgramDetails = useCallback(async (updates: { 
     selectedDates?: Date[]; 
-    numberOfPeople?: number 
+    numberOfPeople?: number;
+    programDescription?: string;
   }): Promise<boolean> => {
     if (!program) return false;
 
     try {
-      const programDetails: { selectedDates?: string[]; numberOfPeople?: number } = {};
+      const programDetails: { selectedDates?: string[]; numberOfPeople?: number; programDescription?: string } = {};
       
       if (updates.selectedDates) {
         // Use local date formatting to avoid timezone shifts
@@ -529,6 +530,9 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       }
       if (updates.numberOfPeople) {
         programDetails.numberOfPeople = updates.numberOfPeople;
+      }
+      if (updates.programDescription !== undefined) {
+        programDetails.programDescription = updates.programDescription;
       }
 
       const { error } = await supabase.functions.invoke("update-customer-program", {
