@@ -30,10 +30,12 @@ import {
   X,
   FileText,
   Ban,
+  BedDouble,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
+import { usePartnerRoomTypes } from "@/hooks/usePartnerRoomTypes";
 
 interface AccommodationRequest {
   id: string;
@@ -202,6 +204,9 @@ export const PartnerAccommodationQuoteSheet = ({
     .map(rt => ROOM_TYPES.find(r => r.value === rt)?.label)
     .filter(Boolean);
 
+  // Fetch partner room types for selection
+  const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);
+
   const toggleInclude = (item: string) => {
     setIncludes(prev => 
       prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
@@ -209,7 +214,19 @@ export const PartnerAccommodationQuoteSheet = ({
   };
 
   const addRoom = () => {
-    setRoomConfiguration(prev => [...prev, { type: "double", count: 1, price_per_night: 0, occupancy: 2 }]);
+    setRoomConfiguration(prev => [...prev, { type: "", count: 1, price_per_night: 0, occupancy: 2 }]);
+  };
+
+  const addRoomFromPreset = (roomTypeId: string) => {
+    const roomType = partnerRoomTypes.find(rt => rt.id === roomTypeId);
+    if (roomType) {
+      setRoomConfiguration(prev => [...prev, {
+        type: roomType.name,
+        count: 1,
+        price_per_night: roomType.price_per_night || 0,
+        occupancy: roomType.max_occupancy,
+      }]);
+    }
   };
 
   const updateRoom = (index: number, updates: Partial<RoomConfig>) => {
@@ -509,46 +526,87 @@ export const PartnerAccommodationQuoteSheet = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Kamerconfiguratie (optioneel)</Label>
-                {!isReadOnly && (
-                  <Button type="button" variant="outline" size="sm" onClick={addRoom}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Kamer toevoegen
-                  </Button>
-                )}
               </div>
 
-              {roomConfiguration.map((room, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                  <Input
-                    placeholder="Type"
-                    value={room.type}
-                    onChange={(e) => updateRoom(index, { type: e.target.value })}
-                    className="flex-1"
-                    disabled={isReadOnly}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Aantal"
-                    value={room.count}
-                    onChange={(e) => updateRoom(index, { count: parseInt(e.target.value) || 0 })}
-                    className="w-20"
-                    disabled={isReadOnly}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="€/nacht"
-                    value={room.price_per_night || ""}
-                    onChange={(e) => updateRoom(index, { price_per_night: parseFloat(e.target.value) || 0 })}
-                    className="w-24"
-                    disabled={isReadOnly}
-                  />
-                  {!isReadOnly && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => removeRoom(index)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+              {/* Room Type Presets Selection */}
+              {!isReadOnly && partnerRoomTypes.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Selecteer uit uw kamersoorten:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {partnerRoomTypes.map((roomType) => (
+                      <Button
+                        key={roomType.id}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addRoomFromPreset(roomType.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <BedDouble className="h-3.5 w-3.5" />
+                        <span>{roomType.name}</span>
+                        {roomType.price_per_night && (
+                          <span className="text-muted-foreground">
+                            €{roomType.price_per_night.toFixed(0)}
+                          </span>
+                        )}
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {/* Added rooms */}
+              {roomConfiguration.length > 0 && (
+                <div className="space-y-2">
+                  {roomConfiguration.map((room, index) => (
+                    <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          placeholder="Kamertype"
+                          value={room.type}
+                          onChange={(e) => updateRoom(index, { type: e.target.value })}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <Input
+                          type="number"
+                          placeholder="Aantal"
+                          value={room.count}
+                          onChange={(e) => updateRoom(index, { count: parseInt(e.target.value) || 0 })}
+                          min={1}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                      <div className="w-28 relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">€</span>
+                        <Input
+                          type="number"
+                          placeholder="per nacht"
+                          value={room.price_per_night || ""}
+                          onChange={(e) => updateRoom(index, { price_per_night: parseFloat(e.target.value) || 0 })}
+                          className="pl-6"
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                      {!isReadOnly && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeRoom(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Manual add button */}
+              {!isReadOnly && (
+                <Button type="button" variant="ghost" size="sm" onClick={addRoom} className="w-full">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Handmatig kamer toevoegen
+                </Button>
+              )}
             </div>
 
             <Separator />
