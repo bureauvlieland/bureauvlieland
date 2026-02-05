@@ -32,6 +32,7 @@ import {
   FolderKanban,
   ImageIcon,
   Settings,
+  LayoutTemplate,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -50,6 +51,7 @@ const menuItems = [
   { title: "CRM", url: "/admin/crm", icon: Users },
   { title: "Partners", url: "/admin/partners", icon: Building2 },
   { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+  { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
   { title: "Media", url: "/admin/media", icon: ImageIcon },
   { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
   { title: "Commissies", url: "/admin/commissies", icon: Euro },
