@@ -1,193 +1,115 @@
 
-# Plan: Realtime Updates, Tijdsortering en Logies-aanmaakknop voor AdminRequestDetail
+# Plan: Programma-omschrijving Veld Toevoegen
 
 ## Samenvatting
-Drie verbeteringen voor de admin projectdetail-pagina:
-1. **Realtime updates** - Pagina updatet automatisch wanneer klanten wijzigingen maken
-2. **Tijdsortering** - Activiteiten worden gesorteerd op dag EN tijd
-3. **Logies aanmaken** - Admin kan direct een logiesaanvraag koppelen aan een project
+Een nieuw optioneel tekstveld toevoegen aan programma's waarmee Bureau Vlieland en/of klanten een vrije inleiding/omschrijving kunnen plaatsen. Dit wordt getoond in het bovenste blok op de klantpagina ("Uw Maatwerkvoorstel").
 
-## Overzicht wijzigingen
+## Wat wordt het?
+- **Veldnaam:** `program_description`
+- **Locatie:** Onder de titel in het ProgramOverviewCard
+- **Bewerkbaar door:** Admin én klant (optioneel)
+- **Verplicht:** Nee
+
+## Voorbeeldweergave
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│              AdminRequestDetail.tsx Wijzigingen             │
-├─────────────────────────────────────────────────────────────┤
+│  Uw maatwerkvoorstel                          #REF-2025-42 │
+│  Dit voorstel is speciaal voor jullie samengesteld...      │
 │                                                              │
-│  1. REALTIME SUBSCRIPTION                                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  useEffect (on mount)                                 │   │
-│  │    ├─ fetchRequestData()                              │   │
-│  │    └─ Subscribe to Supabase channel                   │   │
-│  │        ├─ program_request_items → refetch            │   │
-│  │        └─ program_requests → refetch                  │   │
-│  │                                                        │   │
-│  │  useEffect (on unmount)                               │   │
-│  │    └─ Unsubscribe from channel                        │   │
-│  └──────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ "Dit teamuitje staat in het teken van samenwerking     ││
+│  │ en ontspanning. We hebben een mix van actieve en       ││
+│  │ rustgevende activiteiten samengesteld passend bij      ││
+│  │ jullie wens om het team beter te leren kennen."        ││
+│  └─────────────────────────────────────────────────────────┘│
 │                                                              │
-│  2. SORTERING                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Query: .order("day_index").order("preferred_time")   │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
-│  3. LOGIES AANMAKEN                                         │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Als linkedAccommodation = null:                      │   │
-│  │  ├─ Toon CTA card met "Logies aanvragen" knop        │   │
-│  │  └─ Link naar /logies-aanvragen met parameters:       │   │
-│  │      ├─ arrival (eerste datum)                        │   │
-│  │      ├─ departure (laatste datum)                     │   │
-│  │      ├─ guests (aantal personen)                      │   │
-│  │      └─ programToken (customer_token)                 │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
+│  📅 20 - 22 mei 2026    👥 45 personen    ✨ Maatwerk      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Technische Details
+## Technische Wijzigingen
 
-### Bestand: `src/pages/admin/AdminRequestDetail.tsx`
+### 1. Database Migratie
 
-#### Wijziging 1: Realtime subscription toevoegen
-
-**Locatie: useEffect (regels 178-187)**
-
-Huidige code:
-```typescript
-useEffect(() => {
-  if (id) {
-    fetchRequestData();
-    logAdminActivity({
-      action: AdminActions.REQUEST_VIEWED,
-      entityType: EntityTypes.REQUEST,
-      entityId: id,
-    });
-  }
-}, [id]);
-```
-
-Nieuwe code:
-```typescript
-useEffect(() => {
-  if (!id) return;
-  
-  fetchRequestData();
-  logAdminActivity({
-    action: AdminActions.REQUEST_VIEWED,
-    entityType: EntityTypes.REQUEST,
-    entityId: id,
-  });
-  
-  // Subscribe to realtime changes for live updates
-  const channel = supabase
-    .channel(`admin-request-${id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'program_request_items',
-        filter: `request_id=eq.${id}`,
-      },
-      () => fetchRequestData()
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'program_requests',
-        filter: `id=eq.${id}`,
-      },
-      () => fetchRequestData()
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [id]);
-```
-
-#### Wijziging 2: Items sorteren op dag + tijd
-
-**Locatie: fetchRequestData query (regel 213)**
-
-Huidige code:
-```typescript
-.order("day_index", { ascending: true });
-```
-
-Nieuwe code:
-```typescript
-.order("day_index", { ascending: true })
-.order("preferred_time", { ascending: true, nullsFirst: false });
-```
-
-#### Wijziging 3: Logies aanmaken CTA
-
-**Locatie: Na linkedAccommodation card (rond regel 711)**
-
-Toevoegen:
-```typescript
-{/* Logies CTA when no accommodation linked */}
-{!linkedAccommodation && (request.selected_dates as string[]).length > 1 && (
-  <Card className="border-dashed border-2 border-indigo-300 bg-indigo-50/30">
-    <CardHeader>
-      <CardTitle className="text-lg flex items-center gap-2">
-        <Hotel className="h-5 w-5 text-indigo-600" />
-        Logies regelen
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Dit is een meerdaags programma. Wilt u logies aanvragen voor deze groep?
-      </p>
-      <Button asChild>
-        <Link to={buildLogiesUrl()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Logiesaanvraag maken
-        </Link>
-      </Button>
-    </CardContent>
-  </Card>
-)}
-```
-
-**Helper functie toevoegen:**
-```typescript
-const buildLogiesUrl = () => {
-  const params = new URLSearchParams();
-  const dates = request.selected_dates as string[];
-  
-  if (dates.length > 0) {
-    // Sort dates and use first as arrival, last as departure
-    const sorted = [...dates].sort();
-    params.set("arrival", format(new Date(sorted[0]), "yyyy-MM-dd"));
-    params.set("departure", format(new Date(sorted[sorted.length - 1]), "yyyy-MM-dd"));
-  }
-  
-  params.set("guests", request.number_of_people.toString());
-  params.set("programToken", request.customer_token);
-  
-  return `/logies-aanvragen?${params.toString()}`;
-};
-```
-
-## Database vereisten
-
-De tabellen `program_request_items` en `program_requests` moeten aan de realtime publication zijn toegevoegd. Dit is al gedaan voor het klantportaal, maar als dit nog niet het geval is:
+Nieuw veld toevoegen aan `program_requests`:
 
 ```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.program_request_items;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.program_requests;
+ALTER TABLE program_requests
+ADD COLUMN program_description TEXT;
 ```
+
+### 2. Type Definities
+
+**Bestand:** `src/types/programRequest.ts`
+
+Toevoegen aan `ProgramRequest` interface:
+```typescript
+program_description: string | null;
+```
+
+### 3. ProgramOverviewCard Uitbreiden
+
+**Bestand:** `src/components/customer-portal/ProgramOverviewCard.tsx`
+
+- Nieuwe prop: `programDescription?: string | null`
+- Weergave onder de subtitle, als er tekst is
+- Styling: lichte achtergrond, cursief of quote-stijl
+
+### 4. Desktop/Mobile Views Uitbreiden
+
+**Bestanden:** 
+- `src/components/customer-portal/DesktopProgramView.tsx`
+- `src/components/customer-portal/MobileProgramView.tsx`
+
+Prop `program_description` doorgeven aan ProgramOverviewCard.
+
+### 5. Hook Uitbreiden
+
+**Bestand:** `src/hooks/useCustomerProgram.ts`
+
+- Veld meenemen bij fetch
+- Nieuwe functie: `updateProgramDescription(description: string)`
+
+### 6. Bewerkings-UI
+
+**Optie A - In EditProgramDetailsDialog:**
+Textarea toevoegen aan bestaande dialoog.
+
+**Optie B - Inline bewerken:**
+Klik op omschrijving om te bewerken (voor klant-facing).
+
+Voorkeur: Optie A voor consistentie.
+
+**Bestand:** `src/components/customer-portal/EditProgramDetailsDialog.tsx`
+- Textarea toevoegen voor omschrijving
+- Label: "Omschrijving / doel van het programma"
+- Placeholder: "Bijv. doel van het uitje, thema, specifieke wensen..."
+
+### 7. Admin Pagina
+
+**Bestand:** `src/pages/admin/AdminRequestDetail.tsx`
+
+- Omschrijving tonen in overzichtsblok
+- Bewerkbaar via inline editor of dialoog
+
+## Bestanden die gewijzigd worden
+
+| Bestand | Wijziging |
+|---------|-----------|
+| Database migratie | Nieuw veld `program_description` |
+| `src/types/programRequest.ts` | Type uitbreiden |
+| `src/components/customer-portal/ProgramOverviewCard.tsx` | Omschrijving weergeven |
+| `src/components/customer-portal/DesktopProgramView.tsx` | Prop doorgeven |
+| `src/components/customer-portal/MobileProgramView.tsx` | Prop doorgeven |
+| `src/components/customer-portal/EditProgramDetailsDialog.tsx` | Textarea toevoegen |
+| `src/hooks/useCustomerProgram.ts` | Update functie toevoegen |
+| `src/pages/admin/AdminRequestDetail.tsx` | Weergave + bewerking |
 
 ## Resultaat
 
 Na implementatie:
-- Admin ziet wijzigingen van klanten direct zonder pagina te verversen
-- Activiteiten worden gesorteerd op dag EN tijd (bijv. 09:00 voor 12:00)
-- Admin kan direct een logiesaanvraag maken voor meerdaagse projecten zonder naar klantpagina te hoeven
-- Logiesaanvraag wordt automatisch gekoppeld via `programToken` parameter
+- Bureau Vlieland kan bij maatwerkoffertes een persoonlijke inleiding schrijven
+- Klanten kunnen optioneel hun doel/wensen beschrijven
+- Omschrijving wordt prominent getoond in het overzichtsblok
+- Alle bestaande programma's werken door (veld is optioneel/nullable)
