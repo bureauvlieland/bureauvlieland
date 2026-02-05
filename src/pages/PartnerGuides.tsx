@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   UserPlus, 
   MessageSquare, 
@@ -13,7 +16,54 @@ import {
   BedDouble,
 } from "lucide-react";
 
+interface PartnerCommissionData {
+  commission_percentage: number;
+  accommodation_commission_percentage?: number;
+  partner_type?: string;
+}
+
 const PartnerGuides = () => {
+  const [searchParams] = useSearchParams();
+  const [partnerData, setPartnerData] = useState<PartnerCommissionData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPartnerData = async () => {
+      try {
+        const token = searchParams.get("token") || localStorage.getItem("partner_token");
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setPartnerData({
+            commission_percentage: data.partner?.commission_percentage ?? 15,
+            accommodation_commission_percentage: data.partner?.accommodation_commission_percentage,
+            partner_type: data.partner?.partner_type,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching partner data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPartnerData();
+  }, [searchParams]);
   return (
     <PartnerLayout>
       <div className="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
@@ -267,14 +317,33 @@ const PartnerGuides = () => {
                     Bureau Vlieland rekent commissie over de door u gefactureerde omzet (exclusief BTW):
                   </p>
                   <div className="bg-muted p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Activiteiten</span>
-                      <span className="text-lg font-bold text-primary">15%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Logies</span>
-                      <span className="text-lg font-bold text-primary">10%</span>
-                    </div>
+                    {isLoading ? (
+                      <>
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                      </>
+                    ) : (
+                      <>
+                        {/* Show activity commission if partner is activity provider or both */}
+                        {(!partnerData?.partner_type || partnerData.partner_type !== 'accommodation') && (
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Activiteiten</span>
+                            <span className="text-lg font-bold text-primary">
+                              {partnerData?.commission_percentage ?? 15}%
+                            </span>
+                          </div>
+                        )}
+                        {/* Show accommodation commission if partner is accommodation or both */}
+                        {(partnerData?.partner_type === 'accommodation' || partnerData?.partner_type === 'both') && (
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Logies</span>
+                            <span className="text-lg font-bold text-primary">
+                              {partnerData?.accommodation_commission_percentage ?? 10}%
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                   <p className="text-sm">
                     U factureert rechtstreeks aan de eindklant. Bureau Vlieland stuurt u periodiek 
