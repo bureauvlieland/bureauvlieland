@@ -98,6 +98,7 @@ interface PartnerAccommodationQuoteSheetProps {
   partnerToken: string;
   partnerId: string;
   partnerName?: string;
+  partnerDescription?: string;
   onSubmit: (data: {
     accommodationName: string;
     description: string;
@@ -136,6 +137,7 @@ export const PartnerAccommodationQuoteSheet = ({
   partnerToken,
   partnerId,
   partnerName = "",
+  partnerDescription = "",
   onSubmit,
   onDecline,
   onRefresh,
@@ -175,9 +177,9 @@ export const PartnerAccommodationQuoteSheet = ({
       setResponseType("submit_quote");
       setDeclineReason(existingQuote.status === "declined" ? existingQuote.partner_notes || "" : "");
     } else if (isOpen) {
-      // Default values for new quote - use partner name as default accommodation name
+      // Default values for new quote - use partner name and description as defaults
       setAccommodationName(partnerName);
-      setDescription("");
+      setDescription(partnerDescription);
       setPriceTotal("");
       setPriceIncludesVat(true);
       setVatRate("9");
@@ -190,7 +192,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setResponseType("submit_quote");
       setDeclineReason("");
     }
-  }, [isOpen, existingQuote, partnerName]);
+  }, [isOpen, existingQuote, partnerName, partnerDescription]);
 
   // Fetch partner room types for selection - must be before any early returns
   const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);

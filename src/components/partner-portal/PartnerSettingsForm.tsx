@@ -31,6 +31,7 @@ interface PartnerDetails {
   booking_contact_name: string | null;
   booking_contact_phone: string | null;
   availability_notes: string | null;
+  accommodation_description: string | null;
 }
 
 export const PartnerSettingsForm = () => {
@@ -55,6 +56,7 @@ export const PartnerSettingsForm = () => {
     booking_contact_name: "",
     booking_contact_phone: "",
     availability_notes: "",
+    accommodation_description: "",
   });
 
   // Password form state
@@ -83,19 +85,20 @@ export const PartnerSettingsForm = () => {
 
         if (data && !error) {
           setPartner(data as PartnerDetails);
-          setFormData({
-            name: data.name || "",
-            phone: data.phone || "",
-            kvk_number: data.kvk_number || "",
-            address_street: data.address_street || "",
-            address_postal: data.address_postal || "",
-            address_city: data.address_city || "",
-            bank_iban: (data as any).bank_iban || "",
-            bank_account_name: (data as any).bank_account_name || "",
-            booking_contact_name: (data as any).booking_contact_name || "",
-            booking_contact_phone: (data as any).booking_contact_phone || "",
-            availability_notes: (data as any).availability_notes || "",
-          });
+            setFormData({
+              name: data.name || "",
+              phone: data.phone || "",
+              kvk_number: data.kvk_number || "",
+              address_street: data.address_street || "",
+              address_postal: data.address_postal || "",
+              address_city: data.address_city || "",
+              bank_iban: (data as any).bank_iban || "",
+              bank_account_name: (data as any).bank_account_name || "",
+              booking_contact_name: (data as any).booking_contact_name || "",
+              booking_contact_phone: (data as any).booking_contact_phone || "",
+              availability_notes: (data as any).availability_notes || "",
+              accommodation_description: (data as any).accommodation_description || "",
+            });
           setIsImpersonating(true);
         }
         setIsLoading(false);
@@ -125,6 +128,7 @@ export const PartnerSettingsForm = () => {
         booking_contact_name: (data as any).booking_contact_name || "",
         booking_contact_phone: (data as any).booking_contact_phone || "",
         availability_notes: (data as any).availability_notes || "",
+        accommodation_description: (data as any).accommodation_description || "",
       });
     }
     setIsLoading(false);
@@ -162,6 +166,7 @@ export const PartnerSettingsForm = () => {
           booking_contact_name: formData.booking_contact_name || null,
           booking_contact_phone: formData.booking_contact_phone || null,
           availability_notes: formData.availability_notes || null,
+          accommodation_description: formData.accommodation_description || null,
         } as any)
         .eq("id", partner.id);
 
@@ -481,6 +486,46 @@ export const PartnerSettingsForm = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Accommodation description - only for accommodation partners */}
+      {(partner.partner_type === 'accommodation' || partner.partner_type === 'both') && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <CardTitle>Accommodatie omschrijving</CardTitle>
+            </div>
+            <CardDescription>
+              Standaard omschrijving van uw accommodatie die wordt gebruikt bij offertes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="accommodation_description">Omschrijving</Label>
+              <Textarea
+                id="accommodation_description"
+                value={formData.accommodation_description}
+                onChange={(e) => handleChange("accommodation_description", e.target.value)}
+                placeholder="Bijv. 'Gezellig familiehotel direct aan het strand met 20 kamers en eigen restaurant. Inclusief uitgebreid ontbijtbuffet.'"
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                Deze tekst wordt automatisch ingevuld bij nieuwe logiesoffertes.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Button onClick={handleSaveDetails} disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Opslaan
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Commission info */}
       <Card>
