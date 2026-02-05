@@ -41,7 +41,7 @@ export const PartnerYtdModule = ({
             </div>
           </div>
           <Button variant="ghost" size="sm" asChild>
-            <Link to={`/partner/facturatie${urlSuffix}`}>
+            <Link to={`/partner/finance${urlSuffix}`}>
               Facturatie
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
