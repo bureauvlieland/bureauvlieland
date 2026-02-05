@@ -94,6 +94,7 @@ interface PartnerAccommodationQuoteSheetProps {
   request: { quote: AccommodationQuote | null } & AccommodationRequest | null;
   existingQuote: AccommodationQuote | null;
   partnerToken: string;
+  partnerId: string;
   partnerName?: string;
   onSubmit: (data: {
     accommodationName: string;
@@ -131,6 +132,7 @@ export const PartnerAccommodationQuoteSheet = ({
   request,
   existingQuote,
   partnerToken,
+  partnerId,
   partnerName = "",
   onSubmit,
   onDecline,
@@ -607,6 +609,7 @@ export const PartnerAccommodationQuoteSheet = ({
               <QuoteExtrasList
                 quoteId={existingQuote.id}
                 numberOfGuests={request.number_of_guests}
+                partnerId={partnerId}
                 readOnly={isReadOnly}
               />
             )}

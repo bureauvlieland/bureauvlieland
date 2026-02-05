@@ -29,6 +29,7 @@ const PartnerDashboardContent = () => {
   const [showSheet, setShowSheet] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
+  const [partnerId, setPartnerId] = useState<string>("");
   const [partnerName, setPartnerName] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"action" | "in_progress" | "completed">("action");
 
@@ -91,6 +92,7 @@ const PartnerDashboardContent = () => {
     const impersonatePartnerId = searchParams.get("impersonate");
     let token: string | null = null;
     let pName = "";
+    let pId = "";
 
     if (impersonatePartnerId) {
       const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
@@ -98,13 +100,14 @@ const PartnerDashboardContent = () => {
       if (isAdmin) {
         const { data: partner } = await supabase
           .from("partners")
-          .select("partner_token, name")
+          .select("id, partner_token, name")
           .eq("id", impersonatePartnerId)
           .single();
 
         if (partner) {
           token = partner.partner_token;
           pName = partner.name;
+          pId = partner.id;
         }
       }
     }
@@ -125,9 +128,11 @@ const PartnerDashboardContent = () => {
 
       token = partner.partner_token;
       pName = partner.name;
+      pId = partner.id;
     }
 
     setPartnerToken(token);
+    setPartnerId(pId);
     setPartnerName(pName);
 
     try {
@@ -717,6 +722,7 @@ const PartnerDashboardContent = () => {
         request={selectedRequest}
         existingQuote={selectedRequest?.quote ?? null}
         partnerToken={partnerToken || ""}
+        partnerId={partnerId}
         partnerName={partnerName}
         onSubmit={handleQuoteSubmit}
         onDecline={handleQuoteDecline}

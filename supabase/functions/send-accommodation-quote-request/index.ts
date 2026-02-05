@@ -164,15 +164,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create quote records for each partner
-    const quotesToCreate = partner_ids.map((partnerId) => ({
-      request_id,
-      partner_id: partnerId,
-      accommodation_name: "",
-      price_total: 0,
-      valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      status: "pending",
-    }));
+    // Create quote records for each partner with their commission percentage
+    const quotesToCreate = partner_ids.map((partnerId) => {
+      const partner = partners.find(p => p.id === partnerId);
+      return {
+        request_id,
+        partner_id: partnerId,
+        accommodation_name: "",
+        price_total: 0,
+        valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        status: "pending",
+        commission_percentage: partner?.accommodation_commission_percentage ?? 10,
+      };
+    });
 
     const { error: insertError } = await supabase
       .from("accommodation_quotes")

@@ -61,6 +61,7 @@ export type Database = {
       accommodation_quote_extras: {
         Row: {
           category: string | null
+          commission_percentage: number | null
           created_at: string | null
           description: string | null
           id: string
@@ -77,6 +78,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          commission_percentage?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -93,6 +95,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          commission_percentage?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -771,6 +774,62 @@ export type Database = {
           variables?: Json | null
         }
         Relationships: []
+      }
+      partner_extra_presets: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          partner_id: string
+          price_includes_vat: boolean | null
+          pricing_type: string
+          sort_order: number | null
+          unit_price: number
+          updated_at: string | null
+          vat_rate: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          partner_id: string
+          price_includes_vat?: boolean | null
+          pricing_type?: string
+          sort_order?: number | null
+          unit_price: number
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          partner_id?: string
+          price_includes_vat?: boolean | null
+          pricing_type?: string
+          sort_order?: number | null
+          unit_price?: number
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_extra_presets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partner_unavailability: {
         Row: {
