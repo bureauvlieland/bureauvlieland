@@ -38,6 +38,7 @@ import {
   useUpdateTemplate,
   useDeleteTemplate,
   useDeleteTemplateItem,
+  useTemplateWithItems,
 } from "@/hooks/useProgramTemplates";
 import { Loader2, Trash2, Plus, Clock, GripVertical } from "lucide-react";
 import type { ProgramTemplate, ProgramTemplateItem } from "@/types/programTemplate";
@@ -81,6 +82,10 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const isEditing = !!template;
+  
+  // Fetch live template data when editing (for real-time item updates)
+  const { data: liveTemplate } = useTemplateWithItems(isEditing ? template?.id : null);
+  const currentTemplate = liveTemplate || template;
   
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
@@ -202,11 +207,11 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
   
   const isPending = createTemplate.isPending || updateTemplate.isPending;
   
-  // Group items by day
+  // Group items by day - use currentTemplate for live data
   const itemsByDay: Record<number, ProgramTemplateItem[]> = {};
   const durationDays = form.watch("duration_days");
   for (let i = 0; i < durationDays; i++) {
-    itemsByDay[i] = template?.items?.filter(item => item.day_index === i)
+    itemsByDay[i] = currentTemplate?.items?.filter(item => item.day_index === i)
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)) || [];
   }
   
@@ -231,7 +236,7 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="general">Algemeen</TabsTrigger>
                   <TabsTrigger value="program" disabled={!isEditing}>
-                    Programma {isEditing && `(${template?.items?.length || 0})`}
+                    Programma {isEditing && `(${currentTemplate?.items?.length || 0})`}
                   </TabsTrigger>
                 </TabsList>
                 
@@ -561,14 +566,14 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
       </AlertDialog>
       
       {/* Add Item Dialog */}
-      {template && (
+      {currentTemplate && (
         <AddTemplateItemDialog
           open={addItemDialogOpen}
           onOpenChange={setAddItemDialogOpen}
-          templateId={template.id}
+          templateId={currentTemplate.id}
           dayIndex={selectedDayIndex}
           durationDays={durationDays}
-          existingBlockIds={template.items?.map(i => i.block_id) || []}
+          existingBlockIds={currentTemplate.items?.map(i => i.block_id) || []}
         />
       )}
     </>
