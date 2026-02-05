@@ -1,114 +1,193 @@
 
-# Plan: Commissiepercentages in Handleidingen + Routefix
+# Plan: Extra's Menu Item voor Logiespartners
 
 ## Samenvatting
-Twee problemen moeten worden opgelost:
-
-1. **Handleidingen pagina**: Toont hardcoded percentages (15%/10%) in plaats van de daadwerkelijke commissiepercentages van de partner
-2. **Route error**: De `PartnerYtdModule` linkt naar `/partner/facturatie` maar de correcte route is `/partner/finance`
+Een nieuw menu-item "Extra's" toevoegen aan de sidebar voor logiespartners, met een bijbehorende beheerpagina waar partners hun opgeslagen extra-sjablonen kunnen bekijken, bewerken en verwijderen.
 
 ---
 
-## 1. Handleidingen - Dynamische Commissiepercentages
+## 1. Navigatie Uitbreiden
 
 ### Huidige situatie
-In `PartnerGuides.tsx` (regel 269-278) staan vaste percentages:
-```tsx
-<span className="text-lg font-bold text-primary">15%</span>  // Activiteiten
-<span className="text-lg font-bold text-primary">10%</span>  // Logies
+De sidebar in `PartnerLayout.tsx` heeft de volgende items voor logiespartners:
+- Overzicht
+- Logies
+- Facturatie
+- Handleidingen
+- Instellingen
+
+### Wijziging
+Voeg een nieuw menu-item **"Extra's"** toe, alleen zichtbaar voor logiespartners (`accommodation` of `both`):
+
+```text
+- Overzicht
+- Logies
+- Extra's  ← NIEUW (alleen voor logiespartners)
+- Facturatie
+- Handleidingen
+- Instellingen
 ```
 
-### Oplossing
-De handleidingen pagina moet de werkelijke commissiepercentages van de ingelogde partner ophalen en tonen:
-
-**Stappen:**
-1. Fetch partnergegevens via de bestaande dashboard functie
-2. Toon de daadwerkelijke percentages in plaats van hardcoded waarden
-3. Toon alleen relevante categorieën op basis van `partner_type`
-
-**Resultaat:**
-- Activiteitenpartner ziet: "Activiteiten: 8%"
-- Logiespartner ziet: "Logies: 10%"
-- Partner met "both" ziet beide percentages
+**Icon:** `UtensilsCrossed` of `ListPlus` (van lucide-react)
 
 ---
 
-## 2. Route Error - YtdModule
+## 2. Nieuwe Pagina: PartnerExtras.tsx
 
-### Huidige situatie
-In `PartnerYtdModule.tsx` (regel 44):
-```tsx
-<Link to={`/partner/facturatie${urlSuffix}`}>
+Een beheerpagina waar partners hun opgeslagen extra-sjablonen kunnen beheren.
+
+### Functionaliteit
+- **Lijst van sjablonen** - Toon alle actieve `partner_extra_presets`
+- **Toevoegen** - Button om nieuwe preset toe te voegen
+- **Bewerken** - Klik om preset te wijzigen
+- **Verwijderen** - Optie om preset te deactiveren/verwijderen
+- **Categorie-filter** (optioneel) - Filter op F&B, Faciliteiten, Transport, Overig
+
+### UI Design
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│ Extra's                                   [+ Nieuwe Extra]    │
+│ Beheer uw standaard extra diensten voor logiesoffertes        │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────┐    │
+│ │ 🍽️ F&B (3)                                              │    │
+│ ├─────────────────────────────────────────────────────────┤    │
+│ │ Lunch (2-gangen)                                        │    │
+│ │ €22,50 per persoon                      [Bewerken] [×]  │    │
+│ │                                                          │    │
+│ │ 3-gangendiner                                           │    │
+│ │ €47,50 per persoon                      [Bewerken] [×]  │    │
+│ │                                                          │    │
+│ │ Ontbijtbuffet                                           │    │
+│ │ €18,00 per persoon                      [Bewerken] [×]  │    │
+│ └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────┐    │
+│ │ 🚗 Transport (1)                                        │    │
+│ ├─────────────────────────────────────────────────────────┤    │
+│ │ Parkeren Harlingen                                      │    │
+│ │ €150,00 vast bedrag                     [Bewerken] [×]  │    │
+│ └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-Dit is de verkeerde route. De juiste route is `/partner/finance`.
-
-### Oplossing
-Corrigeer de link naar:
-```tsx
-<Link to={`/partner/finance${urlSuffix}`}>
+### Lege state
+```text
+┌────────────────────────────────────────────────────────────────┐
+│                           📦                                    │
+│                                                                 │
+│              Nog geen extra's opgeslagen                        │
+│                                                                 │
+│  Maak sjablonen aan voor diensten die u vaak toevoegt          │
+│  aan uw logiesoffertes, zoals lunch, diner of parkeren.        │
+│                                                                 │
+│                   [+ Eerste extra aanmaken]                     │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technische Implementatie
+## 3. Technische Implementatie
+
+### Nieuwe Bestanden
+
+| Bestand | Doel |
+|---------|------|
+| `src/pages/PartnerExtras.tsx` | Beheerpagina voor extra-presets |
+| `src/components/partner-portal/PartnerExtraPresetSheet.tsx` | Sheet voor bewerken/aanmaken preset |
 
 ### Gewijzigde Bestanden
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/pages/PartnerGuides.tsx` | Ophalen en tonen van daadwerkelijke commissiepercentages |
-| `src/components/partner-portal/PartnerYtdModule.tsx` | Route fix naar `/partner/finance` |
+| `src/components/partner-portal/PartnerLayout.tsx` | Menu-item toevoegen |
+| `src/App.tsx` | Route toevoegen |
+| `src/hooks/usePartnerExtraPresets.ts` | Filter op partner_id toevoegen, update functie |
 
-### PartnerGuides.tsx Wijzigingen
-
-1. Voeg state en useEffect toe om partnergegevens op te halen
-2. Vervang hardcoded percentages door dynamische waarden
-3. Toon alleen relevante categorieën op basis van partner type
-
-**Nieuw data-ophalen:**
+### Route
 ```tsx
-const [partnerData, setPartnerData] = useState<{
-  commission_percentage: number;
-  accommodation_commission_percentage?: number;
-  partner_type?: string;
-} | null>(null);
-
-useEffect(() => {
-  // Fetch partner data van get-partner-dashboard
-  // Of direct van partners tabel via RLS
-}, []);
+// In App.tsx
+<Route path="/partner/extras" element={<PartnerExtras />} />
 ```
 
-**Dynamische weergave:**
+### Menu Item
 ```tsx
-{/* Toon activiteiten commissie indien relevant */}
-{(!partnerData?.partner_type || partnerData.partner_type !== 'accommodation') && (
-  <div className="flex justify-between items-center">
-    <span className="font-medium">Activiteiten</span>
-    <span className="text-lg font-bold text-primary">
-      {partnerData?.commission_percentage ?? 15}%
-    </span>
-  </div>
-)}
+// In PartnerLayout.tsx menuItems array
+...(isAccommodationPartner ? [
+  { title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble },
+  { title: "Extra's", url: `/partner/extras${urlSuffix}`, icon: UtensilsCrossed },
+] : []),
+```
 
-{/* Toon logies commissie indien relevant */}
-{(partnerData?.partner_type === 'accommodation' || partnerData?.partner_type === 'both') && (
-  <div className="flex justify-between items-center">
-    <span className="font-medium">Logies</span>
-    <span className="text-lg font-bold text-primary">
-      {partnerData?.accommodation_commission_percentage ?? 10}%
-    </span>
-  </div>
-)}
+### Hook Update
+De bestaande `usePartnerExtraPresets` hook moet uitgebreid worden met:
+1. Filter op specifieke `partner_id`
+2. Update mutation voor bewerken van presets
+
+```tsx
+export function usePartnerExtraPresets(partnerId?: string) {
+  return useQuery({
+    queryKey: ['partner-extra-presets', partnerId],
+    queryFn: async () => {
+      let query = supabase
+        .from('partner_extra_presets')
+        .select('*')
+        .eq('is_active', true)
+        .order('category', { ascending: true })
+        .order('sort_order', { ascending: true });
+
+      if (partnerId) {
+        query = query.eq('partner_id', partnerId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as PartnerExtraPreset[];
+    },
+    enabled: !!partnerId,
+  });
+}
+
+export function useUpdatePartnerExtraPreset() {
+  // ... update mutation
+}
 ```
 
 ---
 
-## Resultaat
+## 4. Sheet Component
+
+De `PartnerExtraPresetSheet` is vergelijkbaar met `AddQuoteExtraDialog`, maar dan voor het beheren van presets:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Extra bewerken                                         [✕]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│ Naam: [Lunch                     ]                          │
+│ Omschrijving: [2-gangenmenu met soep/brood        ]        │
+│                                                              │
+│ Categorie: [F&B ▾]                                          │
+│                                                              │
+│ Prijstype: ○ Per persoon  ● Vast bedrag                     │
+│                                                              │
+│ Prijs: [€ 22,50]                                            │
+│                                                              │
+│ BTW: [9 %]  ☑ Inclusief BTW                                 │
+│                                                              │
+│                              [Annuleren] [Opslaan]          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Resultaat
 
 Na implementatie:
-- Handleidingen toont de juiste commissiepercentages per partner (8%/10% in jouw geval)
-- Commissiepercentages worden alleen getoond voor relevante diensten (activiteiten en/of logies)
-- YtdModule navigeert correct naar de facturatiepagina zonder error
-- Consistentie tussen Instellingen en Handleidingen pagina's
+- Logiespartners zien een "Extra's" menu-item in de sidebar
+- Partners kunnen hun standaard extra-diensten beheren op een centrale plek
+- Presets zijn beschikbaar bij het invullen van nieuwe logiesoffertes
+- Consistente UI met de rest van de partner portal
