@@ -13,7 +13,6 @@ import {
   Target,
   Sparkles,
   Building2,
-  Heart,
   PartyPopper,
   Briefcase,
   Home,
@@ -22,6 +21,9 @@ import {
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { TemplateSelector } from "./TemplateSelector";
+import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
+import type { ProgramTemplate } from "@/types/programTemplate";
 
 export type ProgramType = 
   | "teamuitje" 
@@ -82,21 +84,28 @@ interface WizardData {
   numberOfPeople: number;
   selectedDates: Date[];
   wantsAccommodation: boolean | null;
+  selectedTemplate: ProgramTemplate | null;
 }
 
 interface ConfiguratorWizardProps {
   onComplete: (data: WizardData) => void;
+  onTemplateSelected: (template: ProgramTemplate, data: WizardData) => void;
   initialData?: Partial<WizardData>;
 }
 
-export const ConfiguratorWizard = ({ onComplete, initialData }: ConfiguratorWizardProps) => {
+export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData }: ConfiguratorWizardProps) => {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>({
     programType: initialData?.programType ?? null,
     numberOfPeople: initialData?.numberOfPeople ?? 20,
     selectedDates: initialData?.selectedDates ?? [],
     wantsAccommodation: initialData?.wantsAccommodation ?? null,
+    selectedTemplate: null,
   });
+  const [pendingTemplate, setPendingTemplate] = useState<ProgramTemplate | null>(null);
+
+  // Fetch full template with items when a template is selected
+  const { data: fullTemplate } = useTemplateWithItems(pendingTemplate?.id || null);
 
   const minDate = addDays(new Date(), 7);
   const isMultiDay = data.selectedDates.length > 1;
@@ -105,10 +114,32 @@ export const ConfiguratorWizard = ({ onComplete, initialData }: ConfiguratorWiza
   const canProceedStep2 = data.numberOfPeople >= 8 && data.selectedDates.length > 0;
   const canProceedStep3 = data.wantsAccommodation !== null;
 
+  // When full template is loaded, trigger the callback
+  const handleTemplateLoaded = (template: ProgramTemplate) => {
+    if (fullTemplate && fullTemplate.id === template.id) {
+      onTemplateSelected(fullTemplate, data);
+    } else {
+      setPendingTemplate(template);
+    }
+  };
+
+  // Effect to handle when fullTemplate loads
+  if (fullTemplate && pendingTemplate && fullTemplate.id === pendingTemplate.id) {
+    setPendingTemplate(null);
+    onTemplateSelected(fullTemplate, data);
+  }
+
   const handleNext = () => {
-    if (step === 2 && !isMultiDay) {
-      // Skip accommodation question for single-day
-      onComplete({ ...data, wantsAccommodation: false });
+    if (step === 2) {
+      // After step 2, go to template selection (step 2.5)
+      setStep(2.5);
+    } else if (step === 2.5) {
+      // From template selection, skip if they chose "start empty" - handled by onStartEmpty
+      if (isMultiDay) {
+        setStep(3);
+      } else {
+        onComplete({ ...data, wantsAccommodation: false });
+      }
     } else if (step === 3) {
       onComplete(data);
     } else {
@@ -117,7 +148,21 @@ export const ConfiguratorWizard = ({ onComplete, initialData }: ConfiguratorWiza
   };
 
   const handleBack = () => {
-    setStep(step - 1);
+    if (step === 2.5) {
+      setStep(2);
+    } else if (step === 3) {
+      setStep(2.5);
+    } else {
+      setStep(step - 1);
+    }
+  };
+
+  const handleStartEmpty = () => {
+    if (isMultiDay) {
+      setStep(3);
+    } else {
+      onComplete({ ...data, wantsAccommodation: false });
+    }
   };
 
   const handleDateSelect = (dates: Date[] | undefined) => {
@@ -128,7 +173,14 @@ export const ConfiguratorWizard = ({ onComplete, initialData }: ConfiguratorWiza
     }
   };
 
-  const totalSteps = isMultiDay || step < 2 ? 3 : 2;
+  // Calculate progress step for indicator
+  const getProgressStep = () => {
+    if (step <= 1) return 1;
+    if (step <= 2.5) return 2;
+    return 3;
+  };
+
+  const progressStep = getProgressStep();
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -139,8 +191,8 @@ export const ConfiguratorWizard = ({ onComplete, initialData }: ConfiguratorWiza
             key={s}
             className={cn(
               "h-2 rounded-full transition-all duration-300",
-              s === step ? "w-12 bg-primary" : "w-8",
-              s < step ? "bg-primary/60" : s > step ? "bg-muted" : ""
+              s === progressStep ? "w-12 bg-primary" : "w-8",
+              s < progressStep ? "bg-primary/60" : s > progressStep ? "bg-muted" : ""
             )}
           />
         ))}
@@ -324,11 +376,22 @@ export const ConfiguratorWizard = ({ onComplete, initialData }: ConfiguratorWiza
               className="gap-2"
               size="lg"
             >
-              {isMultiDay ? "Volgende" : "Naar het aanbod"}
+              Volgende
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Step 2.5: Template Selection */}
+      {step === 2.5 && (
+        <TemplateSelector
+          durationDays={data.selectedDates.length}
+          numberOfPeople={data.numberOfPeople}
+          onSelectTemplate={handleTemplateLoaded}
+          onStartEmpty={handleStartEmpty}
+          onBack={handleBack}
+        />
       )}
 
       {/* Step 3: Accommodation (only for multi-day) */}

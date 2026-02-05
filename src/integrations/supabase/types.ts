@@ -1211,6 +1211,99 @@ export type Database = {
           },
         ]
       }
+      program_template_items: {
+        Row: {
+          block_id: string
+          created_at: string | null
+          day_index: number
+          id: string
+          notes: string | null
+          preferred_time: string | null
+          sort_order: number | null
+          template_id: string
+        }
+        Insert: {
+          block_id: string
+          created_at?: string | null
+          day_index?: number
+          id?: string
+          notes?: string | null
+          preferred_time?: string | null
+          sort_order?: number | null
+          template_id: string
+        }
+        Update: {
+          block_id?: string
+          created_at?: string | null
+          day_index?: number
+          id?: string
+          notes?: string | null
+          preferred_time?: string | null
+          sort_order?: number | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_template_items_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "building_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "program_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_days: number
+          id: string
+          image_url: string | null
+          indicative_price_pp: number | null
+          is_published: boolean | null
+          name: string
+          short_description: string | null
+          sort_order: number | null
+          target_group: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_days: number
+          id: string
+          image_url?: string | null
+          indicative_price_pp?: number | null
+          is_published?: boolean | null
+          name: string
+          short_description?: string | null
+          sort_order?: number | null
+          target_group?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_days?: number
+          id?: string
+          image_url?: string | null
+          indicative_price_pp?: number | null
+          is_published?: boolean | null
+          name?: string
+          short_description?: string | null
+          sort_order?: number | null
+          target_group?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       shared_programs: {
         Row: {
           cart_items: Json

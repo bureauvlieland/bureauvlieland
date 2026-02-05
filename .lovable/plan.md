@@ -1,8 +1,16 @@
 
 # Plan: Voorbeeldprogramma's / Arrangementen Systeem
 
+## Status: ✅ GEÏMPLEMENTEERD
+
 ## Samenvatting
-Een template-systeem bouwen waarmee vooraf samengestelde programma's (1-daags, 2-daags, 3-daags) in één klik geladen kunnen worden in de configurator. Dit versnelt het offerte-proces voor klanten en maakt maatwerkvoorstellen door Bureau Vlieland eenvoudiger.
+Een template-systeem bouwen waarmee vooraf samengestelde programma's (1-daags, 2-daags, 3-daags) in één klik geladen kunnen worden in de configurator.
+
+---
+
+## Volgende Stap: Template Items Vullen
+
+De 3 templates zijn aangemaakt maar de `program_template_items` moeten nog gevuld worden met de daadwerkelijke building block IDs. Dit vereist het invoeren van de juiste block_id's via een migratie.
 
 ---
 

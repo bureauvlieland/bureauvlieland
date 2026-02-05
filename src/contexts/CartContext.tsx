@@ -4,6 +4,8 @@ import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
 import { trackAddToCart, trackRemoveFromCart } from "@/lib/analytics";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { DEFAULT_GROUP_SIZE } from "@/lib/appSettings";
+import type { ProgramTemplate } from "@/types/programTemplate";
+import { loadTemplateToCart } from "@/lib/templateLoader";
 
 const MAX_DAYS = 7;
 
@@ -28,6 +30,7 @@ interface CartContextType {
   hasPendingDraft: boolean;
   pendingDraft: DraftProgram | null;
   dismissDraft: () => void;
+  loadFromTemplate: (template: ProgramTemplate, startDate: Date, numberOfPeople: number) => void;
   // Legacy compatibility
   selectedDate: Date | undefined;
   setSelectedDate: (date: Date | undefined) => void;
@@ -219,6 +222,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return cartItems.some(item => item.blockId === blockId);
   }, [cartItems]);
 
+  // Load a template into the cart
+  const loadFromTemplate = useCallback((
+    template: ProgramTemplate,
+    startDate: Date,
+    numberOfPeople: number
+  ) => {
+    loadTemplateToCart(template, {
+      clearCart,
+      setSelectedDate: (date) => {
+        if (date) {
+          setSelectedDates([date]);
+        } else {
+          setSelectedDates([]);
+        }
+      },
+      addDate: (date) => {
+        setSelectedDates(prev => [...prev, date].sort((a, b) => a.getTime() - b.getTime()));
+        return true;
+      },
+      addToCart,
+      updateItem,
+      setNumberOfPeople,
+    }, startDate, numberOfPeople);
+  }, [clearCart, addToCart, updateItem, setNumberOfPeople]);
+
   // Legacy compatibility: first date as selectedDate
   const selectedDate = selectedDates.length > 0 ? selectedDates[0] : undefined;
   
@@ -258,6 +286,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         hasPendingDraft,
         pendingDraft: draft,
         dismissDraft,
+        loadFromTemplate,
         // Legacy
         selectedDate,
         setSelectedDate,

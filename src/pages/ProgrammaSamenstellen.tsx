@@ -23,6 +23,7 @@ import { ArrowLeft, Save, Loader2, Settings2 } from "lucide-react";
 import heroImage from "@/assets/beach-signs.jpg";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
+import type { ProgramTemplate } from "@/types/programTemplate";
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
@@ -54,6 +55,7 @@ const ProgrammaSamenstellen = () => {
     restoreDraft,
     dismissDraft,
     clearCart,
+    loadFromTemplate,
   } = useCart();
 
   // Wizard state
@@ -98,7 +100,7 @@ const ProgrammaSamenstellen = () => {
     setShowWizard(true);
   };
 
-  // Handle wizard completion
+  // Handle wizard completion (empty start)
   const handleWizardComplete = (data: {
     programType: ProgramType | null;
     numberOfPeople: number;
@@ -142,6 +144,30 @@ const ProgrammaSamenstellen = () => {
       title: "Gegevens opgeslagen",
       description: "Kies nu de onderdelen voor uw programma.",
       duration: 3000,
+    });
+  };
+
+  // Handle template selection from wizard
+  const handleTemplateSelected = (
+    template: ProgramTemplate,
+    wizardData: {
+      programType: ProgramType | null;
+      numberOfPeople: number;
+      selectedDates: Date[];
+      wantsAccommodation: boolean | null;
+    }
+  ) => {
+    // Load template into cart
+    const startDate = wizardData.selectedDates[0] || new Date();
+    loadFromTemplate(template, startDate, wizardData.numberOfPeople);
+    
+    setProgramType(wizardData.programType);
+    setShowWizard(false);
+
+    toast({
+      title: `"${template.name}" geladen`,
+      description: "U kunt het programma nu naar wens aanpassen.",
+      duration: 4000,
     });
   };
 
@@ -244,6 +270,7 @@ const ProgrammaSamenstellen = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
               <ConfiguratorWizard 
                 onComplete={handleWizardComplete}
+                onTemplateSelected={handleTemplateSelected}
                 initialData={{
                   numberOfPeople,
                   selectedDates,
