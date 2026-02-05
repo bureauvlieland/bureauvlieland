@@ -1,336 +1,249 @@
 
-# Plan: Voorbeeldprogramma's / Arrangementen Systeem
-
-## Status: ✅ GEÏMPLEMENTEERD
+# Plan: Admin Beheer voor Programma Templates
 
 ## Samenvatting
-Een template-systeem bouwen waarmee vooraf samengestelde programma's (1-daags, 2-daags, 3-daags) in één klik geladen kunnen worden in de configurator.
+Een admin-pagina bouwen waarmee Bureau Vlieland programma templates kan aanmaken, bewerken en beheren. Templates tonen afbeeldingen van de gekoppelde building blocks voor een visueel aantrekkelijk overzicht.
 
 ---
 
-## Volgende Stap: Template Items Vullen
+## 1. Nieuwe Admin Pagina
 
-De 3 templates zijn aangemaakt maar de `program_template_items` moeten nog gevuld worden met de daadwerkelijke building block IDs. Dit vereist het invoeren van de juiste block_id's via een migratie.
+### `src/pages/admin/AdminTemplates.tsx`
 
----
-
-## 1. Voorgestelde Arrangementen
-
-### 🏖️ Eilanddag Compleet (1 dag)
-*Actief dagprogramma met lunch, activiteit en borrel*
-
-| Tijd | Onderdeel | Block ID |
-|------|-----------|----------|
-| 10:00 | Overtocht Doeksen | `boot-retour` |
-| 10:30 | Fietshuur | `fiets-huur` |
-| 12:30 | Lunch in de natuur | `lunch-strand` |
-| 14:00 | Beach Games | `beach-games` |
-| 16:30 | Borrel & Hapjes | `borrel` |
-
----
-
-### 🌅 Avontuur & Ontspanning (2 dagen)
-
-**Dag 1:**
-| Tijd | Onderdeel | Block ID |
-|------|-----------|----------|
-| 10:00 | RescueBoat Transfer | `rescueboat` |
-| 10:30 | Fietshuur | `fiets-huur` |
-| 12:30 | Luxe Lunchbuffet | `luxe-lunch` |
-| 14:30 | Blokarten | `voc-blokarten` |
-| 19:00 | Sunset Dinner | `sunset-dinner` |
-
-**Dag 2:**
-| Tijd | Onderdeel | Block ID |
-|------|-----------|----------|
-| 10:00 | Zeehondentocht | `zeehondentocht` |
-| 12:30 | Lunch in de natuur | `lunch-strand` |
-| 14:30 | SUP (Stand Up Paddle) | `voc-sup` |
-| 16:00 | Borrel & Hapjes | `borrel` |
-| 17:00 | Overtocht retour | `boot-retour` |
-
----
-
-### 🏝️ Complete Eilandervaring (3 dagen)
-
-**Dag 1:**
-| Tijd | Onderdeel | Block ID |
-|------|-----------|----------|
-| 10:00 | RescueBoat Transfer | `rescueboat` |
-| 10:30 | Fietshuur | `fiets-huur` |
-| 12:30 | Luxe Lunchbuffet | `luxe-lunch` |
-| 14:30 | Fietstocht met begeleiding | `fietstocht-met-begeleiding` |
-| 19:00 | Sunset Dinner | `sunset-dinner` |
-
-**Dag 2:**
-| Tijd | Onderdeel | Block ID |
-|------|-----------|----------|
-| 10:00 | Vliehors Expres | `vliehors-expres` |
-| 12:30 | Strand BBQ | `strand-bbq` |
-| 14:30 | Beach Games | `beach-games` |
-| 16:30 | Borrel & Hapjes | `borrel` |
-
-**Dag 3:**
-| Tijd | Onderdeel | Block ID |
-|------|-----------|----------|
-| 09:30 | Zeehondentocht | `zeehondentocht` |
-| 12:00 | Lunch in de natuur | `lunch-strand` |
-| 14:00 | Surfles | `surfen` |
-| 16:30 | Borrel & Hapjes | `borrel` |
-| 17:30 | Overtocht retour | `boot-retour` |
-
----
-
-## 2. Technische Implementatie
-
-### Database Schema
-
-**Nieuwe tabel: `program_templates`**
-```sql
-CREATE TABLE program_templates (
-  id TEXT PRIMARY KEY,           -- bijv. "eilanddag-compleet"
-  name TEXT NOT NULL,            -- "Eilanddag Compleet"
-  description TEXT,              -- Lange omschrijving
-  short_description TEXT,        -- Korte tagline
-  duration_days INTEGER NOT NULL, -- 1, 2 of 3
-  target_group TEXT,             -- 'bedrijf', 'familie', 'algemeen'
-  image_url TEXT,                -- Afbeelding voor preview
-  indicative_price_pp DECIMAL,   -- Indicatieprijs p.p. (optioneel)
-  is_published BOOLEAN DEFAULT false,
-  sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- RLS: Iedereen mag published templates lezen, admin mag alles
-ALTER TABLE program_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Published templates readable" ON program_templates
-  FOR SELECT USING (is_published = true);
-CREATE POLICY "Admin full access" ON program_templates
-  FOR ALL USING (public.is_admin(auth.uid()));
-```
-
-**Nieuwe tabel: `program_template_items`**
-```sql
-CREATE TABLE program_template_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id TEXT REFERENCES program_templates(id) ON DELETE CASCADE,
-  block_id TEXT REFERENCES building_blocks(id),
-  day_index INTEGER NOT NULL DEFAULT 0,  -- 0 = dag 1, 1 = dag 2, etc.
-  preferred_time TEXT,                    -- "10:00", "12:30", etc.
-  notes TEXT,                             -- Optionele notitie
-  sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE program_template_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Readable via template" ON program_template_items
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM program_templates 
-      WHERE id = template_id AND is_published = true
-    )
-  );
-CREATE POLICY "Admin full access" ON program_template_items
-  FOR ALL USING (public.is_admin(auth.uid()));
-```
-
----
-
-### Nieuwe Bestanden
-
-**1. `src/types/programTemplate.ts`**
-Type definities voor templates:
-```typescript
-export interface ProgramTemplate {
-  id: string;
-  name: string;
-  description: string | null;
-  short_description: string | null;
-  duration_days: number;
-  target_group: string | null;
-  image_url: string | null;
-  indicative_price_pp: number | null;
-  is_published: boolean;
-  sort_order: number;
-  items?: ProgramTemplateItem[];
-}
-
-export interface ProgramTemplateItem {
-  id: string;
-  template_id: string;
-  block_id: string;
-  day_index: number;
-  preferred_time: string | null;
-  notes: string | null;
-  sort_order: number;
-  // Joined data
-  block?: BuildingBlock;
-}
-```
-
-**2. `src/hooks/useProgramTemplates.ts`**
-React Query hooks:
-- `usePublishedTemplates()` - Templates ophalen voor klanten
-- `useTemplateWithItems(id)` - Enkele template met items ophalen
-- (Later) Admin CRUD hooks
-
-**3. `src/lib/templateLoader.ts`**
-Helper om template in cart te laden:
-```typescript
-export const loadTemplateToCart = (
-  template: ProgramTemplate,
-  cartContext: CartContextType,
-  startDate: Date
-) => {
-  // 1. Wis huidige cart
-  cartContext.clearCart();
-  
-  // 2. Voeg datums toe (startDate + duration_days - 1)
-  for (let i = 0; i < template.duration_days; i++) {
-    const date = addDays(startDate, i);
-    if (i === 0) {
-      cartContext.setSelectedDate(date);
-    } else {
-      cartContext.addDate(date);
-    }
-  }
-  
-  // 3. Voeg alle items toe met correcte dag en tijd
-  template.items?.forEach(item => {
-    cartContext.addToCart(item.block_id, item.day_index);
-    if (item.preferred_time) {
-      cartContext.updateItem(item.block_id, {
-        preferredTime: item.preferred_time,
-        notes: item.notes || ""
-      });
-    }
-  });
-};
-```
-
----
-
-### UI Componenten
-
-**4. `src/components/configurator/TemplateSelector.tsx`**
-Modal/Sheet voor template selectie na stap 2 in de wizard:
+Overzichtspagina vergelijkbaar met AdminBuildingBlocks:
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│  Begin met een voorbeeldprogramma                            │
-│  Of start met een leeg programma en stel zelf samen          │
-├──────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌─────────────────────┐  ┌─────────────────────┐            │
-│  │ [afbeelding]        │  │ [afbeelding]        │            │
-│  │                     │  │                     │            │
-│  │ Eilanddag Compleet  │  │ Avontuur &          │            │
-│  │ 1 dag | ~€75 p.p.   │  │ Ontspanning         │            │
-│  │                     │  │ 2 dagen | ~€195 p.p.│            │
-│  │ Actief dagprogramma │  │                     │            │
-│  │ met lunch, activit  │  │ Spectaculaire over- │            │
-│  │ eit en borrel       │  │ steek, outdoor...   │            │
-│  │                     │  │                     │            │
-│  │ [Bekijk] [Gebruik]  │  │ [Bekijk] [Gebruik]  │            │
-│  └─────────────────────┘  └─────────────────────┘            │
-│                                                               │
-│  ┌─────────────────────┐                                     │
-│  │ [afbeelding]        │                                     │
-│  │                     │                                     │
-│  │ Complete Eiland-    │      ┌─────────────────────────┐   │
-│  │ ervaring            │      │  ✨ Start leeg          │   │
-│  │ 3 dagen | ~€345 p.p.│      │  Stel je eigen         │   │
-│  │                     │      │  programma samen       │   │
-│  │ Drie dagen vol...   │      └─────────────────────────┘   │
-│  │                     │                                     │
-│  │ [Bekijk] [Gebruik]  │                                     │
-│  └─────────────────────┘                                     │
-│                                                               │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  📋 Programma Templates                               [+ Nieuwe template] │
+├──────────────────────────────────────────────────────────────────────────┤
+│  [Zoeken...]          [Filter: Alle duurtes ▾]    [Status: Alle ▾]      │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  ┌───────────────────────────────────────────────────────────────────┐   │
+│  │ [afbeelding] │ Eilanddag Compleet          │ 1 dag │ ✓ │ [Edit]  │   │
+│  │              │ Actief dagprogramma...      │ 5 items │            │   │
+│  │              │ 🏖️ 🚴 🍽️ 🏐 🍺              │        │            │   │
+│  ├───────────────────────────────────────────────────────────────────┤   │
+│  │ [afbeelding] │ Avontuur & Ontspanning      │ 2 dagen │ ✓ │ [Edit] │   │
+│  │              │ Twee dagen actie...         │ 10 items │            │   │
+│  │              │ 🚤 🚴 🍽️ 🏎️ 🌅 🦭 🏄          │        │            │   │
+│  ├───────────────────────────────────────────────────────────────────┤   │
+│  │ [afbeelding] │ Complete Eilandervaring     │ 3 dagen │ ○ │ [Edit] │   │
+│  │              │ Drie dagen vol avontuur...  │ 14 items │            │   │
+│  │              │ 🚤 🚴 🍽️ 🚜 🌅 🏖️ 🦭 🏄        │        │            │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│                                                                           │
+│  3 templates • 2 gepubliceerd • 1 concept                                │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**5. `src/components/configurator/TemplatePreviewSheet.tsx`**
-Sheet om template inhoud te bekijken voordat je kiest:
-- Toont alle activiteiten per dag
-- Tijdlijn-weergave
-- Indicatieve prijs berekening
-- "Gebruik dit programma" knop
+**Kenmerken:**
+- Tabel met template naam, beschrijving, duur, aantal items
+- Miniatuur-afbeeldingen van de eerste 3-5 building blocks als preview
+- Publicatie-toggle per template
+- Filter op duur (1/2/3 dagen) en status (gepubliceerd/concept)
 
 ---
 
-### Integratie in ConfiguratorWizard
+## 2. Template Bewerk Sheet
 
-**Wijziging: `src/components/configurator/ConfiguratorWizard.tsx`**
+### `src/components/admin/AdminTemplateSheet.tsx`
 
-Nieuwe optionele stap 2.5 (tussen datum en logies-vraag):
-- Na stap 2 (datum/personen) toon TemplateSelector
-- Gefilterd op `duration_days` die past bij geselecteerde dagen
-- Gebruiker kan kiezen:
-  - **Template gebruiken**: Laadt template in cart, ga naar programma-overzicht
-  - **Start leeg**: Ga door naar logies-vraag (zoals nu)
+Sheet om template details en items te beheren:
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  Template bewerken                                        [✕]   │
+├──────────────────────────────────────────────────────────────────┤
+│  [Algemeen] [Programma]                                         │
+│                                                                  │
+│  === TAB: Algemeen ===                                          │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ ID: [eilanddag-compleet         ]                        │   │
+│  │ Naam: [Eilanddag Compleet       ]                        │   │
+│  │ Korte beschrijving: [Actief dagprogramma met lunch...]   │   │
+│  │ Lange beschrijving: [Textarea...]                        │   │
+│  │ Duur: [1 ▾] dagen                                        │   │
+│  │ Doelgroep: [Bedrijf ▾]                                   │   │
+│  │ Indicatieve prijs p.p.: [75    ]                         │   │
+│  │ Afbeelding: [Kies uit media ▾] of [Upload]              │   │
+│  │ Gepubliceerd: [○→●]                                      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  === TAB: Programma ===                                         │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Dag 1                                                     │   │
+│  │ ├─ [10:00] 🚢 Overtocht Doeksen         [⋮] [✕]          │   │
+│  │ ├─ [10:30] 🚴 Fietshuur                 [⋮] [✕]          │   │
+│  │ ├─ [12:30] 🍽️ Lunch in de natuur        [⋮] [✕]          │   │
+│  │ ├─ [14:00] 🏐 Beach Games               [⋮] [✕]          │   │
+│  │ └─ [16:30] 🍺 Borrel & Hapjes           [⋮] [✕]          │   │
+│  │                                                           │   │
+│  │ [+ Bouwsteen toevoegen]                                   │   │
+│  │                                                           │   │
+│  │ ─────────────────────────────────────────────────────     │   │
+│  │ Dag 2 (indien 2+ dagen)                                   │   │
+│  │ ├─ ...                                                    │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  [Verwijderen]                              [Annuleren] [Opslaan]│
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tab Algemeen:**
+- Basis metadata (naam, beschrijving, duur)
+- Indicatieve prijs per persoon
+- Afbeelding via MediaPickerDialog
+- Publicatiestatus
+
+**Tab Programma:**
+- Per dag de gekoppelde building blocks weergeven
+- Elke item toont: tijd, afbeelding (thumbnail), naam
+- Drag-and-drop voor volgorde (optioneel, later)
+- Verwijder-knop per item
+- "Bouwsteen toevoegen" opent selectie-dialoog
 
 ---
 
-### Seed Data
+## 3. Bouwsteen Toevoegen Dialoog
 
-De 3 arrangementen worden als seed data ingevoerd bij de migratie:
+### `src/components/admin/AddTemplateItemDialog.tsx`
 
-```sql
--- Templates
-INSERT INTO program_templates (id, name, short_description, description, duration_days, is_published, sort_order) VALUES
-('eilanddag-compleet', 'Eilanddag Compleet', 'Actief dagprogramma met lunch, activiteit en borrel', 'Een complete dag Vlieland met overtocht, fietsen, lunch op een spectaculaire locatie, strandactiviteiten en afsluiting met borrel.', 1, true, 1),
-('avontuur-ontspanning', 'Avontuur & Ontspanning', 'Twee dagen actie en genieten', 'Spectaculaire RescueBoat overtocht, outdoor activiteiten, zeehondentocht en culinaire verwennerij.', 2, true, 2),
-('complete-eilandervaring', 'Complete Eilandervaring', 'Drie dagen vol avontuur', 'Het ultieme Vlieland programma: alle hoogtepunten in drie dagen.', 3, true, 3);
+Dialoog om een building block toe te voegen aan een template:
 
--- Template items (per template)
-INSERT INTO program_template_items (template_id, block_id, day_index, preferred_time, sort_order) VALUES
--- Eilanddag Compleet
-('eilanddag-compleet', 'boot-retour', 0, '10:00', 1),
-('eilanddag-compleet', 'fiets-huur', 0, '10:30', 2),
-('eilanddag-compleet', 'lunch-strand', 0, '12:30', 3),
-('eilanddag-compleet', 'beach-games', 0, '14:00', 4),
-('eilanddag-compleet', 'borrel', 0, '16:30', 5),
--- ... etc voor andere templates
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Bouwsteen toevoegen                                   [✕]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  [Zoeken...]                                                │
+│                                                              │
+│  ┌─ Outdoor & Sport ────────────────────────────────────┐   │
+│  │ [img] Beach Games           ○                        │   │
+│  │ [img] Blokarten             ○                        │   │
+│  │ [img] SUP                   ●                        │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌─ Excursies ──────────────────────────────────────────┐   │
+│  │ [img] Zeehondentocht        ○                        │   │
+│  │ [img] Vliehors Expres       ○                        │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ...                                                         │
+│                                                              │
+│  Dag: [Dag 1 ▾]     Tijd: [14:00]                           │
+│                                                              │
+│                               [Annuleren] [Toevoegen]        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Kenmerken:**
+- Zoeken in building blocks
+- Gegroepeerd per categorie
+- Afbeelding thumbnail per block
+- Dag-selectie en tijd-invoer
+
+---
+
+## 4. Hooks Uitbreiden
+
+### `src/hooks/useProgramTemplates.ts` (aanvullen)
+
+Toevoegen:
+
+```typescript
+// Admin: Alle templates ophalen (inclusief unpublished)
+export const useAdminTemplates = () => { ... };
+
+// Template aanmaken
+export const useCreateTemplate = () => { ... };
+
+// Template bijwerken
+export const useUpdateTemplate = () => { ... };
+
+// Template verwijderen
+export const useDeleteTemplate = () => { ... };
+
+// Template item toevoegen
+export const useAddTemplateItem = () => { ... };
+
+// Template item bijwerken
+export const useUpdateTemplateItem = () => { ... };
+
+// Template item verwijderen  
+export const useDeleteTemplateItem = () => { ... };
+
+// Publicatie toggle
+export const useToggleTemplatePublish = () => { ... };
 ```
 
 ---
 
-## 3. Fasering
+## 5. Navigatie Toevoegen
 
-### Fase 1 (Dit plan)
-1. ✅ Database tabellen aanmaken met RLS
-2. ✅ 3 templates als seed data invoeren
-3. ✅ Types en hooks voor templates
-4. ✅ Template loader utility
-5. ✅ TemplateSelector component
-6. ✅ TemplatePreviewSheet component
-7. ✅ Integreren in ConfiguratorWizard
+### `src/components/admin/AdminLayout.tsx`
 
-### Fase 2 (Later)
-- Admin interface voor template beheer
-- Templates aanmaken/bewerken met drag-and-drop
-- Meer templates toevoegen (rustig alternatief, familieweekend, etc.)
-- Templates koppelen aan landingspagina's
+Menu-item toevoegen:
+
+```typescript
+const menuItems = [
+  // ... bestaande items
+  { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+  { title: "Templates", url: "/admin/templates", icon: LayoutTemplate }, // NIEUW
+  { title: "Media", url: "/admin/media", icon: ImageIcon },
+  // ...
+];
+```
+
+### `src/App.tsx`
+
+Route toevoegen:
+
+```typescript
+import AdminTemplates from "./pages/admin/AdminTemplates";
+
+// In Routes:
+<Route path="/admin/templates" element={<AdminTemplates />} />
+```
 
 ---
 
-## 4. Wijzigingen Bestaande Bestanden
+## 6. Afbeeldingen uit Building Blocks
 
-| Bestand | Wijziging |
-|---------|-----------|
-| `src/contexts/CartContext.tsx` | `loadFromTemplate()` functie toevoegen |
-| `src/components/configurator/ConfiguratorWizard.tsx` | Template-keuze stap toevoegen |
-| `src/integrations/supabase/types.ts` | Automatisch bijgewerkt na migratie |
+De template preview sheet en admin overzicht tonen automatisch afbeeldingen van de gekoppelde building blocks:
+
+**In TemplatePreviewSheet (public):**
+- Al geïmplementeerd via `getBlockImage(block)`
+
+**In AdminTemplates (admin overzicht):**
+- Per template de eerste 3-4 block afbeeldingen als "collage"
+- Gebruik `getBlockImage()` utility
+
+**In AdminTemplateSheet (admin bewerken):**
+- Elke template item toont thumbnail van de building block
+- Thumbnail komt uit `block.image_url` of `getBlockImage(block)`
 
 ---
 
-## 5. Resultaat
+## 7. Bestanden Samenvatting
+
+| Nieuw Bestand | Doel |
+|---------------|------|
+| `src/pages/admin/AdminTemplates.tsx` | Overzichtspagina templates |
+| `src/components/admin/AdminTemplateSheet.tsx` | Template bewerk-sheet |
+| `src/components/admin/AddTemplateItemDialog.tsx` | Bouwsteen toevoegen dialoog |
+
+| Aangepast Bestand | Wijziging |
+|-------------------|-----------|
+| `src/hooks/useProgramTemplates.ts` | Admin CRUD hooks toevoegen |
+| `src/components/admin/AdminLayout.tsx` | Menu-item toevoegen |
+| `src/App.tsx` | Route toevoegen |
+
+---
+
+## 8. Resultaat
 
 Na implementatie:
-- ✅ Klanten kunnen bij start kiezen uit 3 voorbeeldprogramma's
-- ✅ Met één klik wordt het complete programma geladen in de configurator
-- ✅ Klanten kunnen daarna nog aanpassen wat ze willen
-- ✅ Templates worden gefilterd op aantal geselecteerde dagen
-- ✅ Bureau Vlieland kan later via admin templates beheren
-- ✅ Indicatieve prijzen worden getoond
+- Bureau Vlieland kan templates aanmaken en beheren via admin
+- Templates tonen visueel de gekoppelde bouwstenen met afbeeldingen  
+- Per dag kunnen bouwstenen worden toegevoegd met tijd
+- Publicatie-toggle om templates zichtbaar te maken voor klanten
+- Afbeeldingen worden automatisch getoond uit de building blocks
