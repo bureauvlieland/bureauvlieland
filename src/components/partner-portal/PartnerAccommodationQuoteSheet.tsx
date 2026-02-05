@@ -192,6 +192,9 @@ export const PartnerAccommodationQuoteSheet = ({
     }
   }, [isOpen, existingQuote, partnerName]);
 
+  // Fetch partner room types for selection - must be before any early returns
+  const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);
+
   if (!request) return null;
 
   const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
@@ -203,9 +206,6 @@ export const PartnerAccommodationQuoteSheet = ({
   const roomTypeLabels = request.room_types
     .map(rt => ROOM_TYPES.find(r => r.value === rt)?.label)
     .filter(Boolean);
-
-  // Fetch partner room types for selection
-  const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);
 
   const toggleInclude = (item: string) => {
     setIncludes(prev => 
