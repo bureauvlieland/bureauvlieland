@@ -937,6 +937,7 @@ export type Database = {
       partners: {
         Row: {
           accommodation_commission_percentage: number | null
+          accommodation_description: string | null
           accommodation_types: Json | null
           address_city: string | null
           address_postal: string | null
@@ -968,6 +969,7 @@ export type Database = {
         }
         Insert: {
           accommodation_commission_percentage?: number | null
+          accommodation_description?: string | null
           accommodation_types?: Json | null
           address_city?: string | null
           address_postal?: string | null
@@ -999,6 +1001,7 @@ export type Database = {
         }
         Update: {
           accommodation_commission_percentage?: number | null
+          accommodation_description?: string | null
           accommodation_types?: Json | null
           address_city?: string | null
           address_postal?: string | null

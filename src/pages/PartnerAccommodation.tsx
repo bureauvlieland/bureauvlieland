@@ -75,6 +75,7 @@ const PartnerAccommodationContent = () => {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
+  const [partnerDescription, setPartnerDescription] = useState<string>("");
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
 
@@ -105,7 +106,7 @@ const PartnerAccommodationContent = () => {
       // Get partner ID and token from auth
       const { data: partner } = await supabase
         .from("partners")
-        .select("id, partner_token, name")
+        .select("id, partner_token, name, accommodation_description")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .maybeSingle();
@@ -119,16 +120,18 @@ const PartnerAccommodationContent = () => {
       currentPartnerId = partner.id;
       setPartnerToken(partner.partner_token);
       setPartnerName(partner.name);
+      setPartnerDescription((partner as any).accommodation_description || "");
     } else {
       // Admin impersonating - fetch the partner token and name
       const { data: impersonatedPartner } = await supabase
         .from("partners")
-        .select("partner_token, name")
+        .select("partner_token, name, accommodation_description")
         .eq("id", currentPartnerId)
         .maybeSingle();
       if (impersonatedPartner) {
         setPartnerToken(impersonatedPartner.partner_token);
         setPartnerName(impersonatedPartner.name);
+        setPartnerDescription((impersonatedPartner as any).accommodation_description || "");
       }
     }
 
@@ -467,6 +470,7 @@ const PartnerAccommodationContent = () => {
         partnerToken={partnerToken || ""}
         partnerId={partnerId || ""}
         partnerName={partnerName}
+        partnerDescription={partnerDescription}
         onSubmit={handleQuoteSubmit}
         onDecline={handleQuoteDecline}
         onRefresh={fetchData}

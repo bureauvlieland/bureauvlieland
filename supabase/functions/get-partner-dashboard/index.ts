@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
           commission_percentage: partner.commission_percentage,
           accommodation_commission_percentage: partner.accommodation_commission_percentage,
           partner_type: partnerType,
+          accommodation_description: partner.accommodation_description,
         },
         items: itemsWithSiblings,
         summary: {
