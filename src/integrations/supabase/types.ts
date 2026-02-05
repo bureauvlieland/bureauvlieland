@@ -58,6 +58,65 @@ export type Database = {
           },
         ]
       }
+      accommodation_quote_extras: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          notes: string | null
+          price_includes_vat: boolean | null
+          pricing_type: string
+          quantity: number
+          quote_id: string
+          sort_order: number | null
+          unit_price: number
+          updated_at: string | null
+          vat_rate: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          price_includes_vat?: boolean | null
+          pricing_type?: string
+          quantity?: number
+          quote_id: string
+          sort_order?: number | null
+          unit_price: number
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          price_includes_vat?: boolean | null
+          pricing_type?: string
+          quantity?: number
+          quote_id?: string
+          sort_order?: number | null
+          unit_price?: number
+          updated_at?: string | null
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_quote_extras_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accommodation_quotes: {
         Row: {
           accommodation_name: string
