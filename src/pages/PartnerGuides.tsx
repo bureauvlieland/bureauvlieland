@@ -447,17 +447,70 @@ const PartnerGuides = () => {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="kamerindeling">
-                <AccordionTrigger>Kamerindeling opgeven</AccordionTrigger>
+              <AccordionItem value="kamersoorten">
+                <AccordionTrigger>Kamersoorten configureren</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground space-y-3">
                   <p>
-                    Bij uw offerte kunt u een kamerindeling specificeren:
+                    Configureer uw standaard kamertypes eenmalig, zodat u deze snel kunt hergebruiken bij het opstellen van offertes:
                   </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>Aantal kamers per type (1-persoons, 2-persoons, etc.)</li>
-                    <li>Bedconfiguratie per kamer</li>
-                    <li>Eventuele bijzonderheden</li>
-                  </ul>
+                  <ol className="list-decimal list-inside space-y-2 ml-2">
+                    <li>Ga naar <strong>Kamersoorten</strong> in het menu</li>
+                    <li>Klik op "Kamersoort toevoegen"</li>
+                    <li>Vul de details in:
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li>Naam (bijv. "Tweepersoonskamer Superior")</li>
+                        <li>Oppervlakte in m²</li>
+                        <li>Bedconfiguratie</li>
+                        <li>Maximale bezetting</li>
+                        <li>Faciliteiten (WiFi, TV, balkon, etc.)</li>
+                        <li>Richtprijs per nacht</li>
+                      </ul>
+                    </li>
+                  </ol>
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800 text-sm">
+                    <strong>Voordeel:</strong> Bij het indienen van een offerte kunt u met één klik een kamersoort toevoegen. 
+                    Alle gegevens worden automatisch overgenomen.
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="extra-diensten">
+                <AccordionTrigger>Extra diensten beheren</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground space-y-3">
+                  <p>
+                    Naast kamers kunt u extra diensten aanbieden zoals catering of parkeerplaatsen:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-2 ml-2">
+                    <li>Ga naar <strong>Extra's</strong> in het menu</li>
+                    <li>Maak sjablonen aan voor veelgebruikte diensten:
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li>Naam en omschrijving</li>
+                        <li>Prijs per persoon of vast bedrag</li>
+                        <li>BTW-tarief (9% of 21%)</li>
+                        <li>Categorie (F&B, Faciliteiten, Transport, Overig)</li>
+                      </ul>
+                    </li>
+                  </ol>
+                  <p>
+                    Bij het opstellen van een offerte kunt u deze sjablonen selecteren en direct toevoegen aan de offerte.
+                  </p>
+                  <div className="bg-muted p-3 rounded-lg text-sm">
+                    <strong>Commissie:</strong> Over extra diensten geldt hetzelfde commissiepercentage als over logies 
+                    ({isLoading ? '...' : `${partnerData?.accommodation_commission_percentage ?? 10}%`}).
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="kamerindeling">
+                <AccordionTrigger>Kamerindeling opgeven in offerte</AccordionTrigger>
+                <AccordionContent className="text-muted-foreground space-y-3">
+                  <p>
+                    Bij uw offerte specificeert u de kamerindeling:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-2 ml-2">
+                    <li>Selecteer kamers uit uw vooraf ingestelde kamersoorten, óf</li>
+                    <li>Voer handmatig een kamertype, aantal en prijs in</li>
+                  </ol>
                   <p className="text-sm">
                     Dit helpt de klant een weloverwogen keuze te maken tussen verschillende offertes.
                   </p>
