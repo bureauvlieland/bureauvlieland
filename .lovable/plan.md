@@ -1,150 +1,135 @@
 
-# Plan: Logiespartner Extra's Systeem
+# Plan: Partner Extra Presets + Commissie Per Extra
 
 ## Samenvatting
-Een systeem waarmee logiespartners (zoals WestCord Strandhotel Seeduyn) extra diensten kunnen toevoegen aan hun accommodatie-offerte. Dit betreft aanvullende F&B en services zoals lunch, diner, parkeren in Harlingen, etc. Deze extra's zijn:
-- **Niet openbaar** - komen niet in de configurator voor eindklanten
-- **Onderdeel van de offerte** - worden meegenomen in de totaalprijs
-- **Traceerbaar** - Bureau Vlieland weet welke extra's verkocht zijn
-- **Commissieplichtig** - worden meegenomen in de commissieberekening. Standaard dezelfde commissie als de activiteiten commissie, maar ook aanpasbaar door admin. 
+Dit plan bevat drie onderdelen:
+1. **Bug fix**: Commissiepercentages worden nu niet correct overgenomen bij accommodatie-offertes
+2. **Extra commissie veld**: Admin kan per extra het commissiepercentage instellen
+3. **Partner presets**: Partners kunnen extra's opslaan als sjablonen voor hergebruik
 
 ---
 
-## 1. Voorbeelden van Extra's (op basis van screenshot)
+## 1. Bug Fix: Commissiepercentages bij Offertes
 
-| Type | Voorbeelden |
-|------|-------------|
-| **F&B** | Lunch, 3-gangendiner, Ontbijtbuffet, BBQ, Borrel |
-| **Faciliteiten** | Vergaderzaal, Beamer, Flipover |
-| **Transport** | Parkeren in Harlingen, Bustransfer |
-| **Overig** | Fietshuur, Wellness arrangement |
+### Probleem Geïdentificeerd
+Bij het aanmaken en indienen van accommodatie-offertes wordt het `commission_percentage` niet ingesteld:
+- `send-accommodation-quote-request/index.ts` maakt quotes zonder commissiepercentage
+- `PartnerAccommodation.tsx` update de quote zonder commissiepercentage
 
----
+### Oplossing
 
-## 2. Database Schema
-
-### Nieuwe tabel: `accommodation_quote_extras`
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ accommodation_quote_extras                                       │
-├─────────────────────────────────────────────────────────────────┤
-│ id               UUID PRIMARY KEY                                │
-│ quote_id         UUID → accommodation_quotes(id)                 │
-│ name             TEXT NOT NULL (bijv. "Lunch")                   │
-│ description      TEXT (optioneel, bijv. "2-gangenmenu")          │
-│ quantity         INTEGER DEFAULT 1                               │
-│ unit_price       DECIMAL NOT NULL (prijs per stuk/persoon)       │
-│ pricing_type     TEXT DEFAULT 'per_person' (per_person/fixed)    │
-│ price_includes_vat BOOLEAN DEFAULT true                          │
-│ vat_rate         DECIMAL DEFAULT 9                               │
-│ category         TEXT (fb/facilities/transport/other)            │
-│ notes            TEXT (partner notities)                         │
-│ sort_order       INTEGER DEFAULT 0                               │
-│ created_at       TIMESTAMPTZ                                     │
-│ updated_at       TIMESTAMPTZ                                     │
-└─────────────────────────────────────────────────────────────────┘
+**Bestand: `supabase/functions/send-accommodation-quote-request/index.ts`**
+```typescript
+// Bij het aanmaken van quotes, haal partner commissiepercentage op
+const quotesToCreate = partner_ids.map((partnerId) => {
+  const partner = partners.find(p => p.id === partnerId);
+  return {
+    request_id,
+    partner_id: partnerId,
+    accommodation_name: "",
+    price_total: 0,
+    valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    status: "pending",
+    commission_percentage: partner?.accommodation_commission_percentage ?? 10,
+  };
+});
 ```
 
-**RLS Policies:**
-- Partners kunnen hun eigen extra's CRUD'en (via quote ownership)
-- Admin heeft volledige toegang
-- Klanten kunnen extra's lezen van submitted quotes
+---
+
+## 2. Commissie Per Extra
+
+### Database Wijziging
+
+Toevoegen van `commission_percentage` kolom aan `accommodation_quote_extras`:
+
+```sql
+-- Voeg commissie percentage toe aan extras
+ALTER TABLE accommodation_quote_extras 
+ADD COLUMN commission_percentage DECIMAL(5,2) DEFAULT 15;
+
+COMMENT ON COLUMN accommodation_quote_extras.commission_percentage IS 
+'Commissiepercentage voor deze extra (standaard 15%, aanpasbaar door admin)';
+```
+
+### UI Wijzigingen
+
+**Admin: Commissie aanpassen per extra**
+
+In het admin gedeelte van de accommodatie-details kunnen admins het commissiepercentage per extra aanpassen.
 
 ---
 
-## 3. UI Componenten
+## 3. Partner Extra Presets
 
-### 3.1 Partner Portaal - Extra's Toevoegen
+### Database Schema
 
-**Locatie:** `PartnerAccommodationQuoteSheet.tsx` (uitbreiden)
+**Nieuwe tabel: `partner_extra_presets`**
 
-Nieuwe sectie onder de prijs-invoer:
+```sql
+CREATE TABLE partner_extra_presets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id TEXT NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  unit_price DECIMAL(10,2) NOT NULL,
+  pricing_type TEXT NOT NULL DEFAULT 'per_person' 
+    CHECK (pricing_type IN ('per_person', 'fixed')),
+  price_includes_vat BOOLEAN DEFAULT true,
+  vat_rate DECIMAL(4,2) DEFAULT 9,
+  category TEXT CHECK (category IN ('fb', 'facilities', 'transport', 'other')),
+  is_active BOOLEAN DEFAULT true,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Extra diensten & arrangementen                    [+ Extra]  │
-├──────────────────────────────────────────────────────────────┤
-│                                                               │
-│ ┌─────────────────────────────────────────────────────────┐  │
-│ │ 🍽️ Lunch (2-gangenmenu)                                 │  │
-│ │ €22,50 p.p. × 30 = €675,00                   [Edit] [✕] │  │
-│ └─────────────────────────────────────────────────────────┘  │
-│                                                               │
-│ ┌─────────────────────────────────────────────────────────┐  │
-│ │ 🍽️ 3-gangendiner                                        │  │
-│ │ €47,50 p.p. × 30 = €1.425,00                 [Edit] [✕] │  │
-│ └─────────────────────────────────────────────────────────┘  │
-│                                                               │
-│ ┌─────────────────────────────────────────────────────────┐  │
-│ │ 🚗 Parkeren Harlingen                                   │  │
-│ │ Vast bedrag: €150,00                         [Edit] [✕] │  │
-│ └─────────────────────────────────────────────────────────┘  │
-│                                                               │
-│ ────────────────────────────────────────────────────────────  │
-│ Subtotaal extra's:                              €2.250,00    │
-│                                                               │
-└──────────────────────────────────────────────────────────────┘
+-- Index
+CREATE INDEX idx_partner_extra_presets_partner ON partner_extra_presets(partner_id);
+
+-- RLS
+ALTER TABLE partner_extra_presets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Partners manage own presets" ON partner_extra_presets
+  FOR ALL USING (
+    partner_id = public.get_partner_id(auth.uid())
+  );
+
+CREATE POLICY "Admin full access" ON partner_extra_presets
+  FOR ALL USING (public.is_admin(auth.uid()));
+
+-- Trigger
+CREATE TRIGGER update_partner_extra_presets_updated_at
+  BEFORE UPDATE ON partner_extra_presets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
-### 3.2 Nieuwe Component: `AddQuoteExtraDialog.tsx`
+### Partner UI Flow
 
-Dialog om een extra toe te voegen:
+**In `AddQuoteExtraDialog.tsx`:**
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │ Extra toevoegen                                        [✕]  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
+│ ┌─ Mijn sjablonen ─────────────────────────────────────┐    │
+│ │ 🍽️ Lunch (€22,50 p.p.)          [Gebruiken]         │    │
+│ │ 🍽️ 3-gangendiner (€47,50 p.p.)   [Gebruiken]         │    │
+│ │ 🚗 Parkeren Harlingen (€150)     [Gebruiken]         │    │
+│ └──────────────────────────────────────────────────────┘    │
+│                                                              │
+│ ─── of maak een nieuwe ────────────────────────────────     │
+│                                                              │
 │ Naam: [Lunch                     ]                          │
 │ Omschrijving: [2-gangenmenu met soep/brood        ]        │
+│ ...                                                          │
 │                                                              │
-│ Categorie: [F&B ▾]                                          │
-│                                                              │
-│ Prijstype: ○ Per persoon  ● Vast bedrag                     │
-│                                                              │
-│ Prijs: [€ 22,50]    Aantal/personen: [30]                   │
-│                                                              │
-│ BTW: [9 %]  ☑ Inclusief BTW                                 │
-│                                                              │
-│ Totaal: €675,00                                             │
+│ ☑ Opslaan als sjabloon voor later gebruik                   │
 │                                                              │
 │                              [Annuleren] [Toevoegen]        │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### 3.3 Klant Portaal - Extra's Weergave
-
-**Locatie:** `AccommodationQuoteCard.tsx` en `AccommodationQuoteDetailSheet.tsx`
-
-Toon extra's onder de basis-prijs:
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ WestCord Strandhotel Seeduyn                                 │
-├──────────────────────────────────────────────────────────────┤
-│                                                               │
-│ Verblijf (3 nachten, 30 personen)              €4.500,00    │
-│                                                               │
-│ Extra's inbegrepen:                                          │
-│ ├─ 🍽️ Lunch (30×)                               €675,00     │
-│ ├─ 🍽️ 3-gangendiner (30×)                     €1.425,00     │
-│ └─ 🚗 Parkeren Harlingen                        €150,00     │
-│                                                               │
-│ ──────────────────────────────────────────────────────────   │
-│ Totaal                                         €6.750,00    │
-│                                                               │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### 3.4 Admin Overzicht
-
-**Locatie:** Admin commissie-overzicht en request details
-
-Extra's tonen bij logiesdetails zodat Bureau Vlieland ziet wat er verkocht is:
-- Lijst van extra's met prijzen
-- Totaal extra-omzet per offerte
-- Commissie over totaalbedrag (inclusief extra's)
 
 ---
 
@@ -154,146 +139,78 @@ Extra's tonen bij logiesdetails zodat Bureau Vlieland ziet wat er verkocht is:
 
 | Bestand | Doel |
 |---------|------|
-| `src/types/accommodationExtras.ts` | Type definities voor extra's |
-| `src/components/partner-portal/AddQuoteExtraDialog.tsx` | Dialog voor extra toevoegen |
-| `src/components/partner-portal/QuoteExtrasList.tsx` | Lijst component voor extra's |
-| `src/hooks/useQuoteExtras.ts` | CRUD hooks voor extra's |
+| `src/hooks/usePartnerExtraPresets.ts` | CRUD hooks voor presets |
 
 ### Gewijzigde Bestanden
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` | Extra's sectie toevoegen |
-| `src/components/accommodation-portal/AccommodationQuoteCard.tsx` | Extra's weergeven |
-| `src/components/accommodation-portal/AccommodationQuoteDetailSheet.tsx` | Extra's detailweergave |
-| `src/pages/admin/AdminAccommodationDetail.tsx` | Extra's tonen bij offerte details |
-| `supabase/functions/get-admin-commissions/index.ts` | Extra's meenemen in commissie |
+| `supabase/functions/send-accommodation-quote-request/index.ts` | Commissie% bij quote aanmaken |
+| `src/components/partner-portal/AddQuoteExtraDialog.tsx` | Presets tonen + "opslaan als sjabloon" |
+| `src/types/accommodationExtras.ts` | `commission_percentage` toevoegen |
+| `src/hooks/useQuoteExtras.ts` | Commissie% meenemen |
+| `supabase/functions/get-admin-commissions/index.ts` | Extra's commissie meenemen in berekening |
 
 ### Database Migratie
 
 ```sql
--- Nieuwe tabel voor quote extras
-CREATE TABLE accommodation_quote_extras (
+-- 1. Commissie percentage bij extras
+ALTER TABLE accommodation_quote_extras 
+ADD COLUMN commission_percentage DECIMAL(5,2) DEFAULT 15;
+
+-- 2. Partner extra presets tabel
+CREATE TABLE partner_extra_presets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quote_id UUID NOT NULL REFERENCES accommodation_quotes(id) ON DELETE CASCADE,
+  partner_id TEXT NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
-  quantity INTEGER NOT NULL DEFAULT 1,
   unit_price DECIMAL(10,2) NOT NULL,
   pricing_type TEXT NOT NULL DEFAULT 'per_person' 
     CHECK (pricing_type IN ('per_person', 'fixed')),
   price_includes_vat BOOLEAN DEFAULT true,
   vat_rate DECIMAL(4,2) DEFAULT 9,
   category TEXT CHECK (category IN ('fb', 'facilities', 'transport', 'other')),
-  notes TEXT,
+  is_active BOOLEAN DEFAULT true,
   sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Index voor snelle lookups
-CREATE INDEX idx_quote_extras_quote_id ON accommodation_quote_extras(quote_id);
+CREATE INDEX idx_partner_extra_presets_partner ON partner_extra_presets(partner_id);
 
--- RLS
-ALTER TABLE accommodation_quote_extras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_extra_presets ENABLE ROW LEVEL SECURITY;
 
--- Partners kunnen extra's beheren via hun quotes
-CREATE POLICY "Partners manage own quote extras" ON accommodation_quote_extras
+CREATE POLICY "Partners manage own presets" ON partner_extra_presets
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM accommodation_quotes q
-      JOIN partners p ON p.id = q.partner_id
-      WHERE q.id = quote_id
-      AND p.auth_user_id = auth.uid()
-    )
+    partner_id = public.get_partner_id(auth.uid())
   );
 
--- Admin heeft volledige toegang
-CREATE POLICY "Admin full access" ON accommodation_quote_extras
+CREATE POLICY "Admin full access" ON partner_extra_presets
   FOR ALL USING (public.is_admin(auth.uid()));
 
--- Klanten kunnen extras lezen van submitted quotes
-CREATE POLICY "Customers read submitted quote extras" ON accommodation_quote_extras
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM accommodation_quotes q
-      JOIN accommodation_requests r ON r.id = q.request_id
-      WHERE q.id = quote_id
-      AND q.status IN ('submitted', 'selected')
-    )
-  );
-
--- Updated_at trigger
-CREATE TRIGGER update_accommodation_quote_extras_updated_at
-  BEFORE UPDATE ON accommodation_quote_extras
+CREATE TRIGGER update_partner_extra_presets_updated_at
+  BEFORE UPDATE ON partner_extra_presets
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ---
 
-## 5. Commissie Berekening
+## 5. Commissie Berekening Update
 
-De commissie wordt berekend over het **totaalbedrag inclusief extra's**:
+**In `get-admin-commissions/index.ts`:**
 
-```
-Totaal = Verblijfsprijs + Som(Extra's)
-Commissie = Totaal × Commissiepercentage
-```
-
-Dit wordt automatisch meegenomen doordat:
-1. Partner het totaalbedrag inclusief extra's invult in `price_total`
-2. Of: het systeem berekent automatisch `price_total + SUM(extra totalen)`
-
-Voorstel: **Optie 2** - Automatisch berekenen zodat de breakdown transparant blijft.
+Voor accommodatie quotes met extra's:
+1. Basis accommodatie commissie = `price_total × commission_percentage`
+2. Extra's commissie = `SUM(extra_total × extra_commission_percentage)`
+3. Totale commissie = Basis + Extra's
 
 ---
 
-## 6. Workflow
-
-### Partner Workflow
-
-1. Partner ontvangt logiesaanvraag
-2. Partner vult basis-offerte in (kamers, prijzen)
-3. Partner voegt extra's toe (lunch, diner, parkeren)
-4. Systeem berekent totaalprijs = basis + extra's
-5. Partner dient offerte in
-
-### Klant Workflow
-
-1. Klant ziet offertes met totaalprijzen
-2. Bij "Details" ziet klant de breakdown (basis + extra's)
-3. Klant kiest offerte (inclusief alle extra's)
-
-### Admin Workflow
-
-1. Admin ziet in commissie-overzicht het totaal
-2. Bij details ziet admin welke extra's verkocht zijn
-3. Commissie wordt berekend over totaalbedrag
-
----
-
-## 7. Fasering
-
-### Fase 1 (Dit plan)
-1. Database tabel aanmaken
-2. Types en hooks voor extra's
-3. Partner UI voor toevoegen/beheren extra's
-4. Klant UI voor weergave extra's
-5. Automatische totaalberekening
-
-### Fase 2 (Later)
-- Voorgedefinieerde extra's per partner (templates)
-- Categorie-filtering in overzichten
-- Rapportages: meest verkochte extra's
-- Import/export functionaliteit
-
----
-
-## 8. Resultaat
+## 6. Resultaat
 
 Na implementatie:
-- Logiespartners kunnen F&B en andere diensten toevoegen aan hun offerte
-- Extra's worden transparant weergegeven aan klanten
-- Bureau Vlieland heeft volledig inzicht in verkochte extra's
-- Commissie wordt correct berekend over het totaalbedrag
-- Extra's worden niet getoond in de openbare configurator
+- ✅ Commissiepercentages worden correct ingesteld bij accommodatie-offertes
+- ✅ Elke extra heeft een eigen commissiepercentage (standaard 15%, aanpasbaar door admin)
+- ✅ Partners kunnen extra's opslaan als sjablonen voor hergebruik
+- ✅ Bij het toevoegen van een extra kan de partner kiezen uit opgeslagen sjablonen
+- ✅ Commissie-overzicht toont correct de totale commissie inclusief extra's
