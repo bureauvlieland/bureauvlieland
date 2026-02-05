@@ -21,6 +21,8 @@ interface PartnerDetails {
   address_postal: string | null;
   address_city: string | null;
   commission_percentage: number;
+  accommodation_commission_percentage: number | null;
+  partner_type: string | null;
   terms_pdf_path: string | null;
   terms_uploaded_at: string | null;
   uses_default_terms: boolean | null;
@@ -489,10 +491,22 @@ export const PartnerSettingsForm = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">Huidig commissiepercentage</p>
-            <p className="text-2xl font-bold">{partner.commission_percentage}%</p>
-            <p className="text-xs text-muted-foreground mt-1">
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            {/* Show activities commission if partner is activity provider or both */}
+            {(!partner.partner_type || partner.partner_type === 'activity_provider' || partner.partner_type === 'both') && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Activiteiten</span>
+                <span className="text-xl font-bold">{partner.commission_percentage}%</span>
+              </div>
+            )}
+            {/* Show accommodation commission if partner is accommodation or both */}
+            {(partner.partner_type === 'accommodation' || partner.partner_type === 'both') && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Logies</span>
+                <span className="text-xl font-bold">{partner.accommodation_commission_percentage ?? 10}%</span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground pt-2 border-t">
               Neem contact op met Bureau Vlieland om dit percentage aan te passen.
             </p>
           </div>
