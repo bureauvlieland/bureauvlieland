@@ -20,7 +20,7 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-const SESSION_TIMEOUT_MS = 8000;
+const SESSION_TIMEOUT_MS = 60000; // 60 seconds – give recovery session plenty of time to initialise
 
 const PartnerResetPassword = () => {
   const navigate = useNavigate();
