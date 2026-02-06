@@ -56,6 +56,8 @@ import {
   Sparkles,
   Plus,
   Pencil,
+  Layers,
+  Save,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { 
@@ -81,6 +83,8 @@ import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 import { InvoicingModeSelector } from "@/components/admin/InvoicingModeSelector";
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
+import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
+import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 
 interface ProgramRequest {
   id: string;
@@ -179,6 +183,8 @@ const AdminRequestDetail = () => {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
+  const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -853,10 +859,22 @@ const AdminRequestDetail = () => {
                   }
                 </CardDescription>
               </div>
-              <Button onClick={() => setAddActivityOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Activiteit toevoegen
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="outline" onClick={() => setApplyTemplateOpen(true)}>
+                  <Layers className="h-4 w-4 mr-2" />
+                  Template toepassen
+                </Button>
+                {items.length > 0 && (
+                  <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Opslaan als template
+                  </Button>
+                )}
+                <Button onClick={() => setAddActivityOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Activiteit toevoegen
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -1114,6 +1132,25 @@ const AdminRequestDetail = () => {
           requestId={request.id}
           selectedDates={request.selected_dates as string[]}
           onSuccess={fetchRequestData}
+        />
+      )}
+
+      {/* Apply template dialog */}
+      {request && (
+        <ApplyTemplateDialog
+          open={applyTemplateOpen}
+          onOpenChange={setApplyTemplateOpen}
+          requestId={request.id}
+          onSuccess={fetchRequestData}
+        />
+      )}
+
+      {/* Save as template dialog */}
+      {request && (
+        <SaveAsTemplateDialog
+          open={saveAsTemplateOpen}
+          onOpenChange={setSaveAsTemplateOpen}
+          items={items}
         />
       )}
     </>
