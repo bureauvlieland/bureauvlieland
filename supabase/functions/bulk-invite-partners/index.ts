@@ -89,8 +89,8 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </p>
       
       <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> 15% commissie (excl. BTW)</li>
-        <li><strong>Logies:</strong> 10% commissie (excl. BTW)</li>
+        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> ${partner.commission_percentage || 15}% commissie (excl. BTW)</li>
+        <li><strong>Logies:</strong> ${partner.accommodation_commission_percentage || 10}% commissie (excl. BTW)</li>
       </ul>
       
       <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
@@ -159,7 +159,7 @@ async function delay(ms: number): Promise<void> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function invitePartner(
   adminClient: any,
-  partner: { id: string; name: string; email: string; auth_user_id: string | null },
+  partner: { id: string; name: string; email: string; auth_user_id: string | null; commission_percentage?: number; accommodation_commission_percentage?: number },
   origin: string
 ): Promise<InviteResult> {
   try {
@@ -249,6 +249,8 @@ async function invitePartner(
         partner_name: sanitizeHtml(partner.name),
         reset_link: resetLink,
         partner_portal_link: `${origin}/partner`,
+        commission_activity: String(partner.commission_percentage || 15),
+        commission_accommodation: String(partner.accommodation_commission_percentage || 10),
       };
 
       // Try to get template from database
@@ -403,7 +405,7 @@ Deno.serve(async (req) => {
     // Get partners data
     const { data: partners, error: partnersError } = await adminClient
       .from("partners")
-      .select("id, name, email, auth_user_id")
+      .select("id, name, email, auth_user_id, commission_percentage, accommodation_commission_percentage")
       .in("id", partnerIds);
 
     if (partnersError) {

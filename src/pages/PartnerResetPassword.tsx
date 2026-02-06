@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Lock, CheckCircle } from "lucide-react";
+import { Loader2, Lock, CheckCircle, AlertTriangle } from "lucide-react";
 import { z } from "zod";
 
 const passwordSchema = z.object({
@@ -20,6 +20,8 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const SESSION_TIMEOUT_MS = 8000;
+
 const PartnerResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -27,23 +29,47 @@ const PartnerResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    supabase.auth.onAuthStateChange(async (event) => {
+    const timeout = setTimeout(() => {
+      setSessionExpired((prev) => {
+        // Only expire if session wasn't already established
+        if (!sessionReady) return true;
+        return prev;
+      });
+    }, SESSION_TIMEOUT_MS);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === "PASSWORD_RECOVERY") {
-        // User clicked the recovery link - they can now set a new password
-        console.log("Password recovery mode active");
+        setSessionReady(true);
+        setSessionExpired(false);
+        clearTimeout(timeout);
       }
     });
+
+    // Also check if we already have a session (user may have already been authenticated)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionReady(true);
+        setSessionExpired(false);
+        clearTimeout(timeout);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
-    // Validate form
     const result = passwordSchema.safeParse({ password, confirmPassword });
     if (!result.success) {
       const fieldErrors: { password?: string; confirmPassword?: string } = {};
@@ -57,18 +83,25 @@ const PartnerResetPassword = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
-      if (error) throw error;
+      if (error) {
+        // Provide user-friendly error messages
+        if (error.message.includes("weak")) {
+          setErrors({ password: "Wachtwoord is te zwak. Gebruik letters, cijfers en speciale tekens." });
+        } else if (error.message.includes("session")) {
+          setSessionExpired(true);
+        } else {
+          throw error;
+        }
+        return;
+      }
 
-      // Update password_set_at timestamp in partners table
+      // Update password_set_at timestamp
       try {
         await supabase.functions.invoke("update-partner-password-set");
       } catch (updateErr) {
         console.error("Error updating password_set_at:", updateErr);
-        // Don't fail the password reset if this fails
       }
 
       setIsSuccess(true);
@@ -77,7 +110,6 @@ const PartnerResetPassword = () => {
         description: "Je wachtwoord is succesvol bijgewerkt.",
       });
 
-      // Redirect after a delay
       setTimeout(() => {
         navigate("/partner/dashboard");
       }, 2000);
@@ -101,7 +133,6 @@ const PartnerResetPassword = () => {
           <meta name="robots" content="noindex, nofollow" />
         </Helmet>
         <Navigation />
-
         <main className="container mx-auto px-4 py-16 max-w-md text-center">
           <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Wachtwoord gewijzigd!</h1>
@@ -109,7 +140,49 @@ const PartnerResetPassword = () => {
             Je wordt automatisch doorgestuurd naar je dashboard...
           </p>
         </main>
+        <Footer />
+      </div>
+    );
+  }
 
+  // Loading state: waiting for recovery session
+  if (!sessionReady && !sessionExpired) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Helmet>
+          <title>Nieuw Wachtwoord | Bureau Vlieland</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
+        <Navigation />
+        <main className="container mx-auto px-4 py-16 max-w-md text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <h1 className="text-xl font-semibold mb-2">Sessie wordt opgebouwd...</h1>
+          <p className="text-muted-foreground">Even geduld, uw activeringslink wordt geverifieerd.</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state: session expired / invalid link
+  if (sessionExpired && !sessionReady) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Helmet>
+          <title>Link Verlopen | Bureau Vlieland</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
+        <Navigation />
+        <main className="container mx-auto px-4 py-16 max-w-md text-center">
+          <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Link verlopen of ongeldig</h1>
+          <p className="text-muted-foreground mb-6">
+            Deze activeringslink is verlopen of niet meer geldig. Neem contact op met Bureau Vlieland om een nieuwe link te ontvangen.
+          </p>
+          <Button onClick={() => navigate("/partner/login")} variant="outline">
+            Naar inlogpagina
+          </Button>
+        </main>
         <Footer />
       </div>
     );
@@ -171,11 +244,7 @@ const PartnerResetPassword = () => {
                 )}
               </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Wachtwoord opslaan
               </Button>
