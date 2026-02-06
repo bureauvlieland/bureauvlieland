@@ -78,6 +78,7 @@ import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivityShee
 import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
+import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 
 interface ProgramRequest {
   id: string;
@@ -985,6 +986,13 @@ const AdminRequestDetail = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Communication log */}
+          <ProjectCommunicationsCard
+            requestId={request.id}
+            customerName={request.customer_name}
+            customerEmail={request.customer_email}
+          />
 
           {/* History timeline */}
           <Card>

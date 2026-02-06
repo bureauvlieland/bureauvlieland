@@ -1490,6 +1490,75 @@ export type Database = {
         }
         Relationships: []
       }
+      project_communications: {
+        Row: {
+          accommodation_id: string | null
+          communication_date: string | null
+          communication_type: string
+          contact_email: string | null
+          contact_name: string | null
+          content: string
+          created_at: string | null
+          direction: string
+          id: string
+          logged_at: string | null
+          logged_by: string | null
+          metadata: Json | null
+          request_id: string | null
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accommodation_id?: string | null
+          communication_date?: string | null
+          communication_type?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          content: string
+          created_at?: string | null
+          direction?: string
+          id?: string
+          logged_at?: string | null
+          logged_by?: string | null
+          metadata?: Json | null
+          request_id?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accommodation_id?: string | null
+          communication_date?: string | null
+          communication_type?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          content?: string
+          created_at?: string | null
+          direction?: string
+          id?: string
+          logged_at?: string | null
+          logged_by?: string | null
+          metadata?: Json | null
+          request_id?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_communications_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_communications_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_programs: {
         Row: {
           cart_items: Json
