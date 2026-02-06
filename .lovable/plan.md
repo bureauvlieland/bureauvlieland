@@ -1,122 +1,172 @@
 
-# Plan: Verwijder Link Geldigheid & Voeg Opnieuw Uitnodigen Toe
+
+# Plan: Opschonen Testdata in Test & Live Database
 
 ## Samenvatting
 
-Dit plan lost twee gerelateerde problemen op:
-1. De "24 uur geldig" tekst wordt verwijderd uit partner uitnodigingsemails
-2. Admin kan een nieuwe uitnodigingslink versturen naar partners met een verlopen link
-
-## Achtergrond
-
-Uit de email van Island Events (Amber de Jongh) blijkt dat partners soms de uitnodigingslink laten verlopen. Momenteel is er geen manier om een nieuwe link te versturen als een partner al een auth_user_id heeft.
+Alle testdata wordt verwijderd uit beide databases (Test en Live), waarbij alleen de aanvragen van **Jack Frieling** behouden blijven.
 
 ---
 
-## Wijzigingen
+## Te Behouden Records
 
-### 1. Verwijder "24 uur geldig" tekst
+| Tabel | ID | Naam |
+|-------|-----|------|
+| program_requests | `b8c87342-7fd9-43ce-a04f-36e6f17aa5fa` | Jack Frieling |
+| program_requests | `d57eefa0-d422-42cf-893a-6a0cec0b9ac7` | Jack Frieling |
+| accommodation_requests | `ed3bf3a1-b29d-4f12-a898-e90e35f92ceb` | Jack Frieling |
 
-**Bestand:** `supabase/functions/invite-partner/index.ts`
+---
 
-**HTML template (regel 119-122)** - Van:
-```html
-<p style="...">
-  Deze link is 24 uur geldig. Na activatie vindt u het portaal op:...
-</p>
+## Aanpak per Database
+
+### Test Database (Preview)
+- Wordt automatisch uitgevoerd via Lovable's insert tool
+- Direct effect op de preview omgeving
+
+### Live Database (Productie)
+- SQL-queries worden gegenereerd die je handmatig uitvoert
+- Via: **Cloud View → Run SQL → Selecteer "Live"**
+
+---
+
+## Te Verwijderen Data
+
+### Stap 1: Gerelateerde records eerst verwijderen (foreign key dependencies)
+
+```sql
+-- 1a. Verwijder program_request_history voor te verwijderen requests
+DELETE FROM program_request_history 
+WHERE request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 1b. Verwijder program_request_items voor te verwijderen requests
+DELETE FROM program_request_items 
+WHERE request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 1c. Verwijder accepted_terms_log voor te verwijderen requests
+DELETE FROM accepted_terms_log 
+WHERE request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 1d. Verwijder bureau_invoices voor te verwijderen requests
+DELETE FROM bureau_invoices 
+WHERE request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 1e. Verwijder partner_purchase_invoices voor te verwijderen requests
+DELETE FROM partner_purchase_invoices 
+WHERE request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 1f. Verwijder project_communications voor te verwijderen requests
+DELETE FROM project_communications 
+WHERE request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 1g. Verwijder admin_todos gerelateerd aan te verwijderen requests
+DELETE FROM admin_todos 
+WHERE related_request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+)
+AND related_request_id IS NOT NULL;
 ```
 
-Naar:
-```html
-<p style="...">
-  Na activatie vindt u het portaal op:...
-</p>
+### Stap 2: Accommodation gerelateerde data
+
+```sql
+-- 2a. Verwijder accommodation_quote_extras voor te verwijderen quotes
+DELETE FROM accommodation_quote_extras 
+WHERE quote_id IN (
+  SELECT id FROM accommodation_quotes 
+  WHERE request_id != 'ed3bf3a1-b29d-4f12-a898-e90e35f92ceb'
+);
+
+-- 2b. Verwijder accommodation_quotes voor te verwijderen requests
+DELETE FROM accommodation_quotes 
+WHERE request_id != 'ed3bf3a1-b29d-4f12-a898-e90e35f92ceb';
+
+-- 2c. Verwijder project_communications voor te verwijderen accommodation requests
+DELETE FROM project_communications 
+WHERE accommodation_id NOT IN ('ed3bf3a1-b29d-4f12-a898-e90e35f92ceb')
+AND accommodation_id IS NOT NULL;
 ```
 
-**Plain text versie (regel 342)** - Verwijder:
+### Stap 3: Email logs opschonen
+
+```sql
+-- 3a. Verwijder email_log voor te verwijderen requests
+DELETE FROM email_log 
+WHERE related_request_id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+)
+AND related_request_id IS NOT NULL;
+
+-- 3b. Verwijder email_log voor te verwijderen accommodation requests
+DELETE FROM email_log 
+WHERE related_accommodation_id NOT IN ('ed3bf3a1-b29d-4f12-a898-e90e35f92ceb')
+AND related_accommodation_id IS NOT NULL;
 ```
-Deze link is 24 uur geldig.
+
+### Stap 4: Hoofdtabellen opschonen
+
+```sql
+-- 4a. Verwijder program_requests (behalve Jack Frieling)
+DELETE FROM program_requests 
+WHERE id NOT IN (
+  'b8c87342-7fd9-43ce-a04f-36e6f17aa5fa',
+  'd57eefa0-d422-42cf-893a-6a0cec0b9ac7'
+);
+
+-- 4b. Verwijder accommodation_requests (behalve Jack Frieling)
+DELETE FROM accommodation_requests 
+WHERE id != 'ed3bf3a1-b29d-4f12-a898-e90e35f92ceb';
+```
+
+### Stap 5: Overige test data
+
+```sql
+-- 5a. Verwijder alle shared_programs (test configuraties)
+DELETE FROM shared_programs;
+
+-- 5b. Verwijder admin_todos zonder request relatie (optioneel)
+-- DELETE FROM admin_todos WHERE related_request_id IS NULL;
 ```
 
 ---
 
-### 2. Nieuwe Edge Function: resend-partner-invitation
+## Uitvoering
 
-Maakt het mogelijk om een nieuwe wachtwoord-reset link te genereren voor partners die al een auth account hebben.
+### Test Database
+Ik zal de queries automatisch uitvoeren via de insert tool.
 
-**Nieuw bestand:** `supabase/functions/resend-partner-invitation/index.ts`
-
-Functionaliteit:
-- Ontvangt `partnerId` als parameter
-- Controleert of partner een auth_user_id heeft
-- Genereert een nieuwe recovery link via Supabase Auth Admin API
-- Stuurt dezelfde uitnodigingsemail opnieuw (met nieuwe link)
-- Update `invited_at` timestamp
-
----
-
-### 3. Update AdminPartnerDetail.tsx
-
-De "Partner uitnodigen" knop wordt aangepast zodat deze ook werkt voor partners met een verlopen link:
-
-```text
-Situatie                               | Knop tekst              | Actie
----------------------------------------|-------------------------|---------------------------
-Geen auth_user_id                      | "Partner uitnodigen"    | invite-partner (nieuw account)
-auth_user_id + geen password_set_at    | "Opnieuw uitnodigen"    | resend-partner-invitation
-auth_user_id + password_set_at         | (geen knop)             | Partner is actief
-```
-
-UI wijziging:
-- Knop wordt getoond als `!partner.password_set_at` (in plaats van `!partner.auth_user_id`)
-- Knoplicoon: `UserPlus` voor nieuwe uitnodiging, `RefreshCw` voor opnieuw uitnodigen
-- Tekst dynamisch: "Partner uitnodigen" of "Opnieuw uitnodigen"
+### Live Database
+Na goedkeuring ontvang je een gecombineerde SQL-query die je kunt uitvoeren via:
+1. Open **Cloud View** (backend beheer)
+2. Ga naar **Run SQL**
+3. Selecteer **"Live"** in de environment selector
+4. Plak de SQL en voer uit
 
 ---
 
-## Technische Details
+## Waarschuwing
 
-### Database Query voor Partner Status
+- **Onomkeerbaar**: Verwijderde data kan niet worden hersteld
+- **Controleer eerst**: Zorg dat Jack Frieling's data correct is geïdentificeerd
+- **Live apart**: Live database vereist handmatige uitvoering
 
-Partner interface moet uitgebreid worden met `password_set_at`:
-
-```typescript
-interface Partner {
-  // ... existing fields
-  password_set_at: string | null;
-}
-```
-
-### resend-partner-invitation Edge Function
-
-```typescript
-// Pseudo-code
-1. Verify admin auth
-2. Get partner by ID
-3. Verify partner.auth_user_id exists
-4. Generate new recovery link via adminClient.auth.admin.generateLink()
-5. Send invitation email with new link
-6. Update partners.invited_at = now()
-7. Log email to email_log table
-```
-
----
-
-## Bestanden
-
-### Nieuwe bestanden
-| Bestand | Functie |
-|---------|---------|
-| `supabase/functions/resend-partner-invitation/index.ts` | Nieuwe link versturen |
-
-### Te wijzigen bestanden
-| Bestand | Wijziging |
-|---------|-----------|
-| `supabase/functions/invite-partner/index.ts` | Verwijder "24 uur geldig" tekst |
-| `src/pages/admin/AdminPartnerDetail.tsx` | Toon "Opnieuw uitnodigen" knop + fetch password_set_at |
-
----
-
-## Email Template Update
-
-Als er een database template bestaat voor `partner_invitation`, zal de admin deze handmatig moeten aanpassen via /admin/berichten om de "24 uur geldig" tekst te verwijderen. De code fallback wordt automatisch bijgewerkt.
