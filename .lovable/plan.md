@@ -1,66 +1,80 @@
 
 
-# Fix klantportaal labels voor bureau_central projecten
+# Direct inloggegevens mailen in plaats van activeringslink
 
-## Probleem
+## Wat verandert er?
 
-Het klantportaal (`/mijn-programma/:token`) houdt op drie plekken geen rekening met het facturatiemodel:
+De uitnodigingsmail bevat voortaan direct het emailadres en een tijdelijk wachtwoord. De partner logt in op de normale loginpagina. Geen activeringslink meer, dus ook geen verlopen links meer.
 
-1. **ItemStatusBadge**: Toont "Aangevraagd" voor pending items, terwijl de klant bij een maatwerk-project nog helemaal niets heeft "aangevraagd" -- Bureau Vlieland stelt het programma samen.
-2. **InvoiceProvidersCard**: Toont individuele partnerregels met "je ontvangt afzonderlijke facturen", terwijl bij `bureau_central` alles door Bureau Vlieland wordt gefactureerd.
-3. **PriceSummaryCard**: Splitst prijzen op in "bureau" en "partner" categorieen, terwijl de klant dat onderscheid niet hoeft te zien bij centraal factureren.
+## Moet ik alles resetten?
 
-## Oplossing
+**Nee.** Bestaande partner-accounts blijven intact. Partners die al geactiveerd zijn merken hier niets van. Voor partners die nog niet geactiveerd zijn, gebruik je "Opnieuw uitnodigen" -- zij krijgen dan de nieuwe mail met inloggegevens.
 
-### Stap 1: `invoicing_mode` beschikbaar maken in het klantportaal
+## Wat wordt er aangepast?
 
-**Bestand:** `src/hooks/useCustomerProgram.ts`
+### 1. `invite-partner` edge function
 
-De `program` data bevat al `invoicing_mode` vanuit de edge function `get-customer-program` (die `SELECT *` doet op `program_requests`). Dit veld is dus al beschikbaar in `program.invoicing_mode`.
+- Verwijder het aanmaken van een recovery link (`generateLink`)
+- Het tijdelijke wachtwoord dat al gegenereerd wordt (voor `createUser`) wordt nu meegestuurd in de email
+- Fallback email-template: "Account Activeren" knop vervangen door een blok met inloggegevens (email + wachtwoord + loginlink)
+- Template variabelen: `reset_link` vervangen door `partner_email`, `partner_password`, `login_link`
 
-### Stap 2: `invoicing_mode` doorgeven aan child-componenten
+### 2. `bulk-invite-partners` edge function
 
-**Bestanden:** `MobileProgramView.tsx`, `DesktopProgramView.tsx`
+- Zelfde wijzigingen als `invite-partner` (recovery link verwijderen, wachtwoord meesturen)
+- Fallback email-template bijwerken
 
-Deze componenten moeten `invoicing_mode` doorgeven aan `InvoiceProvidersCard`, `PriceSummaryCard`, en `CustomerProgramItem`.
+### 3. `resend-partner-invitation` edge function
 
-### Stap 3: InvoiceProvidersCard aanpassen
+- In plaats van een recovery link te genereren: reset het wachtwoord via `adminClient.auth.admin.updateUserById()` met een nieuw gegenereerd wachtwoord
+- Stuur het nieuwe wachtwoord mee in de email
+- Fallback email-template bijwerken
 
-**Bestand:** `src/components/customer-portal/InvoiceProvidersCard.tsx`
+### 4. Database email template
 
-- Nieuwe prop: `invoicingMode?: string`
-- Als `invoicingMode === "bureau_central"`:
-  - Verander introductietekst naar: "Bureau Vlieland verzorgt de volledige facturatie voor uw programma."
-  - Alle items groeperen onder een enkele "Bureau Vlieland" regel (geen aparte partnerregels)
-  - Totaalbedrag tonen als een gecombineerd bedrag
+- De bestaande database-template (`partner_invitation`) moet aangepast worden met de nieuwe variabelen
+- Dit is iets wat je zelf via de admin UI kunt doen na de implementatie, of ik kan de variabelen documenteren
 
-### Stap 4: PriceSummaryCard aanpassen
+## Wat verandert er NIET?
 
-**Bestand:** `src/components/customer-portal/PriceSummaryCard.tsx`
+- De loginpagina (`/partner/login`) blijft exact hetzelfde
+- "Wachtwoord vergeten" blijft beschikbaar als fallback
+- Bestaande geactiveerde partners worden niet geraakt
+- De `/partner/reset-password` pagina blijft bestaan voor de "wachtwoord vergeten" flow
+- Geen database-migraties nodig
 
-- Nieuwe prop: `invoicingMode?: string`
-- Als `invoicingMode === "bureau_central"`:
-  - Geen opsplitsing in "bureau" en "partner" categorieen
-  - Alles onder een enkele "Bureau Vlieland" noemer tonen
+## Technische details
 
-### Stap 5: ItemStatusBadge / CustomerProgramItem context-afhankelijk
+### Wachtwoord generatie
 
-**Bestand:** `src/components/customer-portal/CustomerProgramItem.tsx`
+Er wordt al een tijdelijk wachtwoord gegenereerd bij het aanmaken van de user. Dit wordt nu ook meegestuurd:
 
-- Nieuwe prop: `invoicingMode?: string`
-- Als `invoicingMode === "bureau_central"` en `status === "pending"`:
-  - Toon "In voorbereiding" in plaats van "Aangevraagd" (klantgericht label)
-  - Dit is beter dan "Nog niet verstuurd" (admin-taal) -- de klant hoeft niet te weten dat er partners zijn
+```text
+// Bestaande code:
+const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
 
-## Samenvatting wijzigingen
+// Wordt leesbaaarder:
+const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
+```
+
+Het wachtwoord wordt leesbaar en makkelijk over te typen (bijv. `Vlieland-4827`).
+
+### Email inhoud (nieuw blok in plaats van "Activeren" knop)
+
+```text
+Uw inloggegevens:
+- Emailadres: partner@example.com  
+- Wachtwoord: Vlieland-4827
+- Inloggen: https://bureauvlieland.lovable.app/partner/login
+
+Wijzig uw wachtwoord na eerste login via Instellingen.
+```
+
+### Bestanden die worden aangepast
 
 | Bestand | Wijziging |
 |---|---|
-| `src/components/customer-portal/InvoiceProvidersCard.tsx` | Alles onder Bureau Vlieland bij bureau_central |
-| `src/components/customer-portal/PriceSummaryCard.tsx` | Geen bureau/partner splitsing bij bureau_central |
-| `src/components/customer-portal/CustomerProgramItem.tsx` | "In voorbereiding" i.p.v. "Aangevraagd" bij bureau_central |
-| `src/components/customer-portal/DesktopProgramView.tsx` | invoicingMode prop doorvoeren |
-| `src/components/customer-portal/MobileProgramView.tsx` | invoicingMode prop doorvoeren |
-
-Geen database- of edge function-wijzigingen nodig -- `invoicing_mode` zit al in de `program_requests` data.
+| `supabase/functions/invite-partner/index.ts` | Recovery link eruit, wachtwoord in email, leesbaar wachtwoord |
+| `supabase/functions/bulk-invite-partners/index.ts` | Zelfde als invite-partner |
+| `supabase/functions/resend-partner-invitation/index.ts` | Recovery link eruit, wachtwoord reset + in email |
 
