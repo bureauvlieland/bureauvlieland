@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,10 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Info, Receipt, Building2, Mail, FileText, Calendar, Users, Clock, Euro } from "lucide-react";
+import { Loader2, Info, Receipt, Building2, Mail, FileText, Calendar, Users, Clock, Euro, Upload, File, X } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface BillingDetails {
   billing_company_name?: string | null;
@@ -31,6 +33,14 @@ interface BillingDetails {
   billing_reference?: string | null;
 }
 
+interface BureauDetails {
+  companyName?: string;
+  kvkNumber?: string;
+  vatNumber?: string;
+  address?: string;
+  email?: string;
+}
+
 interface InvoiceRegistrationDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -38,11 +48,13 @@ interface InvoiceRegistrationDialogProps {
     amount: number,
     invoiceNumber: string,
     date: string,
-    notes?: string
+    notes?: string,
+    filePath?: string
   ) => Promise<{ success: boolean; commission?: { percentage: number; amount: number } }>;
   item: PartnerItem | null;
   commissionPercentage: number;
   billingDetails?: BillingDetails | null;
+  bureauDetails?: BureauDetails | null;
 }
 
 export const InvoiceRegistrationDialog = ({
@@ -52,6 +64,7 @@ export const InvoiceRegistrationDialog = ({
   item,
   commissionPercentage,
   billingDetails,
+  bureauDetails,
 }: InvoiceRegistrationDialogProps) => {
   const [amount, setAmount] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -59,6 +72,9 @@ export const InvoiceRegistrationDialog = ({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -68,6 +84,7 @@ export const InvoiceRegistrationDialog = ({
       setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
       setNotes("");
       setErrors({});
+      setSelectedFile(null);
     }
   }, [isOpen]);
 
@@ -93,12 +110,64 @@ export const InvoiceRegistrationDialog = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Alleen PDF-bestanden zijn toegestaan");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error("Bestand is te groot (max 10MB)");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const uploadFile = async (): Promise<string | null> => {
+    if (!selectedFile || !item) return null;
+
+    setIsUploading(true);
+    try {
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${item.provider_id}/${item.request_id}/${item.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("partner-invoices")
+        .upload(fileName, selectedFile);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        toast.error("Fout bij uploaden van PDF");
+        return null;
+      }
+
+      return fileName;
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Fout bij uploaden van PDF");
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      const result = await onSubmit(parsedAmount, invoiceNumber.trim(), invoiceDate, notes || undefined);
+      // Upload file if selected
+      let filePath: string | undefined;
+      if (selectedFile) {
+        const uploadedPath = await uploadFile();
+        if (uploadedPath) {
+          filePath = uploadedPath;
+        }
+      }
+
+      const result = await onSubmit(parsedAmount, invoiceNumber.trim(), invoiceDate, notes || undefined, filePath);
       if (!result.success) {
         setErrors({ submit: "Er is een fout opgetreden bij het registreren van de factuur" });
       }
@@ -112,6 +181,18 @@ export const InvoiceRegistrationDialog = ({
   };
 
   if (!item) return null;
+
+  // Check if this is bureau_central mode
+  const isBureauCentral = item.program_requests?.invoicing_mode === "bureau_central";
+
+  // Bureau details defaults
+  const bureauInfo = {
+    companyName: bureauDetails?.companyName || "Bureau Vlieland",
+    kvkNumber: bureauDetails?.kvkNumber || "",
+    vatNumber: bureauDetails?.vatNumber || "",
+    address: bureauDetails?.address || "Vlieland",
+    email: bureauDetails?.email || "administratie@bureauvlieland.nl",
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

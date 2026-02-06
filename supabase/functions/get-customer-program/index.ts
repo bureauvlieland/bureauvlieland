@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch program request with linked accommodation
+    // invoicing_mode is already included via * selector
     const { data: program, error: programError } = await supabase
       .from("program_requests")
       .select(`
