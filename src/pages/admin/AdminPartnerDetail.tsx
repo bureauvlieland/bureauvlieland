@@ -39,6 +39,7 @@ import {
   Percent,
   Save,
   UserPlus,
+  RefreshCw,
   CheckCircle2,
   XCircle,
   Calendar,
@@ -62,6 +63,7 @@ interface Partner {
   commission_percentage: number;
   is_active: boolean;
   auth_user_id: string | null;
+  password_set_at: string | null;
   partner_token: string;
   created_at: string;
   partner_type: string | null;
@@ -333,9 +335,12 @@ const AdminPartnerDetail = () => {
   const handleInvitePartner = async () => {
     if (!partner) return;
 
+    const isResend = !!partner.auth_user_id;
+    const functionName = isResend ? "resend-partner-invitation" : "invite-partner";
+
     setIsInviting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("invite-partner", {
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { partnerId: partner.id },
       });
 
@@ -346,14 +351,14 @@ const AdminPartnerDetail = () => {
       }
 
       await logAdminActivity({
-        action: AdminActions.PARTNER_INVITED,
+        action: isResend ? "partner_invitation_resent" : AdminActions.PARTNER_INVITED,
         entityType: EntityTypes.PARTNER,
         entityId: partner.id,
         details: { email: partner.email },
       });
 
-      toast.success("Uitnodiging verstuurd!", {
-        description: `Er is een uitnodigingsmail verzonden naar ${partner.email}`,
+      toast.success(isResend ? "Nieuwe uitnodiging verstuurd!" : "Uitnodiging verstuurd!", {
+        description: `Er is een ${isResend ? "nieuwe " : ""}uitnodigingsmail verzonden naar ${partner.email}`,
       });
       fetchPartner();
     } catch (error) {
@@ -411,10 +416,18 @@ const AdminPartnerDetail = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!isNew && partner && !partner.auth_user_id && (
+              {!isNew && partner && !partner.password_set_at && (
                 <Button variant="outline" onClick={handleInvitePartner} disabled={isInviting}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  {isInviting ? "Uitnodigen..." : "Partner uitnodigen"}
+                  {partner.auth_user_id ? (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {isInviting
+                    ? "Uitnodigen..."
+                    : partner.auth_user_id
+                    ? "Opnieuw uitnodigen"
+                    : "Partner uitnodigen"}
                 </Button>
               )}
               <Button onClick={handleSave} disabled={isSaving}>
