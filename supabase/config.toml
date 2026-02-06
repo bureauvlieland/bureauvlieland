@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.update-partner-password-set]
 verify_jwt = false
+
+[functions.resend-partner-invitation]
+verify_jwt = false

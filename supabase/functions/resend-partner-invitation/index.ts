@@ -1,10 +1,10 @@
-// Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { 
   getRenderedTemplate, 
   sanitizeHtml,
   TemplateIds 
 } from "../_shared/email-templates.ts";
+import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,11 +14,11 @@ const corsHeaders = {
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
-interface InviteRequest {
+interface ResendRequest {
   partnerId: string;
 }
 
-// Fallback email template if database template not found
+// Same fallback template as invite-partner (without "24 uur geldig" text)
 function getFallbackInvitationHtml(partnerName: string, resetLink: string, portalLink: string): string {
   return `
 <!DOCTYPE html>
@@ -37,13 +37,8 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
     <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 20px;">Beste ${sanitizeHtml(partnerName)},</h2>
     
     <p style="margin: 0 0 18px 0; color: #374151;">
-      We zijn verheugd u te verwelkomen bij het nieuwe <strong>Bureau Vlieland Partner Portaal</strong>. 
-      Dit digitale platform is ontwikkeld om onze jarenlange samenwerking nog efficiënter en transparanter te maken.
-    </p>
-    
-    <p style="margin: 0 0 25px 0; color: #374151;">
-      Het portaal is een evolutie van hoe we samenwerken — geen vervanging van de persoonlijke relatie die we waarderen, 
-      maar een aanvulling die het administratieve werk verlicht en de communicatie verbetert.
+      U ontvangt deze email omdat u nog geen wachtwoord heeft ingesteld voor het <strong>Bureau Vlieland Partner Portaal</strong>.
+      Via onderstaande link kunt u alsnog uw account activeren.
     </p>
     
     <div style="background: #e8f0f8; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
@@ -65,50 +60,6 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </p>
     </div>
     
-    <div style="background: #e8f0f8; border-radius: 8px; padding: 20px 25px; margin: 0 0 25px 0;">
-      <p style="margin: 0; color: #374151; font-size: 14px;">
-        <strong>💡 Goed om te weten:</strong> Naast programma's die klanten zelf samenstellen, gebruiken wij het portaal 
-        ook voor maatwerk programma's die we op verzoek van de klant uitwerken. De werkwijze voor aanvragen en facturatie blijft hetzelfde.
-      </p>
-    </div>
-    
-    <div style="background: #fef9e7; border-left: 4px solid #f59e0b; padding: 20px 25px; margin: 0 0 25px 0; border-radius: 0 8px 8px 0;">
-      <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">💼 Facturatie &amp; Commissie</h3>
-      
-      <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
-        U factureert uw diensten <strong>rechtstreeks aan de eindklant</strong>. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet:
-      </p>
-      
-      <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> 15% commissie (excl. BTW)</li>
-        <li><strong>Logies:</strong> 10% commissie (excl. BTW)</li>
-      </ul>
-      
-      <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
-        Deze commissie dekt de acquisitie, coördinatie en klantenservice die Bureau Vlieland voor u verzorgt.
-      </p>
-    </div>
-    
-    <div style="background: #d1fae5; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
-      <h3 style="color: #064e3b; margin: 0 0 15px 0; font-size: 17px;">✅ Wat kunt u nu doen?</h3>
-      
-      <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-        <li style="margin-bottom: 10px;">
-          <strong>Activeer uw account</strong> door op onderstaande knop te klikken en een wachtwoord in te stellen
-        </li>
-        <li style="margin-bottom: 10px;">
-          <strong>Controleer uw aanbod</strong> — bekijk of uw activiteiten en diensten correct zijn weergegeven
-        </li>
-        <li>
-          <strong>Werk uw beschikbaarheid bij</strong> — geef eventuele periodes aan waarop u niet beschikbaar bent
-        </li>
-      </ol>
-      
-      <p style="margin: 15px 0 0 0; color: #374151; font-size: 13px;">
-        We stellen het op prijs als u uw account binnen <strong>14 dagen</strong> activeert, zodat u geen aanvragen mist.
-      </p>
-    </div>
-    
     <div style="text-align: center; margin: 30px 0;">
       <a href="${resetLink}" 
          style="background: #1e3a5f; color: #ffffff; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
@@ -116,17 +67,12 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </a>
     </div>
     
-      <p style="color: #374151; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
-        Na activatie vindt u het portaal op:<br>
-        <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
-      </p>
+    <p style="color: #374151; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
+      Na activatie vindt u het portaal op:<br>
+      <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
+    </p>
     
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
-    
-    <p style="margin: 0 0 15px 0; color: #374151;">
-      Dit is het eerste jaar dat we met dit nieuwe systeem werken. Uw feedback is daarom bijzonder waardevol. 
-      Heeft u vragen, opmerkingen of suggesties? Laat het ons weten — we ontwikkelen dit platform samen.
-    </p>
     
     <p style="margin: 0 0 5px 0; color: #374151;">Met vriendelijke groet,</p>
     <p style="margin: 0; color: #1e3a5f; font-weight: 600;">Erwin Soolsma</p>
@@ -195,7 +141,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request
-    const { partnerId }: InviteRequest = await req.json();
+    const { partnerId }: ResendRequest = await req.json();
 
     if (!partnerId) {
       return new Response(
@@ -218,59 +164,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (partner.auth_user_id) {
+    // Must have an auth_user_id to resend
+    if (!partner.auth_user_id) {
       return new Response(
-        JSON.stringify({ error: "Partner already has an account" }),
+        JSON.stringify({ error: "Partner has no account yet. Use invite-partner instead." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Generate a secure temporary password
-    const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
-
-    // Create auth user
-    const { data: authUser, error: createError } = await adminClient.auth.admin.createUser({
-      email: partner.email,
-      password: tempPassword,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        partner_id: partnerId,
-        partner_name: partner.name,
-      },
-    });
-
-    if (createError) {
-      console.error("Error creating auth user:", createError);
+    // Should not have password_set_at (already activated)
+    if (partner.password_set_at) {
       return new Response(
-        JSON.stringify({ error: `Failed to create account: ${createError.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Partner has already activated their account" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Link auth user to partner
-    const { error: updateError } = await adminClient
-      .from("partners")
-      .update({ auth_user_id: authUser.user.id })
-      .eq("id", partnerId);
-
-    if (updateError) {
-      console.error("Error linking partner:", updateError);
-      // Don't fail - user was created
-    }
-
-    // Add partner role
-    const { error: roleError } = await adminClient
-      .from("user_roles")
-      .insert({
-        user_id: authUser.user.id,
-        role: "partner",
-      });
-
-    if (roleError) {
-      console.error("Error adding partner role:", roleError);
-    }
-
-    // Generate password reset link
+    // Generate new password reset link
     const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
     const { data: resetData, error: resetError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
@@ -282,25 +192,39 @@ Deno.serve(async (req) => {
 
     if (resetError) {
       console.error("Error generating reset link:", resetError);
+      return new Response(
+        JSON.stringify({ error: "Failed to generate activation link" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Get the action link (password reset URL)
     const resetLink = resetData?.properties?.action_link || `${origin}/partner/login`;
+    const portalLink = `${origin}/partner`;
+
+    // Update invited_at timestamp
+    await adminClient
+      .from("partners")
+      .update({ invited_at: new Date().toISOString() })
+      .eq("id", partnerId);
 
     // Send invitation email via Mailjet
+    let emailSent = false;
+    let emailError: string | null = null;
+    let mailjetMessageId: string | null = null;
+
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
       // Prepare template variables
       const templateVariables = {
         partner_name: sanitizeHtml(partner.name),
         reset_link: resetLink,
-        partner_portal_link: `${origin}/partner`,
+        partner_portal_link: portalLink,
       };
 
       // Try to get template from database
       const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
 
-      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink, `${origin}/partner`);
-      const emailSubject = template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek";
+      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink, portalLink);
+      const emailSubject = template?.subject || "Herinnering: Activeer uw Bureau Vlieland Partner Portaal account";
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -324,20 +248,14 @@ Deno.serve(async (req) => {
               Subject: emailSubject,
               HTMLPart: emailHtml,
               TextPart: `
-Welkom ${partner.name}!
+Beste ${partner.name},
 
-U bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal.
+U ontvangt deze email omdat u nog geen wachtwoord heeft ingesteld voor het Bureau Vlieland Partner Portaal.
 
-Via dit portaal kunt u:
-- Activiteitsaanvragen bekijken en bevestigen
-- Prijzen doorgeven aan klanten
-- Facturen registreren
-- Uw bedrijfsgegevens beheren
-
-Naast programma's die klanten zelf samenstellen, gebruiken wij het portaal ook voor maatwerk programma's die we op verzoek van de klant uitwerken. De werkwijze voor aanvragen en facturatie blijft hetzelfde.
-
-Klik op de volgende link om uw wachtwoord in te stellen:
+Klik op de volgende link om uw account te activeren:
 ${resetLink}
+
+Na activatie vindt u het portaal op: ${portalLink}
 
 Vragen? Neem contact op via erwin@bureauvlieland.nl
 
@@ -353,36 +271,53 @@ Bureau Vlieland
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text();
         console.error("Mailjet error:", errorText);
+        emailError = errorText;
       } else {
-        console.log("Invitation email sent successfully to:", partner.email);
+        emailSent = true;
+        const responseData = await emailResponse.json();
+        mailjetMessageId = responseData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+        console.log("Re-invitation email sent successfully to:", partner.email);
       }
     } else {
+      emailError = "Mailjet credentials not configured";
       console.warn("Mailjet credentials not configured, skipping email");
     }
 
-    // Log the invitation
+    // Log email
+    await logEmail({
+      email_type: EmailTypes.PARTNER_INVITATION,
+      subject: "Herinnering: Activeer uw Bureau Vlieland Partner Portaal account",
+      recipient_email: partner.email,
+      recipient_name: partner.name,
+      related_partner_id: partnerId,
+      status: emailSent ? "sent" : "failed",
+      error_message: emailError || undefined,
+      mailjet_message_id: mailjetMessageId || undefined,
+      sent_by: "resend-partner-invitation",
+      metadata: { resend: true },
+    });
+
+    // Log the activity
     await adminClient.from("admin_activity_log").insert({
       user_id: userId,
-      action: "partner_invited",
+      action: "partner_invitation_resent",
       entity_type: "partner",
       entity_id: partnerId,
       details: {
         partner_name: partner.name,
         partner_email: partner.email,
-        auth_user_id: authUser.user.id,
       },
     });
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Partner invited successfully",
-        authUserId: authUser.user.id,
+        message: "Invitation resent successfully",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in invite-partner:", error);
+    console.error("Error in resend-partner-invitation:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
