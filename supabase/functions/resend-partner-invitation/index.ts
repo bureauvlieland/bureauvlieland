@@ -218,6 +218,8 @@ Deno.serve(async (req) => {
         partner_name: sanitizeHtml(partner.name),
         reset_link: resetLink,
         partner_portal_link: portalLink,
+        commission_activity: String(partner.commission_percentage || 15),
+        commission_accommodation: String(partner.accommodation_commission_percentage || 10),
       };
 
       // Try to get template from database

@@ -80,8 +80,8 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </p>
       
       <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> 15% commissie (excl. BTW)</li>
-        <li><strong>Logies:</strong> 10% commissie (excl. BTW)</li>
+        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> ${partner.commission_percentage || 15}% commissie (excl. BTW)</li>
+        <li><strong>Logies:</strong> ${partner.accommodation_commission_percentage || 10}% commissie (excl. BTW)</li>
       </ul>
       
       <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
@@ -294,6 +294,8 @@ Deno.serve(async (req) => {
         partner_name: sanitizeHtml(partner.name),
         reset_link: resetLink,
         partner_portal_link: `${origin}/partner`,
+        commission_activity: String(partner.commission_percentage || 15),
+        commission_accommodation: String(partner.accommodation_commission_percentage || 10),
       };
 
       // Try to get template from database
