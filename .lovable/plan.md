@@ -1,34 +1,42 @@
 
 
-# Jack Frieling (BV-2602-0001) migreren naar Maatwerk
+# Template Katalys aanmaken
 
-## Huidige situatie
+## Wat verandert er ten opzichte van het vorige plan?
 
-- **Klant**: Jack Frieling (Unive Samen)
-- **Referentie**: BV-2602-0001
-- **Huidig type**: `self_service`
-- **Status**: active
-- **Facturatiemodus**: `bureau_central`
-- **Items**: 7 activiteiten, allemaal status `pending` met `item_quote_status: concept`
+- Partner "Stichting Natuur Educatie Centrum Vlieland" bestaat al (ID: `stichting-natuur-educatie-cent`) -- wordt NIET opnieuw aangemaakt
+- Stap 1 (partner aanmaken) vervalt volledig
 
-## Wat wordt er aangepast?
+## Stap 1: Twee nieuwe bouwstenen aanmaken
 
-Een enkel database-update statement:
+| Bouwsteen | ID | Categorie | Partner ID |
+|-----------|-----|-----------|-----------|
+| Wadloopexcursie | `wadloopexcursie` | excursies | `stichting-natuur-educatie-cent` |
+| Paardrijden | `paardrijden` | outdoor | `manege-de-seeruyter` |
 
-```sql
-UPDATE program_requests
-SET program_type = 'admin_managed'
-WHERE id = 'd548e22b-663d-439c-b0fa-f2b5441a00cd';
-```
+Beide starten als unpublished zonder prijzen.
 
-Dit verandert het project naar maatwerk-modus, waardoor:
-- De admin volledige controle heeft over prijzen en het programma
-- Automatische partnernotificaties onderdrukt worden tot de offerte is verstuurd
-- De offerte-workflow beschikbaar wordt (offerte samenstellen, PDF genereren, versturen naar klant)
+## Stap 2: Template "Katalys" aanmaken (3 dagen, 11 items)
 
-## Wat verandert er NIET?
+| Dag | Tijd | Activiteit | Bouwsteen |
+|-----|------|-----------|-----------|
+| 1 | 13:30 | Vertrek naar Vlieland | `boot-retour` |
+| 1 | 15:45 | Fietsen ophalen | `fiets-huur` |
+| 1 | 16:30 | Strandspektakel | `strandspektakel` |
+| 1 | 18:00 | BBQ | `strand-bbq` |
+| 2 | 10:00 | Wadloopexcursie | `wadloopexcursie` (nieuw) |
+| 2 | 12:00 | Lunch bij bunkermuseum | `luncharrangement` |
+| 2 | 13:30 | Paardrijden | `paardrijden` (nieuw) |
+| 2 | 17:30 | Diner | `catering-3-gangen-diner` |
+| 2 | 19:30 | Lasergamen | `voc-lasergamen` |
+| 3 | 09:30 | Zeehondentocht | `zeehondentocht` |
+| 3 | 11:30 | Vertrek veerboot | `boot-retour` |
 
-- Alle 7 bestaande items blijven behouden
-- De klantgegevens en het klantportaal blijven intact
-- De facturatiemodus (`bureau_central`) blijft ongewijzigd
+## Technische details
+
+Drie SQL operaties:
+
+1. **Bouwsteen wadloopexcursie**: `INSERT INTO building_blocks` met `provider_id = 'stichting-natuur-educatie-cent'`, categorie `excursies`
+2. **Bouwsteen paardrijden**: `INSERT INTO building_blocks` met `provider_id = 'manege-de-seeruyter'`, categorie `outdoor`
+3. **Template + 11 items**: `INSERT INTO program_templates` (ID: `katalys`, naam: "Katalys", 3 dagen, unpublished) en `INSERT INTO program_template_items` met alle 11 regels
 
