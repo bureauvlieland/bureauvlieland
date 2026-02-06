@@ -1,80 +1,60 @@
 
 
-# Template toepassen en Programma opslaan als template
+# Fix misleidende labels op admin projectdetailpagina
 
-## Wat wordt er gebouwd?
+## Probleem
 
-Twee nieuwe admin-functionaliteiten op de projectdetailpagina:
+Op de admin projectdetailpagina worden twee misleidende zaken getoond:
 
-1. **Template toepassen op bestaand project** -- Een knop "Template toepassen" waarmee een admin een voorbeeldprogramma kan selecteren en alle bouwstenen in een keer kan toevoegen aan een bestaand project.
+1. **"Aangevraagd" status** -- Suggereert dat partnermails al verstuurd zijn, terwijl het project nog in de opbouwfase zit
+2. **"Partner -> Klant" facturatie** -- Suggereert dat partners direct factureren, terwijl Bureau Vlieland centraal factureert (vorige issue)
 
-2. **Programma opslaan als template** -- Een knop "Opslaan als template" waarmee de huidige activiteiten van een project als nieuw voorbeeldprogramma worden opgeslagen.
+Dit komt doordat de pagina niet goed rekening houdt met het `invoicing_mode` en `program_type` van het project.
 
----
+## Oplossing
 
-## Functionaliteit in detail
+### Fix 1: Facturatielabel (eerder besproken)
 
-### 1. Template toepassen
+**Bestand:** `src/pages/admin/AdminRequestDetail.tsx`
 
-- Nieuwe knop naast "Activiteit toevoegen" op de projectdetailpagina
-- Opent een dialog met:
-  - Lijst van alle gepubliceerde templates (naam, duur, aantal bouwstenen, indicatieve prijs)
-  - Preview van de geselecteerde template (welke bouwstenen per dag)
-  - Bevestigknop "Toepassen"
-- Bij bevestiging worden alle template-items als `program_request_items` ingevoegd met:
-  - `day_index` en `preferred_time` uit de template
-  - `status: "pending"`, `item_quote_status: "concept"`
-  - `skip_partner_notification: true` (admin voegt handmatig toe)
-  - Provider-info uit de gekoppelde `building_block`
-- Bestaande activiteiten blijven behouden (template wordt toegevoegd, niet vervangen)
-- Admin logging na toepassen
+```
+// Van:
+const isBureauInvoiced = item.block_type === "bureau";
 
-### 2. Opslaan als template
+// Naar:
+const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
+```
 
-- Nieuwe knop in het activiteiten-kaartje (dropdown of naast de andere knoppen)
-- Opent een dialog met:
-  - Naam voor de template (verplicht)
-  - ID/slug (auto-gegenereerd uit naam)
-  - Korte beschrijving (optioneel)
-  - Duur wordt automatisch bepaald op basis van het maximale `day_index + 1`
-  - Optie om direct te publiceren of als concept op te slaan
-- Bij bevestiging:
-  - Nieuwe rij in `program_templates`
-  - Voor elke `program_request_item` wordt een `program_template_item` aangemaakt met `block_id`, `day_index`, `preferred_time`, en `sort_order`
-  - Bevestigingsmelding met link naar template-beheer
+Wanneer het project op `bureau_central` staat, tonen alle items "Bureau -> Klant".
 
----
+### Fix 2: Status labels context-afhankelijk maken
 
-## Technische details
+**Bestand:** `src/types/programRequest.ts`
 
-### Nieuwe componenten
+Het label "Aangevraagd" blijft correct voor self-service projecten. Voor quote-modus projecten wordt de status-kolom in de tabel al vervangen door de `item_quote_status` selector (Concept / In afstemming / Bevestigd / Optioneel). Echter, als een project per ongeluk als `self_service` is aangemaakt maar eigenlijk als offerte wordt gebruikt, ziet de admin het verkeerde label.
 
-| Component | Doel |
-|---|---|
-| `src/components/admin/ApplyTemplateDialog.tsx` | Dialog voor template selectie en toepassing op een project |
-| `src/components/admin/SaveAsTemplateDialog.tsx` | Dialog voor het opslaan van een programma als template |
+**Bestand:** `src/pages/admin/AdminRequestDetail.tsx`
 
-### Wijzigingen in bestaande bestanden
+Aanvulling: wanneer `invoicing_mode === "bureau_central"` en het project is niet expliciet in quote-modus, toon dan een contextgerichter label voor `pending` items:
+
+```
+// In de self-service statusweergave:
+const displayLabel = (request?.invoicing_mode === "bureau_central" && item.status === "pending")
+  ? "Nog niet verstuurd"
+  : statusInfo.label;
+```
+
+Dit maakt het voor de admin direct duidelijk dat er nog geen communicatie naar partners is gegaan.
+
+### Fix 3: Projecttype-indicator toevoegen
+
+Optioneel maar nuttig: een duidelijke indicator bovenaan de pagina die toont welk facturatiemodel actief is, zodat de context altijd zichtbaar is.
+
+## Samenvatting wijzigingen
 
 | Bestand | Wijziging |
 |---|---|
-| `src/pages/admin/AdminRequestDetail.tsx` | Twee nieuwe knoppen toevoegen in de activiteiten-card header + state en imports |
+| `src/pages/admin/AdminRequestDetail.tsx` | Facturatie-label fix + status-label aanpassing voor bureau_central projecten |
 
-### Geen database-wijzigingen nodig
-De bestaande tabellen `program_templates`, `program_template_items`, `program_request_items` en `building_blocks` bevatten alle benodigde kolommen.
-
-### Data flow: Template toepassen
-
-1. Admin selecteert template in dialog
-2. Template-items worden opgehaald via `useTemplateWithItems`
-3. Voor elk template-item wordt de bijbehorende `building_block` opgezocht (provider-info nodig)
-4. Batch-insert in `program_request_items` via Supabase
-5. Refetch project-data, toon bevestiging
-
-### Data flow: Opslaan als template
-
-1. Admin vult naam en slug in
-2. Insert in `program_templates` met afgeleide `duration_days`
-3. Voor elk `program_request_item` een insert in `program_template_items` met `block_id`, `day_index`, `preferred_time`
-4. Toon bevestiging met optie om naar template-beheer te navigeren
+Twee kleine, gerichte aanpassingen -- geen nieuwe componenten of database-wijzigingen nodig.
 
