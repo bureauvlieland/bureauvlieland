@@ -62,6 +62,7 @@ import {
 } from "lucide-react";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
+import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 
 interface LinkedProgram {
   id: string;
@@ -743,6 +744,13 @@ export default function AdminAccommodationDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Communication log */}
+            <ProjectCommunicationsCard
+              accommodationId={id}
+              customerName={request.customer_name}
+              customerEmail={request.customer_email}
+            />
           </div>
 
           {/* Sidebar */}
