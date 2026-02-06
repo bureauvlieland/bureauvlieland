@@ -265,8 +265,11 @@ const CustomerProgram = () => {
     : "";
 
   // Shared props for both views
+  const invoicingMode = (program as any).invoicing_mode || "partner_direct";
+
   const viewProps = {
     program: program as any,
+    invoicingMode,
     history,
     selectedDates,
     statusSummary,

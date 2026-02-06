@@ -38,6 +38,7 @@ interface CustomerProgramItemProps {
   isEditing?: boolean;
   hasChanges?: boolean;
   isAccepting?: boolean;
+  invoicingMode?: string;
 }
 
 export const CustomerProgramItem = ({
@@ -51,6 +52,7 @@ export const CustomerProgramItem = ({
   isEditing = false,
   hasChanges = false,
   isAccepting = false,
+  invoicingMode,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -110,7 +112,7 @@ export const CustomerProgramItem = ({
                     Nieuw
                   </Badge>
                 )}
-                <ItemStatusBadge status={item.status as ItemStatus} />
+                <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={invoicingMode === "bureau_central" && item.status === "pending" ? "In voorbereiding" : undefined} />
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {item.provider_name}

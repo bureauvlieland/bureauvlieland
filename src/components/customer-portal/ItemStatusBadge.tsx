@@ -7,6 +7,7 @@ interface ItemStatusBadgeProps {
   status: ItemStatus;
   className?: string;
   showLabel?: boolean;
+  overrideLabel?: string;
 }
 
 const iconMap = {
@@ -24,6 +25,7 @@ export const ItemStatusBadge = ({
   status,
   className,
   showLabel = true,
+  overrideLabel,
 }: ItemStatusBadgeProps) => {
   const config = itemStatusConfig[status];
   const IconComponent = iconMap[config.icon as keyof typeof iconMap];
@@ -39,7 +41,7 @@ export const ItemStatusBadge = ({
       )}
     >
       <IconComponent className="h-3.5 w-3.5" />
-      {showLabel && <span>{config.label}</span>}
+      {showLabel && <span>{overrideLabel || config.label}</span>}
     </Badge>
   );
 };

@@ -24,6 +24,7 @@ interface CompactBillingSectionProps {
   termsAccepted: boolean;
   selectedAccommodationQuote?: AccommodationQuote;
   onEditBilling: () => void;
+  invoicingMode?: string;
 }
 
 export const CompactBillingSection = ({
@@ -33,6 +34,7 @@ export const CompactBillingSection = ({
   termsAccepted,
   selectedAccommodationQuote,
   onEditBilling,
+  invoicingMode,
 }: CompactBillingSectionProps) => {
   const billingComplete = !!(
     program.billing_company_name &&
@@ -71,6 +73,7 @@ export const CompactBillingSection = ({
         items={items}
         selectedAccommodationQuote={selectedAccommodationQuote}
         numberOfPeople={numberOfPeople}
+        invoicingMode={invoicingMode}
       />
 
       {/* Price summary */}
@@ -79,6 +82,7 @@ export const CompactBillingSection = ({
         numberOfPeople={numberOfPeople}
         termsAccepted={termsAccepted}
         selectedAccommodationQuote={selectedAccommodationQuote}
+        invoicingMode={invoicingMode}
       />
     </div>
   );
