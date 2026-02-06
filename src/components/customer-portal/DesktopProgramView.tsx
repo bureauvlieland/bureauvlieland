@@ -38,6 +38,7 @@ import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 interface DesktopProgramViewProps {
+  invoicingMode?: string;
   program: {
     customer_name: string;
     customer_company?: string;
@@ -103,6 +104,7 @@ interface DesktopProgramViewProps {
 }
 
 export const DesktopProgramView = ({
+  invoicingMode,
   program,
   history,
   selectedDates,
@@ -295,6 +297,7 @@ export const DesktopProgramView = ({
                           onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
                           allItems={program.items}
                           hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                          invoicingMode={invoicingMode}
                         />
                       ))}
                       {getItemsForDay(dayIndex).length === 0 && (
@@ -326,6 +329,7 @@ export const DesktopProgramView = ({
                         onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
                         allItems={program.items}
                         hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                        invoicingMode={invoicingMode}
                       />
                     ))}
                 </div>
@@ -343,6 +347,7 @@ export const DesktopProgramView = ({
             termsAccepted={termsAccepted}
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
             onEditBilling={onOpenBilling}
+            invoicingMode={invoicingMode}
           />
         </div>
 

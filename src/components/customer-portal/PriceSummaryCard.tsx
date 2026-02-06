@@ -13,8 +13,8 @@ interface PriceSummaryCardProps {
   className?: string;
   variant?: "default" | "compact";
   termsAccepted?: boolean;
-  // Accommodation data
   selectedAccommodationQuote?: AccommodationQuote | null;
+  invoicingMode?: string;
 }
 
 // Calculate VAT breakdown
@@ -31,7 +31,9 @@ export const PriceSummaryCard = ({
   variant = "default",
   termsAccepted = false,
   selectedAccommodationQuote,
+  invoicingMode,
 }: PriceSummaryCardProps) => {
+  const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const summary = useMemo(() => {
     // Filter out self-arranged and cancelled items
@@ -148,12 +150,16 @@ export const PriceSummaryCard = ({
           {(summary.hasBureauItems || summary.coordinationFee > 0) && (
             <div className="flex items-center justify-between">
               <span className="text-primary">Bureau Vlieland</span>
-              <span className="text-primary">€{formatPrice(summary.bureauTotal + summary.coordinationFee)}</span>
+              <span className="text-primary">€{formatPrice(
+                isBureauCentral 
+                  ? summary.bureauTotal + summary.coordinationFee + summary.partnerTotal
+                  : summary.bureauTotal + summary.coordinationFee
+              )}</span>
             </div>
           )}
           
-          {/* Partner activiteiten - muted */}
-          {summary.hasPartnerItems && (
+          {/* Partner activiteiten - muted - only in partner_direct */}
+          {!isBureauCentral && summary.hasPartnerItems && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Aanbieders</span>
               <span className="text-muted-foreground">€{formatPrice(summary.partnerTotal)}</span>
@@ -253,7 +259,7 @@ export const PriceSummaryCard = ({
             </div>
           )}
 
-          {/* Bureau Vlieland section */}
+          {/* Bureau Vlieland section - in bureau_central include partner costs */}
           {(summary.hasBureauItems || true) && (
             <div className="bg-primary/5 rounded-lg p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
@@ -263,8 +269,16 @@ export const PriceSummaryCard = ({
               
               {summary.hasBureauItems && (
                 <div className="flex items-center justify-between text-sm pl-6">
-                  <span className="text-muted-foreground">Activiteiten</span>
+                  <span className="text-muted-foreground">{isBureauCentral ? "Bureau activiteiten" : "Activiteiten"}</span>
                   <span>€{formatPrice(summary.bureauTotal)}</span>
+                </div>
+              )}
+
+              {/* In bureau_central, partner costs go under Bureau Vlieland */}
+              {isBureauCentral && summary.hasPartnerItems && (
+                <div className="flex items-center justify-between text-sm pl-6">
+                  <span className="text-muted-foreground">Activiteiten aanbieders</span>
+                  <span>€{formatPrice(summary.partnerTotal)}</span>
                 </div>
               )}
               
@@ -273,27 +287,29 @@ export const PriceSummaryCard = ({
                 <span>€{formatPrice(summary.coordinationFee)}</span>
               </div>
 
-              {/* VAT breakdown for Bureau */}
+              {/* VAT breakdown for Bureau - in bureau_central include partner VAT */}
               <div className="border-t border-primary/10 pt-2 mt-2 space-y-1 pl-6">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Subtotaal excl. BTW</span>
-                  <span>€{formatPrice(summary.bureauExclVat)}</span>
+                  <span>€{formatPrice(summary.bureauExclVat + (isBureauCentral ? summary.partnerExclVat : 0))}</span>
                 </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>BTW ({summary.standardVatRate}%)</span>
-                  <span>€{formatPrice(summary.bureauVatAmount)}</span>
+                  <span>€{formatPrice(summary.bureauVatAmount + (isBureauCentral ? summary.partnerVatAmount : 0))}</span>
                 </div>
               </div>
               
               <div className="flex items-center justify-between font-medium pt-2 border-t border-primary/10 pl-6">
                 <span>Subtotaal incl. BTW</span>
-                <span className="text-primary">€{formatPrice(summary.bureauTotal + summary.coordinationFee)}</span>
+                <span className="text-primary">€{formatPrice(
+                  summary.bureauTotal + summary.coordinationFee + (isBureauCentral ? summary.partnerTotal : 0)
+                )}</span>
               </div>
             </div>
           )}
 
-          {/* Partner invoices section */}
-          {summary.hasPartnerItems && (
+          {/* Partner invoices section - only in partner_direct mode */}
+          {!isBureauCentral && summary.hasPartnerItems && (
             <div className="bg-muted/50 rounded-lg p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Building2 className="h-4 w-4 text-muted-foreground" />

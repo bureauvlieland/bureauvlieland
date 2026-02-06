@@ -39,6 +39,7 @@ import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 
 interface MobileProgramViewProps {
+  invoicingMode?: string;
   program: {
     customer_name: string;
     customer_company?: string;
@@ -103,6 +104,7 @@ interface MobileProgramViewProps {
 }
 
 export const MobileProgramView = ({
+  invoicingMode,
   program,
   history,
   selectedDates,
@@ -317,6 +319,7 @@ export const MobileProgramView = ({
                     onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
                     allItems={program.items}
                     hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                    invoicingMode={invoicingMode}
                   />
                 ))}
                 {getItemsForDay(dayIndex).length === 0 && (
@@ -348,6 +351,7 @@ export const MobileProgramView = ({
                   onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
                   allItems={program.items}
                   hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                  invoicingMode={invoicingMode}
                 />
               ))}
           </div>
@@ -367,12 +371,14 @@ export const MobileProgramView = ({
             items={program.items} 
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
             numberOfPeople={program.number_of_people}
+            invoicingMode={invoicingMode}
           />
           <PriceSummaryCard 
             items={program.items} 
             numberOfPeople={program.number_of_people} 
             termsAccepted={termsAccepted}
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+            invoicingMode={invoicingMode}
           />
         </div>
       </ProgramSection>

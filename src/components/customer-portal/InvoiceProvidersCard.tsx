@@ -10,6 +10,7 @@ interface InvoiceProvidersCardProps {
   selectedAccommodationQuote?: AccommodationQuote | null;
   numberOfPeople: number;
   className?: string;
+  invoicingMode?: string;
 }
 
 interface ProviderInfo {
@@ -21,7 +22,8 @@ interface ProviderInfo {
   itemNames: string[];
 }
 
-export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, numberOfPeople, className }: InvoiceProvidersCardProps) => {
+export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, numberOfPeople, className, invoicingMode }: InvoiceProvidersCardProps) => {
+  const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee } = useAppSettings();
   const { providers, selfArrangedItems, bureauTotal, partnerProviders, coordinationFee } = useMemo(() => {
     // Group items by provider, excluding cancelled and self-arranged
@@ -94,7 +96,9 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Voor dit programma ontvang je afzonderlijke facturen van de onderstaande partijen.
+          {isBureauCentral
+            ? "Bureau Vlieland verzorgt de volledige facturatie voor uw programma."
+            : "Voor dit programma ontvang je afzonderlijke facturen van de onderstaande partijen."}
         </p>
 
         <div className="space-y-3">
@@ -130,11 +134,14 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                   <p className="font-medium">Bureau Vlieland</p>
                   <div className="flex items-center gap-1 text-primary font-semibold">
                     <Euro className="h-3.5 w-3.5" />
-                    <span>{formatPrice(bureauTotal + coordinationFee)}</span>
+                    <span>{formatPrice(isBureauCentral 
+                      ? bureauTotal + coordinationFee + partnerProviders.reduce((s, p) => s + p.totalAmount, 0)
+                      : bureauTotal + coordinationFee
+                    )}</span>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Coördinatie & handling
+                  {isBureauCentral ? "Volledige programma & coördinatie" : "Coördinatie & handling"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Factuur door: Bureau Vlieland
@@ -143,9 +150,8 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
             </div>
           )}
 
-          {/* Partner items - each provider separately with amounts */}
-          {partnerProviders.map((provider) => {
-            // Check if any item for this provider uses preliminary pricing
+          {/* Partner items - only show individually in partner_direct mode */}
+          {!isBureauCentral && partnerProviders.map((provider) => {
             const providerItems = items.filter(i => i.provider_id === provider.id && i.status !== "cancelled");
             const hasPreliminaryPrice = providerItems.some(i => !i.quoted_price && i.admin_price_override);
             
