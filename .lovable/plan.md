@@ -1,60 +1,66 @@
 
 
-# Fix misleidende labels op admin projectdetailpagina
+# Fix klantportaal labels voor bureau_central projecten
 
 ## Probleem
 
-Op de admin projectdetailpagina worden twee misleidende zaken getoond:
+Het klantportaal (`/mijn-programma/:token`) houdt op drie plekken geen rekening met het facturatiemodel:
 
-1. **"Aangevraagd" status** -- Suggereert dat partnermails al verstuurd zijn, terwijl het project nog in de opbouwfase zit
-2. **"Partner -> Klant" facturatie** -- Suggereert dat partners direct factureren, terwijl Bureau Vlieland centraal factureert (vorige issue)
-
-Dit komt doordat de pagina niet goed rekening houdt met het `invoicing_mode` en `program_type` van het project.
+1. **ItemStatusBadge**: Toont "Aangevraagd" voor pending items, terwijl de klant bij een maatwerk-project nog helemaal niets heeft "aangevraagd" -- Bureau Vlieland stelt het programma samen.
+2. **InvoiceProvidersCard**: Toont individuele partnerregels met "je ontvangt afzonderlijke facturen", terwijl bij `bureau_central` alles door Bureau Vlieland wordt gefactureerd.
+3. **PriceSummaryCard**: Splitst prijzen op in "bureau" en "partner" categorieen, terwijl de klant dat onderscheid niet hoeft te zien bij centraal factureren.
 
 ## Oplossing
 
-### Fix 1: Facturatielabel (eerder besproken)
+### Stap 1: `invoicing_mode` beschikbaar maken in het klantportaal
 
-**Bestand:** `src/pages/admin/AdminRequestDetail.tsx`
+**Bestand:** `src/hooks/useCustomerProgram.ts`
 
-```
-// Van:
-const isBureauInvoiced = item.block_type === "bureau";
+De `program` data bevat al `invoicing_mode` vanuit de edge function `get-customer-program` (die `SELECT *` doet op `program_requests`). Dit veld is dus al beschikbaar in `program.invoicing_mode`.
 
-// Naar:
-const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
-```
+### Stap 2: `invoicing_mode` doorgeven aan child-componenten
 
-Wanneer het project op `bureau_central` staat, tonen alle items "Bureau -> Klant".
+**Bestanden:** `MobileProgramView.tsx`, `DesktopProgramView.tsx`
 
-### Fix 2: Status labels context-afhankelijk maken
+Deze componenten moeten `invoicing_mode` doorgeven aan `InvoiceProvidersCard`, `PriceSummaryCard`, en `CustomerProgramItem`.
 
-**Bestand:** `src/types/programRequest.ts`
+### Stap 3: InvoiceProvidersCard aanpassen
 
-Het label "Aangevraagd" blijft correct voor self-service projecten. Voor quote-modus projecten wordt de status-kolom in de tabel al vervangen door de `item_quote_status` selector (Concept / In afstemming / Bevestigd / Optioneel). Echter, als een project per ongeluk als `self_service` is aangemaakt maar eigenlijk als offerte wordt gebruikt, ziet de admin het verkeerde label.
+**Bestand:** `src/components/customer-portal/InvoiceProvidersCard.tsx`
 
-**Bestand:** `src/pages/admin/AdminRequestDetail.tsx`
+- Nieuwe prop: `invoicingMode?: string`
+- Als `invoicingMode === "bureau_central"`:
+  - Verander introductietekst naar: "Bureau Vlieland verzorgt de volledige facturatie voor uw programma."
+  - Alle items groeperen onder een enkele "Bureau Vlieland" regel (geen aparte partnerregels)
+  - Totaalbedrag tonen als een gecombineerd bedrag
 
-Aanvulling: wanneer `invoicing_mode === "bureau_central"` en het project is niet expliciet in quote-modus, toon dan een contextgerichter label voor `pending` items:
+### Stap 4: PriceSummaryCard aanpassen
 
-```
-// In de self-service statusweergave:
-const displayLabel = (request?.invoicing_mode === "bureau_central" && item.status === "pending")
-  ? "Nog niet verstuurd"
-  : statusInfo.label;
-```
+**Bestand:** `src/components/customer-portal/PriceSummaryCard.tsx`
 
-Dit maakt het voor de admin direct duidelijk dat er nog geen communicatie naar partners is gegaan.
+- Nieuwe prop: `invoicingMode?: string`
+- Als `invoicingMode === "bureau_central"`:
+  - Geen opsplitsing in "bureau" en "partner" categorieen
+  - Alles onder een enkele "Bureau Vlieland" noemer tonen
 
-### Fix 3: Projecttype-indicator toevoegen
+### Stap 5: ItemStatusBadge / CustomerProgramItem context-afhankelijk
 
-Optioneel maar nuttig: een duidelijke indicator bovenaan de pagina die toont welk facturatiemodel actief is, zodat de context altijd zichtbaar is.
+**Bestand:** `src/components/customer-portal/CustomerProgramItem.tsx`
+
+- Nieuwe prop: `invoicingMode?: string`
+- Als `invoicingMode === "bureau_central"` en `status === "pending"`:
+  - Toon "In voorbereiding" in plaats van "Aangevraagd" (klantgericht label)
+  - Dit is beter dan "Nog niet verstuurd" (admin-taal) -- de klant hoeft niet te weten dat er partners zijn
 
 ## Samenvatting wijzigingen
 
 | Bestand | Wijziging |
 |---|---|
-| `src/pages/admin/AdminRequestDetail.tsx` | Facturatie-label fix + status-label aanpassing voor bureau_central projecten |
+| `src/components/customer-portal/InvoiceProvidersCard.tsx` | Alles onder Bureau Vlieland bij bureau_central |
+| `src/components/customer-portal/PriceSummaryCard.tsx` | Geen bureau/partner splitsing bij bureau_central |
+| `src/components/customer-portal/CustomerProgramItem.tsx` | "In voorbereiding" i.p.v. "Aangevraagd" bij bureau_central |
+| `src/components/customer-portal/DesktopProgramView.tsx` | invoicingMode prop doorvoeren |
+| `src/components/customer-portal/MobileProgramView.tsx` | invoicingMode prop doorvoeren |
 
-Twee kleine, gerichte aanpassingen -- geen nieuwe componenten of database-wijzigingen nodig.
+Geen database- of edge function-wijzigingen nodig -- `invoicing_mode` zit al in de `program_requests` data.
 
