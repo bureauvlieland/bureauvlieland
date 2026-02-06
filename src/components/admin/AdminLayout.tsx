@@ -54,6 +54,7 @@ const menuItems = [
   { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
   { title: "Media", url: "/admin/media", icon: ImageIcon },
   { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
+  { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Euro },
   { title: "Commissies", url: "/admin/commissies", icon: Euro },
   { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
   { title: "Berichten", url: "/admin/berichten", icon: Mail },

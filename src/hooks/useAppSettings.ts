@@ -60,6 +60,20 @@ export function useAppSettings() {
     },
   });
 
+  // Get a specific setting value with fallback
+  const getSetting = <T = unknown>(id: string, fallback: T): T => {
+    const setting = rawSettings?.find(s => s.id === id);
+    if (!setting) return fallback;
+    
+    // Handle JSON-wrapped strings
+    const val = setting.value;
+    if (typeof val === "string") {
+      // Remove surrounding quotes if present
+      return val.replace(/^"|"$/g, "") as unknown as T;
+    }
+    return val as T;
+  };
+
   return {
     // Raw data
     rawSettings,
@@ -82,5 +96,8 @@ export function useAppSettings() {
 
     // Fee tiers for display
     feeTiers: mergedSettings.coordination_fee_tiers as FeeTier[],
+
+    // Get arbitrary setting
+    getSetting,
   };
 }

@@ -831,6 +831,97 @@ export type Database = {
           },
         ]
       }
+      partner_purchase_invoices: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          approved_at: string | null
+          created_at: string
+          description: string | null
+          file_path: string | null
+          forwarded_by: string | null
+          forwarded_to_accounting_at: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          item_id: string | null
+          paid_at: string | null
+          partner_id: string
+          registered_by: string
+          request_id: string
+          status: string
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          approved_at?: string | null
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          forwarded_by?: string | null
+          forwarded_to_accounting_at?: string | null
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          item_id?: string | null
+          paid_at?: string | null
+          partner_id: string
+          registered_by?: string
+          request_id: string
+          status?: string
+          updated_at?: string
+          vat_amount: number
+          vat_rate?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          approved_at?: string | null
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          forwarded_by?: string | null
+          forwarded_to_accounting_at?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          item_id?: string | null
+          paid_at?: string | null
+          partner_id?: string
+          registered_by?: string
+          request_id?: string
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_purchase_invoices_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_purchase_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_purchase_invoices_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_room_types: {
         Row: {
           bed_configuration: string | null
@@ -1281,6 +1372,7 @@ export type Database = {
           expires_at: string
           general_notes: string | null
           id: string
+          invoicing_mode: string
           linked_accommodation_id: string | null
           number_of_people: number
           program_description: string | null
@@ -1324,6 +1416,7 @@ export type Database = {
           expires_at?: string
           general_notes?: string | null
           id?: string
+          invoicing_mode?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
           program_description?: string | null
@@ -1367,6 +1460,7 @@ export type Database = {
           expires_at?: string
           general_notes?: string | null
           id?: string
+          invoicing_mode?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
           program_description?: string | null

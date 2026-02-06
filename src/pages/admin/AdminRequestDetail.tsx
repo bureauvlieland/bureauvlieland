@@ -79,6 +79,8 @@ import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
+import { InvoicingModeSelector } from "@/components/admin/InvoicingModeSelector";
+import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 
 interface ProgramRequest {
   id: string;
@@ -108,6 +110,8 @@ interface ProgramRequest {
   quote_personal_message: string | null;
   // Program description
   program_description: string | null;
+  // Invoicing mode
+  invoicing_mode: 'partner_direct' | 'bureau_central';
 }
 
 interface LinkedAccommodation {
@@ -804,6 +808,20 @@ const AdminRequestDetail = () => {
             }))}
             selectedDates={request.selected_dates as string[]}
           />
+
+          {/* Invoicing Mode & Purchase Invoices (for bureau_central) */}
+          <div className="grid md:grid-cols-3 gap-6">
+            <InvoicingModeSelector
+              requestId={request.id}
+              currentMode={request.invoicing_mode || 'partner_direct'}
+              onModeChange={fetchRequestData}
+            />
+            {request.invoicing_mode === 'bureau_central' && (
+              <div className="md:col-span-2">
+                <PurchaseInvoicesCard requestId={request.id} />
+              </div>
+            )}
+          </div>
 
           {/* Completion Status and Financial Overview */}
           <div className="grid md:grid-cols-2 gap-6">
