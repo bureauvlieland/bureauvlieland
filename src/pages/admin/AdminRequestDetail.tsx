@@ -904,7 +904,7 @@ const AdminRequestDetail = () => {
                   <TableBody>
                     {items.map((item) => {
                       const statusInfo = itemStatusConfig[item.status];
-                      const isBureauInvoiced = item.block_type === "bureau";
+                      const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
                       return (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
@@ -982,7 +982,9 @@ const AdminRequestDetail = () => {
                                 <div className="flex items-center gap-2">
                                   {statusIcons[item.status]}
                                   <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                    {statusInfo.label}
+                                    {request?.invoicing_mode === "bureau_central" && item.status === "pending"
+                                      ? "Nog niet verstuurd"
+                                      : statusInfo.label}
                                   </Badge>
                                 </div>
                                 {item.status_note && (
