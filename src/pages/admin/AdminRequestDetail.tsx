@@ -853,12 +853,10 @@ const AdminRequestDetail = () => {
                   }
                 </CardDescription>
               </div>
-              {isQuoteMode && (
-                <Button onClick={() => setAddActivityOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Activiteit toevoegen
-                </Button>
-              )}
+              <Button onClick={() => setAddActivityOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Activiteit toevoegen
+              </Button>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
