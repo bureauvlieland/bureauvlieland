@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes } = await req.json();
+    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes, filePath } = await req.json();
 
     if (!partnerToken || !itemId || !invoicedAmount || !invoicedNumber || !invoicedDate) {
       return new Response(
@@ -89,10 +89,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify item belongs to this partner
+    // Verify item belongs to this partner and get invoicing_mode
     const { data: item, error: itemError } = await supabase
       .from("program_request_items")
-      .select("*, program_requests!inner(id, customer_name, customer_email, customer_company, selected_dates)")
+      .select("*, program_requests!inner(id, customer_name, customer_email, customer_company, selected_dates, invoicing_mode, reference_number)")
       .eq("id", itemId)
       .eq("provider_id", partner.id)
       .single();
@@ -104,17 +104,55 @@ Deno.serve(async (req) => {
       );
     }
 
+    const invoicingMode = item.program_requests.invoicing_mode || "partner_direct";
+
     // Calculate commission
     const commissionPercentage = partner.commission_percentage;
     const commissionAmount = (invoicedAmount * commissionPercentage) / 100;
 
-    // Update item with invoice details
+    // Calculate VAT (assume 21% for activities)
+    const vatRate = 21;
+    const vatAmount = invoicedAmount * (vatRate / 100);
+    const amountInclVat = invoicedAmount + vatAmount;
+
+    // If bureau_central mode, create a purchase invoice record instead of just updating the item
+    if (invoicingMode === "bureau_central") {
+      // Create purchase invoice record
+      const { error: purchaseError } = await supabase
+        .from("partner_purchase_invoices")
+        .insert({
+          request_id: item.request_id,
+          item_id: itemId,
+          partner_id: partner.id,
+          invoice_number: invoicedNumber,
+          invoice_date: invoicedDate,
+          amount_excl_vat: invoicedAmount,
+          vat_rate: vatRate,
+          vat_amount: vatAmount,
+          amount_incl_vat: amountInclVat,
+          description: `${item.block_name} - ${item.program_requests.customer_company || item.program_requests.customer_name}`,
+          file_path: filePath || null,
+          status: "pending",
+          registered_by: "partner",
+        });
+
+      if (purchaseError) {
+        console.error("Error creating purchase invoice:", purchaseError);
+        return new Response(
+          JSON.stringify({ error: "Failed to register purchase invoice" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Update item with invoice details (for both modes)
     const { error: updateError } = await supabase
       .from("program_request_items")
       .update({
         invoiced_amount: invoicedAmount,
         invoiced_number: invoicedNumber,
         invoiced_date: invoicedDate,
+        invoiced_file_path: filePath || null,
         commission_percentage: commissionPercentage,
         commission_amount: commissionAmount,
         commission_status: commissionPercentage > 0 ? "pending" : "not_applicable",
@@ -135,7 +173,7 @@ Deno.serve(async (req) => {
     await supabase.from("program_request_history").insert({
       request_id: item.request_id,
       item_id: itemId,
-      action: "invoice_registered",
+      action: invoicingMode === "bureau_central" ? "purchase_invoice_registered" : "invoice_registered",
       actor: "partner",
       actor_name: partner.name,
       new_value: {
@@ -144,8 +182,11 @@ Deno.serve(async (req) => {
         invoiced_date: invoicedDate,
         commission_percentage: commissionPercentage,
         commission_amount: commissionAmount,
+        invoicing_mode: invoicingMode,
       },
-      notes: `Partner heeft factuur ${invoicedNumber} geregistreerd (€${invoicedAmount})`,
+      notes: invoicingMode === "bureau_central" 
+        ? `Partner heeft inkoopfactuur ${invoicedNumber} geregistreerd aan Bureau Vlieland (€${invoicedAmount})`
+        : `Partner heeft factuur ${invoicedNumber} geregistreerd (€${invoicedAmount})`,
     });
 
     // Create auto todo for commission handling if commission > 0
@@ -171,6 +212,20 @@ Deno.serve(async (req) => {
         });
         console.log(`Created commission_pending todo for item ${itemId}`);
       }
+    }
+
+    // Create auto todo for purchase invoice processing if bureau_central
+    if (invoicingMode === "bureau_central") {
+      await supabase.from("admin_todos").insert({
+        title: `Inkoopfactuur verwerken: ${partner.name} - ${invoicedNumber}`,
+        description: `Partner ${partner.name} heeft inkoopfactuur ${invoicedNumber} (€${invoicedAmount}) geregistreerd voor project ${item.program_requests.reference_number || item.request_id}. Factuur doorsturen naar Snelstart.`,
+        priority: "normal",
+        status: "todo",
+        related_request_id: item.request_id,
+        related_partner_id: partner.id,
+        auto_type: "purchase_invoice_pending",
+        auto_entity_id: itemId,
+      });
     }
 
     // Send notification email to Bureau Vlieland

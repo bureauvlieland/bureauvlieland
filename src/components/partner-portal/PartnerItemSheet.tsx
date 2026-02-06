@@ -33,6 +33,7 @@ import {
   Play,
 } from "lucide-react";
 import { CopyReferenceButton } from "./CopyReferenceButton";
+import { BureauCentralBadge } from "./BureauCentralBadge";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -301,6 +302,11 @@ export const PartnerItemSheet = ({
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {/* Bureau Central badge - show when invoicing_mode is bureau_central */}
+          {request.invoicing_mode === "bureau_central" && (
+            <BureauCentralBadge variant="full" />
+          )}
+
           {/* Customer section */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Klant</h3>
