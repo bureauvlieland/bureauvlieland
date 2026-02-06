@@ -28,7 +28,7 @@ interface InviteResult {
 }
 
 // Fallback email template if database template not found
-function getFallbackInvitationHtml(partnerName: string, resetLink: string, portalLink: string): string {
+function getFallbackInvitationHtml(partnerName: string, partnerEmail: string, partnerPassword: string, loginLink: string, portalLink: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -85,13 +85,8 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">💼 Facturatie &amp; Commissie</h3>
       
       <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
-        U factureert uw diensten <strong>rechtstreeks aan de eindklant</strong>. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet:
+        U factureert uw diensten <strong>rechtstreeks aan de eindklant</strong>. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet.
       </p>
-      
-      <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
-        <li style="margin-bottom: 6px;"><strong>Activiteiten:</strong> ${partner.commission_percentage || 15}% commissie (excl. BTW)</li>
-        <li><strong>Logies:</strong> ${partner.accommodation_commission_percentage || 10}% commissie (excl. BTW)</li>
-      </ul>
       
       <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
         Deze commissie dekt de acquisitie, coördinatie en klantenservice die Bureau Vlieland voor u verzorgt.
@@ -103,7 +98,7 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       
       <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px;">
         <li style="margin-bottom: 10px;">
-          <strong>Activeer uw account</strong> door op onderstaande knop te klikken en een wachtwoord in te stellen
+          <strong>Log in</strong> met onderstaande inloggegevens
         </li>
         <li style="margin-bottom: 10px;">
           <strong>Controleer uw aanbod</strong> — bekijk of uw activiteiten en diensten correct zijn weergegeven
@@ -114,19 +109,36 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </ol>
       
       <p style="margin: 15px 0 0 0; color: #374151; font-size: 13px;">
-        We stellen het op prijs als u uw account binnen <strong>14 dagen</strong> activeert, zodat u geen aanvragen mist.
+        We stellen het op prijs als u binnen <strong>14 dagen</strong> inlogt, zodat u geen aanvragen mist.
+      </p>
+    </div>
+    
+    <div style="background: #f0f4ff; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
+      <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 17px;">🔑 Uw inloggegevens</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Emailadres:</td>
+          <td style="padding: 8px 0; color: #1e3a5f; font-weight: 600; font-size: 14px;">${sanitizeHtml(partnerEmail)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Wachtwoord:</td>
+          <td style="padding: 8px 0; color: #1e3a5f; font-weight: 600; font-size: 14px; font-family: monospace; letter-spacing: 1px;">${sanitizeHtml(partnerPassword)}</td>
+        </tr>
+      </table>
+      <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 12px;">
+        Wijzig uw wachtwoord na eerste login via Instellingen.
       </p>
     </div>
     
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${resetLink}" 
+      <a href="${loginLink}" 
          style="background: #1e3a5f; color: #ffffff; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
-        Account Activeren
+        Inloggen op het Portaal
       </a>
     </div>
     
     <p style="color: #374151; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
-      Deze link is 24 uur geldig. Na activatie vindt u het portaal op:<br>
+      U vindt het portaal op:<br>
       <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
     </p>
     
@@ -173,8 +185,8 @@ async function invitePartner(
       };
     }
 
-    // Generate a secure temporary password
-    const tempPassword = crypto.randomUUID().slice(0, 16) + "Aa1!";
+    // Generate a readable temporary password
+    const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
 
     // Create auth user
     const { data: authUser, error: createError } = await adminClient.auth.admin.createUser({
@@ -222,20 +234,8 @@ async function invitePartner(
       console.error(`Error adding partner role for ${partner.name}:`, roleError);
     }
 
-    // Generate password reset link
-    const { data: resetData, error: resetError } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email: partner.email,
-      options: {
-        redirectTo: `${origin}/partner/reset-password`,
-      },
-    });
-
-    if (resetError) {
-      console.error(`Error generating reset link for ${partner.name}:`, resetError);
-    }
-
-    const resetLink = resetData?.properties?.action_link || `${origin}/partner/login`;
+    const loginLink = `${origin}/partner/login`;
+    const portalLink = `${origin}/partner`;
 
     // Send invitation email via Mailjet
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
@@ -247,8 +247,10 @@ async function invitePartner(
       // Prepare template variables
       const templateVariables = {
         partner_name: sanitizeHtml(partner.name),
-        reset_link: resetLink,
-        partner_portal_link: `${origin}/partner`,
+        partner_email: partner.email,
+        partner_password: tempPassword,
+        login_link: loginLink,
+        partner_portal_link: portalLink,
         commission_activity: String(partner.commission_percentage || 15),
         commission_accommodation: String(partner.accommodation_commission_percentage || 10),
       };
@@ -256,7 +258,7 @@ async function invitePartner(
       // Try to get template from database
       const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
 
-      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink, `${origin}/partner`);
+      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, partner.email, tempPassword, loginLink, portalLink);
       const emailSubject = `${subjectPrefix}${template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek"}`;
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -285,18 +287,12 @@ Welkom ${partner.name}!
 
 U bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal.
 
-Via dit portaal kunt u:
-- Activiteitsaanvragen bekijken en bevestigen
-- Prijzen doorgeven aan klanten
-- Facturen registreren
-- Uw bedrijfsgegevens beheren
+Uw inloggegevens:
+- Emailadres: ${partner.email}
+- Wachtwoord: ${tempPassword}
+- Inloggen: ${loginLink}
 
-Naast programma's die klanten zelf samenstellen, gebruiken wij het portaal ook voor maatwerk programma's die we op verzoek van de klant uitwerken. De werkwijze voor aanvragen en facturatie blijft hetzelfde.
-
-Klik op de volgende link om uw wachtwoord in te stellen:
-${resetLink}
-
-Deze link is 24 uur geldig.
+Wijzig uw wachtwoord na eerste login via Instellingen.
 
 Vragen? Neem contact op via erwin@bureauvlieland.nl
 

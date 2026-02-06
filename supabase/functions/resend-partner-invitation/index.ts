@@ -18,8 +18,8 @@ interface ResendRequest {
   partnerId: string;
 }
 
-// Same fallback template as invite-partner (without "24 uur geldig" text)
-function getFallbackInvitationHtml(partnerName: string, resetLink: string, portalLink: string): string {
+// Fallback template with direct credentials
+function getFallbackInvitationHtml(partnerName: string, partnerEmail: string, partnerPassword: string, loginLink: string, portalLink: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -37,8 +37,8 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
     <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 20px;">Beste ${sanitizeHtml(partnerName)},</h2>
     
     <p style="margin: 0 0 18px 0; color: #374151;">
-      U ontvangt deze email omdat u nog geen wachtwoord heeft ingesteld voor het <strong>Bureau Vlieland Partner Portaal</strong>.
-      Via onderstaande link kunt u alsnog uw account activeren.
+      U ontvangt deze email omdat u nog niet bent ingelogd op het <strong>Bureau Vlieland Partner Portaal</strong>.
+      Hieronder vindt u uw (nieuwe) inloggegevens.
     </p>
     
     <div style="background: #e8f0f8; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
@@ -60,15 +60,32 @@ function getFallbackInvitationHtml(partnerName: string, resetLink: string, porta
       </p>
     </div>
     
+    <div style="background: #f0f4ff; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
+      <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 17px;">🔑 Uw inloggegevens</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Emailadres:</td>
+          <td style="padding: 8px 0; color: #1e3a5f; font-weight: 600; font-size: 14px;">${sanitizeHtml(partnerEmail)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Wachtwoord:</td>
+          <td style="padding: 8px 0; color: #1e3a5f; font-weight: 600; font-size: 14px; font-family: monospace; letter-spacing: 1px;">${sanitizeHtml(partnerPassword)}</td>
+        </tr>
+      </table>
+      <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 12px;">
+        Wijzig uw wachtwoord na eerste login via Instellingen.
+      </p>
+    </div>
+    
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${resetLink}" 
+      <a href="${loginLink}" 
          style="background: #1e3a5f; color: #ffffff; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
-        Account Activeren
+        Inloggen op het Portaal
       </a>
     </div>
     
     <p style="color: #374151; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
-      Na activatie vindt u het portaal op:<br>
+      U vindt het portaal op:<br>
       <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
     </p>
     
@@ -180,25 +197,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate new password reset link
-    const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
-    const { data: resetData, error: resetError } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email: partner.email,
-      options: {
-        redirectTo: `${origin}/partner/reset-password`,
-      },
-    });
+    // Generate a new readable temporary password and reset it
+    const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
 
-    if (resetError) {
-      console.error("Error generating reset link:", resetError);
+    const { error: updatePasswordError } = await adminClient.auth.admin.updateUserById(
+      partner.auth_user_id,
+      { password: tempPassword }
+    );
+
+    if (updatePasswordError) {
+      console.error("Error resetting password:", updatePasswordError);
       return new Response(
-        JSON.stringify({ error: "Failed to generate activation link" }),
+        JSON.stringify({ error: "Failed to reset password" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const resetLink = resetData?.properties?.action_link || `${origin}/partner/login`;
+    const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
+    const loginLink = `${origin}/partner/login`;
     const portalLink = `${origin}/partner`;
 
     // Update invited_at timestamp
@@ -216,7 +232,9 @@ Deno.serve(async (req) => {
       // Prepare template variables
       const templateVariables = {
         partner_name: sanitizeHtml(partner.name),
-        reset_link: resetLink,
+        partner_email: partner.email,
+        partner_password: tempPassword,
+        login_link: loginLink,
         partner_portal_link: portalLink,
         commission_activity: String(partner.commission_percentage || 15),
         commission_accommodation: String(partner.accommodation_commission_percentage || 10),
@@ -225,8 +243,8 @@ Deno.serve(async (req) => {
       // Try to get template from database
       const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
 
-      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, resetLink, portalLink);
-      const emailSubject = template?.subject || "Herinnering: Activeer uw Bureau Vlieland Partner Portaal account";
+      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, partner.email, tempPassword, loginLink, portalLink);
+      const emailSubject = template?.subject || "Herinnering: Uw Bureau Vlieland Partner Portaal inloggegevens";
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -252,12 +270,14 @@ Deno.serve(async (req) => {
               TextPart: `
 Beste ${partner.name},
 
-U ontvangt deze email omdat u nog geen wachtwoord heeft ingesteld voor het Bureau Vlieland Partner Portaal.
+U ontvangt deze email omdat u nog niet bent ingelogd op het Bureau Vlieland Partner Portaal.
 
-Klik op de volgende link om uw account te activeren:
-${resetLink}
+Uw inloggegevens:
+- Emailadres: ${partner.email}
+- Wachtwoord: ${tempPassword}
+- Inloggen: ${loginLink}
 
-Na activatie vindt u het portaal op: ${portalLink}
+Wijzig uw wachtwoord na eerste login via Instellingen.
 
 Vragen? Neem contact op via erwin@bureauvlieland.nl
 
@@ -288,7 +308,7 @@ Bureau Vlieland
     // Log email
     await logEmail({
       email_type: EmailTypes.PARTNER_INVITATION,
-      subject: "Herinnering: Activeer uw Bureau Vlieland Partner Portaal account",
+      subject: "Herinnering: Uw Bureau Vlieland Partner Portaal inloggegevens",
       recipient_email: partner.email,
       recipient_name: partner.name,
       related_partner_id: partnerId,
