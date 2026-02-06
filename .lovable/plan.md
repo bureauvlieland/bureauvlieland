@@ -1,144 +1,204 @@
 
-# Plan: Integratie Kamersoorten & Extra's in Bestaande Componenten
+# Plan: Project Communicatie Tracking via Reguliere Mailprogramma's
 
-## Samenvatting
-Na de uitbreidingen met Extra's Presets en Kamersoorten zijn er enkele plekken waar deze nieuwe data nog beter benut kan worden. Dit plan richt zich op drie verbeteringen:
+## De Uitdaging
 
-1. **Handleidingen uitbreiden** - Partners informeren over nieuwe functionaliteit
-2. **Extra Presets integreren in AddQuoteExtraDialog** - Sneller toevoegen vanuit presets
-3. **Kamersoort details verrijken in klantweergave** - Optioneel: faciliteiten en m² tonen
+Je wilt alle e-mailcommunicatie rond een project bijhouden terwijl iedereen gewoon zijn eigen mailprogramma (Outlook, Gmail, etc.) blijft gebruiken. Dit is een veelvoorkomende behoefte bij bureaus die veel projectcommunicatie hebben.
 
----
+## Mogelijke Oplossingen
 
-## 1. Handleidingen Uitbreiden (PartnerGuides.tsx)
+### Optie A: Uniek Project E-mailadres met Auto-Forwarding
 
-### Huidige Situatie
-De handleidingen bevatten secties over:
-- Account activeren
-- Aanvragen beheren
-- Beschikbaarheid instellen
-- Commissiemodel
+Elk project krijgt een uniek e-mailadres dat automatisch wordt doorgestuurd naar een centrale inbox en gelogd in het systeem.
 
-### Toevoeging
-Twee nieuwe secties voor logiespartners:
-
-**Sectie: "Kamersoorten configureren"**
-- Hoe kamersoorten aan te maken met m², bedconfiguratie, faciliteiten
-- Hoe deze te hergebruiken bij offertes
-- Voordeel: sneller en consistenter offertes maken
-
-**Sectie: "Extra diensten beheren"**
-- Hoe extra presets (lunch, diner, parkeren) aan te maken
-- Hoe deze toe te voegen aan logiesoffertes
-- Commissie-informatie over extras
-
----
-
-## 2. Extra Presets in AddQuoteExtraDialog
-
-### Huidige Situatie
-`AddQuoteExtraDialog.tsx` laat partners handmatig extras invoeren bij een offerte.
-
-### Verbetering
-Quick-select sectie toevoegen die presets uit `partner_extra_presets` laadt:
-
+```text
+Voorbeeld:
+  Project BV-2602-0001 → bv-2602-0001@mail.bureauvlieland.nl
+  
+Workflow:
+  1. Klant stuurt mail naar bv-2602-0001@mail.bureauvlieland.nl
+  2. Mail wordt automatisch:
+     - Doorgestuurd naar info@bureauvlieland.nl
+     - Opgeslagen in de database als communicatie-log
+  3. Admin kan alle correspondentie zien in het project-detail
 ```
+
+**Voordelen:**
+- Volledig automatisch
+- Klanten kunnen direct reageren naar project-adres
+- Geen handmatig werk
+
+**Nadelen:**
+- Vereist mailserver configuratie (bijv. Mailgun, SendGrid, of eigen domein setup)
+- Maandelijkse kosten voor inkomende e-mail verwerking
+
+---
+
+### Optie B: BCC/Forward Logging (Aanbevolen voor Snelle Start)
+
+Een simpel systeem waarbij admins en partners emails kunnen forwarden naar een centraal adres dat ze automatisch koppelt aan het juiste project.
+
+```text
+Workflow:
+  1. Admin ontvangt email van klant in reguliere inbox
+  2. Admin forward de mail naar: log@bureauvlieland.nl
+  3. Systeem herkent het project via:
+     - Referentienummer in onderwerp (BV-2602-0001)
+     - Of klant e-mailadres matching
+  4. Email wordt gelogd in project timeline
+```
+
+**Voordelen:**
+- Werkt met bestaande mailprogramma's
+- Geen configuratie voor eindgebruikers
+- Flexibel - je kiest zelf wat je logt
+
+**Nadelen:**
+- Vereist handmatige actie (forwarden)
+- Kan emails missen als mensen vergeten te forwarden
+
+---
+
+### Optie C: Handmatige Communicatie Log (Eenvoudigste)
+
+Een notitie-systeem in de admin/portal waar communicatie handmatig wordt vastgelegd.
+
+```text
 ┌────────────────────────────────────────────────────────────┐
-│ Extra toevoegen                                       [✕]  │
+│ Communicatie Log                                     [+ Nieuw] │
 ├────────────────────────────────────────────────────────────┤
+│ 📧 6 feb 14:32 - Email van klant                           │
+│    "Kunnen we de blokarttocht verplaatsen naar woensdag?"  │
 │                                                             │
-│ Snelle selectie uit uw presets:                            │
-│ ┌─────────────────────────────────────────────────────┐    │
-│ │ 🍽️ Lunch (€22,50 p.p.)                    [Toevoegen]│    │
-│ │ 🍽️ 3-gangendiner (€47,50 p.p.)           [Toevoegen]│    │
-│ │ 🚗 Parkeren Harlingen (€150,- vast)      [Toevoegen]│    │
-│ └─────────────────────────────────────────────────────┘    │
+│ 📞 5 feb 10:15 - Telefoongesprek                           │
+│    "Besproken: aankomst wordt 09:30 i.p.v. 10:00"          │
 │                                                             │
-│ ─── Of handmatig invoeren ─────────────────────────────    │
-│ Naam: [                                   ]                 │
-│ ...                                                         │
+│ 📧 4 feb 16:45 - Email aan klant                           │
+│    "Offerte aangepast met extra activiteit"                │
 └────────────────────────────────────────────────────────────┘
 ```
 
-### Technisch
-- Import `usePartnerExtraPresets` in `AddQuoteExtraDialog`
-- Render presets als klikbare buttons boven het formulier
-- Bij klik: vul alle velden automatisch in en submit direct (of pre-fill formulier)
+**Voordelen:**
+- Geen externe integraties nodig
+- Direct te implementeren
+- Kan ook telefoongesprekken en notities loggen
+
+**Nadelen:**
+- Volledig handmatig
+- Risico op incomplete logging
 
 ---
 
-## 3. Kamersoort Details in Klantweergave (Optioneel)
+### Optie D: Hybride Aanpak (Beste van Beide)
 
-### Huidige Situatie
-De `AccommodationQuoteDetailSheet` (klantportaal) toont alleen basis info:
-- Kamernaam
-- Aantal × bezetting
-- Prijs per nacht
+Combineer automatische uitgaande email logging (al aanwezig) met handmatige inkomende communicatie logging + optionele forward-to-log functie.
 
-### Mogelijke Verrijking
-Als we de kamersoort-ID meesturen in de `room_configuration`:
-
-```tsx
-// In room_configuration opslaan:
-{
-  type: "Tweepersoonskamer Superior",
-  room_type_id: "uuid-hier",  // <- nieuw veld
-  count: 5,
-  price_per_night: 125,
-  occupancy: 2
-}
+```text
+Huidige situatie:
+  ✓ Uitgaande emails → Automatisch gelogd (email_log tabel)
+  
+Toevoegen:
+  + Handmatige communicatie entries (nieuw: project_communications tabel)
+  + Optionele forward-to-log edge function
 ```
 
-Dan kan de klantweergave extra details ophalen:
-- Oppervlakte (28 m²)
-- Bedconfiguratie (1 queensize bed)
-- Faciliteiten (WiFi, TV, Balkon)
-- Eventueel een foto
+---
 
-### Overwegingen
-**Pro:** Klant ziet rijkere informatie over de kamers
-**Con:** Complexer, vereist aanpassing in data-opslag
+## Aanbevolen Aanpak: Optie D (Hybride)
 
-**Aanbeveling:** Dit als vervolgstap markeren, niet nu implementeren. De basis integratie bij het aanmaken van offertes werkt al.
+### Fase 1: Handmatige Communicatie Log
+
+**Nieuwe database tabel: `project_communications`**
+
+| Kolom | Type | Omschrijving |
+|-------|------|--------------|
+| id | uuid | Primaire sleutel |
+| request_id | uuid | Gekoppeld project |
+| accommodation_id | uuid | OF gekoppeld logies project |
+| communication_type | text | 'email_in', 'email_out', 'phone', 'note' |
+| direction | text | 'inbound', 'outbound', 'internal' |
+| subject | text | Onderwerp (optioneel) |
+| content | text | Samenvatting of volledige tekst |
+| contact_name | text | Naam van contact |
+| contact_email | text | Email van contact |
+| logged_by | uuid | Admin die het logde |
+| logged_at | timestamptz | Wanneer gelogd |
+| communication_date | timestamptz | Wanneer communicatie plaatsvond |
+| metadata | jsonb | Extra data (bijlagen, etc.) |
+
+**UI Toevoegingen:**
+
+1. **AdminRequestDetail** - Nieuwe "Communicatie" tab/sectie
+2. **AddCommunicationDialog** - Modal om entry toe te voegen
+3. **CommunicationTimeline** - Chronologisch overzicht
+
+### Fase 2: Forward-to-Log (Toekomstig)
+
+Een edge function die emails ontvangt via webhook (bijv. via Mailgun of SendGrid inbound parsing) en automatisch logt.
 
 ---
 
-## Implementatievolgorde
+## Implementatie Fase 1
 
-### Fase 1 (Prioriteit Hoog)
-1. **PartnerGuides.tsx** - Documentatie uitbreiden met nieuwe secties
-   - Bestand: `src/pages/PartnerGuides.tsx`
-   - Wijziging: Twee secties toevoegen onder bestaande content
+### Database Migratie
 
-### Fase 2 (Prioriteit Medium)
-2. **AddQuoteExtraDialog.tsx** - Presets quick-select toevoegen
-   - Bestand: `src/components/partner-portal/AddQuoteExtraDialog.tsx`
-   - Wijziging: Presets laden en renderen als snelle keuze
+```sql
+CREATE TABLE project_communications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id UUID REFERENCES program_requests(id),
+  accommodation_id UUID REFERENCES accommodation_requests(id),
+  communication_type TEXT NOT NULL DEFAULT 'note',
+  direction TEXT NOT NULL DEFAULT 'internal',
+  subject TEXT,
+  content TEXT NOT NULL,
+  contact_name TEXT,
+  contact_email TEXT,
+  logged_by UUID REFERENCES auth.users(id),
+  logged_at TIMESTAMPTZ DEFAULT now(),
+  communication_date TIMESTAMPTZ DEFAULT now(),
+  metadata JSONB DEFAULT '{}'
+);
 
-### Fase 3 (Toekomstig)
-3. Kamersoort details in klantweergave - Later evalueren of dit meerwaarde heeft
+-- RLS: alleen admins
+ALTER TABLE project_communications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can manage communications" 
+  ON project_communications FOR ALL 
+  USING (is_admin(auth.uid()));
+```
 
----
+### Nieuwe Componenten
 
-## Niet Nodig om Nu te Wijzigen
+| Component | Locatie | Functie |
+|-----------|---------|---------|
+| AddCommunicationSheet | src/components/admin/ | Toevoegen van communicatie |
+| ProjectCommunicationsCard | src/components/admin/ | Overzicht in project detail |
 
-Na analyse blijken de volgende onderdelen **niet** te hoeven worden aangepast:
+### Bestaande Aanpassingen
 
-| Component | Reden |
-|-----------|-------|
-| `PriceSummaryCard` | Berekent al correct op basis van bestaande quote data |
-| `FinancialOverviewCard` | Logies data komt via `selectedAccommodationQuote` |
-| `AdminCommissions` | Commissie wordt berekend op `quoted_price`, niet op room types |
-| `PartnerFinancialSummary` | Werkt op item-niveau, niet op kamer-niveau |
-| `AccommodationSection` | Toont offerte-data die al correct is opgeslagen |
-
-De nieuwe kamersoorten en extra presets zijn "bron-data" die partners helpen om sneller en consistenter offertes in te vullen. De uiteindelijke offerte-data (`accommodation_quotes`) wordt daarna onafhankelijk opgeslagen en gebruikt door alle andere componenten.
+| Bestand | Wijziging |
+|---------|-----------|
+| AdminRequestDetail.tsx | Communicatie-sectie toevoegen |
+| AdminAccommodationDetail.tsx | Communicatie-sectie toevoegen |
 
 ---
 
 ## Resultaat
 
 Na implementatie:
-- Partners begrijpen hoe ze de nieuwe functionaliteit gebruiken (documentatie)
-- Partners kunnen bestaande extra-presets direct selecteren bij het invullen van offertes (efficiëntie)
-- De data-flow blijft intact: presets → offerte → financiële overzichten
+- **Uitgaande emails**: Automatisch gelogd (bestaand systeem)
+- **Inkomende emails/telefoon**: Handmatig te loggen met notities
+- **Volledige timeline**: Combinatie van automatische + handmatige entries
+- **Klantcontextschakelaar**: Snel zien wat er besproken is
+
+---
+
+## Technische Onderdelen
+
+### Nieuwe Bestanden
+1. `src/components/admin/AddCommunicationSheet.tsx`
+2. `src/components/admin/ProjectCommunicationsCard.tsx`
+3. Database migratie voor `project_communications` tabel
+
+### Te Wijzigen Bestanden
+1. `src/pages/admin/AdminRequestDetail.tsx` - Communicatie-sectie integreren
+2. `src/pages/admin/AdminAccommodationDetail.tsx` - Communicatie-sectie integreren
