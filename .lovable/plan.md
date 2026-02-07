@@ -1,31 +1,29 @@
 
 
-# Partner Bouwstenen Sheet verbeteren
+# Laatste getClaims-fixes in één keer
 
-## Huidige situatie
+Twee resterende edge functions gebruiken nog de niet-bestaande `getClaims()` methode en zullen daarom falen:
 
-De partner sheet heeft al dezelfde inhoudelijke velden als de admin (prijzen, categorie, beschrijving, etc.). De twee concrete problemen zijn:
+1. **`supabase/functions/invite-partner/index.ts`** -- individuele partner uitnodigen
+2. **`supabase/functions/get-admin-commissions/index.ts`** -- commissie-overzicht ophalen
 
-1. **Lelijke ID-generatie**: Nieuwe partner-bouwstenen krijgen IDs als `partner-voc-vlieland-1738930000000` in plaats van leesbare slugs zoals `zeehondentocht`
-2. **Form reset ontbreekt**: Na opslaan van een nieuwe bouwsteen blijft het formulier gevuld met de vorige data (zelfde bug als de admin had)
+## Aanpassing (identiek aan vorige fix)
 
-## Wat wordt aangepast
+In beide bestanden wordt dit patroon:
 
-### 1. Auto-slug op basis van naam
+```typescript
+const token = authHeader.replace("Bearer ", "");
+const { data: claims, error: claimsError } = await userClient.auth.getClaims(token);
+if (claimsError || !claims?.claims?.sub) { ... }
+const userId = claims.claims.sub;
+```
 
-Bij het aanmaken genereert het formulier automatisch een leesbare slug uit de naam, net als in de admin sheet. Voorbeeld: "Zeehondentocht Vlieland" wordt `zeehondentocht-vlieland`.
+Vervangen door:
 
-### 2. Form reset na opslaan
+```typescript
+const { data: { user }, error: userError } = await userClient.auth.getUser();
+if (userError || !user) { ... }
+const userId = user.id;
+```
 
-Na succesvol opslaan van een nieuw blok wordt het formulier volledig leeggemaakt, zodat direct een volgende bouwsteen kan worden toegevoegd.
-
-## Technische details
-
-**Bestand: `src/components/partner-portal/PartnerBlockSheet.tsx`**
-
-- Slugify-functie toevoegen aan het `name` veld: `onChange` handler die automatisch een slug genereert
-- Gegenereerde slug gebruiken als `id` bij insert (in plaats van `partner-${partnerId}-${Date.now()}`)
-- Na succesvol aanmaken: `setFormData(getInitialFormData(null))` aanroepen om het formulier te resetten
-- Optioneel: het slug-veld tonen als readonly info zodat de partner ziet welke ID wordt aangemaakt
-
-Geen database-wijzigingen nodig. De admin-specifieke velden (block_type, provider_id, sort_order, status) blijven verborgen voor partners -- die worden automatisch gezet (block_type=partner, provider_id=eigen partner, status=concept via DB default).
+Beide functies worden daarna direct gedeployed. Geen andere bestanden hoeven te worden aangepast.
