@@ -17,6 +17,7 @@ import {
   Euro,
   CheckCircle,
   FileEdit,
+  ShieldCheck,
 } from "lucide-react";
 import { PartnerBlockSheet } from "@/components/partner-portal/PartnerBlockSheet";
 import type { PartnerBuildingBlock } from "@/types/partner";
@@ -80,7 +81,7 @@ const PartnerBlocksContent = () => {
           duration, price_adult, price_adult_note, price_type, 
           price_child, price_child_note, price_child_min_age, price_child_max_age,
           price_pet, price_pet_note, 
-          min_people, max_people, is_published, is_active, 
+          min_people, max_people, is_published, is_active, status,
           image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
           seasonal_notes, tags
         `)
@@ -130,7 +131,7 @@ const PartnerBlocksContent = () => {
         duration, price_adult, price_adult_note, price_type, 
         price_child, price_child_note, price_child_min_age, price_child_max_age,
         price_pet, price_pet_note, 
-        min_people, max_people, is_published, is_active, 
+        min_people, max_people, is_published, is_active, status,
         image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
         seasonal_notes, tags
       `)
@@ -164,8 +165,9 @@ const PartnerBlocksContent = () => {
     );
   }
 
-  const publishedBlocks = blocks.filter(b => b.is_published);
-  const draftBlocks = blocks.filter(b => !b.is_published);
+  const publishedBlocks = blocks.filter(b => b.status === "published");
+  const activeBlocks = blocks.filter(b => b.status === "active");
+  const conceptBlocks = blocks.filter(b => b.status === "concept");
 
   return (
     <div className="p-6">
@@ -211,16 +213,34 @@ const PartnerBlocksContent = () => {
             </div>
           )}
 
-          {/* Draft blocks */}
-          {draftBlocks.length > 0 && (
+          {/* Active blocks (approved but not public) */}
+          {activeBlocks.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-blue-600" />
+                Goedgekeurd ({activeBlocks.length})
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Deze activiteiten zijn goedgekeurd en beschikbaar voor maatwerk-offertes, maar nog niet publiek zichtbaar.
+              </p>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeBlocks.map((block) => (
+                  <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="active" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Concept blocks (awaiting approval) */}
+          {conceptBlocks.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <FileEdit className="h-5 w-5 text-amber-600" />
-                Concept ({draftBlocks.length})
+                Wacht op goedkeuring ({conceptBlocks.length})
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {draftBlocks.map((block) => (
-                  <BlockCard key={block.id} block={block} onEdit={handleEditBlock} isDraft />
+                {conceptBlocks.map((block) => (
+                  <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="concept" />
                 ))}
               </div>
             </div>
@@ -243,58 +263,55 @@ const PartnerBlocksContent = () => {
 interface BlockCardProps {
   block: PartnerBuildingBlock;
   onEdit: (block: PartnerBuildingBlock) => void;
-  isDraft?: boolean;
+  status?: string;
 }
 
-const BlockCard = ({ block, onEdit, isDraft }: BlockCardProps) => {
-  // Get image URL - check storage URL first, then asset map, then placeholder
+const BlockCard = ({ block, onEdit, status }: BlockCardProps) => {
+  const isDraft = status === "concept";
+  const isActive = status === "active";
+  
   const getImageUrl = () => {
     if (block.image_url) return block.image_url;
-    if (block.image_asset) {
-      // Try to construct path - for partner blocks we use placeholder
-      return "/placeholder.svg";
-    }
     return "/placeholder.svg";
   };
   
   const formatPrice = () => {
     if (!block.price_adult) return "Prijs op aanvraag";
     const price = block.price_adult.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
-    
     switch (block.price_type) {
-      case "per_person":
-        return `€${price} p.p.`;
-      case "total":
-        return `€${price} totaal`;
-      case "per_hour":
-        return `€${price}/uur`;
-      case "per_day":
-        return `€${price}/dag`;
-      default:
-        return `€${price}`;
+      case "per_person": return `€${price} p.p.`;
+      case "total": return `€${price} totaal`;
+      case "per_hour": return `€${price}/uur`;
+      case "per_day": return `€${price}/dag`;
+      default: return `€${price}`;
     }
   };
 
+  const getBorderClass = () => {
+    if (isDraft) return "border-amber-300 dark:border-amber-700";
+    if (isActive) return "border-blue-300 dark:border-blue-700";
+    return "";
+  };
+
   return (
-    <Card className={isDraft ? "border-amber-300 dark:border-amber-700" : ""}>
+    <Card className={getBorderClass()}>
       <div className="aspect-video relative overflow-hidden rounded-t-lg">
-        <img
-          src={getImageUrl()}
-          alt={block.name}
-          className="w-full h-full object-cover"
-        />
-        {isDraft && (
-          <div className="absolute top-2 right-2">
+        <img src={getImageUrl()} alt={block.name} className="w-full h-full object-cover" />
+        <div className="absolute top-2 right-2">
+          {isDraft && (
             <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-              Concept
+              Wacht op goedkeuring
             </Badge>
-          </div>
-        )}
-        {!isDraft && (
-          <div className="absolute top-2 right-2">
+          )}
+          {isActive && (
+            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+              Goedgekeurd
+            </Badge>
+          )}
+          {!isDraft && !isActive && (
             <Badge className="bg-green-600">Gepubliceerd</Badge>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <CardContent className="p-4">
         <h3 className="font-semibold mb-1">{block.name}</h3>
@@ -331,8 +348,8 @@ const BlockCard = ({ block, onEdit, isDraft }: BlockCardProps) => {
         </Button>
 
         {isDraft && (
-          <p className="text-xs text-center text-muted-foreground mt-2">
-            Wacht op goedkeuring Bureau Vlieland
+          <p className="text-xs text-center text-amber-600 mt-2 font-medium">
+            Bureau Vlieland beoordeelt uw voorstel
           </p>
         )}
       </CardContent>
