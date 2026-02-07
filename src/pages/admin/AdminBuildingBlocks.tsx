@@ -18,33 +18,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
   Search,
   Edit,
-  Eye,
-  EyeOff,
   Blocks,
   Filter,
 } from "lucide-react";
-import { useAdminBuildingBlocks, useTogglePublishBlock } from "@/hooks/useBuildingBlocks";
+import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockSheet } from "@/components/admin/BuildingBlockSheet";
-import { categoryLabels, blockTypeLabels } from "@/types/buildingBlock";
+import { categoryLabels, blockTypeLabels, statusLabels } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import type { BuildingBlock, BuildingBlockCategory, BuildingBlockType } from "@/types/buildingBlock";
+import type { BuildingBlock, BuildingBlockCategory, BuildingBlockType, BuildingBlockStatus } from "@/types/buildingBlock";
+
+const statusBadgeStyles: Record<BuildingBlockStatus, string> = {
+  concept: "bg-muted text-muted-foreground",
+  active: "bg-blue-100 text-blue-700 border-blue-200",
+  published: "bg-green-100 text-green-700 border-green-200",
+};
 
 const AdminBuildingBlocks = () => {
-  const { toast } = useToast();
   const { data: blocks, isLoading } = useAdminBuildingBlocks();
-  const togglePublish = useTogglePublishBlock();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<BuildingBlockCategory | "all">("all");
   const [typeFilter, setTypeFilter] = useState<BuildingBlockType | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
+  const [statusFilter, setStatusFilter] = useState<BuildingBlockStatus | "all">("all");
   
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<BuildingBlock | null>(null);
@@ -55,28 +55,10 @@ const AdminBuildingBlocks = () => {
       block.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === "all" || block.category === categoryFilter;
     const matchesType = typeFilter === "all" || block.block_type === typeFilter;
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "published" && block.is_published) ||
-      (statusFilter === "draft" && !block.is_published);
+    const matchesStatus = statusFilter === "all" || block.status === statusFilter;
     
-    return matchesSearch && matchesCategory && matchesType && matchesStatus && block.is_active;
+    return matchesSearch && matchesCategory && matchesType && matchesStatus;
   }) || [];
-  
-  const handleTogglePublish = async (block: BuildingBlock) => {
-    try {
-      await togglePublish.mutateAsync({ id: block.id, is_published: !block.is_published });
-      toast({
-        title: block.is_published ? "Bouwsteen gedepubliceerd" : "Bouwsteen gepubliceerd",
-        description: `${block.name} is nu ${block.is_published ? "niet meer" : ""} zichtbaar op de website.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Fout",
-        description: "Er ging iets mis bij het wijzigen van de publicatiestatus.",
-        variant: "destructive",
-      });
-    }
-  };
   
   const handleEdit = (block: BuildingBlock) => {
     setSelectedBlock(block);
@@ -97,6 +79,12 @@ const AdminBuildingBlocks = () => {
     const note = block.price_adult_note ? ` ${block.price_adult_note}` : "";
     
     return `${prefix}${price}${note}`;
+  };
+  
+  const statusCounts = {
+    concept: blocks?.filter(b => b.status === "concept").length || 0,
+    active: blocks?.filter(b => b.status === "active").length || 0,
+    published: blocks?.filter(b => b.status === "published").length || 0,
   };
   
   return (
@@ -162,14 +150,15 @@ const AdminBuildingBlocks = () => {
               </SelectContent>
             </Select>
             
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "published" | "draft")}>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as BuildingBlockStatus | "all")}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle statussen</SelectItem>
+                <SelectItem value="concept">Concept</SelectItem>
+                <SelectItem value="active">Actief</SelectItem>
                 <SelectItem value="published">Gepubliceerd</SelectItem>
-                <SelectItem value="draft">Concept</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -197,7 +186,7 @@ const AdminBuildingBlocks = () => {
                   <TableHead>Type</TableHead>
                   <TableHead>Partner</TableHead>
                   <TableHead>Prijs</TableHead>
-                  <TableHead className="text-center">Gepubliceerd</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Acties</TableHead>
                 </TableRow>
               </TableHeader>
@@ -242,11 +231,12 @@ const AdminBuildingBlocks = () => {
                       {formatPrice(block)}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Switch
-                        checked={block.is_published}
-                        onCheckedChange={() => handleTogglePublish(block)}
-                        disabled={togglePublish.isPending}
-                      />
+                      <Badge 
+                        variant="outline"
+                        className={statusBadgeStyles[block.status]}
+                      >
+                        {statusLabels[block.status]}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -268,9 +258,11 @@ const AdminBuildingBlocks = () => {
         <div className="flex gap-4 text-sm text-muted-foreground">
           <span>{filteredBlocks.length} bouwstenen</span>
           <span>•</span>
-          <span>{filteredBlocks.filter(b => b.is_published).length} gepubliceerd</span>
+          <span>{statusCounts.published} gepubliceerd</span>
           <span>•</span>
-          <span>{filteredBlocks.filter(b => !b.is_published).length} concept</span>
+          <span>{statusCounts.active} actief</span>
+          <span>•</span>
+          <span>{statusCounts.concept} concept</span>
         </div>
       </div>
       

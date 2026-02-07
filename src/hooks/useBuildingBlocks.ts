@@ -13,8 +13,7 @@ export const usePublishedBuildingBlocks = () => {
           *,
           provider:partners!building_blocks_provider_id_fkey(id, name, email)
         `)
-        .eq("is_published", true)
-        .eq("is_active", true)
+        .eq("status", "published")
         .order("sort_order");
       
       if (error) throw error;
@@ -143,15 +142,19 @@ export const useDeleteBuildingBlock = () => {
   });
 };
 
-// Toggle publish status
-export const useTogglePublishBlock = () => {
+// Update block status
+export const useUpdateBlockStatus = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase
         .from("building_blocks")
-        .update({ is_published })
+        .update({ 
+          status,
+          is_published: status === "published",
+          is_active: status !== "concept",
+        })
         .eq("id", id);
       
       if (error) throw error;
