@@ -1,42 +1,70 @@
 
 
-# Template Katalys aanmaken
+# Bouwstenen Admin verbeteringen
 
-## Wat verandert er ten opzichte van het vorige plan?
+## 1. Form reset na opslaan
 
-- Partner "Stichting Natuur Educatie Centrum Vlieland" bestaat al (ID: `stichting-natuur-educatie-cent`) -- wordt NIET opnieuw aangemaakt
-- Stap 1 (partner aanmaken) vervalt volledig
+Na het toevoegen van een bouwsteen wordt het formulier niet leeggemaakt. De oorzaak: het formulier reset alleen als de `block` prop verandert, maar bij twee opeenvolgende "nieuwe" acties blijft `block` steeds `null`.
 
-## Stap 1: Twee nieuwe bouwstenen aanmaken
+**Oplossing**: Na succesvol opslaan expliciet `form.reset()` aanroepen voordat de sheet sluit. Daarnaast een key-mechanisme toevoegen zodat het form altijd vers is bij een nieuwe sessie.
 
-| Bouwsteen | ID | Categorie | Partner ID |
-|-----------|-----|-----------|-----------|
-| Wadloopexcursie | `wadloopexcursie` | excursies | `stichting-natuur-educatie-cent` |
-| Paardrijden | `paardrijden` | outdoor | `manege-de-seeruyter` |
+## 2. Driestaps-status voor bouwstenen
 
-Beide starten als unpublished zonder prijzen.
+Huidige situatie: alleen `is_published` (ja/nee). Gewenste situatie:
 
-## Stap 2: Template "Katalys" aanmaken (3 dagen, 11 items)
+| Status | Betekenis | Online zichtbaar | Bruikbaar in offertes |
+|--------|-----------|------------------|----------------------|
+| concept | Nog in bewerking | Nee | Nee |
+| actief | Klaar, niet publiek | Nee | Ja |
+| gepubliceerd | Publiek zichtbaar | Ja | Ja |
 
-| Dag | Tijd | Activiteit | Bouwsteen |
-|-----|------|-----------|-----------|
-| 1 | 13:30 | Vertrek naar Vlieland | `boot-retour` |
-| 1 | 15:45 | Fietsen ophalen | `fiets-huur` |
-| 1 | 16:30 | Strandspektakel | `strandspektakel` |
-| 1 | 18:00 | BBQ | `strand-bbq` |
-| 2 | 10:00 | Wadloopexcursie | `wadloopexcursie` (nieuw) |
-| 2 | 12:00 | Lunch bij bunkermuseum | `luncharrangement` |
-| 2 | 13:30 | Paardrijden | `paardrijden` (nieuw) |
-| 2 | 17:30 | Diner | `catering-3-gangen-diner` |
-| 2 | 19:30 | Lasergamen | `voc-lasergamen` |
-| 3 | 09:30 | Zeehondentocht | `zeehondentocht` |
-| 3 | 11:30 | Vertrek veerboot | `boot-retour` |
+**Aanpak**: Een nieuw `status` kolom (`text`) toevoegen aan de `building_blocks` tabel met waarden `concept`, `active`, `published`. De bestaande `is_published` wordt behouden voor backward-compatibiliteit maar de logica wordt gebaseerd op de nieuwe kolom. Bestaande data wordt gemigreerd: `is_published = true` wordt `published`, de rest wordt `active`.
+
+De RLS-policy "Published blocks are publicly readable" wordt aangepast naar `status = 'published'` (in plaats van `is_published = true`).
+
+## 3. Auto-slug op basis van naam
+
+Bij het aanmaken van een nieuwe bouwsteen wordt de ID (slug) automatisch gegenereerd vanuit de naam. Het veld blijft zichtbaar maar wordt automatisch ingevuld. De gebruiker kan het nog handmatig aanpassen.
 
 ## Technische details
 
-Drie SQL operaties:
+### Database migratie
 
-1. **Bouwsteen wadloopexcursie**: `INSERT INTO building_blocks` met `provider_id = 'stichting-natuur-educatie-cent'`, categorie `excursies`
-2. **Bouwsteen paardrijden**: `INSERT INTO building_blocks` met `provider_id = 'manege-de-seeruyter'`, categorie `outdoor`
-3. **Template + 11 items**: `INSERT INTO program_templates` (ID: `katalys`, naam: "Katalys", 3 dagen, unpublished) en `INSERT INTO program_template_items` met alle 11 regels
+```sql
+-- Nieuwe status kolom
+ALTER TABLE building_blocks ADD COLUMN status text NOT NULL DEFAULT 'concept';
 
+-- Bestaande data migreren
+UPDATE building_blocks SET status = 'published' WHERE is_published = true AND is_active = true;
+UPDATE building_blocks SET status = 'active' WHERE is_published = false AND is_active = true;
+UPDATE building_blocks SET status = 'concept' WHERE is_active = false;
+
+-- RLS policy aanpassen
+DROP POLICY "Published blocks are publicly readable" ON building_blocks;
+CREATE POLICY "Published blocks are publicly readable" ON building_blocks
+  FOR SELECT USING (status = 'published');
+```
+
+### Code aanpassingen
+
+**`src/components/admin/BuildingBlockSheet.tsx`**:
+- Na succesvol opslaan (create): `form.reset()` aanroepen voor `onOpenChange(false)`
+- Naam-veld: `onChange` handler die automatisch slug genereert en in het `id` veld zet (alleen bij aanmaken, niet bij bewerken)
+- `is_published` switch vervangen door een `status` dropdown met drie opties
+- Slugify-functie: `"Zeehondentocht Vlieland"` wordt `"zeehondentocht-vlieland"`
+
+**`src/pages/admin/AdminBuildingBlocks.tsx`**:
+- Status-filter aanpassen voor drie waarden (concept/actief/gepubliceerd)
+- Published-switch in tabel vervangen door status-badge
+- Status-kolom met gekleurde badges (concept=grijs, actief=blauw, gepubliceerd=groen)
+
+**`src/hooks/useBuildingBlocks.ts`**:
+- `usePublishedBuildingBlocks` filter aanpassen naar `status = 'published'` (in plaats van `is_published` + `is_active`)
+- `useTogglePublishBlock` vervangen door `useUpdateBlockStatus`
+
+**`src/types/buildingBlock.ts`**:
+- `BuildingBlockStatus` type toevoegen: `"concept" | "active" | "published"`
+- Status labels map toevoegen
+
+**`src/components/configurator/BuildingBlockCard.tsx`** en andere publieke componenten:
+- Geen wijzigingen nodig, deze gebruiken al de `usePublishedBuildingBlocks` hook die de juiste filter krijgt
