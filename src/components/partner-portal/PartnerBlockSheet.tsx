@@ -25,6 +25,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, ImageIcon, AlertCircle, CheckCircle, Info, Euro, Settings, Image } from "lucide-react";
 import type { PartnerBuildingBlock } from "@/types/partner";
 
+// Slugify helper
+const slugify = (text: string): string =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 80);
+
 // Category type matching database ENUM
 type BlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer";
 
@@ -364,8 +374,8 @@ export const PartnerBlockSheet = ({
       };
 
       if (isNew) {
-        // Generate a unique ID for new blocks
-        const blockId = `partner-${partnerId}-${Date.now()}`;
+        // Generate a readable slug ID from the name
+        const blockId = slugify(formData.name) || `partner-${Date.now()}`;
         
         const { error } = await supabase
           .from("building_blocks")
@@ -378,8 +388,14 @@ export const PartnerBlockSheet = ({
 
         toast({
           title: "Voorstel ingediend",
-          description: "Uw nieuwe activiteit is ingediend ter goedkeuring door Bureau Vlieland. U kunt nu een afbeelding toevoegen.",
+          description: "Uw nieuwe activiteit is ingediend ter goedkeuring door Bureau Vlieland.",
         });
+
+        // Reset form for next entry
+        setFormData(getInitialFormData(null));
+        setImagePreview(null);
+        setImageValidation(null);
+        setActiveTab("algemeen");
       } else if (block) {
         // Update existing block - partners can update all these fields including category
         const { error } = await supabase
@@ -466,13 +482,18 @@ export const PartnerBlockSheet = ({
               {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name">Naam *</Label>
-                <Input
+              <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Bijv. Zeehondentocht"
                   required
                 />
+                {isNew && formData.name.trim() && (
+                  <p className="text-xs text-muted-foreground">
+                    ID: <code className="bg-muted px-1 rounded">{slugify(formData.name)}</code>
+                  </p>
+                )}
               </div>
 
               {/* Category - always editable */}
