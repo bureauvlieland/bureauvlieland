@@ -117,6 +117,7 @@ export interface PartnerBuildingBlock {
   max_people: number | null;
   is_published: boolean;
   is_active: boolean;
+  status: string;
   image_url: string | null;
   image_asset: string | null;
   seasonal_notes: string | null;
