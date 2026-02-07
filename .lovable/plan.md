@@ -1,70 +1,31 @@
 
 
-# Bouwstenen Admin verbeteringen
+# Partner Bouwstenen Sheet verbeteren
 
-## 1. Form reset na opslaan
+## Huidige situatie
 
-Na het toevoegen van een bouwsteen wordt het formulier niet leeggemaakt. De oorzaak: het formulier reset alleen als de `block` prop verandert, maar bij twee opeenvolgende "nieuwe" acties blijft `block` steeds `null`.
+De partner sheet heeft al dezelfde inhoudelijke velden als de admin (prijzen, categorie, beschrijving, etc.). De twee concrete problemen zijn:
 
-**Oplossing**: Na succesvol opslaan expliciet `form.reset()` aanroepen voordat de sheet sluit. Daarnaast een key-mechanisme toevoegen zodat het form altijd vers is bij een nieuwe sessie.
+1. **Lelijke ID-generatie**: Nieuwe partner-bouwstenen krijgen IDs als `partner-voc-vlieland-1738930000000` in plaats van leesbare slugs zoals `zeehondentocht`
+2. **Form reset ontbreekt**: Na opslaan van een nieuwe bouwsteen blijft het formulier gevuld met de vorige data (zelfde bug als de admin had)
 
-## 2. Driestaps-status voor bouwstenen
+## Wat wordt aangepast
 
-Huidige situatie: alleen `is_published` (ja/nee). Gewenste situatie:
+### 1. Auto-slug op basis van naam
 
-| Status | Betekenis | Online zichtbaar | Bruikbaar in offertes |
-|--------|-----------|------------------|----------------------|
-| concept | Nog in bewerking | Nee | Nee |
-| actief | Klaar, niet publiek | Nee | Ja |
-| gepubliceerd | Publiek zichtbaar | Ja | Ja |
+Bij het aanmaken genereert het formulier automatisch een leesbare slug uit de naam, net als in de admin sheet. Voorbeeld: "Zeehondentocht Vlieland" wordt `zeehondentocht-vlieland`.
 
-**Aanpak**: Een nieuw `status` kolom (`text`) toevoegen aan de `building_blocks` tabel met waarden `concept`, `active`, `published`. De bestaande `is_published` wordt behouden voor backward-compatibiliteit maar de logica wordt gebaseerd op de nieuwe kolom. Bestaande data wordt gemigreerd: `is_published = true` wordt `published`, de rest wordt `active`.
+### 2. Form reset na opslaan
 
-De RLS-policy "Published blocks are publicly readable" wordt aangepast naar `status = 'published'` (in plaats van `is_published = true`).
-
-## 3. Auto-slug op basis van naam
-
-Bij het aanmaken van een nieuwe bouwsteen wordt de ID (slug) automatisch gegenereerd vanuit de naam. Het veld blijft zichtbaar maar wordt automatisch ingevuld. De gebruiker kan het nog handmatig aanpassen.
+Na succesvol opslaan van een nieuw blok wordt het formulier volledig leeggemaakt, zodat direct een volgende bouwsteen kan worden toegevoegd.
 
 ## Technische details
 
-### Database migratie
+**Bestand: `src/components/partner-portal/PartnerBlockSheet.tsx`**
 
-```sql
--- Nieuwe status kolom
-ALTER TABLE building_blocks ADD COLUMN status text NOT NULL DEFAULT 'concept';
+- Slugify-functie toevoegen aan het `name` veld: `onChange` handler die automatisch een slug genereert
+- Gegenereerde slug gebruiken als `id` bij insert (in plaats van `partner-${partnerId}-${Date.now()}`)
+- Na succesvol aanmaken: `setFormData(getInitialFormData(null))` aanroepen om het formulier te resetten
+- Optioneel: het slug-veld tonen als readonly info zodat de partner ziet welke ID wordt aangemaakt
 
--- Bestaande data migreren
-UPDATE building_blocks SET status = 'published' WHERE is_published = true AND is_active = true;
-UPDATE building_blocks SET status = 'active' WHERE is_published = false AND is_active = true;
-UPDATE building_blocks SET status = 'concept' WHERE is_active = false;
-
--- RLS policy aanpassen
-DROP POLICY "Published blocks are publicly readable" ON building_blocks;
-CREATE POLICY "Published blocks are publicly readable" ON building_blocks
-  FOR SELECT USING (status = 'published');
-```
-
-### Code aanpassingen
-
-**`src/components/admin/BuildingBlockSheet.tsx`**:
-- Na succesvol opslaan (create): `form.reset()` aanroepen voor `onOpenChange(false)`
-- Naam-veld: `onChange` handler die automatisch slug genereert en in het `id` veld zet (alleen bij aanmaken, niet bij bewerken)
-- `is_published` switch vervangen door een `status` dropdown met drie opties
-- Slugify-functie: `"Zeehondentocht Vlieland"` wordt `"zeehondentocht-vlieland"`
-
-**`src/pages/admin/AdminBuildingBlocks.tsx`**:
-- Status-filter aanpassen voor drie waarden (concept/actief/gepubliceerd)
-- Published-switch in tabel vervangen door status-badge
-- Status-kolom met gekleurde badges (concept=grijs, actief=blauw, gepubliceerd=groen)
-
-**`src/hooks/useBuildingBlocks.ts`**:
-- `usePublishedBuildingBlocks` filter aanpassen naar `status = 'published'` (in plaats van `is_published` + `is_active`)
-- `useTogglePublishBlock` vervangen door `useUpdateBlockStatus`
-
-**`src/types/buildingBlock.ts`**:
-- `BuildingBlockStatus` type toevoegen: `"concept" | "active" | "published"`
-- Status labels map toevoegen
-
-**`src/components/configurator/BuildingBlockCard.tsx`** en andere publieke componenten:
-- Geen wijzigingen nodig, deze gebruiken al de `usePublishedBuildingBlocks` hook die de juiste filter krijgt
+Geen database-wijzigingen nodig. De admin-specifieke velden (block_type, provider_id, sort_order, status) blijven verborgen voor partners -- die worden automatisch gezet (block_type=partner, provider_id=eigen partner, status=concept via DB default).
