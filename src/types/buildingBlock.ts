@@ -3,6 +3,7 @@
 export type BuildingBlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer";
 export type BuildingBlockType = "bureau" | "partner" | "self_arranged";
 export type BuildingBlockPriceType = "per_person" | "total" | "per_hour" | "per_day" | "on_request";
+export type BuildingBlockStatus = "concept" | "active" | "published";
 
 export interface BuildingBlock {
   id: string;
@@ -59,6 +60,7 @@ export interface BuildingBlock {
   image_asset: string | null;
   
   // Publication status
+  status: BuildingBlockStatus;
   is_published: boolean;
   is_active: boolean;
   sort_order: number;
@@ -217,6 +219,13 @@ export const groupBlocksByType = (blocks: BuildingBlock[]) => {
     partner: blocks.filter((b) => b.block_type === "partner"),
     self_arranged: blocks.filter((b) => b.block_type === "self_arranged"),
   };
+};
+
+// Status labels for display
+export const statusLabels: Record<BuildingBlockStatus, string> = {
+  concept: "Concept",
+  active: "Actief",
+  published: "Gepubliceerd",
 };
 
 // Category labels for display

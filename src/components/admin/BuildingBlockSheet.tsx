@@ -41,7 +41,8 @@ import {
   useUploadBlockImage,
 } from "@/hooks/useBuildingBlocks";
 import { Loader2, Trash2, ImageIcon } from "lucide-react";
-import type { BuildingBlock } from "@/types/buildingBlock";
+import type { BuildingBlock, BuildingBlockStatus } from "@/types/buildingBlock";
+import { statusLabels } from "@/types/buildingBlock";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +84,7 @@ const formSchema = z.object({
   image_asset: z.string().optional(),
   is_published: z.boolean(),
   is_active: z.boolean(),
+  status: z.enum(["concept", "active", "published"]),
   sort_order: z.coerce.number(),
   seasonal_notes: z.string().optional(),
   tags: z.string().optional(),
@@ -100,6 +102,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const isEditing = !!block;
   
   const createBlock = useCreateBuildingBlock();
@@ -152,6 +155,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       image_asset: "",
       is_published: false,
       is_active: true,
+      status: "concept" as const,
       sort_order: 0,
       seasonal_notes: "",
       tags: "",
@@ -190,6 +194,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         image_asset: block.image_asset || "",
         is_published: block.is_published ?? false,
         is_active: block.is_active ?? true,
+        status: (block as any).status || (block.is_published ? "published" : block.is_active ? "active" : "concept"),
         sort_order: block.sort_order ?? 0,
         seasonal_notes: block.seasonal_notes || "",
         tags: block.tags?.join(", ") || "",
@@ -224,6 +229,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         image_asset: "",
         is_published: false,
         is_active: true,
+        status: "concept",
         sort_order: 0,
         seasonal_notes: "",
         tags: "",
@@ -241,6 +247,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       const submitData = {
         ...data,
         tags: tagsArray,
+        is_published: data.status === "published",
+        is_active: data.status !== "concept",
       };
       
       if (isEditing) {
@@ -255,6 +263,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
           title: "Bouwsteen aangemaakt",
           description: `${data.name} is succesvol toegevoegd.`,
         });
+        setFormKey((k) => k + 1);
       }
       onOpenChange(false);
     } catch (error: any) {
@@ -333,7 +342,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
             </SheetDescription>
           </SheetHeader>
           
-          <Form {...form}>
+          <Form {...form} key={formKey}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
               <Tabs defaultValue="general">
                 <TabsList className="grid w-full grid-cols-3">
@@ -372,7 +381,22 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                       <FormItem>
                         <FormLabel>Naam</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Zeehondentocht" />
+                          <Input 
+                            {...field} 
+                            placeholder="Zeehondentocht" 
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (!isEditing) {
+                                const slug = e.target.value
+                                  .toLowerCase()
+                                  .replace(/[^a-z0-9\s-]/g, "")
+                                  .replace(/\s+/g, "-")
+                                  .replace(/-+/g, "-")
+                                  .replace(/^-|-$/g, "");
+                                form.setValue("id", slug);
+                              }
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -936,39 +960,27 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
               <Separator />
               
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <FormField
-                    control={form.control}
-                    name="is_published"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormLabel className="!mt-0">Status:</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormLabel className="!mt-0">Gepubliceerd</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2">
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="!mt-0">Actief</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <SelectContent>
+                          <SelectItem value="concept">Concept</SelectItem>
+                          <SelectItem value="active">Actief</SelectItem>
+                          <SelectItem value="published">Gepubliceerd</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
                 
                 <FormField
                   control={form.control}

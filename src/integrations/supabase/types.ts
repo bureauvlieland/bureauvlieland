@@ -515,6 +515,7 @@ export type Database = {
           seasonal_notes: string | null
           short_description: string | null
           sort_order: number | null
+          status: string
           tags: string[] | null
           updated_at: string | null
           vat_rate: number | null
@@ -554,6 +555,7 @@ export type Database = {
           seasonal_notes?: string | null
           short_description?: string | null
           sort_order?: number | null
+          status?: string
           tags?: string[] | null
           updated_at?: string | null
           vat_rate?: number | null
@@ -593,6 +595,7 @@ export type Database = {
           seasonal_notes?: string | null
           short_description?: string | null
           sort_order?: number | null
+          status?: string
           tags?: string[] | null
           updated_at?: string | null
           vat_rate?: number | null
