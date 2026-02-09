@@ -62,6 +62,7 @@ import {
 } from "lucide-react";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
+import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToCustomerDialog";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 
 interface LinkedProgram {
@@ -114,6 +115,7 @@ export default function AdminAccommodationDetail() {
   const [selectedPartners, setSelectedPartners] = useState<string[]>([]);
   const [adminNotes, setAdminNotes] = useState("");
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [forwardQuoteId, setForwardQuoteId] = useState<string | null>(null);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -276,6 +278,57 @@ export default function AdminAccommodationDetail() {
     },
     onError: () => {
       toast({ title: "Fout bij accepteren", variant: "destructive" });
+    },
+  });
+
+  // Forward quote to customer
+  const forwardQuoteMutation = useMutation({
+    mutationFn: async ({ quoteId, emailSubject, emailBody }: { quoteId: string; emailSubject: string; emailBody: string }) => {
+      // Send notification email via existing edge function
+      const { error: emailError } = await supabase.functions.invoke("notify-accommodation-quote", {
+        body: { quoteId },
+      });
+
+      if (emailError) throw emailError;
+
+      // Mark as forwarded
+      const { error: updateError } = await supabase
+        .from("accommodation_quotes")
+        .update({ forwarded_at: new Date().toISOString() })
+        .eq("id", quoteId);
+
+      if (updateError) throw updateError;
+
+      // Resolve the review todo
+      const { error: todoError } = await supabase
+        .from("admin_todos")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("auto_type", "quote_review")
+        .eq("auto_entity_id", quoteId)
+        .neq("status", "done");
+
+      if (todoError) console.error("Error resolving todo:", todoError);
+
+      // Log communication
+      await supabase
+        .from("project_communications")
+        .insert({
+          accommodation_id: id,
+          communication_type: "email",
+          direction: "outbound",
+          subject: emailSubject,
+          content: emailBody,
+          contact_name: request?.customer_name,
+          contact_email: request?.customer_email,
+        });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      setForwardQuoteId(null);
+      toast({ title: "Offerte doorgestuurd naar klant" });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij doorsturen", description: error.message, variant: "destructive" });
     },
   });
 
@@ -657,36 +710,54 @@ export default function AdminAccommodationDetail() {
                               <Badge variant={quoteStatus.variant}>{quoteStatus.label}</Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              {quote.status === "submitted" && (
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      <Check className="h-4 w-4 mr-1" />
-                                      Selecteren
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Offerte selecteren</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Weet je zeker dat je deze offerte wilt selecteren? Andere offertes worden automatisch afgewezen.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => selectQuoteMutation.mutate(quote.id)}>
-                                        Bevestigen
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              )}
-                              {quote.status === "selected" && (
-                                <Badge variant="default" className="bg-green-600">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Geselecteerd
-                                </Badge>
-                              )}
+                              <div className="flex items-center justify-end gap-2">
+                                {quote.status === "submitted" && !(quote as any).forwarded_at && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setForwardQuoteId(quote.id)}
+                                  >
+                                    <Send className="h-4 w-4 mr-1" />
+                                    Doorsturen
+                                  </Button>
+                                )}
+                                {quote.status === "submitted" && (quote as any).forwarded_at && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Doorgestuurd
+                                  </Badge>
+                                )}
+                                {quote.status === "submitted" && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        <Check className="h-4 w-4 mr-1" />
+                                        Selecteren
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Offerte selecteren</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Weet je zeker dat je deze offerte wilt selecteren? Andere offertes worden automatisch afgewezen.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => selectQuoteMutation.mutate(quote.id)}>
+                                          Bevestigen
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                                {quote.status === "selected" && (
+                                  <Badge variant="default" className="bg-green-600">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Geselecteerd
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -904,6 +975,30 @@ export default function AdminAccommodationDetail() {
           isSending={createQuotesMutation.isPending}
         />
       )}
+
+      {/* Forward Quote to Customer Dialog */}
+      {request && forwardQuoteId && quotes && (() => {
+        const quoteToForward = quotes.find(q => q.id === forwardQuoteId);
+        if (!quoteToForward) return null;
+        return (
+          <ForwardQuoteToCustomerDialog
+            open={!!forwardQuoteId}
+            onOpenChange={(open) => { if (!open) setForwardQuoteId(null); }}
+            quote={{
+              id: quoteToForward.id,
+              accommodation_name: quoteToForward.accommodation_name,
+              price_total: quoteToForward.price_total,
+              partner: quoteToForward.partner as { name: string } | null,
+            }}
+            customerName={request.customer_name}
+            customerEmail={request.customer_email}
+            onSend={(emailSubject, emailBody) => {
+              forwardQuoteMutation.mutate({ quoteId: forwardQuoteId, emailSubject, emailBody });
+            }}
+            isSending={forwardQuoteMutation.isPending}
+          />
+        );
+      })()}
     </AdminLayout>
   );
 }
