@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { ChevronRight, Sparkles, RefreshCw, ArrowLeftRight } from "lucide-react";
+import { ChevronRight, Sparkles, RefreshCw, ArrowLeftRight, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -75,9 +75,14 @@ export const PartnerItemRow = ({ item, onClick }: PartnerItemRowProps) => {
         </div>
       </TableCell>
       <TableCell className="hidden sm:table-cell">
-        <span className="truncate max-w-[150px] block">
-          {request.customer_company || request.customer_name}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="truncate max-w-[150px] block">
+            {request.customer_company || request.customer_name}
+          </span>
+          {request.invoicing_mode === "bureau_central" && (
+            <Building2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+          )}
+        </div>
       </TableCell>
       <TableCell className="hidden md:table-cell">
         {activityDate
