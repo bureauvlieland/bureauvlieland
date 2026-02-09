@@ -85,7 +85,7 @@ function getFallbackInvitationHtml(partnerName: string, partnerEmail: string, pa
       <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">💼 Facturatie &amp; Commissie</h3>
       
       <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
-        U factureert uw diensten <strong>rechtstreeks aan de eindklant</strong>. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet.
+        Afhankelijk van het project factureert u uw diensten <strong>rechtstreeks aan de eindklant</strong> of aan <strong>Bureau Vlieland</strong>. Dit wordt per project afgestemd. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet.
       </p>
       
       <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
