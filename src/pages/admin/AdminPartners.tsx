@@ -43,7 +43,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
   Plus,
-  Edit,
   Mail,
   Phone,
   Building2,
@@ -53,6 +52,7 @@ import {
   AlertTriangle,
   CalendarOff,
   RotateCcw,
+  ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -491,7 +491,12 @@ const AdminPartnersContent = () => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{partner.name}</p>
+                            <button
+                              className="font-medium hover:underline text-primary cursor-pointer text-left"
+                              onClick={() => navigate(`/admin/partners/${partner.id}`)}
+                            >
+                              {partner.name}
+                            </button>
                             {partner.terms_pdf_path && (
                               <TooltipProvider>
                                 <Tooltip>
@@ -587,21 +592,23 @@ const AdminPartnersContent = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => navigate(`/admin/partners/${partner.id}`)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Bewerken</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        {partner.auth_user_id && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => window.open(`/partner?impersonate=${partner.id}`, "_blank")}
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Bekijk als partner</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {!partner.auth_user_id && (
                           <TooltipProvider>
                             <Tooltip>
