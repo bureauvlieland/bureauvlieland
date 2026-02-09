@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BureauCentralBadge } from "./BureauCentralBadge";
 import {
   Calendar,
   Clock,
@@ -152,7 +153,10 @@ export const PartnerItemCard = ({
           </div>
         </div>
 
-        {/* Price indication from customer */}
+        {/* Bureau Central invoicing mode indicator */}
+        {request.invoicing_mode === "bureau_central" && (
+          <BureauCentralBadge variant="compact" />
+        )}
         {item.price_indication && (
           <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 text-sm">
             <span className="text-muted-foreground">Indicatieve prijs (klant zag):</span>{" "}
