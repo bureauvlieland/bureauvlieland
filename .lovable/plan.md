@@ -1,52 +1,54 @@
 
+# Afgewezen logiespartners notificeren
 
-# Logiesaanvragen toevoegen aan partner detailpagina
-
-## Wat ontbreekt
-De partner detailpagina (`AdminPartnerDetail.tsx`) toont alleen gerelateerde **programma-aanvragen** (activiteiten). Voor partners van het type "accommodation" of "both" ontbreken de gerelateerde **logiesaanvragen** (accommodation quotes).
+## Probleem
+Wanneer een klant een logiesofferte kiest (`select-accommodation-quote`), worden andere openstaande offertes op `rejected` gezet (regel 130-141), maar de bijbehorende partners ontvangen hierover **geen notificatie**. Dit is onprofessioneel -- partners wachten dan onnodig op een reactie.
 
 ## Wijzigingen
 
-### 1. Logies aanvragen ophalen
-Een nieuwe functie `fetchRelatedAccommodationQuotes` toevoegen die:
-- Alle `accommodation_quotes` ophaalt waar `partner_id` gelijk is aan de huidige partner
-- De bijbehorende `accommodation_requests` meeneemt (klantnaam, periode, gasten, status)
-- Alleen getoond wordt als `partner_type` gelijk is aan "accommodation" of "both"
+### 1. Edge Function: `select-accommodation-quote/index.ts`
+Na het afwijzen van de andere offertes (regel 130-141), de afgewezen partners ophalen en per partner een e-mail sturen:
 
-### 2. Nieuwe sectie "Gerelateerde logiesaanvragen"
-Een extra Card-sectie toevoegen onder (of naast) de bestaande "Gerelateerde aanvragen", met een tabel die toont:
-- **Accommodatie** -- naam van de offerte
-- **Klant** -- naam en eventueel bedrijf
-- **Periode** -- aankomst- en vertrekdatum
-- **Gasten** -- aantal gasten
-- **Status** -- badge (Te beantwoorden / Offerte verstuurd / Gekozen / Afgewezen)
-- **Link** -- knop naar de logies detail pagina (`/admin/logies/{request_id}`)
+- **Ophalen afgewezen offertes**: Query de zojuist ge-update quotes met status `rejected` voor deze `request_id`, inclusief partnergegevens (`partner:partners(name, email)`)
+- **Per afgewezen partner een e-mail versturen** met:
+  - Klantnaam en periode
+  - Naam van de accommodatie waarvoor ze een offerte hadden gedaan
+  - Een vriendelijke tekst dat de klant voor een andere optie heeft gekozen
+  - Geen financiele details van de gekozen offerte (privacy)
+- **E-mail loggen** via de bestaande `logEmail()` utility met nieuw type
 
-### 3. Conditie
-De sectie wordt alleen gerenderd als de partner van het type "accommodation" of "both" is, zodat het niet verschijnt bij pure activiteitenpartners.
+### 2. E-mail template constanten
+Toevoegen aan de bestaande constanten:
 
-## Technisch
+- **`email-templates.ts`**: Nieuw `TemplateIds.ACCOMMODATION_REJECTED_PARTNER` toevoegen
+- **`email-logger.ts`**: Nieuw `EmailTypes.ACCOMMODATION_REJECTED_PARTNER` toevoegen
 
-### Bestand
-- `src/pages/admin/AdminPartnerDetail.tsx`
+Dit maakt het template ook beheerbaar via de admin e-mail templates pagina.
 
-### Data model
-Nieuw interface `RelatedAccommodationQuote` met velden uit `accommodation_quotes` + geneste `accommodation_requests`.
+### 3. Partner Portal weergave
+De partner ziet al een status "Niet gekozen" badge in het overzicht (`PartnerAccommodationRequestCard.tsx`). Geen aanvullende UI-wijziging nodig.
 
-### Query
-```sql
-SELECT *, accommodation_requests(...)
-FROM accommodation_quotes
-WHERE partner_id = :partnerId
-ORDER BY created_at DESC
-LIMIT 10
+## Technisch detail
+
+### E-mail inhoud (fallback HTML)
+```
+Onderwerp: Logiesaanvraag [klantnaam] - niet gekozen
+
+Beste [partnernaam],
+
+Wij laten u weten dat de klant [klantnaam] voor de periode
+[aankomst] - [vertrek] voor een andere accommodatie heeft gekozen.
+
+Uw offerte voor [accommodatienaam] wordt hiermee afgesloten.
+
+Bedankt voor het uitbrengen van uw offerte. Wij hopen u bij een
+volgende aanvraag weer te mogen benaderen.
+
+Met vriendelijke groet,
+Bureau Vlieland
 ```
 
-### Weergave
-Hergebruik van dezelfde status-mapping als in `PartnerAccommodationTable.tsx`:
-- pending -> "Te beantwoorden"
-- submitted -> "Offerte verstuurd"
-- selected -> "Gekozen"
-- rejected -> "Niet gekozen"
-- expired -> "Verlopen"
-
+### Bestanden die worden gewijzigd
+- `supabase/functions/select-accommodation-quote/index.ts` -- e-mails versturen naar afgewezen partners
+- `supabase/functions/_shared/email-templates.ts` -- nieuw template ID
+- `supabase/functions/_shared/email-logger.ts` -- nieuw email type
