@@ -23,13 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -50,16 +43,13 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
   Plus,
-  MoreVertical,
   Edit,
   Mail,
   Phone,
   Building2,
   UserPlus,
-  ExternalLink,
   Trash2,
   FileCheck2,
-  FileX,
   AlertTriangle,
   CalendarOff,
   RotateCcw,
@@ -85,6 +75,7 @@ interface Partner {
   address_city: string | null;
   is_active: boolean;
   commission_percentage: number;
+  accommodation_commission_percentage: number | null;
   auth_user_id: string | null;
   partner_token: string;
   created_at: string;
@@ -451,18 +442,16 @@ const AdminPartnersContent = () => {
                 <TableHead>Partner</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Adres</TableHead>
                 <TableHead>Commissie</TableHead>
-                <TableHead>Voorwaarden</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actief</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-[120px]">Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPartners.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Geen partners gevonden
                   </TableCell>
                 </TableRow>
@@ -492,17 +481,29 @@ const AdminPartnersContent = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          isCurrentlyUnavailable ? "bg-amber-100" : "bg-slate-100"
+                          isCurrentlyUnavailable ? "bg-amber-100" : "bg-muted"
                         }`}>
                           {isCurrentlyUnavailable ? (
                             <CalendarOff className="h-5 w-5 text-amber-600" />
                           ) : (
-                            <Building2 className="h-5 w-5 text-slate-600" />
+                            <Building2 className="h-5 w-5 text-muted-foreground" />
                           )}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{partner.name}</p>
+                            {partner.terms_pdf_path && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <FileCheck2 className="h-4 w-4 text-green-600" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-sm">Voorwaarden geüpload</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             {isCurrentlyUnavailable && (
                               <TooltipProvider>
                                 <Tooltip>
@@ -516,7 +517,7 @@ const AdminPartnersContent = () => {
                                     <div className="text-sm">
                                       <p className="font-medium">Geblokkeerd tot {currentPeriod && format(new Date(currentPeriod.end_date), "d MMM yyyy", { locale: nl })}</p>
                                       {currentPeriod?.reason && (
-                                        <p className="text-slate-400">{currentPeriod.reason}</p>
+                                        <p className="text-muted-foreground">{currentPeriod.reason}</p>
                                       )}
                                     </div>
                                   </TooltipContent>
@@ -540,7 +541,7 @@ const AdminPartnersContent = () => {
                             )}
                           </div>
                           {partner.kvk_number && (
-                            <p className="text-xs text-slate-500">KvK: {partner.kvk_number}</p>
+                            <p className="text-xs text-muted-foreground">KvK: {partner.kvk_number}</p>
                           )}
                         </div>
                       </div>
@@ -553,34 +554,27 @@ const AdminPartnersContent = () => {
                     <TableCell>
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3 text-slate-400" />
+                          <Mail className="h-3 w-3 text-muted-foreground" />
                           <a
                             href={`mailto:${partner.email}`}
-                            className="text-blue-600 hover:underline"
+                            className="text-primary hover:underline"
                           >
                             {partner.email}
                           </a>
                         </div>
                         {partner.phone && (
-                          <div className="flex items-center gap-1 text-sm text-slate-500">
-                            <Phone className="h-3 w-3 text-slate-400" />
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3" />
                             {partner.phone}
                           </div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-600">
-                      {partner.address_city || "-"}
-                    </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{partner.commission_percentage}%</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {partner.terms_pdf_path ? (
-                        <FileCheck2 className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <FileX className="h-5 w-5 text-muted-foreground/50" />
-                      )}
+                      <div className="text-sm">
+                        <span className="font-medium">{partner.commission_percentage}% / {partner.accommodation_commission_percentage ?? 10}%</span>
+                        <p className="text-xs text-muted-foreground">act. / logies</p>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <OnboardingBadge status={onboardingStatus} />
@@ -592,49 +586,61 @@ const AdminPartnersContent = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/admin/partners/${partner.id}`)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Bewerken
-                          </DropdownMenuItem>
-                          {!partner.auth_user_id && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedIds(new Set([partner.id]));
-                                setBulkInviteOpen(true);
-                              }}
-                            >
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Uitnodigen
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/partner/dashboard?impersonate=${partner.id}`)}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Bekijk als partner
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              setPartnerToDelete(partner);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Verwijderen
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => navigate(`/admin/partners/${partner.id}`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Bewerken</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {!partner.auth_user_id && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    setSelectedIds(new Set([partner.id]));
+                                    setBulkInviteOpen(true);
+                                  }}
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Uitnodigen</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setPartnerToDelete(partner);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Verwijderen</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </TableCell>
                   </TableRow>
                   );
