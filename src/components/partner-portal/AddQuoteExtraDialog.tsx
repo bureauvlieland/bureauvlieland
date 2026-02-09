@@ -225,7 +225,7 @@ export function AddQuoteExtraDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Extra bewerken' : 'Extra toevoegen'}</DialogTitle>
           <DialogDescription>
@@ -233,7 +233,7 @@ export function AddQuoteExtraDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
           {/* Presets section - only show when adding new extra */}
           {!isEditing && presets.length > 0 && showPresets && (
             <div className="space-y-3 mb-4">
@@ -270,7 +270,7 @@ export function AddQuoteExtraDialog({
             </div>
           )}
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form id="add-extra-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
             <div className="space-y-2">
               <Label htmlFor="name">Naam *</Label>
               <Input
@@ -414,25 +414,26 @@ export function AddQuoteExtraDialog({
                 </Label>
               </div>
             )}
-
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Annuleren
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={addExtra.isPending || updateExtra.isPending || addPreset.isPending}
-              >
-                {addExtra.isPending || updateExtra.isPending || addPreset.isPending
-                  ? 'Bezig...' 
-                  : isEditing 
-                    ? 'Opslaan' 
-                    : 'Toevoegen'
-                }
-              </Button>
-            </DialogFooter>
           </form>
-        </ScrollArea>
+        </div>
+
+        <DialogFooter className="pt-4 border-t">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Annuleren
+          </Button>
+          <Button 
+            type="submit"
+            form="add-extra-form"
+            disabled={addExtra.isPending || updateExtra.isPending || addPreset.isPending}
+          >
+            {addExtra.isPending || updateExtra.isPending || addPreset.isPending
+              ? 'Bezig...' 
+              : isEditing 
+                ? 'Opslaan' 
+                : 'Toevoegen'
+            }
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
