@@ -16,6 +16,7 @@ import {
   RotateCcw,
   AlertCircle,
   ToggleLeft,
+  Bell,
 } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { SETTING_CATEGORIES } from "@/types/appSettings";
@@ -205,6 +206,8 @@ export default function AdminSettings() {
       case "vat":
       case "commission":
         return <Percent className="h-5 w-5" />;
+      case "reminders":
+        return <Bell className="h-5 w-5" />;
       case "system":
         return <Clock className="h-5 w-5" />;
       default:
@@ -239,6 +242,7 @@ export default function AdminSettings() {
                     {categoryKey === "pricing" && "Coördinatiefee staffel gebaseerd op groepsgrootte"}
                     {categoryKey === "vat" && "BTW tarieven voor verschillende diensten"}
                     {categoryKey === "commission" && "Standaard commissie percentages voor partners"}
+                    {categoryKey === "reminders" && "Automatische herinnerings-e-mails instellen"}
                     {categoryKey === "system" && "Algemene systeeminstellingen"}
                   </CardDescription>
                 </CardHeader>

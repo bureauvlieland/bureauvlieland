@@ -14,6 +14,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,11 +29,14 @@ import {
   Activity,
   Euro,
   Blocks,
-  Mail,
+  MailCheck,
   FolderKanban,
   ImageIcon,
   Settings,
   LayoutTemplate,
+  Receipt,
+  HandCoins,
+  ChevronDown,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -45,27 +49,83 @@ interface AdminInfo {
   email: string;
 }
 
-const menuItems = [
-  { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
-  { title: "CRM", url: "/admin/crm", icon: Users },
-  { title: "Partners", url: "/admin/partners", icon: Building2 },
-  { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
-  { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
-  { title: "Media", url: "/admin/media", icon: ImageIcon },
-  { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
-  { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Euro },
-  { title: "Commissies", url: "/admin/commissies", icon: Euro },
-  { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
-  { title: "Berichten", url: "/admin/berichten", icon: Mail },
-  { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },
-  { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
+interface MenuSection {
+  label: string;
+  items: { title: string; url: string; icon: React.ComponentType<{ className?: string }> }[];
+  collapsible?: boolean;
+}
+
+const menuSections: MenuSection[] = [
+  {
+    label: "Operationeel",
+    items: [
+      { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+      { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
+      { title: "CRM", url: "/admin/crm", icon: Users },
+      { title: "Partners", url: "/admin/partners", icon: Building2 },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+      { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
+      { title: "Media", url: "/admin/media", icon: ImageIcon },
+    ],
+  },
+  {
+    label: "Financiën",
+    collapsible: true,
+    items: [
+      { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
+      { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
+      { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
+    ],
+  },
+  {
+    label: "Systeem",
+    items: [
+      { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
+      { title: "E-maillog", url: "/admin/berichten", icon: MailCheck },
+      { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },
+      { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
+    ],
+  },
 ];
 
 const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => void }) => {
   const location = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  const isItemActive = (url: string) => location.pathname === url;
+  const isSectionActive = (section: MenuSection) =>
+    section.items.some((item) => isItemActive(item.url));
+
+  const renderMenuItems = (items: MenuSection["items"]) => (
+    <SidebarMenu>
+      {items.map((item) => {
+        const isActive = isItemActive(item.url);
+        return (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton asChild>
+              <Link
+                to={item.url}
+                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-amber-500/20 text-amber-400"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span>{item.title}</span>}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
 
   return (
     <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
@@ -100,35 +160,40 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         )}
 
         {/* Navigation */}
-        <SidebarGroup className="flex-1">
-          <SidebarGroupLabel className="text-slate-400 text-xs uppercase tracking-wider px-4">
-            {!isCollapsed && "Beheer"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <Link
-                        to={item.url}
-                        className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-                          isActive
-                            ? "bg-amber-500/20 text-amber-400"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`}
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        {!isCollapsed && <span>{item.title}</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="flex-1 overflow-y-auto py-2">
+          {menuSections.map((section) => {
+            if (section.collapsible && !isCollapsed) {
+              return (
+                <Collapsible
+                  key={section.label}
+                  defaultOpen={isSectionActive(section)}
+                  className="px-2 py-1"
+                >
+                  <CollapsibleTrigger className="flex items-center justify-between w-full px-2 py-1.5 text-xs uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-colors">
+                    <span>{section.label}</span>
+                    <ChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    {renderMenuItems(section.items)}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            }
+
+            return (
+              <SidebarGroup key={section.label} className="py-1">
+                {!isCollapsed && (
+                  <SidebarGroupLabel className="text-slate-400 text-xs uppercase tracking-wider px-4">
+                    {section.label}
+                  </SidebarGroupLabel>
+                )}
+                <SidebarGroupContent>
+                  {renderMenuItems(section.items)}
+                </SidebarGroupContent>
+              </SidebarGroup>
+            );
+          })}
+        </div>
 
         {/* Logout button */}
         <div className="p-4 border-t border-slate-700">
@@ -164,7 +229,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           return;
         }
 
-        // Check if user has admin role
         const { data: roleData, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
@@ -173,7 +237,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           .maybeSingle();
 
         if (roleError || !roleData) {
-          // Not an admin, redirect to partner dashboard or login
           navigate("/partner/dashboard");
           return;
         }
@@ -230,9 +293,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       <div className="min-h-screen flex w-full bg-slate-100">
         <AdminSidebar admin={admin} onLogout={handleLogout} />
         
-        {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile header */}
           <header className="lg:hidden h-14 border-b bg-white flex items-center px-4 gap-4">
             <SidebarTrigger>
               <Menu className="h-5 w-5" />
@@ -240,7 +301,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             <span className="font-semibold text-slate-900">Admin</span>
           </header>
 
-          {/* Content */}
           <main className="flex-1 overflow-auto">
             {children}
           </main>

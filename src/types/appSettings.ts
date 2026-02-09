@@ -38,6 +38,7 @@ export const SETTING_CATEGORIES = {
   pricing: "Prijzen",
   vat: "BTW Tarieven",
   commission: "Commissies",
+  reminders: "Herinneringen",
   system: "Systeem",
 } as const;
 
