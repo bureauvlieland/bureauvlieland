@@ -17,7 +17,7 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   coordination_fee_tiers: FALLBACK_FEE_TIERS,
   default_vat_rate: 21,
   accommodation_vat_rate: 9,
-  default_partner_commission: 15,
+  default_partner_commission: 10,
   default_accommodation_commission: 10,
   request_expiry_days: 90,
   customer_portal_enabled: false,
