@@ -45,6 +45,7 @@ import {
   Calendar,
   Users,
   ExternalLink,
+  BedDouble,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
@@ -80,6 +81,31 @@ interface RelatedRequest {
   created_at: string;
   item_count: number;
 }
+
+interface RelatedAccommodationQuote {
+  id: string;
+  accommodation_name: string;
+  status: string;
+  created_at: string;
+  accommodation_requests: {
+    id: string;
+    customer_name: string;
+    customer_company: string | null;
+    arrival_date: string;
+    departure_date: string;
+    number_of_guests: number;
+    status: string;
+  };
+}
+
+const ACCOMMODATION_QUOTE_STATUS: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  pending: { label: "Te beantwoorden", variant: "default" },
+  submitted: { label: "Offerte verstuurd", variant: "secondary" },
+  selected: { label: "Gekozen", variant: "outline" },
+  rejected: { label: "Niet gekozen", variant: "destructive" },
+  expired: { label: "Verlopen", variant: "destructive" },
+  declined: { label: "Afgewezen", variant: "destructive" },
+};
 
 const PARTNER_TYPE_OPTIONS = [
   { value: "activity_provider", label: "Activiteiten partner" },
@@ -120,11 +146,16 @@ const AdminPartnerDetail = () => {
   const [isInviting, setIsInviting] = useState(false);
   const [relatedRequests, setRelatedRequests] = useState<RelatedRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [accommodationQuotes, setAccommodationQuotes] = useState<RelatedAccommodationQuote[]>([]);
+  const [isLoadingAccommodationQuotes, setIsLoadingAccommodationQuotes] = useState(false);
+
+  const isAccommodationPartner = formData.partner_type === "accommodation" || formData.partner_type === "both";
 
   useEffect(() => {
     if (!isNew && id) {
       fetchPartner();
       fetchRelatedRequests();
+      fetchAccommodationQuotes();
     }
   }, [id, isNew]);
 
@@ -218,6 +249,38 @@ const AdminPartnerDetail = () => {
       console.error("Error fetching related requests:", error);
     } finally {
       setIsLoadingRequests(false);
+    }
+  };
+
+  const fetchAccommodationQuotes = async () => {
+    if (!id) return;
+    setIsLoadingAccommodationQuotes(true);
+    try {
+      const { data, error } = await supabase
+        .from("accommodation_quotes")
+        .select(`
+          id, accommodation_name, status, created_at,
+          accommodation_requests!inner(id, customer_name, customer_company, arrival_date, departure_date, number_of_guests, status)
+        `)
+        .eq("partner_id", id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      setAccommodationQuotes(
+        (data || []).map((q: any) => ({
+          id: q.id,
+          accommodation_name: q.accommodation_name,
+          status: q.status,
+          created_at: q.created_at,
+          accommodation_requests: q.accommodation_requests,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching accommodation quotes:", error);
+    } finally {
+      setIsLoadingAccommodationQuotes(false);
     }
   };
 
@@ -797,6 +860,94 @@ const AdminPartnerDetail = () => {
                     )}
                   </CardContent>
                 </Card>
+          )}
+
+          {/* Related Accommodation Quotes */}
+          {!isNew && id && isAccommodationPartner && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BedDouble className="h-5 w-5" />
+                  Gerelateerde logiesaanvragen
+                </CardTitle>
+                <CardDescription>
+                  Logies offertes van deze partner
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoadingAccommodationQuotes ? (
+                  <div className="p-6">
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                ) : accommodationQuotes.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground">
+                    Geen logiesaanvragen gevonden
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Accommodatie</TableHead>
+                          <TableHead>Klant</TableHead>
+                          <TableHead>Periode</TableHead>
+                          <TableHead className="text-center">Gasten</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-12"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {accommodationQuotes.map((quote) => {
+                          const req = quote.accommodation_requests;
+                          const statusConfig = ACCOMMODATION_QUOTE_STATUS[quote.status] || ACCOMMODATION_QUOTE_STATUS.pending;
+                          return (
+                            <TableRow key={quote.id}>
+                              <TableCell>
+                                <p className="font-medium">{quote.accommodation_name || "Logies"}</p>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{req.customer_name}</p>
+                                  {req.customer_company && (
+                                    <p className="text-sm text-muted-foreground">{req.customer_company}</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">
+                                    {format(new Date(req.arrival_date), "d MMM", { locale: nl })} - {format(new Date(req.departure_date), "d MMM", { locale: nl })}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  {req.number_of_guests}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={statusConfig.variant}>
+                                  {statusConfig.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="icon" asChild>
+                                  <Link to={`/admin/logies/${req.id}`}>
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       </AdminLayout>
