@@ -26,6 +26,10 @@ export interface AppSettingsMap {
   default_accommodation_commission: number;
   request_expiry_days: number;
   customer_portal_enabled: boolean;
+  reminder_days_partner_quote: number;
+  reminder_days_customer_quote: number;
+  reminder_days_customer_request: number;
+  reminder_email_enabled: boolean;
 }
 
 // Setting categories for grouping in admin UI

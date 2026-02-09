@@ -21,6 +21,10 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   default_accommodation_commission: 10,
   request_expiry_days: 90,
   customer_portal_enabled: false,
+  reminder_days_partner_quote: 5,
+  reminder_days_customer_quote: 7,
+  reminder_days_customer_request: 14,
+  reminder_email_enabled: true,
 };
 
 // ============================================

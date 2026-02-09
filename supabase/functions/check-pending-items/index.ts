@@ -5,8 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Number of days before creating a reminder
-const REMINDER_DAYS = 3;
+// Default reminder thresholds (overridden by app_settings)
+const DEFAULT_REMINDER_DAYS_PARTNER = 5;
+const DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE = 7;
+const DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST = 14;
+const DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY = 3;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,15 +23,35 @@ Deno.serve(async (req) => {
 
     console.log("Starting check-pending-items job...");
 
-    // Calculate the cutoff date (3 days ago)
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - REMINDER_DAYS);
+    // Fetch configurable settings
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("id, value")
+      .in("id", [
+        "reminder_days_partner_quote",
+        "reminder_days_customer_quote",
+        "reminder_days_customer_request",
+      ]);
 
-    // Find items that:
-    // 1. Have status = 'pending'
-    // 2. Were created more than REMINDER_DAYS ago
-    // 3. Are not self_arranged
-    // 4. Don't already have an active reminder todo
+    const settings: Record<string, number> = {};
+    for (const row of settingsRows || []) {
+      settings[row.id] = typeof row.value === "number" ? row.value : parseInt(String(row.value), 10) || 0;
+    }
+
+    const partnerQuoteDays = settings["reminder_days_partner_quote"] || DEFAULT_REMINDER_DAYS_PARTNER;
+    const customerQuoteDays = settings["reminder_days_customer_quote"] || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
+    const customerRequestDays = settings["reminder_days_customer_request"] || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
+    const partnerActivityDays = DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY;
+
+    let totalCreated = 0;
+    let totalSkipped = 0;
+
+    // =============================================
+    // CHECK 1: Partner activity items (existing logic)
+    // =============================================
+    const activityCutoff = new Date();
+    activityCutoff.setDate(activityCutoff.getDate() - partnerActivityDays);
+
     const { data: pendingItems, error: itemsError } = await supabase
       .from("program_request_items")
       .select(`
@@ -48,101 +71,272 @@ Deno.serve(async (req) => {
       `)
       .eq("status", "pending")
       .neq("block_type", "self_arranged")
-      .lt("created_at", cutoffDate.toISOString())
+      .lt("created_at", activityCutoff.toISOString())
       .eq("program_requests.status", "active")
       .gt("program_requests.expires_at", new Date().toISOString());
 
     if (itemsError) {
       console.error("Error fetching pending items:", itemsError);
-      throw itemsError;
-    }
+    } else {
+      console.log(`Found ${pendingItems?.length || 0} pending activity items older than ${partnerActivityDays} days`);
 
-    console.log(`Found ${pendingItems?.length || 0} pending items older than ${REMINDER_DAYS} days`);
+      for (const item of pendingItems || []) {
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "partner_reminder")
+          .eq("auto_entity_id", item.id)
+          .neq("status", "done")
+          .maybeSingle();
 
-    if (!pendingItems || pendingItems.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No pending items need reminders", created: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
 
-    let createdCount = 0;
-    let skippedCount = 0;
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("name")
+          .eq("id", item.provider_id)
+          .maybeSingle();
 
-    for (const item of pendingItems) {
-      // Check if a reminder todo already exists for this item
-      const { data: existingTodo } = await supabase
-        .from("admin_todos")
-        .select("id")
-        .eq("auto_type", "partner_reminder")
-        .eq("auto_entity_id", item.id)
-        .neq("status", "done")
-        .maybeSingle();
+        const partnerName = partner?.name || item.provider_name;
+        const programRequestsArray = item.program_requests as unknown as Array<{
+          id: string;
+          customer_name: string;
+          customer_company: string | null;
+          status: string;
+          expires_at: string;
+        }>;
+        const request = programRequestsArray[0];
 
-      if (existingTodo) {
-        skippedCount++;
-        continue;
-      }
+        if (!request) continue;
 
-      // Get partner info for the todo
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("name")
-        .eq("id", item.provider_id)
-        .maybeSingle();
+        const customerName = request.customer_company || request.customer_name;
+        const daysSinceCreated = Math.floor(
+          (Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        );
 
-      const partnerName = partner?.name || item.provider_name;
-      
-      // program_requests is an array from the join, get first element
-      const programRequestsArray = item.program_requests as unknown as Array<{
-        id: string;
-        customer_name: string;
-        customer_company: string | null;
-        status: string;
-        expires_at: string;
-      }>;
-      const request = programRequestsArray[0];
-      
-      if (!request) {
-        console.error(`No program request found for item ${item.id}`);
-        continue;
-      }
-      
-      const customerName = request.customer_company || request.customer_name;
-      const daysSinceCreated = Math.floor(
-        (Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60 * 24)
-      );
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `Partner ${partnerName} heeft niet gereageerd op "${item.block_name}"`,
+            description: `Deze activiteit is ${daysSinceCreated} dagen geleden aangevraagd voor ${customerName}, maar de partner heeft nog niet gereageerd. Neem contact op met de partner.`,
+            priority: daysSinceCreated > 7 ? "high" : "normal",
+            status: "todo",
+            related_request_id: request.id,
+            related_partner_id: item.provider_id,
+            auto_type: "partner_reminder",
+            auto_entity_id: item.id,
+          });
 
-      // Create the reminder todo
-      const { error: todoError } = await supabase
-        .from("admin_todos")
-        .insert({
-          title: `Partner ${partnerName} heeft niet gereageerd op "${item.block_name}"`,
-          description: `Deze activiteit is ${daysSinceCreated} dagen geleden aangevraagd voor ${customerName}, maar de partner heeft nog niet gereageerd. Neem contact op met de partner.`,
-          priority: daysSinceCreated > 7 ? "high" : "normal",
-          status: "todo",
-          related_request_id: request.id,
-          related_partner_id: item.provider_id,
-          auto_type: "partner_reminder",
-          auto_entity_id: item.id,
-        });
-
-      if (todoError) {
-        console.error(`Error creating todo for item ${item.id}:`, todoError);
-      } else {
-        createdCount++;
-        console.log(`Created reminder for item ${item.id} (${item.block_name})`);
+        if (!todoError) totalCreated++;
       }
     }
 
-    console.log(`Job completed: ${createdCount} reminders created, ${skippedCount} skipped`);
+    // =============================================
+    // CHECK 2: Partner accommodation quotes pending
+    // =============================================
+    const partnerQuoteCutoff = new Date();
+    partnerQuoteCutoff.setDate(partnerQuoteCutoff.getDate() - partnerQuoteDays);
+
+    const { data: pendingQuotes, error: pendingQuotesError } = await supabase
+      .from("accommodation_quotes")
+      .select(`
+        id,
+        partner_id,
+        request_id,
+        created_at,
+        partner:partners(name),
+        request:accommodation_requests(
+          customer_name,
+          customer_company,
+          arrival_date,
+          departure_date,
+          number_of_guests,
+          status,
+          expires_at
+        )
+      `)
+      .eq("status", "pending")
+      .lt("created_at", partnerQuoteCutoff.toISOString());
+
+    if (pendingQuotesError) {
+      console.error("Error fetching pending quotes:", pendingQuotesError);
+    } else {
+      const activeQuotes = (pendingQuotes || []).filter(q => {
+        const req = q.request as any;
+        return req && req.status !== "cancelled" && new Date(req.expires_at) > new Date();
+      });
+
+      console.log(`Found ${activeQuotes.length} pending accommodation quotes older than ${partnerQuoteDays} days`);
+
+      for (const quote of activeQuotes) {
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "quote_pending_partner")
+          .eq("auto_entity_id", quote.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const partnerName = (quote.partner as any)?.name || "Onbekend";
+        const req = quote.request as any;
+        const customerName = req?.customer_company || req?.customer_name || "Onbekend";
+        const daysSince = Math.floor(
+          (Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `Partner ${partnerName} heeft niet gereageerd op logiesverzoek ${customerName}`,
+            description: `De offerteaanvraag is ${daysSince} dagen geleden verstuurd, maar de partner heeft nog niet gereageerd.`,
+            priority: daysSince > partnerQuoteDays * 2 ? "high" : "normal",
+            status: "todo",
+            related_partner_id: quote.partner_id,
+            auto_type: "quote_pending_partner",
+            auto_entity_id: quote.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
+    // CHECK 3: Customer hasn't selected forwarded quote
+    // =============================================
+    const customerQuoteCutoff = new Date();
+    customerQuoteCutoff.setDate(customerQuoteCutoff.getDate() - customerQuoteDays);
+
+    const { data: forwardedQuotes, error: forwardedError } = await supabase
+      .from("accommodation_quotes")
+      .select(`
+        id,
+        request_id,
+        forwarded_at,
+        request:accommodation_requests(
+          id,
+          customer_name,
+          customer_company,
+          status,
+          expires_at,
+          linked_program_id
+        )
+      `)
+      .eq("status", "submitted")
+      .not("forwarded_at", "is", null)
+      .lt("forwarded_at", customerQuoteCutoff.toISOString());
+
+    if (forwardedError) {
+      console.error("Error fetching forwarded quotes:", forwardedError);
+    } else {
+      const activeForwarded = (forwardedQuotes || []).filter(q => {
+        const req = q.request as any;
+        return req && req.status !== "accepted" && req.status !== "cancelled" && new Date(req.expires_at) > new Date();
+      });
+
+      console.log(`Found ${activeForwarded.length} forwarded quotes without customer selection older than ${customerQuoteDays} days`);
+
+      for (const quote of activeForwarded) {
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "quote_pending_customer")
+          .eq("auto_entity_id", quote.request_id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const req = quote.request as any;
+        const customerName = req?.customer_company || req?.customer_name || "Onbekend";
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `Klant ${customerName} heeft nog geen logiesofferte gekozen`,
+            description: `Er zijn offertes doorgestuurd naar de klant, maar er is nog geen selectie gemaakt.`,
+            priority: "normal",
+            status: "todo",
+            related_request_id: req?.linked_program_id || null,
+            auto_type: "quote_pending_customer",
+            auto_entity_id: quote.request_id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
+    // CHECK 4: Inactive program requests
+    // =============================================
+    const requestCutoff = new Date();
+    requestCutoff.setDate(requestCutoff.getDate() - customerRequestDays);
+
+    const { data: inactiveRequests, error: inactiveError } = await supabase
+      .from("program_requests")
+      .select("id, customer_name, customer_company, updated_at, status, expires_at")
+      .eq("status", "active")
+      .eq("completion_status", "in_progress")
+      .lt("updated_at", requestCutoff.toISOString())
+      .gt("expires_at", new Date().toISOString());
+
+    if (inactiveError) {
+      console.error("Error fetching inactive requests:", inactiveError);
+    } else {
+      console.log(`Found ${inactiveRequests?.length || 0} inactive program requests older than ${customerRequestDays} days`);
+
+      for (const req of inactiveRequests || []) {
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "request_no_response")
+          .eq("auto_entity_id", req.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const customerName = req.customer_company || req.customer_name;
+        const daysSince = Math.floor(
+          (Date.now() - new Date(req.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `Aanvraag ${customerName} is ${daysSince} dagen inactief`,
+            description: `Deze aanvraag is al ${daysSince} dagen niet bijgewerkt. Neem contact op met de klant om de voortgang te bespreken.`,
+            priority: daysSince > customerRequestDays * 2 ? "high" : "normal",
+            status: "todo",
+            related_request_id: req.id,
+            auto_type: "request_no_response",
+            auto_entity_id: req.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    console.log(`Job completed: ${totalCreated} reminders created, ${totalSkipped} skipped`);
 
     return new Response(
-      JSON.stringify({ 
-        message: "Check completed", 
-        created: createdCount,
-        skipped: skippedCount,
-        total_checked: pendingItems.length,
+      JSON.stringify({
+        message: "Check completed",
+        created: totalCreated,
+        skipped: totalSkipped,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

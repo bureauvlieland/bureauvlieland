@@ -5,7 +5,11 @@ export type AutoTodoType =
   | "commission_pending" 
   | "terms_reminder" 
   | "invoicing_ready"
-  | "availability_conflict";
+  | "availability_conflict"
+  | "quote_review"
+  | "quote_pending_partner"
+  | "quote_pending_customer"
+  | "request_no_response";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -126,6 +130,18 @@ export const autoTodoTitles = {
   
   availability_conflict: (partnerName: string, activityName: string) =>
     `Beschikbaarheidsconflict: ${partnerName} niet beschikbaar voor "${activityName}"`,
+
+  quote_review: (partnerName: string, customerName: string) =>
+    `Nieuwe logiesofferte: ${partnerName} voor ${customerName}`,
+
+  quote_pending_partner: (partnerName: string, customerName: string) =>
+    `Partner ${partnerName} heeft niet gereageerd op logiesverzoek ${customerName}`,
+
+  quote_pending_customer: (customerName: string) =>
+    `Klant ${customerName} heeft nog geen logiesofferte gekozen`,
+
+  request_no_response: (customerName: string) =>
+    `Aanvraag ${customerName} is lang inactief`,
 };
 
 /**
@@ -160,5 +176,25 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Beschikbaarheid",
     color: "text-amber-700",
     bgColor: "bg-amber-100",
+  },
+  quote_review: {
+    label: "Offerte beoordelen",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
+  },
+  quote_pending_partner: {
+    label: "Partner logies",
+    color: "text-orange-700",
+    bgColor: "bg-orange-100",
+  },
+  quote_pending_customer: {
+    label: "Klant logies",
+    color: "text-indigo-700",
+    bgColor: "bg-indigo-100",
+  },
+  request_no_response: {
+    label: "Inactieve aanvraag",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
   },
 };

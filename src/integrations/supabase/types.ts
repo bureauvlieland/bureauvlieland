@@ -132,6 +132,7 @@ export type Database = {
           created_at: string
           description: string | null
           deviation_reason: string | null
+          forwarded_at: string | null
           id: string
           includes: Json | null
           invoiced_amount: number | null
@@ -170,6 +171,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           deviation_reason?: string | null
+          forwarded_at?: string | null
           id?: string
           includes?: Json | null
           invoiced_amount?: number | null
@@ -208,6 +210,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           deviation_reason?: string | null
+          forwarded_at?: string | null
           id?: string
           includes?: Json | null
           invoiced_amount?: number | null

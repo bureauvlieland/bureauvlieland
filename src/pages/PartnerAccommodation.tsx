@@ -237,18 +237,18 @@ const PartnerAccommodationContent = () => {
 
       if (error) throw error;
 
-      // Send notification email to customer
+      // Create auto-todo for admin to review the quote (instead of sending directly to customer)
       try {
-        await supabase.functions.invoke("notify-accommodation-quote", {
+        await supabase.functions.invoke("create-quote-review-todo", {
           body: { quoteId: selectedRequest.quote.id },
         });
-      } catch (emailError) {
-        console.error("Failed to send quote notification:", emailError);
+      } catch (todoError) {
+        console.error("Failed to create review todo:", todoError);
       }
 
       toast({
         title: "Offerte ingediend",
-        description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland.",
+        description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland. Zij zullen deze beoordelen.",
       });
 
       await fetchData();
