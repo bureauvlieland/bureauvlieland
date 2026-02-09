@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.resend-partner-invitation]
 verify_jwt = false
+
+[functions.send-project-email]
+verify_jwt = false
