@@ -84,4 +84,7 @@ export const EmailTypes = {
   
   // Counter proposal emails
   COUNTER_PROPOSAL_PARTNER: "counter_proposal_partner",
+  
+  // Accommodation rejection
+  ACCOMMODATION_REJECTED_PARTNER: "accommodation_rejected_partner",
 } as const;

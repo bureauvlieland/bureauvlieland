@@ -229,4 +229,7 @@ export const TemplateIds = {
   // Counter proposal emails
   COUNTER_PROPOSAL_PARTNER: "counter_proposal_partner",
   COUNTER_PROPOSAL_RESPONSE: "counter_proposal_response",
+  
+  // Accommodation rejection
+  ACCOMMODATION_REJECTED_PARTNER: "accommodation_rejected_partner",
 } as const;
