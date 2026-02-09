@@ -10,6 +10,7 @@ import {
   getRecipientEmail,
   TemplateIds 
 } from "../_shared/email-templates.ts";
+import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,6 +140,14 @@ Deno.serve(async (req) => {
       console.error("Reject quotes error:", rejectError);
       // Non-fatal, continue
     }
+
+    // Fetch rejected quotes with partner info to notify them
+    const { data: rejectedQuotes } = await supabase
+      .from("accommodation_quotes")
+      .select("id, accommodation_name, partner:partners(id, name, email)")
+      .eq("request_id", request.id)
+      .eq("status", "rejected")
+      .neq("id", quoteId);
 
     // Update request status to accepted
     const { error: updateRequestError } = await supabase
@@ -294,6 +303,81 @@ Deno.serve(async (req) => {
         });
       } catch (e) {
         console.error("Error sending customer email:", e);
+      }
+      // Notify rejected partners
+      if (rejectedQuotes && rejectedQuotes.length > 0) {
+        for (const rq of rejectedQuotes) {
+          const partner = rq.partner as any;
+          if (!partner?.email) continue;
+
+          const rejectedVars = {
+            partner_name: sanitizeHtml(partner.name),
+            customer_name: sanitizeHtml(request.customer_name),
+            accommodation_name: sanitizeHtml(rq.accommodation_name),
+            arrival_date: formatDateNL(request.arrival_date),
+            departure_date: formatDateNL(request.departure_date),
+          };
+
+          const rejectedTemplate = await getRenderedTemplate(
+            TemplateIds.ACCOMMODATION_REJECTED_PARTNER,
+            rejectedVars
+          );
+
+          const rejectedHtml = rejectedTemplate?.body || `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <p>Beste ${sanitizeHtml(partner.name)},</p>
+              <p>Wij laten u weten dat de klant <strong>${sanitizeHtml(request.customer_name)}</strong> voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie heeft gekozen.</p>
+              <p>Uw offerte voor <strong>${sanitizeHtml(rq.accommodation_name)}</strong> wordt hiermee afgesloten.</p>
+              <p>Bedankt voor het uitbrengen van uw offerte. Wij hopen u bij een volgende aanvraag weer te mogen benaderen.</p>
+              <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+            </div>
+          `;
+
+          const rejectedEmail = getRecipientEmail(partner.email, origin);
+          try {
+            await fetch("https://api.mailjet.com/v3.1/send", {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                Messages: [{
+                  From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                  To: [{ Email: rejectedEmail }],
+                  Subject: rejectedTemplate?.subject || `${subjectPrefix}Logiesaanvraag ${sanitizeHtml(request.customer_name)} - niet gekozen`,
+                  HTMLPart: rejectedHtml,
+                }],
+              }),
+            });
+
+            await logEmail({
+              email_type: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
+              subject: rejectedTemplate?.subject || `Logiesaanvraag ${request.customer_name} - niet gekozen`,
+              recipient_email: rejectedEmail,
+              recipient_name: partner.name,
+              related_accommodation_id: request.id,
+              related_partner_id: partner.id,
+              status: "sent",
+              sent_by: "system",
+            });
+
+            console.log(`Rejection notification sent to partner ${partner.name}`);
+          } catch (e) {
+            console.error(`Error sending rejection email to ${partner.name}:`, e);
+            await logEmail({
+              email_type: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
+              subject: `Logiesaanvraag ${request.customer_name} - niet gekozen`,
+              recipient_email: rejectedEmail,
+              recipient_name: partner.name,
+              related_accommodation_id: request.id,
+              related_partner_id: partner.id,
+              status: "failed",
+              error_message: String(e),
+              sent_by: "system",
+            });
+          }
+        }
       }
     }
 
