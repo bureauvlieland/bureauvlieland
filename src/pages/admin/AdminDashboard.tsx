@@ -4,6 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { PendingCommissionsCard } from "@/components/admin/PendingCommissionsCard";
 import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilityWidget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -276,6 +277,9 @@ const AdminDashboardContent = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Todo widget */}
+      <DashboardTodoWidget />
 
       {/* Partner Availability and Pending Commissions */}
       <div className="grid lg:grid-cols-2 gap-6">

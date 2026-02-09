@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -624,84 +625,85 @@ const AdminRequestDetail = () => {
             </Card>
           )}
 
-          {/* Overview cards */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Customer info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Klantgegevens
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-slate-400" />
-                  <span>{request.customer_name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-slate-400" />
-                  <a href={`mailto:${request.customer_email}`} className="text-primary hover:underline">
-                    {request.customer_email}
-                  </a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-slate-400" />
-                  <a href={`tel:${request.customer_phone}`} className="hover:underline">
-                    {request.customer_phone}
-                  </a>
-                </div>
-                {request.customer_company && (
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-slate-400" />
-                    <span>{request.customer_company}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Event info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Evenement details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-slate-400" />
-                  <span>{request.number_of_people} personen</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Calendar className="h-4 w-4 text-slate-400 mt-0.5" />
-                  <div>
-                    {(request.selected_dates as string[]).map((date, idx) => (
-                      <div key={idx}>
-                        Dag {idx + 1}: {format(new Date(date), "d MMMM yyyy", { locale: nl })}
+          {/* Compact combined customer + event card */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Customer info */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Klantgegevens
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="h-4 w-4 text-slate-400" />
+                      <span>{request.customer_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-slate-400" />
+                      <a href={`mailto:${request.customer_email}`} className="text-primary hover:underline">
+                        {request.customer_email}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-slate-400" />
+                      <a href={`tel:${request.customer_phone}`} className="hover:underline">
+                        {request.customer_phone}
+                      </a>
+                    </div>
+                    {request.customer_company && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="h-4 w-4 text-slate-400" />
+                        <span>{request.customer_company}</span>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
-                {request.general_notes && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-slate-600">{request.general_notes}</p>
-                  </div>
-                )}
-                {request.program_description && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-slate-400 mb-1">Omschrijving</p>
-                    <p className="text-sm text-slate-700 italic whitespace-pre-line">
-                      "{request.program_description}"
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
+                {/* Event details */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Evenement details
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="h-4 w-4 text-slate-400" />
+                      <span>{request.number_of_people} personen</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-slate-400 mt-0.5" />
+                      <div>
+                        {(request.selected_dates as string[]).map((date, idx) => (
+                          <div key={idx}>
+                            Dag {idx + 1}: {format(new Date(date), "d MMMM yyyy", { locale: nl })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {request.general_notes && (
+                      <p className="text-sm text-slate-600 pt-1 border-t">{request.general_notes}</p>
+                    )}
+                    {request.program_description && (
+                      <div className="pt-1 border-t">
+                        <p className="text-xs text-slate-400 mb-1">Omschrijving</p>
+                        <p className="text-sm text-slate-700 italic whitespace-pre-line">
+                          "{request.program_description}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status summary + linked accommodation row */}
+          <div className="grid md:grid-cols-3 gap-6">
             {/* Status summary */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Activiteiten status
@@ -739,7 +741,7 @@ const AdminRequestDetail = () => {
             {/* Linked Accommodation */}
             {linkedAccommodation && (
               <Card className="border-indigo-200 bg-indigo-50/50">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Hotel className="h-5 w-5 text-indigo-600" />
                     Gekoppelde logies
@@ -782,7 +784,7 @@ const AdminRequestDetail = () => {
             {/* Logies CTA when no accommodation linked */}
             {!linkedAccommodation && (request.selected_dates as string[]).length > 1 && (
               <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Hotel className="h-5 w-5 text-primary" />
                     Logies regelen
@@ -790,7 +792,7 @@ const AdminRequestDetail = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Dit is een meerdaags programma. Wilt u logies aanvragen voor deze groep?
+                    Meerdaags programma — logies regelen?
                   </p>
                   <Button asChild>
                     <Link to={buildLogiesUrl()}>
@@ -815,274 +817,286 @@ const AdminRequestDetail = () => {
             selectedDates={request.selected_dates as string[]}
           />
 
-          {/* Invoicing Mode & Purchase Invoices (for bureau_central) */}
-          <div className="grid md:grid-cols-3 gap-6">
-            <InvoicingModeSelector
-              requestId={request.id}
-              currentMode={request.invoicing_mode || 'partner_direct'}
-              onModeChange={fetchRequestData}
-            />
-            {request.invoicing_mode === 'bureau_central' && (
-              <div className="md:col-span-2">
-                <PurchaseInvoicesCard requestId={request.id} />
-              </div>
-            )}
-          </div>
+          {/* Tabs */}
+          <Tabs defaultValue="activiteiten" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
+              <TabsTrigger value="financien">Financiën</TabsTrigger>
+              <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
+              <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
+            </TabsList>
 
-          {/* Completion Status and Financial Overview */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <RequestCompletionStatus
-              status={request.status}
-              completionStatus={request.completion_status}
-              termsAcceptedAt={request.terms_accepted_at}
-              items={items}
-              outstandingAmount={calculateOutstandingAmount()}
-            />
-            <FinancialOverviewCard
-              numberOfPeople={request.number_of_people}
-              items={items}
-              invoices={bureauInvoices}
-              onRegisterInvoice={() => setInvoiceDialogOpen(true)}
-              isQuoteMode={isQuoteMode}
-            />
-          </div>
-
-          {/* Items table */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <div>
-                <CardTitle>Activiteiten</CardTitle>
-                <CardDescription>
-                  {isQuoteMode 
-                    ? "Beheer de activiteiten en prijzen in deze offerte"
-                    : "Alle activiteiten in dit programma"
-                  }
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="outline" onClick={() => setApplyTemplateOpen(true)}>
-                  <Layers className="h-4 w-4 mr-2" />
-                  Template toepassen
-                </Button>
-                {items.length > 0 && (
-                  <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Opslaan als template
-                  </Button>
-                )}
-                <Button onClick={() => setAddActivityOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Activiteit toevoegen
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Dag</TableHead>
-                      <TableHead>Activiteit</TableHead>
-                      <TableHead>Partner</TableHead>
-                      <TableHead>Gefactureerd door</TableHead>
-                      <TableHead>Tijd</TableHead>
-                      {isQuoteMode ? (
-                        <>
-                          <TableHead>Offerte-status</TableHead>
-                          <TableHead>Prijs (aanpasbaar)</TableHead>
-                          <TableHead className="w-[80px]"></TableHead>
-                        </>
-                      ) : (
-                        <>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Prijs</TableHead>
-                          <TableHead>Factuur</TableHead>
-                        </>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => {
-                      const statusInfo = itemStatusConfig[item.status];
-                      const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            Dag {item.day_index + 1}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{item.block_name}</div>
-                              <div className="text-xs text-slate-500">{item.block_category}</div>
-                              {item.admin_price_notes && (
-                                <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Link 
-                              to={`/admin/partners/${item.provider_id}`}
-                              className="text-primary hover:underline"
-                            >
-                              {item.provider_name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            {isBureauInvoiced ? (
-                              <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary whitespace-nowrap">
-                                <Building2 className="h-3 w-3" />
-                                Bureau → Klant
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="gap-1 border-slate-300 bg-slate-50 text-slate-700 whitespace-nowrap">
-                                <Users className="h-3 w-3" />
-                                Partner → Klant
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {item.preferred_time || "-"}
-                          </TableCell>
-                          
+            {/* Tab: Activiteiten */}
+            <TabsContent value="activiteiten">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>Activiteiten</CardTitle>
+                    <CardDescription>
+                      {isQuoteMode 
+                        ? "Beheer de activiteiten en prijzen in deze offerte"
+                        : "Alle activiteiten in dit programma"
+                      }
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" onClick={() => setApplyTemplateOpen(true)}>
+                      <Layers className="h-4 w-4 mr-2" />
+                      Template toepassen
+                    </Button>
+                    {items.length > 0 && (
+                      <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Opslaan als template
+                      </Button>
+                    )}
+                    <Button onClick={() => setAddActivityOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Activiteit toevoegen
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Dag</TableHead>
+                          <TableHead>Activiteit</TableHead>
+                          <TableHead>Partner</TableHead>
+                          <TableHead>Gefactureerd door</TableHead>
+                          <TableHead>Tijd</TableHead>
                           {isQuoteMode ? (
                             <>
-                              {/* Quote mode: editable item status */}
-                              <TableCell>
-                                <AdminItemQuoteStatusSelect
-                                  status={item.item_quote_status}
-                                  onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
-                                />
-                              </TableCell>
-                              {/* Quote mode: editable price */}
-                              <TableCell>
-                                <AdminQuotePriceEditor
-                                  originalPrice={item.quoted_price}
-                                  overridePrice={item.admin_price_override}
-                                  priceNotes={item.admin_price_notes}
-                                  numberOfPeople={request.number_of_people}
-                                  onSave={(price, notes) => handleItemPriceUpdate(item.id, price, notes)}
-                                />
-                              </TableCell>
-                              {/* Quote mode: edit button */}
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setEditingItem(item)}
-                                  className="h-8 w-8"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
+                              <TableHead>Offerte-status</TableHead>
+                              <TableHead>Prijs (aanpasbaar)</TableHead>
+                              <TableHead className="w-[80px]"></TableHead>
                             </>
                           ) : (
                             <>
-                              {/* Self-service mode: readonly status */}
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {statusIcons[item.status]}
-                                  <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                    {request?.invoicing_mode === "bureau_central" && item.status === "pending"
-                                      ? "Nog niet verstuurd"
-                                      : statusInfo.label}
-                                  </Badge>
-                                </div>
-                                {item.status_note && (
-                                  <p className="text-xs text-slate-500 mt-1">{item.status_note}</p>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {item.quoted_price ? (
-                                  <span className="font-medium">
-                                    €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {item.invoiced_number ? (
-                                  <div className="text-sm">
-                                    <div className="font-medium">{item.invoiced_number}</div>
-                                    <div className="text-slate-500">
-                                      €{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-400">-</span>
-                                )}
-                              </TableCell>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Prijs</TableHead>
+                              <TableHead>Factuur</TableHead>
                             </>
                           )}
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item) => {
+                          const statusInfo = itemStatusConfig[item.status];
+                          const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">
+                                Dag {item.day_index + 1}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{item.block_name}</div>
+                                  <div className="text-xs text-slate-500">{item.block_category}</div>
+                                  {item.admin_price_notes && (
+                                    <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Link 
+                                  to={`/admin/partners/${item.provider_id}`}
+                                  className="text-primary hover:underline"
+                                >
+                                  {item.provider_name}
+                                </Link>
+                              </TableCell>
+                              <TableCell>
+                                {isBureauInvoiced ? (
+                                  <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary whitespace-nowrap">
+                                    <Building2 className="h-3 w-3" />
+                                    Bureau → Klant
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="gap-1 border-slate-300 bg-slate-50 text-slate-700 whitespace-nowrap">
+                                    <Users className="h-3 w-3" />
+                                    Partner → Klant
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {item.preferred_time || "-"}
+                              </TableCell>
+                              
+                              {isQuoteMode ? (
+                                <>
+                                  <TableCell>
+                                    <AdminItemQuoteStatusSelect
+                                      status={item.item_quote_status}
+                                      onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <AdminQuotePriceEditor
+                                      originalPrice={item.quoted_price}
+                                      overridePrice={item.admin_price_override}
+                                      priceNotes={item.admin_price_notes}
+                                      numberOfPeople={request.number_of_people}
+                                      onSave={(price, notes) => handleItemPriceUpdate(item.id, price, notes)}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setEditingItem(item)}
+                                      className="h-8 w-8"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </>
+                              ) : (
+                                <>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      {statusIcons[item.status]}
+                                      <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
+                                        {request?.invoicing_mode === "bureau_central" && item.status === "pending"
+                                          ? "Nog niet verstuurd"
+                                          : statusInfo.label}
+                                      </Badge>
+                                    </div>
+                                    {item.status_note && (
+                                      <p className="text-xs text-slate-500 mt-1">{item.status_note}</p>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {item.quoted_price ? (
+                                      <span className="font-medium">
+                                        €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400">-</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {item.invoiced_number ? (
+                                      <div className="text-sm">
+                                        <div className="font-medium">{item.invoiced_number}</div>
+                                        <div className="text-slate-500">
+                                          €{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-400">-</span>
+                                    )}
+                                  </TableCell>
+                                </>
+                              )}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tab: Financiën */}
+            <TabsContent value="financien" className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-6">
+                <InvoicingModeSelector
+                  requestId={request.id}
+                  currentMode={request.invoicing_mode || 'partner_direct'}
+                  onModeChange={fetchRequestData}
+                />
+                {request.invoicing_mode === 'bureau_central' && (
+                  <div className="md:col-span-2">
+                    <PurchaseInvoicesCard requestId={request.id} />
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <div className="grid md:grid-cols-2 gap-6">
+                <RequestCompletionStatus
+                  status={request.status}
+                  completionStatus={request.completion_status}
+                  termsAcceptedAt={request.terms_accepted_at}
+                  items={items}
+                  outstandingAmount={calculateOutstandingAmount()}
+                />
+                <FinancialOverviewCard
+                  numberOfPeople={request.number_of_people}
+                  items={items}
+                  invoices={bureauInvoices}
+                  onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+                  isQuoteMode={isQuoteMode}
+                />
+              </div>
+            </TabsContent>
 
-          {/* Communication log */}
-          <ProjectCommunicationsCard
-            requestId={request.id}
-            customerName={request.customer_name}
-            customerEmail={request.customer_email}
-            partnerRecipients={
-              Array.from(
-                new Map(
-                  items
-                    .filter((i) => i.provider_email && i.provider_id)
-                    .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
-                ).values()
-              )
-            }
-          />
+            {/* Tab: Communicatie */}
+            <TabsContent value="communicatie">
+              <ProjectCommunicationsCard
+                requestId={request.id}
+                customerName={request.customer_name}
+                customerEmail={request.customer_email}
+                partnerRecipients={
+                  Array.from(
+                    new Map(
+                      items
+                        .filter((i) => i.provider_email && i.provider_id)
+                        .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
+                    ).values()
+                  )
+                }
+              />
+            </TabsContent>
 
-          {/* History timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                Geschiedenis
-              </CardTitle>
-              <CardDescription>
-                Alle wijzigingen en updates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {history.length === 0 ? (
-                <p className="text-slate-500 text-center py-6">
-                  Nog geen geschiedenis beschikbaar
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {history.map((entry, idx) => (
-                    <div key={entry.id} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        {idx < history.length - 1 && (
-                          <div className="flex-1 w-px bg-slate-200" />
-                        )}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium">{entry.actor_name || entry.actor}</span>
-                          <span className="text-slate-500">
-                            {format(new Date(entry.created_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
-                          </span>
+            {/* Tab: Geschiedenis */}
+            <TabsContent value="geschiedenis">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    Geschiedenis
+                  </CardTitle>
+                  <CardDescription>
+                    Alle wijzigingen en updates
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {history.length === 0 ? (
+                    <p className="text-slate-500 text-center py-6">
+                      Nog geen geschiedenis beschikbaar
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {history.map((entry, idx) => (
+                        <div key={entry.id} className="flex gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className="w-2 h-2 rounded-full bg-primary" />
+                            {idx < history.length - 1 && (
+                              <div className="flex-1 w-px bg-slate-200" />
+                            )}
+                          </div>
+                          <div className="flex-1 pb-4">
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-medium">{entry.actor_name || entry.actor}</span>
+                              <span className="text-slate-500">
+                                {format(new Date(entry.created_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 mt-1">{entry.action}</p>
+                            {entry.notes && (
+                              <p className="text-sm text-slate-500 mt-1">{entry.notes}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-slate-600 mt-1">{entry.action}</p>
-                        {entry.notes && (
-                          <p className="text-sm text-slate-500 mt-1">{entry.notes}</p>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </AdminLayout>
 
