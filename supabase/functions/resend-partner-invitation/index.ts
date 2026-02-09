@@ -41,6 +41,16 @@ function getFallbackInvitationHtml(partnerName: string, partnerEmail: string, pa
       Hieronder vindt u uw (nieuwe) inloggegevens.
     </p>
     
+    <div style="background: #fef9e7; border-left: 4px solid #f59e0b; padding: 20px 25px; margin: 0 0 25px 0; border-radius: 0 8px 8px 0;">
+      <h3 style="color: #92400e; margin: 0 0 12px 0; font-size: 16px;">💼 Facturatie &amp; Commissie</h3>
+      <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
+        Afhankelijk van het project factureert u uw diensten <strong>rechtstreeks aan de eindklant</strong> of aan <strong>Bureau Vlieland</strong>. Dit wordt per project afgestemd. Bureau Vlieland stuurt u periodiek een commissiefactuur over de gerealiseerde omzet.
+      </p>
+      <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; font-style: italic;">
+        Deze commissie dekt de acquisitie, coördinatie en klantenservice die Bureau Vlieland voor u verzorgt.
+      </p>
+    </div>
+    
     <div style="background: #e8f0f8; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
       <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 17px;">📋 Hoe werkt het?</h3>
       
