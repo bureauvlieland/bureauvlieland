@@ -29,14 +29,22 @@ import {
 } from "lucide-react";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
+import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
 import { COMMUNICATION_TYPE_CONFIG, type CommunicationType } from "@/types/projectCommunication";
 import { cn } from "@/lib/utils";
+
+interface PartnerRecipient {
+  name: string;
+  email: string;
+  partnerId: string;
+}
 
 interface ProjectCommunicationsCardProps {
   requestId?: string;
   accommodationId?: string;
   customerName?: string;
   customerEmail?: string;
+  partnerRecipients?: PartnerRecipient[];
 }
 
 export function ProjectCommunicationsCard({
@@ -44,8 +52,10 @@ export function ProjectCommunicationsCard({
   accommodationId,
   customerName,
   customerEmail,
+  partnerRecipients = [],
 }: ProjectCommunicationsCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [emailSheetOpen, setEmailSheetOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -100,10 +110,16 @@ export function ProjectCommunicationsCard({
               </Badge>
             )}
           </CardTitle>
-          <Button size="sm" onClick={() => setSheetOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Toevoegen
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEmailSheetOpen(true)}>
+              <Send className="h-4 w-4 mr-1" />
+              E-mail
+            </Button>
+            <Button size="sm" onClick={() => setSheetOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Loggen
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -203,6 +219,28 @@ export function ProjectCommunicationsCard({
         accommodationId={accommodationId}
         defaultContactName={customerName}
         defaultContactEmail={customerEmail}
+      />
+
+      <SendProjectEmailSheet
+        open={emailSheetOpen}
+        onOpenChange={setEmailSheetOpen}
+        requestId={requestId}
+        accommodationId={accommodationId}
+        recipients={[
+          ...(customerEmail ? [{
+            label: `Klant: ${customerName || ""}`,
+            email: customerEmail,
+            name: customerName || "",
+            type: "customer" as const,
+          }] : []),
+          ...partnerRecipients.map((p) => ({
+            label: `Partner: ${p.name}`,
+            email: p.email,
+            name: p.name,
+            type: "partner" as const,
+            partnerId: p.partnerId,
+          })),
+        ]}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

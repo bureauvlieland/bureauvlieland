@@ -1028,6 +1028,15 @@ const AdminRequestDetail = () => {
             requestId={request.id}
             customerName={request.customer_name}
             customerEmail={request.customer_email}
+            partnerRecipients={
+              Array.from(
+                new Map(
+                  items
+                    .filter((i) => i.provider_email && i.provider_id)
+                    .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
+                ).values()
+              )
+            }
           />
 
           {/* History timeline */}
