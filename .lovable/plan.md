@@ -1,51 +1,52 @@
 
-# Partner overzicht verbeteren
 
-## Huidige problemen
-- 10 kolommen veroorzaken horizontale scroll
-- Logies commissie ontbreekt in het overzicht
-- Adres-kolom neemt ruimte in maar voegt weinig toe
-- Acties zitten verstopt in een dropdown-menu
+# Logiesaanvragen toevoegen aan partner detailpagina
+
+## Wat ontbreekt
+De partner detailpagina (`AdminPartnerDetail.tsx`) toont alleen gerelateerde **programma-aanvragen** (activiteiten). Voor partners van het type "accommodation" of "both" ontbreken de gerelateerde **logiesaanvragen** (accommodation quotes).
 
 ## Wijzigingen
 
-### 1. Kolommen optimaliseren
-- **Adres-kolom verwijderen** -- deze informatie is beschikbaar op de detailpagina
-- **Commissie-kolom splitsen** in twee compacte waarden: "Activiteiten / Logies" (bijv. "10% / 10%") in een enkele kolom met label
-- **Voorwaarden-kolom verwijderen** als losse kolom en verplaatsen als icoon naast de partnernaam (net als de beschikbaarheid-badge)
+### 1. Logies aanvragen ophalen
+Een nieuwe functie `fetchRelatedAccommodationQuotes` toevoegen die:
+- Alle `accommodation_quotes` ophaalt waar `partner_id` gelijk is aan de huidige partner
+- De bijbehorende `accommodation_requests` meeneemt (klantnaam, periode, gasten, status)
+- Alleen getoond wordt als `partner_type` gelijk is aan "accommodation" of "both"
 
-### 2. Acties zichtbaar maken
-De dropdown met `MoreVertical` vervangen door inline icon-buttons met tooltips:
-- **Bewerken** (Edit-icoon) -- navigeert naar detailpagina
-- **Uitnodigen** (UserPlus-icoon) -- alleen zichtbaar als partner nog niet uitgenodigd
-- **Verwijderen** (Trash2-icoon) -- rode kleur, opent bevestigingsdialog
+### 2. Nieuwe sectie "Gerelateerde logiesaanvragen"
+Een extra Card-sectie toevoegen onder (of naast) de bestaande "Gerelateerde aanvragen", met een tabel die toont:
+- **Accommodatie** -- naam van de offerte
+- **Klant** -- naam en eventueel bedrijf
+- **Periode** -- aankomst- en vertrekdatum
+- **Gasten** -- aantal gasten
+- **Status** -- badge (Te beantwoorden / Offerte verstuurd / Gekozen / Afgewezen)
+- **Link** -- knop naar de logies detail pagina (`/admin/logies/{request_id}`)
 
-"Bekijk als partner" verplaatsen naar de detailpagina aangezien het minder vaak wordt gebruikt.
-
-### 3. Nieuwe kolomstructuur
-Na optimalisatie worden de kolommen:
-
-| Checkbox | Partner (naam + KvK + badges) | Type | Contact | Commissie (act/logies) | Status | Actief | Acties |
-
-Dit zijn 8 kolommen i.p.v. 10, met meer informatiedichtheid en geen horizontale scroll.
-
-### 4. Commissie weergave
-De commissie-kolom toont beide percentages compact:
-```
-10% / 10%
-```
-Met een subtekst "act. / logies" in klein grijs lettertype.
+### 3. Conditie
+De sectie wordt alleen gerenderd als de partner van het type "accommodation" of "both" is, zodat het niet verschijnt bij pure activiteitenpartners.
 
 ## Technisch
 
-### Bestand dat wordt aangepast
-- `src/pages/admin/AdminPartners.tsx`
+### Bestand
+- `src/pages/admin/AdminPartnerDetail.tsx`
 
-### Wijzigingen
-- Partner interface uitbreiden met `accommodation_commission_percentage`
-- Supabase query aanpassen om `accommodation_commission_percentage` op te halen
-- Adres-kolom (`TableHead` + `TableCell`) verwijderen
-- Voorwaarden-kolom verwijderen en icoon toevoegen naast partnernaam
-- Commissie-cel aanpassen voor dubbele weergave
-- Dropdown vervangen door inline buttons met tooltips
-- "Bekijk als partner" link verwijderen uit de tabelrij
+### Data model
+Nieuw interface `RelatedAccommodationQuote` met velden uit `accommodation_quotes` + geneste `accommodation_requests`.
+
+### Query
+```sql
+SELECT *, accommodation_requests(...)
+FROM accommodation_quotes
+WHERE partner_id = :partnerId
+ORDER BY created_at DESC
+LIMIT 10
+```
+
+### Weergave
+Hergebruik van dezelfde status-mapping als in `PartnerAccommodationTable.tsx`:
+- pending -> "Te beantwoorden"
+- submitted -> "Offerte verstuurd"
+- selected -> "Gekozen"
+- rejected -> "Niet gekozen"
+- expired -> "Verlopen"
+
