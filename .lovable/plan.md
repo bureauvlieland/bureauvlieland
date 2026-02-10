@@ -1,45 +1,65 @@
 
-# Datum en tijd toevoegen aan logies-offerte extra's
+
+# Losse facturabele kosten toevoegen aan projecten
 
 ## Wat verandert
-Extra diensten bij logiesoffertes (bijv. lunch, parkeren) krijgen twee optionele velden: **datum** en **tijdstip**. Hiermee kan een partner aangeven op welke dag (en eventueel hoe laat) een extra geldt. Admins kunnen deze velden ook aanpassen.
+Admins kunnen "overige kosten" toevoegen aan een project die niet bij het dagprogramma horen, zoals gewerkte uren, toeristenbelasting, of huur van materiaal. Deze items verschijnen in het financieel overzicht maar niet in de programma-planning.
+
+## Aanpak
+We gebruiken de bestaande `program_request_items` tabel met een conventie: items met `day_index = -1` zijn "overige kosten" en worden niet in het programma getoond. Hiervoor is een kleine databasewijziging nodig (`block_id` nullable maken) zodat ad-hoc kosten geen bouwsteen hoeven te refereren.
 
 ## Wijzigingen
 
 ### 1. Database migratie
-Twee nieuwe kolommen toevoegen aan `accommodation_quote_extras`:
-- `service_date` (type `date`, nullable) -- de dag waarop de extra geldt
-- `service_time` (type `time without time zone`, nullable) -- optioneel tijdstip
+- `block_id` kolom nullable maken (was `NOT NULL`) zodat ad-hoc kosten geen bouwsteen-referentie nodig hebben
+- Bestaande data wordt niet geraakt
 
-### 2. TypeScript types bijwerken
-In `src/types/accommodationExtras.ts`:
-- `service_date: string | null` en `service_time: string | null` toevoegen aan `AccommodationQuoteExtra`
-- Dezelfde velden als optioneel toevoegen aan `AccommodationQuoteExtraInsert` en `AccommodationQuoteExtraUpdate`
+### 2. Nieuw component: AdminAddCostSheet
+Een apart, simpel formulier (Sheet) voor het toevoegen van losse kosten met:
+- **Omschrijving** (vrij tekstveld, verplicht)
+- **Bedrag** (verplicht, in EUR)
+- **BTW-tarief** (dropdown: 21%, 9%, 0%)
+- **Toelichting** (optioneel, voor klant zichtbaar)
+- **Gefactureerd door** (Bureau Vlieland of partner-keuze)
 
-### 3. Partner formulier: AddQuoteExtraDialog
-In `src/components/partner-portal/AddQuoteExtraDialog.tsx`:
-- Twee nieuwe velden toevoegen aan het formulier: een datumpicker en een tijdinvoer (type `time`)
-- Beide optioneel (de partner "kan" ze invullen)
-- Velden meesturen bij insert/update
+Technisch wordt een `program_request_item` aangemaakt met:
+- `block_id = null`
+- `day_index = -1`
+- `block_type = "bureau"`
+- `block_category = "overig"`
+- `status = "confirmed"`
+- `admin_price_override` = het ingevoerde bedrag
+- `skip_partner_notification = true`
 
-### 4. Partner weergave: QuoteExtrasList
-In `src/components/partner-portal/QuoteExtrasList.tsx`:
-- Datum en tijd tonen bij elke extra (indien ingevuld), bijv. "di 15 jul" en "12:30"
+### 3. Aanpassing AdminRequestDetail
+- Nieuwe knop "Kosten toevoegen" naast de bestaande "Activiteit toevoegen"
+- Items met `day_index = -1` uitsluiten uit de programmatabel (dagindeling)
+- Nieuw blok "Overige kosten" onderaan de financiele sectie met een overzicht van deze items (met edit/delete opties)
 
-### 5. Admin aanpassing
-De `QuoteExtrasList` component wordt al (of kan worden) gebruikt in de admin context met `readOnly={false}`. Dit betekent dat admins via dezelfde "Extra bewerken" dialog de datum en tijd kunnen aanpassen. Geen aparte admin-component nodig.
+### 4. Aanpassing FinancialOverviewCard
+- Items met `day_index = -1` apart tonen onder een kopje "OVERIGE KOSTEN" boven de subtotalen
+- Meenemen in de totaalberekening
+
+### 5. Klantportaal: uitsluiten uit programma
+- In `CustomerProgramItem`, `DesktopProgramView`, en `MobileProgramView`: items met `day_index = -1` filteren uit de dagweergave
+- In `PriceSummaryCard`/`CompactBillingSection`: deze kosten wel meenemen en apart tonen
+
+### 6. Partnerportaal
+- Overige kosten (day_index = -1) uitsluiten uit partneroverzichten, aangezien ze altijd door Bureau Vlieland worden afgehandeld
 
 ## Technisch
 
 ### Migratie SQL
 ```sql
-ALTER TABLE accommodation_quote_extras
-  ADD COLUMN service_date date,
-  ADD COLUMN service_time time without time zone;
+ALTER TABLE program_request_items ALTER COLUMN block_id DROP NOT NULL;
 ```
 
+### Bestanden die worden aangemaakt
+- `src/components/admin/AdminAddCostSheet.tsx` -- formulier voor losse kosten
+
 ### Bestanden die worden gewijzigd
-- **Database**: nieuwe migratie voor twee kolommen
-- `src/types/accommodationExtras.ts` -- type-uitbreiding
-- `src/components/partner-portal/AddQuoteExtraDialog.tsx` -- datum/tijd velden in formulier
-- `src/components/partner-portal/QuoteExtrasList.tsx` -- datum/tijd tonen in lijst
+- `src/pages/admin/AdminRequestDetail.tsx` -- knop + overzicht overige kosten + filter programma
+- `src/components/admin/FinancialOverviewCard.tsx` -- overige kosten in financieel overzicht
+- `src/components/customer-portal/ProgramSection.tsx` -- filter day_index=-1 uit programma
+- `src/components/customer-portal/PriceSummaryCard.tsx` -- toon overige kosten apart
+- `src/types/programRequest.ts` -- block_id nullable maken in interface
