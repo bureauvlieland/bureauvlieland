@@ -71,6 +71,8 @@ export type Database = {
           pricing_type: string
           quantity: number
           quote_id: string
+          service_date: string | null
+          service_time: string | null
           sort_order: number | null
           unit_price: number
           updated_at: string | null
@@ -88,6 +90,8 @@ export type Database = {
           pricing_type?: string
           quantity?: number
           quote_id: string
+          service_date?: string | null
+          service_time?: string | null
           sort_order?: number | null
           unit_price: number
           updated_at?: string | null
@@ -105,6 +109,8 @@ export type Database = {
           pricing_type?: string
           quantity?: number
           quote_id?: string
+          service_date?: string | null
+          service_time?: string | null
           sort_order?: number | null
           unit_price?: number
           updated_at?: string | null
