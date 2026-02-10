@@ -37,9 +37,9 @@ export const PartnerTerms = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-4">Artikel 2 – Totstandkoming van de overeenkomst</h2>
               <ul className="list-disc pl-6 space-y-2 text-foreground">
-                <li>Een overeenkomst komt tot stand op het moment dat de Partner de aanvraag bevestigt.</li>
-                <li>Bevestiging kan digitaal plaatsvinden via het platform van Bureau Vlieland.</li>
-                <li>Door bevestiging verklaart de Eindklant kennis te hebben genomen van deze voorwaarden en hiermee akkoord te gaan.</li>
+                <li>Een overeenkomst komt tot stand op het moment dat de Partner de aanvraag bevestigt via het platform van Bureau Vlieland.</li>
+                <li>De overeenkomst wordt definitief en bindend op het moment dat de Eindklant de algemene voorwaarden digitaal ondertekent via het klantenportaal van Bureau Vlieland.</li>
+                <li>Door digitale ondertekening verklaart de Eindklant kennis te hebben genomen van deze voorwaarden en hiermee akkoord te gaan.</li>
               </ul>
             </section>
 
@@ -66,7 +66,9 @@ export const PartnerTerms = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-4">Artikel 5 – Prijs en facturatie</h2>
               <ul className="list-disc pl-6 space-y-2 text-foreground">
-                <li>De Partner factureert rechtstreeks aan de Eindklant.</li>
+                <li>Tenzij anders overeengekomen factureert de Partner rechtstreeks aan de Eindklant.</li>
+                <li>Indien Bureau Vlieland optreedt als centrale facturerende partij (het zogenoemde 'bureau_central'-model), factureert de Partner aan Bureau Vlieland. Bureau Vlieland draagt in dat geval zorg voor de facturatie aan de Eindklant.</li>
+                <li>Het toepasselijke facturatiemodel wordt per project vastgesteld en is zichtbaar in het partnerportaal.</li>
                 <li>Betaling vindt plaats volgens de betalingsvoorwaarden van de Partner zoals vermeld op de factuur.</li>
                 <li>Tenzij anders vermeld zijn prijzen inclusief btw.</li>
                 <li>Extra kosten die voortvloeien uit wijzigingen op verzoek van de Eindklant kunnen aanvullend in rekening worden gebracht.</li>
