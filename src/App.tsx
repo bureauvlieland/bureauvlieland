@@ -66,6 +66,7 @@ import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
 import AdminProjects from "./pages/admin/AdminProjects";
 import AdminProgramNew from "./pages/admin/AdminProgramNew";
 import AdminQuotePreview from "./pages/admin/AdminQuotePreview";
+import AdminInvoicePreview from "./pages/admin/AdminInvoicePreview";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminTemplates from "./pages/admin/AdminTemplates";
@@ -163,7 +164,8 @@ const App = () => {
             <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
             <Route path="/admin/projecten/:id" element={<AdminRequestDetail />} />
             <Route path="/admin/projecten/:id/offerte-preview" element={<AdminQuotePreview />} />
-            <Route path="/admin/aanvragen/:id/factuur" element={<AdminQuotePreview />} />
+            <Route path="/admin/aanvragen/:id/factuur" element={<AdminInvoicePreview />} />
+            <Route path="/admin/projecten/:id/factuur" element={<AdminInvoicePreview />} />
             <Route path="/admin/partners" element={<AdminPartners />} />
             <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
             <Route path="/admin/todos" element={<AdminTodos />} />
