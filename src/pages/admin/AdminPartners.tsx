@@ -592,23 +592,21 @@ const AdminPartnersContent = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {partner.auth_user_id && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => window.open(`/partner/dashboard?impersonate=${partner.id}`, "_blank")}
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Bekijk als partner</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => window.open(`/partner/dashboard?impersonate=${partner.id}`, "_blank")}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Bekijk als partner</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         {!partner.auth_user_id && (
                           <TooltipProvider>
                             <Tooltip>
