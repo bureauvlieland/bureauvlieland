@@ -6,6 +6,8 @@ import { Users, Building2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { InvoicingMode } from "@/types/purchaseInvoice";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { FALLBACK_SETTINGS } from "@/lib/appSettings";
 
 interface InvoicingModeSelectorProps {
   requestId: string;
@@ -21,7 +23,8 @@ export function InvoicingModeSelector({
   disabled = false,
 }: InvoicingModeSelectorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-
+  const { settings } = useAppSettings();
+  const commissionPct = settings?.default_partner_commission ?? FALLBACK_SETTINGS.default_partner_commission;
   const handleModeChange = async (newMode: InvoicingMode) => {
     if (newMode === currentMode || isUpdating) return;
 
@@ -64,8 +67,8 @@ export function InvoicingModeSelector({
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">Partners factureren klant direct</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Partners sturen facturen naar de eindklant. Bureau Vlieland int 15% commissie periodiek.
+               <p className="text-xs text-muted-foreground mt-0.5">
+                 Partners sturen facturen naar de eindklant. Bureau Vlieland int {commissionPct}% commissie periodiek.
               </p>
             </Label>
           </div>
