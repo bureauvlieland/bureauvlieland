@@ -1,6 +1,6 @@
 // Building Block types matching the database schema
 
-export type BuildingBlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer";
+export type BuildingBlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer" | "services" | "overig" | "activiteiten";
 export type BuildingBlockType = "bureau" | "partner" | "self_arranged";
 export type BuildingBlockPriceType = "per_person" | "total" | "per_hour" | "per_day" | "on_request";
 export type BuildingBlockStatus = "concept" | "active" | "published";
@@ -236,6 +236,9 @@ export const categoryLabels: Record<BuildingBlockCategory, string> = {
   locaties: "Locaties",
   catering: "Catering",
   vervoer: "Vervoer",
+  services: "Services",
+  overig: "Overig",
+  activiteiten: "Activiteiten",
 };
 
 // Block type labels for display

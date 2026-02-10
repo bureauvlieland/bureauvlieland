@@ -135,6 +135,9 @@ const AdminBuildingBlocks = () => {
                 <SelectItem value="locaties">Locaties</SelectItem>
                 <SelectItem value="catering">Catering</SelectItem>
                 <SelectItem value="vervoer">Vervoer</SelectItem>
+                <SelectItem value="services">Services</SelectItem>
+                <SelectItem value="overig">Overig</SelectItem>
+                <SelectItem value="activiteiten">Activiteiten</SelectItem>
               </SelectContent>
             </Select>
             

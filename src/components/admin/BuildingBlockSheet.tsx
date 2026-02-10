@@ -60,7 +60,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
   description: z.string().optional(),
   short_description: z.string().max(100, "Maximaal 100 tekens").optional(),
-  category: z.enum(["outdoor", "excursies", "entertainment", "locaties", "catering", "vervoer"]),
+  category: z.enum(["outdoor", "excursies", "entertainment", "locaties", "catering", "vervoer", "services", "overig", "activiteiten"]),
   block_type: z.enum(["bureau", "partner", "self_arranged"]),
   provider_id: z.string().optional(),
   min_people: z.coerce.number().nullable().optional(),
@@ -451,6 +451,9 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                               <SelectItem value="locaties">Locaties</SelectItem>
                               <SelectItem value="catering">Catering</SelectItem>
                               <SelectItem value="vervoer">Vervoer</SelectItem>
+                              <SelectItem value="services">Services</SelectItem>
+                              <SelectItem value="overig">Overig</SelectItem>
+                              <SelectItem value="activiteiten">Activiteiten</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

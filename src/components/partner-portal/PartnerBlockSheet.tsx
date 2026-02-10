@@ -36,7 +36,7 @@ const slugify = (text: string): string =>
     .substring(0, 80);
 
 // Category type matching database ENUM
-type BlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer";
+type BlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer" | "services" | "overig" | "activiteiten";
 
 // Category display map
 const CATEGORY_OPTIONS: { value: BlockCategory; label: string }[] = [
@@ -46,6 +46,9 @@ const CATEGORY_OPTIONS: { value: BlockCategory; label: string }[] = [
   { value: "locaties", label: "Locaties" },
   { value: "catering", label: "Catering" },
   { value: "vervoer", label: "Vervoer" },
+  { value: "services", label: "Services" },
+  { value: "overig", label: "Overig" },
+  { value: "activiteiten", label: "Activiteiten" },
 ];
 
 // Image validation constants
