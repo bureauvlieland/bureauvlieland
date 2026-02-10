@@ -39,6 +39,7 @@ interface CustomerProgramItemProps {
   hasChanges?: boolean;
   isAccepting?: boolean;
   invoicingMode?: string;
+  vatRate?: number;
 }
 
 export const CustomerProgramItem = ({
@@ -53,6 +54,7 @@ export const CustomerProgramItem = ({
   hasChanges = false,
   isAccepting = false,
   invoicingMode,
+  vatRate,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -159,6 +161,12 @@ export const CustomerProgramItem = ({
             {item.quoted_price ? (
               <span className="font-semibold text-green-700 dark:text-green-500">
                 €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {item.price_type === "per_person" && (
+                  <span className="font-normal text-xs ml-1">p.p.</span>
+                )}
+                {vatRate !== undefined && (
+                  <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
+                )}
               </span>
             ) : item.price_indication && (
               <span className="font-medium text-foreground">
@@ -339,6 +347,23 @@ export const CustomerProgramItem = ({
           
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
+            {/* Price details */}
+            {item.quoted_price && vatRate !== undefined && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Excl. BTW</span>
+                  <span>€{(item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">BTW ({vatRate}%)</span>
+                  <span>€{(item.quoted_price - item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between font-medium pt-1 border-t">
+                  <span>Incl. BTW {item.price_type === "per_person" ? "(per persoon)" : "(totaalprijs)"}</span>
+                  <span>€{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            )}
             {/* Time editing */}
             <div className="grid sm:grid-cols-2 gap-4">
               <div>

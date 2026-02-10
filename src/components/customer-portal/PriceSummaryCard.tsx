@@ -241,6 +241,12 @@ export const PriceSummaryCard = ({
             <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
           </div>
           
+          {numberOfPeople > 0 && summary.hasConfirmedPrices && (
+            <p className="text-xs text-muted-foreground">
+              ca. €{formatPrice(summary.grandTotalInclVat / numberOfPeople)} p.p.
+            </p>
+          )}
+          
           {summary.pendingCount > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
               +{summary.pendingCount} activiteit{summary.pendingCount > 1 ? "en" : ""} nog te bevestigen
@@ -433,6 +439,12 @@ export const PriceSummaryCard = ({
                 €{formatPrice(summary.grandTotalInclVat)}
               </span>
             </div>
+            {numberOfPeople > 0 && summary.hasConfirmedPrices && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Gemiddeld per persoon</span>
+                <span>€{formatPrice(summary.grandTotalInclVat / numberOfPeople)}</span>
+              </div>
+            )}
           </div>
         </div>
 

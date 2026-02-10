@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { AcceptQuoteProposalCard } from "./AcceptQuoteProposalCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
+import { PaymentStatusCard } from "./PaymentStatusCard";
 import { AccommodationSection } from "./AccommodationSection";
 import { ExtrasSection } from "./ExtrasSection";
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
@@ -37,6 +38,8 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import { supabase } from "@/integrations/supabase/client";
+import { calculateExclVat } from "@/lib/appSettings";
 
 interface MobileProgramViewProps {
   invoicingMode?: string;
@@ -131,6 +134,32 @@ export const MobileProgramView = ({
   onAcceptQuoteProposal,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
+
+  // Fetch VAT rates per building block
+  const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const blockIds = program.items.map(i => i.block_id).filter(Boolean) as string[];
+    if (blockIds.length === 0) return;
+    supabase
+      .from("building_blocks")
+      .select("id, vat_rate")
+      .in("id", blockIds)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, number> = {};
+          data.forEach(b => { map[b.id] = b.vat_rate ?? 21; });
+          setVatRateMap(map);
+        }
+      });
+  }, [program.items]);
+
+  const getItemVatRate = (item: ProgramRequestItem): number => {
+    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
+      return vatRateMap[item.block_id];
+    }
+    return 21;
+  };
+
   const termsAccepted = !!program.terms_accepted_at;
   const billingComplete = !!(
     program.billing_company_name &&
@@ -306,29 +335,48 @@ export const MobileProgramView = ({
             onDayChange={onDayChange}
             itemCountPerDay={itemCountPerDay}
           >
-            {(dayIndex) => (
-              <div className="space-y-3 mt-4">
-                {getItemsForDay(dayIndex).map((item) => (
-                  <CustomerProgramItem
-                    key={item.id}
-                    item={item}
-                    selectedDates={selectedDates}
-                    onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                    onRemove={() => onRemoveItem(item.id)}
-                    onAccept={() => onAcceptItem(item.id)}
-                    onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                    allItems={program.items}
-                    hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                    invoicingMode={invoicingMode}
-                  />
-                ))}
-                {getItemsForDay(dayIndex).length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    Geen activiteiten op deze dag
-                  </p>
-                )}
-              </div>
-            )}
+            {(dayIndex) => {
+              const dayItems = getItemsForDay(dayIndex);
+              const dayPricedItems = dayItems.filter(i => i.status !== "cancelled" && i.quoted_price);
+              const dayTotalIncl = dayPricedItems.reduce((s, i) => s + (i.quoted_price || 0), 0);
+              const dayTotalExcl = dayPricedItems.reduce((s, i) => {
+                const rate = getItemVatRate(i);
+                return s + calculateExclVat(i.quoted_price || 0, rate);
+              }, 0);
+              return (
+                <div className="space-y-3 mt-4">
+                  {dayItems.map((item) => (
+                    <CustomerProgramItem
+                      key={item.id}
+                      item={item}
+                      selectedDates={selectedDates}
+                      onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                      onRemove={() => onRemoveItem(item.id)}
+                      onAccept={() => onAcceptItem(item.id)}
+                      onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                      allItems={program.items}
+                      hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                      invoicingMode={invoicingMode}
+                      vatRate={getItemVatRate(item)}
+                    />
+                  ))}
+                  {dayItems.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      Geen activiteiten op deze dag
+                    </p>
+                  )}
+                  {dayPricedItems.length > 0 && (
+                    <div className="flex items-center justify-between pt-3 mt-3 border-t text-sm">
+                      <span className="text-muted-foreground">Dagtotaal</span>
+                      <div className="text-right">
+                        <span className="font-semibold">€{dayTotalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-xs text-muted-foreground ml-2">(excl. BTW: €{dayTotalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }}
           </DayTabs>
         ) : (
           <div className="space-y-3">
@@ -352,6 +400,7 @@ export const MobileProgramView = ({
                   allItems={program.items}
                   hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                   invoicingMode={invoicingMode}
+                  vatRate={getItemVatRate(item)}
                 />
               ))}
           </div>
@@ -404,6 +453,14 @@ export const MobileProgramView = ({
           signatureName={program.signature_name || null}
           signatureId={program.signature_id || null}
           acceptedTerms={program.acceptedTerms}
+        />
+      )}
+
+      {/* Payment status after terms acceptance */}
+      {termsAccepted && (
+        <PaymentStatusCard
+          items={program.items}
+          termsAcceptedAt={program.terms_accepted_at!}
         />
       )}
 
