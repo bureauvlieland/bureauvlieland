@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Euro, CheckCircle, Clock, HelpCircle, Building2, FileText, AlertCircle, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -6,6 +6,7 @@ import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -35,6 +36,31 @@ export const PriceSummaryCard = ({
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate } = useAppSettings();
+
+  // Fetch VAT rates per building block
+  const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const blockIds = items.map(i => i.block_id).filter(Boolean) as string[];
+    if (blockIds.length === 0) return;
+    supabase
+      .from("building_blocks")
+      .select("id, vat_rate")
+      .in("id", blockIds)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, number> = {};
+          data.forEach(b => { map[b.id] = b.vat_rate ?? 21; });
+          setVatRateMap(map);
+        }
+      });
+  }, [items]);
+
+  const getItemVatRate = (item: ProgramRequestItem): number => {
+    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
+      return vatRateMap[item.block_id];
+    }
+    return 21;
+  };
   const summary = useMemo(() => {
     // Filter out self-arranged and cancelled items
     const relevantItems = items.filter(
@@ -80,23 +106,65 @@ export const PriceSummaryCard = ({
     const coordinationFeeAmount = getCoordinationFee(numberOfPeople);
     const standardVatRate = getVatRate("standard");
 
-    // Calculate VAT breakdown
-    const bureauVat = calculateVatBreakdown(bureauTotal, standardVatRate);
-    const partnerVat = calculateVatBreakdown(partnerTotal, standardVatRate);
+    // Calculate per-item VAT using actual building block rates
+    let bureauExclVat = 0;
+    let bureauVatAmount = 0;
+    const bureauVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
+    confirmedBureauItems.forEach(item => {
+      const rate = getItemVatRate(item);
+      const price = item.quoted_price || 0;
+      const breakdown = calculateVatBreakdown(price, rate);
+      bureauExclVat += breakdown.exclVat;
+      bureauVatAmount += breakdown.vatAmount;
+      if (!bureauVatLines[rate]) bureauVatLines[rate] = { exclVat: 0, vatAmount: 0 };
+      bureauVatLines[rate].exclVat += breakdown.exclVat;
+      bureauVatLines[rate].vatAmount += breakdown.vatAmount;
+    });
+    // Add coordination fee (always 21%)
     const feeVat = calculateVatBreakdown(coordinationFeeAmount, standardVatRate);
-    const totalExclVat = bureauVat.exclVat + partnerVat.exclVat + feeVat.exclVat + accommodationVat.exclVat;
-    const totalVatAmount = bureauVat.vatAmount + partnerVat.vatAmount + feeVat.vatAmount + accommodationVat.vatAmount;
+    bureauExclVat += feeVat.exclVat;
+    bureauVatAmount += feeVat.vatAmount;
+    if (!bureauVatLines[standardVatRate]) bureauVatLines[standardVatRate] = { exclVat: 0, vatAmount: 0 };
+    bureauVatLines[standardVatRate].exclVat += feeVat.exclVat;
+    bureauVatLines[standardVatRate].vatAmount += feeVat.vatAmount;
+
+    let partnerExclVat = 0;
+    let partnerVatAmount = 0;
+    const partnerVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
+    confirmedPartnerItems.forEach(item => {
+      const rate = getItemVatRate(item);
+      const price = item.quoted_price || 0;
+      const breakdown = calculateVatBreakdown(price, rate);
+      partnerExclVat += breakdown.exclVat;
+      partnerVatAmount += breakdown.vatAmount;
+      if (!partnerVatLines[rate]) partnerVatLines[rate] = { exclVat: 0, vatAmount: 0 };
+      partnerVatLines[rate].exclVat += breakdown.exclVat;
+      partnerVatLines[rate].vatAmount += breakdown.vatAmount;
+    });
+
+    const totalExclVat = bureauExclVat + partnerExclVat + accommodationVat.exclVat;
+    const totalVatAmount = bureauVatAmount + partnerVatAmount + accommodationVat.vatAmount;
+
+    // Merged VAT lines for grand total display
+    const allVatLines: Record<number, number> = {};
+    Object.entries(bureauVatLines).forEach(([r, v]) => { allVatLines[Number(r)] = (allVatLines[Number(r)] || 0) + v.vatAmount; });
+    Object.entries(partnerVatLines).forEach(([r, v]) => { allVatLines[Number(r)] = (allVatLines[Number(r)] || 0) + v.vatAmount; });
+    if (accommodationVat.vatAmount > 0) {
+      allVatLines[accommodationVatRate] = (allVatLines[accommodationVatRate] || 0) + accommodationVat.vatAmount;
+    }
 
     return {
       confirmedTotal,
       bureauTotal,
       partnerTotal,
       coordinationFee: coordinationFeeAmount,
-      grandTotal: bureauTotal + coordinationFeeAmount, // Only bureau items + fee are invoiced by Bureau Vlieland
-      bureauExclVat: bureauVat.exclVat + feeVat.exclVat,
-      bureauVatAmount: bureauVat.vatAmount + feeVat.vatAmount,
-      partnerExclVat: partnerVat.exclVat,
-      partnerVatAmount: partnerVat.vatAmount,
+      grandTotal: bureauTotal + coordinationFeeAmount,
+      bureauExclVat,
+      bureauVatAmount,
+      bureauVatLines,
+      partnerExclVat,
+      partnerVatAmount,
+      partnerVatLines,
       standardVatRate,
       // Accommodation
       accommodationTotal,
@@ -109,6 +177,7 @@ export const PriceSummaryCard = ({
       // Totals
       totalExclVat,
       totalVatAmount,
+      allVatLines,
       grandTotalInclVat: confirmedTotal + coordinationFeeAmount + accommodationTotal,
       confirmedCount: confirmedItems.length,
       pendingCount: pendingItems.length,
@@ -116,7 +185,7 @@ export const PriceSummaryCard = ({
       hasBureauItems: confirmedBureauItems.length > 0,
       hasPartnerItems: confirmedPartnerItems.length > 0,
     };
-  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate]);
+  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap]);
 
   // Don't show if there are no confirmed prices yet
   if (!summary.hasConfirmedPrices) {
@@ -293,10 +362,19 @@ export const PriceSummaryCard = ({
                   <span>Subtotaal excl. BTW</span>
                   <span>€{formatPrice(summary.bureauExclVat + (isBureauCentral ? summary.partnerExclVat : 0))}</span>
                 </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>BTW ({summary.standardVatRate}%)</span>
-                  <span>€{formatPrice(summary.bureauVatAmount + (isBureauCentral ? summary.partnerVatAmount : 0))}</span>
-                </div>
+                {(() => {
+                  const combined: Record<number, number> = {};
+                  Object.entries(summary.bureauVatLines).forEach(([r, v]) => { combined[Number(r)] = (combined[Number(r)] || 0) + v.vatAmount; });
+                  if (isBureauCentral) {
+                    Object.entries(summary.partnerVatLines).forEach(([r, v]) => { combined[Number(r)] = (combined[Number(r)] || 0) + v.vatAmount; });
+                  }
+                  return Object.entries(combined).sort(([a], [b]) => Number(a) - Number(b)).map(([rate, amount]) => (
+                    <div key={rate} className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>BTW ({rate}%)</span>
+                      <span>€{formatPrice(amount)}</span>
+                    </div>
+                  ));
+                })()}
               </div>
               
               <div className="flex items-center justify-between font-medium pt-2 border-t border-primary/10 pl-6">
@@ -327,10 +405,12 @@ export const PriceSummaryCard = ({
                   <span>Subtotaal excl. BTW</span>
                   <span>€{formatPrice(summary.partnerExclVat)}</span>
                 </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>BTW ({summary.standardVatRate}%)</span>
-                  <span>€{formatPrice(summary.partnerVatAmount)}</span>
-                </div>
+                {Object.entries(summary.partnerVatLines).sort(([a], [b]) => Number(a) - Number(b)).map(([rate, v]) => (
+                  <div key={rate} className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>BTW ({rate}%)</span>
+                    <span>€{formatPrice(v.vatAmount)}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
