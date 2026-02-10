@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,7 +184,10 @@ export function EmailTemplateSheet({
             <TabsContent value="preview" className="mt-4">
               <div
                 className="border rounded-lg p-4 min-h-[400px] bg-white prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: generatePreview() }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatePreview(), {
+                  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'a', 'table', 'tr', 'td', 'th', 'span', 'div', 'img'],
+                  ALLOWED_ATTR: ['href', 'style', 'class', 'src', 'alt'],
+                }) }}
               />
             </TabsContent>
           </Tabs>
