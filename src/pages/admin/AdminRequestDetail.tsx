@@ -465,14 +465,18 @@ const AdminRequestDetail = () => {
     }
   };
 
-  const handleItemPriceUpdate = async (itemId: string, price: number | null, notes: string) => {
+  const handleItemPriceUpdate = async (itemId: string, price: number | null, notes: string, newPriceType?: "per_person" | "total") => {
     try {
+      const updateData: Record<string, unknown> = { 
+        admin_price_override: price,
+        admin_price_notes: notes || null,
+      };
+      if (newPriceType) {
+        updateData.price_type = newPriceType;
+      }
       const { error } = await supabase
         .from("program_request_items")
-        .update({ 
-          admin_price_override: price,
-          admin_price_notes: notes || null,
-        })
+        .update(updateData)
         .eq("id", itemId);
 
       if (error) throw error;
@@ -949,7 +953,7 @@ const AdminRequestDetail = () => {
                                       priceNotes={item.admin_price_notes}
                                       numberOfPeople={request.number_of_people}
                                       priceType={item.price_type === "total" ? "total" : "per_person"}
-                                      onSave={(price, notes) => handleItemPriceUpdate(item.id, price, notes)}
+                                      onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                     />
                                   </TableCell>
                                   <TableCell>
