@@ -333,7 +333,7 @@ export const MobileProgramView = ({
         ) : (
           <div className="space-y-3">
             {program.items
-              .filter((item) => item.status !== "cancelled")
+              .filter((item) => item.status !== "cancelled" && item.day_index >= 0)
               .sort((a, b) => {
                 if (!a.preferred_time && !b.preferred_time) return 0;
                 if (!a.preferred_time) return 1;

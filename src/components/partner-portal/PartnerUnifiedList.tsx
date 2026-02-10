@@ -115,7 +115,9 @@ export const PartnerUnifiedList = ({
 }: PartnerUnifiedListProps) => {
   // Transform and merge items
   const unified: UnifiedListItem[] = [
-    ...items.map((i) => {
+    ...items
+      .filter((i) => i.day_index >= 0) // Exclude overige kosten
+      .map((i) => {
       const dates = (i.program_requests.selected_dates || []) as string[];
       const activityDate = dates[i.day_index] || "";
       const canInvoice = canItemBeInvoiced(i);

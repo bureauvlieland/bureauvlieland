@@ -1196,7 +1196,7 @@ export type Database = {
           admin_price_notes: string | null
           admin_price_override: number | null
           block_category: string
-          block_id: string
+          block_id: string | null
           block_name: string
           block_type: string
           commission_amount: number | null
@@ -1249,7 +1249,7 @@ export type Database = {
           admin_price_notes?: string | null
           admin_price_override?: number | null
           block_category: string
-          block_id: string
+          block_id?: string | null
           block_name: string
           block_type: string
           commission_amount?: number | null
@@ -1302,7 +1302,7 @@ export type Database = {
           admin_price_notes?: string | null
           admin_price_override?: number | null
           block_category?: string
-          block_id?: string
+          block_id?: string | null
           block_name?: string
           block_type?: string
           commission_amount?: number | null

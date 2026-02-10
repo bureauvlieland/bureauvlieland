@@ -224,7 +224,7 @@ export interface ProgramRequest {
 export interface ProgramRequestItem {
   id: string;
   request_id: string;
-  block_id: string;
+  block_id: string | null;
   block_name: string;
   block_category: string;
   provider_name: string;
