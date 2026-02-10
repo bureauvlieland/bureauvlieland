@@ -1,27 +1,44 @@
 
-
-# Plan: Factuur-route en knop corrigeren
+# Plan: Prijsberekening offerte-PDF corrigeren
 
 ## Probleem
-De factuur-preview route is alleen bereikbaar via `/admin/projecten/:id/factuur`, maar de projectdetailpagina wordt doorgaans benaderd via `/admin/aanvragen/:id`. De navigatie moet consistent zijn.
+De offerte-PDF vermenigvuldigt alle itemprijzen met het aantal personen (150), ongeacht of het totaalprijzen of per-persoon prijzen zijn. In dit project zijn alle items totaalprijzen (`price_type = 'total'`), waardoor het totaal ~150x te hoog uitvalt (EUR 11,6M in plaats van ~EUR 77.000).
+
+## Oorzaak
+In `AdminQuotePreview.tsx`:
+- Het veld `price_type` wordt niet opgehaald uit de database
+- De functie `calculateTotals()` vermenigvuldigt alles met `number_of_people`
+- De kolomkop zegt altijd "Prijs p.p." ongeacht het prijstype
 
 ## Aanpak
 
-### 1. Route toevoegen in `src/App.tsx`
-- Extra route registreren: `/admin/aanvragen/:id/factuur` die naar dezelfde `AdminInvoicePreview` component verwijst
-- De bestaande `/admin/projecten/:id/factuur` route blijft ook bestaan
+### Bestand: `src/pages/admin/AdminQuotePreview.tsx`
 
-### 2. `src/components/admin/FinancialOverviewCard.tsx`
-- `requestId: string` prop toevoegen aan de interface
-- `useNavigate` importeren
-- "Factuur Maken" knop toevoegen (variant `outline`, icoon `FileText`)
-- Navigeert naar `/admin/aanvragen/${requestId}/factuur` (consistent met het pad waar de gebruiker vandaan komt)
-- Twee knoppen naast elkaar: "Factuur Maken" (outline) en "Factuur Registreren" (default)
+**1. Interface uitbreiden**
+- `price_type` toevoegen aan de `ProgramItem` interface
 
-### 3. `src/pages/admin/AdminRequestDetail.tsx`
-- `requestId` (ofwel het `id` uit `useParams`) doorgeven aan `FinancialOverviewCard`
+**2. `calculateTotals()` herschrijven**
+- Per item checken of `price_type === 'per_person'`: zo ja, vermenigvuldigen met `number_of_people`
+- Voor `total`, `per_hour`, `per_day`: de prijs ongewijzigd optellen
+- Coordinatiefee blijft apart (is altijd een totaalprijs)
+
+**3. Kolomkop dynamisch maken**
+- "Prijs p.p." alleen tonen als er per-persoon items zijn
+- Anders "Prijs totaal" tonen
+- Of een generieke kop "Prijs" gebruiken en per regel het type aangeven
+
+**4. Per-item weergave verbeteren**
+- Bij `per_person` items: toon de prijs per persoon en optioneel het totaal
+- Bij `total` items: toon de totaalprijs direct
+- Voeg een subtiele label toe ("p.p." of "totaal") achter de prijs
+
+### Berekening na fix
+- Itemtotaal: EUR 77.434,40 (som van alle admin_price_override waarden)
+- Coordinatiefee: EUR 500 (staffel 151+ personen)
+- Subtotaal incl. BTW: EUR 77.934,40
+- Subtotaal excl. BTW: EUR 64.408,60
+- BTW (21%): EUR 13.525,80
+- Totaal incl. BTW: EUR 77.934,40
 
 ### Bestanden
-- `src/App.tsx` -- extra route toevoegen
-- `src/components/admin/FinancialOverviewCard.tsx` -- knop + requestId prop
-- `src/pages/admin/AdminRequestDetail.tsx` -- requestId doorgeven
+- `src/pages/admin/AdminQuotePreview.tsx` -- prijslogica en weergave corrigeren
