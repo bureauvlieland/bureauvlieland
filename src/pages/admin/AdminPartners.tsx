@@ -600,7 +600,7 @@ const AdminPartnersContent = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={() => window.open(`/partner?impersonate=${partner.id}`, "_blank")}
+                                  onClick={() => window.open(`/partner/dashboard?impersonate=${partner.id}`, "_blank")}
                                 >
                                   <ExternalLink className="h-4 w-4" />
                                 </Button>
