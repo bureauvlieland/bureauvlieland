@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, CalendarDays } from 'lucide-react';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -122,6 +124,14 @@ export function QuoteExtrasList({ quoteId, numberOfGuests, partnerId, readOnly =
                         </>
                       )}
                     </p>
+                    {(extra.service_date || extra.service_time) && (
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" />
+                        {extra.service_date && format(new Date(extra.service_date), 'EEE d MMM', { locale: nl })}
+                        {extra.service_date && extra.service_time && ' – '}
+                        {extra.service_time && extra.service_time.slice(0, 5)}
+                      </p>
+                    )}
                   </div>
                   {!readOnly && (
                     <div className="flex gap-1 ml-2">

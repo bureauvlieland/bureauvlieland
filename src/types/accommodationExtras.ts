@@ -15,6 +15,8 @@ export interface AccommodationQuoteExtra {
   notes: string | null;
   sort_order: number;
   commission_percentage: number;
+  service_date: string | null;
+  service_time: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +62,8 @@ export interface AccommodationQuoteExtraInsert {
   category?: ExtraCategory | null;
   notes?: string | null;
   sort_order?: number;
+  service_date?: string | null;
+  service_time?: string | null;
 }
 
 export interface AccommodationQuoteExtraUpdate {
@@ -73,6 +77,8 @@ export interface AccommodationQuoteExtraUpdate {
   category?: ExtraCategory | null;
   notes?: string | null;
   sort_order?: number;
+  service_date?: string | null;
+  service_time?: string | null;
 }
 
 export const EXTRA_CATEGORY_LABELS: Record<ExtraCategory, string> = {

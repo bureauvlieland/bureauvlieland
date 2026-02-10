@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,6 +53,8 @@ const formSchema = z.object({
   price_includes_vat: z.boolean(),
   notes: z.string().optional(),
   save_as_preset: z.boolean().optional(),
+  service_date: z.date().optional().nullable(),
+  service_time: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -88,6 +96,8 @@ export function AddQuoteExtraDialog({
       price_includes_vat: true,
       notes: '',
       save_as_preset: false,
+      service_date: null,
+      service_time: '',
     },
   });
 
@@ -106,6 +116,8 @@ export function AddQuoteExtraDialog({
           price_includes_vat: editingExtra.price_includes_vat,
           notes: editingExtra.notes || '',
           save_as_preset: false,
+          service_date: editingExtra.service_date ? new Date(editingExtra.service_date) : null,
+          service_time: editingExtra.service_time?.slice(0, 5) || '',
         });
         setShowPresets(false);
       } else {
@@ -120,6 +132,8 @@ export function AddQuoteExtraDialog({
           price_includes_vat: true,
           notes: '',
           save_as_preset: false,
+          service_date: null,
+          service_time: '',
         });
         setShowPresets(true);
       }
@@ -199,6 +213,8 @@ export function AddQuoteExtraDialog({
             vat_rate: values.vat_rate,
             price_includes_vat: values.price_includes_vat,
             notes: values.notes || null,
+            service_date: values.service_date ? format(values.service_date, 'yyyy-MM-dd') : null,
+            service_time: values.service_time || null,
           },
         });
         toast.success('Extra bijgewerkt');
@@ -214,6 +230,8 @@ export function AddQuoteExtraDialog({
           vat_rate: values.vat_rate,
           price_includes_vat: values.price_includes_vat,
           notes: values.notes || null,
+          service_date: values.service_date ? format(values.service_date, 'yyyy-MM-dd') : null,
+          service_time: values.service_time || null,
         });
         toast.success('Extra toegevoegd');
       }
@@ -384,6 +402,55 @@ export function AddQuoteExtraDialog({
                 <Label htmlFor="price_includes_vat" className="font-normal">
                   Prijs incl. BTW
                 </Label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Datum (optioneel)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !form.watch('service_date') && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.watch('service_date')
+                        ? format(form.watch('service_date')!, 'd MMM yyyy', { locale: nl })
+                        : 'Kies datum'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.watch('service_date') ?? undefined}
+                      onSelect={(date) => form.setValue('service_date', date ?? null)}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.watch('service_date') && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => form.setValue('service_date', null)}
+                  >
+                    Datum wissen
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="service_time">Tijd (optioneel)</Label>
+                <Input
+                  id="service_time"
+                  type="time"
+                  {...form.register('service_time')}
+                />
               </div>
             </div>
 
