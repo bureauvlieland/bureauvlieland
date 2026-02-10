@@ -267,6 +267,8 @@ export interface ProgramRequestItem {
   admin_price_override: number | null;
   admin_price_notes: string | null;
   skip_partner_notification: boolean;
+  // Price type snapshot from building block
+  price_type: string | null;
 }
 
 export interface ProgramRequestHistory {

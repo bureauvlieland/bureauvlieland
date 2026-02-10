@@ -1223,6 +1223,7 @@ export type Database = {
           item_quote_status: string | null
           preferred_time: string | null
           price_indication: string | null
+          price_type: string | null
           proforma_amount_excl_vat: number | null
           proforma_commission: number | null
           proforma_deadline: string | null
@@ -1276,6 +1277,7 @@ export type Database = {
           item_quote_status?: string | null
           preferred_time?: string | null
           price_indication?: string | null
+          price_type?: string | null
           proforma_amount_excl_vat?: number | null
           proforma_commission?: number | null
           proforma_deadline?: string | null
@@ -1329,6 +1331,7 @@ export type Database = {
           item_quote_status?: string | null
           preferred_time?: string | null
           price_indication?: string | null
+          price_type?: string | null
           proforma_amount_excl_vat?: number | null
           proforma_commission?: number | null
           proforma_deadline?: string | null

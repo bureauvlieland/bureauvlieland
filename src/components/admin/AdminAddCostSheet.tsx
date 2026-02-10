@@ -67,6 +67,7 @@ export const AdminAddCostSheet = ({
         admin_price_override: parsedAmount,
         admin_price_notes: notes.trim() || null,
         skip_partner_notification: true,
+        price_type: "total",
       });
 
       if (error) throw error;

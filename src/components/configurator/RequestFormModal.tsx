@@ -155,21 +155,25 @@ export const RequestFormModal = ({
       if (insertError) throw insertError;
 
       // Create program request items
-      const itemsToInsert = blocksWithDetails.map((block) => ({
-        request_id: requestData.id,
-        block_id: block.id,
-        block_name: block.name,
-        block_category: block.category,
-        provider_name: block.provider,
-        provider_id: block.providerId,
-        provider_email: block.providerEmail || null,
-        block_type: block.blockType,
-        price_indication: block.priceIndication || null,
-        day_index: block.dayIndex,
-        preferred_time: block.preferredTime || null,
-        customer_notes: block.itemNotes || null,
-        status: "pending",
-      }));
+      const itemsToInsert = blocksWithDetails.map((block) => {
+        const fullBlock = getBlockById(allBlocks, block.id);
+        return {
+          request_id: requestData.id,
+          block_id: block.id,
+          block_name: block.name,
+          block_category: block.category,
+          provider_name: block.provider,
+          provider_id: block.providerId,
+          provider_email: block.providerEmail || null,
+          block_type: block.blockType,
+          price_indication: block.priceIndication || null,
+          day_index: block.dayIndex,
+          preferred_time: block.preferredTime || null,
+          customer_notes: block.itemNotes || null,
+          status: "pending",
+          price_type: fullBlock?.price_type || "per_person",
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from("program_request_items")
