@@ -2,10 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Euro, Plus, CheckCircle2, Clock } from "lucide-react";
+import { Euro, Plus, CheckCircle2, Clock, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useNavigate } from "react-router-dom";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 
 interface ProgramRequestItem {
@@ -21,6 +22,7 @@ interface ProgramRequestItem {
 }
 
 interface FinancialOverviewCardProps {
+  requestId: string;
   numberOfPeople: number;
   items: ProgramRequestItem[];
   invoices: BureauInvoice[];
@@ -29,6 +31,7 @@ interface FinancialOverviewCardProps {
 }
 
 export const FinancialOverviewCard = ({
+  requestId,
   numberOfPeople,
   items,
   invoices,
@@ -36,6 +39,7 @@ export const FinancialOverviewCard = ({
   isQuoteMode = false,
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
+  const navigate = useNavigate();
   
   // Helper to get item price (admin override or quoted price)
   const getItemPrice = (item: ProgramRequestItem) => {
@@ -302,12 +306,22 @@ export const FinancialOverviewCard = ({
           </span>
         </div>
 
-        {/* Register invoice button */}
+        {/* Invoice buttons */}
         {totalInclVat > 0 && (
-          <Button onClick={onRegisterInvoice} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
-            Factuur Registreren
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => navigate(`/admin/aanvragen/${requestId}/factuur`)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Factuur Maken
+            </Button>
+            <Button onClick={onRegisterInvoice} className="flex-1">
+              <Plus className="h-4 w-4 mr-2" />
+              Factuur Registreren
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -1103,6 +1103,7 @@ const AdminRequestDetail = () => {
                   outstandingAmount={calculateOutstandingAmount()}
                 />
                 <FinancialOverviewCard
+                  requestId={request.id}
                   numberOfPeople={request.number_of_people}
                   items={items}
                   invoices={bureauInvoices}

@@ -1745,6 +1745,8 @@ export type Database = {
         | "excursies"
         | "entertainment"
         | "locaties"
+        | "services"
+        | "overig"
       building_block_price_type:
         | "per_person"
         | "total"
@@ -1888,6 +1890,8 @@ export const Constants = {
         "excursies",
         "entertainment",
         "locaties",
+        "services",
+        "overig",
       ],
       building_block_price_type: [
         "per_person",
