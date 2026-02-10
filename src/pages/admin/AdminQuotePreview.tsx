@@ -57,6 +57,7 @@ interface ProgramItem {
   admin_price_override: number | null;
   admin_price_notes: string | null;
   quoted_price: number | null;
+  price_type: string | null;
 }
 
 const AdminQuotePreview = () => {
@@ -128,23 +129,28 @@ const AdminQuotePreview = () => {
     return item.admin_price_override ?? item.quoted_price ?? 0;
   };
 
+  const getItemTotal = (item: ProgramItem) => {
+    const unitPrice = getItemPrice(item);
+    if (item.price_type === 'per_person') {
+      return unitPrice * (request?.number_of_people || 1);
+    }
+    return unitPrice;
+  };
+
   const calculateTotals = () => {
-    const itemsTotal = items.reduce((sum, item) => sum + getItemPrice(item), 0);
+    const itemsTotal = items.reduce((sum, item) => sum + getItemTotal(item), 0);
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
     
-    // Prijzen zijn per persoon en inclusief BTW
-    const subtotalInclVat = (itemsTotal * (request?.number_of_people || 1)) + bureauFee;
-    
-    // Terugrekenen van BTW (prijzen zijn al inclusief 21% BTW)
+    const subtotalInclVat = itemsTotal + bureauFee;
     const subtotalExclVat = subtotalInclVat / 1.21;
     const vatAmount = subtotalInclVat - subtotalExclVat;
     
     return { 
       itemsTotal, 
       bureauFee, 
-      subtotalInclVat,   // Totaal incl. BTW
-      subtotalExclVat,   // Totaal excl. BTW
-      vatAmount,         // BTW-bedrag
+      subtotalInclVat,
+      subtotalExclVat,
+      vatAmount,
     };
   };
 
@@ -476,7 +482,7 @@ const AdminQuotePreview = () => {
                               <tr className="text-left text-xs text-gray-500 border-b">
                                 <th className="py-2">Tijd</th>
                                 <th className="py-2">Activiteit</th>
-                                <th className="py-2 text-right">Prijs p.p.</th>
+                                <th className="py-2 text-right">Prijs</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -496,8 +502,11 @@ const AdminQuotePreview = () => {
                                       {item.provider_name}
                                     </p>
                                   </td>
-                                  <td className="py-3 text-right text-sm font-medium">
+                                  <td className="py-3 text-right text-sm font-medium whitespace-nowrap">
                                     {formatCurrency(getItemPrice(item))}
+                                    <span className="text-xs text-gray-400 ml-1">
+                                      {item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
+                                    </span>
                                   </td>
                                 </tr>
                               ))}
@@ -509,8 +518,8 @@ const AdminQuotePreview = () => {
                       {/* Totals */}
                       <div className="border-t-2 border-[#1e3a5f] pt-4 mt-6">
                         <div className="flex justify-between text-sm mb-1">
-                          <span>Subtotaal ({request.number_of_people} personen) incl. BTW</span>
-                          <span>{formatCurrency(totals.subtotalInclVat - totals.bureauFee)}</span>
+                          <span>Subtotaal activiteiten incl. BTW</span>
+                          <span>{formatCurrency(totals.itemsTotal)}</span>
                         </div>
                         {totals.bureauFee > 0 && (
                           <div className="flex justify-between text-sm mb-1">
