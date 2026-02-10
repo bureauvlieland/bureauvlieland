@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import {
   Dialog,
   DialogContent,
@@ -161,7 +162,7 @@ Bureau Vlieland`;
               </div>
               <div
                 className="p-4 text-sm bg-background prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: formatPreviewBody(emailBody) }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatPreviewBody(emailBody), { ALLOWED_TAGS: ['strong', 'br'], ALLOWED_ATTR: [] }) }}
               />
             </div>
           )}
