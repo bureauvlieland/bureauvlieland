@@ -1,44 +1,52 @@
 
-# Plan: Prijsberekening offerte-PDF corrigeren
+# Plan: Nieuwe categorieën toevoegen aan bouwstenen
 
 ## Probleem
-De offerte-PDF vermenigvuldigt alle itemprijzen met het aantal personen (150), ongeacht of het totaalprijzen of per-persoon prijzen zijn. In dit project zijn alle items totaalprijzen (`price_type = 'total'`), waardoor het totaal ~150x te hoog uitvalt (EUR 11,6M in plaats van ~EUR 77.000).
-
-## Oorzaak
-In `AdminQuotePreview.tsx`:
-- Het veld `price_type` wordt niet opgehaald uit de database
-- De functie `calculateTotals()` vermenigvuldigt alles met `number_of_people`
-- De kolomkop zegt altijd "Prijs p.p." ongeacht het prijstype
+De database bevat al de categorieën `services`, `overig` en `activiteiten`, maar de TypeScript-code kent alleen `outdoor`, `excursies`, `entertainment`, `locaties`, `catering` en `vervoer`. Hierdoor zijn de nieuwe categorieën niet selecteerbaar bij het aanmaken/bewerken van bouwstenen en niet zichtbaar in filters.
 
 ## Aanpak
 
-### Bestand: `src/pages/admin/AdminQuotePreview.tsx`
+De volgende bestanden moeten worden bijgewerkt om de drie ontbrekende categorieën (`services`, `overig`, `activiteiten`) toe te voegen:
 
-**1. Interface uitbreiden**
-- `price_type` toevoegen aan de `ProgramItem` interface
+### 1. Type-definitie: `src/types/buildingBlock.ts`
+- `BuildingBlockCategory` type uitbreiden met `"services" | "overig" | "activiteiten"`
+- `categoryLabels` object uitbreiden met labels:
+  - `services`: "Services"
+  - `overig`: "Overig"
+  - `activiteiten`: "Activiteiten"
 
-**2. `calculateTotals()` herschrijven**
-- Per item checken of `price_type === 'per_person'`: zo ja, vermenigvuldigen met `number_of_people`
-- Voor `total`, `per_hour`, `per_day`: de prijs ongewijzigd optellen
-- Coordinatiefee blijft apart (is altijd een totaalprijs)
+### 2. Configurator categorie-filter: `src/components/configurator/CategoryFilter.tsx`
+- Drie nieuwe knoppen toevoegen met passende iconen (bijv. `Wrench` voor Services, `Package` voor Overig, `Users` voor Activiteiten)
 
-**3. Kolomkop dynamisch maken**
-- "Prijs p.p." alleen tonen als er per-persoon items zijn
-- Anders "Prijs totaal" tonen
-- Of een generieke kop "Prijs" gebruiken en per regel het type aangeven
+### 3. Admin bouwstenen beheer: `src/pages/admin/AdminBuildingBlocks.tsx`
+- Drie nieuwe `SelectItem`s toevoegen in het categorie-filterdropdown
 
-**4. Per-item weergave verbeteren**
-- Bij `per_person` items: toon de prijs per persoon en optioneel het totaal
-- Bij `total` items: toon de totaalprijs direct
-- Voeg een subtiele label toe ("p.p." of "totaal") achter de prijs
+### 4. Admin bouwsteen formulier: `src/components/admin/BuildingBlockSheet.tsx`
+- Zod schema `category` enum uitbreiden met de drie waarden
+- Drie nieuwe `SelectItem`s toevoegen in het categorie-dropdown
 
-### Berekening na fix
-- Itemtotaal: EUR 77.434,40 (som van alle admin_price_override waarden)
-- Coordinatiefee: EUR 500 (staffel 151+ personen)
-- Subtotaal incl. BTW: EUR 77.934,40
-- Subtotaal excl. BTW: EUR 64.408,60
-- BTW (21%): EUR 13.525,80
-- Totaal incl. BTW: EUR 77.934,40
+### 5. Admin activiteit toevoegen: `src/components/admin/AdminAddActivitySheet.tsx`
+- Geen directe wijziging nodig (gebruikt dynamisch `categoryLabels` uit het type-bestand), maar controleren of de categorie-filterknoppen hier ook hardcoded zijn
 
-### Bestanden
-- `src/pages/admin/AdminQuotePreview.tsx` -- prijslogica en weergave corrigeren
+### 6. Admin template item dialog: `src/components/admin/AddTemplateItemDialog.tsx`
+- Gebruikt `categoryLabels` dynamisch, geen wijziging nodig
+
+### 7. Klantportaal activiteit toevoegen: `src/components/customer-portal/AddActivitySheet.tsx`
+- Controleren of categorie-filter hardcoded is
+
+### 8. Partner bouwsteen formulier: `src/components/partner-portal/PartnerBlockSheet.tsx`
+- `BlockCategory` type en `CATEGORY_OPTIONS` array uitbreiden met de drie nieuwe categorieën
+
+### 9. Factuur preview: `src/pages/admin/AdminInvoicePreview.tsx`
+- Gebruikt `categoryLabels` dynamisch, geen wijziging nodig zolang het type-bestand is bijgewerkt
+
+## Samenvatting wijzigingen per bestand
+
+| Bestand | Wijziging |
+|---|---|
+| `src/types/buildingBlock.ts` | Type + labels uitbreiden |
+| `src/components/configurator/CategoryFilter.tsx` | 3 knoppen toevoegen |
+| `src/pages/admin/AdminBuildingBlocks.tsx` | 3 filter-opties toevoegen |
+| `src/components/admin/BuildingBlockSheet.tsx` | Zod enum + 3 select-opties |
+| `src/components/partner-portal/PartnerBlockSheet.tsx` | Type + opties uitbreiden |
+| Overige bestanden die `categoryLabels` gebruiken | Geen wijziging nodig (dynamisch) |
