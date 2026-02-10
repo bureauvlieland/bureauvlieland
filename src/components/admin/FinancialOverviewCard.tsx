@@ -16,6 +16,7 @@ interface ProgramRequestItem {
   quoted_price: number | null;
   admin_price_override?: number | null;
   item_quote_status?: string | null;
+  day_index: number;
 }
 
 interface FinancialOverviewCardProps {
@@ -40,18 +41,24 @@ export const FinancialOverviewCard = ({
     return item.admin_price_override ?? item.quoted_price ?? 0;
   };
 
-  // Calculate items to be invoiced by Bureau Vlieland
+  // Calculate items to be invoiced by Bureau Vlieland (exclude overige kosten)
   const bureauItems = items.filter(
-    (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price
+    (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price && item.day_index !== -1
   );
   
-  // In quote mode, show all items with their preliminary prices
+  // Overige kosten (day_index = -1)
+  const extraCostItems = items.filter(
+    (item) => item.day_index === -1
+  );
+  
+  // In quote mode, show all items with their preliminary prices (exclude overige kosten)
   const quoteItems = isQuoteMode 
-    ? items.filter((item) => item.status !== "cancelled")
+    ? items.filter((item) => item.status !== "cancelled" && item.day_index !== -1)
     : [];
 
   // Calculate totals
   const itemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
+  const extraCostsTotal = extraCostItems.reduce((sum, item) => sum + (item.admin_price_override ?? 0), 0);
   const coordinationFee = getCoordinationFee(numberOfPeople);
   const vatRate = getVatRate("standard");
   const vatMultiplier = 1 + vatRate / 100;
@@ -64,9 +71,13 @@ export const FinancialOverviewCard = ({
   const itemsTotalExcl = itemsTotal / vatMultiplier;
   const itemsVat = itemsTotal - itemsTotalExcl;
 
-  const totalInclVat = itemsTotal + coordinationFee;
-  const totalExclVat = itemsTotalExcl + coordinationFeeExcl;
-  const totalVat = itemsVat + coordinationFeeVat;
+  // Extra costs VAT
+  const extraCostsExcl = extraCostsTotal / vatMultiplier;
+  const extraCostsVat = extraCostsTotal - extraCostsExcl;
+
+  const totalInclVat = itemsTotal + coordinationFee + extraCostsTotal;
+  const totalExclVat = itemsTotalExcl + coordinationFeeExcl + extraCostsExcl;
+  const totalVat = itemsVat + coordinationFeeVat + extraCostsVat;
 
   // Calculate invoiced amounts
   const invoicedInclVat = invoices
@@ -183,7 +194,7 @@ export const FinancialOverviewCard = ({
                   <span className="font-medium">{formatCurrency(item.quoted_price || 0)}</span>
                 </div>
               ))}
-              {bureauItems.length === 0 && (
+              {bureauItems.length === 0 && extraCostItems.length === 0 && (
                 <p className="text-sm text-slate-500">Geen bevestigde bureau items</p>
               )}
               <div className="flex items-center justify-between text-sm">
@@ -194,6 +205,28 @@ export const FinancialOverviewCard = ({
                 <span className="font-medium">{formatCurrency(coordinationFee)}</span>
               </div>
             </div>
+
+            {/* Overige kosten */}
+            {extraCostItems.length > 0 && (
+              <>
+                <Separator className="my-3" />
+                <h4 className="text-sm font-semibold text-slate-700 mb-2">
+                  OVERIGE KOSTEN
+                </h4>
+                <div className="space-y-1.5">
+                  {extraCostItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Euro className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{item.block_name}</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(item.admin_price_override ?? 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             <Separator className="my-3" />
             <div className="space-y-1">
               <div className="flex justify-between text-sm">

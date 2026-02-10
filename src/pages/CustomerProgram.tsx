@@ -80,15 +80,15 @@ const CustomerProgram = () => {
   const itemCountPerDay = useMemo(() => {
     if (!program?.items) return [];
     return selectedDates.map((_, dayIdx) => 
-      program.items.filter((item) => item.day_index === dayIdx && item.status !== "cancelled").length
+      program.items.filter((item) => item.day_index === dayIdx && item.day_index >= 0 && item.status !== "cancelled").length
     );
   }, [program?.items, selectedDates]);
 
-  // Get items for a specific day
+  // Get items for a specific day (exclude overige kosten with day_index=-1)
   const getItemsForDay = (dayIndex: number) => {
     if (!program?.items) return [];
     return program.items
-      .filter((item) => item.day_index === dayIndex && item.status !== "cancelled")
+      .filter((item) => item.day_index === dayIndex && item.day_index >= 0 && item.status !== "cancelled")
       .sort((a, b) => {
         if (!a.preferred_time && !b.preferred_time) return 0;
         if (!a.preferred_time) return 1;

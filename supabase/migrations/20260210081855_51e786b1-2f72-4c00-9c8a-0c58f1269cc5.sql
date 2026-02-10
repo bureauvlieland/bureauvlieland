@@ -1,0 +1,1 @@
+ALTER TABLE program_request_items ALTER COLUMN block_id DROP NOT NULL;

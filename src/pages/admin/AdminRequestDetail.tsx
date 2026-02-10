@@ -59,6 +59,8 @@ import {
   Pencil,
   Layers,
   Save,
+  Euro,
+  Trash2,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { 
@@ -86,6 +88,7 @@ import { InvoicingModeSelector } from "@/components/admin/InvoicingModeSelector"
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
+import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 
 interface ProgramRequest {
   id: string;
@@ -130,7 +133,7 @@ interface LinkedAccommodation {
 
 interface ProgramRequestItem {
   id: string;
-  block_id: string;
+  block_id: string | null;
   block_name: string;
   block_category: string;
   block_type: string;
@@ -186,6 +189,7 @@ const AdminRequestDetail = () => {
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [addCostOpen, setAddCostOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -850,6 +854,10 @@ const AdminRequestDetail = () => {
                         Opslaan als template
                       </Button>
                     )}
+                    <Button variant="outline" onClick={() => setAddCostOpen(true)}>
+                      <Euro className="h-4 w-4 mr-2" />
+                      Kosten toevoegen
+                    </Button>
                     <Button onClick={() => setAddActivityOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Activiteit toevoegen
@@ -882,7 +890,7 @@ const AdminRequestDetail = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.map((item) => {
+                        {items.filter(item => item.day_index >= 0).map((item) => {
                           const statusInfo = itemStatusConfig[item.status];
                           const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
                           return (
@@ -1002,6 +1010,71 @@ const AdminRequestDetail = () => {
 
             {/* Tab: Financiën */}
             <TabsContent value="financien" className="space-y-6">
+              {/* Overige kosten section */}
+              {items.filter(item => item.day_index === -1).length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Euro className="h-5 w-5" />
+                        Overige kosten
+                      </CardTitle>
+                      <CardDescription>Losse facturabele kosten buiten het programma</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setAddCostOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Kosten toevoegen
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Omschrijving</TableHead>
+                          <TableHead>Toelichting</TableHead>
+                          <TableHead>Bedrag</TableHead>
+                          <TableHead className="w-[60px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {items.filter(item => item.day_index === -1).map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.block_name}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {item.admin_price_notes || "-"}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              €{(item.admin_price_override ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("program_request_items")
+                                    .delete()
+                                    .eq("id", item.id);
+                                  if (error) {
+                                    toast.error("Fout bij verwijderen");
+                                  } else {
+                                    toast.success("Kosten verwijderd");
+                                    fetchRequestData();
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="grid md:grid-cols-3 gap-6">
                 <InvoicingModeSelector
                   requestId={request.id}
@@ -1176,6 +1249,15 @@ const AdminRequestDetail = () => {
           open={saveAsTemplateOpen}
           onOpenChange={setSaveAsTemplateOpen}
           items={items}
+        />
+      )}
+      {/* Add cost sheet */}
+      {request && (
+        <AdminAddCostSheet
+          open={addCostOpen}
+          onOpenChange={setAddCostOpen}
+          requestId={request.id}
+          onSuccess={fetchRequestData}
         />
       )}
     </>
