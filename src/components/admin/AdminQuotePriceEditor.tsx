@@ -8,6 +8,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +24,7 @@ interface AdminQuotePriceEditorProps {
   priceNotes: string | null;
   numberOfPeople: number;
   priceType?: "per_person" | "total";
-  onSave: (price: number | null, notes: string) => Promise<void>;
+  onSave: (price: number | null, notes: string, priceType?: "per_person" | "total") => Promise<void>;
   disabled?: boolean;
 }
 
@@ -35,6 +42,7 @@ export const AdminQuotePriceEditor = ({
     overridePrice?.toString() || ""
   );
   const [editNotes, setEditNotes] = useState(priceNotes || "");
+  const [editPriceType, setEditPriceType] = useState<"per_person" | "total">(priceType || "per_person");
   const [isSaving, setIsSaving] = useState(false);
 
   const displayPrice = overridePrice ?? originalPrice;
@@ -44,6 +52,7 @@ export const AdminQuotePriceEditor = ({
     if (open) {
       setEditPrice(overridePrice?.toString() || "");
       setEditNotes(priceNotes || "");
+      setEditPriceType(priceType || "per_person");
     }
     setIsOpen(open);
   };
@@ -52,7 +61,7 @@ export const AdminQuotePriceEditor = ({
     setIsSaving(true);
     try {
       const priceValue = editPrice ? parseFloat(editPrice) : null;
-      await onSave(priceValue, editNotes);
+      await onSave(priceValue, editNotes, editPriceType);
       setIsOpen(false);
     } finally {
       setIsSaving(false);
@@ -99,7 +108,7 @@ export const AdminQuotePriceEditor = ({
           <div className="flex flex-col items-start text-left">
             <span className={cn("text-sm", hasOverride && "font-medium")}>
               {formatPrice(displayPrice)}
-              {priceType === "per_person" && displayPrice !== null && " p.p."}
+              {displayPrice !== null && (priceType === "per_person" ? " p.p." : " totaal")}
             </span>
             {hasOverride && originalPrice !== null && (
               <span className="text-xs text-muted-foreground line-through">
@@ -124,8 +133,21 @@ export const AdminQuotePriceEditor = ({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="price-type">Prijsconfiguratie</Label>
+            <Select value={editPriceType} onValueChange={(v) => setEditPriceType(v as "per_person" | "total")}>
+              <SelectTrigger id="price-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="per_person">Per persoon</SelectItem>
+                <SelectItem value="total">Totaalprijs</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="override-price">
-              Aangepaste prijs {priceType === "per_person" ? "(per persoon)" : "(totaal)"}
+              Aangepaste prijs {editPriceType === "per_person" ? "(per persoon)" : "(totaal)"}
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -142,7 +164,7 @@ export const AdminQuotePriceEditor = ({
                 className="pl-7"
               />
             </div>
-            {editPrice && priceType === "per_person" && (
+            {editPrice && editPriceType === "per_person" && (
               <p className="text-xs text-muted-foreground">
                 Totaal: {formatPrice(parseFloat(editPrice) * numberOfPeople)} ({numberOfPeople} personen)
               </p>
