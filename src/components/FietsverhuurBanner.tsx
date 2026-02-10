@@ -1,9 +1,10 @@
 import { Bike, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import cyclingGroup from "@/assets/cycling-group.jpg";
 
 interface FietsverhuurBannerProps {
-  variant?: "default" | "compact";
+  variant?: "default" | "compact" | "sidebar";
   className?: string;
 }
 
@@ -36,6 +37,43 @@ export const FietsverhuurBanner = ({
     );
   }
 
+  if (variant === "sidebar") {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "block rounded-xl overflow-hidden border group hover:shadow-md transition-shadow",
+          className
+        )}
+      >
+        <div className="relative h-28 overflow-hidden">
+          <img
+            src={cyclingGroup}
+            alt="Fietsen op Vlieland"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute bottom-3 left-3 right-3">
+            <p className="text-white font-semibold text-sm flex items-center gap-1.5">
+              <Bike className="h-4 w-4" />
+              Fietsen reserveren
+            </p>
+          </div>
+        </div>
+        <div className="p-3 bg-card">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Ontdek Vlieland op de fiets. Reserveer eenvoudig voor uw hele groep.
+          </p>
+          <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
+            Reserveer nu <ExternalLink className="h-3 w-3" />
+          </span>
+        </div>
+      </a>
+    );
+  }
+
   return (
     <div className={cn(
       "relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20",
@@ -64,7 +102,6 @@ export const FietsverhuurBanner = ({
           </div>
         </div>
       </div>
-      {/* Decorative bike pattern */}
       <div className="absolute -right-4 -bottom-4 opacity-5">
         <Bike className="h-32 w-32 transform rotate-12" />
       </div>
