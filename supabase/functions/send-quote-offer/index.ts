@@ -38,6 +38,8 @@ interface ProgramItem {
   admin_price_override: number | null;
   quoted_price: number | null;
   preferred_time: string | null;
+  price_type: string | null;
+  day_index: number;
 }
 
 const sendEmailViaMailjet = async (messages: any[]) => {
@@ -78,12 +80,19 @@ function generateQuoteEmailHtml(
 
   // Calculate total estimate
   let totalEstimate = 0;
-  const itemsHtml = items
-    .filter((item) => item.item_quote_status !== "cancelled")
+  // Separate program items and extra costs (day_index = -1)
+  const programItems = items.filter((item) => item.item_quote_status !== "cancelled" && item.day_index >= 0);
+  const extraCostItems = items.filter((item) => item.day_index === -1);
+  
+  const itemsHtml = programItems
     .map((item) => {
       const price = item.admin_price_override ?? item.quoted_price;
+      const isPerPerson = !item.price_type || item.price_type === "per_person";
       const priceStr = price ? formatCurrencyNL(price) : "Op aanvraag";
-      if (price) totalEstimate += price;
+      const priceLabel = isPerPerson ? "p.p." : "";
+      if (price) {
+        totalEstimate += isPerPerson ? price * numberOfPeople : price;
+      }
 
       const statusLabel =
         item.item_quote_status === "bevestigd"
@@ -100,13 +109,32 @@ function generateQuoteEmailHtml(
             ${item.preferred_time ? `<br><span style="color: #6b7280; font-size: 12px;">⏰ ${sanitizeHtml(item.preferred_time)}</span>` : ""}
           </td>
           <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
-            ${priceStr}<br>
+            ${priceStr}${priceLabel ? ` ${priceLabel}` : ""}<br>
             <span style="font-size: 12px;">${statusLabel}</span>
           </td>
         </tr>
       `;
     })
     .join("");
+
+  // Add extra costs to total
+  const extraCostsTotal = extraCostItems.reduce((sum, item) => sum + (item.admin_price_override ?? 0), 0);
+  totalEstimate += extraCostsTotal;
+
+  // Extra costs HTML
+  const extraCostsHtml = extraCostItems.length > 0 ? extraCostItems.map((item) => {
+    const price = item.admin_price_override ?? 0;
+    return `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <strong>${sanitizeHtml(item.block_name)}</strong>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+          ${formatCurrencyNL(price)}
+        </td>
+      </tr>
+    `;
+  }).join("") : "";
 
   const personalMessageHtml = personalMessage
     ? `
@@ -161,17 +189,18 @@ function generateQuoteEmailHtml(
             <thead>
               <tr style="background: #f9fafb;">
                 <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Activiteit</th>
-                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prijs p.p.</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prijs</th>
               </tr>
             </thead>
             <tbody>
               ${itemsHtml}
+              ${extraCostsHtml}
             </tbody>
             <tfoot>
               <tr style="background: #f9fafb;">
                 <td style="padding: 12px; font-weight: 600;">Geschat totaal (${numberOfPeople} pers.)</td>
                 <td style="padding: 12px; text-align: right; font-weight: 600; color: #1e3a5f;">
-                  ${formatCurrencyNL(totalEstimate * numberOfPeople)}
+                  ${formatCurrencyNL(totalEstimate)}
                 </td>
               </tr>
             </tfoot>
@@ -291,7 +320,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Fetch items
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
-      .select("block_name, block_category, provider_name, item_quote_status, admin_price_override, quoted_price, preferred_time")
+      .select("block_name, block_category, provider_name, item_quote_status, admin_price_override, quoted_price, preferred_time, price_type, day_index")
       .eq("request_id", requestId)
       .neq("status", "cancelled");
 

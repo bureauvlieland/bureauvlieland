@@ -153,6 +153,8 @@ interface ProgramRequestItem {
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  // Price type
+  price_type: string | null;
 }
 
 interface HistoryEntry {
@@ -946,6 +948,7 @@ const AdminRequestDetail = () => {
                                       overridePrice={item.admin_price_override}
                                       priceNotes={item.admin_price_notes}
                                       numberOfPeople={request.number_of_people}
+                                      priceType={item.price_type === "total" ? "total" : "per_person"}
                                       onSave={(price, notes) => handleItemPriceUpdate(item.id, price, notes)}
                                     />
                                   </TableCell>

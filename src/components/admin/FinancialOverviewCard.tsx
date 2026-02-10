@@ -17,6 +17,7 @@ interface ProgramRequestItem {
   admin_price_override?: number | null;
   item_quote_status?: string | null;
   day_index: number;
+  price_type?: string | null;
 }
 
 interface FinancialOverviewCardProps {
@@ -100,9 +101,17 @@ export const FinancialOverviewCard = ({
     credit: "Creditnota",
   };
 
+  // Helper to check if item price should be multiplied by number of people
+  const isPerPerson = (item: ProgramRequestItem) => {
+    return !item.price_type || item.price_type === "per_person";
+  };
+
   // Calculate quote mode totals (preliminary)
-  const quoteItemsTotal = quoteItems.reduce((sum, item) => sum + getItemPrice(item), 0);
-  const quoteSubtotalInclVat = (quoteItemsTotal * numberOfPeople) + coordinationFee;
+  const quoteItemsTotal = quoteItems.reduce((sum, item) => {
+    const price = getItemPrice(item);
+    return sum + (isPerPerson(item) ? price * numberOfPeople : price);
+  }, 0);
+  const quoteSubtotalInclVat = quoteItemsTotal + coordinationFee;
   const quoteSubtotalExclVat = quoteSubtotalInclVat / vatMultiplier;
   const quoteVat = quoteSubtotalInclVat - quoteSubtotalExclVat;
 
@@ -138,7 +147,7 @@ export const FinancialOverviewCard = ({
                   </div>
                   <span className="font-medium">
                     {getItemPrice(item) > 0 
-                      ? `${formatCurrency(getItemPrice(item))} p.p.` 
+                      ? `${formatCurrency(getItemPrice(item))}${isPerPerson(item) ? " p.p." : " totaal"}` 
                       : "Op aanvraag"
                     }
                   </span>
@@ -151,6 +160,16 @@ export const FinancialOverviewCard = ({
                 </div>
                 <span className="font-medium">{formatCurrency(coordinationFee)}</span>
               </div>
+              {/* Extra costs in quote section */}
+              {extraCostItems.length > 0 && extraCostItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Euro className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="truncate max-w-[180px]">{item.block_name}</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(item.admin_price_override ?? 0)} totaal</span>
+                </div>
+              ))}
             </div>
             <Separator className="my-3" />
             <div className="space-y-1">
@@ -164,7 +183,7 @@ export const FinancialOverviewCard = ({
               </div>
               <div className="flex justify-between font-semibold">
                 <span>Totaal incl. BTW (indicatief)</span>
-                <span>{formatCurrency(quoteSubtotalInclVat)}</span>
+                <span>{formatCurrency(quoteSubtotalInclVat + extraCostsTotal)}</span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
