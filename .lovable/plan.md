@@ -1,54 +1,45 @@
 
-# Afgewezen logiespartners notificeren
+# Datum en tijd toevoegen aan logies-offerte extra's
 
-## Probleem
-Wanneer een klant een logiesofferte kiest (`select-accommodation-quote`), worden andere openstaande offertes op `rejected` gezet (regel 130-141), maar de bijbehorende partners ontvangen hierover **geen notificatie**. Dit is onprofessioneel -- partners wachten dan onnodig op een reactie.
+## Wat verandert
+Extra diensten bij logiesoffertes (bijv. lunch, parkeren) krijgen twee optionele velden: **datum** en **tijdstip**. Hiermee kan een partner aangeven op welke dag (en eventueel hoe laat) een extra geldt. Admins kunnen deze velden ook aanpassen.
 
 ## Wijzigingen
 
-### 1. Edge Function: `select-accommodation-quote/index.ts`
-Na het afwijzen van de andere offertes (regel 130-141), de afgewezen partners ophalen en per partner een e-mail sturen:
+### 1. Database migratie
+Twee nieuwe kolommen toevoegen aan `accommodation_quote_extras`:
+- `service_date` (type `date`, nullable) -- de dag waarop de extra geldt
+- `service_time` (type `time without time zone`, nullable) -- optioneel tijdstip
 
-- **Ophalen afgewezen offertes**: Query de zojuist ge-update quotes met status `rejected` voor deze `request_id`, inclusief partnergegevens (`partner:partners(name, email)`)
-- **Per afgewezen partner een e-mail versturen** met:
-  - Klantnaam en periode
-  - Naam van de accommodatie waarvoor ze een offerte hadden gedaan
-  - Een vriendelijke tekst dat de klant voor een andere optie heeft gekozen
-  - Geen financiele details van de gekozen offerte (privacy)
-- **E-mail loggen** via de bestaande `logEmail()` utility met nieuw type
+### 2. TypeScript types bijwerken
+In `src/types/accommodationExtras.ts`:
+- `service_date: string | null` en `service_time: string | null` toevoegen aan `AccommodationQuoteExtra`
+- Dezelfde velden als optioneel toevoegen aan `AccommodationQuoteExtraInsert` en `AccommodationQuoteExtraUpdate`
 
-### 2. E-mail template constanten
-Toevoegen aan de bestaande constanten:
+### 3. Partner formulier: AddQuoteExtraDialog
+In `src/components/partner-portal/AddQuoteExtraDialog.tsx`:
+- Twee nieuwe velden toevoegen aan het formulier: een datumpicker en een tijdinvoer (type `time`)
+- Beide optioneel (de partner "kan" ze invullen)
+- Velden meesturen bij insert/update
 
-- **`email-templates.ts`**: Nieuw `TemplateIds.ACCOMMODATION_REJECTED_PARTNER` toevoegen
-- **`email-logger.ts`**: Nieuw `EmailTypes.ACCOMMODATION_REJECTED_PARTNER` toevoegen
+### 4. Partner weergave: QuoteExtrasList
+In `src/components/partner-portal/QuoteExtrasList.tsx`:
+- Datum en tijd tonen bij elke extra (indien ingevuld), bijv. "di 15 jul" en "12:30"
 
-Dit maakt het template ook beheerbaar via de admin e-mail templates pagina.
+### 5. Admin aanpassing
+De `QuoteExtrasList` component wordt al (of kan worden) gebruikt in de admin context met `readOnly={false}`. Dit betekent dat admins via dezelfde "Extra bewerken" dialog de datum en tijd kunnen aanpassen. Geen aparte admin-component nodig.
 
-### 3. Partner Portal weergave
-De partner ziet al een status "Niet gekozen" badge in het overzicht (`PartnerAccommodationRequestCard.tsx`). Geen aanvullende UI-wijziging nodig.
+## Technisch
 
-## Technisch detail
-
-### E-mail inhoud (fallback HTML)
-```
-Onderwerp: Logiesaanvraag [klantnaam] - niet gekozen
-
-Beste [partnernaam],
-
-Wij laten u weten dat de klant [klantnaam] voor de periode
-[aankomst] - [vertrek] voor een andere accommodatie heeft gekozen.
-
-Uw offerte voor [accommodatienaam] wordt hiermee afgesloten.
-
-Bedankt voor het uitbrengen van uw offerte. Wij hopen u bij een
-volgende aanvraag weer te mogen benaderen.
-
-Met vriendelijke groet,
-Bureau Vlieland
+### Migratie SQL
+```sql
+ALTER TABLE accommodation_quote_extras
+  ADD COLUMN service_date date,
+  ADD COLUMN service_time time without time zone;
 ```
 
 ### Bestanden die worden gewijzigd
-- `supabase/functions/select-accommodation-quote/index.ts` -- e-mails versturen naar afgewezen partners
-- `supabase/functions/_shared/email-templates.ts` -- nieuw template ID
-- `supabase/functions/_shared/email-logger.ts` -- nieuw email type
+- **Database**: nieuwe migratie voor twee kolommen
+- `src/types/accommodationExtras.ts` -- type-uitbreiding
+- `src/components/partner-portal/AddQuoteExtraDialog.tsx` -- datum/tijd velden in formulier
+- `src/components/partner-portal/QuoteExtrasList.tsx` -- datum/tijd tonen in lijst
