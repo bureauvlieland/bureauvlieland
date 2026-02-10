@@ -47,6 +47,7 @@ interface ProgramRequest {
 
 interface ProgramItem {
   id: string;
+  block_id: string | null;
   block_name: string;
   block_category: string;
   block_type: string;
@@ -70,6 +71,7 @@ const AdminQuotePreview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
 
   // Form state
   const defaultValidUntil = addDays(new Date(), 14);
@@ -108,7 +110,22 @@ const AdminQuotePreview = () => {
         .order("day_index", { ascending: true });
 
       if (itemsError) throw itemsError;
-      setItems(itemsData as ProgramItem[]);
+      const fetchedItems = itemsData as ProgramItem[];
+      setItems(fetchedItems);
+
+      // Fetch VAT rates from building_blocks
+      const blockIds = fetchedItems.map(i => i.block_id).filter(Boolean) as string[];
+      if (blockIds.length > 0) {
+        const { data: blocks } = await supabase
+          .from("building_blocks")
+          .select("id, vat_rate")
+          .in("id", blockIds);
+        if (blocks) {
+          const map: Record<string, number> = {};
+          blocks.forEach(b => { map[b.id] = b.vat_rate ?? 21; });
+          setVatRateMap(map);
+        }
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Fout bij laden offerte");
@@ -137,21 +154,45 @@ const AdminQuotePreview = () => {
     return unitPrice;
   };
 
+  const getItemVatRate = (item: ProgramItem): number => {
+    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
+      return vatRateMap[item.block_id];
+    }
+    return 21;
+  };
+
   const calculateTotals = () => {
-    const itemsTotal = items.reduce((sum, item) => sum + getItemTotal(item), 0);
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
-    
-    const subtotalInclVat = itemsTotal + bureauFee;
-    const subtotalExclVat = subtotalInclVat / 1.21;
-    const vatAmount = subtotalInclVat - subtotalExclVat;
-    
-    return { 
-      itemsTotal, 
-      bureauFee, 
-      subtotalInclVat,
-      subtotalExclVat,
-      vatAmount,
-    };
+
+    // Group amounts by VAT rate
+    const vatGroups: Record<number, number> = {};
+    items.forEach(item => {
+      const total = getItemTotal(item);
+      const rate = getItemVatRate(item);
+      vatGroups[rate] = (vatGroups[rate] || 0) + total;
+    });
+    // Bureau fee is always 21%
+    vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
+
+    let totalExclVat = 0;
+    let totalVat = 0;
+    const vatLines: { rate: number; exclVat: number; vatAmount: number }[] = [];
+
+    Object.entries(vatGroups)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .forEach(([rateStr, amountInclVat]) => {
+        const rate = Number(rateStr);
+        const exclVat = amountInclVat / (1 + rate / 100);
+        const vatAmount = amountInclVat - exclVat;
+        vatLines.push({ rate, exclVat, vatAmount });
+        totalExclVat += exclVat;
+        totalVat += vatAmount;
+      });
+
+    const itemsTotal = items.reduce((sum, item) => sum + getItemTotal(item), 0);
+    const totalInclVat = totalExclVat + totalVat;
+
+    return { itemsTotal, bureauFee, totalExclVat, totalVat, totalInclVat, vatLines };
   };
 
   // Helper function to convert blob to base64
@@ -530,15 +571,17 @@ const AdminQuotePreview = () => {
                         <Separator className="my-2" />
                         <div className="flex justify-between text-sm mb-1">
                           <span>Subtotaal excl. BTW</span>
-                          <span>{formatCurrency(totals.subtotalExclVat)}</span>
+                          <span>{formatCurrency(totals.totalExclVat)}</span>
                         </div>
-                        <div className="flex justify-between text-sm mb-2 text-gray-500">
-                          <span>BTW (21%)</span>
-                          <span>{formatCurrency(totals.vatAmount)}</span>
-                        </div>
+                        {totals.vatLines.map((line) => (
+                          <div key={line.rate} className="flex justify-between text-sm mb-1 text-gray-500">
+                            <span>BTW ({line.rate}%)</span>
+                            <span>{formatCurrency(line.vatAmount)}</span>
+                          </div>
+                        ))}
                         <div className="flex justify-between font-bold text-lg text-[#1e3a5f]">
                           <span>Totaal incl. BTW</span>
-                          <span>{formatCurrency(totals.subtotalInclVat)}</span>
+                          <span>{formatCurrency(totals.totalInclVat)}</span>
                         </div>
                       </div>
 
