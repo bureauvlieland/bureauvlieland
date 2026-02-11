@@ -3,6 +3,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -38,6 +53,7 @@ import {
   useUpdateTemplate,
   useDeleteTemplate,
   useDeleteTemplateItem,
+  useUpdateTemplateItem,
   useTemplateWithItems,
 } from "@/hooks/useProgramTemplates";
 import { Loader2, Trash2, Plus, Clock, GripVertical } from "lucide-react";
@@ -54,6 +70,78 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddTemplateItemDialog } from "./AddTemplateItemDialog";
+
+// Sortable item row component
+const SortableTemplateItem = ({ 
+  item, 
+  onDelete, 
+  isDeleting 
+}: { 
+  item: ProgramTemplateItem; 
+  onDelete: (id: string) => void; 
+  isDeleting: boolean;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg group"
+    >
+      <GripVertical 
+        className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab" 
+        {...attributes}
+        {...listeners}
+      />
+      
+      {item.block && (
+        <div className="h-10 w-14 rounded overflow-hidden bg-muted flex-shrink-0">
+          <img
+            src={getBlockImage(item.block)}
+            alt={item.block.name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+      
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">
+          {item.block?.name || item.block_id}
+        </p>
+        {item.preferred_time && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {item.preferred_time}
+          </p>
+        )}
+      </div>
+      
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => onDelete(item.id)}
+        disabled={isDeleting}
+      >
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
+};
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
@@ -91,7 +179,14 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
   const updateTemplate = useUpdateTemplate();
   const deleteTemplate = useDeleteTemplate();
   const deleteItem = useDeleteTemplateItem();
+  const updateItem = useUpdateTemplateItem();
   
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
+
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -212,8 +307,35 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
   const durationDays = form.watch("duration_days");
   for (let i = 0; i < durationDays; i++) {
     itemsByDay[i] = currentTemplate?.items?.filter(item => item.day_index === i)
-      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)) || [];
+      .sort((a, b) => {
+        if (a.preferred_time && b.preferred_time) {
+          return a.preferred_time.localeCompare(b.preferred_time);
+        }
+        return (a.sort_order || 0) - (b.sort_order || 0);
+      }) || [];
   }
+  
+  const handleDragEnd = async (event: DragEndEvent, dayIndex: number) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    
+    const dayItems = itemsByDay[dayIndex];
+    if (!dayItems) return;
+    
+    const oldIndex = dayItems.findIndex(i => i.id === active.id);
+    const newIndex = dayItems.findIndex(i => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    
+    const reordered = [...dayItems];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    
+    for (let i = 0; i < reordered.length; i++) {
+      if (reordered[i].sort_order !== i) {
+        await updateItem.mutateAsync({ id: reordered[i].id, updates: { sort_order: i } });
+      }
+    }
+  };
   
   return (
     <>
@@ -456,48 +578,27 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
                               Nog geen bouwstenen voor deze dag
                             </p>
                           ) : (
-                            <div className="space-y-2">
-                              {itemsByDay[dayIndex]?.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg group"
-                                >
-                                  <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-move" />
-                                  
-                                  {item.block && (
-                                    <div className="h-10 w-14 rounded overflow-hidden bg-muted flex-shrink-0">
-                                      <img
-                                        src={getBlockImage(item.block)}
-                                        alt={item.block.name}
-                                        className="h-full w-full object-cover"
-                                      />
-                                    </div>
-                                  )}
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm truncate">
-                                      {item.block?.name || item.block_id}
-                                    </p>
-                                    {item.preferred_time && (
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        {item.preferred_time}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteItem(item.id)}
-                                    disabled={deleteItem.isPending}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={(event) => handleDragEnd(event, dayIndex)}
+                            >
+                              <SortableContext
+                                items={itemsByDay[dayIndex]?.map(i => i.id) || []}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="space-y-2">
+                                  {itemsByDay[dayIndex]?.map((item) => (
+                                    <SortableTemplateItem
+                                      key={item.id}
+                                      item={item}
+                                      onDelete={handleDeleteItem}
+                                      isDeleting={deleteItem.isPending}
+                                    />
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
+                              </SortableContext>
+                            </DndContext>
                           )}
                           
                           {dayIndex < durationDays - 1 && <Separator />}
@@ -573,7 +674,7 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
           templateId={currentTemplate.id}
           dayIndex={selectedDayIndex}
           durationDays={durationDays}
-          existingBlockIds={currentTemplate.items?.map(i => i.block_id) || []}
+          
         />
       )}
     </>
