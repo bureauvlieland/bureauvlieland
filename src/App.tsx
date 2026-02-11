@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import ComingSoon from "./pages/ComingSoon";
 import Catering from "./pages/Catering";
 import Voorbeeldprogrammas from "./pages/Voorbeeldprogrammas";
+import VoorbeeldprogrammaOverzicht from "./pages/VoorbeeldprogrammaOverzicht";
 import Programmas from "./pages/Programmas";
 import Diensten from "./pages/Diensten";
 import VoorWie from "./pages/VoorWie";
@@ -98,6 +99,7 @@ const App = () => {
             <Route path="/voor-wie" element={<VoorWie />} />
             <Route path="/samenwerken" element={<Programmas />} />
             <Route path="/bouwstenen" element={<Voorbeeldprogrammas />} />
+            <Route path="/voorbeeldprogrammas" element={<VoorbeeldprogrammaOverzicht />} />
             <Route path="/catering" element={<Catering />} />
             <Route path="/over-ons" element={<OverOns />} />
             <Route path="/evenementen" element={<Evenementen />} />
