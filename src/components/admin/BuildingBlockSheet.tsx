@@ -43,6 +43,7 @@ import {
 import { Loader2, Trash2, ImageIcon } from "lucide-react";
 import type { BuildingBlock, BuildingBlockStatus } from "@/types/buildingBlock";
 import { statusLabels } from "@/types/buildingBlock";
+import { LocationPicker } from "./LocationPicker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,6 +89,9 @@ const formSchema = z.object({
   sort_order: z.coerce.number(),
   seasonal_notes: z.string().optional(),
   tags: z.string().optional(),
+  location_lat: z.coerce.number().nullable().optional(),
+  location_lng: z.coerce.number().nullable().optional(),
+  location_address: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -159,6 +163,9 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       sort_order: 0,
       seasonal_notes: "",
       tags: "",
+      location_lat: null,
+      location_lng: null,
+      location_address: "",
     },
   });
   
@@ -198,6 +205,9 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         sort_order: block.sort_order ?? 0,
         seasonal_notes: block.seasonal_notes || "",
         tags: block.tags?.join(", ") || "",
+        location_lat: block.location_lat ?? null,
+        location_lng: block.location_lng ?? null,
+        location_address: block.location_address || "",
       });
     } else {
       form.reset({
@@ -233,6 +243,9 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         sort_order: 0,
         seasonal_notes: "",
         tags: "",
+        location_lat: null,
+        location_lng: null,
+        location_address: "",
       });
     }
   }, [block, form]);
@@ -345,9 +358,10 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
           <Form {...form} key={formKey}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
               <Tabs defaultValue="general">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="general">Algemeen</TabsTrigger>
                   <TabsTrigger value="pricing">Prijzen</TabsTrigger>
+                  <TabsTrigger value="location">Locatie</TabsTrigger>
                   <TabsTrigger value="media">Media</TabsTrigger>
                 </TabsList>
                 
@@ -888,6 +902,26 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                   />
                 </TabsContent>
                 
+                {/* Location Tab */}
+                <TabsContent value="location" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Startlocatie op de kaart</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Klik op de kaart of zoek een adres om de locatie van deze activiteit in te stellen.
+                    </p>
+                  </div>
+                  <LocationPicker
+                    lat={form.watch("location_lat") ?? null}
+                    lng={form.watch("location_lng") ?? null}
+                    address={form.watch("location_address") || ""}
+                    onChange={(lat, lng, address) => {
+                      form.setValue("location_lat", lat);
+                      form.setValue("location_lng", lng);
+                      form.setValue("location_address", address);
+                    }}
+                  />
+                </TabsContent>
+
                 {/* Media Tab */}
                 <TabsContent value="media" className="space-y-4 mt-4">
                   <FormField

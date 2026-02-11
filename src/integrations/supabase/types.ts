@@ -503,6 +503,9 @@ export type Database = {
           is_active: boolean | null
           is_from_price: boolean | null
           is_published: boolean | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
           max_people: number | null
           min_people: number | null
           name: string
@@ -543,6 +546,9 @@ export type Database = {
           is_active?: boolean | null
           is_from_price?: boolean | null
           is_published?: boolean | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           max_people?: number | null
           min_people?: number | null
           name: string
@@ -583,6 +589,9 @@ export type Database = {
           is_active?: boolean | null
           is_from_price?: boolean | null
           is_published?: boolean | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           max_people?: number | null
           min_people?: number | null
           name?: string

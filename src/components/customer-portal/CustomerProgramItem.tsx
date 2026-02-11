@@ -18,7 +18,7 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -347,6 +347,13 @@ export const CustomerProgramItem = ({
           
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
+            {/* Location */}
+            {(item as any).location_address && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span>{(item as any).location_address}</span>
+              </div>
+            )}
             {/* Price details */}
             {item.quoted_price && vatRate !== undefined && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
