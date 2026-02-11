@@ -1,73 +1,64 @@
 
 
-# Plan: Template "Avontuur & Ontspanning" vullen + 4 bugfixes in template-editor
+# Plan: Dynamische Voorbeeldprogramma's pagina
 
-## 1. Template "Avontuur & Ontspanning" invullen (database)
+## Wat wordt gebouwd
 
-Twee dagen vol avontuur en ontspanning op Vlieland:
+Een nieuwe pagina `/voorbeeldprogrammas` die alle gepubliceerde programma-templates dynamisch uit de database ophaalt en presenteert met een visuele tijdlijn, foto's, verhalende beschrijvingen en een directe CTA naar de configurator. Wanneer je in de admin templates toevoegt, wijzigt of verwijdert, wordt dit automatisch doorgevoerd op de website.
 
-**Dag 1 -- Avontuur**
-| Tijd  | Activiteit |
-|-------|-----------|
-| 09:00 | Overtocht met Rederij Doeksen (`boot-retour`) |
-| 10:45 | Fietshuur (`fiets-huur`) |
-| 11:00 | RescueBoat Transfer (`rescueboat`) |
-| 12:30 | Lunch in de natuur (`lunch-strand`) |
-| 14:00 | Branding Raften (`voc-branding-raften`) |
-| 16:30 | Borrel & Hapjes (`borrel`) |
-| 18:30 | Strand BBQ (`strand-bbq`) |
+## Pagina-structuur
 
-**Dag 2 -- Ontspanning**
-| Tijd  | Activiteit |
-|-------|-----------|
-| 09:30 | Fietstocht met begeleiding (`fietstocht-met-begeleiding`) |
-| 11:30 | Zeehondentocht (`zeehondentocht`) |
-| 13:00 | Luncharrangement (`luncharrangement`) |
-| 14:30 | Vuurtorenbezoek (`vuurtoren`) |
-| 16:00 | Rondleiding Brouwerij Fortuna (`rondleiding-brouwerij-fortuna`) |
-| 17:30 | Overtocht retour (`boot-retour`) |
+### Hero-sectie
+- Pakkende titel "Kant-en-klare Programma's" met Ken Burns-achtergrondbeeld
+- Subtekst die uitnodigt om een programma te kiezen of zelf samen te stellen
+- CTA-knop naar `/programma-samenstellen`
 
-Na het invoegen wordt de template gepubliceerd (`is_published = true`).
+### Template-overzichtskaarten
+- Dynamisch grid van alle gepubliceerde templates (via `usePublishedTemplates()`)
+- Per kaart: naam, korte beschrijving, duur-badge, doelgroep-badge, indicatieve prijs, thumbnail
+- Klik scrollt naar de bijbehorende tijdlijnsectie
 
-## 2. Drag-and-drop voor items (AdminTemplateSheet.tsx)
+### Tijdlijnsecties per template
+- Per gepubliceerd template een sectie met verhalende introductie (uit `description`)
+- Verticale tijdlijn per dag, met items uit `program_template_items` + gekoppelde `building_blocks` data
+- Per item: tijdstip, naam, korte beschrijving, foto (via `getBlockImage()`), duur-badge
+- Desktop: afwisselend links/rechts. Mobiel: lineair
+- Onderaan elke tijdlijn: CTA-knop "Gebruik dit programma" die navigeert naar `/programma-samenstellen?template={id}`
 
-Momenteel toont de GripVertical-icoon puur visueel maar er zit geen dnd-kit logica achter. Oplossing:
-- `@dnd-kit/core` en `@dnd-kit/sortable` importeren (al geinstalleerd)
-- De itemlijst per dag wrappen in `DndContext` + `SortableContext`
-- Elk item-row een `useSortable` hook geven
-- Bij `onDragEnd`: de `sort_order` van de betrokken items updaten in de database via `useUpdateTemplateItem`
+### Afsluitende CTA
+- Sectie voor bezoekers die geen passend template zien: "Stel zelf samen" link naar configurator
 
-## 3. Sorteren op tijd (AdminTemplateSheet.tsx)
+## Dynamisch gedrag
 
-Items worden nu gesorteerd op `sort_order`. Wijzigen naar sortering op `preferred_time` (als fallback op `sort_order`):
-```typescript
-.sort((a, b) => {
-  if (a.preferred_time && b.preferred_time) {
-    return a.preferred_time.localeCompare(b.preferred_time);
-  }
-  return (a.sort_order || 0) - (b.sort_order || 0);
-})
-```
+Alle data wordt opgehaald via de bestaande React Query hooks:
+- `usePublishedTemplates()` voor het overzicht (alleen `is_published = true`)
+- `useTemplateWithItems(id)` per template voor de volledige tijdlijn met bouwsteendata
 
-## 4. Bouwstenen meerdere keren toestaan (AddTemplateItemDialog.tsx)
+Omdat React Query standaard cached en refetcht, worden admin-wijzigingen automatisch zichtbaar bij het herladen van de pagina. Geen hardcoded content -- alles komt uit de database.
 
-De huidige code blokkeert bouwstenen die al in de template zitten (`existingBlockIds` check). Oplossing:
-- De `existingBlockIds` prop en de `isAlreadyInTemplate`-check verwijderen
-- Alle actieve bouwstenen altijd selecteerbaar maken
-- Prop verwijderen uit `AdminTemplateSheet.tsx` regel 576
+## Technisch
 
-## 5. Tijd instellen op 5 minuten nauwkeurig (AddTemplateItemDialog.tsx)
+### Nieuwe bestanden
+- **`src/pages/VoorbeeldprogrammaOverzicht.tsx`** -- Nieuwe pagina met hero, overzichtskaarten en per-template tijdlijnsecties
+- **`src/components/programmas/ProgramTimeline.tsx`** -- Herbruikbare tijdlijn-component die een template met items rendert als visuele verticale tijdlijn
 
-De HTML `<input type="time">` heeft standaard 1-minuut stappen. Oplossing:
-- `step="300"` attribuut toevoegen (300 seconden = 5 minuten)
-- Dit geldt voor zowel de AddTemplateItemDialog als eventuele andere tijdinputs
+### Aanpassingen bestaande bestanden
+- **`src/App.tsx`** -- Route `/voorbeeldprogrammas` toevoegen met import van nieuwe pagina
+- **`src/components/Navigation.tsx`** -- Navigatie-item "Voorbeeldprogramma's" toevoegen (onder de huidige "Bouwstenen" link of als vervanging)
 
-## Technisch overzicht
+### Data-flow
+1. Pagina laadt --> `usePublishedTemplates()` haalt alle gepubliceerde templates op
+2. Per template wordt `useTemplateWithItems(id)` aangeroepen voor de items + building block data
+3. Items worden gegroepeerd op `day_index` en gesorteerd op `preferred_time` (fallback `sort_order`)
+4. Per item wordt `getBlockImage(block)` gebruikt voor de afbeelding
 
-**Bestanden:**
-- `src/components/admin/AdminTemplateSheet.tsx` -- drag-and-drop toevoegen, tijdsortering, `existingBlockIds` prop verwijderen
-- `src/components/admin/AddTemplateItemDialog.tsx` -- duplicate-check verwijderen, `step="300"` op time input
-- Database: INSERT items voor avontuur-ontspanning template + UPDATE publish status
+### Bestaande hergebruikte code
+- `usePublishedTemplates()` en `useTemplateWithItems()` uit `src/hooks/useProgramTemplates.ts`
+- `getBlockImage()` uit `src/lib/buildingBlockUtils.ts`
+- `useKenBurns()` hook voor hero-animatie
+- Helmet voor SEO meta-tags
 
-**Dependencies:** Geen nieuwe -- `@dnd-kit/core` en `@dnd-kit/sortable` zijn al geinstalleerd.
+### SEO
+- React Helmet met titel, beschrijving en canonical URL
+- Breadcrumb-navigatie consistent met andere pagina's
 
