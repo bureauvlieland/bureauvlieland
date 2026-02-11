@@ -83,7 +83,8 @@ const PartnerBlocksContent = () => {
           price_pet, price_pet_note, 
           min_people, max_people, is_published, is_active, status,
           image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-          seasonal_notes, tags
+          seasonal_notes, tags, location_lat, location_lng, location_address,
+          external_url, price_display_override, sort_order
         `)
         .eq("provider_id", currentPartnerId)
         .order("name");
@@ -133,7 +134,8 @@ const PartnerBlocksContent = () => {
         price_pet, price_pet_note, 
         min_people, max_people, is_published, is_active, status,
         image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-        seasonal_notes, tags
+        seasonal_notes, tags, location_lat, location_lng, location_address,
+        external_url, price_display_override, sort_order
       `)
       .eq("provider_id", partnerId)
       .order("name");
