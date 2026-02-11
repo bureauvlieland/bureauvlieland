@@ -64,17 +64,30 @@ const CustomerProgram = () => {
   const pendingChanges = getPendingChanges();
   const hasChanges = pendingChanges.length > 0;
 
-  // Parse dates
+  // Parse dates, with defensive check for items beyond the date array
   const selectedDates = useMemo(() => {
     if (!program?.selected_dates) return [];
-    return program.selected_dates.map((d: string) => {
+    const parsed = program.selected_dates.map((d: string) => {
       try {
         return parseISO(d);
       } catch {
         return new Date(d);
       }
     });
-  }, [program?.selected_dates]);
+
+    // If items exist with a day_index beyond the dates array, generate placeholder dates
+    if (program?.items) {
+      const maxDayIndex = Math.max(...program.items.filter((i: any) => i.status !== "cancelled").map((i: any) => i.day_index), -1);
+      while (parsed.length <= maxDayIndex && parsed.length > 0) {
+        const lastDate = parsed[parsed.length - 1];
+        const nextDate = new Date(lastDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        parsed.push(nextDate);
+      }
+    }
+
+    return parsed;
+  }, [program?.selected_dates, program?.items]);
 
   // Items per day
   const itemCountPerDay = useMemo(() => {
