@@ -79,7 +79,19 @@ const AdminQuotePreview = () => {
   const [personalMessage, setPersonalMessage] = useState("");
 
   useEffect(() => {
-    if (id) fetchData();
+    if (!id) return;
+    let fetched = false;
+    const doFetch = () => {
+      if (!fetched) { fetched = true; fetchData(); }
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) doFetch();
+      else if (event === 'SIGNED_OUT') navigate("/admin/projecten");
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) doFetch();
+    });
+    return () => subscription.unsubscribe();
   }, [id]);
 
   const fetchData = async () => {
@@ -89,9 +101,14 @@ const AdminQuotePreview = () => {
         .from("program_requests")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (requestError) throw requestError;
+      if (!requestData) {
+        toast.error("Aanvraag niet gevonden");
+        navigate("/admin/projecten");
+        return;
+      }
       setRequest(requestData as ProgramRequest);
 
       // Set existing values if present
