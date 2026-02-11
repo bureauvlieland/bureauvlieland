@@ -102,6 +102,13 @@ const PartnerLogin = () => {
           return;
         }
 
+        // Mark partner as activated on first login
+        try {
+          await supabase.functions.invoke("update-partner-password-set");
+        } catch (err) {
+          console.error("Error updating password_set_at:", err);
+        }
+
         toast({
           title: `Welkom ${partner.name}!`,
           description: "U bent succesvol ingelogd.",
