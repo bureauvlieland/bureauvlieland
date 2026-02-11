@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { format, addDays } from "date-fns";
+import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -42,6 +42,7 @@ interface ProgramRequest {
   customer_company: string | null;
   number_of_people: number;
   selected_dates: string[];
+  linked_accommodation_id: string | null;
   billing_company_name: string | null;
   billing_address_street: string | null;
   billing_address_postal: string | null;
@@ -65,6 +66,26 @@ interface ProgramItem {
   status: string;
 }
 
+interface AccommodationQuoteData {
+  id: string;
+  accommodation_name: string;
+  partner_id: string;
+  price_total: number;
+  price_per_person_per_night: number | null;
+  vat_rate: number;
+  price_includes_vat: boolean;
+  partner_name: string;
+}
+
+interface AccommodationExtraData {
+  name: string;
+  description: string | null;
+  quantity: number;
+  unit_price: number;
+  pricing_type: string;
+  vat_rate: number;
+}
+
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
 
@@ -79,6 +100,11 @@ const AdminInvoicePreview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+
+  // Accommodation state
+  const [accommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
+  const [accommodationExtras, setAccommodationExtras] = useState<AccommodationExtraData[]>([]);
+  const [accommodationNights, setAccommodationNights] = useState(0);
 
   // Form state
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -140,6 +166,65 @@ const AdminInvoicePreview = () => {
         }
       }
 
+      // Fetch accommodation data if linked
+      const linkedAccId = requestData.linked_accommodation_id;
+      if (linkedAccId) {
+        // Get accommodation request for dates
+        const { data: accRequest } = await supabase
+          .from("accommodation_requests")
+          .select("arrival_date, departure_date")
+          .eq("id", linkedAccId)
+          .maybeSingle();
+
+        if (accRequest) {
+          const nights = differenceInCalendarDays(
+            new Date(accRequest.departure_date),
+            new Date(accRequest.arrival_date)
+          );
+          setAccommodationNights(nights);
+        }
+
+        // Get active quote
+        const { data: quoteData } = await supabase
+          .from("accommodation_quotes")
+          .select("id, accommodation_name, partner_id, price_total, price_per_person_per_night, vat_rate, price_includes_vat")
+          .eq("request_id", linkedAccId)
+          .in("status", ["selected", "submitted"])
+          .maybeSingle();
+
+        if (quoteData) {
+          // Fetch partner name
+          const { data: partnerData } = await supabase
+            .from("partners")
+            .select("name")
+            .eq("id", quoteData.partner_id)
+            .maybeSingle();
+
+          setAccommodationQuote({
+            ...quoteData,
+            vat_rate: quoteData.vat_rate ?? 9,
+            price_includes_vat: quoteData.price_includes_vat ?? true,
+            partner_name: partnerData?.name || "Onbekend",
+          } as AccommodationQuoteData);
+
+          // Fetch extras
+          const { data: extrasData } = await supabase
+            .from("accommodation_quote_extras")
+            .select("name, description, quantity, unit_price, pricing_type, vat_rate")
+            .eq("quote_id", quoteData.id)
+            .order("sort_order", { ascending: true });
+
+          if (extrasData) {
+            setAccommodationExtras(
+              extrasData.map(e => ({
+                ...e,
+                vat_rate: e.vat_rate ?? 9,
+              })) as AccommodationExtraData[]
+            );
+          }
+        }
+      }
+
       // Generate invoice number suggestion
       const ref = requestData.reference_number || "XXXX";
       setInvoiceNumber(`FV-${ref}-001`);
@@ -161,6 +246,11 @@ const AdminInvoicePreview = () => {
       return unitPrice * (request?.number_of_people || 1);
     }
     return unitPrice;
+  };
+
+  const getExtraTotal = (extra: AccommodationExtraData) => {
+    if (extra.pricing_type === "fixed") return extra.unit_price;
+    return extra.unit_price * extra.quantity;
   };
 
   // Group items by category
@@ -197,6 +287,19 @@ const AdminInvoicePreview = () => {
     });
     // Bureau fee is always 21%
     vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
+
+    // Add accommodation quote
+    if (accommodationQuote) {
+      const rate = accommodationQuote.vat_rate;
+      vatGroups[rate] = (vatGroups[rate] || 0) + accommodationQuote.price_total;
+    }
+
+    // Add accommodation extras
+    accommodationExtras.forEach(extra => {
+      const total = getExtraTotal(extra);
+      const rate = extra.vat_rate;
+      vatGroups[rate] = (vatGroups[rate] || 0) + total;
+    });
 
     let totalExclVat = 0;
     let totalVat = 0;
@@ -283,6 +386,8 @@ const AdminInvoicePreview = () => {
     request.billing_address_street,
     [request.billing_address_postal, request.billing_address_city].filter(Boolean).join(" "),
   ].filter(Boolean);
+
+  const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + accommodationExtras.length;
 
   return (
     <>
@@ -387,7 +492,7 @@ const AdminInvoicePreview = () => {
 
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Ontvanger: {billingName}</p>
-                  <p>Posten: {items.length} items</p>
+                  <p>Posten: {totalItemCount} items{accommodationQuote ? " (incl. logies)" : ""}</p>
                   <p>Totaal: {formatCurrency(totals.totalInclVat)}</p>
                 </div>
               </CardContent>
@@ -530,6 +635,80 @@ const AdminInvoicePreview = () => {
                               </React.Fragment>
                             );
                           })}
+
+                          {/* Accommodation / Logies section */}
+                          {accommodationQuote && (
+                            <>
+                              <tr>
+                                <td
+                                  colSpan={4}
+                                  className="py-2 px-3 font-semibold text-xs uppercase tracking-wider border-b"
+                                  style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+                                >
+                                  Logies
+                                </td>
+                              </tr>
+                              <tr className="border-b border-gray-100">
+                                <td className="py-2 px-3">
+                                  <p className="font-medium">{accommodationQuote.accommodation_name}</p>
+                                  <p className="text-xs text-gray-400">{accommodationQuote.partner_name}</p>
+                                  {accommodationNights > 0 && (
+                                    <p className="text-xs text-gray-400">{accommodationNights} {accommodationNights === 1 ? "nacht" : "nachten"}</p>
+                                  )}
+                                </td>
+                                <td className="py-2 px-3 text-right">1</td>
+                                <td className="py-2 px-3 text-right">
+                                  {formatCurrency(accommodationQuote.price_total)}
+                                  <span className="text-xs text-gray-400 ml-1">totaal</span>
+                                </td>
+                                <td className="py-2 px-3 text-right font-medium">
+                                  {formatCurrency(accommodationQuote.price_total)}
+                                </td>
+                              </tr>
+                            </>
+                          )}
+
+                          {/* Accommodation extras */}
+                          {accommodationExtras.length > 0 && (
+                            <>
+                              <tr>
+                                <td
+                                  colSpan={4}
+                                  className="py-2 px-3 font-semibold text-xs uppercase tracking-wider border-b"
+                                  style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+                                >
+                                  Extra's bij logies
+                                </td>
+                              </tr>
+                              {accommodationExtras.map((extra, idx) => {
+                                const extraTotal = getExtraTotal(extra);
+                                const isFixed = extra.pricing_type === "fixed";
+
+                                return (
+                                  <tr key={`extra-${idx}`} className="border-b border-gray-100">
+                                    <td className="py-2 px-3">
+                                      <p className="font-medium">{extra.name}</p>
+                                      {extra.description && (
+                                        <p className="text-xs text-gray-500">{extra.description}</p>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3 text-right">
+                                      {isFixed ? 1 : extra.quantity}
+                                    </td>
+                                    <td className="py-2 px-3 text-right">
+                                      {formatCurrency(extra.unit_price)}
+                                      {!isFixed && (
+                                        <span className="text-xs text-gray-400 ml-1">p.p.</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3 text-right font-medium">
+                                      {formatCurrency(extraTotal)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </>
+                          )}
 
                           {/* Coordination fee */}
                           {totals.bureauFee > 0 && (
