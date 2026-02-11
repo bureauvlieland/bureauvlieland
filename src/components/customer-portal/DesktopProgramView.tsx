@@ -28,6 +28,7 @@ import {
   Plus,
   BedDouble,
   MoreHorizontal,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateExclVat } from "@/lib/appSettings";
+import { ProgramPdfDownload } from "./ProgramPdfDownload";
 
 interface DesktopProgramViewProps {
   invoicingMode?: string;
@@ -287,6 +289,15 @@ export const DesktopProgramView = ({
                   Programma
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  <ProgramPdfDownload
+                    customerName={program.customer_name}
+                    customerCompany={program.customer_company}
+                    selectedDates={selectedDates}
+                    numberOfPeople={program.number_of_people}
+                    items={program.items}
+                    referenceNumber={program.reference_number}
+                    variant="sm"
+                  />
                   {!termsAccepted && (
                     <Button
                       variant="outline"

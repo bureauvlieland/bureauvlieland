@@ -65,6 +65,11 @@ export interface BuildingBlock {
   is_active: boolean;
   sort_order: number;
   
+  // Location
+  location_lat: number | null;
+  location_lng: number | null;
+  location_address: string | null;
+  
   // Extra metadata
   tags: string[] | null;
   seasonal_notes: string | null;
@@ -105,6 +110,9 @@ export interface BuildingBlockFormData {
   is_published: boolean;
   is_active: boolean;
   sort_order: number;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_address: string;
   tags: string[];
   seasonal_notes: string;
 }

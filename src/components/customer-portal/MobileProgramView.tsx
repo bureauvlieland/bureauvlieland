@@ -40,6 +40,7 @@ import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateExclVat } from "@/lib/appSettings";
+import { ProgramPdfDownload } from "./ProgramPdfDownload";
 
 interface MobileProgramViewProps {
   invoicingMode?: string;
@@ -305,27 +306,36 @@ export const MobileProgramView = ({
         id="program"
         title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
-        badge={
-          <div className="flex items-center gap-2 ml-auto">
-            {!termsAccepted && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsAddActivityOpen(true);
-                }}
-                className="h-7 text-xs"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Toevoegen
-              </Button>
-            )}
-            <Badge variant="secondary">
-              {statusSummary.total} activiteiten
-            </Badge>
-          </div>
-        }
+          badge={
+            <div className="flex items-center gap-2 ml-auto">
+              <ProgramPdfDownload
+                customerName={program.customer_name}
+                customerCompany={program.customer_company}
+                selectedDates={selectedDates}
+                numberOfPeople={program.number_of_people}
+                items={program.items}
+                referenceNumber={program.reference_number}
+                variant="sm"
+              />
+              {!termsAccepted && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAddActivityOpen(true);
+                  }}
+                  className="h-7 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Toevoegen
+                </Button>
+              )}
+              <Badge variant="secondary">
+                {statusSummary.total} activiteiten
+              </Badge>
+            </div>
+          }
         defaultOpen
       >
         {selectedDates.length > 1 ? (

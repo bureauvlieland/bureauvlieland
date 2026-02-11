@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, Users, Info } from "lucide-react";
+import { Plus, Clock, Users, Info, MapPin } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
 import { getBlockImage, getProviderName, isSelfArranged } from "@/lib/buildingBlockUtils";
@@ -57,6 +57,12 @@ export const BuildingBlockListItem = ({ block, onAdd, isInCart }: BuildingBlockL
           <span className="text-xs text-muted-foreground">
             Door: {getProviderName(block)}
           </span>
+          {block.location_address && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              <span className="truncate max-w-[120px]">{block.location_address}</span>
+            </span>
+          )}
         </div>
       </div>
 
