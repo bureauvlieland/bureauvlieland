@@ -375,7 +375,7 @@ export const PartnerBlockSheet = ({
         duration: formData.duration.trim() || null,
         price_adult: formData.price_adult ? parseFloat(formData.price_adult) : null,
         price_adult_note: formData.price_adult_note.trim() || null,
-        price_type: formData.price_type as "per_person" | "total" | "per_hour" | "per_day" | "on_request",
+        price_type: formData.price_type as "per_person" | "total" | "on_request",
         price_child: formData.price_child ? parseFloat(formData.price_child) : null,
         price_child_note: formData.price_child_note.trim() || null,
         price_child_min_age: formData.price_child_min_age ? parseInt(formData.price_child_min_age) : 4,
@@ -636,8 +636,6 @@ export const PartnerBlockSheet = ({
                   <SelectContent>
                     <SelectItem value="per_person">Per persoon</SelectItem>
                     <SelectItem value="total">Totaalprijs</SelectItem>
-                    <SelectItem value="per_hour">Per uur</SelectItem>
-                    <SelectItem value="per_day">Per dag</SelectItem>
                     <SelectItem value="on_request">Op aanvraag</SelectItem>
                   </SelectContent>
                 </Select>
@@ -685,113 +683,119 @@ export const PartnerBlockSheet = ({
                 </Select>
               </div>
 
-              {/* Adult price section */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-medium">Volwassenen</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price_adult">Prijs (€)</Label>
-                    <Input
-                      id="price_adult"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price_adult}
-                      onChange={(e) => setFormData({ ...formData, price_adult: e.target.value })}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price_adult_note">Notitie</Label>
-                    <Input
-                      id="price_adult_note"
-                      value={formData.price_adult_note}
-                      onChange={(e) => setFormData({ ...formData, price_adult_note: e.target.value })}
-                      placeholder="Bijv. incl. materiaal"
-                    />
+              {/* Price section - hidden for on_request */}
+              {formData.price_type !== "on_request" && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium">{formData.price_type === "per_person" ? "Volwassenen" : "Prijs"}</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price_adult">Prijs (€)</Label>
+                      <Input
+                        id="price_adult"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.price_adult}
+                        onChange={(e) => setFormData({ ...formData, price_adult: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="price_adult_note">Notitie</Label>
+                      <Input
+                        id="price_adult_note"
+                        value={formData.price_adult_note}
+                        onChange={(e) => setFormData({ ...formData, price_adult_note: e.target.value })}
+                        placeholder={formData.price_type === "per_person" ? "Bijv. incl. materiaal" : ""}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Child price section */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-medium">Kinderen</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price_child">Prijs (€)</Label>
-                    <Input
-                      id="price_child"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price_child}
-                      onChange={(e) => setFormData({ ...formData, price_child: e.target.value })}
-                      placeholder="0.00"
-                    />
+              {/* Child price section - only for per_person */}
+              {formData.price_type === "per_person" && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium">Kinderen</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price_child">Prijs (€)</Label>
+                      <Input
+                        id="price_child"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.price_child}
+                        onChange={(e) => setFormData({ ...formData, price_child: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="price_child_note">Notitie</Label>
+                      <Input
+                        id="price_child_note"
+                        value={formData.price_child_note}
+                        onChange={(e) => setFormData({ ...formData, price_child_note: e.target.value })}
+                        placeholder="Bijv. onder begeleiding"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price_child_note">Notitie</Label>
-                    <Input
-                      id="price_child_note"
-                      value={formData.price_child_note}
-                      onChange={(e) => setFormData({ ...formData, price_child_note: e.target.value })}
-                      placeholder="Bijv. onder begeleiding"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price_child_min_age">Leeftijd vanaf</Label>
+                      <Input
+                        id="price_child_min_age"
+                        type="number"
+                        min="0"
+                        max="18"
+                        value={formData.price_child_min_age}
+                        onChange={(e) => setFormData({ ...formData, price_child_min_age: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="price_child_max_age">Leeftijd t/m</Label>
+                      <Input
+                        id="price_child_max_age"
+                        type="number"
+                        min="0"
+                        max="18"
+                        value={formData.price_child_max_age}
+                        onChange={(e) => setFormData({ ...formData, price_child_max_age: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price_child_min_age">Leeftijd vanaf</Label>
-                    <Input
-                      id="price_child_min_age"
-                      type="number"
-                      min="0"
-                      max="18"
-                      value={formData.price_child_min_age}
-                      onChange={(e) => setFormData({ ...formData, price_child_min_age: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price_child_max_age">Leeftijd t/m</Label>
-                    <Input
-                      id="price_child_max_age"
-                      type="number"
-                      min="0"
-                      max="18"
-                      value={formData.price_child_max_age}
-                      onChange={(e) => setFormData({ ...formData, price_child_max_age: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Pet price section */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-medium">Huisdieren</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price_pet">Prijs (€)</Label>
-                    <Input
-                      id="price_pet"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price_pet}
-                      onChange={(e) => setFormData({ ...formData, price_pet: e.target.value })}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price_pet_note">Notitie</Label>
-                    <Input
-                      id="price_pet_note"
-                      value={formData.price_pet_note}
-                      onChange={(e) => setFormData({ ...formData, price_pet_note: e.target.value })}
-                      placeholder="Bijv. honden welkom"
-                    />
+              {/* Pet price section - only for per_person */}
+              {formData.price_type === "per_person" && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium">Huisdieren</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price_pet">Prijs (€)</Label>
+                      <Input
+                        id="price_pet"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.price_pet}
+                        onChange={(e) => setFormData({ ...formData, price_pet: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="price_pet_note">Notitie</Label>
+                      <Input
+                        id="price_pet_note"
+                        value={formData.price_pet_note}
+                        onChange={(e) => setFormData({ ...formData, price_pet_note: e.target.value })}
+                        placeholder="Bijv. honden welkom"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </TabsContent>
 
             {/* Tab: Locatie */}

@@ -69,7 +69,7 @@ const formSchema = z.object({
   duration: z.string().optional(),
   price_adult: z.coerce.number().nullable().optional(),
   price_adult_note: z.string().optional(),
-  price_type: z.enum(["per_person", "total", "per_hour", "per_day", "on_request"]),
+  price_type: z.enum(["per_person", "total", "on_request"]),
   price_child: z.coerce.number().nullable().optional(),
   price_child_note: z.string().optional(),
   price_child_min_age: z.coerce.number().optional(),
@@ -647,8 +647,6 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                           <SelectContent>
                             <SelectItem value="per_person">Per persoon</SelectItem>
                             <SelectItem value="total">Totaalprijs</SelectItem>
-                            <SelectItem value="per_hour">Per uur</SelectItem>
-                            <SelectItem value="per_day">Per dag</SelectItem>
                             <SelectItem value="on_request">Op aanvraag</SelectItem>
                           </SelectContent>
                         </Select>
@@ -732,155 +730,161 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                   
                   <Separator />
                   
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Volwassenen</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="price_adult"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Prijs (€)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                {...field}
-                                value={field.value ?? ""} 
-                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="price_adult_note"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notitie</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="p.p." />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {form.watch("price_type") !== "on_request" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">{form.watch("price_type") === "per_person" ? "Volwassenen" : "Prijs"}</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="price_adult"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Prijs (€)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  step="0.01"
+                                  {...field}
+                                  value={field.value ?? ""} 
+                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="price_adult_note"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Notitie</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder={form.watch("price_type") === "per_person" ? "p.p." : ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Kinderen</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="price_child"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Prijs (€)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                {...field}
-                                value={field.value ?? ""} 
-                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {form.watch("price_type") === "per_person" && (
+                    <>
+                      <Separator />
                       
-                      <FormField
-                        control={form.control}
-                        name="price_child_note"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notitie</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="4-12 jaar" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="price_child_min_age"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Min. leeftijd</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Kinderen</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="price_child"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Prijs (€)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    {...field}
+                                    value={field.value ?? ""} 
+                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="price_child_note"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Notitie</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="4-12 jaar" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="price_child_min_age"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Min. leeftijd</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="price_child_max_age"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Max. leeftijd</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
                       
-                      <FormField
-                        control={form.control}
-                        name="price_child_max_age"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Max. leeftijd</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Huisdieren</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="price_pet"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Prijs (€)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                {...field}
-                                value={field.value ?? ""} 
-                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <Separator />
                       
-                      <FormField
-                        control={form.control}
-                        name="price_pet_note"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notitie</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="honden" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Huisdieren</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="price_pet"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Prijs (€)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    {...field}
+                                    value={field.value ?? ""} 
+                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="price_pet_note"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Notitie</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="honden" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                   
                   <Separator />
                   
