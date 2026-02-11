@@ -32,7 +32,6 @@ interface AddTemplateItemDialogProps {
   templateId: string;
   dayIndex: number;
   durationDays: number;
-  existingBlockIds: string[];
 }
 
 export const AddTemplateItemDialog = ({
@@ -41,7 +40,6 @@ export const AddTemplateItemDialog = ({
   templateId,
   dayIndex,
   durationDays,
-  existingBlockIds,
 }: AddTemplateItemDialogProps) => {
   const { toast } = useToast();
   const { data: blocks, isLoading } = useAdminBuildingBlocks();
@@ -148,19 +146,15 @@ export const AddTemplateItemDialog = ({
                   <div className="space-y-1">
                     {categoryBlocks.map((block) => {
                       const isSelected = selectedBlockId === block.id;
-                      const isAlreadyInTemplate = existingBlockIds.includes(block.id);
                       
                       return (
                         <button
                           key={block.id}
                           type="button"
-                          onClick={() => !isAlreadyInTemplate && setSelectedBlockId(block.id)}
-                          disabled={isAlreadyInTemplate}
+                          onClick={() => setSelectedBlockId(block.id)}
                           className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${
                             isSelected
                               ? "bg-primary/10 border border-primary"
-                              : isAlreadyInTemplate
-                              ? "bg-muted/50 opacity-50 cursor-not-allowed"
                               : "hover:bg-muted"
                           }`}
                         >
@@ -181,9 +175,6 @@ export const AddTemplateItemDialog = ({
                           </div>
                           {isSelected && (
                             <Check className="h-5 w-5 text-primary" />
-                          )}
-                          {isAlreadyInTemplate && (
-                            <span className="text-xs text-muted-foreground">Al toegevoegd</span>
                           )}
                         </button>
                       );
@@ -223,6 +214,7 @@ export const AddTemplateItemDialog = ({
             </Label>
             <Input
               type="time"
+              step="300"
               value={preferredTime}
               onChange={(e) => setPreferredTime(e.target.value)}
             />
