@@ -1,84 +1,73 @@
 
 
-# Plan: Handleidingen partner portaal updaten en uitbreiden
+# Plan: Template "Avontuur & Ontspanning" vullen + 4 bugfixes in template-editor
 
-## Wat wordt aangepast
+## 1. Template "Avontuur & Ontspanning" invullen (database)
 
-De handleidingenpagina (`PartnerGuides.tsx`) wordt bijgewerkt om de recente wijzigingen en nieuwe functionaliteiten correct te documenteren.
+Twee dagen vol avontuur en ontspanning op Vlieland:
 
-### 1. Sectie "Aan de slag" -- bijwerken
+**Dag 1 -- Avontuur**
+| Tijd  | Activiteit |
+|-------|-----------|
+| 09:00 | Overtocht met Rederij Doeksen (`boot-retour`) |
+| 10:45 | Fietshuur (`fiets-huur`) |
+| 11:00 | RescueBoat Transfer (`rescueboat`) |
+| 12:30 | Lunch in de natuur (`lunch-strand`) |
+| 14:00 | Branding Raften (`voc-branding-raften`) |
+| 16:30 | Borrel & Hapjes (`borrel`) |
+| 18:30 | Strand BBQ (`strand-bbq`) |
 
-**Account activeren** aanpassen:
-- Vermelden dat partners ook direct kunnen inloggen met de verstrekte inloggegevens (formaat Vlieland-XXXX) zonder eerst het wachtwoord te resetten
-- De huidige tekst suggereert dat alleen via de activatielink werkt; dat klopt niet meer
+**Dag 2 -- Ontspanning**
+| Tijd  | Activiteit |
+|-------|-----------|
+| 09:30 | Fietstocht met begeleiding (`fietstocht-met-begeleiding`) |
+| 11:30 | Zeehondentocht (`zeehondentocht`) |
+| 13:00 | Luncharrangement (`luncharrangement`) |
+| 14:30 | Vuurtorenbezoek (`vuurtoren`) |
+| 16:00 | Rondleiding Brouwerij Fortuna (`rondleiding-brouwerij-fortuna`) |
+| 17:30 | Overtocht retour (`boot-retour`) |
 
-**Nieuw item: "Algemene voorwaarden instellen"**
-- Uitleggen dat partners in Instellingen kunnen kiezen tussen:
-  - Eigen PDF met voorwaarden uploaden
-  - De Standaardvoorwaarden Partneraanbod Bureau Vlieland accepteren
-- Waarom dit belangrijk is (juridische audit-trail bij boekingen)
+Na het invoegen wordt de template gepubliceerd (`is_published = true`).
 
-### 2. Sectie "Aanvragen verwerken" -- uitbreiden
+## 2. Drag-and-drop voor items (AdminTemplateSheet.tsx)
 
-**"Aanvraag bevestigen" verduidelijken:**
-- Toelichten dat bij bevestiging een prijs (excl. BTW) moet worden opgegeven
-- Optioneel een voorkeurstijd/datum kan worden meegegeven
-- De verwachte commissie wordt als voorberekening getoond
+Momenteel toont de GripVertical-icoon puur visueel maar er zit geen dnd-kit logica achter. Oplossing:
+- `@dnd-kit/core` en `@dnd-kit/sortable` importeren (al geinstalleerd)
+- De itemlijst per dag wrappen in `DndContext` + `SortableContext`
+- Elk item-row een `useSortable` hook geven
+- Bij `onDragEnd`: de `sort_order` van de betrokken items updaten in de database via `useUpdateTemplateItem`
 
-**Nieuw item: "Referentienummer en versie"**
-- Uitleggen dat elke aanvraag een referentienummer heeft (#BV-...)
-- Bij wijzigingen door de klant verschijnt een versie-indicator
-- Het referentienummer kan worden gekopieerd via de kopieerknop
+## 3. Sorteren op tijd (AdminTemplateSheet.tsx)
 
-### 3. Sectie "Facturatie" -- uitbreiden
+Items worden nu gesorteerd op `sort_order`. Wijzigen naar sortering op `preferred_time` (als fallback op `sort_order`):
+```typescript
+.sort((a, b) => {
+  if (a.preferred_time && b.preferred_time) {
+    return a.preferred_time.localeCompare(b.preferred_time);
+  }
+  return (a.sort_order || 0) - (b.sort_order || 0);
+})
+```
 
-**"Commissiepercentages" aanvullen:**
-- Commissie wordt berekend over het bedrag exclusief BTW
-- Toevoegen dat de verwachte commissie alvast zichtbaar is bij elke aanvraag
+## 4. Bouwstenen meerdere keren toestaan (AddTemplateItemDialog.tsx)
 
-**Nieuw item: "Facturatiemodel"**
-- Uitleggen dat er twee modellen bestaan:
-  - **Partner Direct**: partner factureert rechtstreeks aan de klant
-  - **Bureau Centraal**: partner factureert aan Bureau Vlieland
-- Het model wordt per project bepaald; dit is zichtbaar in de aanvraagdetails
+De huidige code blokkeert bouwstenen die al in de template zitten (`existingBlockIds` check). Oplossing:
+- De `existingBlockIds` prop en de `isAlreadyInTemplate`-check verwijderen
+- Alle actieve bouwstenen altijd selecteerbaar maken
+- Prop verwijderen uit `AdminTemplateSheet.tsx` regel 576
 
-**"Factuur registreren" verduidelijken:**
-- Bij Bureau Centraal: factuur sturen naar Bureau Vlieland
-- Vermelding dat upload van een factuurkopie mogelijk is
+## 5. Tijd instellen op 5 minuten nauwkeurig (AddTemplateItemDialog.tsx)
 
-### 4. Sectie "Dashboard" -- nieuw toevoegen
+De HTML `<input type="time">` heeft standaard 1-minuut stappen. Oplossing:
+- `step="300"` attribuut toevoegen (300 seconden = 5 minuten)
+- Dit geldt voor zowel de AddTemplateItemDialog als eventuele andere tijdinputs
 
-Nieuwe sectie die het dashboard uitlegt:
-- **Actiebanner**: toont openstaande taken (nieuwe aanvragen, tegenvoorstellen, te factureren items)
-- **Statistiekknoppen**: klikbaar om direct naar de juiste tab of pagina te navigeren
-- **Gecombineerd overzicht**: activiteiten en logies in een lijst, gesorteerd op urgentie
-- **Agenda**: de komende 14 dagen met bevestigde/geaccepteerde items
-- **YTD-module**: toont jaar-tot-datum omzet en commissie
+## Technisch overzicht
 
-### 5. Sectie "Mijn Aanbod" -- nieuw toevoegen (voor activiteitenpartners)
+**Bestanden:**
+- `src/components/admin/AdminTemplateSheet.tsx` -- drag-and-drop toevoegen, tijdsortering, `existingBlockIds` prop verwijderen
+- `src/components/admin/AddTemplateItemDialog.tsx` -- duplicate-check verwijderen, `step="300"` op time input
+- Database: INSERT items voor avontuur-ontspanning template + UPDATE publish status
 
-Nieuwe sectie die uitlegt:
-- Het overzicht van eigen activiteiten/bouwblokken
-- Hoe een nieuw blok toe te voegen (concept-status)
-- Dat blokken pas zichtbaar worden voor klanten na goedkeuring door Bureau Vlieland
-- Velden zoals duur, prijs, min/max personen, seizoensnotities
-
-### 6. FAQ -- uitbreiden
-
-Nieuwe vragen toevoegen:
-- **"Wat is het verschil tussen 'Partner Direct' en 'Bureau Centraal' facturatie?"** -- beknopte uitleg van de twee modellen
-- **"Hoe kan ik mijn beschikbaarheid beheren?"** -- verwijzing naar de beschikbaarheidsmanager op het dashboard
-
-## Technisch
-
-**Bestand:** `src/pages/PartnerGuides.tsx`
-
-Wijzigingen:
-- Nieuwe Lucide-iconen importeren (bijv. `BarChart3`, `FileText`, `CreditCard`)
-- 2 nieuwe Card-secties toevoegen (Dashboard, Mijn Aanbod)
-- Bestaande AccordionItems aanpassen en uitbreiden
-- 2 nieuwe FAQ-items toevoegen
-- Conditioneel tonen van "Mijn Aanbod" sectie op basis van `partnerData?.partner_type` (net als de bestaande Logies-sectie)
-
-Geschatte omvang: circa 150 regels toevoegen, 30 regels aanpassen.
+**Dependencies:** Geen nieuwe -- `@dnd-kit/core` en `@dnd-kit/sortable` zijn al geinstalleerd.
 
