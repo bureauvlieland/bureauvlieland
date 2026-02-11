@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -22,8 +23,8 @@ import {
 
 interface PartnerCommissionData {
   commission_percentage: number;
-  accommodation_commission_percentage?: number;
-  partner_type?: string;
+  accommodation_commission_percentage: number | null;
+  partner_type: string | null;
 }
 
 const PartnerGuides = () => {
@@ -34,30 +35,44 @@ const PartnerGuides = () => {
   useEffect(() => {
     const fetchPartnerData = async () => {
       try {
-        const token = searchParams.get("token") || localStorage.getItem("partner_token");
-        if (!token) {
+        // Check for admin impersonation
+        const impersonateId = searchParams.get("impersonate");
+
+        if (impersonateId) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
+            if (isAdmin) {
+              const { data } = await supabase
+                .from("partners")
+                .select("commission_percentage, accommodation_commission_percentage, partner_type")
+                .eq("id", impersonateId)
+                .single();
+              if (data) {
+                setPartnerData(data);
+                setIsLoading(false);
+                return;
+              }
+            }
+          }
+        }
+
+        // Regular partner: fetch via auth
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
           setIsLoading(false);
           return;
         }
 
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-          }
-        );
+        const { data } = await supabase
+          .from("partners")
+          .select("commission_percentage, accommodation_commission_percentage, partner_type")
+          .eq("auth_user_id", session.user.id)
+          .eq("is_active", true)
+          .single();
 
-        if (response.ok) {
-          const data = await response.json();
-          setPartnerData({
-            commission_percentage: data.partner?.commission_percentage ?? 15,
-            accommodation_commission_percentage: data.partner?.accommodation_commission_percentage,
-            partner_type: data.partner?.partner_type,
-          });
+        if (data) {
+          setPartnerData(data);
         }
       } catch (error) {
         console.error("Error fetching partner data:", error);
@@ -69,7 +84,7 @@ const PartnerGuides = () => {
     fetchPartnerData();
   }, [searchParams]);
 
-  const isActivityPartner = !partnerData?.partner_type || partnerData.partner_type === 'activity_provider' || partnerData.partner_type === 'both';
+  const isActivityPartner = partnerData?.partner_type === 'activity_provider' || partnerData?.partner_type === 'both' || (!partnerData?.partner_type);
   const isAccommodationPartner = partnerData?.partner_type === 'accommodation' || partnerData?.partner_type === 'both';
 
   return (
@@ -551,15 +566,15 @@ const PartnerGuides = () => {
                       </>
                     ) : (
                       <>
-                        {(!partnerData?.partner_type || partnerData.partner_type !== 'accommodation') && (
+                        {isActivityPartner && (
                           <div className="flex justify-between items-center">
                             <span className="font-medium">Activiteiten</span>
                             <span className="text-lg font-bold text-primary">
-                              {partnerData?.commission_percentage ?? 15}%
+                              {partnerData?.commission_percentage ?? 10}%
                             </span>
                           </div>
                         )}
-                        {(partnerData?.partner_type === 'accommodation' || partnerData?.partner_type === 'both') && (
+                        {isAccommodationPartner && (
                           <div className="flex justify-between items-center">
                             <span className="font-medium">Logies</span>
                             <span className="text-lg font-bold text-primary">
