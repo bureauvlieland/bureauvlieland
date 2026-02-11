@@ -1,55 +1,46 @@
 
 
-# Plan: Logies-onderdelen toevoegen aan factuur-preview
+# Plan: Prijsconfiguratie vereenvoudigen
 
 ## Overzicht
-De factuur-preview (`AdminInvoicePreview.tsx`) toont momenteel alleen programma-items en coordinatiekosten. We voegen een "Logies" sectie toe met de gekoppelde accommodatie-offerte en bijbehorende extra's, analoog aan wat al is gedaan in de offerte-preview.
+De prijstype-opties worden teruggebracht van 5 naar 3: **Per persoon**, **Totaalprijs** en **Op aanvraag**. De opties `per_hour` en `per_day` vervallen. Bij keuze "Totaalprijs" of "Op aanvraag" worden de secties Kinderen en Huisdieren verborgen.
 
-## Wat wordt toegevoegd
+## Bestaande data (uit eerdere analyse)
+- 24 bouwstenen: `per_person`
+- 34 bouwstenen: `total`
+- 1 bouwsteen: `per_hour`
+- 3 bouwstenen: `per_day`
+- 22 bouwstenen: `on_request`
 
-**Logies-sectie** (als nieuwe categorie-groep in de factuur-tabel):
-- Accommodatienaam + partnernaam
-- Aantal nachten (berekend uit arrival/departure)
-- Totaalprijs
-- BTW-tarief (standaard 9%)
+De 4 items met `per_hour`/`per_day` worden gemigreerd naar `total`.
 
-**Logies extra's** (uit `accommodation_quote_extras`):
-- Elke extra als aparte regel met naam, aantal, prijs en subtotaal
-- Eigen BTW-tarief per extra
+## Wijzigingen
 
-**Totaalberekening**: logies + extras worden opgenomen in de BTW-groepen en het eindtotaal.
+### 1. Database migratie
+- Update alle `per_hour` en `per_day` bouwstenen naar `total`
+- Verwijder de enum-waarden `per_hour` en `per_day` uit `building_block_price_type`
 
-## Technische wijzigingen
+### 2. TypeScript types (`src/types/buildingBlock.ts`)
+- `BuildingBlockPriceType` beperken tot `"per_person" | "total" | "on_request"`
+- `priceTypeLabels` opschonen (per_hour en per_day verwijderen)
+- `formatPriceNote`: cases voor per_hour en per_day verwijderen
+- `calculateIndicativeTotal`: per_hour en per_day cases verwijderen (vallen al onder default/total)
 
-### Bestand: `src/pages/admin/AdminInvoicePreview.tsx`
+### 3. Admin BuildingBlockSheet (`src/components/admin/BuildingBlockSheet.tsx`)
+- Prijstype select: alleen "Per persoon", "Totaalprijs" en "Op aanvraag" tonen
+- Zod schema aanpassen naar `z.enum(["per_person", "total", "on_request"])`
+- Bij `per_person`: alle prijsvelden tonen (Volwassenen, Kinderen, Huisdieren)
+- Bij `total`: header wijzigen naar "Prijs", alleen een enkel prijsveld, Kinderen/Huisdieren verbergen
+- Bij `on_request`: prijsvelden volledig verbergen (er is geen prijs in te vullen)
 
-1. **Nieuwe interfaces** toevoegen:
-   - `AccommodationQuoteData` met velden: id, accommodation_name, partner_id, price_total, price_per_person_per_night, vat_rate, price_includes_vat, partner_name
-   - `AccommodationExtraData` met velden: name, description, quantity, unit_price, pricing_type, vat_rate
+### 4. Partner PartnerBlockSheet (`src/components/partner-portal/PartnerBlockSheet.tsx`)
+- Zelfde logica als admin: prijstype select beperken tot 3 opties
+- Conditionele weergave van prijsvelden op basis van gekozen type
 
-2. **Nieuwe state**:
-   - `accommodationQuote: AccommodationQuoteData | null`
-   - `accommodationExtras: AccommodationExtraData[]`
-   - `accommodationNights: number`
+### 5. Display-functies opruimen
+- `PartnerBlocks.tsx` (`formatPrice`): per_hour/per_day cases verwijderen
+- `formatBlockPrice` en `formatPriceNote` in buildingBlock.ts: per_hour/per_day verwijderen
 
-3. **fetchData uitbreiden**:
-   - `program_requests` query al bevat `linked_accommodation_id` via de bestaande `requestData`
-   - Als `linked_accommodation_id` aanwezig: `accommodation_requests` ophalen voor arrival/departure dates
-   - Actieve quote ophalen (`status` in `['selected', 'submitted']`)
-   - Partner-naam ophalen via aparte query op `partners`
-   - `accommodation_quote_extras` ophalen voor die quote
-
-4. **calculateTotals uitbreiden**:
-   - Logiesprijs toevoegen aan de juiste BTW-groep (quote.vat_rate, standaard 9%)
-   - Elke extra toevoegen aan zijn eigen BTW-groep
-   - Resultaat automatisch meegenomen in subtotaal, BTW en eindtotaal
-
-5. **Factuur-tabel uitbreiden** (na programma-categorieen, voor coordinatiekosten):
-   - Categorie-header "Logies"
-   - Regel voor accommodatie met nachten, prijs en totaal
-   - Als er extra's zijn: categorie-header "Extra's bij logies"
-   - Regels per extra met naam, aantal, prijs en subtotaal
-
-6. **Sidebar** bijwerken:
-   - Aantal posten tellen inclusief logies-items
+### Geen wijzigingen nodig
+- Offerte-preview en factuur-preview gebruiken `admin_price_override`, niet het prijstype van de bouwsteen
 
