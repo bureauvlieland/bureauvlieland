@@ -96,6 +96,13 @@ export const Navigation = () => {
 
             {/* Direct links */}
             <Link
+              to="/voorbeeldprogrammas"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Voorbeeldprogramma's
+            </Link>
+
+            <Link
               to="/programma-samenstellen"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -224,6 +231,14 @@ export const Navigation = () => {
               </div>
 
               {/* Direct links Mobile */}
+              <Link
+                to="/voorbeeldprogrammas"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Voorbeeldprogramma's
+              </Link>
+
               <Link
                 to="/programma-samenstellen"
                 onClick={() => setIsMenuOpen(false)}
