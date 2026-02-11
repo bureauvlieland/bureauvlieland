@@ -9,8 +9,10 @@ import { useKenBurns } from "@/hooks/use-ken-burns";
 import { type BuildingBlockCategory } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockCard } from "@/components/configurator/BuildingBlockCard";
+import { BuildingBlockListItem } from "@/components/configurator/BuildingBlockListItem";
 import { ConfiguratorCart } from "@/components/configurator/ConfiguratorCart";
 import { CategoryFilter } from "@/components/configurator/CategoryFilter";
+import { ViewToggle } from "@/components/configurator/ViewToggle";
 import { RequestFormModal } from "@/components/configurator/RequestFormModal";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { HowItWorksBlock } from "@/components/configurator/HowItWorksBlock";
@@ -64,6 +66,9 @@ const ProgrammaSamenstellen = () => {
 
   // State
   const [selectedCategory, setSelectedCategory] = useState<BuildingBlockCategory | "all">("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    return (localStorage.getItem("bv-view-mode") as "grid" | "list") || "grid";
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
 
@@ -336,7 +341,10 @@ const ProgrammaSamenstellen = () => {
                         <h2 className="text-2xl font-display font-bold">
                           Kies uw onderdelen
                         </h2>
-                        <SupportCTA />
+                        <div className="flex items-center gap-2">
+                          <ViewToggle viewMode={viewMode} onChange={(m) => { setViewMode(m); localStorage.setItem("bv-view-mode", m); }} />
+                          <SupportCTA />
+                        </div>
                       </div>
                       
                       <p className="text-sm text-muted-foreground mb-4">
@@ -357,16 +365,29 @@ const ProgrammaSamenstellen = () => {
                       </div>
                     ) : (
                       <>
-                        <div className="grid sm:grid-cols-2 gap-6">
-                          {filteredBlocks.map((block) => (
-                            <BuildingBlockCard
-                              key={block.id}
-                              block={block}
-                              onAdd={handleAddToCart}
-                              isInCart={isInCart(block.id)}
-                            />
-                          ))}
-                        </div>
+                        {viewMode === "grid" ? (
+                          <div className="grid sm:grid-cols-2 gap-6">
+                            {filteredBlocks.map((block) => (
+                              <BuildingBlockCard
+                                key={block.id}
+                                block={block}
+                                onAdd={handleAddToCart}
+                                isInCart={isInCart(block.id)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {filteredBlocks.map((block) => (
+                              <BuildingBlockListItem
+                                key={block.id}
+                                block={block}
+                                onAdd={handleAddToCart}
+                                isInCart={isInCart(block.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
 
                         {filteredBlocks.length === 0 && (
                           <div className="text-center py-12 text-muted-foreground">
