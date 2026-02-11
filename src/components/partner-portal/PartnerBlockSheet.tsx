@@ -22,8 +22,9 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, ImageIcon, AlertCircle, CheckCircle, Info, Euro, Settings, Image } from "lucide-react";
+import { Loader2, Upload, ImageIcon, AlertCircle, CheckCircle, Info, Euro, Settings, Image, MapPin } from "lucide-react";
 import type { PartnerBuildingBlock } from "@/types/partner";
+import { LocationPicker } from "@/components/admin/LocationPicker";
 
 // Slugify helper
 const slugify = (text: string): string =>
@@ -153,6 +154,12 @@ interface FormData {
   seasonal_notes: string;
   tags: string;
   image_url: string;
+  location_lat: string;
+  location_lng: string;
+  location_address: string;
+  external_url: string;
+  price_display_override: string;
+  sort_order: string;
 }
 
 const getInitialFormData = (block: PartnerBuildingBlock | null): FormData => {
@@ -180,6 +187,12 @@ const getInitialFormData = (block: PartnerBuildingBlock | null): FormData => {
       seasonal_notes: block.seasonal_notes || "",
       tags: block.tags?.join(", ") || "",
       image_url: block.image_url || "",
+      location_lat: block.location_lat?.toString() || "",
+      location_lng: block.location_lng?.toString() || "",
+      location_address: block.location_address || "",
+      external_url: block.external_url || "",
+      price_display_override: block.price_display_override || "",
+      sort_order: block.sort_order?.toString() || "0",
     };
   }
   return {
@@ -205,6 +218,12 @@ const getInitialFormData = (block: PartnerBuildingBlock | null): FormData => {
     seasonal_notes: "",
     tags: "",
     image_url: "",
+    location_lat: "",
+    location_lng: "",
+    location_address: "",
+    external_url: "",
+    price_display_override: "",
+    sort_order: "0",
   };
 };
 
@@ -365,11 +384,17 @@ export const PartnerBlockSheet = ({
         price_pet_note: formData.price_pet_note.trim() || null,
         is_from_price: formData.is_from_price,
         price_includes_vat: formData.price_includes_vat,
+        price_display_override: formData.price_display_override.trim() || null,
         vat_rate: formData.vat_rate ? parseFloat(formData.vat_rate) : 21,
         min_people: formData.min_people ? parseInt(formData.min_people) : null,
         max_people: formData.max_people ? parseInt(formData.max_people) : null,
         seasonal_notes: formData.seasonal_notes.trim() || null,
         tags: tagsArray.length > 0 ? tagsArray : null,
+        location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
+        location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
+        location_address: formData.location_address.trim() || null,
+        external_url: formData.external_url.trim() || null,
+        sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
         provider_id: partnerId,
         block_type: "partner" as const,
         is_published: false, // New blocks are always unpublished (need admin approval)
@@ -400,32 +425,12 @@ export const PartnerBlockSheet = ({
         setImageValidation(null);
         setActiveTab("algemeen");
       } else if (block) {
-        // Update existing block - partners can update all these fields including category
+        // Update existing block - partners can update all fields except publication status
+        const { provider_id: _pid, block_type: _bt, is_published: _ip, is_active: _ia, ...updateData } = blockData;
+        
         const { error } = await supabase
           .from("building_blocks")
-          .update({
-            name: blockData.name,
-            short_description: blockData.short_description,
-            description: blockData.description,
-            category: blockData.category,
-            duration: blockData.duration,
-            price_adult: blockData.price_adult,
-            price_adult_note: blockData.price_adult_note,
-            price_type: blockData.price_type,
-            price_child: blockData.price_child,
-            price_child_note: blockData.price_child_note,
-            price_child_min_age: blockData.price_child_min_age,
-            price_child_max_age: blockData.price_child_max_age,
-            price_pet: blockData.price_pet,
-            price_pet_note: blockData.price_pet_note,
-            is_from_price: blockData.is_from_price,
-            price_includes_vat: blockData.price_includes_vat,
-            vat_rate: blockData.vat_rate,
-            min_people: blockData.min_people,
-            max_people: blockData.max_people,
-            seasonal_notes: blockData.seasonal_notes,
-            tags: blockData.tags,
-          })
+          .update(updateData)
           .eq("id", block.id);
 
         if (error) throw error;
@@ -465,7 +470,7 @@ export const PartnerBlockSheet = ({
 
         <form onSubmit={handleSubmit} className="mt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="algemeen" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline">Algemeen</span>
@@ -473,6 +478,10 @@ export const PartnerBlockSheet = ({
               <TabsTrigger value="prijzen" className="flex items-center gap-2">
                 <Euro className="h-4 w-4" />
                 <span className="hidden sm:inline">Prijzen</span>
+              </TabsTrigger>
+              <TabsTrigger value="locatie" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                <span className="hidden sm:inline">Locatie</span>
               </TabsTrigger>
               <TabsTrigger value="media" className="flex items-center gap-2">
                 <Image className="h-4 w-4" />
@@ -782,6 +791,59 @@ export const PartnerBlockSheet = ({
                     />
                   </div>
                 </div>
+              </div>
+            </TabsContent>
+
+            {/* Tab: Locatie */}
+            <TabsContent value="locatie" className="space-y-4">
+              <LocationPicker
+                lat={formData.location_lat ? parseFloat(formData.location_lat) : null}
+                lng={formData.location_lng ? parseFloat(formData.location_lng) : null}
+                address={formData.location_address}
+                onChange={(lat, lng, address) => {
+                  setFormData({
+                    ...formData,
+                    location_lat: lat?.toString() || "",
+                    location_lng: lng?.toString() || "",
+                    location_address: address,
+                  });
+                }}
+              />
+
+              {/* External URL */}
+              <div className="space-y-2">
+                <Label htmlFor="external_url">Externe URL</Label>
+                <Input
+                  id="external_url"
+                  value={formData.external_url}
+                  onChange={(e) => setFormData({ ...formData, external_url: e.target.value })}
+                  placeholder="https://..."
+                />
+                <p className="text-xs text-muted-foreground">Optioneel: link naar meer informatie</p>
+              </div>
+
+              {/* Sort order */}
+              <div className="space-y-2">
+                <Label htmlFor="sort_order">Sorteervolgorde</Label>
+                <Input
+                  id="sort_order"
+                  type="number"
+                  value={formData.sort_order}
+                  onChange={(e) => setFormData({ ...formData, sort_order: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Price display override */}
+              <div className="space-y-2">
+                <Label htmlFor="price_display_override">Prijsweergave overschrijven</Label>
+                <Input
+                  id="price_display_override"
+                  value={formData.price_display_override}
+                  onChange={(e) => setFormData({ ...formData, price_display_override: e.target.value })}
+                  placeholder="Bijv. 'Vanaf €25 p.p.'"
+                />
+                <p className="text-xs text-muted-foreground">Vervangt de standaard prijsweergave</p>
               </div>
             </TabsContent>
 

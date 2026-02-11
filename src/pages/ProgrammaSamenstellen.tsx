@@ -17,7 +17,7 @@ import { RequestFormModal } from "@/components/configurator/RequestFormModal";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { HowItWorksBlock } from "@/components/configurator/HowItWorksBlock";
 import { LogiesSuggestionBanner } from "@/components/configurator/LogiesSuggestionBanner";
-import { SupportCTA } from "@/components/configurator/SupportCTA";
+
 import { ConfiguratorWizard, type ProgramType } from "@/components/configurator/ConfiguratorWizard";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -343,7 +343,6 @@ const ProgrammaSamenstellen = () => {
                         </h2>
                         <div className="flex items-center gap-2">
                           <ViewToggle viewMode={viewMode} onChange={(m) => { setViewMode(m); localStorage.setItem("bv-view-mode", m); }} />
-                          <SupportCTA />
                         </div>
                       </div>
                       
