@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { format, addDays } from "date-fns";
+import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -25,7 +25,6 @@ import {
   Send,
   Loader2,
   FileText,
-  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +42,7 @@ interface ProgramRequest {
   selected_dates: string[];
   quote_valid_until: string | null;
   quote_personal_message: string | null;
+  linked_accommodation_id: string | null;
 }
 
 interface ProgramItem {
@@ -61,6 +61,30 @@ interface ProgramItem {
   price_type: string | null;
 }
 
+interface AccommodationQuoteData {
+  id: string;
+  accommodation_name: string;
+  partner_name: string;
+  price_total: number;
+  price_per_person_per_night: number | null;
+  price_includes_vat: boolean;
+  vat_rate: number;
+  arrival_date: string;
+  departure_date: string;
+  nights: number;
+}
+
+interface AccommodationExtraData {
+  id: string;
+  name: string;
+  description: string | null;
+  quantity: number;
+  unit_price: number;
+  pricing_type: string;
+  price_includes_vat: boolean;
+  vat_rate: number;
+}
+
 const AdminQuotePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -72,6 +96,8 @@ const AdminQuotePreview = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+  const [accommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
+  const [accommodationExtras, setAccommodationExtras] = useState<AccommodationExtraData[]>([]);
 
   // Form state
   const defaultValidUntil = addDays(new Date(), 14);
@@ -143,6 +169,67 @@ const AdminQuotePreview = () => {
           setVatRateMap(map);
         }
       }
+
+      // Fetch linked accommodation quote + extras
+      if (requestData.linked_accommodation_id) {
+        const { data: accReq } = await supabase
+          .from("accommodation_requests")
+          .select("id, arrival_date, departure_date")
+          .eq("id", requestData.linked_accommodation_id)
+          .maybeSingle();
+
+        if (accReq) {
+          const { data: quoteData } = await supabase
+            .from("accommodation_quotes")
+            .select("*, partner:partners(name)")
+            .eq("request_id", accReq.id)
+            .in("status", ["selected", "submitted"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (quoteData) {
+            const nights = differenceInCalendarDays(
+              new Date(accReq.departure_date),
+              new Date(accReq.arrival_date)
+            );
+            setAccommodationQuote({
+              id: quoteData.id,
+              accommodation_name: quoteData.accommodation_name,
+              partner_name: (quoteData.partner as any)?.name || "Onbekend",
+              price_total: quoteData.price_total,
+              price_per_person_per_night: quoteData.price_per_person_per_night,
+              price_includes_vat: quoteData.price_includes_vat ?? true,
+              vat_rate: quoteData.vat_rate ?? 9,
+              arrival_date: accReq.arrival_date,
+              departure_date: accReq.departure_date,
+              nights,
+            });
+
+            // Fetch extras
+            const { data: extrasData } = await supabase
+              .from("accommodation_quote_extras")
+              .select("*")
+              .eq("quote_id", quoteData.id)
+              .order("sort_order", { ascending: true });
+
+            if (extrasData) {
+              setAccommodationExtras(
+                extrasData.map((e) => ({
+                  id: e.id,
+                  name: e.name,
+                  description: e.description,
+                  quantity: e.quantity,
+                  unit_price: e.unit_price,
+                  pricing_type: e.pricing_type,
+                  price_includes_vat: e.price_includes_vat ?? true,
+                  vat_rate: e.vat_rate ?? 9,
+                }))
+              );
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Fout bij laden offerte");
@@ -178,6 +265,11 @@ const AdminQuotePreview = () => {
     return 21;
   };
 
+  const getExtraTotal = (extra: AccommodationExtraData) => {
+    if (extra.pricing_type === 'fixed') return extra.unit_price;
+    return extra.unit_price * extra.quantity;
+  };
+
   const calculateTotals = () => {
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
 
@@ -190,6 +282,23 @@ const AdminQuotePreview = () => {
     });
     // Bureau fee is always 21%
     vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
+
+    // Add accommodation quote to VAT groups
+    let accommodationTotal = 0;
+    if (accommodationQuote) {
+      const rate = accommodationQuote.vat_rate;
+      vatGroups[rate] = (vatGroups[rate] || 0) + accommodationQuote.price_total;
+      accommodationTotal += accommodationQuote.price_total;
+    }
+
+    // Add accommodation extras to VAT groups
+    let extrasTotal = 0;
+    accommodationExtras.forEach(extra => {
+      const total = getExtraTotal(extra);
+      const rate = extra.vat_rate;
+      vatGroups[rate] = (vatGroups[rate] || 0) + total;
+      extrasTotal += total;
+    });
 
     let totalExclVat = 0;
     let totalVat = 0;
@@ -209,7 +318,7 @@ const AdminQuotePreview = () => {
     const itemsTotal = items.reduce((sum, item) => sum + getItemTotal(item), 0);
     const totalInclVat = totalExclVat + totalVat;
 
-    return { itemsTotal, bureauFee, totalExclVat, totalVat, totalInclVat, vatLines };
+    return { itemsTotal, bureauFee, totalExclVat, totalVat, totalInclVat, vatLines, accommodationTotal, extrasTotal };
   };
 
   // Helper function to convert blob to base64
@@ -458,6 +567,18 @@ const AdminQuotePreview = () => {
                     <span className="text-muted-foreground">Activiteiten:</span>
                     <span>{items.length} items</span>
                   </div>
+                  {accommodationQuote && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Logies:</span>
+                      <span>{accommodationQuote.accommodation_name}</span>
+                    </div>
+                  )}
+                  {accommodationExtras.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Logies extra's:</span>
+                      <span>{accommodationExtras.length} items</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -573,12 +694,98 @@ const AdminQuotePreview = () => {
                         </div>
                       ))}
 
+                      {/* Logies section */}
+                      {accommodationQuote && (
+                        <div className="mb-6">
+                          <h2 className="text-lg font-semibold mb-4 text-[#1e3a5f]">
+                            Logies
+                          </h2>
+                          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold">{accommodationQuote.accommodation_name}</p>
+                                <p className="text-sm text-gray-500">{accommodationQuote.partner_name}</p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {format(new Date(accommodationQuote.arrival_date), "d MMM", { locale: nl })} -{" "}
+                                  {format(new Date(accommodationQuote.departure_date), "d MMM yyyy", { locale: nl })}
+                                  {" · "}{accommodationQuote.nights} {accommodationQuote.nights === 1 ? "nacht" : "nachten"}
+                                </p>
+                                {accommodationQuote.price_per_person_per_night && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {formatCurrency(accommodationQuote.price_per_person_per_night)} p.p.p.n.
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold">{formatCurrency(accommodationQuote.price_total)}</p>
+                                <p className="text-xs text-gray-400">incl. {accommodationQuote.vat_rate}% BTW</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Accommodation extras */}
+                          {accommodationExtras.length > 0 && (
+                            <>
+                              <h3 className="font-semibold text-sm bg-[#1e3a5f] text-white px-3 py-2 rounded">
+                                Extra's bij logies
+                              </h3>
+                              <table className="w-full mt-2">
+                                <thead>
+                                  <tr className="text-left text-xs text-gray-500 border-b">
+                                    <th className="py-2">Omschrijving</th>
+                                    <th className="py-2 text-right">Aantal</th>
+                                    <th className="py-2 text-right">Stukprijs</th>
+                                    <th className="py-2 text-right">Subtotaal</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {accommodationExtras.map((extra) => (
+                                    <tr key={extra.id} className="border-b border-gray-100">
+                                      <td className="py-3">
+                                        <p className="font-medium text-sm">{extra.name}</p>
+                                        {extra.description && (
+                                          <p className="text-xs text-gray-500">{extra.description}</p>
+                                        )}
+                                      </td>
+                                      <td className="py-3 text-right text-sm">
+                                        {extra.pricing_type === 'fixed' ? '-' : extra.quantity}
+                                      </td>
+                                      <td className="py-3 text-right text-sm">
+                                        {formatCurrency(extra.unit_price)}
+                                        <span className="text-xs text-gray-400 ml-1">
+                                          {extra.pricing_type === 'per_person' ? 'p.p.' : 'totaal'}
+                                        </span>
+                                      </td>
+                                      <td className="py-3 text-right text-sm font-medium">
+                                        {formatCurrency(getExtraTotal(extra))}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       {/* Totals */}
                       <div className="border-t-2 border-[#1e3a5f] pt-4 mt-6">
                         <div className="flex justify-between text-sm mb-1">
                           <span>Subtotaal activiteiten incl. BTW</span>
                           <span>{formatCurrency(totals.itemsTotal)}</span>
                         </div>
+                        {accommodationQuote && (
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>Subtotaal logies incl. BTW</span>
+                            <span>{formatCurrency(totals.accommodationTotal)}</span>
+                          </div>
+                        )}
+                        {totals.extrasTotal > 0 && (
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>Subtotaal logies extra's incl. BTW</span>
+                            <span>{formatCurrency(totals.extrasTotal)}</span>
+                          </div>
+                        )}
                         {totals.bureauFee > 0 && (
                           <div className="flex justify-between text-sm mb-1">
                             <span>Coördinatiekosten</span>
