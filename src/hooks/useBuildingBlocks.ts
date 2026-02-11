@@ -78,10 +78,12 @@ export const useCreateBuildingBlock = () => {
     mutationFn: async (block: BuildingBlockFormData) => {
       const { data: session } = await supabase.auth.getSession();
       
+      const { price_type, ...rest } = block;
       const { data, error } = await supabase
         .from("building_blocks")
         .insert({
-          ...block,
+          ...rest,
+          price_type: price_type as any,
           provider_id: block.provider_id || null,
           created_by: session.session?.user.id,
         })
@@ -103,10 +105,12 @@ export const useUpdateBuildingBlock = () => {
   
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<BuildingBlockFormData> }) => {
+      const { price_type, ...rest } = updates;
       const { data, error } = await supabase
         .from("building_blocks")
         .update({
-          ...updates,
+          ...rest,
+          ...(price_type ? { price_type: price_type as any } : {}),
           provider_id: updates.provider_id || null,
         })
         .eq("id", id)

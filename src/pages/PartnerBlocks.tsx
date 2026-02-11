@@ -283,8 +283,6 @@ const BlockCard = ({ block, onEdit, status }: BlockCardProps) => {
     switch (block.price_type) {
       case "per_person": return `€${price} p.p.`;
       case "total": return `€${price} totaal`;
-      case "per_hour": return `€${price}/uur`;
-      case "per_day": return `€${price}/dag`;
       default: return `€${price}`;
     }
   };
