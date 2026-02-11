@@ -1,59 +1,55 @@
 
 
-# Plan: Logies-onderdelen tonen in offerte-preview
+# Plan: Logies-onderdelen toevoegen aan factuur-preview
 
 ## Overzicht
-De offerte-preview (`AdminQuotePreview.tsx`) toont momenteel alleen programma-items (activiteiten). We breiden dit uit met een logies-sectie die de gekoppelde accommodatie-offerte en bijbehorende extra's toont.
+De factuur-preview (`AdminInvoicePreview.tsx`) toont momenteel alleen programma-items en coordinatiekosten. We voegen een "Logies" sectie toe met de gekoppelde accommodatie-offerte en bijbehorende extra's, analoog aan wat al is gedaan in de offerte-preview.
 
-## Wat wordt getoond
+## Wat wordt toegevoegd
 
-Op basis van de bestaande data-koppeling (`program_requests.linked_accommodation_id` -> `accommodation_requests` -> `accommodation_quotes`):
+**Logies-sectie** (als nieuwe categorie-groep in de factuur-tabel):
+- Accommodatienaam + partnernaam
+- Aantal nachten (berekend uit arrival/departure)
+- Totaalprijs
+- BTW-tarief (standaard 9%)
 
-- **Logies-sectie** (nieuw blok boven of onder programma-overzicht):
-  - Accommodatienaam + partnernaam
-  - Aantal nachten (berekend uit arrival/departure)
-  - Prijs totaal
-  - Prijs per persoon per nacht (als beschikbaar)
-  - BTW-tarief (9%)
+**Logies extra's** (uit `accommodation_quote_extras`):
+- Elke extra als aparte regel met naam, aantal, prijs en subtotaal
+- Eigen BTW-tarief per extra
 
-- **Logies extra's** (uit `accommodation_quote_extras`):
-  - Naam + omschrijving per extra
-  - Prijs per stuk, aantal, subtotaal
-  - BTW-tarief
-
-- **Totaalberekening**: logies + extras worden meegenomen in de BTW-groepen en het eindtotaal
-
-## Welke offerte tonen?
-
-We tonen de offerte met status `selected` of `submitted` (de actieve offerte). Pending/declined quotes worden genegeerd.
-
----
+**Totaalberekening**: logies + extras worden opgenomen in de BTW-groepen en het eindtotaal.
 
 ## Technische wijzigingen
 
-### Bestand: `src/pages/admin/AdminQuotePreview.tsx`
+### Bestand: `src/pages/admin/AdminInvoicePreview.tsx`
 
 1. **Nieuwe interfaces** toevoegen:
-   - `AccommodationQuoteData` (accommodatienaam, prijs, BTW, partner, etc.)
-   - `AccommodationExtra` (naam, prijs, aantal, BTW)
+   - `AccommodationQuoteData` met velden: id, accommodation_name, partner_id, price_total, price_per_person_per_night, vat_rate, price_includes_vat, partner_name
+   - `AccommodationExtraData` met velden: name, description, quantity, unit_price, pricing_type, vat_rate
 
 2. **Nieuwe state**:
-   - `accommodationQuote` en `accommodationExtras`
+   - `accommodationQuote: AccommodationQuoteData | null`
+   - `accommodationExtras: AccommodationExtraData[]`
+   - `accommodationNights: number`
 
 3. **fetchData uitbreiden**:
-   - Via `request.linked_accommodation_id` de `accommodation_requests` ophalen
-   - Vervolgens de actieve quote ophalen (status = `selected` of `submitted`) met partner-naam via join
-   - De bijbehorende `accommodation_quote_extras` ophalen
+   - `program_requests` query al bevat `linked_accommodation_id` via de bestaande `requestData`
+   - Als `linked_accommodation_id` aanwezig: `accommodation_requests` ophalen voor arrival/departure dates
+   - Actieve quote ophalen (`status` in `['selected', 'submitted']`)
+   - Partner-naam ophalen via aparte query op `partners`
+   - `accommodation_quote_extras` ophalen voor die quote
 
 4. **calculateTotals uitbreiden**:
-   - Logiesprijs toevoegen aan BTW-groep 9%
-   - Elke extra toevoegen aan de juiste BTW-groep
-   - Totaalberekening aanpassen
+   - Logiesprijs toevoegen aan de juiste BTW-groep (quote.vat_rate, standaard 9%)
+   - Elke extra toevoegen aan zijn eigen BTW-groep
+   - Resultaat automatisch meegenomen in subtotaal, BTW en eindtotaal
 
-5. **PDF-inhoud uitbreiden**:
-   - Nieuwe sectie "Logies" met tabel: accommodatienaam, nachten, prijs
-   - Tabel met extra's (als aanwezig)
-   - Alles boven de totaalberekening
+5. **Factuur-tabel uitbreiden** (na programma-categorieen, voor coordinatiekosten):
+   - Categorie-header "Logies"
+   - Regel voor accommodatie met nachten, prijs en totaal
+   - Als er extra's zijn: categorie-header "Extra's bij logies"
+   - Regels per extra met naam, aantal, prijs en subtotaal
 
-6. **Sidebar**: aantal logies-items tonen naast activiteiten-telling
+6. **Sidebar** bijwerken:
+   - Aantal posten tellen inclusief logies-items
 
