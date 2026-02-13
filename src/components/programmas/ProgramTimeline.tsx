@@ -73,7 +73,7 @@ export const ProgramTimeline = ({ template }: ProgramTimelineProps) => {
                     {/* Card */}
                     <div className="flex-1 flex gap-3 bg-card rounded-lg border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow min-w-0">
                       {hasImage && (
-                        <div className="hidden sm:block w-24 md:w-32 shrink-0">
+                        <div className="w-20 sm:w-24 md:w-32 shrink-0">
                           <img
                             src={image}
                             alt={block?.name || item.block_id}
