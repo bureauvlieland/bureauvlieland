@@ -10,14 +10,17 @@ import {
   Calendar as CalendarIcon, 
   ChevronRight, 
   ChevronLeft,
-  Target,
-  Sparkles,
-  Building2,
-  PartyPopper,
-  Briefcase,
   Home,
-  ArrowRight
+  ArrowRight,
+  Check
 } from "lucide-react";
+
+import teamBeach from "@/assets/team-beach.jpg";
+import mindsetOutdoor from "@/assets/mindset22-outdoor.jpg";
+import speedboatImg from "@/assets/speedboat.jpg";
+import eventOutdoor from "@/assets/event-outdoor.jpg";
+import dunesGroupImg from "@/assets/dunes-group.jpg";
+import beachActivityImg from "@/assets/beach-activity.jpg";
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -37,7 +40,7 @@ interface ProgramTypeOption {
   id: ProgramType;
   label: string;
   description: string;
-  icon: React.ReactNode;
+  image: string;
 }
 
 const programTypes: ProgramTypeOption[] = [
@@ -45,37 +48,37 @@ const programTypes: ProgramTypeOption[] = [
     id: "teamuitje",
     label: "Teamuitje",
     description: "Eendaags programma voor teambuilding",
-    icon: <Users className="h-6 w-6" />,
+    image: teamBeach,
   },
   {
     id: "heisessie",
     label: "Heisessie",
     description: "Strategische sessie met focus op inhoud",
-    icon: <Target className="h-6 w-6" />,
+    image: mindsetOutdoor,
   },
   {
     id: "incentive",
     label: "Incentive reis",
     description: "Beloningsprogramma voor medewerkers",
-    icon: <Sparkles className="h-6 w-6" />,
+    image: speedboatImg,
   },
   {
     id: "bedrijfsevenement",
     label: "Zakelijk evenement",
     description: "Jubileum, productlancering of relatie-event",
-    icon: <Building2 className="h-6 w-6" />,
+    image: eventOutdoor,
   },
   {
     id: "meerdaags",
     label: "Meerdaags bedrijfsuitje",
     description: "Uitgebreid programma met overnachting",
-    icon: <Briefcase className="h-6 w-6" />,
+    image: dunesGroupImg,
   },
   {
     id: "overig",
     label: "Overig",
     description: "Ander type programma of combinatie",
-    icon: <PartyPopper className="h-6 w-6" />,
+    image: beachActivityImg,
   },
 ];
 
@@ -212,31 +215,38 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
 
           <div className="grid sm:grid-cols-2 gap-4">
             {programTypes.map((type) => (
-              <Card
+              <div
                 key={type.id}
                 className={cn(
-                  "cursor-pointer transition-all duration-200 hover:border-primary/50",
+                  "relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 group",
+                  "h-[140px] sm:h-[160px]",
                   data.programType === type.id
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "hover:bg-muted/30"
+                    ? "ring-3 ring-primary ring-offset-2 ring-offset-background shadow-lg"
+                    : "hover:shadow-md"
                 )}
                 onClick={() => setData({ ...data, programType: type.id })}
               >
-                <CardContent className="p-4 flex items-start gap-4">
-                  <div className={cn(
-                    "p-3 rounded-lg",
-                    data.programType === type.id 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    {type.icon}
+                <img
+                  src={type.image}
+                  alt={type.label}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className={cn(
+                  "absolute inset-0 transition-colors duration-300",
+                  data.programType === type.id
+                    ? "bg-primary/60"
+                    : "bg-black/45 group-hover:bg-black/55"
+                )} />
+                {data.programType === type.id && (
+                  <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-1">
+                    <Check className="h-4 w-4" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{type.label}</h3>
-                    <p className="text-sm text-muted-foreground">{type.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                )}
+                <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                  <h3 className="font-semibold text-lg text-white">{type.label}</h3>
+                  <p className="text-sm text-white/80 line-clamp-2">{type.description}</p>
+                </div>
+              </div>
             ))}
           </div>
 
