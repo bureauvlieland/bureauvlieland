@@ -1,7 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { useKenBurns } from "@/hooks/use-ken-burns";
@@ -124,57 +124,51 @@ const VoorbeeldprogrammaOverzicht = () => {
             ) : templates && templates.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {templates.map((t) => (
-                  <Card
+                  <div
                     key={t.id}
-                    className="cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 group"
+                    className="relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 group h-[240px] sm:h-[280px] hover:shadow-lg hover:-translate-y-1"
                     onClick={() => scrollToTemplate(t.id)}
                   >
-                    {t.image_url && (
-                      <div className="relative h-48 overflow-hidden">
-                        <img
-                          src={t.image_url}
-                          alt={t.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                        <div className="absolute bottom-3 left-3 flex gap-2">
-                          <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {t.duration_days} {t.duration_days === 1 ? "dag" : "dagen"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xl">{t.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                    <img
+                      src={t.image_url || "/placeholder.svg"}
+                      alt={t.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                    <div className="absolute top-3 left-3 flex gap-2">
+                      <span className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {t.duration_days} {t.duration_days === 1 ? "dag" : "dagen"}
+                      </span>
+                    </div>
+                    <div className="absolute inset-0 p-5 flex flex-col justify-end">
+                      <h3 className="font-bold text-xl text-white mb-1">{t.name}</h3>
                       {t.short_description && (
-                        <p className="text-muted-foreground text-sm mb-4">
+                        <p className="text-white/80 text-sm line-clamp-2 mb-3">
                           {t.short_description}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2">
                         {t.target_group && (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">
                             <Users className="h-3 w-3" />
                             {t.target_group}
                           </span>
                         )}
                         {t.indicative_price_pp && (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-xs text-white/90 bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">
                             <Euro className="h-3 w-3" />
                             Vanaf €{t.indicative_price_pp} p.p.
                           </span>
                         )}
                       </div>
-                      <div className="mt-4 flex items-center gap-1 text-primary text-sm font-medium group-hover:gap-2 transition-all">
+                      <div className="mt-3 flex items-center gap-1 text-white text-sm font-medium group-hover:gap-2 transition-all">
                         Bekijk tijdlijn
                         <ArrowRight className="h-4 w-4" />
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
