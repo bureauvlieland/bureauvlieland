@@ -10,6 +10,7 @@ import lunchBuffet from "@/assets/lunch-buffet.jpg";
 import lighthouseVlieland from "@/assets/lighthouse-vlieland.jpg";
 import dunesGroup from "@/assets/dunes-group.jpg";
 import kiteFlying from "@/assets/kite-flying.jpg";
+import strandBbq from "@/assets/strand-bbq.jpg";
 import silentDisco from "@/assets/silent-disco.jpg";
 import outdoorDining from "@/assets/outdoor-dining.jpg";
 
@@ -29,6 +30,7 @@ const assetMap: Record<string, string> = {
   "kite-flying.jpg": kiteFlying,
   "silent-disco.jpg": silentDisco,
   "outdoor-dining.jpg": outdoorDining,
+  "strand-bbq.jpg": strandBbq,
 };
 
 /**
