@@ -102,11 +102,18 @@ const PartnerLogin = () => {
           return;
         }
 
-        // Mark partner as activated on first login
+        // Mark partner as activated and track login
         try {
-          await supabase.functions.invoke("update-partner-password-set");
+          const now = new Date().toISOString();
+          await supabase
+            .from("partners")
+            .update({ 
+              password_set_at: now,
+              last_login_at: now,
+            })
+            .eq("auth_user_id", data.user.id);
         } catch (err) {
-          console.error("Error updating password_set_at:", err);
+          console.error("Error updating login status:", err);
         }
 
         toast({
