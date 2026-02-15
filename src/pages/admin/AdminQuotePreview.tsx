@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import type { BuildingBlock } from "@/types/buildingBlock";
 
 interface ProgramRequest {
@@ -45,6 +46,7 @@ interface ProgramRequest {
   quote_valid_until: string | null;
   quote_personal_message: string | null;
   linked_accommodation_id: string | null;
+  invoicing_mode: string | null;
 }
 
 interface ProgramItem {
@@ -93,6 +95,7 @@ const AdminQuotePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
+  const { settings: appSettings } = useAppSettings();
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
@@ -287,15 +290,24 @@ const AdminQuotePreview = () => {
   const calculateTotals = () => {
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
 
+    // Filter out self_arranged items from price calculations
+    const pricedItems = items.filter(item => item.block_type !== "self_arranged");
+
+    // Calculate surcharge for bureau_central mode
+    const isBureauCentral = request?.invoicing_mode === "bureau_central";
+    const surchargePerPerson = appSettings.bureau_central_surcharge_pp;
+    const numberOfPeople = request?.number_of_people || 0;
+    const centralSurcharge = isBureauCentral ? surchargePerPerson * numberOfPeople : 0;
+
     // Group amounts by VAT rate
     const vatGroups: Record<number, number> = {};
-    items.forEach(item => {
+    pricedItems.forEach(item => {
       const total = getItemTotal(item);
       const rate = getItemVatRate(item);
       vatGroups[rate] = (vatGroups[rate] || 0) + total;
     });
-    // Bureau fee is always 21%
-    vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
+    // Bureau fee + surcharge are always 21%
+    vatGroups[21] = (vatGroups[21] || 0) + bureauFee + centralSurcharge;
 
     // Add accommodation quote to VAT groups
     let accommodationTotal = 0;
@@ -329,10 +341,10 @@ const AdminQuotePreview = () => {
         totalVat += vatAmount;
       });
 
-    const itemsTotal = items.reduce((sum, item) => sum + getItemTotal(item), 0);
+    const itemsTotal = pricedItems.reduce((sum, item) => sum + getItemTotal(item), 0);
     const totalInclVat = totalExclVat + totalVat;
 
-    return { itemsTotal, bureauFee, totalExclVat, totalVat, totalInclVat, vatLines, accommodationTotal, extrasTotal };
+    return { itemsTotal, bureauFee, centralSurcharge, totalExclVat, totalVat, totalInclVat, vatLines, accommodationTotal, extrasTotal };
   };
 
   // Helper function to convert blob to base64
@@ -728,10 +740,16 @@ const AdminQuotePreview = () => {
                                       </p>
                                     </td>
                                     <td className="py-3 text-right text-sm font-medium whitespace-nowrap">
-                                      {formatCurrency(getItemPrice(item))}
-                                      <span className="text-xs text-gray-400 ml-1">
-                                        {item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
-                                      </span>
+                                      {item.block_type === "self_arranged" ? (
+                                        <span className="text-xs text-gray-400 italic">Zelf te regelen</span>
+                                      ) : (
+                                        <>
+                                          {formatCurrency(getItemPrice(item))}
+                                          <span className="text-xs text-gray-400 ml-1">
+                                            {item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
+                                          </span>
+                                        </>
+                                      )}
                                     </td>
                                   </tr>
                                 );
@@ -837,6 +855,12 @@ const AdminQuotePreview = () => {
                           <div className="flex justify-between text-sm mb-1">
                             <span>Coördinatiekosten</span>
                             <span>{formatCurrency(totals.bureauFee)}</span>
+                          </div>
+                        )}
+                        {totals.centralSurcharge > 0 && (
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>Opslag centrale facturatie ({request.number_of_people} × {formatCurrency(appSettings.bureau_central_surcharge_pp)})</span>
+                            <span>{formatCurrency(totals.centralSurcharge)}</span>
                           </div>
                         )}
                         <Separator className="my-2" />
