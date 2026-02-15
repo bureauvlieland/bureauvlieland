@@ -230,6 +230,12 @@ function generateQuoteEmailHtml(
             Wij helpen u graag verder!
           </p>
 
+          <div style="background: #eff6ff; padding: 14px 18px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #3b82f6;">
+            <p style="margin: 0; font-size: 13px; color: #1e40af;">
+              Wij werken momenteel met een vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag.
+            </p>
+          </div>
+
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
 
           <p style="margin-bottom: 0;">
