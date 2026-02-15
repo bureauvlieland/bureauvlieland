@@ -17,7 +17,46 @@ export const usePublishedTemplates = () => {
         .order("sort_order", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      const templates = data || [];
+
+      // For templates without image_url, fetch first block image as fallback
+      const needsFallback = templates.filter((t) => !t.image_url);
+      if (needsFallback.length > 0) {
+        const { data: items } = await supabase
+          .from("program_template_items")
+          .select("template_id, block_id")
+          .in("template_id", needsFallback.map((t) => t.id))
+          .order("day_index", { ascending: true })
+          .order("sort_order", { ascending: true });
+
+        if (items && items.length > 0) {
+          // Get first block_id per template
+          const firstBlockPerTemplate = new Map<string, string>();
+          for (const item of items) {
+            if (!firstBlockPerTemplate.has(item.template_id)) {
+              firstBlockPerTemplate.set(item.template_id, item.block_id);
+            }
+          }
+
+          const blockIds = [...new Set(firstBlockPerTemplate.values())];
+          const { data: blocks } = await supabase
+            .from("building_blocks")
+            .select("id, image_url")
+            .in("id", blockIds);
+
+          if (blocks) {
+            const blockImageMap = new Map(blocks.map((b) => [b.id, b.image_url]));
+            for (const t of templates) {
+              if (!t.image_url) {
+                const blockId = firstBlockPerTemplate.get(t.id);
+                if (blockId) t.image_url = blockImageMap.get(blockId) || null;
+              }
+            }
+          }
+        }
+      }
+
+      return templates;
     },
   });
 };
