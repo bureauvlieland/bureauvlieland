@@ -1,41 +1,40 @@
 
-# Afbeeldingen toevoegen aan voorbeeldprogramma-kaarten
+# Navigatie optimalisatie
 
-## Probleem
-De 4 programmakaarten bovenaan de pagina tonen placeholder-afbeeldingen omdat het veld `image_url` in de `program_templates` tabel leeg is voor alle templates. De afbeeldingen in de tijdlijn-blokken werken wel correct.
+## Huidige problemen
+1. **Dubbele links**: "Programma samenstellen" verschijnt twee keer (tekstlink + CTA-button), "Contact" ook twee keer (tekstlink in "Over ons" dropdown + aparte button)
+2. **Te veel items op de balk**: 3 dropdowns + 3 losse links + 2 buttons = 8 elementen, waardoor het logo op kleinere desktops verdwijnt
+3. **Ruimtegebrek**: op 1024-1366px schermen is het erg krap
 
-## Oplossing (twee stappen)
+## Voorgestelde aanpak: compactere navigatie
 
-### Stap 1: Fallback in de code
-De `VoorbeeldprogrammaOverzicht.tsx` pagina toont nu `t.image_url || "/placeholder.svg"` als afbeelding. We voegen een fallback toe die automatisch de afbeelding van het eerste bouwblok uit het template gebruikt als er geen eigen template-afbeelding is ingesteld. Hiervoor moeten we de template-items ophalen of een slimme fallback inbouwen.
+### Wat verandert
+- **Verwijder dubbele "Programma samenstellen" tekstlink** uit het midden -- de CTA-button rechts is voldoende en valt meer op
+- **Verwijder losse "Contact" button** -- Contact blijft bereikbaar via het "Over ons" dropdown
+- **"Voorbeeldprogramma's" verplaatsen** naar het "Voor bedrijven" dropdown als eerste item, aangezien het daar thematisch bij past
+- **Resultaat**: van 8 naar 5 elementen op de balk (3 dropdowns + Logies link + 1 CTA-button)
 
-Concreet: we passen de `usePublishedTemplates` hook aan zodat die ook het eerste item met blok-afbeelding meelevert, of we lossen het op door voor elk template de eerste blok-image als fallback te gebruiken via een extra query.
+### Visueel resultaat
 
-### Stap 2: Database vullen met passende afbeeldingen
-We stellen voor elk template een passende `image_url` in op basis van een representatieve bouwsteen-afbeelding die al in storage staat:
+```text
+[Logo]   Voor bedrijven v   Voor prive v   Logies   Over ons v   [Programma samenstellen]
+```
 
-| Template | Voorgestelde afbeelding |
-|---|---|
-| Eilanddag Compleet | Zeehondentocht (seal-tour) of Fietshuur (cycling-team) |
-| Avontuur en Ontspanning | Branding Raften of Strand BBQ |
-| Complete Eilandervaring | Strandspektakel of een landschap |
-| Actief en Culinair Dagje | Powerkiten/Vliegeren of Brouwerij Fortuna |
+In plaats van het huidige:
+```text
+[Logo] Voor bedrijven v  Voor prive v  Voorbeeldprogramma's  Programma samenstellen  Logies  Over ons v  [Contact] [Programma samenstellen]
+```
 
-We gebruiken afbeeldingen die al beschikbaar zijn in de storage bucket `building-block-images`.
+### Mobiel
+Het mobiele menu wordt ook opgeschoond: geen dubbele "Programma samenstellen" link meer (alleen de CTA-button bovenaan).
 
 ## Technische details
 
-**Bestanden:**
-- `src/hooks/useProgramTemplates.ts` — eventueel aanpassen als fallback in code gewenst is
-- `src/pages/VoorbeeldprogrammaOverzicht.tsx` — fallback-logica toevoegen bij `img src`
-- Database update — `image_url` vullen voor alle 4 templates
+**Bestand:** `src/components/Navigation.tsx`
 
-**Database updates (4 SQL statements):**
-```sql
-UPDATE program_templates SET image_url = '<storage-url>' WHERE id = 'eilanddag-compleet';
-UPDATE program_templates SET image_url = '<storage-url>' WHERE id = 'avontuur-ontspanning';
-UPDATE program_templates SET image_url = '<storage-url>' WHERE id = 'complete-eilandervaring';
-UPDATE program_templates SET image_url = '<storage-url>' WHERE id = 'actief-culinair-dagje';
-```
-
-De exacte URLs worden opgehaald uit de bestaande `building_blocks` afbeeldingen.
+Wijzigingen:
+1. Verplaats "Voorbeeldprogramma's" naar `voorBedrijvenItems` array als eerste (niet-highlighted) item
+2. Verwijder de losse `<Link to="/voorbeeldprogrammas">` en `<Link to="/programma-samenstellen">` uit de desktop nav
+3. Verwijder de `<Link to="/contact"><Button>Contact</Button></Link>` button (Contact zit al in "Over ons")
+4. Zelfde opschoning in de mobiele sectie: verwijder dubbele links
+5. Gap tussen items iets verkleinen: `gap-5` naar `gap-4`
