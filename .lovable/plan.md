@@ -1,40 +1,43 @@
 
-# Navigatie optimalisatie
+# Offerte PDF visueel verbeteren
 
-## Huidige problemen
-1. **Dubbele links**: "Programma samenstellen" verschijnt twee keer (tekstlink + CTA-button), "Contact" ook twee keer (tekstlink in "Over ons" dropdown + aparte button)
-2. **Te veel items op de balk**: 3 dropdowns + 3 losse links + 2 buttons = 8 elementen, waardoor het logo op kleinere desktops verdwijnt
-3. **Ruimtegebrek**: op 1024-1366px schermen is het erg krap
+## Wat verandert
 
-## Voorgestelde aanpak: compactere navigatie
+### 1. Afbeeldingen bij programma-onderdelen
+Elke activiteit in de PDF-preview krijgt een kleine thumbnail (40x40px) naast de naam. De afbeeldingen worden opgehaald uit de `building_blocks` tabel (veld `image_url` of `image_asset`). Bijna alle bouwstenen in dit project hebben al een afbeelding.
 
-### Wat verandert
-- **Verwijder dubbele "Programma samenstellen" tekstlink** uit het midden -- de CTA-button rechts is voldoende en valt meer op
-- **Verwijder losse "Contact" button** -- Contact blijft bereikbaar via het "Over ons" dropdown
-- **"Voorbeeldprogramma's" verplaatsen** naar het "Voor bedrijven" dropdown als eerste item, aangezien het daar thematisch bij past
-- **Resultaat**: van 8 naar 5 elementen op de balk (3 dropdowns + Logies link + 1 CTA-button)
-
-### Visueel resultaat
-
-```text
-[Logo]   Voor bedrijven v   Voor prive v   Logies   Over ons v   [Programma samenstellen]
-```
-
-In plaats van het huidige:
-```text
-[Logo] Voor bedrijven v  Voor prive v  Voorbeeldprogramma's  Programma samenstellen  Logies  Over ons v  [Contact] [Programma samenstellen]
-```
-
-### Mobiel
-Het mobiele menu wordt ook opgeschoond: geen dubbele "Programma samenstellen" link meer (alleen de CTA-button bovenaan).
+### 2. Sortering op tijd
+De items per dag worden gesorteerd op `preferred_time`, zodat het programma chronologisch loopt. Items zonder tijd komen onderaan.
 
 ## Technische details
 
-**Bestand:** `src/components/Navigation.tsx`
+**Bestand:** `src/pages/admin/AdminQuotePreview.tsx`
 
-Wijzigingen:
-1. Verplaats "Voorbeeldprogramma's" naar `voorBedrijvenItems` array als eerste (niet-highlighted) item
-2. Verwijder de losse `<Link to="/voorbeeldprogrammas">` en `<Link to="/programma-samenstellen">` uit de desktop nav
-3. Verwijder de `<Link to="/contact"><Button>Contact</Button></Link>` button (Contact zit al in "Over ons")
-4. Zelfde opschoning in de mobiele sectie: verwijder dubbele links
-5. Gap tussen items iets verkleinen: `gap-5` naar `gap-4`
+### Aanpassingen:
+
+1. **Extra data ophalen** - Bij het fetchen van items ook `image_url` en `image_asset` meenemen uit de `building_blocks` tabel (die join gebeurt al deels voor VAT, wordt uitgebreid).
+
+2. **ProgramItem interface uitbreiden** met `image_url?: string | null`.
+
+3. **Sortering toevoegen** - Na het groeperen per dag, de items sorteren:
+```typescript
+dayItems.sort((a, b) => {
+  if (!a.preferred_time && !b.preferred_time) return 0;
+  if (!a.preferred_time) return 1;
+  if (!b.preferred_time) return -1;
+  return a.preferred_time.localeCompare(b.preferred_time);
+});
+```
+
+4. **Thumbnail in PDF-tabel** - De activiteitrij krijgt een afbeelding-kolom:
+```
+[40x40 afbeelding] | Tijd | Activiteit + beschrijving | Prijs
+```
+De afbeelding wordt weergegeven als een `img` tag met `object-cover` en afgeronde hoeken, binnen de bestaande tabel-rij.
+
+5. **Fallback** - Als er geen afbeelding beschikbaar is, wordt een gekleurde cirkel met de eerste letter van de activiteit getoond (vergelijkbaar met een avatar).
+
+### Impact
+- Alleen de offerte-preview/PDF wordt aangepast
+- Geen effect op het klantportaal of andere views
+- De html2canvas rendering pakt de afbeeldingen automatisch mee in de PDF
