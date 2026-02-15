@@ -1,36 +1,49 @@
 
 
-# Disclaimers op de offerte-PDF
+# Beta-banner in klantportaal + opmerking in offerte-email
 
 ## Wat verandert
 
-Drie tekstuele aanpassingen in de offerte-preview die duidelijk communiceren dat activiteitenprijzen indicatief zijn, terwijl logies al gebaseerd is op een actuele aanbieding.
+### 1. Nieuwe app_setting: `portal_beta_banner_enabled`
+Een boolean instelling in de `app_settings` tabel waarmee de beta-banner aan- en uitgezet kan worden vanuit de admin-instellingen. Zodra de portal stabiel genoeg is, schakelt u deze simpelweg uit.
 
-### 1. Nieuw disclaimer-blok (boven de totalen)
-Een informatief blok met de tekst:
+### 2. Beta-banner in het klantportaal
+Bovenaan de pagina `/mijn-programma/:token` verschijnt een subtiele, vriendelijke banner:
 
-> **Indicatief voorstel**
-> De genoemde prijzen voor activiteiten zijn gebaseerd op onze actuele tarieven en zijn indicatief. Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw persoonlijke klantomgeving.
+> **Nieuw! Vernieuwde klantomgeving** -- Wij werken momenteel met een volledig vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via hallo@bureauvlieland.nl.
 
-Wanneer er een logies-offerte aan het voorstel is gekoppeld, wordt een extra zin toegevoegd:
+De banner wordt alleen getoond als `portal_beta_banner_enabled` aan staat. Styling: lichtblauw informatief blok met een sluitknop (dismiss per sessie).
 
-> De prijzen voor logies zijn gebaseerd op een actuele aanbieding van de accommodatiepartner en zijn reeds bevestigd.
+### 3. Opmerking in de offerte-email
+In de `send-quote-offer` edge function wordt een korte, professionele zin toegevoegd aan de bevestigingsmail die de klant ontvangt bij het versturen van de offerte:
 
-### 2. Geldigheidsblok aanscherpen
-De tekst in het gele validiteitsblok wordt:
+> Wij werken momenteel met een vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag.
 
-> Dit voorstel is geldig tot [datum]. Na uw akkoord ontvangt u toegang tot uw klantomgeving waar u de bevestigingen van partners kunt volgen.
-
-### 3. Footer aanpassen
-De footertekst wordt: "Prijzen voor activiteiten zijn indicatief en onder voorbehoud van beschikbaarheid."
+Dit wordt toegevoegd als korte paragraaf onder de hoofdinhoud van de mail, boven de footer.
 
 ## Technische details
 
-**Bestand:** `src/pages/admin/AdminQuotePreview.tsx`
+### Database-migratie
+- `INSERT` van een nieuw record in `app_settings`:
+  - id: `portal_beta_banner_enabled`
+  - category: `features`
+  - label: `Beta-banner klantportaal`
+  - description: `Toon een melding in het klantportaal dat de omgeving nieuw is`
+  - value_type: `boolean`
+  - value: `true`
 
-1. Nieuw `div`-blok invoegen net boven de Validity-sectie (rond regel 859). De tekst is conditioneel: als `accommodationQuote` niet `null` is, wordt de extra zin over logies getoond.
+### Bestanden die worden aangepast
 
-2. Geldigheidsblok (regels 860-869): tekst vervangen.
+1. **`src/types/appSettings.ts`** -- Toevoegen van `portal_beta_banner_enabled: boolean` aan `AppSettingsMap`.
 
-3. Footer (regel 879): tekst wijzigen.
+2. **`src/lib/appSettings.ts`** -- Toevoegen van fallback `portal_beta_banner_enabled: false` aan `FALLBACK_SETTINGS`.
+
+3. **`src/pages/CustomerProgram.tsx`** -- Nieuwe banner-component na de header, conditioneel op basis van de `portal_beta_banner_enabled` setting. Dismiss-state via `useState`.
+
+4. **`supabase/functions/send-quote-offer/index.ts`** -- Extra paragraaf in de HTML-template van de klant-email.
+
+### Impact
+- De banner is alleen zichtbaar voor klanten in het portaal, niet op de publieke website
+- Uitschakelbaar via de bestaande admin-instellingen pagina (verschijnt automatisch onder "Functies")
+- De email-opmerking kan later handmatig verwijderd worden uit de edge function
 
