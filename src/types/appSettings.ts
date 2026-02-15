@@ -30,6 +30,7 @@ export interface AppSettingsMap {
   reminder_days_customer_quote: number;
   reminder_days_customer_request: number;
   reminder_email_enabled: boolean;
+  portal_beta_banner_enabled: boolean;
 }
 
 // Setting categories for grouping in admin UI

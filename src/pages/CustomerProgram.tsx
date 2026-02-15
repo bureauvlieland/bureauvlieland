@@ -12,6 +12,7 @@ import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigatio
 import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
@@ -20,6 +21,8 @@ import {
   ArrowLeft, 
   AlertCircle,
   RefreshCw,
+  Info,
+  X,
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 
@@ -27,6 +30,8 @@ const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { settings: appSettings } = useAppSettings();
+  const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
   
   const {
     program,
@@ -330,6 +335,26 @@ const CustomerProgram = () => {
           </Button>
         </div>
       </header>
+
+      {/* Beta banner */}
+      {appSettings.portal_beta_banner_enabled && !betaBannerDismissed && (
+        <div className="bg-blue-50 border-b border-blue-200">
+          <div className="container mx-auto px-4 py-3 flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-800 flex-1">
+              <strong>Nieuw! Vernieuwde klantomgeving</strong> — Wij werken momenteel met een volledig vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
+              <a href="mailto:hallo@bureauvlieland.nl" className="underline font-medium">hallo@bureauvlieland.nl</a>.
+            </p>
+            <button
+              onClick={() => setBetaBannerDismissed(true)}
+              className="text-blue-600 hover:text-blue-800 flex-shrink-0"
+              aria-label="Sluiten"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Desktop navigation - only show on lg screens */}
       {!isMobile && <ProgramNavigation isMultiDay={selectedDates.length > 1} />}

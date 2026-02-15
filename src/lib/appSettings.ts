@@ -25,6 +25,7 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   reminder_days_customer_quote: 7,
   reminder_days_customer_request: 14,
   reminder_email_enabled: true,
+  portal_beta_banner_enabled: false,
 };
 
 // ============================================
