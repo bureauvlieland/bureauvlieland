@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calculateBureauFee } from "@/types/buildingBlock";
+import { getBlockImage } from "@/lib/buildingBlockUtils";
+import type { BuildingBlock } from "@/types/buildingBlock";
 
 interface ProgramRequest {
   id: string;
@@ -59,6 +61,8 @@ interface ProgramItem {
   admin_price_notes: string | null;
   quoted_price: number | null;
   price_type: string | null;
+  image_url: string | null;
+  image_asset: string | null;
 }
 
 interface AccommodationQuoteData {
@@ -153,20 +157,30 @@ const AdminQuotePreview = () => {
         .order("day_index", { ascending: true });
 
       if (itemsError) throw itemsError;
-      const fetchedItems = itemsData as ProgramItem[];
+      const fetchedItems = (itemsData as unknown as ProgramItem[]).map(item => ({
+        ...item, image_url: item.image_url ?? null, image_asset: item.image_asset ?? null,
+      }));
       setItems(fetchedItems);
 
-      // Fetch VAT rates from building_blocks
+      // Fetch VAT rates + images from building_blocks
       const blockIds = fetchedItems.map(i => i.block_id).filter(Boolean) as string[];
       if (blockIds.length > 0) {
         const { data: blocks } = await supabase
           .from("building_blocks")
-          .select("id, vat_rate")
+          .select("id, vat_rate, image_url, image_asset")
           .in("id", blockIds);
         if (blocks) {
           const map: Record<string, number> = {};
-          blocks.forEach(b => { map[b.id] = b.vat_rate ?? 21; });
+          const enriched = fetchedItems.map(item => {
+            const block = blocks.find(b => b.id === item.block_id);
+            if (block) {
+              map[block.id] = block.vat_rate ?? 21;
+              return { ...item, image_url: block.image_url, image_asset: block.image_asset };
+            }
+            return item;
+          });
           setVatRateMap(map);
+          setItems(enriched);
         }
       }
 
@@ -456,6 +470,16 @@ const AdminQuotePreview = () => {
     return acc;
   }, {} as Record<number, ProgramItem[]>);
 
+  // Sort each day's items by preferred_time (items without time at the end)
+  Object.values(groupedByDay).forEach(dayItems => {
+    dayItems.sort((a, b) => {
+      if (!a.preferred_time && !b.preferred_time) return 0;
+      if (!a.preferred_time) return 1;
+      if (!b.preferred_time) return -1;
+      return a.preferred_time.localeCompare(b.preferred_time);
+    });
+  });
+
   return (
     <>
       <Helmet>
@@ -659,36 +683,59 @@ const AdminQuotePreview = () => {
                           <table className="w-full mt-2">
                             <thead>
                               <tr className="text-left text-xs text-gray-500 border-b">
-                                <th className="py-2">Tijd</th>
+                                <th className="py-2 w-12"></th>
+                                <th className="py-2 w-16">Tijd</th>
                                 <th className="py-2">Activiteit</th>
                                 <th className="py-2 text-right">Prijs</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {dayItems.map((item) => (
-                                <tr key={item.id} className="border-b border-gray-100">
-                                  <td className="py-3 text-sm w-20">
-                                    {item.preferred_time || "-"}
-                                  </td>
-                                  <td className="py-3">
-                                    <p className="font-medium text-sm">{item.block_name}</p>
-                                    {item.admin_price_notes && (
-                                      <p className="text-xs text-gray-500">
-                                        {item.admin_price_notes}
+                              {dayItems.map((item) => {
+                                const imgSrc = (item.image_url || item.image_asset)
+                                  ? getBlockImage({ image_url: item.image_url, image_asset: item.image_asset } as BuildingBlock)
+                                  : null;
+                                return (
+                                  <tr key={item.id} className="border-b border-gray-100">
+                                    <td className="py-2 w-12">
+                                      {imgSrc ? (
+                                        <img
+                                          src={imgSrc}
+                                          alt={item.block_name}
+                                          className="w-10 h-10 rounded object-cover"
+                                          crossOrigin="anonymous"
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-10 h-10 rounded flex items-center justify-center text-white text-sm font-bold"
+                                          style={{ backgroundColor: "#1e3a5f" }}
+                                        >
+                                          {item.block_name.charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="py-3 text-sm w-16">
+                                      {item.preferred_time || "-"}
+                                    </td>
+                                    <td className="py-3">
+                                      <p className="font-medium text-sm">{item.block_name}</p>
+                                      {item.admin_price_notes && (
+                                        <p className="text-xs text-gray-500">
+                                          {item.admin_price_notes}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-gray-400">
+                                        {item.provider_name}
                                       </p>
-                                    )}
-                                    <p className="text-xs text-gray-400">
-                                      {item.provider_name}
-                                    </p>
-                                  </td>
-                                  <td className="py-3 text-right text-sm font-medium whitespace-nowrap">
-                                    {formatCurrency(getItemPrice(item))}
-                                    <span className="text-xs text-gray-400 ml-1">
-                                      {item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
+                                    </td>
+                                    <td className="py-3 text-right text-sm font-medium whitespace-nowrap">
+                                      {formatCurrency(getItemPrice(item))}
+                                      <span className="text-xs text-gray-400 ml-1">
+                                        {item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
