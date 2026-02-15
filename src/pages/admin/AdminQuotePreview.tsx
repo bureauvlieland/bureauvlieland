@@ -856,15 +856,27 @@ const AdminQuotePreview = () => {
                         </div>
                       </div>
 
+                      {/* Disclaimer */}
+                      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                        <p className="font-semibold text-blue-900 mb-1">Indicatief voorstel</p>
+                        <p className="text-blue-800">
+                          De genoemde prijzen voor activiteiten zijn gebaseerd op onze actuele tarieven en zijn indicatief. Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw persoonlijke klantomgeving.
+                        </p>
+                        {accommodationQuote && (
+                          <p className="text-blue-800 mt-2">
+                            De prijzen voor logies zijn gebaseerd op een actuele aanbieding van de accommodatiepartner en zijn reeds bevestigd.
+                          </p>
+                        )}
+                      </div>
+
                       {/* Validity */}
-                      <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                         <p className="font-semibold text-amber-800">
                           Dit voorstel is geldig tot{" "}
                           {format(validUntil, "d MMMM yyyy", { locale: nl })}
                         </p>
                         <p className="text-amber-700 mt-1">
-                          Als u akkoord bent met dit programmavoorstel, kunt u dit bevestigen 
-                          in uw klantomgeving. Hierna worden de leveranciers op de hoogte gebracht.
+                          Na uw akkoord ontvangt u toegang tot uw klantomgeving waar u de bevestigingen van partners kunt volgen.
                         </p>
                       </div>
 
@@ -876,7 +888,7 @@ const AdminQuotePreview = () => {
                             <p>hallo@bureauvlieland.nl | 0562 700 208</p>
                           </div>
                           <div className="text-right">
-                            <p>Prijzen zijn onder voorbehoud.</p>
+                            <p>Prijzen voor activiteiten zijn indicatief en onder voorbehoud van beschikbaarheid.</p>
                             <p>Facturatie kan geschieden door partners.</p>
                           </div>
                         </div>
