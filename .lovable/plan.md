@@ -1,43 +1,36 @@
 
-# Offerte PDF visueel verbeteren
+
+# Disclaimers op de offerte-PDF
 
 ## Wat verandert
 
-### 1. Afbeeldingen bij programma-onderdelen
-Elke activiteit in de PDF-preview krijgt een kleine thumbnail (40x40px) naast de naam. De afbeeldingen worden opgehaald uit de `building_blocks` tabel (veld `image_url` of `image_asset`). Bijna alle bouwstenen in dit project hebben al een afbeelding.
+Drie tekstuele aanpassingen in de offerte-preview die duidelijk communiceren dat activiteitenprijzen indicatief zijn, terwijl logies al gebaseerd is op een actuele aanbieding.
 
-### 2. Sortering op tijd
-De items per dag worden gesorteerd op `preferred_time`, zodat het programma chronologisch loopt. Items zonder tijd komen onderaan.
+### 1. Nieuw disclaimer-blok (boven de totalen)
+Een informatief blok met de tekst:
+
+> **Indicatief voorstel**
+> De genoemde prijzen voor activiteiten zijn gebaseerd op onze actuele tarieven en zijn indicatief. Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw persoonlijke klantomgeving.
+
+Wanneer er een logies-offerte aan het voorstel is gekoppeld, wordt een extra zin toegevoegd:
+
+> De prijzen voor logies zijn gebaseerd op een actuele aanbieding van de accommodatiepartner en zijn reeds bevestigd.
+
+### 2. Geldigheidsblok aanscherpen
+De tekst in het gele validiteitsblok wordt:
+
+> Dit voorstel is geldig tot [datum]. Na uw akkoord ontvangt u toegang tot uw klantomgeving waar u de bevestigingen van partners kunt volgen.
+
+### 3. Footer aanpassen
+De footertekst wordt: "Prijzen voor activiteiten zijn indicatief en onder voorbehoud van beschikbaarheid."
 
 ## Technische details
 
 **Bestand:** `src/pages/admin/AdminQuotePreview.tsx`
 
-### Aanpassingen:
+1. Nieuw `div`-blok invoegen net boven de Validity-sectie (rond regel 859). De tekst is conditioneel: als `accommodationQuote` niet `null` is, wordt de extra zin over logies getoond.
 
-1. **Extra data ophalen** - Bij het fetchen van items ook `image_url` en `image_asset` meenemen uit de `building_blocks` tabel (die join gebeurt al deels voor VAT, wordt uitgebreid).
+2. Geldigheidsblok (regels 860-869): tekst vervangen.
 
-2. **ProgramItem interface uitbreiden** met `image_url?: string | null`.
+3. Footer (regel 879): tekst wijzigen.
 
-3. **Sortering toevoegen** - Na het groeperen per dag, de items sorteren:
-```typescript
-dayItems.sort((a, b) => {
-  if (!a.preferred_time && !b.preferred_time) return 0;
-  if (!a.preferred_time) return 1;
-  if (!b.preferred_time) return -1;
-  return a.preferred_time.localeCompare(b.preferred_time);
-});
-```
-
-4. **Thumbnail in PDF-tabel** - De activiteitrij krijgt een afbeelding-kolom:
-```
-[40x40 afbeelding] | Tijd | Activiteit + beschrijving | Prijs
-```
-De afbeelding wordt weergegeven als een `img` tag met `object-cover` en afgeronde hoeken, binnen de bestaande tabel-rij.
-
-5. **Fallback** - Als er geen afbeelding beschikbaar is, wordt een gekleurde cirkel met de eerste letter van de activiteit getoond (vergelijkbaar met een avatar).
-
-### Impact
-- Alleen de offerte-preview/PDF wordt aangepast
-- Geen effect op het klantportaal of andere views
-- De html2canvas rendering pakt de afbeeldingen automatisch mee in de PDF
