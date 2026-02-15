@@ -35,7 +35,7 @@ export const PriceSummaryCard = ({
   invoicingMode,
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
-  const { getCoordinationFee, getVatRate } = useAppSettings();
+  const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
 
   // Fetch VAT rates per building block
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
@@ -106,6 +106,9 @@ export const PriceSummaryCard = ({
     const coordinationFeeAmount = getCoordinationFee(numberOfPeople);
     const standardVatRate = getVatRate("standard");
 
+    // Central invoicing surcharge
+    const centralSurcharge = isBureauCentral ? appSettings.bureau_central_surcharge_pp * numberOfPeople : 0;
+
     // Calculate per-item VAT using actual building block rates
     let bureauExclVat = 0;
     let bureauVatAmount = 0;
@@ -120,8 +123,8 @@ export const PriceSummaryCard = ({
       bureauVatLines[rate].exclVat += breakdown.exclVat;
       bureauVatLines[rate].vatAmount += breakdown.vatAmount;
     });
-    // Add coordination fee (always 21%)
-    const feeVat = calculateVatBreakdown(coordinationFeeAmount, standardVatRate);
+    // Add coordination fee + surcharge (always 21%)
+    const feeVat = calculateVatBreakdown(coordinationFeeAmount + centralSurcharge, standardVatRate);
     bureauExclVat += feeVat.exclVat;
     bureauVatAmount += feeVat.vatAmount;
     if (!bureauVatLines[standardVatRate]) bureauVatLines[standardVatRate] = { exclVat: 0, vatAmount: 0 };
@@ -158,7 +161,8 @@ export const PriceSummaryCard = ({
       bureauTotal,
       partnerTotal,
       coordinationFee: coordinationFeeAmount,
-      grandTotal: bureauTotal + coordinationFeeAmount,
+      centralSurcharge,
+      grandTotal: bureauTotal + coordinationFeeAmount + centralSurcharge,
       bureauExclVat,
       bureauVatAmount,
       bureauVatLines,
@@ -178,14 +182,14 @@ export const PriceSummaryCard = ({
       totalExclVat,
       totalVatAmount,
       allVatLines,
-      grandTotalInclVat: confirmedTotal + coordinationFeeAmount + accommodationTotal,
+      grandTotalInclVat: confirmedTotal + coordinationFeeAmount + centralSurcharge + accommodationTotal,
       confirmedCount: confirmedItems.length,
       pendingCount: pendingItems.length,
       hasConfirmedPrices: confirmedItems.length > 0 || !!selectedAccommodationQuote,
       hasBureauItems: confirmedBureauItems.length > 0,
       hasPartnerItems: confirmedPartnerItems.length > 0,
     };
-  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap]);
+  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, isBureauCentral]);
 
   // Don't show if there are no confirmed prices yet
   if (!summary.hasConfirmedPrices) {
@@ -221,8 +225,8 @@ export const PriceSummaryCard = ({
               <span className="text-primary">Bureau Vlieland</span>
               <span className="text-primary">€{formatPrice(
                 isBureauCentral 
-                  ? summary.bureauTotal + summary.coordinationFee + summary.partnerTotal
-                  : summary.bureauTotal + summary.coordinationFee
+                  ? summary.bureauTotal + summary.coordinationFee + summary.centralSurcharge + summary.partnerTotal
+                  : summary.bureauTotal + summary.coordinationFee + summary.centralSurcharge
               )}</span>
             </div>
           )}
@@ -357,10 +361,17 @@ export const PriceSummaryCard = ({
                 </div>
               )}
               
-              <div className="flex items-center justify-between text-sm pl-6">
-                <span className="text-muted-foreground">Coördinatie & handling fee</span>
-                <span>€{formatPrice(summary.coordinationFee)}</span>
-              </div>
+                <div className="flex items-center justify-between text-sm pl-6">
+                  <span className="text-muted-foreground">Coördinatie & handling fee</span>
+                  <span>€{formatPrice(summary.coordinationFee)}</span>
+                </div>
+
+                {summary.centralSurcharge > 0 && (
+                  <div className="flex items-center justify-between text-sm pl-6">
+                    <span className="text-muted-foreground">Opslag centrale facturatie</span>
+                    <span>€{formatPrice(summary.centralSurcharge)}</span>
+                  </div>
+                )}
 
               {/* VAT breakdown for Bureau - in bureau_central include partner VAT */}
               <div className="border-t border-primary/10 pt-2 mt-2 space-y-1 pl-6">
@@ -383,12 +394,12 @@ export const PriceSummaryCard = ({
                 })()}
               </div>
               
-              <div className="flex items-center justify-between font-medium pt-2 border-t border-primary/10 pl-6">
-                <span>Subtotaal incl. BTW</span>
-                <span className="text-primary">€{formatPrice(
-                  summary.bureauTotal + summary.coordinationFee + (isBureauCentral ? summary.partnerTotal : 0)
-                )}</span>
-              </div>
+                <div className="flex items-center justify-between font-medium pt-2 border-t border-primary/10 pl-6">
+                  <span>Subtotaal incl. BTW</span>
+                  <span className="text-primary">€{formatPrice(
+                    summary.bureauTotal + summary.coordinationFee + summary.centralSurcharge + (isBureauCentral ? summary.partnerTotal : 0)
+                  )}</span>
+                </div>
             </div>
           )}
 

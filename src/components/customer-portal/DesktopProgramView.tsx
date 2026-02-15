@@ -185,9 +185,9 @@ export const DesktopProgramView = ({
   const totalCost = useMemo(() => {
     let total = 0;
     
-    // Activity costs
+    // Activity costs (exclude self_arranged)
     program.items.forEach(item => {
-      if (item.status !== "cancelled" && item.quoted_price) {
+      if (item.status !== "cancelled" && item.block_type !== "self_arranged" && item.quoted_price) {
         total += item.quoted_price;
       }
     });

@@ -79,6 +79,7 @@ const AdminInvoicing = () => {
     const bureauItems = request.items.filter(
       (item) => item.block_type === "bureau" && item.status === "confirmed"
     );
+    // Note: self_arranged items are excluded from invoicing (they don't have block_type "bureau")
     
     const bureauItemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
     const coordinationFee = getCoordinationFee(request.number_of_people);

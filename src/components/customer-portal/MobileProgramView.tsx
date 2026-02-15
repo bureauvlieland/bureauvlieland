@@ -183,7 +183,7 @@ export const MobileProgramView = ({
   const totalCost = useMemo(() => {
     let total = 0;
     program.items.forEach(item => {
-      if (item.status !== "cancelled" && item.quoted_price) {
+      if (item.status !== "cancelled" && item.block_type !== "self_arranged" && item.quoted_price) {
         total += item.quoted_price;
       }
     });

@@ -1,4 +1,5 @@
 import { FietsverhuurBanner } from "@/components/FietsverhuurBanner";
+import { BootticketBanner } from "@/components/BootticketBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 
@@ -15,6 +16,7 @@ export const ExtrasSection = ({ variant = "default" }: ExtrasSectionProps) => {
           Extra's
         </h3>
         <FietsverhuurBanner variant="compact" />
+        <BootticketBanner variant="compact" />
       </div>
     );
   }
@@ -27,8 +29,9 @@ export const ExtrasSection = ({ variant = "default" }: ExtrasSectionProps) => {
           Extra's
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <FietsverhuurBanner />
+        <BootticketBanner />
       </CardContent>
     </Card>
   );
