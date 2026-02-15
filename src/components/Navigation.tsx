@@ -19,6 +19,7 @@ export const Navigation = () => {
   };
 
   const voorBedrijvenItems = [
+    { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
     { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland", highlight: true },
     { label: "Meerdaags bedrijfsuitje", href: "/meerdaags-bedrijfsuitje-vlieland" },
     { label: "Teambuilding", href: "/teamuitje-vlieland" },
@@ -58,7 +59,7 @@ export const Navigation = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-5">
+          <div className="hidden lg:flex items-center gap-4">
             {/* Voor bedrijven Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm font-semibold text-foreground hover:text-primary transition-colors flex items-center gap-1">
@@ -96,20 +97,6 @@ export const Navigation = () => {
 
             {/* Direct links */}
             <Link
-              to="/voorbeeldprogrammas"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Voorbeeldprogramma's
-            </Link>
-
-            <Link
-              to="/programma-samenstellen"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Programma samenstellen
-            </Link>
-
-            <Link
               to="/logies-vlieland"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -132,15 +119,7 @@ export const Navigation = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Right side buttons */}
-            <Link to="/contact">
-              <Button
-                variant="outline"
-                size="sm"
-              >
-                Contact
-              </Button>
-            </Link>
+            {/* Right side button */}
             <Link to="/programma-samenstellen">
               <Button
                 variant="default"
@@ -231,22 +210,6 @@ export const Navigation = () => {
               </div>
 
               {/* Direct links Mobile */}
-              <Link
-                to="/voorbeeldprogrammas"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Voorbeeldprogramma's
-              </Link>
-
-              <Link
-                to="/programma-samenstellen"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Programma samenstellen
-              </Link>
-
               <Link
                 to="/logies-vlieland"
                 onClick={() => setIsMenuOpen(false)}
