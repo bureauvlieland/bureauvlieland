@@ -28,7 +28,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
   const { providers, selfArrangedItems, bureauTotal, partnerProviders, coordinationFee } = useMemo(() => {
     // Group items by provider, excluding cancelled and self-arranged
     const providerMap = items
-      .filter((item) => item.status !== "cancelled" && item.block_type !== "self_arranged")
+      .filter((item) => item.status !== "cancelled" && item.block_type === "partner")
       .reduce((acc, item) => {
         const key = item.provider_id;
         if (!acc[key]) {
@@ -51,12 +51,13 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
 
     const providerList = Object.values(providerMap);
 
-    // Separate Bureau Vlieland items from partner items
-    const bureauItems = providerList.filter((p) => p.blockType === "bureau");
-    const partnerItems = providerList.filter((p) => p.blockType === "partner");
+    // Bureau items total (calculated directly from items)
+    const bureauItemsTotal = items
+      .filter((item) => item.status !== "cancelled" && item.block_type === "bureau")
+      .reduce((sum, item) => sum + (item.quoted_price ?? item.admin_price_override ?? 0), 0);
 
-    // Calculate bureau total
-    const bureauItemsTotal = bureauItems.reduce((sum, p) => sum + p.totalAmount, 0);
+    // Partner providers list
+    const partnerItems = providerList;
 
     // Self-arranged items
     const selfArranged = items.filter(
@@ -212,7 +213,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
 
           {/* Partner items - only show individually in partner_direct mode */}
           {!isBureauCentral && partnerProviders.map((provider) => {
-            const providerItems = items.filter(i => i.provider_id === provider.id && i.status !== "cancelled" && i.block_type !== "self_arranged");
+            const providerItems = items.filter(i => i.provider_id === provider.id && i.status !== "cancelled" && i.block_type === "partner");
             const hasPreliminaryPrice = providerItems.some(i => !i.quoted_price && i.admin_price_override);
             
             return (
