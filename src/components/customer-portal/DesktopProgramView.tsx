@@ -484,13 +484,6 @@ export const DesktopProgramView = ({
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <button 
-                  onClick={onOpenEdit}
-                  className="hover:text-foreground transition-colors flex items-center gap-1"
-                >
-                  <Settings className="h-4 w-4" />
-                  Programma details
-                </button>
                 {history.length > 0 && (
                   <button 
                     onClick={() => setShowHistory(!showHistory)}
