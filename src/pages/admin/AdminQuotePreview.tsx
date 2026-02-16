@@ -106,6 +106,12 @@ const AdminQuotePreview = () => {
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   const [accommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
   const [accommodationExtras, setAccommodationExtras] = useState<AccommodationExtraData[]>([]);
+  const [accommodationRequest, setAccommodationRequest] = useState<{
+    arrival_date: string;
+    departure_date: string;
+    number_of_guests: number;
+    accommodation_type: string;
+  } | null>(null);
 
   // Form state
   const defaultValidUntil = addDays(new Date(), 14);
@@ -188,15 +194,22 @@ const AdminQuotePreview = () => {
         }
       }
 
-      // Fetch linked accommodation quote + extras
+      // Fetch linked accommodation request + quote + extras
       if (requestData.linked_accommodation_id) {
         const { data: accReq } = await supabase
           .from("accommodation_requests")
-          .select("id, arrival_date, departure_date")
+          .select("id, arrival_date, departure_date, number_of_guests, accommodation_type")
           .eq("id", requestData.linked_accommodation_id)
           .maybeSingle();
 
         if (accReq) {
+          setAccommodationRequest({
+            arrival_date: accReq.arrival_date,
+            departure_date: accReq.departure_date,
+            number_of_guests: accReq.number_of_guests,
+            accommodation_type: accReq.accommodation_type,
+          });
+
           const { data: quoteData } = await supabase
             .from("accommodation_quotes")
             .select("*, partner:partners(name)")
@@ -808,8 +821,32 @@ const AdminQuotePreview = () => {
                         </div>
                       )}
 
+                      {/* Pending accommodation request info */}
+                      {accommodationRequest && !accommodationQuote && (
+                        <div className="mb-6">
+                          <h2 className="text-lg font-semibold mb-4 text-[#1e3a5f]">
+                            Logies
+                          </h2>
+                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                            <p className="font-semibold text-amber-800 mb-1">Logiesaanvraag in behandeling</p>
+                            <p className="text-amber-700">
+                              Er loopt een logiesaanvraag voor{" "}
+                              {format(new Date(accommodationRequest.arrival_date), "d MMMM", { locale: nl })} -{" "}
+                              {format(new Date(accommodationRequest.departure_date), "d MMMM yyyy", { locale: nl })}
+                              {" "}voor {accommodationRequest.number_of_guests} gasten.
+                              {" "}Wij verwachten binnenkort voorstellen van accommodatiepartners.
+                            </p>
+                            {accommodationRequest.accommodation_type && accommodationRequest.accommodation_type !== "no_preference" && (
+                              <p className="text-amber-600 mt-1 text-xs">
+                                Voorkeur: {
+                                  { hotel: "Hotel", vacation_home: "Vakantiewoning", group_accommodation: "Groepsaccommodatie", camping: "Camping" }[accommodationRequest.accommodation_type] || accommodationRequest.accommodation_type
+                                }
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-                      {/* Disclaimer */}
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
                         <p className="font-semibold text-blue-900 mb-1">Indicatief voorstel</p>
                         <p className="text-blue-800">
