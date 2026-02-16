@@ -1,73 +1,27 @@
 
 
-# PDF verrijken met afbeeldingen en locatiekaarten
+# "Op aanvraag" items tonen €0 in offerte - fix
 
-## Wat verandert er?
-De programma-PDF die klanten downloaden wordt visueel aantrekkelijker:
+## Probleem
+Items met `price_type === 'on_request'` (zoals "Cafe Boven" en "Overtocht met Rederij Doeksen") tonen nu **€0,00** in de offerte-preview en PDF. Dit komt doordat:
 
-- **Activiteitafbeelding**: een thumbnail (30x20mm) links naast de activiteitnaam en details
-- **Statische kaart**: voor activiteiten met coordinaten een OpenStreetMap kaartje onder het blok
-- **Locatie blijft klikbaar**: de bestaande Google Maps link blijft behouden
+1. `getItemPrice()` retourneert `0` wanneer er geen `admin_price_override` of `quoted_price` is ingesteld
+2. De prijskolom in de tabel toont altijd een bedrag, behalve voor `self_arranged` items - er is geen check voor `on_request`
 
-## Visueel resultaat per activiteit
+## Oplossing
+Twee aanpassingen in `src/pages/admin/AdminQuotePreview.tsx`:
 
-```text
-+--------------------------------------------------+
-| Dag 1 - Maandag 14 juli                          |
-+--------------------------------------------------+
-| +--------+  Strandspektakel                       |
-| |  foto  |  14:00  *  2u  *  Vlieland Events     |
-| |        |  Exclusieve strandactiviteit...        |
-| +--------+  Locatie: Badweg 1, Vlieland           |
-|                                                   |
-|  +-------------------------------------------+    |
-|  |          [statische kaart]                 |    |
-|  +-------------------------------------------+    |
-+---------------------------------------------------+
-```
+### 1. Prijsweergave in de tabel (regel 749-759)
+Naast de bestaande `self_arranged` check, ook een check toevoegen voor `on_request` items **zonder admin_price_override**. Wanneer een item `price_type === 'on_request'` heeft en geen handmatige prijs is ingesteld, toon dan **"Op aanvraag"** in plaats van €0,00.
 
-## Technische aanpak
+### 2. Prijstotalen berekening (regel 292-349)
+Items met `price_type === 'on_request'` die geen `admin_price_override` hebben, moeten worden uitgesloten van de totaalberekening, net als `self_arranged` items. Dit voorkomt dat er €0,00 regels in de BTW-berekening terechtkomen.
 
-### Bestand: `src/components/customer-portal/ProgramPdfDownload.tsx`
+### Technisch detail
+De check wordt: als `price_type === 'on_request'` EN `admin_price_override` is `null/undefined`, toon "Op aanvraag". Als er WEL een `admin_price_override` is ingesteld (admin heeft handmatig een prijs opgegeven), dan wordt die prijs gewoon getoond - dit maakt het mogelijk om later alsnog een prijs in te vullen.
 
-**1. Helper: afbeelding laden als base64**
-
-Een `loadImageAsBase64(url)` functie die:
-- Een `Image()` element aanmaakt met `crossOrigin = "anonymous"`
-- Via een canvas naar JPEG base64 converteert (jsPDF kan geen externe URLs)
-- Bij CORS-fouten of timeouts graceful `null` retourneert
-- Timeout van 5 seconden per afbeelding
-
-**2. Afbeeldingen voorladen**
-
-Voor het tekenen van de PDF worden alle afbeeldingen parallel geladen:
-- Activiteitafbeeldingen via `image_url` (al beschikbaar in de items data)
-- Lokale assets via `image_asset` (resolved via `getBlockImage` helper uit `buildingBlockUtils.ts`)
-- Statische kaarten via OpenStreetMap: `https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lng}&zoom=15&size=600x200&markers={lat},{lng},red-pushpin`
-
-**3. Layout per activiteit aanpassen**
-
-Huidige layout: tekst op volle breedte.
-Nieuwe layout wanneer afbeelding beschikbaar:
-- Links: thumbnail 30mm breed x 20mm hoog
-- Rechts (offset 34mm): activiteitnaam, metadata, beschrijving
-- Onder het blok: statische kaart (contentWidth x 22mm) indien coordinaten aanwezig
-
-`checkPage` wordt aangepast om de grotere hoogte per item te accommoderen (afbeelding ~25mm + kaart ~27mm).
-
-**4. Graceful fallback**
-
-Als een afbeelding niet laadt (CORS, 404, timeout):
-- Item wordt gewoon zonder afbeelding gerenderd (huidige layout)
-- Geen foutmelding voor de gebruiker
-- Kaart wordt ook overgeslagen als coordinaten ontbreken
-
-### Geen andere bestanden wijzigen
-
-De items bevatten al `image_url`, `image_asset`, `location_lat`, `location_lng` en `location_address` vanuit de `useCustomerProgram` hook. Geen database- of edge function-wijzigingen nodig.
-
-### Aandachtspunten
-- **Laadtijd**: afbeeldingen worden parallel geladen, maar de PDF-generatie duurt 2-5 seconden langer afhankelijk van het aantal activiteiten. De loading spinner is al aanwezig.
-- **CORS**: Supabase Storage URLs ondersteunen CORS. OpenStreetMap static map service staat cross-origin toe. Lokale assets worden via import resolved en werken altijd.
-- **Bestandsgrootte**: JPEG-compressie (kwaliteit 0.7) houdt de PDF compact.
+### Bestanden die wijzigen
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/pages/admin/AdminQuotePreview.tsx` | Prijsweergave en totaalberekening aanpassen voor `on_request` items |
 
