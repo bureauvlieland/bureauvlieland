@@ -292,8 +292,10 @@ const AdminQuotePreview = () => {
   const calculateTotals = () => {
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
 
-    // Filter out self_arranged items from price calculations
-    const pricedItems = items.filter(item => item.block_type !== "self_arranged");
+    // Filter out self_arranged and unpriced on_request items from price calculations
+    const isOnRequestUnpriced = (item: ProgramItem) =>
+      item.price_type === 'on_request' && item.admin_price_override == null;
+    const pricedItems = items.filter(item => item.block_type !== "self_arranged" && !isOnRequestUnpriced(item));
 
     // Calculate surcharge for bureau_central mode
     const isBureauCentral = request?.invoicing_mode === "bureau_central";
@@ -749,6 +751,8 @@ const AdminQuotePreview = () => {
                                     <td className="py-3 text-right text-sm font-medium whitespace-nowrap">
                                       {item.block_type === "self_arranged" ? (
                                         <span className="text-xs text-gray-400 italic">Zelf te regelen</span>
+                                      ) : item.price_type === 'on_request' && item.admin_price_override == null ? (
+                                        <span className="text-xs text-gray-400 italic">Op aanvraag</span>
                                       ) : (
                                         <>
                                           {formatCurrency(getItemPrice(item))}
