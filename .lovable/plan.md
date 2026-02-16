@@ -1,41 +1,38 @@
 
-
-# Prijsnotities en per-item detail in overzichten
+# Prijsnotitie (price_adult_note) doorvoeren naar programma-items
 
 ## Probleem
+Het veld "Notitie" bij bouwstenen (`price_adult_note`, bijv. "Per schip (12 personen)") wordt nergens overgenomen naar `admin_price_notes` op programma-items. In plaats daarvan wordt `short_description` of `null` gebruikt.
 
-1. In het **Prijsoverzicht** (PriceSummaryCard) worden activiteiten alleen als totaal getoond ("Activiteiten €X"), zonder individuele items, prijstype of notities zoals "Per schip (12 personen)".
-2. In het **Facturatie per onderdeel** (InvoiceProvidersCard) toont het Bureau Vlieland-blok ook geen individuele items met notities -- alleen een samenvatting.
-3. Het "Gemiddeld per persoon"-bedrag toont alleen incl. BTW. De klant wil ook de kosten per persoon excl. BTW zien.
+## Oorzaak
+Er zijn drie plekken waar programma-items worden aangemaakt, en geen daarvan neemt `price_adult_note` over:
 
-## Wat verandert
+1. **Admin voegt activiteit toe** (`AdminAddActivitySheet.tsx` regel 103): initialiseert de beschrijving met `block.short_description` in plaats van `block.price_adult_note`
+2. **Template toepassen** (`ApplyTemplateDialog.tsx` regel 79): zet `admin_price_notes` op `block.short_description` in plaats van `block.price_adult_note`
+3. **Klant voegt activiteit toe** (`useCustomerProgram.ts` regel 421): zet `admin_price_notes` altijd op `null`
 
-### 1. PriceSummaryCard -- individuele items met notities en prijstype
+## Oplossing
 
-In de secties "Factuur Bureau Vlieland" en "Facturen aanbieders" worden de samenvattende regels ("Activiteiten" / "Activiteiten aanbieders") vervangen door een lijst van individuele items met:
-- Naam van de activiteit
-- Prijs met label "p.p." of "totaal"
-- `admin_price_notes` als subtekst (bijv. "Per schip (12 personen)")
+### 1. AdminAddActivitySheet.tsx
+Regel 103 wijzigen: bij het selecteren van een bouwsteen wordt `customDescription` gevuld met `price_adult_note` als dat bestaat, anders `short_description`.
 
-De component krijgt hiervoor toegang tot de individuele `items` array (die al als prop binnenkomt) om per confirmed item de details te tonen.
+```
+setCustomDescription(block.price_adult_note || block.short_description || "");
+```
 
-### 2. InvoiceProvidersCard -- Bureau Vlieland individuele items
+### 2. ApplyTemplateDialog.tsx
+Regel 79 wijzigen: `admin_price_notes` vullen met `price_adult_note` als dat bestaat, anders `short_description`.
 
-Het Bureau Vlieland-blok (regels 127-151) krijgt dezelfde detailweergave als de partner-blokken: individuele items met prijs, prijstype-label en eventuele `admin_price_notes`.
+```
+admin_price_notes: block.price_adult_note || block.short_description || null,
+```
 
-### 3. Kosten per persoon excl. BTW toevoegen
+### 3. useCustomerProgram.ts
+Regel 421 wijzigen: `admin_price_notes` vullen met `price_adult_note` van de opgehaalde bouwsteen.
 
-In het grand total blok van PriceSummaryCard wordt naast "Gemiddeld per persoon" (incl. BTW) ook een regel "Per persoon excl. BTW" toegevoegd.
+```
+admin_price_notes: block.price_adult_note || null,
+```
 
-## Technische details
-
-### Bestanden die worden aangepast
-
-1. **`src/components/customer-portal/PriceSummaryCard.tsx`**
-   - In de Bureau Vlieland sectie (regel ~349-354): vervang de samenvattende regel door een loop over confirmed bureau items met naam, prijs + prijstype, en `admin_price_notes`
-   - Idem voor de partner sectie (regel ~414-417) en bureau_central partner items (regel ~357-362)
-   - In het grand total blok (regel ~453-458): voeg een extra regel toe: "Per persoon excl. BTW" = `totalExclVat / numberOfPeople`
-
-2. **`src/components/customer-portal/InvoiceProvidersCard.tsx`**
-   - In het Bureau Vlieland blok (regel ~127-151): voeg een itemlijst toe vergelijkbaar met de partner-blokken, met bureau-items gefilterd uit de `items` prop, inclusief prijs, prijstype en `admin_price_notes`
-
+## Bestaande data
+Het bestaande item "Zeehondentocht Exclusief" op programma KSHU9ndXD5Ey heeft al `admin_price_notes = null`. Dit moet handmatig worden bijgewerkt in de admin, of er kan een eenmalige database-update worden gedaan om bestaande items te verrijken.
