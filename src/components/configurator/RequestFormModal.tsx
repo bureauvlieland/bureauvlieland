@@ -172,6 +172,7 @@ export const RequestFormModal = ({
           customer_notes: block.itemNotes || null,
           status: "pending",
           price_type: fullBlock?.price_type || "per_person",
+          external_url: block.externalUrl || null,
         };
       });
 

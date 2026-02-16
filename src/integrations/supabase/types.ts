@@ -1224,6 +1224,7 @@ export type Database = {
           deviation_reason: string | null
           duration: string | null
           executed_at: string | null
+          external_url: string | null
           id: string
           invoiced_amount: number | null
           invoiced_date: string | null
@@ -1278,6 +1279,7 @@ export type Database = {
           deviation_reason?: string | null
           duration?: string | null
           executed_at?: string | null
+          external_url?: string | null
           id?: string
           invoiced_amount?: number | null
           invoiced_date?: string | null
@@ -1332,6 +1334,7 @@ export type Database = {
           deviation_reason?: string | null
           duration?: string | null
           executed_at?: string | null
+          external_url?: string | null
           id?: string
           invoiced_amount?: number | null
           invoiced_date?: string | null

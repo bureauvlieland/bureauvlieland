@@ -269,6 +269,8 @@ export interface ProgramRequestItem {
   skip_partner_notification: boolean;
   // Price type snapshot from building block
   price_type: string | null;
+  // External URL for self-arranged items
+  external_url: string | null;
 }
 
 export interface ProgramRequestHistory {
