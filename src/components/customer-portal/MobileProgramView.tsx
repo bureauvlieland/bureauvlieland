@@ -263,6 +263,7 @@ export const MobileProgramView = ({
         termsAcceptedAt={program.terms_accepted_at}
         programDescription={program.program_description}
         onEdit={onOpenEdit}
+        hasPendingItems={statusSummary.pending > 0}
       />
 
       {/* 2. Quote Proposal Card - only for maatwerk quotes awaiting approval */}
