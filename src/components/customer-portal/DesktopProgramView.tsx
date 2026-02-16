@@ -480,51 +480,6 @@ export const DesktopProgramView = ({
           </div>
         )}
 
-        {/* Secondary info in collapsible section */}
-        <Card className="border-dashed">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {history.length > 0 && (
-                  <button 
-                    onClick={() => setShowHistory(!showHistory)}
-                    className="hover:text-foreground transition-colors flex items-center gap-1"
-                  >
-                    <History className="h-4 w-4" />
-                    Geschiedenis
-                  </button>
-                )}
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-background">
-                  <DropdownMenuItem onClick={onOpenEdit}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Gegevens bewerken
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={onOpenCancel}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    Aanvraag annuleren
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            {/* Expandable history */}
-            {showHistory && history.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <ProgramHistoryTimeline history={history} variant="embedded" />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Contact section */}
         <Card className="bg-muted/30">
           <CardContent className="py-6">
