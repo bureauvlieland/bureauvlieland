@@ -8,6 +8,7 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  getRenderedTemplate,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -24,10 +25,12 @@ const corsHeaders = {
 const SendQuoteOfferSchema = z.object({
   requestId: z.string().uuid(),
   validUntil: z.string(), // ISO date string
-  personalMessage: z.string().optional(),
+  personalMessage: z.string().optional(), // Legacy support
+  emailSubject: z.string().optional(), // New: custom subject from admin
+  emailBody: z.string().optional(), // New: custom body from admin
   origin: z.string().optional(),
-  pdfBase64: z.string().optional(), // Base64-encoded PDF
-  pdfFilename: z.string().optional(), // PDF filename
+  pdfBase64: z.string().optional(),
+  pdfFilename: z.string().optional(),
 });
 
 interface ProgramItem {
@@ -63,27 +66,31 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   return await response.json();
 };
 
+function generateIntroHtml(introText: string): string {
+  // Convert plain text intro to HTML paragraphs
+  return introText
+    .split("\n\n")
+    .map((para) => `<p>${sanitizeHtml(para.trim()).replace(/\n/g, "<br>")}</p>`)
+    .filter((p) => p !== "<p></p>")
+    .join("");
+}
+
 function generateQuoteEmailHtml(
-  customerName: string,
-  customerCompany: string | null,
+  introHtml: string,
   dates: string[],
   numberOfPeople: number,
   items: ProgramItem[],
-  personalMessage: string | null,
   validUntil: string,
   portalUrl: string
 ): string {
   // Format dates
-  const formattedDates = dates
-    .map((d) => formatDateNL(d))
-    .join(", ");
+  const formattedDates = dates.map((d) => formatDateNL(d)).join(", ");
 
   // Calculate total estimate
   let totalEstimate = 0;
-  // Separate program items and extra costs (day_index = -1)
   const programItems = items.filter((item) => item.item_quote_status !== "cancelled" && item.day_index >= 0);
   const extraCostItems = items.filter((item) => item.day_index === -1);
-  
+
   const itemsHtml = programItems
     .map((item) => {
       const price = item.admin_price_override ?? item.quoted_price;
@@ -117,31 +124,25 @@ function generateQuoteEmailHtml(
     })
     .join("");
 
-  // Add extra costs to total
   const extraCostsTotal = extraCostItems.reduce((sum, item) => sum + (item.admin_price_override ?? 0), 0);
   totalEstimate += extraCostsTotal;
 
-  // Extra costs HTML
-  const extraCostsHtml = extraCostItems.length > 0 ? extraCostItems.map((item) => {
-    const price = item.admin_price_override ?? 0;
-    return `
-      <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-          <strong>${sanitizeHtml(item.block_name)}</strong>
-        </td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
-          ${formatCurrencyNL(price)}
-        </td>
-      </tr>
-    `;
-  }).join("") : "";
-
-  const personalMessageHtml = personalMessage
-    ? `
-      <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #f59e0b;">
-        <p style="margin: 0; white-space: pre-line;">${sanitizeHtml(personalMessage)}</p>
-      </div>
-    `
+  const extraCostsHtml = extraCostItems.length > 0
+    ? extraCostItems
+        .map((item) => {
+          const price = item.admin_price_override ?? 0;
+          return `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+            <strong>${sanitizeHtml(item.block_name)}</strong>
+          </td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+            ${formatCurrencyNL(price)}
+          </td>
+        </tr>
+      `;
+        })
+        .join("")
     : "";
 
   return `
@@ -161,12 +162,7 @@ function generateQuoteEmailHtml(
 
         <!-- Content -->
         <div style="padding: 32px 24px;">
-          <p>Beste ${sanitizeHtml(customerName)},</p>
-
-          <p>Hierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. 
-          Wij hebben dit programma speciaal voor ${customerCompany ? sanitizeHtml(customerCompany) : "u"} samengesteld.</p>
-
-          ${personalMessageHtml}
+          ${introHtml}
 
           <!-- Program details -->
           <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0;">
@@ -224,11 +220,6 @@ function generateQuoteEmailHtml(
               Bekijk voorstel & geef akkoord
             </a>
           </div>
-
-          <p style="color: #6b7280;">
-            Heeft u vragen over dit voorstel? Neem gerust contact met ons op. 
-            Wij helpen u graag verder!
-          </p>
 
           <div style="background: #eff6ff; padding: 14px 18px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #3b82f6;">
             <p style="margin: 0; font-size: 13px; color: #1e40af;">
@@ -302,13 +293,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { requestId, validUntil, personalMessage, origin, pdfBase64, pdfFilename } = validationResult.data;
+    const { requestId, validUntil, personalMessage, emailSubject, emailBody, origin, pdfBase64, pdfFilename } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
 
     console.log(`Sending quote offer for request: ${requestId} [Test mode: ${testMode}]`);
 
-    // Fetch the program request with items
+    // Fetch the program request
     const { data: programRequest, error: fetchError } = await supabase
       .from("program_requests")
       .select("*")
@@ -342,14 +333,44 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const baseUrl = getPortalBaseUrl(origin);
     const portalUrl = `${baseUrl}/mijn-programma/${programRequest.customer_token}`;
 
-    // Generate email HTML
+    // Determine intro text: use admin-provided emailBody, or fall back to template, or legacy personalMessage
+    let introText: string;
+    let finalSubject: string;
+
+    if (emailBody) {
+      // Admin provided custom text from the dialog
+      introText = emailBody;
+      finalSubject = emailSubject || "Uw maatwerkvoorstel van Bureau Vlieland";
+    } else {
+      // Fallback: try template from database
+      const templateVars = {
+        customer_name: programRequest.customer_name,
+        company_name: programRequest.customer_company || "u",
+        dates: (programRequest.selected_dates as string[]).map((d: string) => formatDateNL(d)).join(", "),
+        number_of_people: programRequest.number_of_people,
+        valid_until: formatDateNL(validUntil),
+        portal_url: portalUrl,
+        personal_message: personalMessage || "",
+      };
+
+      const rendered = await getRenderedTemplate("quote_offer_customer", templateVars);
+      if (rendered) {
+        introText = rendered.body;
+        finalSubject = rendered.subject;
+      } else {
+        // Ultimate fallback: hardcoded
+        introText = `Beste ${programRequest.customer_name},\n\nHierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${programRequest.customer_company || "u"} samengesteld.${personalMessage ? `\n\n${personalMessage}` : ""}\n\nDit voorstel is geldig tot ${formatDateNL(validUntil)}. U kunt het voorstel bekijken en akkoord geven in uw persoonlijke klantomgeving.\n\nHeeft u vragen over dit voorstel? Neem gerust contact met ons op.`;
+        finalSubject = "Uw maatwerkvoorstel van Bureau Vlieland";
+      }
+    }
+
+    // Generate email HTML with intro + program table
+    const introHtml = generateIntroHtml(introText);
     const emailHtml = generateQuoteEmailHtml(
-      programRequest.customer_name,
-      programRequest.customer_company,
+      introHtml,
       programRequest.selected_dates as string[],
       programRequest.number_of_people,
       items || [],
-      personalMessage || null,
       validUntil,
       portalUrl
     );
@@ -357,7 +378,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Get recipient email (redirect in test mode)
     const recipientEmail = getRecipientEmail(programRequest.customer_email, origin);
 
-    // Build email message with optional PDF attachment
+    const fullSubject = `${subjectPrefix}${finalSubject}`;
+
+    // Build email message
     const emailMessage: any = {
       From: {
         Email: "noreply@bureauvlieland.nl",
@@ -369,7 +392,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           Name: programRequest.customer_name,
         },
       ],
-      Subject: `${subjectPrefix}Uw maatwerkvoorstel van Bureau Vlieland`,
+      Subject: fullSubject,
       HTMLPart: emailHtml,
     };
 
@@ -392,7 +415,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const messageId = mailjetResponse?.Messages?.[0]?.MessageID || null;
     await logEmail({
       email_type: "quote_offer_customer",
-      subject: `${subjectPrefix}Uw maatwerkvoorstel van Bureau Vlieland`,
+      subject: fullSubject,
       recipient_email: recipientEmail,
       recipient_name: programRequest.customer_name,
       related_request_id: requestId,
@@ -401,7 +424,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       sent_by: "system",
       metadata: {
         valid_until: validUntil,
-        has_personal_message: !!personalMessage,
+        has_custom_body: !!emailBody,
         item_count: items?.length || 0,
         test_mode: testMode,
       },
@@ -412,7 +435,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (pdfBase64) {
       try {
         const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-        const pdfBytes = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+        const pdfBytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
         const storagePath = `${requestId}/${Date.now()}.pdf`;
         const { error: uploadError } = await serviceClient.storage
           .from("quote-documents")
@@ -428,12 +451,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // Update program request status to 'offerte_verstuurd'
+    // Update program request status
     const updateData: Record<string, any> = {
       quote_status: "offerte_verstuurd",
       quote_sent_at: new Date().toISOString(),
       quote_valid_until: validUntil,
-      quote_personal_message: personalMessage || null,
+      quote_personal_message: emailBody || personalMessage || null,
     };
     if (quotePdfPath) {
       updateData.quote_pdf_path = quotePdfPath;
@@ -446,7 +469,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (updateError) {
       console.error("Error updating program request status:", updateError);
-      // Don't fail the request, email was already sent
     }
 
     console.log(`Quote offer sent successfully to ${recipientEmail}`);

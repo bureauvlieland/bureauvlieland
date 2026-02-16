@@ -543,8 +543,11 @@ const AdminRequestDetail = () => {
                     requestId={request.id}
                     customerName={request.customer_name}
                     customerEmail={request.customer_email}
+                    customerCompany={request.customer_company}
+                    numberOfPeople={request.number_of_people}
                     programDates={request.selected_dates as string[]}
                     currentValidUntil={request.quote_valid_until}
+                    portalUrl={customerPortalUrl}
                     onSuccess={fetchRequestData}
                   />
                 </>

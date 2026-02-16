@@ -232,4 +232,7 @@ export const TemplateIds = {
   
   // Accommodation rejection
   ACCOMMODATION_REJECTED_PARTNER: "accommodation_rejected_partner",
+  
+  // Quote offer
+  QUOTE_OFFER_CUSTOMER: "quote_offer_customer",
 } as const;
