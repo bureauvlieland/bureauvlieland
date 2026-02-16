@@ -1,7 +1,7 @@
 import { Ship, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import ferryImage from "@/assets/ferry-doeksen.jpg";
+import ferryImage from "@/assets/ferry-doeksen.webp";
 
 interface BootticketBannerProps {
   variant?: "default" | "compact" | "sidebar";
