@@ -29,7 +29,7 @@ const SendQuoteOfferSchema = z.object({
   emailSubject: z.string().optional(), // New: custom subject from admin
   emailBody: z.string().optional(), // New: custom body from admin
   origin: z.string().optional(),
-  pdfBase64: z.string().optional(),
+  pdfStoragePath: z.string().optional(), // Path in quote-documents bucket
   pdfFilename: z.string().optional(),
 });
 
@@ -293,7 +293,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { requestId, validUntil, personalMessage, emailSubject, emailBody, origin, pdfBase64, pdfFilename } = validationResult.data;
+    const { requestId, validUntil, personalMessage, emailSubject, emailBody, origin, pdfStoragePath, pdfFilename } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
 
@@ -396,52 +396,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
       HTMLPart: emailHtml,
     };
 
-    // Store PDF in storage first (before sending email, so we can link to it)
-    let quotePdfPath: string | null = null;
+    // Handle PDF: it's already uploaded to storage by the frontend
+    let quotePdfPath: string | null = pdfStoragePath || null;
     let pdfDownloadUrl: string | null = null;
-    if (pdfBase64) {
+
+    if (pdfStoragePath) {
       try {
         const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-        const pdfBytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
-        const storagePath = `${requestId}/${Date.now()}.pdf`;
-        const { error: uploadError } = await serviceClient.storage
+        // Generate a signed URL valid for 90 days
+        const { data: signedData } = await serviceClient.storage
           .from("quote-documents")
-          .upload(storagePath, pdfBytes, { contentType: "application/pdf", upsert: true });
-        if (uploadError) {
-          console.error("Error uploading quote PDF:", uploadError);
-        } else {
-          quotePdfPath = storagePath;
-          console.log(`Quote PDF stored at: ${storagePath}`);
-          // Generate a signed URL valid for 90 days
-          const { data: signedData } = await serviceClient.storage
-            .from("quote-documents")
-            .createSignedUrl(storagePath, 60 * 60 * 24 * 90);
-          if (signedData?.signedUrl) {
-            pdfDownloadUrl = signedData.signedUrl;
-          }
+          .createSignedUrl(pdfStoragePath, 60 * 60 * 24 * 90);
+        if (signedData?.signedUrl) {
+          pdfDownloadUrl = signedData.signedUrl;
         }
-      } catch (storageErr) {
-        console.error("Error storing quote PDF:", storageErr);
+      } catch (err) {
+        console.error("Error generating signed URL:", err);
       }
-    }
 
-    // Mailjet attachment limit is ~15MB. Base64 adds ~33% overhead.
-    // If the base64 string is over 10MB, skip the attachment and use a download link instead.
-    const MAX_ATTACHMENT_BASE64_SIZE = 10 * 1024 * 1024; // 10MB in base64 chars
-    const pdfTooLarge = pdfBase64 && pdfBase64.length > MAX_ATTACHMENT_BASE64_SIZE;
-
-    if (pdfBase64 && pdfFilename && !pdfTooLarge) {
-      emailMessage.Attachments = [
-        {
-          ContentType: "application/pdf",
-          Filename: pdfFilename,
-          Base64Content: pdfBase64,
-        },
-      ];
-      console.log(`Attaching PDF: ${pdfFilename} (${Math.round(pdfBase64.length / 1024)}KB base64)`);
-    } else if (pdfTooLarge) {
-      console.log(`PDF too large for attachment (${Math.round(pdfBase64!.length / 1024)}KB base64), using download link instead`);
-      // Insert a download link block into the email HTML before the closing </body>
+      // Add download link to the email
       if (pdfDownloadUrl) {
         const downloadBlock = `
           <div style="max-width: 600px; margin: 0 auto;">
@@ -456,6 +429,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           </div>`;
         emailMessage.HTMLPart = emailMessage.HTMLPart.replace("</body>", `${downloadBlock}</body>`);
       }
+      console.log(`PDF in storage: ${pdfStoragePath}, download link included in email`);
     }
 
     // Update program request status
