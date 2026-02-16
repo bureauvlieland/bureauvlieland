@@ -1,74 +1,43 @@
 
-# Self-arranged items zichtbaar maken in klantportaal
+
+# Status-label corrigeren voor maatwerk-programma's
 
 ## Probleem
-Items die verwijzen naar bouwblokken van type `self_arranged` (boottickets, fietshuur) worden in het klantportaal niet als zodanig gemarkeerd. De klant ziet ze als gewone activiteiten, terwijl ze zelf verantwoordelijk zijn voor boeking en betaling.
+Bij maatwerk-programma's (program_type = "quote") toont het klantportaal de status "Aangevraagd" bij alle pending items. Dit is misleidend omdat partners pas worden aangeschreven nadat de klant akkoord geeft op het programma. Vóór dat moment zijn de items "in voorbereiding", niet "aangevraagd".
 
-Daarnaast zijn er 2 bestaande items in de database die een verkeerd `block_type` hebben (de "Overtocht met Rederij Doeksen" items staan als `partner` in plaats van `self_arranged`).
+De huidige "In voorbereiding" override werkt alleen voor `invoicing_mode === "bureau_central"`, maar zou moeten gelden voor alle maatwerk-programma's zolang de klant nog geen akkoord heeft gegeven.
+
+## Oplossing
+De override-logica uitbreiden zodat **alle** maatwerk-programma's met een quote_status vóór `akkoord_ontvangen` het label "In voorbereiding" tonen in plaats van "Aangevraagd".
 
 ## Wat verandert
 
-### 1. Datafix: bestaande items corrigeren
-Een migratie die alle `program_request_items` bijwerkt waarvan het `block_type` afwijkt van het huidige `block_type` van het gekoppelde bouwblok. Dit corrigeert de 2 bootticket-items in dit project en eventuele andere inconsistenties.
+### Logica-aanpassing
+Het label "In voorbereiding" wordt getoond wanneer:
+- `program_type === "quote"` EN
+- `quote_status` is `concept`, `in_afstemming`, of `offerte_verstuurd` EN
+- De item-status is `pending`
 
-### 2. Visuele markering in CustomerProgramItem
-Self-arranged items krijgen een duidelijk andere weergave:
-- Een opvallende badge "Zelf te regelen" (oranje/amber) in plaats van de reguliere statusbadge
-- De provider-tekst wordt vervangen door "Zelf te boeken en betalen"
-- Een directe link naar de externe boekingspagina (bijv. rederij-doeksen.nl of fietsverhuurvlieland.nl) als call-to-action knop
-- Geen prijs/BTW-informatie (want dat regelt de klant zelf)
+Na klantakkoord (`akkoord_ontvangen` / `definitief_bevestigd`) schakelt het label over naar "Aangevraagd" omdat de partners dan daadwerkelijk worden benaderd.
 
-### 3. External URL meenemen bij item-aanmaak
-Het `external_url` veld van het bouwblok wordt opgeslagen op het program_request_item, zodat de link beschikbaar is in het klantportaal zonder extra database-queries.
+### Technische aanpassing
+De `invoicingMode`-prop die nu door DesktopProgramView en MobileProgramView aan CustomerProgramItem wordt doorgegeven, moet worden aangevuld met `quoteStatus` en `programType` (of een gecombineerde boolean `isPreApproval`). 
 
-## Technische details
-
-### Database-migratie
-```sql
--- Fix bestaande items: sync block_type met building_blocks
-UPDATE program_request_items pri
-SET block_type = bb.block_type::text
-FROM building_blocks bb
-WHERE pri.block_id = bb.id
-  AND pri.block_type != bb.block_type::text;
-```
-
-### Bestanden die worden aangepast
+Er zijn drie bestanden die worden aangepast:
 
 1. **`src/components/customer-portal/CustomerProgramItem.tsx`**
-   - Detecteer `block_type === "self_arranged"` en toon aangepaste weergave
-   - Badge "Zelf te regelen" in amber styling
-   - Subtekst "Zelf te boeken en betalen" i.p.v. provider
-   - External link knop wanneer beschikbaar
-   - Geen prijs/BTW-details tonen
+   - Nieuwe prop: `isPreApproval?: boolean`
+   - Override-conditie wijzigen van `invoicingMode === "bureau_central"` naar `isPreApproval || invoicingMode === "bureau_central"`
 
-2. **`src/components/customer-portal/ItemStatusBadge.tsx`**
-   - Nieuwe optionele variant voor self_arranged items
+2. **`src/components/customer-portal/DesktopProgramView.tsx`**
+   - Berekenen van `isPreApproval` op basis van `program_type === "quote"` en `quote_status` niet `akkoord_ontvangen` of `definitief_bevestigd`
+   - Doorgeven van `isPreApproval` aan elke CustomerProgramItem
 
-3. **`src/components/configurator/RequestFormModal.tsx`**
-   - Bij het aanmaken van items ook het `external_url` veld meenemen (als het bouwblok dat heeft)
+3. **`src/components/customer-portal/MobileProgramView.tsx`**
+   - Zelfde aanpassing als DesktopProgramView
 
-4. **`supabase/functions/update-customer-program/index.ts`**
-   - Bij het toevoegen van items via de klantportal ook `external_url` meenemen
+### Resultaat
+- **Voor akkoord**: Items tonen "In voorbereiding" (geel/amber badge)
+- **Na akkoord**: Items tonen "Aangevraagd" (de gebruikelijke pending-badge)
+- **Self-arranged items**: Blijven altijd "Zelf te regelen" tonen (ongewijzigd)
 
-5. **`src/types/programRequest.ts`**
-   - Optioneel `external_url` veld toevoegen aan het `ProgramRequestItem` type (als dat nog niet bestaat)
-
-### Voorbeeld weergave
-
-Een self_arranged item ziet er in het klantportaal zo uit:
-
-```text
-[afbeelding] Overtocht met Rederij Doeksen
-             Zelf te boeken en betalen        [Zelf te regelen]
-             Dag 1 - 15 mei | Flexibel
-             [Boek bij Rederij Doeksen ->]
-```
-
-In plaats van het huidige:
-
-```text
-[afbeelding] Overtocht met Rederij Doeksen
-             Bureau Vlieland                   [In behandeling]
-             Dag 1 - 15 mei | Flexibel
-```
