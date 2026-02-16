@@ -1,5 +1,5 @@
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Clock, MessageSquare, Circle } from "lucide-react";
+import { CheckCircle, Clock, MessageSquare, Circle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatusSummaryProps {
@@ -45,11 +45,17 @@ export const StatusSummary = ({
           <li className="flex items-center gap-2">
             {activitiesConfirmed ? (
               <CheckCircle className="h-4 w-4 text-green-600" />
+            ) : alternative > 0 ? (
+              <AlertCircle className="h-4 w-4 text-amber-500" />
             ) : (
-              <Circle className="h-4 w-4 text-muted-foreground" />
+              <Clock className="h-4 w-4 text-amber-500" />
             )}
-            <span className={activitiesConfirmed ? "text-foreground" : "text-muted-foreground"}>
-              Activiteiten bevestigd
+            <span className={activitiesConfirmed ? "text-foreground" : "text-amber-700"}>
+              {activitiesConfirmed
+                ? `Activiteiten bevestigd (${total}/${total})`
+                : alternative > 0
+                  ? `Alternatief voorstel bekijken (${confirmed}/${total})`
+                  : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`}
             </span>
           </li>
           <li className="flex items-center gap-2">
