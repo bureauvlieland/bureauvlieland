@@ -67,6 +67,27 @@ Deno.serve(async (req) => {
       throw itemsError;
     }
 
+    // Enrich items with descriptions from building_blocks
+    let enrichedItems = items || [];
+    const blockIds = (items || []).map((i: any) => i.block_id).filter(Boolean);
+    if (blockIds.length > 0) {
+      const { data: blocks } = await supabase
+        .from("building_blocks")
+        .select("id, short_description, description")
+        .in("id", blockIds);
+      if (blocks) {
+        const blockMap = Object.fromEntries(blocks.map((b: any) => [b.id, b]));
+        enrichedItems = (items || []).map((item: any) => {
+          const block = item.block_id ? blockMap[item.block_id] : null;
+          return {
+            ...item,
+            block_short_description: block?.short_description || null,
+            block_description: block?.description || null,
+          };
+        });
+      }
+    }
+
     // Fetch accepted terms log (if terms have been accepted)
     let acceptedTerms: any[] = [];
     if (program.terms_accepted_at) {
@@ -100,7 +121,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         program: {
           ...program,
-          items: items || [],
+          items: enrichedItems,
           acceptedTerms: acceptedTerms,
           quote_pdf_url: quotePdfUrl,
         },

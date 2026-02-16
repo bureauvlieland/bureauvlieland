@@ -129,6 +129,11 @@ export const CustomerProgramItem = ({
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isSelfArranged ? "Zelf te boeken en betalen" : item.provider_name}
               </p>
+              {(item as any).block_short_description && (
+                <p className="text-sm text-muted-foreground/80 mt-0.5 line-clamp-2">
+                  {(item as any).block_short_description}
+                </p>
+              )}
             </div>
             
             <CollapsibleTrigger asChild>
@@ -382,6 +387,12 @@ export const CustomerProgramItem = ({
           
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
+            {/* Full description */}
+            {(item as any).block_description && (
+              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                {(item as any).block_description}
+              </p>
+            )}
             {/* Location with navigation link */}
             {item.location_address && (
               <a
