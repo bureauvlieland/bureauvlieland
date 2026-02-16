@@ -141,7 +141,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       // Fetch building block images
       const { data: blocksData } = await supabase
         .from("building_blocks")
-        .select("id, image_url, image_asset, short_description, description")
+        .select("id, image_url, image_asset, short_description, description, external_url")
         .in("id", blockIds);
       
       // Create a lookup map for images and descriptions
@@ -156,6 +156,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
           image_asset: block?.image_asset || null,
           block_short_description: block?.short_description || null,
           block_description: block?.description || null,
+          external_url: block?.external_url || item.external_url || null,
         };
       });
 
