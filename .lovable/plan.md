@@ -1,27 +1,36 @@
 
 
-# "Op aanvraag" items tonen €0 in offerte - fix
+## Communicatie verbeteren: aanvragen zijn verstuurd naar aanbieders
 
-## Probleem
-Items met `price_type === 'on_request'` (zoals "Cafe Boven" en "Overtocht met Rederij Doeksen") tonen nu **€0,00** in de offerte-preview en PDF. Dit komt doordat:
+Bij self-service programma's worden de aanvragen direct verstuurd naar de partners na indiening. De klant ziet nu "Wachten op bevestiging" maar het is niet heel duidelijk dat de aanvragen daadwerkelijk al verstuurd zijn. We verbeteren dit op twee plekken:
 
-1. `getItemPrice()` retourneert `0` wanneer er geen `admin_price_override` of `quoted_price` is ingesteld
-2. De prijskolom in de tabel toont altijd een bedrag, behalve voor `self_arranged` items - er is geen check voor `on_request`
+### Wijzigingen
 
-## Oplossing
-Twee aanpassingen in `src/pages/admin/AdminQuotePreview.tsx`:
+**1. ActionRequiredCard - Duidelijkere pending-melding**
 
-### 1. Prijsweergave in de tabel (regel 749-759)
-Naast de bestaande `self_arranged` check, ook een check toevoegen voor `on_request` items **zonder admin_price_override**. Wanneer een item `price_type === 'on_request'` heeft en geen handmatige prijs is ingesteld, toon dan **"Op aanvraag"** in plaats van €0,00.
+De huidige tekst bij pending items:
+> "Nog X activiteiten wachten op reactie van de aanbieder. U ontvangt een e-mail zodra zij reageren."
 
-### 2. Prijstotalen berekening (regel 292-349)
-Items met `price_type === 'on_request'` die geen `admin_price_override` hebben, moeten worden uitgesloten van de totaalberekening, net als `self_arranged` items. Dit voorkomt dat er €0,00 regels in de BTW-berekening terechtkomen.
+Wordt vervangen door:
+> **Titel:** "Aanvragen verstuurd naar aanbieders"
+> **Beschrijving:** "Uw programma is ingediend en de aanvragen zijn verstuurd naar X aanbieder(s). Zodra zij reageren ontvangt u hiervan een e-mail."
 
-### Technisch detail
-De check wordt: als `price_type === 'on_request'` EN `admin_price_override` is `null/undefined`, toon "Op aanvraag". Als er WEL een `admin_price_override` is ingesteld (admin heeft handmatig een prijs opgegeven), dan wordt die prijs gewoon getoond - dit maakt het mogelijk om later alsnog een prijs in te vullen.
+Dit maakt expliciet duidelijk dat de aanvragen al onderweg zijn.
 
-### Bestanden die wijzigen
-| Bestand | Wijziging |
-|---------|-----------|
-| `src/pages/admin/AdminQuotePreview.tsx` | Prijsweergave en totaalberekening aanpassen voor `on_request` items |
+**2. ProgramOverviewCard - Subtitel voor self-service**
+
+De huidige subtitel:
+> "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
+
+Wordt vervangen door een contextbewuste tekst die ook benoemt dat aanbieders worden benaderd:
+> "Uw aanvragen zijn verstuurd naar de aanbieders. Wij stemmen alles op elkaar af."
+
+Dit wordt alleen getoond wanneer er daadwerkelijk pending items zijn (via een nieuwe prop `hasPendingItems`). Wanneer alles bevestigd is, blijft de huidige tekst staan.
+
+### Technische aanpassingen
+
+- `src/components/customer-portal/ActionRequiredCard.tsx`: Titel en beschrijving van het "pending" blok aanpassen
+- `src/components/customer-portal/ProgramOverviewCard.tsx`: Subtitel dynamisch maken op basis van pending status (nieuwe optionele prop `hasPendingItems`)
+- `src/components/customer-portal/DesktopProgramView.tsx`: Prop `hasPendingItems` doorgeven
+- `src/components/customer-portal/MobileProgramView.tsx`: Prop `hasPendingItems` doorgeven
 
