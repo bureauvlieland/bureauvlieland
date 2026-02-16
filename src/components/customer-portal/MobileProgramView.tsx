@@ -179,6 +179,11 @@ export const MobileProgramView = ({
   // Check if this is a quote awaiting customer approval
   const isQuoteAwaitingApproval = program.program_type === "quote" && program.quote_status === "offerte_verstuurd";
 
+  // Pre-approval: quote programs where partners haven't been contacted yet
+  const isPreApproval = program.program_type === "quote" && 
+    !!program.quote_status && 
+    ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
+
   // Calculate total cost
   const totalCost = useMemo(() => {
     let total = 0;
@@ -367,6 +372,7 @@ export const MobileProgramView = ({
                       allItems={program.items}
                       hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                       invoicingMode={invoicingMode}
+                      isPreApproval={isPreApproval}
                       vatRate={getItemVatRate(item)}
                     />
                   ))}
@@ -410,6 +416,7 @@ export const MobileProgramView = ({
                   allItems={program.items}
                   hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                   invoicingMode={invoicingMode}
+                  isPreApproval={isPreApproval}
                   vatRate={getItemVatRate(item)}
                 />
               ))}
