@@ -1,34 +1,42 @@
 
+## Voorwaarden-sectie altijd tonen met placeholder
 
-## Activiteiten-status verbeteren in de checklist
+De AcceptTermsCard wordt nu pas getoond als alle activiteiten bevestigd zijn. We maken een placeholder-versie die altijd zichtbaar is zolang de voorwaarden nog niet geaccepteerd zijn, zodat de klant weet wat er komt.
 
-De logies-status is nu verbeterd met drie toestanden, maar de eerste stap ("Activiteiten bevestigd") mist nog de tussentoestanden. We voeren alsnog de eerder goedgekeurde verbeteringen door.
+### Gewenst resultaat
 
-### Huidige weergave
-
+**Nog niet alle activiteiten bevestigd:**
 ```text
-O   Activiteiten bevestigd       <- lege cirkel, ook als 3 van 5 al bevestigd zijn
++-----------------------------------------------+
+| [FileText]  Voorwaarden                        |
+|                                                |
+|  Zodra alle activiteiten in je programma       |
+|  bevestigd zijn, verschijnen hier de           |
+|  voorwaarden ter ondertekening.                |
++-----------------------------------------------+
 ```
 
-### Verbeterde weergave
+**Alle activiteiten bevestigd:** De huidige AcceptTermsCard met checkbox, handtekening en knop (ongewijzigd).
 
-```text
-Pending items:        [klok]  Wachten op aanbieders (3/5 bevestigd)      <- amber
-Alternatieven:        [!]     Alternatief voorstel bekijken (3/5)        <- amber
-Alles bevestigd:      [v]     Activiteiten bevestigd (5/5)               <- groen
-```
+**Na acceptatie:** De bestaande AcceptedTermsCard (ongewijzigd).
 
 ### Technische aanpassing
 
-**Bestand: `src/components/customer-portal/StatusSummary.tsx`**
+**Bestand: `src/components/customer-portal/DesktopProgramView.tsx`**
 
-Regels 45-54 worden aangepast. De huidige simpele toggle (cirkel of vinkje) wordt vervangen door drie toestanden:
+De huidige voorwaardelijke rendering (regel 430-441) wordt aangepast:
 
-1. Als `alternative > 0`: amber `AlertCircle` icoon + "Alternatief voorstel bekijken" + teller `(confirmed/total bevestigd)`
-2. Als `pending > 0` (geen alternatives): amber `Clock` icoon + "Wachten op aanbieders" + teller `(confirmed/total bevestigd)`
-3. Als alles bevestigd: groen `CheckCircle` + "Activiteiten bevestigd" + teller `(total/total)`
+- De `{allConfirmed && !termsAccepted && ...}` conditie wordt vervangen door `{!termsAccepted && ...}` zodat de sectie altijd zichtbaar is.
+- Binnen die sectie komt een nieuwe check: als `allConfirmed` waar is, toon de bestaande `AcceptTermsCard`. Anders toon een simpele placeholder-kaart.
 
-De `AlertCircle` import moet worden toegevoegd aan de lucide-react imports.
+De placeholder is een lichte `Card` met een `FileText` icoon, de titel "Voorwaarden" en een korte uitleg. Geen nieuwe component nodig -- een inline kaart van ~10 regels volstaat.
 
-Geen andere bestanden hoeven te worden aangepast -- alle benodigde props (`confirmed`, `pending`, `alternative`, `total`) zijn al beschikbaar in de component.
+**Bestand: `src/components/customer-portal/MobileProgramView.tsx`**
 
+Dezelfde aanpassing doorvoeren voor de mobiele weergave (als daar dezelfde `allConfirmed` guard staat).
+
+### Wat niet verandert
+
+- De `AcceptTermsCard` component zelf blijft ongewijzigd.
+- De `AcceptedTermsCard` (na acceptatie) blijft ongewijzigd.
+- De sidebar checklist blijft ongewijzigd.
