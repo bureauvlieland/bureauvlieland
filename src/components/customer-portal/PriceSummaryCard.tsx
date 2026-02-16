@@ -346,20 +346,41 @@ export const PriceSummaryCard = ({
                 <span>Factuur Bureau Vlieland</span>
               </div>
               
-              {summary.hasBureauItems && (
-                <div className="flex items-center justify-between text-sm pl-6">
-                  <span className="text-muted-foreground">{isBureauCentral ? "Bureau activiteiten" : "Activiteiten"}</span>
-                  <span>€{formatPrice(summary.bureauTotal)}</span>
-                </div>
-              )}
+              {/* Individual bureau items */}
+              {items
+                .filter(i => i.block_type === "bureau" && i.status === "confirmed" && i.quoted_price !== null)
+                .map(item => {
+                  const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+                  return (
+                    <div key={item.id} className="pl-6 space-y-0.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{item.block_name}</span>
+                        <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
+                      </div>
+                      {item.admin_price_notes && (
+                        <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                      )}
+                    </div>
+                  );
+                })}
 
-              {/* In bureau_central, partner costs go under Bureau Vlieland */}
-              {isBureauCentral && summary.hasPartnerItems && (
-                <div className="flex items-center justify-between text-sm pl-6">
-                  <span className="text-muted-foreground">Activiteiten aanbieders</span>
-                  <span>€{formatPrice(summary.partnerTotal)}</span>
-                </div>
-              )}
+              {/* In bureau_central, individual partner items */}
+              {isBureauCentral && items
+                .filter(i => i.block_type === "partner" && i.status === "confirmed" && i.quoted_price !== null)
+                .map(item => {
+                  const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+                  return (
+                    <div key={item.id} className="pl-6 space-y-0.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{item.block_name}</span>
+                        <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
+                      </div>
+                      {item.admin_price_notes && (
+                        <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                      )}
+                    </div>
+                  );
+                })}
               
                 <div className="flex items-center justify-between text-sm pl-6">
                   <span className="text-muted-foreground">Coördinatie & handling fee</span>
@@ -411,10 +432,23 @@ export const PriceSummaryCard = ({
                 <span>Facturen aanbieders</span>
               </div>
               
-              <div className="flex items-center justify-between text-sm pl-6">
-                <span className="text-muted-foreground">Activiteiten aanbieders</span>
-                <span>€{formatPrice(summary.partnerTotal)}</span>
-              </div>
+              {/* Individual partner items */}
+              {items
+                .filter(i => i.block_type === "partner" && i.status === "confirmed" && i.quoted_price !== null)
+                .map(item => {
+                  const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+                  return (
+                    <div key={item.id} className="pl-6 space-y-0.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{item.block_name}</span>
+                        <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
+                      </div>
+                      {item.admin_price_notes && (
+                        <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                      )}
+                    </div>
+                  );
+                })}
 
               {/* VAT breakdown for Partners */}
               <div className="border-t pt-2 mt-2 space-y-1 pl-6">
@@ -451,10 +485,16 @@ export const PriceSummaryCard = ({
               </span>
             </div>
             {numberOfPeople > 0 && summary.hasConfirmedPrices && (
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Gemiddeld per persoon</span>
-                <span>€{formatPrice(summary.grandTotalInclVat / numberOfPeople)}</span>
-              </div>
+              <>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Per persoon excl. BTW</span>
+                  <span>€{formatPrice(summary.totalExclVat / numberOfPeople)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Per persoon incl. BTW</span>
+                  <span>€{formatPrice(summary.grandTotalInclVat / numberOfPeople)}</span>
+                </div>
+              </>
             )}
           </div>
         </div>

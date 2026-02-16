@@ -140,10 +140,70 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                     )}</span>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {isBureauCentral ? "Volledige programma & coördinatie" : "Coördinatie & handling"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                {/* Individual bureau items */}
+                {(() => {
+                  const bureauItems = items.filter(i => i.block_type === "bureau" && i.status !== "cancelled");
+                  return bureauItems.length > 0 ? (
+                    <div className="mt-1 space-y-0.5">
+                      {bureauItems.map(item => {
+                        const itemPrice = item.quoted_price ?? item.admin_price_override ?? 0;
+                        const isPreliminary = !item.quoted_price && item.admin_price_override;
+                        const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+                        return (
+                          <div key={item.id} className="text-sm text-muted-foreground">
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{item.block_name}</span>
+                              {itemPrice > 0 && (
+                                <span className="text-xs whitespace-nowrap">
+                                  {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
+                                  {priceTypeLabel && ` ${priceTypeLabel}`}
+                                </span>
+                              )}
+                            </div>
+                            {item.admin_price_notes && (
+                              <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null;
+                })()}
+                {/* Coordination fee line */}
+                <div className="mt-1 text-sm text-muted-foreground flex items-center justify-between gap-2">
+                  <span>Coördinatie & handling fee</span>
+                  <span className="text-xs whitespace-nowrap">€{formatPrice(coordinationFee)}</span>
+                </div>
+                {/* In bureau_central, show partner items under Bureau */}
+                {isBureauCentral && (() => {
+                  const partnerItems = items.filter(i => i.block_type === "partner" && i.status !== "cancelled");
+                  return partnerItems.length > 0 ? (
+                    <div className="mt-1 space-y-0.5">
+                      {partnerItems.map(item => {
+                        const itemPrice = item.quoted_price ?? item.admin_price_override ?? 0;
+                        const isPreliminary = !item.quoted_price && item.admin_price_override;
+                        const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+                        return (
+                          <div key={item.id} className="text-sm text-muted-foreground">
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{item.block_name}</span>
+                              {itemPrice > 0 && (
+                                <span className="text-xs whitespace-nowrap">
+                                  {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
+                                  {priceTypeLabel && ` ${priceTypeLabel}`}
+                                </span>
+                              )}
+                            </div>
+                            {item.admin_price_notes && (
+                              <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null;
+                })()}
+                <p className="text-xs text-muted-foreground mt-1">
                   Factuur door: Bureau Vlieland
                 </p>
               </div>
