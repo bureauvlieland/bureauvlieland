@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
-import type { AccommodationQuote } from "@/types/accommodation";
+import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
 
 interface ProgramSidebarProps {
   statusSummary: {
@@ -25,6 +25,7 @@ interface ProgramSidebarProps {
   items: ProgramRequestItem[];
   numberOfPeople: number;
   selectedAccommodationQuote?: AccommodationQuote | null;
+  accommodation?: AccommodationRequest | null;
   isMultiDay?: boolean;
   totalCost?: number;
   allConfirmed?: boolean;
@@ -42,14 +43,16 @@ export const ProgramSidebar = ({
   items,
   numberOfPeople,
   selectedAccommodationQuote,
+  accommodation,
   isMultiDay = false,
   totalCost = 0,
   allConfirmed = false,
   onScrollToTerms,
   className,
 }: ProgramSidebarProps) => {
-  // Determine if accommodation is arranged
+  // Determine accommodation status
   const hasAccommodation = !!selectedAccommodationQuote;
+  const accommodationStatus: "none" | "requested" | "selected" = selectedAccommodationQuote ? "selected" : accommodation ? "requested" : "none";
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -100,6 +103,7 @@ export const ProgramSidebar = ({
         variant="checklist"
         billingComplete={billingComplete}
         hasAccommodation={hasAccommodation}
+        accommodationStatus={accommodationStatus}
         termsAccepted={termsAccepted}
         isMultiDay={isMultiDay}
       />

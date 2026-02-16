@@ -523,6 +523,7 @@ export const DesktopProgramView = ({
         items={program.items}
         numberOfPeople={program.number_of_people}
         selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+        accommodation={accommodation}
         isMultiDay={isMultiDay}
         totalCost={totalCost}
         allConfirmed={allConfirmed}

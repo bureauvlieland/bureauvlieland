@@ -13,6 +13,7 @@ interface StatusSummaryProps {
   // Additional props for checklist variant
   billingComplete?: boolean;
   hasAccommodation?: boolean;
+  accommodationStatus?: "none" | "requested" | "selected";
   termsAccepted?: boolean;
   isMultiDay?: boolean;
 }
@@ -27,9 +28,12 @@ export const StatusSummary = ({
   variant = "default",
   billingComplete = false,
   hasAccommodation = false,
+  accommodationStatus,
   termsAccepted = false,
   isMultiDay = false,
 }: StatusSummaryProps) => {
+  // Derive effective accommodation status: prefer explicit prop, fall back to boolean
+  const effectiveAccommodationStatus = accommodationStatus ?? (hasAccommodation ? "selected" : "none");
   // Checklist variant - new design per repositioning
   if (variant === "checklist") {
     const activitiesConfirmed = pending === 0 && alternative === 0 && total > 0;
@@ -60,13 +64,23 @@ export const StatusSummary = ({
           </li>
           {isMultiDay && (
             <li className="flex items-center gap-2">
-              {hasAccommodation ? (
+              {effectiveAccommodationStatus === "selected" ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
+              ) : effectiveAccommodationStatus === "requested" ? (
+                <Clock className="h-4 w-4 text-amber-500" />
               ) : (
                 <Circle className="h-4 w-4 text-muted-foreground" />
               )}
-              <span className={hasAccommodation ? "text-foreground" : "text-muted-foreground"}>
-                Logies geregeld
+              <span className={
+                effectiveAccommodationStatus === "selected" ? "text-foreground" 
+                : effectiveAccommodationStatus === "requested" ? "text-amber-700" 
+                : "text-muted-foreground"
+              }>
+                {effectiveAccommodationStatus === "selected" 
+                  ? "Logies geregeld" 
+                  : effectiveAccommodationStatus === "requested" 
+                    ? "Offertes worden verzameld" 
+                    : "Logies regelen"}
               </span>
             </li>
           )}
