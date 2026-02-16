@@ -774,7 +774,7 @@ const AdminQuotePreview = () => {
                         </p>
                         {accommodationQuote && (
                           <p className="text-blue-800 mt-2">
-                            De prijzen voor logies zijn gebaseerd op een actuele aanbieding van de accommodatiepartner en zijn reeds bevestigd.
+                            De prijzen voor logies zijn gebaseerd op een actuele aanbieding van de accommodatiepartner en zijn reeds in optie gezet voor genoemde data.
                           </p>
                         )}
                       </div>
