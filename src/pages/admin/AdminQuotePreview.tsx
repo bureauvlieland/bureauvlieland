@@ -31,7 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import type { BuildingBlock } from "@/types/buildingBlock";
-import { useAppSettings } from "@/hooks/useAppSettings";
+
 
 interface ProgramRequest {
   id: string;
@@ -96,7 +96,7 @@ const AdminQuotePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const { getSetting, isLoading: settingsLoading } = useAppSettings();
+  const [templateLoading, setTemplateLoading] = useState(false);
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
@@ -512,14 +512,36 @@ const AdminQuotePreview = () => {
                         variant="ghost"
                         size="sm"
                         className="text-xs h-7"
-                        disabled={settingsLoading}
-                        onClick={() => {
-                          const defaultText = getSetting<string>("default_quote_personal_message", "");
-                          if (defaultText) {
-                            setPersonalMessage(defaultText);
+                        disabled={templateLoading}
+                        onClick={async () => {
+                          setTemplateLoading(true);
+                          try {
+                            const { data: tpl, error } = await supabase
+                              .from("email_templates")
+                              .select("body_html")
+                              .eq("id", "quote_offer_customer")
+                              .eq("is_active", true)
+                              .maybeSingle();
+                            if (error || !tpl) {
+                              toast.info("Geen standaard mailtekst gevonden");
+                              return;
+                            }
+                            // Extract plain text intro from the HTML template
+                            const dates = request.selected_dates?.length
+                              ? request.selected_dates.map(d => format(new Date(d), "d MMMM yyyy", { locale: nl })).join(" – ")
+                              : "Nog niet bepaald";
+                            const companyName = request.customer_company || "u";
+                            const validUntilStr = format(validUntil, "d MMMM yyyy", { locale: nl });
+
+                            // Build a plain-text version from the template content
+                            let plainText = `Beste ${request.customer_name},\n\nHierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${companyName} samengesteld.\n\nProgrammadetails:\n- Data: ${dates}\n- Aantal personen: ${request.number_of_people}\n- Geldig tot: ${validUntilStr}\n\nU kunt het voorstel bekijken en akkoord geven via de knop in de e-mail.\n\nHeeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.\n\nMet vriendelijke groet,\nErwin Soolsma\nBureau Vlieland`;
+
+                            setPersonalMessage(plainText);
                             toast.success("Standaard mailtekst geladen");
-                          } else {
-                            toast.info("Geen standaard mailtekst ingesteld");
+                          } catch {
+                            toast.error("Kon template niet laden");
+                          } finally {
+                            setTemplateLoading(false);
                           }
                         }}
                       >
