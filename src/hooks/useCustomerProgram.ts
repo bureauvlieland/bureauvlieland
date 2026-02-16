@@ -141,19 +141,21 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       // Fetch building block images
       const { data: blocksData } = await supabase
         .from("building_blocks")
-        .select("id, image_url, image_asset")
+        .select("id, image_url, image_asset, short_description, description")
         .in("id", blockIds);
       
-      // Create a lookup map for images
-      const imageMap = new Map((blocksData || []).map((b: any) => [b.id, { image_url: b.image_url, image_asset: b.image_asset }]));
+      // Create a lookup map for images and descriptions
+      const blockMap = new Map((blocksData || []).map((b: any) => [b.id, b]));
       
-      // Merge image data onto items
+      // Merge image + description data onto items
       const itemsWithImages = (itemsData || []).map((item: any) => {
-        const imageData = imageMap.get(item.block_id);
+        const block = blockMap.get(item.block_id);
         return {
           ...item,
-          image_url: imageData?.image_url || null,
-          image_asset: imageData?.image_asset || null,
+          image_url: block?.image_url || null,
+          image_asset: block?.image_asset || null,
+          block_short_description: block?.short_description || null,
+          block_description: block?.description || null,
         };
       });
 
