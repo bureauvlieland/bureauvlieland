@@ -656,16 +656,15 @@ const AdminQuotePreview = () => {
                                     </td>
                                     <td className="py-3">
                                       <p className="font-medium text-sm">{item.block_name}</p>
-                                      {item.block_short_description && (
-                                        <p className="text-xs text-gray-500">
-                                          {item.block_short_description}
-                                        </p>
-                                      )}
-                                      {item.admin_price_notes && (
+                                      {item.admin_price_notes ? (
                                         <p className="text-xs text-gray-500">
                                           {item.admin_price_notes}
                                         </p>
-                                      )}
+                                      ) : item.block_short_description ? (
+                                        <p className="text-xs text-gray-500">
+                                          {item.block_short_description}
+                                        </p>
+                                      ) : null}
                                       <p className="text-xs text-gray-400">
                                         {item.provider_name}
                                       </p>
