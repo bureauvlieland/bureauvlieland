@@ -1,38 +1,29 @@
 
-# Prijsnotitie (price_adult_note) doorvoeren naar programma-items
+# Fix: Zelf-te-regelen items verschijnen onder Bureau Vlieland
 
 ## Probleem
-Het veld "Notitie" bij bouwstenen (`price_adult_note`, bijv. "Per schip (12 personen)") wordt nergens overgenomen naar `admin_price_notes` op programma-items. In plaats daarvan wordt `short_description` of `null` gebruikt.
+Items die in de bouwstenen als `self_arranged` zijn gedefinieerd (zoals "Overtocht met Rederij Doeksen" en "Fietshuur") zijn bij het aanmaken van het programma opgeslagen met `block_type = "partner"`. Hierdoor verschijnen ze in de facturatieoverzichten onder Bureau Vlieland of als partneractiviteit, terwijl ze daar niet thuishoren.
 
-## Oorzaak
-Er zijn drie plekken waar programma-items worden aangemaakt, en geen daarvan neemt `price_adult_note` over:
-
-1. **Admin voegt activiteit toe** (`AdminAddActivitySheet.tsx` regel 103): initialiseert de beschrijving met `block.short_description` in plaats van `block.price_adult_note`
-2. **Template toepassen** (`ApplyTemplateDialog.tsx` regel 79): zet `admin_price_notes` op `block.short_description` in plaats van `block.price_adult_note`
-3. **Klant voegt activiteit toe** (`useCustomerProgram.ts` regel 421): zet `admin_price_notes` altijd op `null`
+De **code** is inmiddels correct: zowel `ApplyTemplateDialog` als `AdminAddActivitySheet` nemen het juiste `block_type` over van de bouwsteen. Het probleem zit in **bestaande data** die is aangemaakt voordat deze fix actief was.
 
 ## Oplossing
 
-### 1. AdminAddActivitySheet.tsx
-Regel 103 wijzigen: bij het selecteren van een bouwsteen wordt `customDescription` gevuld met `price_adult_note` als dat bestaat, anders `short_description`.
+### 1. Database-correctie: bestaande items bijwerken
+Een UPDATE-query die alle `program_request_items` corrigeert waar het `block_type` afwijkt van de bijbehorende `building_block`:
 
-```
-setCustomDescription(block.price_adult_note || block.short_description || "");
-```
-
-### 2. ApplyTemplateDialog.tsx
-Regel 79 wijzigen: `admin_price_notes` vullen met `price_adult_note` als dat bestaat, anders `short_description`.
-
-```
-admin_price_notes: block.price_adult_note || block.short_description || null,
+```sql
+UPDATE program_request_items pri
+SET block_type = bb.block_type
+FROM building_blocks bb
+WHERE pri.block_id = bb.id
+  AND pri.block_type != bb.block_type::text
+  AND bb.block_type = 'self_arranged';
 ```
 
-### 3. useCustomerProgram.ts
-Regel 421 wijzigen: `admin_price_notes` vullen met `price_adult_note` van de opgehaalde bouwsteen.
+Dit corrigeert alle programma's in een keer, niet alleen KSHU9ndXD5Ey.
 
-```
-admin_price_notes: block.price_adult_note || null,
-```
-
-## Bestaande data
-Het bestaande item "Zeehondentocht Exclusief" op programma KSHU9ndXD5Ey heeft al `admin_price_notes = null`. Dit moet handmatig worden bijgewerkt in de admin, of er kan een eenmalige database-update worden gedaan om bestaande items te verrijken.
+### 2. Geen codewijzigingen nodig
+De display-componenten (`InvoiceProvidersCard`, `PriceSummaryCard`) filteren `self_arranged` items al correct uit. Zodra de data is gecorrigeerd, werkt alles naar behoren:
+- Items verschijnen niet meer onder Bureau Vlieland of partners in het facturatieoverzicht
+- Items verschijnen wel in de "Zelf te regelen" sectie
+- Prijzen worden niet meegenomen in de totalen
