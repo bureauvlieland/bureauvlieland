@@ -164,30 +164,68 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create quote records for each partner with their commission percentage
-    const quotesToCreate = partner_ids.map((partnerId) => {
-      const partner = partners.find(p => p.id === partnerId);
-      return {
-        request_id,
-        partner_id: partnerId,
-        accommodation_name: "",
-        price_total: 0,
-        valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        status: "pending",
-        commission_percentage: partner?.accommodation_commission_percentage ?? 10,
-      };
+    // Check existing quotes for each partner
+    const { data: existingQuotes } = await supabase
+      .from("accommodation_quotes")
+      .select("id, partner_id, status")
+      .eq("request_id", request_id)
+      .in("partner_id", partner_ids);
+
+    const existingQuoteMap: Record<string, { id: string; status: string }> = {};
+    (existingQuotes || []).forEach((q) => {
+      existingQuoteMap[q.partner_id] = { id: q.id, status: q.status };
     });
 
-    const { error: insertError } = await supabase
-      .from("accommodation_quotes")
-      .insert(quotesToCreate);
+    // Process each partner: insert, update, or skip (reminder only)
+    for (const partnerId of partner_ids) {
+      const existing = existingQuoteMap[partnerId];
+      const partner = partners.find(p => p.id === partnerId);
 
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      return new Response(
-        JSON.stringify({ error: "Fout bij aanmaken offerteaanvragen" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (!existing) {
+        // No existing quote → INSERT new record
+        const { error: insertError } = await supabase
+          .from("accommodation_quotes")
+          .insert({
+            request_id,
+            partner_id: partnerId,
+            accommodation_name: "",
+            price_total: 0,
+            valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+            status: "pending",
+            commission_percentage: partner?.accommodation_commission_percentage ?? 10,
+          });
+
+        if (insertError) {
+          console.error("Insert error for partner", partnerId, insertError);
+        }
+      } else if (["declined", "rejected", "expired"].includes(existing.status)) {
+        // Re-request: UPDATE status back to pending, reset fields
+        const { error: updateError } = await supabase
+          .from("accommodation_quotes")
+          .update({
+            status: "pending",
+            submitted_at: null,
+            selected_at: null,
+            partner_notes: null,
+            accommodation_name: "",
+            price_total: 0,
+            price_per_person_per_night: null,
+            room_configuration: [],
+            includes: [],
+            conditions: null,
+            description: null,
+            quote_attachment_path: null,
+            quote_attachment_filename: null,
+            quote_external_url: null,
+            valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          })
+          .eq("id", existing.id);
+
+        if (updateError) {
+          console.error("Update error for partner", partnerId, updateError);
+        }
+      }
+      // For status "pending": do nothing to the record, just send the email (reminder)
     }
 
     // Send emails to each partner

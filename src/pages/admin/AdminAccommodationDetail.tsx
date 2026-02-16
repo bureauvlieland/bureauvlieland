@@ -340,8 +340,20 @@ export default function AdminAccommodationDetail() {
     );
   };
 
-  // Get already requested partner IDs
-  const requestedPartnerIds = quotes?.map((q) => q.partner_id) || [];
+  // Build a lookup map: partner_id -> quote status
+  const partnerQuoteStatusMap: Record<string, string> = {};
+  quotes?.forEach((q) => {
+    // Keep the most relevant status if multiple quotes exist (shouldn't happen, but be safe)
+    if (!partnerQuoteStatusMap[q.partner_id] || 
+        ['submitted', 'selected'].includes(q.status)) {
+      partnerQuoteStatusMap[q.partner_id] = q.status;
+    }
+  });
+
+  // Check if any selected partner already has a pending quote (for button text)
+  const hasPendingSelected = selectedPartners.some(
+    (pid) => partnerQuoteStatusMap[pid] === "pending"
+  );
 
   // Helper to get label from value
   const getLabel = (options: readonly { value: string; label: string }[], value: string) => {
@@ -569,14 +581,34 @@ export default function AdminAccommodationDetail() {
                 ) : (
                   <div className="space-y-2">
                     {partners?.map((partner) => {
-                      const alreadyRequested = requestedPartnerIds.includes(partner.id);
+                      const quoteStatus = partnerQuoteStatusMap[partner.id];
+                      const isBlocked = quoteStatus === "submitted" || quoteStatus === "selected";
                       const isSelected = selectedPartners.includes(partner.id);
+
+                      // Dynamic badge based on quote status
+                      const statusBadge = quoteStatus ? (() => {
+                        switch (quoteStatus) {
+                          case "pending":
+                            return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Wacht op reactie</Badge>;
+                          case "submitted":
+                            return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Offerte ontvangen</Badge>;
+                          case "selected":
+                            return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Geselecteerd</Badge>;
+                          case "declined":
+                          case "rejected":
+                            return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Afgewezen</Badge>;
+                          case "expired":
+                            return <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">Verlopen</Badge>;
+                          default:
+                            return <Badge variant="secondary">Reeds aangevraagd</Badge>;
+                        }
+                      })() : null;
 
                       return (
                         <div
                           key={partner.id}
                           className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                            alreadyRequested
+                            isBlocked
                               ? "bg-slate-50 border-slate-200 opacity-60"
                               : isSelected
                               ? "bg-primary/5 border-primary"
@@ -586,15 +618,13 @@ export default function AdminAccommodationDetail() {
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => togglePartner(partner.id)}
-                            disabled={alreadyRequested}
+                            disabled={isBlocked}
                           />
                           <div className="flex-1">
                             <p className="font-medium">{partner.name}</p>
                             <p className="text-sm text-slate-500">{partner.email}</p>
                           </div>
-                          {alreadyRequested && (
-                            <Badge variant="secondary">Reeds aangevraagd</Badge>
-                          )}
+                          {statusBadge}
                           <span className="text-sm text-slate-500">
                             {partner.accommodation_commission_percentage || 10}% commissie
                           </span>
@@ -611,7 +641,7 @@ export default function AdminAccommodationDetail() {
                     </p>
                     <Button onClick={() => setShowEmailDialog(true)} disabled={createQuotesMutation.isPending}>
                       <Send className="h-4 w-4 mr-2" />
-                      Offerteaanvraag versturen
+                      {hasPendingSelected ? "Herinnering versturen" : "Offerteaanvraag versturen"}
                     </Button>
                   </div>
                 )}
