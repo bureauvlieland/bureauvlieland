@@ -1231,6 +1231,9 @@ export type Database = {
           invoiced_file_path: string | null
           invoiced_number: string | null
           item_quote_status: string | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
           preferred_time: string | null
           price_indication: string | null
           price_type: string | null
@@ -1286,6 +1289,9 @@ export type Database = {
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           item_quote_status?: string | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
@@ -1341,6 +1347,9 @@ export type Database = {
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           item_quote_status?: string | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null

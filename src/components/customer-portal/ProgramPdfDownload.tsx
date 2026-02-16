@@ -140,11 +140,15 @@ export const ProgramPdfDownload = ({
           doc.setTextColor(0);
           y += 5;
 
-          // Location
-          if ((item as any).location_address) {
+          // Location with clickable link
+          if (item.location_address) {
+            const locationUrl = item.location_lat && item.location_lng
+              ? `https://www.google.com/maps/dir/?api=1&destination=${item.location_lat},${item.location_lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location_address)}`;
+            const locationText = `📍 ${item.location_address}`;
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.text(`📍 ${(item as any).location_address}`, margin + 2, y);
+            doc.textWithLink(locationText, margin + 2, y, { url: locationUrl });
             doc.setTextColor(0);
             y += 5;
           }
