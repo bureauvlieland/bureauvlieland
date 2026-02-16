@@ -1,6 +1,7 @@
 import { Ship, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import ferryImage from "@/assets/ferry-doeksen.jpg";
 
 interface BootticketBannerProps {
   variant?: "default" | "compact" | "sidebar";
@@ -47,14 +48,15 @@ export const BootticketBanner = ({
           className
         )}
       >
-        <div className="relative h-28 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-          <Ship className="h-12 w-12 text-primary/40 group-hover:scale-110 transition-transform duration-500" />
+        <div className="relative h-28 overflow-hidden">
+          <img src={ferryImage} alt="Veerboot naar Vlieland" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          <span className="absolute bottom-2 left-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
+            <Ship className="h-4 w-4" />
+            Boottickets reserveren
+          </span>
         </div>
         <div className="p-3 bg-card">
-          <p className="text-sm font-semibold flex items-center gap-1.5">
-            <Ship className="h-4 w-4 text-primary" />
-            Boottickets reserveren
-          </p>
           <p className="text-xs text-muted-foreground leading-relaxed mt-1">
             Boek groepstickets voor de veerboot bij Rederij Doeksen.
           </p>
