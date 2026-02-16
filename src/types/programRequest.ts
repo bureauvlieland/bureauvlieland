@@ -271,6 +271,10 @@ export interface ProgramRequestItem {
   price_type: string | null;
   // External URL for self-arranged items
   external_url: string | null;
+  // Location fields
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_address?: string | null;
 }
 
 export interface ProgramRequestHistory {

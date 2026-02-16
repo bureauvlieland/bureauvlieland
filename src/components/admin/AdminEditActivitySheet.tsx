@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { timeSlots } from "@/types/buildingBlock";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+import { LocationPicker } from "@/components/admin/LocationPicker";
 
 interface ProgramRequestItem {
   id: string;
@@ -52,6 +53,9 @@ interface ProgramRequestItem {
   status: string;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_address?: string | null;
 }
 
 interface AdminEditActivitySheetProps {
@@ -81,6 +85,9 @@ export const AdminEditActivitySheet = ({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [locationAddress, setLocationAddress] = useState("");
 
   // Initialize form when item changes
   useEffect(() => {
@@ -92,6 +99,9 @@ export const AdminEditActivitySheet = ({
       setPriceOverride(item.admin_price_override?.toString() || "");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
+      setLocationLat(item.location_lat ?? null);
+      setLocationLng(item.location_lng ?? null);
+      setLocationAddress(item.location_address || "");
     }
   }, [item]);
 
@@ -115,6 +125,9 @@ export const AdminEditActivitySheet = ({
         admin_price_override: price,
         customer_notes: notes || null,
         block_type: isBureauInvoiced ? "bureau" : "partner",
+        location_lat: locationLat,
+        location_lng: locationLng,
+        location_address: locationAddress || null,
       };
 
       // Only change provider if switching to bureau
@@ -317,6 +330,21 @@ export const AdminEditActivitySheet = ({
               value={priceOverride}
               onChange={(e) => setPriceOverride(e.target.value)}
               placeholder="Prijs per persoon"
+            />
+          </div>
+
+          {/* Location */}
+          <div className="space-y-2">
+            <Label>Locatie (optioneel)</Label>
+            <LocationPicker
+              lat={locationLat}
+              lng={locationLng}
+              address={locationAddress}
+              onChange={(lat, lng, addr) => {
+                setLocationLat(lat);
+                setLocationLng(lng);
+                setLocationAddress(addr);
+              }}
             />
           </div>
 

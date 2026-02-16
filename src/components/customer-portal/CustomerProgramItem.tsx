@@ -374,12 +374,22 @@ export const CustomerProgramItem = ({
           
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
-            {/* Location */}
-            {(item as any).location_address && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {/* Location with navigation link */}
+            {item.location_address && (
+              <a
+                href={
+                  item.location_lat && item.location_lng
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${item.location_lat},${item.location_lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location_address)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
+              >
                 <MapPin className="h-4 w-4 shrink-0" />
-                <span>{(item as any).location_address}</span>
-              </div>
+                <span className="group-hover:underline">{item.location_address}</span>
+                <span className="text-xs text-primary font-medium ml-auto shrink-0">Route →</span>
+              </a>
             )}
             {/* Price details - hidden for self-arranged items */}
             {!isSelfArranged && item.quoted_price && vatRate !== undefined && (

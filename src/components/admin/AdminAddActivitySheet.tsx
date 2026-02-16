@@ -28,6 +28,7 @@ import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { timeSlots, type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+import { LocationPicker } from "@/components/admin/LocationPicker";
 
 interface AdminAddActivitySheetProps {
   open: boolean;
@@ -63,6 +64,9 @@ export const AdminAddActivitySheet = ({
   const [customDescription, setCustomDescription] = useState<string>("");
   const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [locationAddress, setLocationAddress] = useState("");
 
   // Filter blocks: active blocks only
   const availableBlocks = useMemo(() => {
@@ -98,6 +102,9 @@ export const AdminAddActivitySheet = ({
     setCustomName(block.name);
     setCustomDescription(block.short_description || "");
     setInvoicedBy(block.block_type === "bureau" ? "bureau" : "partner");
+    setLocationLat(block.location_lat ?? null);
+    setLocationLng(block.location_lng ?? null);
+    setLocationAddress(block.location_address || "");
   };
 
   const handleBack = () => {
@@ -141,6 +148,9 @@ export const AdminAddActivitySheet = ({
           admin_price_notes: customDescription || null,
           skip_partner_notification: true,
           price_type: selectedBlock.price_type || "per_person",
+          location_lat: locationLat,
+          location_lng: locationLng,
+          location_address: locationAddress || null,
         })
         .select()
         .single();
@@ -322,6 +332,21 @@ export const AdminAddActivitySheet = ({
               <p className="text-xs text-muted-foreground">
                 Standaard: €{selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}
               </p>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-2">
+              <Label>Locatie (optioneel)</Label>
+              <LocationPicker
+                lat={locationLat}
+                lng={locationLng}
+                address={locationAddress}
+                onChange={(lat, lng, addr) => {
+                  setLocationLat(lat);
+                  setLocationLng(lng);
+                  setLocationAddress(addr);
+                }}
+              />
             </div>
 
             {/* Notes */}
