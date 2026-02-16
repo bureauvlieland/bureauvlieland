@@ -64,26 +64,6 @@ export const StatusSummary = ({
         <h3 className="text-sm font-semibold">Status programma</h3>
         
         <div className="space-y-3 text-sm">
-          {/* Programma */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-0.5">Programma</p>
-            <StatusItem
-              icon={activitiesConfirmed 
-                ? <CheckCircle className="h-4 w-4 text-green-600" />
-                : alternative > 0 
-                  ? <AlertCircle className="h-4 w-4 text-amber-500" />
-                  : <Clock className="h-4 w-4 text-amber-500" />
-              }
-              label={activitiesConfirmed
-                ? `Bevestigd (${total}/${total})`
-                : alternative > 0
-                  ? `Alternatief bekijken (${confirmed}/${total})`
-                  : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
-              }
-              color={activitiesConfirmed ? "green" : "amber"}
-            />
-          </div>
-
           {/* Logies */}
           {isMultiDay && (
             <div>
@@ -105,6 +85,26 @@ export const StatusSummary = ({
               />
             </div>
           )}
+
+          {/* Programma */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-0.5">Programma</p>
+            <StatusItem
+              icon={activitiesConfirmed 
+                ? <CheckCircle className="h-4 w-4 text-green-600" />
+                : alternative > 0 
+                  ? <AlertCircle className="h-4 w-4 text-amber-500" />
+                  : <Clock className="h-4 w-4 text-amber-500" />
+              }
+              label={activitiesConfirmed
+                ? `Bevestigd (${total}/${total})`
+                : alternative > 0
+                  ? `Alternatief bekijken (${confirmed}/${total})`
+                  : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
+              }
+              color={activitiesConfirmed ? "green" : "amber"}
+            />
+          </div>
 
           {/* Facturatie */}
           <div>
