@@ -1,36 +1,52 @@
 
 
-## Communicatie verbeteren: aanvragen zijn verstuurd naar aanbieders
+## Logies-status verduidelijken in de checklist
 
-Bij self-service programma's worden de aanvragen direct verstuurd naar de partners na indiening. De klant ziet nu "Wachten op bevestiging" maar het is niet heel duidelijk dat de aanvragen daadwerkelijk al verstuurd zijn. We verbeteren dit op twee plekken:
+De checklist in de sidebar toont nu "Logies geregeld" als volledig afgevinkt zodra er een logiesaanvraag is ingediend. Maar dat klopt niet -- de logies is pas echt geregeld wanneer een offerte is gekozen. We splitsen dit op in drie duidelijke toestanden.
 
-### Wijzigingen
+### Huidige weergave
 
-**1. ActionRequiredCard - Duidelijkere pending-melding**
+```text
+[v]  Logies geregeld          <- groen vinkje, ook als er nog geen offerte gekozen is
+```
 
-De huidige tekst bij pending items:
-> "Nog X activiteiten wachten op reactie van de aanbieder. U ontvangt een e-mail zodra zij reageren."
+### Verbeterde weergave
 
-Wordt vervangen door:
-> **Titel:** "Aanvragen verstuurd naar aanbieders"
-> **Beschrijving:** "Uw programma is ingediend en de aanvragen zijn verstuurd naar X aanbieder(s). Zodra zij reageren ontvangt u hiervan een e-mail."
-
-Dit maakt expliciet duidelijk dat de aanvragen al onderweg zijn.
-
-**2. ProgramOverviewCard - Subtitel voor self-service**
-
-De huidige subtitel:
-> "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
-
-Wordt vervangen door een contextbewuste tekst die ook benoemt dat aanbieders worden benaderd:
-> "Uw aanvragen zijn verstuurd naar de aanbieders. Wij stemmen alles op elkaar af."
-
-Dit wordt alleen getoond wanneer er daadwerkelijk pending items zijn (via een nieuwe prop `hasPendingItems`). Wanneer alles bevestigd is, blijft de huidige tekst staan.
+```text
+Geen aanvraag:        O     Logies regelen
+Aanvraag ingediend:   [klok] Offertes worden verzameld
+Offerte gekozen:      [v]   Logies geregeld
+```
 
 ### Technische aanpassingen
 
-- `src/components/customer-portal/ActionRequiredCard.tsx`: Titel en beschrijving van het "pending" blok aanpassen
-- `src/components/customer-portal/ProgramOverviewCard.tsx`: Subtitel dynamisch maken op basis van pending status (nieuwe optionele prop `hasPendingItems`)
-- `src/components/customer-portal/DesktopProgramView.tsx`: Prop `hasPendingItems` doorgeven
-- `src/components/customer-portal/MobileProgramView.tsx`: Prop `hasPendingItems` doorgeven
+**1. StatusSummary.tsx - Nieuwe prop en drie-traps logies-status**
 
+Een nieuwe optionele prop `accommodationStatus` met waarden `"none" | "requested" | "selected"` wordt toegevoegd (naast de bestaande `hasAccommodation` die backward-compatible blijft).
+
+De logies-stap in de checklist toont:
+- `"none"`: lege cirkel + "Logies regelen" (grijs)
+- `"requested"`: amber klok-icoon + "Offertes worden verzameld" (amber)
+- `"selected"`: groen vinkje + "Logies geregeld" (groen)
+
+**2. ProgramSidebar.tsx - Status berekenen**
+
+De bestaande `hasAccommodation` boolean wordt aangevuld met een `accommodationStatus` berekening op basis van de al beschikbare props (`selectedAccommodationQuote` en of er een accommodation request bestaat -- dit laatste moet als nieuwe prop worden doorgegeven).
+
+Nieuwe prop: `accommodation: AccommodationRequest | null` (wordt al doorgegeven aan DesktopProgramView, moet alleen doorgesluisd worden naar de sidebar).
+
+Logica:
+```
+selectedAccommodationQuote ? "selected" : accommodation ? "requested" : "none"
+```
+
+**3. DesktopProgramView.tsx + MobileProgramView.tsx - Prop doorgeven**
+
+De `accommodation` prop wordt doorgegeven aan ProgramSidebar zodat de status berekend kan worden.
+
+### Bestanden
+
+- `src/components/customer-portal/StatusSummary.tsx`: Nieuwe prop + drie-traps rendering
+- `src/components/customer-portal/ProgramSidebar.tsx`: Nieuwe prop + statusberekening
+- `src/components/customer-portal/DesktopProgramView.tsx`: `accommodation` prop doorgeven aan sidebar
+- `src/components/customer-portal/MobileProgramView.tsx`: Idem voor mobiel (als sidebar daar ook gebruikt wordt)
