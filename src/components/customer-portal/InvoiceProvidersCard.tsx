@@ -152,16 +152,21 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                         const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
                         return (
                           <div key={item.id} className="text-sm text-muted-foreground">
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-start justify-between gap-2">
                               <span>{item.block_name}</span>
                               {itemPrice > 0 && (
-                                <span className="text-xs whitespace-nowrap">
-                                  {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
-                                  {priceTypeLabel && ` ${priceTypeLabel}`}
-                                </span>
+                                <div className="text-right shrink-0">
+                                  <span className="text-xs whitespace-nowrap">
+                                    {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
+                                    {priceTypeLabel && ` ${priceTypeLabel}`}
+                                  </span>
+                                  {item.admin_price_notes && (
+                                    <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                                  )}
+                                </div>
                               )}
                             </div>
-                            {item.admin_price_notes && (
+                            {itemPrice <= 0 && item.admin_price_notes && (
                               <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
                             )}
                           </div>
@@ -243,17 +248,22 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                       const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
                       return (
                         <div key={item.id} className="text-sm text-muted-foreground">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-start justify-between gap-2">
                             <span>{item.block_name}</span>
                             {itemPrice > 0 && (
-                              <span className="text-xs whitespace-nowrap">
-                                {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
-                                {priceTypeLabel && ` ${priceTypeLabel}`}
-                              </span>
+                              <div className="text-right shrink-0">
+                                <span className="text-xs whitespace-nowrap">
+                                  {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
+                                  {priceTypeLabel && ` ${priceTypeLabel}`}
+                                </span>
+                                {item.admin_price_notes && (
+                                  <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                                )}
+                              </div>
                             )}
                           </div>
-                          {item.admin_price_notes && (
-                            <p className="text-xs text-muted-foreground/70 ml-0">{item.admin_price_notes}</p>
+                          {itemPrice <= 0 && item.admin_price_notes && (
+                            <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
                           )}
                         </div>
                       );
