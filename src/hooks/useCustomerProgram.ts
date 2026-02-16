@@ -401,6 +401,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       admin_price_notes: null,
       skip_partner_notification: false,
       price_type: block.price_type || "per_person",
+      external_url: block.external_url || null,
     };
 
     setProgram((prev) => {

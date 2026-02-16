@@ -1048,6 +1048,7 @@ Deno.serve(async (req) => {
               customer_notes: change.notes || null,
               status: "pending",
               version: 1,
+              external_url: block.external_url || null,
             })
             .select()
             .single();

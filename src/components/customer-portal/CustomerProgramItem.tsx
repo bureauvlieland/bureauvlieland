@@ -18,7 +18,7 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -63,6 +63,7 @@ export const CustomerProgramItem = ({
   
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
+  const isSelfArranged = item.block_type === "self_arranged";
   
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
@@ -114,10 +115,17 @@ export const CustomerProgramItem = ({
                     Nieuw
                   </Badge>
                 )}
-                <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={invoicingMode === "bureau_central" && item.status === "pending" ? "In voorbereiding" : undefined} />
+                {isSelfArranged ? (
+                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Zelf te regelen
+                  </Badge>
+                ) : (
+                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={invoicingMode === "bureau_central" && item.status === "pending" ? "In voorbereiding" : undefined} />
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {item.provider_name}
+                {isSelfArranged ? "Zelf te boeken en betalen" : item.provider_name}
               </p>
             </div>
             
@@ -157,26 +165,43 @@ export const CustomerProgramItem = ({
                 {item.duration}
               </span>
             )}
-            {/* Show quoted price if available (confirmed by partner), otherwise show price indication */}
-            {item.quoted_price ? (
-              <span className="font-semibold text-green-700 dark:text-green-500">
-                €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                {item.price_type === "per_person" && (
-                  <span className="font-normal text-xs ml-1">p.p.</span>
-                )}
-                {vatRate !== undefined && (
-                  <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
-                )}
-              </span>
-            ) : item.price_indication && (
-              <span className="font-medium text-foreground">
-                {item.price_indication}
-              </span>
+            {/* Show quoted price if available (confirmed by partner), otherwise show price indication - hide for self_arranged */}
+            {!isSelfArranged && (
+              item.quoted_price ? (
+                <span className="font-semibold text-green-700 dark:text-green-500">
+                  €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {item.price_type === "per_person" && (
+                    <span className="font-normal text-xs ml-1">p.p.</span>
+                  )}
+                  {vatRate !== undefined && (
+                    <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
+                  )}
+                </span>
+              ) : item.price_indication && (
+                <span className="font-medium text-foreground">
+                  {item.price_indication}
+                </span>
+              )
             )}
           </div>
+
+          {/* External booking link for self-arranged items */}
+          {isSelfArranged && item.external_url && (
+            <div className="mt-2 ml-[76px]">
+              <a
+                href={item.external_url!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Boek bij {item.provider_name}
+              </a>
+            </div>
+          )}
           
           {/* Quoted price notes from partner */}
-          {item.quoted_price && item.quoted_notes && (
+          {!isSelfArranged && item.quoted_price && item.quoted_notes && (
             <p className="mt-1 text-xs text-muted-foreground italic">
               {item.quoted_notes}
             </p>
@@ -354,8 +379,8 @@ export const CustomerProgramItem = ({
                 <span>{(item as any).location_address}</span>
               </div>
             )}
-            {/* Price details */}
-            {item.quoted_price && vatRate !== undefined && (
+            {/* Price details - hidden for self-arranged items */}
+            {!isSelfArranged && item.quoted_price && vatRate !== undefined && (
               <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Excl. BTW</span>
