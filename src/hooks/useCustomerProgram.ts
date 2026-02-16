@@ -418,7 +418,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       // Quote mode fields (null for self-service added items)
       item_quote_status: null,
       admin_price_override: null,
-      admin_price_notes: null,
+      admin_price_notes: block.price_adult_note || null,
       skip_partner_notification: false,
       price_type: block.price_type || "per_person",
       external_url: block.external_url || null,
