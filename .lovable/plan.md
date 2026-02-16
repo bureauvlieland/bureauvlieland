@@ -1,22 +1,23 @@
 
 
-## Plan: Prijsnotities links uitlijnen en overflow voorkomen
+## Plan: Logiesaanvraag-status tonen op de offerte
 
 ### Probleem
-Op de Facturatie-tab lopen de omschrijvingen (admin_price_notes) onder de prijzen als een lange zin naar rechts uit het blok. Ze staan rechts uitgelijnd binnen het prijsblok en hebben geen tekstomloop.
+Als er een logiesaanvraag gekoppeld is aan het programma, maar er nog geen offerte is binnengekomen of geselecteerd, staat er niets over logies op de offerte. De klant weet dan niet dat er al een aanvraag loopt.
 
 ### Oplossing
-In beide componenten worden de notities:
-- Links uitgelijnd op een eigen regel onder de activiteitnaam
-- Voorzien van `break-words` zodat lange teksten netjes wrappen binnen het blok
+Een informatieblok toevoegen op de offerte-preview (PDF) dat aangeeft dat er een logiesaanvraag in behandeling is, inclusief de basisgegevens (data, aantal gasten, type accommodatie).
 
-### Wijzigingen
+### Technische wijzigingen
 
-**1. `src/components/customer-portal/InvoiceProvidersCard.tsx`**
-- De `admin_price_notes` paragrafen die nu in de `text-right shrink-0` div staan (bij de prijs) worden verplaatst naar buiten die div, op een eigen regel onder de flex-row
-- Toevoegen van `break-words` class op alle `admin_price_notes` elementen
-- Dit geldt voor 3 secties: bureau items (regel 163), bureau-central partner items (regel 203), en partner-direct items (regel 259)
+**`src/pages/admin/AdminQuotePreview.tsx`**
 
-**2. `src/components/customer-portal/PriceSummaryCard.tsx`**
-- Toevoegen van `break-words` class op alle `admin_price_notes` paragrafen (regels 361, 379, 447)
-- Deze staan al op een eigen regel, dus alleen de overflow-fix is nodig
+1. **Extra state toevoegen** voor de accommodation request data (aankomst, vertrek, aantal gasten, type) - onafhankelijk van of er al een quote is
+2. **In `fetchData()`**: bij een `linked_accommodation_id`, de accommodation request data altijd ophalen en opslaan (niet alleen wanneer er een quote is)
+3. **In de PDF-sectie**: onder het programma-overzicht en boven de disclaimer, een nieuw blok tonen wanneer er wel een gekoppelde logiesaanvraag is maar geen `accommodationQuote`:
+   - Koptekst "Logies" (zelfde stijl als bestaande sectie)
+   - Informatieblok met amberkleurige achtergrond: "Er loopt een logiesaanvraag voor [aankomst] - [vertrek] voor [x] gasten. Wij verwachten binnenkort voorstellen van accommodatiepartners."
+   - Toont het type accommodatie indien beschikbaar
+
+Dit blok verschijnt alleen in de situatie dat er geen `accommodationQuote` is maar wel een `linked_accommodation_id` - zodra er een geselecteerde offerte is, wordt het bestaande logies-blok met prijzen getoond.
+
