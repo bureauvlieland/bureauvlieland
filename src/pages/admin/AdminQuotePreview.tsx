@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import type { BuildingBlock } from "@/types/buildingBlock";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface ProgramRequest {
   id: string;
@@ -95,7 +96,7 @@ const AdminQuotePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  
+  const { getSetting, isLoading: settingsLoading } = useAppSettings();
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
@@ -505,7 +506,27 @@ const AdminQuotePreview = () => {
 
                   {/* Personal message */}
                   <div className="space-y-2">
-                    <Label>Persoonlijke tekst (optioneel)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Persoonlijke tekst (optioneel)</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7"
+                        disabled={settingsLoading}
+                        onClick={() => {
+                          const defaultText = getSetting<string>("default_quote_personal_message", "");
+                          if (defaultText) {
+                            setPersonalMessage(defaultText);
+                            toast.success("Standaard mailtekst geladen");
+                          } else {
+                            toast.info("Geen standaard mailtekst ingesteld");
+                          }
+                        }}
+                      >
+                        <FileText className="h-3 w-3 mr-1" />
+                        Standaard tekst
+                      </Button>
+                    </div>
                     <Textarea
                       placeholder={`Beste ${request.customer_name},\n\nHierbij ons maatwerkvoorstel...`}
                       value={personalMessage}
