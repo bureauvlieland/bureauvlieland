@@ -11,7 +11,7 @@ import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
 import { PaymentStatusCard } from "./PaymentStatusCard";
 import { AccommodationSection } from "./AccommodationSection";
-import { ExtrasSection } from "./ExtrasSection";
+
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
 import { CompactBillingSection } from "./CompactBillingSection";
@@ -458,8 +458,6 @@ export const DesktopProgramView = ({
           />
         )}
 
-        {/* Extras section */}
-        <ExtrasSection />
 
         {/* Floating changes bar */}
         {hasChanges && (

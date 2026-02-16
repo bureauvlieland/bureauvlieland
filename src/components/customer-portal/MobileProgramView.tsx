@@ -14,7 +14,7 @@ import { CustomerProgramItem } from "./CustomerProgramItem";
 import { AddActivitySheet } from "./AddActivitySheet";
 import { PaymentStatusCard } from "./PaymentStatusCard";
 import { AccommodationSection } from "./AccommodationSection";
-import { ExtrasSection } from "./ExtrasSection";
+
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
@@ -496,8 +496,6 @@ export const MobileProgramView = ({
         />
       )}
 
-      {/* Extras section */}
-      <ExtrasSection />
 
       {/* Floating changes bar */}
       {hasChanges && (
