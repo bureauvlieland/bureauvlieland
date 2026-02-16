@@ -155,19 +155,14 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                             <div className="flex items-start justify-between gap-2">
                               <span>{item.block_name}</span>
                               {itemPrice > 0 && (
-                                <div className="text-right shrink-0">
-                                  <span className="text-xs whitespace-nowrap">
-                                    {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
-                                    {priceTypeLabel && ` ${priceTypeLabel}`}
-                                  </span>
-                                  {item.admin_price_notes && (
-                                    <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
-                                  )}
-                                </div>
+                                <span className="text-xs whitespace-nowrap shrink-0">
+                                  {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
+                                  {priceTypeLabel && ` ${priceTypeLabel}`}
+                                </span>
                               )}
                             </div>
-                            {itemPrice <= 0 && item.admin_price_notes && (
-                              <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                            {item.admin_price_notes && (
+                              <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
                             )}
                           </div>
                         );
@@ -201,7 +196,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                               )}
                             </div>
                             {item.admin_price_notes && (
-                              <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                              <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
                             )}
                           </div>
                         );
@@ -251,19 +246,14 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
                           <div className="flex items-start justify-between gap-2">
                             <span>{item.block_name}</span>
                             {itemPrice > 0 && (
-                              <div className="text-right shrink-0">
-                                <span className="text-xs whitespace-nowrap">
-                                  {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
-                                  {priceTypeLabel && ` ${priceTypeLabel}`}
-                                </span>
-                                {item.admin_price_notes && (
-                                  <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
-                                )}
-                              </div>
+                              <span className="text-xs whitespace-nowrap shrink-0">
+                                {isPreliminary && "ca. "}€{formatPrice(itemPrice)}
+                                {priceTypeLabel && ` ${priceTypeLabel}`}
+                              </span>
                             )}
                           </div>
-                          {itemPrice <= 0 && item.admin_price_notes && (
-                            <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                          {item.admin_price_notes && (
+                            <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
                           )}
                         </div>
                       );
