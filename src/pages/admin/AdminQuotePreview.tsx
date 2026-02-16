@@ -56,6 +56,8 @@ interface ProgramItem {
   block_category: string;
   block_type: string;
   provider_name: string;
+  block_short_description?: string | null;
+  block_description?: string | null;
   day_index: number;
   preferred_time: string | null;
   item_quote_status: string | null;
@@ -170,7 +172,7 @@ const AdminQuotePreview = () => {
       if (blockIds.length > 0) {
         const { data: blocks } = await supabase
           .from("building_blocks")
-          .select("id, vat_rate, image_url, image_asset")
+          .select("id, vat_rate, image_url, image_asset, short_description, description")
           .in("id", blockIds);
         if (blocks) {
           const map: Record<string, number> = {};
@@ -178,7 +180,7 @@ const AdminQuotePreview = () => {
             const block = blocks.find(b => b.id === item.block_id);
             if (block) {
               map[block.id] = block.vat_rate ?? 21;
-              return { ...item, image_url: block.image_url, image_asset: block.image_asset };
+              return { ...item, image_url: block.image_url, image_asset: block.image_asset, block_short_description: block.short_description, block_description: block.description };
             }
             return item;
           });
@@ -730,6 +732,11 @@ const AdminQuotePreview = () => {
                                     </td>
                                     <td className="py-3">
                                       <p className="font-medium text-sm">{item.block_name}</p>
+                                      {item.block_short_description && (
+                                        <p className="text-xs text-gray-500">
+                                          {item.block_short_description}
+                                        </p>
+                                      )}
                                       {item.admin_price_notes && (
                                         <p className="text-xs text-gray-500">
                                           {item.admin_price_notes}
