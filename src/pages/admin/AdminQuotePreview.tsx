@@ -274,18 +274,6 @@ const AdminQuotePreview = () => {
     return extra.unit_price * extra.quantity;
   };
 
-  // Helper function to convert blob to base64
-  const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
 
   const generatePDF = async (): Promise<Blob | null> => {
     if (!pdfRef.current) return null;
@@ -354,16 +342,28 @@ const AdminQuotePreview = () => {
 
     setIsSending(true);
     try {
-      // Generate PDF as base64
+      // Generate PDF blob
       const pdfBlob = await generatePDF();
       if (!pdfBlob) {
         toast.error("Kon PDF niet genereren");
         setIsSending(false);
         return;
       }
-      
-      const pdfBase64 = await blobToBase64(pdfBlob);
+
       const pdfFilename = `Voorstel-${request.reference_number || request.customer_name}.pdf`;
+
+      // Upload PDF directly to storage from the frontend
+      const storagePath = `${request.id}/${Date.now()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from("quote-documents")
+        .upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+
+      if (uploadError) {
+        console.error("Error uploading PDF:", uploadError);
+        toast.error("Kon PDF niet uploaden");
+        setIsSending(false);
+        return;
+      }
 
       const { error } = await supabase.functions.invoke("send-quote-offer", {
         body: {
@@ -371,7 +371,7 @@ const AdminQuotePreview = () => {
           validUntil: format(validUntil, "yyyy-MM-dd"),
           personalMessage: personalMessage || undefined,
           origin: window.location.origin,
-          pdfBase64,
+          pdfStoragePath: storagePath,
           pdfFilename,
         },
       });
