@@ -1,31 +1,41 @@
 
-# Prijsnotities en prijstype tonen in klantportaal
+
+# Prijsnotities en per-item detail in overzichten
 
 ## Probleem
-1. De prijsnotitie (`admin_price_notes`, bijv. "Per schip (12 personen)") wordt niet getoond in het klantportaal -- niet bij de individuele items en niet in het facturatie-overzicht.
-2. In het onderdeel "Facturatie per onderdeel" (`InvoiceProvidersCard`) ontbreekt de aanduiding of een prijs per persoon of een totaalprijs is.
+
+1. In het **Prijsoverzicht** (PriceSummaryCard) worden activiteiten alleen als totaal getoond ("Activiteiten €X"), zonder individuele items, prijstype of notities zoals "Per schip (12 personen)".
+2. In het **Facturatie per onderdeel** (InvoiceProvidersCard) toont het Bureau Vlieland-blok ook geen individuele items met notities -- alleen een samenvatting.
+3. Het "Gemiddeld per persoon"-bedrag toont alleen incl. BTW. De klant wil ook de kosten per persoon excl. BTW zien.
 
 ## Wat verandert
 
-### 1. CustomerProgramItem -- prijsnotitie tonen
-Bij de prijsweergave in de meta-rij (regel 170-187) wordt de `admin_price_notes` als extra tekst getoond wanneer aanwezig, direct onder of naast de prijs. Dit is de notitie die de admin instelt bij de bouwsteen (bijv. "Per schip (12 personen)").
+### 1. PriceSummaryCard -- individuele items met notities en prijstype
 
-### 2. InvoiceProvidersCard -- prijsnotitie en prijstype per item
-Het huidige overzicht toont alleen de naam van items per aanbieder. Dit wordt uitgebreid:
-- Per item wordt het prijstype getoond: "p.p." of "totaal"
-- Als er een `admin_price_notes` bij het item hoort, wordt deze als subtekst getoond
-- De itemlijst per provider wordt gedetailleerder: naam + prijs + prijstype + notitie
+In de secties "Factuur Bureau Vlieland" en "Facturen aanbieders" worden de samenvattende regels ("Activiteiten" / "Activiteiten aanbieders") vervangen door een lijst van individuele items met:
+- Naam van de activiteit
+- Prijs met label "p.p." of "totaal"
+- `admin_price_notes` als subtekst (bijv. "Per schip (12 personen)")
+
+De component krijgt hiervoor toegang tot de individuele `items` array (die al als prop binnenkomt) om per confirmed item de details te tonen.
+
+### 2. InvoiceProvidersCard -- Bureau Vlieland individuele items
+
+Het Bureau Vlieland-blok (regels 127-151) krijgt dezelfde detailweergave als de partner-blokken: individuele items met prijs, prijstype-label en eventuele `admin_price_notes`.
+
+### 3. Kosten per persoon excl. BTW toevoegen
+
+In het grand total blok van PriceSummaryCard wordt naast "Gemiddeld per persoon" (incl. BTW) ook een regel "Per persoon excl. BTW" toegevoegd.
 
 ## Technische details
 
 ### Bestanden die worden aangepast
 
-1. **`src/components/customer-portal/CustomerProgramItem.tsx`** (regel ~170-187)
-   - Na de prijsweergave: als `item.admin_price_notes` bestaat, toon dit als kleine grijze tekst
-   - Voorbeeld: `€425,00 totaal` gevolgd door `Per schip (12 personen)` in tekst eronder
+1. **`src/components/customer-portal/PriceSummaryCard.tsx`**
+   - In de Bureau Vlieland sectie (regel ~349-354): vervang de samenvattende regel door een loop over confirmed bureau items met naam, prijs + prijstype, en `admin_price_notes`
+   - Idem voor de partner sectie (regel ~414-417) en bureau_central partner items (regel ~357-362)
+   - In het grand total blok (regel ~453-458): voeg een extra regel toe: "Per persoon excl. BTW" = `totalExclVat / numberOfPeople`
 
-2. **`src/components/customer-portal/InvoiceProvidersCard.tsx`** (regel ~154-196)
-   - De itemlijst per provider (`provider.itemNames`) wordt vervangen door een gedetailleerde lijst
-   - Per item worden getoond: naam, prijs met prijstype-label ("p.p." of "totaal"), en eventuele prijsnotitie
-   - Hiervoor worden de individuele items gefilterd per provider in plaats van alleen namen op te slaan
-   - De `ProviderInfo` interface wordt uitgebreid met items-referenties voor detailweergave
+2. **`src/components/customer-portal/InvoiceProvidersCard.tsx`**
+   - In het Bureau Vlieland blok (regel ~127-151): voeg een itemlijst toe vergelijkbaar met de partner-blokken, met bureau-items gefilterd uit de `items` prop, inclusief prijs, prijstype en `admin_price_notes`
+
