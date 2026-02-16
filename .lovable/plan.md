@@ -1,78 +1,38 @@
 
 
-## Offerte-verstuur e-mail beheerbaar maken via templates
+## Plan: Email template opwaarderen en koppelen aan offerte-preview
 
-### Huidige situatie
-De offerte-mail naar de klant is volledig hardcoded in de edge function `send-quote-offer`. De admin ziet alleen een optioneel "persoonlijke tekst" veld, maar kan de standaardtekst niet inzien of aanpassen.
-
-### Gewenst resultaat
-- Een standaard e-mail template voor het versturen van offertes, beheerbaar via /admin/berichten
-- Bij het versturen van een offerte ziet de admin de volledige e-mailtekst (ingevuld met klantnaam, data, etc.)
-- De admin kan de tekst aanpassen voordat deze wordt verstuurd
-- De edge function gebruikt de (eventueel aangepaste) tekst in plaats van de hardcoded versie
+### Probleem
+1. De email template `quote_offer_customer` bevat platte tekst zonder HTML-opmaak, CTA-knop of link naar de klantomgeving
+2. De "Standaard tekst" knop op de offerte-preview laadt uit `app_settings` in plaats van uit de email template
 
 ### Aanpak
 
-**Stap 1: Nieuw email template aanmaken (database)**
+#### 1. Email template `quote_offer_customer` updaten met volledige HTML
+- Dezelfde visuele stijl als de andere templates (navy header, witte content, afgeronde hoeken)
+- CTA-knop "Bekijk voorstel & geef akkoord" met link naar `{{portal_url}}`
+- Programmadetails blok met `{{dates}}`, `{{number_of_people}}`
+- Geldigheidsmelding met `{{valid_until}}`
+- Optioneel persoonlijk bericht blok via `{{#if personal_message}}`
+- Contactgegevens footer
 
-Een nieuw record in `email_templates` met id `quote_offer_customer`:
+#### 2. AdminQuotePreview "Standaard tekst" knop aanpassen
+- Laden uit `email_templates` tabel (id: `quote_offer_customer`) in plaats van `app_settings`
+- Variabelen (`{{customer_name}}`, `{{valid_until}}`, etc.) automatisch invullen met de projectdata
+- Alleen de platte tekst-versie tonen in het tekstveld (de HTML-versie wordt door de edge function gegenereerd)
 
-- **Onderwerp:** `Uw maatwerkvoorstel van Bureau Vlieland`
-- **Body:** Een standaard begeleidende tekst met variabelen:
-  - `{{customer_name}}` - Naam van de klant
-  - `{{company_name}}` - Bedrijfsnaam (optioneel)
-  - `{{dates}}` - Geformatteerde data
-  - `{{number_of_people}}` - Aantal personen
-  - `{{valid_until}}` - Geldigheidsdatum
-  - `{{portal_url}}` - Link naar klantportaal
-
-De standaardtekst wordt iets als:
-
-```
-Beste {{customer_name}},
-
-Hierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland.
-Wij hebben dit programma speciaal voor {{company_name}} samengesteld.
-
-{{#if personal_message}}
-{{personal_message}}
-{{/if}}
-
-Dit voorstel is geldig tot {{valid_until}}. U kunt het voorstel bekijken
-en akkoord geven in uw persoonlijke klantomgeving.
-
-Heeft u vragen over dit voorstel? Neem gerust contact met ons op.
-
-Met vriendelijke groet,
-Bureau Vlieland
-```
-
-**Stap 2: AdminSendQuoteDialog uitbreiden**
-
-Het huidige dialoogvenster wordt uitgebreid zodat de admin de volledige e-mailtekst ziet:
-
-- Bij openen: het template ophalen uit de database en variabelen invullen (klantnaam, data, etc.)
-- De ingevulde tekst tonen in een preview met een "Bewerken" knop (vergelijkbaar met de `ForwardQuoteToCustomerDialog`)
-- In bewerkingsmodus: onderwerp en body aanpasbaar in tekstvelden
-- De (aangepaste) tekst wordt meegestuurd naar de edge function
-
-**Stap 3: Edge function aanpassen**
-
-De `send-quote-offer` edge function wordt aangepast:
-
-- Accepteert optioneel een `emailSubject` en `emailBody` parameter
-- Als deze meegegeven worden: gebruik de aangepaste tekst als intro in de HTML-mail (de programmatabel en CTA-knop blijven automatisch gegenereerd)
-- Als ze niet meegegeven worden: val terug op het template uit de database (backward compatible)
-- Het "persoonlijke tekst" veld verdwijnt als apart concept; het is nu onderdeel van de volledige e-mailtekst
+#### 3. Opruimen
+- De zojuist aangemaakte `app_settings` entry `default_quote_personal_message` kan verwijderd worden (wordt vervangen door de email template)
 
 ### Technische details
 
-**Bestanden die worden aangepast:**
-- `src/components/admin/AdminSendQuoteDialog.tsx` - Uitbreiden met template-preview en bewerkingsmodus
-- `supabase/functions/send-quote-offer/index.ts` - Aangepaste tekst accepteren en verwerken
+**Database migratie:**
+- UPDATE `email_templates` SET `body_html` = volledige HTML template voor `quote_offer_customer`
+- DELETE `app_settings` WHERE id = `default_quote_personal_message`
 
-**Database:**
-- INSERT in `email_templates` tabel met id `quote_offer_customer`
+**Bestanden:**
+- `src/pages/admin/AdminQuotePreview.tsx`: "Standaard tekst" knop wijzigen om uit email_templates te laden en variabelen te vervangen
+- `supabase/functions/send-quote-offer/index.ts`: Geen wijziging nodig - de edge function genereert al een volledige HTML email met CTA onafhankelijk van de template
 
-**Template ID toevoegen aan constants:**
-- `supabase/functions/_shared/email-templates.ts` - Toevoegen van `QUOTE_OFFER_CUSTOMER` aan `TemplateIds`
+**Opmerking:** De edge function gebruikt de template-tekst als "intro" en bouwt daar zelf een complete email omheen met programmatabel en CTA-knop. De HTML in de template is dus primair voor weergave op de admin templates-pagina en voor eventueel toekomstig direct gebruik.
+
