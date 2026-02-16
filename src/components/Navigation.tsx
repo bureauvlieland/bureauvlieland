@@ -103,6 +103,13 @@ export const Navigation = () => {
               Logies
             </Link>
 
+            <Link
+              to="/voorbeeldprogrammas"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Voorbeeldprogramma's
+            </Link>
+
             {/* Over ons Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
@@ -216,6 +223,14 @@ export const Navigation = () => {
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 Logies
+              </Link>
+
+              <Link
+                to="/voorbeeldprogrammas"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Voorbeeldprogramma's
               </Link>
 
               {/* Over ons Dropdown Mobile */}
