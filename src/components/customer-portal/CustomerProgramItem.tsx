@@ -210,7 +210,7 @@ export const CustomerProgramItem = ({
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                Boek bij {item.provider_name}
+                {item.external_url}
               </a>
             </div>
           )}
