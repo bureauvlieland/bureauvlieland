@@ -40,6 +40,7 @@ interface CustomerProgramItemProps {
   isAccepting?: boolean;
   invoicingMode?: string;
   vatRate?: number;
+  isPreApproval?: boolean;
 }
 
 export const CustomerProgramItem = ({
@@ -55,6 +56,7 @@ export const CustomerProgramItem = ({
   isAccepting = false,
   invoicingMode,
   vatRate,
+  isPreApproval = false,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -121,7 +123,7 @@ export const CustomerProgramItem = ({
                     Zelf te regelen
                   </Badge>
                 ) : (
-                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={invoicingMode === "bureau_central" && item.status === "pending" ? "In voorbereiding" : undefined} />
+                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={(isPreApproval || invoicingMode === "bureau_central") && item.status === "pending" ? "In voorbereiding" : undefined} />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
