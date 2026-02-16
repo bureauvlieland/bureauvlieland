@@ -38,69 +38,100 @@ export const StatusSummary = ({
   if (variant === "checklist") {
     const activitiesConfirmed = pending === 0 && alternative === 0 && total > 0;
     
+    const StatusItem = ({ 
+      icon, 
+      label, 
+      color 
+    }: { 
+      icon: React.ReactNode; 
+      label: string; 
+      color: "green" | "amber" | "muted";
+    }) => (
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className={
+          color === "green" ? "text-foreground" 
+          : color === "amber" ? "text-amber-700" 
+          : "text-muted-foreground"
+        }>
+          {label}
+        </span>
+      </div>
+    );
+
     return (
-      <div className={cn("bg-muted/50 rounded-lg p-4 space-y-3", className)}>
-        <h3 className="text-sm font-medium">Status programma</h3>
-        <ul className="space-y-2 text-sm">
-          <li className="flex items-center gap-2">
-            {activitiesConfirmed ? (
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            ) : alternative > 0 ? (
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-            ) : (
-              <Clock className="h-4 w-4 text-amber-500" />
-            )}
-            <span className={activitiesConfirmed ? "text-foreground" : "text-amber-700"}>
-              {activitiesConfirmed
-                ? `Activiteiten bevestigd (${total}/${total})`
+      <div className={cn("bg-muted/50 rounded-lg p-4 space-y-4", className)}>
+        <h3 className="text-sm font-semibold">Status programma</h3>
+        
+        <div className="space-y-3 text-sm">
+          {/* Programma */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-0.5">Programma</p>
+            <StatusItem
+              icon={activitiesConfirmed 
+                ? <CheckCircle className="h-4 w-4 text-green-600" />
+                : alternative > 0 
+                  ? <AlertCircle className="h-4 w-4 text-amber-500" />
+                  : <Clock className="h-4 w-4 text-amber-500" />
+              }
+              label={activitiesConfirmed
+                ? `Bevestigd (${total}/${total})`
                 : alternative > 0
-                  ? `Alternatief voorstel bekijken (${confirmed}/${total})`
-                  : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`}
-            </span>
-          </li>
-          <li className="flex items-center gap-2">
-            {billingComplete ? (
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            ) : (
-              <Circle className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className={billingComplete ? "text-foreground" : "text-muted-foreground"}>
-              Facturatiegegevens compleet
-            </span>
-          </li>
+                  ? `Alternatief bekijken (${confirmed}/${total})`
+                  : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
+              }
+              color={activitiesConfirmed ? "green" : "amber"}
+            />
+          </div>
+
+          {/* Logies */}
           {isMultiDay && (
-            <li className="flex items-center gap-2">
-              {effectiveAccommodationStatus === "selected" ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : effectiveAccommodationStatus === "requested" ? (
-                <Clock className="h-4 w-4 text-amber-500" />
-              ) : (
-                <Circle className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className={
-                effectiveAccommodationStatus === "selected" ? "text-foreground" 
-                : effectiveAccommodationStatus === "requested" ? "text-amber-700" 
-                : "text-muted-foreground"
-              }>
-                {effectiveAccommodationStatus === "selected" 
-                  ? "Logies geregeld" 
-                  : effectiveAccommodationStatus === "requested" 
-                    ? "Offertes worden verzameld" 
-                    : "Logies regelen"}
-              </span>
-            </li>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">Logies</p>
+              <StatusItem
+                icon={effectiveAccommodationStatus === "selected"
+                  ? <CheckCircle className="h-4 w-4 text-green-600" />
+                  : effectiveAccommodationStatus === "requested"
+                    ? <Clock className="h-4 w-4 text-amber-500" />
+                    : <Circle className="h-4 w-4 text-muted-foreground" />
+                }
+                label={effectiveAccommodationStatus === "selected"
+                  ? "Logies geregeld"
+                  : effectiveAccommodationStatus === "requested"
+                    ? "Offertes worden verzameld"
+                    : "Logies regelen"
+                }
+                color={effectiveAccommodationStatus === "selected" ? "green" : effectiveAccommodationStatus === "requested" ? "amber" : "muted"}
+              />
+            </div>
           )}
-          <li className="flex items-center gap-2">
-            {termsAccepted ? (
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            ) : (
-              <Circle className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className={termsAccepted ? "text-foreground" : "text-muted-foreground"}>
-              Voorwaarden geaccepteerd
-            </span>
-          </li>
-        </ul>
+
+          {/* Facturatie */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-0.5">Facturatie</p>
+            <StatusItem
+              icon={billingComplete 
+                ? <CheckCircle className="h-4 w-4 text-green-600" />
+                : <Circle className="h-4 w-4 text-muted-foreground" />
+              }
+              label={billingComplete ? "Gegevens compleet" : "Gegevens aanleveren"}
+              color={billingComplete ? "green" : "muted"}
+            />
+          </div>
+
+          {/* Voorwaarden */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-0.5">Voorwaarden</p>
+            <StatusItem
+              icon={termsAccepted 
+                ? <CheckCircle className="h-4 w-4 text-green-600" />
+                : <Circle className="h-4 w-4 text-muted-foreground" />
+              }
+              label={termsAccepted ? "Geaccepteerd" : "Nog accepteren"}
+              color={termsAccepted ? "green" : "muted"}
+            />
+          </div>
+        </div>
       </div>
     );
   }
