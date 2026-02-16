@@ -173,7 +173,7 @@ const PartnerExtras = () => {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{preset.name}</p>
                         {preset.description && (
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-muted-foreground break-words whitespace-normal">
                             {preset.description}
                           </p>
                         )}
