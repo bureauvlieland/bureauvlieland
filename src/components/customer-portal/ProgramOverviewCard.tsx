@@ -25,6 +25,8 @@ interface ProgramOverviewCardProps {
   programDescription?: string | null;
   // Edit callback
   onEdit?: () => void;
+  // Whether there are pending items (self-service)
+  hasPendingItems?: boolean;
 }
 
 export const ProgramOverviewCard = ({
@@ -41,6 +43,7 @@ export const ProgramOverviewCard = ({
   termsAcceptedAt,
   programDescription,
   onEdit,
+  hasPendingItems,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
   const isQuoteMode = programType === "quote";
@@ -158,7 +161,9 @@ export const ProgramOverviewCard = ({
               <p className="text-sm text-muted-foreground mt-1">
                 {isQuoteMode 
                   ? "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
-                  : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
+                  : hasPendingItems
+                    ? "Uw aanvragen zijn verstuurd naar de aanbieders. Wij stemmen alles op elkaar af."
+                    : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
                 }
               </p>
               

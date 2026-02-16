@@ -91,8 +91,8 @@ export const ActionRequiredCard = ({
     if (statusSummary.pending > 0) {
       return {
         type: "pending",
-        title: "Wachten op bevestiging",
-        description: `Nog ${statusSummary.pending} activiteit${statusSummary.pending > 1 ? "en" : ""} wacht${statusSummary.pending === 1 ? "" : "en"} op reactie van de aanbieder. U ontvangt een e-mail zodra zij reageren.`,
+        title: "Aanvragen verstuurd naar aanbieders",
+        description: `Uw programma is ingediend en de aanvragen zijn verstuurd naar ${statusSummary.pending} aanbieder${statusSummary.pending > 1 ? "s" : ""}. Zodra zij reageren ontvangt u hiervan een e-mail.`,
         icon: <Clock className="h-5 w-5" />,
         variant: "info",
       };
