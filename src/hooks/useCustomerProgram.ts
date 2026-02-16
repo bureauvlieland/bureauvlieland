@@ -260,6 +260,26 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         items: itemsWithImages as ProgramRequestItem[],
       };
 
+      // If quote_pdf_path is set, fetch a signed URL via the edge function
+      if (requestData.quote_pdf_path) {
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+          const response = await fetch(
+            `${supabaseUrl}/functions/v1/get-customer-program?token=${token}`,
+            { headers: { "apikey": supabaseKey } }
+          );
+          if (response.ok) {
+            const result = await response.json();
+            if (result.program?.quote_pdf_url) {
+              (programWithItems as any).quote_pdf_url = result.program.quote_pdf_url;
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching quote PDF URL:", err);
+        }
+      }
+
       setProgram(programWithItems);
       setOriginalItems(JSON.parse(JSON.stringify(itemsData || [])));
       setHistory((historyData || []) as ProgramRequestHistory[]);

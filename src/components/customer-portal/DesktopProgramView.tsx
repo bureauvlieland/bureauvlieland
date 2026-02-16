@@ -303,6 +303,16 @@ export const DesktopProgramView = ({
                     referenceNumber={program.reference_number}
                     variant="sm"
                   />
+                  {(program as any).quote_pdf_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open((program as any).quote_pdf_url, "_blank")}
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Bekijk offerte
+                    </Button>
+                  )}
                   {!termsAccepted && (
                     <Button
                       variant="outline"

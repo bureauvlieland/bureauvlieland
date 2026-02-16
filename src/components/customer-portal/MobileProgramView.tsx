@@ -33,6 +33,7 @@ import {
   Send,
   Plus,
   BedDouble,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -322,6 +323,20 @@ export const MobileProgramView = ({
                 referenceNumber={program.reference_number}
                 variant="sm"
               />
+              {(program as any).quote_pdf_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open((program as any).quote_pdf_url, "_blank");
+                  }}
+                  className="h-7 text-xs"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Offerte
+                </Button>
+              )}
               {!termsAccepted && (
                 <Button
                   variant="outline"

@@ -81,12 +81,28 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Generate signed URL for quote PDF if available
+    let quotePdfUrl: string | null = null;
+    if (program.quote_pdf_path) {
+      try {
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from("quote-documents")
+          .createSignedUrl(program.quote_pdf_path, 3600); // 1 hour
+        if (!signedError && signedData?.signedUrl) {
+          quotePdfUrl = signedData.signedUrl;
+        }
+      } catch (err) {
+        console.error("Error generating signed URL for quote PDF:", err);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         program: {
           ...program,
           items: items || [],
           acceptedTerms: acceptedTerms,
+          quote_pdf_url: quotePdfUrl,
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
