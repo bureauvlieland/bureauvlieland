@@ -1,52 +1,73 @@
 
-# Omschrijvingen bouwstenen tonen in klantportaal en offerte
+
+# PDF verrijken met afbeeldingen en locatiekaarten
 
 ## Wat verandert er?
-Momenteel zien klanten alleen de naam van een activiteit en de aanbieder. De korte en lange beschrijvingen (bijv. "Exclusieve zeehondentocht per boot" of de uitgebreide uitleg over een Italiaanse shared dining) worden niet getoond. Na deze wijziging:
+De programma-PDF die klanten downloaden wordt visueel aantrekkelijker:
 
-- **Korte beschrijving** verschijnt direct onder de aanbieder in elk programma-item
-- **Lange beschrijving** verschijnt bij het openklikken van een item
-- **Offerte (AdminQuotePreview)** toont de korte beschrijving onder elke activiteit
-- **Programma-PDF download** werkt al met beschrijvingen (maar ontvangt nu ook de juiste data)
+- **Activiteitafbeelding**: een thumbnail (30x20mm) links naast de activiteitnaam en details
+- **Statische kaart**: voor activiteiten met coordinaten een OpenStreetMap kaartje onder het blok
+- **Locatie blijft klikbaar**: de bestaande Google Maps link blijft behouden
+
+## Visueel resultaat per activiteit
+
+```text
++--------------------------------------------------+
+| Dag 1 - Maandag 14 juli                          |
++--------------------------------------------------+
+| +--------+  Strandspektakel                       |
+| |  foto  |  14:00  *  2u  *  Vlieland Events     |
+| |        |  Exclusieve strandactiviteit...        |
+| +--------+  Locatie: Badweg 1, Vlieland           |
+|                                                   |
+|  +-------------------------------------------+    |
+|  |          [statische kaart]                 |    |
+|  +-------------------------------------------+    |
++---------------------------------------------------+
+```
 
 ## Technische aanpak
 
-### 1. Edge function verrijken met beschrijvingen
-**Bestand:** `supabase/functions/get-customer-program/index.ts`
+### Bestand: `src/components/customer-portal/ProgramPdfDownload.tsx`
 
-De huidige query haalt items op met `select("*")` uit `program_request_items`. Omdat `short_description` en `description` niet op die tabel staan, moeten we ze ophalen uit `building_blocks`.
+**1. Helper: afbeelding laden als base64**
 
-Na het ophalen van items, een extra query doen op `building_blocks` voor alle `block_id`'s, en de beschrijvingen toevoegen aan elk item:
+Een `loadImageAsBase64(url)` functie die:
+- Een `Image()` element aanmaakt met `crossOrigin = "anonymous"`
+- Via een canvas naar JPEG base64 converteert (jsPDF kan geen externe URLs)
+- Bij CORS-fouten of timeouts graceful `null` retourneert
+- Timeout van 5 seconden per afbeelding
 
-```
-block_short_description: block.short_description
-block_description: block.description
-```
+**2. Afbeeldingen voorladen**
 
-### 2. Klantportaal: beschrijvingen tonen
-**Bestand:** `src/components/customer-portal/CustomerProgramItem.tsx`
+Voor het tekenen van de PDF worden alle afbeeldingen parallel geladen:
+- Activiteitafbeeldingen via `image_url` (al beschikbaar in de items data)
+- Lokale assets via `image_asset` (resolved via `getBlockImage` helper uit `buildingBlockUtils.ts`)
+- Statische kaarten via OpenStreetMap: `https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lng}&zoom=15&size=600x200&markers={lat},{lng},red-pushpin`
 
-- Onder de aanbieder (regel 129-131): `short_description` tonen als subtiele tekst
-- In de `CollapsibleContent` (regel 384): de volledige `description` tonen boven de bestaande content
+**3. Layout per activiteit aanpassen**
 
-### 3. Offerte-preview: beschrijvingen tonen
-**Bestand:** `src/pages/admin/AdminQuotePreview.tsx`
+Huidige layout: tekst op volle breedte.
+Nieuwe layout wanneer afbeelding beschikbaar:
+- Links: thumbnail 30mm breed x 20mm hoog
+- Rechts (offset 34mm): activiteitnaam, metadata, beschrijving
+- Onder het blok: statische kaart (contentWidth x 22mm) indien coordinaten aanwezig
 
-- De building blocks query (regel 171-173) uitbreiden met `short_description` en `description`
-- De ProgramItem interface uitbreiden met `block_short_description` en `block_description`
-- Items verrijken met beschrijvingen (regel 177-187)
-- In de offerte-tabel (regel 731-740) de korte beschrijving tonen onder de activiteitnaam
+`checkPage` wordt aangepast om de grotere hoogte per item te accommoderen (afbeelding ~25mm + kaart ~27mm).
 
-### 4. Programma-PDF: data aansluiten
-**Bestand:** `src/components/customer-portal/ProgramPdfDownload.tsx`
+**4. Graceful fallback**
 
-Dit bestand gebruikt al `(item as any).block_description` (regel 157). Zodra de edge function de data meelevert, werkt dit automatisch.
+Als een afbeelding niet laadt (CORS, 404, timeout):
+- Item wordt gewoon zonder afbeelding gerenderd (huidige layout)
+- Geen foutmelding voor de gebruiker
+- Kaart wordt ook overgeslagen als coordinaten ontbreken
 
-## Samenvatting wijzigingen
+### Geen andere bestanden wijzigen
 
-| Bestand | Wijziging |
-|---------|-----------|
-| `supabase/functions/get-customer-program/index.ts` | Beschrijvingen ophalen uit building_blocks en toevoegen aan items |
-| `src/components/customer-portal/CustomerProgramItem.tsx` | Short description onder aanbieder, description in uitgeklapt blok |
-| `src/pages/admin/AdminQuotePreview.tsx` | Short description ophalen en tonen in offerte-tabel |
-| `src/components/customer-portal/ProgramPdfDownload.tsx` | Geen wijziging nodig (pakt `block_description` al op) |
+De items bevatten al `image_url`, `image_asset`, `location_lat`, `location_lng` en `location_address` vanuit de `useCustomerProgram` hook. Geen database- of edge function-wijzigingen nodig.
+
+### Aandachtspunten
+- **Laadtijd**: afbeeldingen worden parallel geladen, maar de PDF-generatie duurt 2-5 seconden langer afhankelijk van het aantal activiteiten. De loading spinner is al aanwezig.
+- **CORS**: Supabase Storage URLs ondersteunen CORS. OpenStreetMap static map service staat cross-origin toe. Lokale assets worden via import resolved en werken altijd.
+- **Bestandsgrootte**: JPEG-compressie (kwaliteit 0.7) houdt de PDF compact.
+
