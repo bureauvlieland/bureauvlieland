@@ -31,21 +31,6 @@ export const AcceptQuoteProposalCard = ({
   const activeItems = program.items.filter((item) => item.status !== "cancelled");
   const itemCount = activeItems.length;
 
-  // Calculate estimated total
-  const estimatedTotal = activeItems.reduce((sum, item) => {
-    const price = item.admin_price_override ?? item.quoted_price ?? 0;
-    return sum + price;
-  }, 0);
-  const estimatedTotalForGroup = estimatedTotal * program.number_of_people;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("nl-NL", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const handleAccept = async () => {
     setIsLoading(true);
@@ -111,11 +96,6 @@ export const AcceptQuoteProposalCard = ({
               <Badge variant="secondary" className="text-sm">
                 {itemCount} activiteit{itemCount !== 1 ? "en" : ""}
               </Badge>
-              {estimatedTotalForGroup > 0 && (
-                <Badge variant="secondary" className="text-sm">
-                  Geschat {formatCurrency(estimatedTotalForGroup)}
-                </Badge>
-              )}
               {validUntil && (
                 <Badge variant="outline" className="text-sm flex items-center gap-1">
                   <Clock className="h-3 w-3" />
