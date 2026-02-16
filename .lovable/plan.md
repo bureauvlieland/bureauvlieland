@@ -1,41 +1,22 @@
 
 
-## Plan: Logiespartners opnieuw aanvragen en herinneren
+## Plan: Prijsnotities links uitlijnen en overflow voorkomen
 
-### Wat er verandert
+### Probleem
+Op de Facturatie-tab lopen de omschrijvingen (admin_price_notes) onder de prijzen als een lange zin naar rechts uit het blok. Ze staan rechts uitgelijnd binnen het prijsblok en hebben geen tekstomloop.
 
-De huidige logica blokkeert alle partners die al een quote-record hebben. Dit wordt versoepeld zodat:
+### Oplossing
+In beide componenten worden de notities:
+- Links uitgelijnd op een eigen regel onder de activiteitnaam
+- Voorzien van `break-words` zodat lange teksten netjes wrappen binnen het blok
 
-1. **Partners met status `pending` worden selecteerbaar** - voor het sturen van een herinnering
-2. **Partners met status `declined`, `rejected`, `expired` worden selecteerbaar** - voor opnieuw aanvragen
-3. **Alleen partners met status `submitted` of `selected` blijven geblokkeerd** - daar loopt al een actieve offerte
+### Wijzigingen
 
-De badge per partner wordt dynamisch op basis van de bestaande quote-status:
+**1. `src/components/customer-portal/InvoiceProvidersCard.tsx`**
+- De `admin_price_notes` paragrafen die nu in de `text-right shrink-0` div staan (bij de prijs) worden verplaatst naar buiten die div, op een eigen regel onder de flex-row
+- Toevoegen van `break-words` class op alle `admin_price_notes` elementen
+- Dit geldt voor 3 secties: bureau items (regel 163), bureau-central partner items (regel 203), en partner-direct items (regel 259)
 
-| Quote status | Badge | Selecteerbaar? |
-|---|---|---|
-| `pending` | "Wacht op reactie" (geel) | Ja |
-| `submitted` | "Offerte ontvangen" (groen) | Nee |
-| `selected` | "Geselecteerd" (blauw) | Nee |
-| `declined` | "Afgewezen" (rood) | Ja |
-| `expired` | "Verlopen" (grijs) | Ja |
-| `rejected` | "Afgewezen" (rood) | Ja |
-| Geen quote | - | Ja |
-
-### Technische wijzigingen
-
-**1. Frontend: `src/pages/admin/AdminAccommodationDetail.tsx`**
-
-- `requestedPartnerIds` wordt vervangen door een lookup-map die per partner de quote-status opslaat
-- De `alreadyRequested` check wordt: alleen blokkeren als status `submitted` of `selected`
-- Badge tekst wordt dynamisch op basis van quote-status
-- Knoptekst wordt "Herinnering versturen" als er al pending partners geselecteerd zijn
-
-**2. Edge Function: `supabase/functions/send-accommodation-quote-request/index.ts`**
-
-- Voor elke partner: check of er al een `accommodation_quotes` record bestaat voor deze `request_id + partner_id`
-- **Bestaande quote met status `pending`**: Geen nieuw record, alleen email versturen (herinnering)
-- **Bestaande quote met status `declined`/`expired`/`rejected`**: UPDATE status terug naar `pending`, reset `submitted_at` etc., en verstuur email
-- **Geen bestaande quote**: INSERT nieuw record (huidige gedrag)
-
-Dit zorgt ervoor dat je zowel herinneringen kunt sturen als opnieuw kunt aanvragen, zonder dubbele records aan te maken.
+**2. `src/components/customer-portal/PriceSummaryCard.tsx`**
+- Toevoegen van `break-words` class op alle `admin_price_notes` paragrafen (regels 361, 379, 447)
+- Deze staan al op een eigen regel, dus alleen de overflow-fix is nodig
