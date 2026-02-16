@@ -29,9 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { calculateBureauFee } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { useAppSettings } from "@/hooks/useAppSettings";
 import type { BuildingBlock } from "@/types/buildingBlock";
 
 interface ProgramRequest {
@@ -97,7 +95,7 @@ const AdminQuotePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const { settings: appSettings } = useAppSettings();
+  
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
@@ -269,86 +267,10 @@ const AdminQuotePreview = () => {
     return item.admin_price_override ?? item.quoted_price ?? 0;
   };
 
-  const getItemTotal = (item: ProgramItem) => {
-    const unitPrice = getItemPrice(item);
-    if (item.price_type === 'per_person') {
-      return unitPrice * (request?.number_of_people || 1);
-    }
-    return unitPrice;
-  };
-
-  const getItemVatRate = (item: ProgramItem): number => {
-    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
-      return vatRateMap[item.block_id];
-    }
-    return 21;
-  };
 
   const getExtraTotal = (extra: AccommodationExtraData) => {
     if (extra.pricing_type === 'fixed') return extra.unit_price;
     return extra.unit_price * extra.quantity;
-  };
-
-  const calculateTotals = () => {
-    const bureauFee = calculateBureauFee(request?.number_of_people || 0);
-
-    // Filter out self_arranged and unpriced on_request items from price calculations
-    const isOnRequestUnpriced = (item: ProgramItem) =>
-      item.price_type === 'on_request' && item.admin_price_override == null;
-    const pricedItems = items.filter(item => item.block_type !== "self_arranged" && !isOnRequestUnpriced(item));
-
-    // Calculate surcharge for bureau_central mode
-    const isBureauCentral = request?.invoicing_mode === "bureau_central";
-    const surchargePerPerson = appSettings.bureau_central_surcharge_pp;
-    const numberOfPeople = request?.number_of_people || 0;
-    const centralSurcharge = isBureauCentral ? surchargePerPerson * numberOfPeople : 0;
-
-    // Group amounts by VAT rate
-    const vatGroups: Record<number, number> = {};
-    pricedItems.forEach(item => {
-      const total = getItemTotal(item);
-      const rate = getItemVatRate(item);
-      vatGroups[rate] = (vatGroups[rate] || 0) + total;
-    });
-    // Bureau fee + surcharge are always 21%
-    vatGroups[21] = (vatGroups[21] || 0) + bureauFee + centralSurcharge;
-
-    // Add accommodation quote to VAT groups
-    let accommodationTotal = 0;
-    if (accommodationQuote) {
-      const rate = accommodationQuote.vat_rate;
-      vatGroups[rate] = (vatGroups[rate] || 0) + accommodationQuote.price_total;
-      accommodationTotal += accommodationQuote.price_total;
-    }
-
-    // Add accommodation extras to VAT groups
-    let extrasTotal = 0;
-    accommodationExtras.forEach(extra => {
-      const total = getExtraTotal(extra);
-      const rate = extra.vat_rate;
-      vatGroups[rate] = (vatGroups[rate] || 0) + total;
-      extrasTotal += total;
-    });
-
-    let totalExclVat = 0;
-    let totalVat = 0;
-    const vatLines: { rate: number; exclVat: number; vatAmount: number }[] = [];
-
-    Object.entries(vatGroups)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .forEach(([rateStr, amountInclVat]) => {
-        const rate = Number(rateStr);
-        const exclVat = amountInclVat / (1 + rate / 100);
-        const vatAmount = amountInclVat - exclVat;
-        vatLines.push({ rate, exclVat, vatAmount });
-        totalExclVat += exclVat;
-        totalVat += vatAmount;
-      });
-
-    const itemsTotal = pricedItems.reduce((sum, item) => sum + getItemTotal(item), 0);
-    const totalInclVat = totalExclVat + totalVat;
-
-    return { itemsTotal, bureauFee, centralSurcharge, totalExclVat, totalVat, totalInclVat, vatLines, accommodationTotal, extrasTotal };
   };
 
   // Helper function to convert blob to base64
@@ -478,7 +400,7 @@ const AdminQuotePreview = () => {
 
   if (!request) return null;
 
-  const totals = calculateTotals();
+  
   const groupedByDay = items.reduce((acc, item) => {
     const day = item.day_index;
     if (!acc[day]) acc[day] = [];
@@ -844,52 +766,6 @@ const AdminQuotePreview = () => {
                         </div>
                       )}
 
-                      {/* Totals */}
-                      <div className="border-t-2 border-[#1e3a5f] pt-4 mt-6">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Subtotaal activiteiten incl. BTW</span>
-                          <span>{formatCurrency(totals.itemsTotal)}</span>
-                        </div>
-                        {accommodationQuote && (
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Subtotaal logies incl. BTW</span>
-                            <span>{formatCurrency(totals.accommodationTotal)}</span>
-                          </div>
-                        )}
-                        {totals.extrasTotal > 0 && (
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Subtotaal logies extra's incl. BTW</span>
-                            <span>{formatCurrency(totals.extrasTotal)}</span>
-                          </div>
-                        )}
-                        {totals.bureauFee > 0 && (
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Coördinatiekosten</span>
-                            <span>{formatCurrency(totals.bureauFee)}</span>
-                          </div>
-                        )}
-                        {totals.centralSurcharge > 0 && (
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Opslag centrale facturatie ({request.number_of_people} × {formatCurrency(appSettings.bureau_central_surcharge_pp)})</span>
-                            <span>{formatCurrency(totals.centralSurcharge)}</span>
-                          </div>
-                        )}
-                        <Separator className="my-2" />
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Subtotaal excl. BTW</span>
-                          <span>{formatCurrency(totals.totalExclVat)}</span>
-                        </div>
-                        {totals.vatLines.map((line) => (
-                          <div key={line.rate} className="flex justify-between text-sm mb-1 text-gray-500">
-                            <span>BTW ({line.rate}%)</span>
-                            <span>{formatCurrency(line.vatAmount)}</span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between font-bold text-lg text-[#1e3a5f]">
-                          <span>Totaal incl. BTW</span>
-                          <span>{formatCurrency(totals.totalInclVat)}</span>
-                        </div>
-                      </div>
 
                       {/* Disclaimer */}
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
