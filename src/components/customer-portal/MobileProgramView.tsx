@@ -465,17 +465,33 @@ export const MobileProgramView = ({
         </div>
       </ProgramSection>
 
-      {/* 6. Accept terms - only when ready */}
-      {allConfirmed && !termsAccepted && (
+      {/* 6. Accept terms - always visible as placeholder or full card */}
+      {!termsAccepted && (
         <div id="terms-section">
-          <AcceptTermsCard
-            onAccept={onAcceptTerms}
-            isBillingComplete={billingComplete}
-            onOpenBilling={onOpenBilling}
-            items={program.items}
-            accommodationQuotes={accommodationQuotes}
-            selectedDates={selectedDates}
-          />
+          {allConfirmed ? (
+            <AcceptTermsCard
+              onAccept={onAcceptTerms}
+              isBillingComplete={billingComplete}
+              onOpenBilling={onOpenBilling}
+              items={program.items}
+              accommodationQuotes={accommodationQuotes}
+              selectedDates={selectedDates}
+            />
+          ) : (
+            <Card className="border-dashed bg-muted/30">
+              <CardContent className="py-6">
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <h3 className="font-medium">Voorwaarden</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Zodra alle activiteiten in je programma bevestigd zijn, verschijnen hier de voorwaarden ter ondertekening.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
