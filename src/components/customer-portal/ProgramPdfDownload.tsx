@@ -6,6 +6,16 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import jsPDF from "jspdf";
 import type { ProgramRequestItem } from "@/types/programRequest";
+import { preloadItemImages, type PreloadedItemImages } from "@/lib/pdfImageHelpers";
+
+// Asset map for resolving local image_asset filenames to imported URLs
+const assetModules = import.meta.glob("@/assets/*.jpg", { eager: true, import: "default" }) as Record<string, string>;
+const resolveAsset = (filename: string): string | null => {
+  for (const [path, url] of Object.entries(assetModules)) {
+    if (path.endsWith(`/${filename}`)) return url;
+  }
+  return null;
+};
 
 interface ProgramPdfDownloadProps {
   customerName: string;
@@ -33,11 +43,33 @@ export const ProgramPdfDownload = ({
     setIsGenerating(true);
 
     try {
+      // Filter and sort items
+      const activeItems = items
+        .filter((i) => i.status !== "cancelled")
+        .sort((a, b) => {
+          if (a.day_index !== b.day_index) return a.day_index - b.day_index;
+          const at = a.confirmed_time || a.proposed_time || a.preferred_time || "zz";
+          const bt = b.confirmed_time || b.proposed_time || b.preferred_time || "zz";
+          return at.localeCompare(bt);
+        });
+
+      // Preload all images in parallel
+      const imageResults = await Promise.all(
+        activeItems.map((item) => preloadItemImages(item, resolveAsset))
+      );
+      const imageMap = new Map<string, PreloadedItemImages>();
+      activeItems.forEach((item, i) => imageMap.set(item.id, imageResults[i]));
+
       const doc = new jsPDF("p", "mm", "a4");
       const pageWidth = doc.internal.pageSize.getWidth();
       const margin = 20;
       const contentWidth = pageWidth - margin * 2;
       let y = 20;
+
+      const THUMB_W = 30;
+      const THUMB_H = 20;
+      const THUMB_GAP = 4;
+      const MAP_H = 22;
 
       const checkPage = (needed: number) => {
         if (y + needed > 270) {
@@ -82,24 +114,13 @@ export const ProgramPdfDownload = ({
       y += 8;
 
       // Group items by day
-      const activeItems = items
-        .filter((i) => i.status !== "cancelled")
-        .sort((a, b) => {
-          if (a.day_index !== b.day_index) return a.day_index - b.day_index;
-          const at = a.confirmed_time || a.proposed_time || a.preferred_time || "zz";
-          const bt = b.confirmed_time || b.proposed_time || b.preferred_time || "zz";
-          return at.localeCompare(bt);
-        });
-
       const dayGroups: Record<number, ProgramRequestItem[]> = {};
       activeItems.forEach((item) => {
         if (!dayGroups[item.day_index]) dayGroups[item.day_index] = [];
         dayGroups[item.day_index].push(item);
       });
 
-      const sortedDays = Object.keys(dayGroups)
-        .map(Number)
-        .sort((a, b) => a - b);
+      const sortedDays = Object.keys(dayGroups).map(Number).sort((a, b) => a - b);
 
       for (const dayIndex of sortedDays) {
         const dayItems = dayGroups[dayIndex];
@@ -117,15 +138,35 @@ export const ProgramPdfDownload = ({
         y += 8;
 
         for (const item of dayItems) {
-          checkPage(30);
+          const images = imageMap.get(item.id);
+          const hasThumb = !!images?.activityImage;
+          const hasMap = !!images?.mapImage;
+
+          // Estimate needed height
+          const estimatedHeight = Math.max(hasThumb ? THUMB_H + 5 : 25, 25) + (hasMap ? MAP_H + 5 : 0) + 6;
+          checkPage(estimatedHeight);
+
+          const textX = hasThumb ? margin + THUMB_W + THUMB_GAP : margin + 2;
+          const textWidth = hasThumb ? contentWidth - THUMB_W - THUMB_GAP - 2 : contentWidth - 4;
+          const blockStartY = y;
+
+          // Draw thumbnail
+          if (hasThumb && images!.activityImage) {
+            try {
+              doc.addImage(images!.activityImage, "JPEG", margin, y, THUMB_W, THUMB_H);
+            } catch {
+              // fallback: no image
+            }
+          }
 
           // Activity name
           doc.setFontSize(11);
           doc.setFont("helvetica", "bold");
-          doc.text(item.block_name, margin + 2, y);
-          y += 5;
+          doc.text(item.block_name, textX, y + 4);
+          y += (hasThumb ? 0 : 0);
+          let textY = blockStartY + 9;
 
-          // Time + duration
+          // Time + duration + provider
           const time = item.confirmed_time || item.proposed_time || item.preferred_time;
           const metaParts: string[] = [];
           if (time && time !== "flexibel") metaParts.push(`Tijd: ${time}`);
@@ -136,33 +177,31 @@ export const ProgramPdfDownload = ({
           doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(100);
-          doc.text(metaParts.join("  •  "), margin + 2, y);
+          doc.text(metaParts.join("  •  "), textX, textY);
           doc.setTextColor(0);
-          y += 5;
+          textY += 4.5;
 
           // Location with clickable link
           if (item.location_address) {
             const locationUrl = item.location_lat && item.location_lng
               ? `https://www.google.com/maps/dir/?api=1&destination=${item.location_lat},${item.location_lng}`
               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location_address)}`;
-            const locationText = `📍 ${item.location_address}`;
             doc.setFontSize(9);
             doc.setTextColor(100);
-            doc.textWithLink(locationText, margin + 2, y, { url: locationUrl });
+            doc.textWithLink(`📍 ${item.location_address}`, textX, textY, { url: locationUrl });
             doc.setTextColor(0);
-            y += 5;
+            textY += 4.5;
           }
 
-          // Description (wrap text)
+          // Description
           const description = (item as any).block_description || (item as any).description;
           if (description) {
             doc.setFontSize(9);
             doc.setFont("helvetica", "normal");
-            const lines = doc.splitTextToSize(description, contentWidth - 4);
+            const lines = doc.splitTextToSize(description, textWidth);
             const linesToShow = lines.slice(0, 4);
-            checkPage(linesToShow.length * 4 + 2);
-            doc.text(linesToShow, margin + 2, y);
-            y += linesToShow.length * 4;
+            doc.text(linesToShow, textX, textY);
+            textY += linesToShow.length * 4;
           }
 
           // Customer notes
@@ -170,12 +209,25 @@ export const ProgramPdfDownload = ({
             doc.setFontSize(8);
             doc.setTextColor(120);
             doc.setFont("helvetica", "italic");
-            const noteLines = doc.splitTextToSize(`Opmerking: ${item.customer_notes}`, contentWidth - 4);
-            checkPage(noteLines.length * 3.5 + 2);
-            doc.text(noteLines.slice(0, 2), margin + 2, y);
-            y += noteLines.slice(0, 2).length * 3.5;
+            const noteLines = doc.splitTextToSize(`Opmerking: ${item.customer_notes}`, textWidth);
+            doc.text(noteLines.slice(0, 2), textX, textY);
+            textY += noteLines.slice(0, 2).length * 3.5;
             doc.setFont("helvetica", "normal");
             doc.setTextColor(0);
+          }
+
+          // Set y to the maximum of thumb bottom or text bottom
+          y = Math.max(blockStartY + THUMB_H + 2, textY + 2);
+
+          // Static map
+          if (hasMap && images!.mapImage) {
+            checkPage(MAP_H + 5);
+            try {
+              doc.addImage(images!.mapImage, "JPEG", margin, y, contentWidth, MAP_H);
+              y += MAP_H + 3;
+            } catch {
+              // skip map on error
+            }
           }
 
           y += 4;
