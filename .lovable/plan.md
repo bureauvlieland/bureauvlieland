@@ -1,38 +1,72 @@
 
 
-## Plan: Email template opwaarderen en koppelen aan offerte-preview
+## Plan: Projecten-pagina verbeteren met statussen en programmatypes
 
-### Probleem
-1. De email template `quote_offer_customer` bevat platte tekst zonder HTML-opmaak, CTA-knop of link naar de klantomgeving
-2. De "Standaard tekst" knop op de offerte-preview laadt uit `app_settings` in plaats van uit de email template
+### Huidige situatie
+De projecten-pagina toont nu alleen het type (Beide/Logies/Activ.) en losse statussen per logies-aanvraag. Er ontbreekt:
+- Een overall projectstatus
+- Het type programma (Maatwerk vs Self-service)
+- Zinvolle filteropties gebaseerd op de daadwerkelijke data
 
-### Aanpak
+### Wat er verandert
 
-#### 1. Email template `quote_offer_customer` updaten met volledige HTML
-- Dezelfde visuele stijl als de andere templates (navy header, witte content, afgeronde hoeken)
-- CTA-knop "Bekijk voorstel & geef akkoord" met link naar `{{portal_url}}`
-- Programmadetails blok met `{{dates}}`, `{{number_of_people}}`
-- Geldigheidsmelding met `{{valid_until}}`
-- Optioneel persoonlijk bericht blok via `{{#if personal_message}}`
-- Contactgegevens footer
+#### 1. Nieuwe kolom: Projectstatus
+Een afgeleide status op basis van de beschikbare gegevens:
 
-#### 2. AdminQuotePreview "Standaard tekst" knop aanpassen
-- Laden uit `email_templates` tabel (id: `quote_offer_customer`) in plaats van `app_settings`
-- Variabelen (`{{customer_name}}`, `{{valid_until}}`, etc.) automatisch invullen met de projectdata
-- Alleen de platte tekst-versie tonen in het tekstveld (de HTML-versie wordt door de edge function gegenereerd)
+| Conditie | Label | Kleur |
+|----------|-------|-------|
+| `quote_status = 'concept'` | Concept | Grijs |
+| `quote_status = 'offerte_verstuurd'` | Offerte verstuurd | Blauw |
+| `terms_accepted_at` is gevuld | AV getekend | Groen |
+| `completion_status = 'completed'` | Afgerond | Donkergroen |
+| `status = 'cancelled'` | Geannuleerd | Rood |
+| Geen quote_status, actief | Actief | Blauw |
 
-#### 3. Opruimen
-- De zojuist aangemaakte `app_settings` entry `default_quote_personal_message` kan verwijderd worden (wordt vervangen door de email template)
+Deze kolom vervangt de huidige "Type" kolom niet maar komt erbij, zodat je in een oogopslag de voortgang ziet.
+
+#### 2. Programmatype zichtbaar maken
+- De huidige "Type" badge (Beide/Logies/Activ.) wordt uitgebreid
+- Bij projecten met `program_type = 'quote'` wordt een extra "Maatwerk" label getoond
+- Bij self-service projecten wordt dit eventueel als "Self-service" getoond
+
+#### 3. Verbeterde statusfilter
+De statusfilter wordt vervangen door opties die matchen met de daadwerkelijke data:
+
+- Alle statussen
+- Concept (quote_status = concept)
+- Offerte verstuurd (quote_status = offerte_verstuurd)
+- AV getekend (terms_accepted_at gevuld)
+- Afgerond (completion_status = completed)
+- Geannuleerd
+- Logies: In behandeling / Bevestigd
+
+#### 4. Dashboard stats aanpassen
+De vier statistiek-kaarten boven de tabel worden relevanter:
+- **Totaal projecten** (behouden)
+- **Concept** (aantal projecten in concept-fase)
+- **Offerte verstuurd** (aantal met verstuurde offerte)
+- **AV getekend** (aantal met getekende voorwaarden)
 
 ### Technische details
 
-**Database migratie:**
-- UPDATE `email_templates` SET `body_html` = volledige HTML template voor `quote_offer_customer`
-- DELETE `app_settings` WHERE id = `default_quote_personal_message`
+**Bestand:** `src/pages/admin/AdminProjects.tsx`
 
-**Bestanden:**
-- `src/pages/admin/AdminQuotePreview.tsx`: "Standaard tekst" knop wijzigen om uit email_templates te laden en variabelen te vervangen
-- `supabase/functions/send-quote-offer/index.ts`: Geen wijziging nodig - de edge function genereert al een volledige HTML email met CTA onafhankelijk van de template
+**Data-aanpassingen:**
+- De query haalt nu ook `program_type`, `quote_status`, en `completion_status` op uit `program_requests`
+- Het `Project` interface krijgt de velden `program_type`, `quote_status`, en `completion_status`
+- Een helper-functie `getProjectStatus()` berekent de afgeleide status
 
-**Opmerking:** De edge function gebruikt de template-tekst als "intro" en bouwt daar zelf een complete email omheen met programmatabel en CTA-knop. De HTML in de template is dus primair voor weergave op de admin templates-pagina en voor eventueel toekomstig direct gebruik.
+**Tabel-kolommen (nieuwe volgorde):**
+1. Type (Beide/Logies/Activ. + Maatwerk badge)
+2. Status (nieuwe afgeleide projectstatus badge)
+3. Referentie(s)
+4. Klant
+5. Logies
+6. Activiteiten
+7. Datum(s)
+8. Personen
+9. Acties
+
+**Filter-logica:**
+De statusfilter werkt op de afgeleide projectstatus in plaats van op de losse `program_status` / `accommodation_status` velden.
 
