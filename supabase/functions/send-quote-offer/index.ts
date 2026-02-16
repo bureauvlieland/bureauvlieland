@@ -396,42 +396,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       HTMLPart: emailHtml,
     };
 
-    // Add PDF attachment if provided
-    if (pdfBase64 && pdfFilename) {
-      emailMessage.Attachments = [
-        {
-          ContentType: "application/pdf",
-          Filename: pdfFilename,
-          Base64Content: pdfBase64,
-        },
-      ];
-      console.log(`Attaching PDF: ${pdfFilename} (${Math.round(pdfBase64.length / 1024)}KB base64)`);
-    }
-
-    // Send the email
-    const mailjetResponse = await sendEmailViaMailjet([emailMessage]);
-
-    // Log the email
-    const messageId = mailjetResponse?.Messages?.[0]?.MessageID || null;
-    await logEmail({
-      email_type: "quote_offer_customer",
-      subject: fullSubject,
-      recipient_email: recipientEmail,
-      recipient_name: programRequest.customer_name,
-      related_request_id: requestId,
-      status: "sent",
-      mailjet_message_id: messageId?.toString() || null,
-      sent_by: "system",
-      metadata: {
-        valid_until: validUntil,
-        has_custom_body: !!emailBody,
-        item_count: items?.length || 0,
-        test_mode: testMode,
-      },
-    });
-
-    // Store PDF in storage if provided
+    // Store PDF in storage first (before sending email, so we can link to it)
     let quotePdfPath: string | null = null;
+    let pdfDownloadUrl: string | null = null;
     if (pdfBase64) {
       try {
         const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -445,9 +412,49 @@ Deno.serve(async (req: Request): Promise<Response> => {
         } else {
           quotePdfPath = storagePath;
           console.log(`Quote PDF stored at: ${storagePath}`);
+          // Generate a signed URL valid for 90 days
+          const { data: signedData } = await serviceClient.storage
+            .from("quote-documents")
+            .createSignedUrl(storagePath, 60 * 60 * 24 * 90);
+          if (signedData?.signedUrl) {
+            pdfDownloadUrl = signedData.signedUrl;
+          }
         }
       } catch (storageErr) {
         console.error("Error storing quote PDF:", storageErr);
+      }
+    }
+
+    // Mailjet attachment limit is ~15MB. Base64 adds ~33% overhead.
+    // If the base64 string is over 10MB, skip the attachment and use a download link instead.
+    const MAX_ATTACHMENT_BASE64_SIZE = 10 * 1024 * 1024; // 10MB in base64 chars
+    const pdfTooLarge = pdfBase64 && pdfBase64.length > MAX_ATTACHMENT_BASE64_SIZE;
+
+    if (pdfBase64 && pdfFilename && !pdfTooLarge) {
+      emailMessage.Attachments = [
+        {
+          ContentType: "application/pdf",
+          Filename: pdfFilename,
+          Base64Content: pdfBase64,
+        },
+      ];
+      console.log(`Attaching PDF: ${pdfFilename} (${Math.round(pdfBase64.length / 1024)}KB base64)`);
+    } else if (pdfTooLarge) {
+      console.log(`PDF too large for attachment (${Math.round(pdfBase64!.length / 1024)}KB base64), using download link instead`);
+      // Insert a download link block into the email HTML before the closing </body>
+      if (pdfDownloadUrl) {
+        const downloadBlock = `
+          <div style="max-width: 600px; margin: 0 auto;">
+            <div style="padding: 0 24px 24px 24px;">
+              <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #1e3a5f; text-align: center;">
+                <p style="margin: 0 0 12px 0; color: #1e3a5f; font-weight: 600;">📄 Uw voorstel als PDF</p>
+                <a href="${pdfDownloadUrl}" style="display: inline-block; background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px;">
+                  Download PDF
+                </a>
+              </div>
+            </div>
+          </div>`;
+        emailMessage.HTMLPart = emailMessage.HTMLPart.replace("</body>", `${downloadBlock}</body>`);
       }
     }
 
