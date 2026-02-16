@@ -1404,6 +1404,7 @@ export type Database = {
           number_of_people: number
           program_description: string | null
           program_type: string
+          quote_pdf_path: string | null
           quote_personal_message: string | null
           quote_sent_at: string | null
           quote_sent_by: string | null
@@ -1448,6 +1449,7 @@ export type Database = {
           number_of_people?: number
           program_description?: string | null
           program_type?: string
+          quote_pdf_path?: string | null
           quote_personal_message?: string | null
           quote_sent_at?: string | null
           quote_sent_by?: string | null
@@ -1492,6 +1494,7 @@ export type Database = {
           number_of_people?: number
           program_description?: string | null
           program_type?: string
+          quote_pdf_path?: string | null
           quote_personal_message?: string | null
           quote_sent_at?: string | null
           quote_sent_by?: string | null

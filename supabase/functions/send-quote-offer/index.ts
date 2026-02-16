@@ -407,15 +407,41 @@ Deno.serve(async (req: Request): Promise<Response> => {
       },
     });
 
+    // Store PDF in storage if provided
+    let quotePdfPath: string | null = null;
+    if (pdfBase64) {
+      try {
+        const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const pdfBytes = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+        const storagePath = `${requestId}/${Date.now()}.pdf`;
+        const { error: uploadError } = await serviceClient.storage
+          .from("quote-documents")
+          .upload(storagePath, pdfBytes, { contentType: "application/pdf", upsert: true });
+        if (uploadError) {
+          console.error("Error uploading quote PDF:", uploadError);
+        } else {
+          quotePdfPath = storagePath;
+          console.log(`Quote PDF stored at: ${storagePath}`);
+        }
+      } catch (storageErr) {
+        console.error("Error storing quote PDF:", storageErr);
+      }
+    }
+
     // Update program request status to 'offerte_verstuurd'
+    const updateData: Record<string, any> = {
+      quote_status: "offerte_verstuurd",
+      quote_sent_at: new Date().toISOString(),
+      quote_valid_until: validUntil,
+      quote_personal_message: personalMessage || null,
+    };
+    if (quotePdfPath) {
+      updateData.quote_pdf_path = quotePdfPath;
+    }
+
     const { error: updateError } = await supabase
       .from("program_requests")
-      .update({
-        quote_status: "offerte_verstuurd",
-        quote_sent_at: new Date().toISOString(),
-        quote_valid_until: validUntil,
-        quote_personal_message: personalMessage || null,
-      })
+      .update(updateData)
       .eq("id", requestId);
 
     if (updateError) {
