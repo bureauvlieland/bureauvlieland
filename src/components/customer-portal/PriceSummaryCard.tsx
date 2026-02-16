@@ -358,7 +358,7 @@ export const PriceSummaryCard = ({
                         <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
                       </div>
                       {item.admin_price_notes && (
-                        <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                        <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
                       )}
                     </div>
                   );
@@ -376,7 +376,7 @@ export const PriceSummaryCard = ({
                         <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
                       </div>
                       {item.admin_price_notes && (
-                        <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                        <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
                       )}
                     </div>
                   );
@@ -444,7 +444,7 @@ export const PriceSummaryCard = ({
                         <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
                       </div>
                       {item.admin_price_notes && (
-                        <p className="text-xs text-muted-foreground/70">{item.admin_price_notes}</p>
+                        <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
                       )}
                     </div>
                   );
