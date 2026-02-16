@@ -432,6 +432,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
       console.log(`PDF in storage: ${pdfStoragePath}, download link included in email`);
     }
 
+    // Send the email
+    const mailjetResponse = await sendEmailViaMailjet([emailMessage]);
+
+    // Log the email
+    const messageId = mailjetResponse?.Messages?.[0]?.MessageID || null;
+    await logEmail({
+      email_type: "quote_offer_customer",
+      subject: fullSubject,
+      recipient_email: recipientEmail,
+      recipient_name: programRequest.customer_name,
+      related_request_id: requestId,
+      status: "sent",
+      mailjet_message_id: messageId?.toString() || null,
+      sent_by: "system",
+      metadata: {
+        valid_until: validUntil,
+        has_custom_body: !!emailBody,
+        item_count: items?.length || 0,
+        test_mode: testMode,
+        has_pdf: !!pdfStoragePath,
+      },
+    });
+
     // Update program request status
     const updateData: Record<string, any> = {
       quote_status: "offerte_verstuurd",
@@ -458,7 +481,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       JSON.stringify({
         success: true,
         message: "Offerte verstuurd",
-        messageId,
+        messageId: messageId || null,
       }),
       {
         status: 200,
