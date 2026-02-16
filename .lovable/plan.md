@@ -1,52 +1,34 @@
 
 
-## Logies-status verduidelijken in de checklist
+## Activiteiten-status verbeteren in de checklist
 
-De checklist in de sidebar toont nu "Logies geregeld" als volledig afgevinkt zodra er een logiesaanvraag is ingediend. Maar dat klopt niet -- de logies is pas echt geregeld wanneer een offerte is gekozen. We splitsen dit op in drie duidelijke toestanden.
+De logies-status is nu verbeterd met drie toestanden, maar de eerste stap ("Activiteiten bevestigd") mist nog de tussentoestanden. We voeren alsnog de eerder goedgekeurde verbeteringen door.
 
 ### Huidige weergave
 
 ```text
-[v]  Logies geregeld          <- groen vinkje, ook als er nog geen offerte gekozen is
+O   Activiteiten bevestigd       <- lege cirkel, ook als 3 van 5 al bevestigd zijn
 ```
 
 ### Verbeterde weergave
 
 ```text
-Geen aanvraag:        O     Logies regelen
-Aanvraag ingediend:   [klok] Offertes worden verzameld
-Offerte gekozen:      [v]   Logies geregeld
+Pending items:        [klok]  Wachten op aanbieders (3/5 bevestigd)      <- amber
+Alternatieven:        [!]     Alternatief voorstel bekijken (3/5)        <- amber
+Alles bevestigd:      [v]     Activiteiten bevestigd (5/5)               <- groen
 ```
 
-### Technische aanpassingen
+### Technische aanpassing
 
-**1. StatusSummary.tsx - Nieuwe prop en drie-traps logies-status**
+**Bestand: `src/components/customer-portal/StatusSummary.tsx`**
 
-Een nieuwe optionele prop `accommodationStatus` met waarden `"none" | "requested" | "selected"` wordt toegevoegd (naast de bestaande `hasAccommodation` die backward-compatible blijft).
+Regels 45-54 worden aangepast. De huidige simpele toggle (cirkel of vinkje) wordt vervangen door drie toestanden:
 
-De logies-stap in de checklist toont:
-- `"none"`: lege cirkel + "Logies regelen" (grijs)
-- `"requested"`: amber klok-icoon + "Offertes worden verzameld" (amber)
-- `"selected"`: groen vinkje + "Logies geregeld" (groen)
+1. Als `alternative > 0`: amber `AlertCircle` icoon + "Alternatief voorstel bekijken" + teller `(confirmed/total bevestigd)`
+2. Als `pending > 0` (geen alternatives): amber `Clock` icoon + "Wachten op aanbieders" + teller `(confirmed/total bevestigd)`
+3. Als alles bevestigd: groen `CheckCircle` + "Activiteiten bevestigd" + teller `(total/total)`
 
-**2. ProgramSidebar.tsx - Status berekenen**
+De `AlertCircle` import moet worden toegevoegd aan de lucide-react imports.
 
-De bestaande `hasAccommodation` boolean wordt aangevuld met een `accommodationStatus` berekening op basis van de al beschikbare props (`selectedAccommodationQuote` en of er een accommodation request bestaat -- dit laatste moet als nieuwe prop worden doorgegeven).
+Geen andere bestanden hoeven te worden aangepast -- alle benodigde props (`confirmed`, `pending`, `alternative`, `total`) zijn al beschikbaar in de component.
 
-Nieuwe prop: `accommodation: AccommodationRequest | null` (wordt al doorgegeven aan DesktopProgramView, moet alleen doorgesluisd worden naar de sidebar).
-
-Logica:
-```
-selectedAccommodationQuote ? "selected" : accommodation ? "requested" : "none"
-```
-
-**3. DesktopProgramView.tsx + MobileProgramView.tsx - Prop doorgeven**
-
-De `accommodation` prop wordt doorgegeven aan ProgramSidebar zodat de status berekend kan worden.
-
-### Bestanden
-
-- `src/components/customer-portal/StatusSummary.tsx`: Nieuwe prop + drie-traps rendering
-- `src/components/customer-portal/ProgramSidebar.tsx`: Nieuwe prop + statusberekening
-- `src/components/customer-portal/DesktopProgramView.tsx`: `accommodation` prop doorgeven aan sidebar
-- `src/components/customer-portal/MobileProgramView.tsx`: Idem voor mobiel (als sidebar daar ook gebruikt wordt)
