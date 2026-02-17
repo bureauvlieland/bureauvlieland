@@ -1,79 +1,70 @@
 
 
-# Fix: Partner e-mails worden niet verstuurd - ontbrekende provider_email
+# Fix: Klantportaal toegankelijk maken zonder inloggen
 
 ## Probleem
+De RLS-policies op de tabellen `program_requests`, `program_request_items`, `program_request_history` en `accommodation_requests` staan alleen SELECT toe voor admins (en partners). Er zijn geen policies die anonieme toegang toestaan op basis van het customer_token. Hierdoor werkt het klantportaal alleen wanneer je als admin bent ingelogd.
 
-De edge function `accept-quote-proposal` vindt 2 items maar groepeert ze in 0 partner-groepen. Dit komt doordat `provider_email` op de items `NULL` is.
+## Oplossing
+Voeg SELECT-policies toe voor de `anon` rol op de relevante tabellen, zodat niet-ingelogde bezoekers hun programma kunnen bekijken via het unieke token.
 
-**Oorzaak**: Wanneer een admin een activiteit toevoegt via AdminAddActivitySheet, wordt `provider_email` opgehaald via `selectedBlock.provider?.email`. Maar de building blocks query haalt alleen `(id, name)` op van de partner -- niet `email`. Daardoor is `provider?.email` altijd `undefined` en wordt het item opgeslagen met `provider_email: null`.
+## Wijzigingen (alleen database-migratie, geen codewijzigingen)
 
-In de edge function skipt `groupItemsByProvider()` items zonder `provider_email`, waardoor er geen partner-groepen ontstaan en geen e-mails worden verstuurd.
+### 1. `program_requests` - anon SELECT toevoegen
+Niet-verlopen programma's moeten leesbaar zijn voor anonieme gebruikers. Het customer_token (random hex) fungeert als beveiliging.
 
-## Oplossing (twee onderdelen)
+```sql
+CREATE POLICY "Public can view programs via token"
+  ON public.program_requests FOR SELECT
+  TO anon
+  USING (expires_at > now());
+```
 
-### 1. Building blocks query: email toevoegen aan partner join
+### 2. `program_request_items` - anon SELECT toevoegen
+Items moeten leesbaar zijn als het bijbehorende programma niet verlopen is.
 
-In `src/hooks/useBuildingBlocks.ts` wordt de partner join uitgebreid van `(id, name)` naar `(id, name, email)`. Dit zorgt ervoor dat nieuwe items voortaan correct worden opgeslagen met de partner e-mail.
+```sql
+CREATE POLICY "Items readable via active request"
+  ON public.program_request_items FOR SELECT
+  TO anon
+  USING (EXISTS (
+    SELECT 1 FROM program_requests pr
+    WHERE pr.id = program_request_items.request_id
+    AND pr.expires_at > now()
+  ));
+```
 
-Betreft 3 plekken in het bestand:
-- `useAdminBuildingBlocks` (regel 40)
-- `useBuildingBlock` (regel 61)
-- Eventuele andere queries die dezelfde join gebruiken
+### 3. `program_request_history` - anon SELECT toevoegen
+Geschiedenis moet leesbaar zijn voor het klantportaal (tijdlijn).
 
-### 2. Edge function: partner e-mail opzoeken als fallback
+```sql
+CREATE POLICY "History readable via active request"
+  ON public.program_request_history FOR SELECT
+  TO anon
+  USING (EXISTS (
+    SELECT 1 FROM program_requests pr
+    WHERE pr.id = program_request_history.request_id
+    AND pr.expires_at > now()
+  ));
+```
 
-In `accept-quote-proposal/index.ts` wordt `groupItemsByProvider()` aangepast zodat items zonder `provider_email` niet worden overgeslagen, maar de e-mail wordt opgezocht in de `partners` tabel. Dit maakt de functie robuust voor bestaande items die al zonder e-mail in de database staan.
+### 4. `accommodation_requests` - anon SELECT toevoegen
+Accommodatie-gegevens moeten leesbaar zijn via het klantportaal.
 
-De aangepaste flow:
-1. Verzamel alle unieke `provider_id`'s van items (exclusief "bureau")
-2. Haal de e-mails op uit de `partners` tabel in een enkele query
-3. Gebruik de partner e-mail uit de database, met `provider_email` van het item als fallback
+```sql
+CREATE POLICY "Accommodation readable via active program"
+  ON public.accommodation_requests FOR SELECT
+  TO anon
+  USING (expires_at > now());
+```
 
-### 3. Bestaande items repareren
-
-De 2 items van BV-2602-0006 hebben nu `provider_email: null`. Na de fix in de edge function worden deze automatisch correct afgehandeld bij de volgende "Verstuur naar partners" actie, omdat de edge function de e-mails dan opzoekt in de partners tabel.
+## Beveiligingsoverwegingen
+- Het customer_token is een willekeurige hex-string (24+ tekens) en fungeert als bearer token
+- Dit is hetzelfde patroon als bij `shared_programs` (publiek leesbaar als niet verlopen)
+- Verlopen programma's zijn niet toegankelijk
+- Geen gevoelige data wordt blootgesteld die niet al via het token bereikbaar zou moeten zijn
+- Schrijfacties (INSERT/UPDATE/DELETE) blijven beperkt tot admins/partners
 
 ## Bestanden die worden gewijzigd
-
-- `src/hooks/useBuildingBlocks.ts` -- email toevoegen aan partner join (preventief)
-- `supabase/functions/accept-quote-proposal/index.ts` -- partner e-mail lookup als fallback (fix voor bestaande + toekomstige items)
-
-## Technische details
-
-**useBuildingBlocks.ts** wijziging:
-```typescript
-// Was:
-provider:partners!building_blocks_provider_id_fkey(id, name)
-// Wordt:
-provider:partners!building_blocks_provider_id_fkey(id, name, email)
-```
-
-**accept-quote-proposal/index.ts** wijziging in `groupItemsByProvider`:
-```typescript
-// Functie wordt async en accepteert supabase client
-async function groupItemsByProvider(items, supabase) {
-  // 1. Verzamel unieke provider IDs (exclusief bureau)
-  const providerIds = [...new Set(
-    items.filter(i => i.provider_id && i.provider_id !== "bureau")
-         .map(i => i.provider_id)
-  )];
-  
-  // 2. Haal emails op uit partners tabel
-  const { data: partners } = await supabase
-    .from("partners")
-    .select("id, name, email")
-    .in("id", providerIds);
-  
-  const partnerMap = new Map(partners?.map(p => [p.id, p]) || []);
-  
-  // 3. Groepeer items met partner email uit DB
-  for (const item of items) {
-    if (item.provider_id === "bureau") continue;
-    const partner = partnerMap.get(item.provider_id);
-    const email = item.provider_email || partner?.email;
-    if (!email) continue;
-    // ... rest van groupering
-  }
-}
-```
+- Alleen een database-migratie met 4 nieuwe RLS-policies
+- Geen codewijzigingen nodig
