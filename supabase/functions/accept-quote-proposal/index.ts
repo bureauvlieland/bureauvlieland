@@ -69,17 +69,38 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   return await response.json();
 };
 
-function groupItemsByProvider(items: ProgramItem[]): Map<string, PartnerGroup> {
+async function groupItemsByProvider(items: ProgramItem[], supabase: any): Promise<Map<string, PartnerGroup>> {
   const groups = new Map<string, PartnerGroup>();
 
+  // Collect unique provider IDs that need email lookup
+  const providerIds = [...new Set(
+    items
+      .filter(i => i.provider_id && i.provider_id !== "bureau")
+      .map(i => i.provider_id)
+  )];
+
+  // Fetch partner emails from DB as fallback
+  let partnerMap = new Map<string, { id: string; name: string; email: string }>();
+  if (providerIds.length > 0) {
+    const { data: partners } = await supabase
+      .from("partners")
+      .select("id, name, email")
+      .in("id", providerIds);
+    partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+  }
+
   for (const item of items) {
-    if (!item.provider_email || item.provider_id === "bureau") continue;
+    if (item.provider_id === "bureau") continue;
+
+    const partner = partnerMap.get(item.provider_id);
+    const email = item.provider_email || partner?.email;
+    if (!email) continue;
 
     if (!groups.has(item.provider_id)) {
       groups.set(item.provider_id, {
         partnerId: item.provider_id,
         partnerName: item.provider_name,
-        partnerEmail: item.provider_email,
+        partnerEmail: email,
         items: [],
         itemIds: [],
       });
@@ -350,7 +371,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.log(`Found ${items?.length || 0} items to notify partners about`);
 
     // 6. Group items by provider
-    const partnerGroups = groupItemsByProvider(items || []);
+    const partnerGroups = await groupItemsByProvider(items || [], supabase);
     console.log(`Grouped into ${partnerGroups.size} partner groups`);
 
     // 7. Build portal URLs
