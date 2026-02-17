@@ -27,6 +27,7 @@ interface ProgramSidebarProps {
   selectedAccommodationQuote?: AccommodationQuote | null;
   accommodation?: AccommodationRequest | null;
   isMultiDay?: boolean;
+  isPreApproval?: boolean;
   totalCost?: number;
   allConfirmed?: boolean;
   onScrollToTerms?: () => void;
@@ -45,6 +46,7 @@ export const ProgramSidebar = ({
   selectedAccommodationQuote,
   accommodation,
   isMultiDay = false,
+  isPreApproval = false,
   totalCost = 0,
   allConfirmed = false,
   onScrollToTerms,
@@ -106,6 +108,7 @@ export const ProgramSidebar = ({
         accommodationStatus={accommodationStatus}
         termsAccepted={termsAccepted}
         isMultiDay={isMultiDay}
+        isPreApproval={isPreApproval}
       />
 
       {/* Next action CTA */}
