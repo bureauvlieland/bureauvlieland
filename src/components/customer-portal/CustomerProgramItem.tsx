@@ -32,7 +32,6 @@ interface CustomerProgramItemProps {
   onAccept?: () => Promise<boolean>;
   onCounterProposal?: (counterTime: string, counterNote: string) => Promise<boolean>;
   allItems?: ProgramRequestItem[];
-  isEditing?: boolean;
   hasChanges?: boolean;
   isAccepting?: boolean;
   invoicingMode?: string;
@@ -48,7 +47,6 @@ export const CustomerProgramItem = ({
   onAccept,
   onCounterProposal,
   allItems = [],
-  isEditing = false,
   hasChanges = false,
   isAccepting = false,
   invoicingMode,
@@ -120,7 +118,7 @@ export const CustomerProgramItem = ({
           
           {/* Meta row */}
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-            {currentDate && (
+            {currentDate && selectedDates.length > 1 && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
@@ -352,7 +350,7 @@ export const CustomerProgramItem = ({
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm">Gewenste tijd</Label>
-                {isEditingTime || isEditing ? (
+                {isEditingTime ? (
                   // For accepted items, use counter-proposal dialog instead of direct edit
                   item.customer_accepted_at && onCounterProposal ? (
                     <div className="mt-1.5 flex items-center gap-2">
