@@ -299,7 +299,7 @@ Bureau Vlieland`;
                     className="mt-1 min-h-[200px] font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    De programmatabel en de akkoord-knop worden automatisch onder deze tekst geplaatst.
+                    Deze tekst wordt als persoonlijk bericht in de e-mailtemplate geplaatst.
                   </p>
                 </div>
               </div>
@@ -318,7 +318,7 @@ Bureau Vlieland`;
                   }}
                 />
                 <div className="bg-muted/50 px-4 py-2 border-t text-xs text-muted-foreground italic">
-                  ↓ Hieronder wordt automatisch de programmatabel en akkoord-knop toegevoegd
+                  De volledige e-mail wordt opgemaakt vanuit de database-template
                 </div>
               </div>
             )}
