@@ -172,15 +172,20 @@ export const AccommodationQuoteItem = ({
               <p className="text-sm font-medium mb-1">Extra's</p>
               <div className="space-y-1">
                 {extras.map((extra) => (
-                  <div key={extra.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {extra.category && EXTRA_CATEGORY_LABELS[extra.category as keyof typeof EXTRA_CATEGORY_LABELS]
-                        ? `${EXTRA_CATEGORY_LABELS[extra.category as keyof typeof EXTRA_CATEGORY_LABELS]} · `
-                        : ""}
-                      {extra.name}
-                      {extra.pricing_type === "per_person" && extra.quantity > 1 ? ` (${extra.quantity}×)` : ""}
-                    </span>
-                    <span className="font-medium">{formatPrice(calculateExtraTotal(extra))}</span>
+                  <div key={extra.id} className="space-y-0.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {extra.category && EXTRA_CATEGORY_LABELS[extra.category as keyof typeof EXTRA_CATEGORY_LABELS]
+                          ? `${EXTRA_CATEGORY_LABELS[extra.category as keyof typeof EXTRA_CATEGORY_LABELS]} · `
+                          : ""}
+                        {extra.name}
+                        {extra.pricing_type === "per_person" && extra.quantity > 1 ? ` (${extra.quantity}×)` : ""}
+                      </span>
+                      <span className="font-medium">{formatPrice(calculateExtraTotal(extra))}</span>
+                    </div>
+                    {extra.description && (
+                      <p className="text-xs text-muted-foreground ml-2">{extra.description}</p>
+                    )}
                   </div>
                 ))}
               </div>
