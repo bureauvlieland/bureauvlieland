@@ -45,6 +45,7 @@ export const AccommodationSection = ({
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [contactQuote, setContactQuote] = useState<AccommodationQuote | null>(null);
 
   // Build URL with all parameters for seamless handoff
   const logiesUrl = useMemo(() => {
@@ -233,6 +234,10 @@ export const AccommodationSection = ({
                 isExpired={isExpired}
                 validUntil={validUntil}
                 onSelect={() => setSelectedQuoteForConfirm(quote)}
+                onContact={customerToken ? () => {
+                  setContactQuote(quote);
+                  setContactDialogOpen(true);
+                } : undefined}
                 formatPrice={formatPrice}
               />
             );
@@ -247,6 +252,19 @@ export const AccommodationSection = ({
           onConfirm={handleSelectQuote}
           isSelecting={isSelecting}
         />
+
+        {customerToken && contactQuote && (
+          <ContactAccommodationDialog
+            open={contactDialogOpen}
+            onOpenChange={(open) => {
+              setContactDialogOpen(open);
+              if (!open) setContactQuote(null);
+            }}
+            accommodationName={contactQuote.accommodation_name}
+            quoteId={contactQuote.id}
+            customerToken={customerToken}
+          />
+        )}
       </>
     );
   }
