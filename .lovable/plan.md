@@ -1,45 +1,36 @@
 
 
-## Plan: Database-template gebruiken voor offerte-email
+## Plan: Klantportaal programma-items verbeteren
 
-### Probleem
-De edge function `send-quote-offer` negeert de mooie email-template die al in de database staat. In plaats daarvan wikkelt het alle content in een hardcoded `generateQuoteEmailHtml()` functie die een extra items-tabel toevoegt. Het resultaat is dubbele content.
+### Drie wijzigingen
 
-### Oplossing
-De edge function wordt aangepast om de database-template als volledige email-HTML te gebruiken, inclusief programmadetails, CTA-knop en footer. De hardcoded `generateQuoteEmailHtml()` en `generateIntroHtml()` functies worden verwijderd.
+**1. "Annuleren" wordt "Verwijderen" per item**
 
-### Wijzigingen
+Op regels 382, 535 in `CustomerProgramItem.tsx` staat "Annuleren" als label voor het verwijderen van een individueel item. Dit wordt "Verwijderen" om verwarring met het annuleren van het hele programma te voorkomen.
 
-**1. Database: CTA-knop tekst aanpassen**
+Locaties:
+- Regel 382: `Verwijderen` (bij unavailable status, blijft gelijk - staat al correct)
+- Regel 535: label wijzigen van "Annuleren" naar "Verwijderen"
 
-In de `email_templates` tabel wordt de CTA-knoptekst gewijzigd van "Bekijk voorstel & geef akkoord" naar **"Bekijk voorstel"**.
+**2. Tijd prominenter weergeven**
 
-**2. `supabase/functions/send-quote-offer/index.ts`**
+In de meta-rij (regel 158-167) wordt de tijdweergave visueel zwaarder gemaakt: `font-semibold text-foreground` in plaats van de huidige muted styling. Hierdoor springt de tijd er direct uit.
 
-De flow wordt vereenvoudigd:
+**3. Prijs inline bij elk item tonen (i.p.v. alleen in apart overzicht)**
 
-- De functies `generateIntroHtml()` en `generateQuoteEmailHtml()` (ca. 120 regels) worden verwijderd
-- De `ProgramItem` interface wordt verwijderd (items-tabel niet meer nodig in email)
-- Het ophalen van `program_request_items` blijft behouden (nodig voor logging metadata)
-- De email-HTML wordt direct uit de database-template gehaald via `getRenderedTemplate()`
-- Bij custom `emailBody` van de admin: de template variabelen worden gevuld, maar de `personal_message` variabele bevat de admin-tekst
-- PDF-downloadblok wordt nog steeds ingevoegd voor `</body>` als er een PDF is
+De prijs staat al in de meta-rij (regel 176-194) met `quoted_price` en `price_indication`. Dit werkt goed. Wat ontbreekt is de BTW-uitsplitsing die nu alleen in de collapsible zit (regels 414-428). 
 
-De nieuwe flow:
+De aanpak: de BTW-uitsplitsing (excl. BTW, BTW-bedrag) compact inline tonen direct onder de prijs in de meta-rij, zodat de klant zonder openklappen al het volledige prijsplaatje ziet. Het aparte PriceSummaryCard blijft bestaan als totaaloverzicht.
 
-```text
-1. Haal programma-aanvraag op
-2. Bouw template-variabelen (customer_name, company_name, dates, etc.)
-3. Als admin emailBody heeft ingevuld -> gebruik als personal_message
-4. Render database-template met variabelen -> volledige HTML
-5. Voeg eventueel PDF-link toe
-6. Verstuur via Mailjet
-```
+### Technische details
 
-### Bestanden
+**Bestand: `src/components/customer-portal/CustomerProgramItem.tsx`**
 
-| Bestand | Wat |
-|---------|-----|
-| `email_templates` (database) | CTA-tekst "Bekijk voorstel" |
-| `send-quote-offer/index.ts` | Verwijder hardcoded HTML, gebruik database-template |
+| Wat | Regel(s) | Wijziging |
+|-----|----------|-----------|
+| Tijd bold | 158-167 | Tijd-span krijgt `font-semibold text-foreground` |
+| Prijs+BTW inline | Na 194 | Compact BTW-detail onder prijs in meta-rij |
+| "Annuleren" -> "Verwijderen" | 535 | Label aanpassen |
+
+De collapsible BTW-sectie (regels 414-428) wordt verwijderd omdat die info nu al zichtbaar is.
 
