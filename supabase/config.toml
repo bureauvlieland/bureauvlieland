@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.send-project-email]
 verify_jwt = false
+
+[functions.send-customer-accommodation-message]
+verify_jwt = false
