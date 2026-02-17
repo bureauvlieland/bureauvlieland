@@ -9,6 +9,7 @@ import {
   Check,
   AlertTriangle,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ interface AccommodationQuoteItemProps {
   isExpired: boolean;
   validUntil: Date;
   onSelect: () => void;
+  onContact?: () => void;
   formatPrice: (price: number) => string;
 }
 
@@ -35,6 +37,7 @@ export const AccommodationQuoteItem = ({
   isExpired,
   validUntil,
   onSelect,
+  onContact,
   formatPrice,
 }: AccommodationQuoteItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -108,6 +111,16 @@ export const AccommodationQuoteItem = ({
 
         {/* Action row - always visible */}
         <div className="mt-3 flex flex-wrap gap-2 justify-end">
+          {onContact && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onContact}
+            >
+              <Mail className="h-4 w-4 mr-1.5" />
+              Contact
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
