@@ -1,94 +1,76 @@
 
 
-## Plan: Tijdlijn-layout voor klantprogramma
+## Optimalisaties klantportaal: doublures, logica en usability
 
-### Wat verandert er
+### 1. Gedupliceerde VAT-logica extraheren naar shared hook
 
-Het programma-overzicht in het klantportaal wordt omgebouwd van losse kaarten naar een verticale tijdlijn, vergelijkbaar met de voorbeeldprogramma-pagina. De actieknoppen worden rechts uitgelijnd.
+De `useEffect` voor het ophalen van BTW-tarieven en `getItemVatRate` staan identiek in zowel `DesktopProgramView.tsx` (regels 143-166) als `MobileProgramView.tsx` (regels 140-163). Dit is 25 regels exacte kopie.
 
-### Visueel ontwerp
+**Oplossing:** Nieuwe hook `useItemVatRates.ts` aanmaken die de Supabase-call en lookup-functie bevat. Beide views importeren dan alleen de hook.
 
-```text
-  09:00  o----[ Overtocht met Rederij Doeksen          [Zelf te regelen]  [v] ]
-              Reguliere veerdienst of Sneldienst
-              Dag 1 - 25 sep.  |  1,5 uur
-                                          [Verwijderen]
+### 2. Gedupliceerde computed values extraheren
 
-  09:30  o----[ Koffie & Gebak aan boord               [In voorbereiding] [v] ]
-              Rederij Doeksen
-              Dag 1 - 25 sep.  |  09:30
-                                  [Tijd wijzigen]  [Verwijderen]
+Beide views berekenen dezelfde afgeleide waarden:
+- `termsAccepted`, `billingComplete`, `allConfirmed`
+- `isMultiDay`, `hasActiveAccommodation`
+- `isQuoteAwaitingApproval`, `isPreApproval`
+- `totalCost`
+
+Dat zijn ~40 regels identieke logica in elk bestand.
+
+**Oplossing:** Een `useProgramStatus` hook die al deze berekeningen doet op basis van het program-object. Beide views gebruiken dan:
+```tsx
+const { termsAccepted, billingComplete, allConfirmed, ... } = useProgramStatus(program, accommodationQuotes, statusSummary);
 ```
 
-De tijd staat links van de tijdlijn-stip (net als bij ProgramTimeline.tsx), de kaart rechts ervan. Actieknoppen worden rechts uitgelijnd met `ml-auto`.
+### 3. Tijdlijn-rendering als herbruikbaar component
 
-### Twee wijzigingen
+De tijdlijn-wrapper (verticale lijn + stip + tijdkolom + kaart) wordt 4x gerenderd:
+- DesktopProgramView multi-day (regels 352-392)
+- DesktopProgramView single-day (regels 412-460)
+- MobileProgramView multi-day (regels 379-411)
+- MobileProgramView single-day (regels 431-467)
 
-**1. Tijdlijn-wrapper in Desktop/MobileProgramView**
+**Oplossing:** Nieuw `ProgramTimeline` wrapper-component specifiek voor het klantportaal:
+```tsx
+<CustomerTimeline items={dayItems} showTimeColumn={!isMobile}>
+  {(item) => <CustomerProgramItem ... />}
+</CustomerTimeline>
+```
 
-De lijst van `CustomerProgramItem`-kaarten (in zowel `DesktopProgramView.tsx` als `MobileProgramView.tsx`) wordt gewrapped in een tijdlijn-container:
-- Een verticale lijn links (`absolute left-[1.15rem] md:left-[4.5rem]`)
-- Per item: een tijdkolom links (desktop), een stip op de lijn, en de kaart rechts
-- Dit volgt exact het patroon van `ProgramTimeline.tsx`
+### 4. Overbodige `isEditing` prop verwijderen
 
-De bestaande `<div className="space-y-3">` die de items rendert wordt vervangen door een `<div className="relative">` met de verticale lijn en per item een flex-row met tijd + stip + kaart.
+De prop `isEditing` in `CustomerProgramItem` wordt gedefinieerd in de interface (regel 36) maar door geen enkele parent op `true` gezet. Dode code.
 
-**2. Actieknoppen rechts uitlijnen in CustomerProgramItem**
+**Oplossing:** Prop verwijderen uit interface en component.
 
-In `CustomerProgramItem.tsx` regel 271 de actierij aanpassen:
-- Van: `<div className="mt-3 ml-[76px] flex flex-wrap gap-2">`
-- Naar: `<div className="mt-3 ml-[76px] flex flex-wrap gap-2 justify-end">`
+### 5. Dag-info in meta-rij slim tonen
 
-De knoppen schuiven hiermee naar rechts.
+De meta-rij toont altijd "Dag X - datum", ook bij een eendaags programma waar dit overbodig is (er is maar 1 dag). Bij meerdaags staat de dag al in de DayTabs.
+
+**Oplossing:** De dag-info alleen tonen als `selectedDates.length > 1` EN de collapsible open is, of helemaal niet als de tijdlijn al per dag gegroepeerd is via DayTabs. Op die manier blijft de meta-rij compact.
+
+### 6. Sorteerlogica inconsistent
+
+In de single-day branch worden items gesorteerd op `preferred_time`, maar in de multi-day branch (via `getItemsForDay`) niet. Dit betekent dat items in een meerdaags programma mogelijk in volgorde van aanmaak staan in plaats van chronologisch.
+
+**Oplossing:** Sorteerlogica verplaatsen naar de `getItemsForDay` functie in de parent, of consistent in de tijdlijn-component toepassen. Sorteren op `confirmed_time || proposed_time || preferred_time`.
 
 ### Bestanden die wijzigen
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/components/customer-portal/CustomerProgramItem.tsx` | Actieknoppen `justify-end`, thumbnail + ml-[76px] offset verwijderen (tijdlijn vervangt dit) |
-| `src/components/customer-portal/DesktopProgramView.tsx` | Tijdlijn-wrapper rond items toevoegen |
-| `src/components/customer-portal/MobileProgramView.tsx` | Tijdlijn-wrapper rond items toevoegen |
+| `src/hooks/useItemVatRates.ts` | Nieuw: gedeelde hook voor VAT-tarieven |
+| `src/hooks/useProgramStatus.ts` | Nieuw: gedeelde berekeningen (termsAccepted, allConfirmed, etc.) |
+| `src/components/customer-portal/CustomerTimeline.tsx` | Nieuw: herbruikbare tijdlijn-wrapper |
+| `src/components/customer-portal/DesktopProgramView.tsx` | Refactor: gebruik hooks + CustomerTimeline, verwijder ~80 regels |
+| `src/components/customer-portal/MobileProgramView.tsx` | Refactor: gebruik hooks + CustomerTimeline, verwijder ~80 regels |
+| `src/components/customer-portal/CustomerProgramItem.tsx` | Verwijder `isEditing` prop, conditionele dag-info |
 
-### Technische details
+### Wat het oplevert
 
-**Tijdlijn-wrapper** (in beide views, rond de `.map()` van items):
+- ~160 regels minder gedupliceerde code
+- Consistente sorteer- en weergavelogica
+- Eenvoudiger onderhoud: wijzigingen aan tijdlijn of berekeningen hoeven maar op 1 plek
+- Geen functionele wijzigingen voor de eindgebruiker, alleen schonere code
 
-```tsx
-<div className="relative">
-  {/* Vertical timeline line */}
-  <div className="absolute left-[1.15rem] md:left-[4.5rem] top-0 bottom-0 w-px bg-border" />
-  
-  <div className="space-y-1">
-    {dayItems.map((item) => {
-      const displayTime = item.confirmed_time || item.proposed_time || item.preferred_time;
-      return (
-        <div key={item.id} className="relative flex items-start gap-3 md:gap-4 py-2">
-          {/* Time column - desktop */}
-          <div className="hidden md:flex w-[4rem] shrink-0 justify-end pt-1">
-            {displayTime && displayTime !== "flexibel" && (
-              <span className="text-sm font-semibold text-primary tabular-nums">
-                {displayTime}
-              </span>
-            )}
-          </div>
-          {/* Dot */}
-          <div className="shrink-0 mt-2">
-            <div className="w-3 h-3 rounded-full bg-primary border-2 border-background shadow-sm" />
-          </div>
-          {/* Card */}
-          <div className="flex-1 min-w-0">
-            <CustomerProgramItem ... />
-          </div>
-        </div>
-      );
-    })}
-  </div>
-</div>
-```
-
-**CustomerProgramItem aanpassingen:**
-
-- De thumbnail (w-16 h-16) en de `ml-[76px]` offsets worden verwijderd of verkleind, omdat de tijdlijn al visuele structuur geeft
-- De tijd wordt niet meer in de meta-rij getoond (staat nu in de tijdlijn-kolom links), alleen op mobiel als fallback
-- Actieknoppen krijgen `justify-end` zodat ze rechts uitlijnen
-- De kaart zelf wordt borderless of krijgt een subtielere rand voor een schonere tijdlijn-look
