@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
           Messages: [
             {
               From: {
-                Email: "noreply@bureauvlieland.nl",
+                Email: "hallo@bureauvlieland.nl",
                 Name: "Bureau Vlieland",
               },
               To: [

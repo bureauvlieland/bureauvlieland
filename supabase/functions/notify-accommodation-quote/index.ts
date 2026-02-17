@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
 
     await sendEmailViaMailjet([
       {
-        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: request.customer_email, Name: request.customer_name }],
         Subject: emailSubject,
         HTMLPart: emailHtml,

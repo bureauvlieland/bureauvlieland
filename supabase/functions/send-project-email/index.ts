@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         Messages: [
           {
-            From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+            From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: recipientName || recipientEmail }],
             Subject: subject,
             HTMLPart: htmlBody,

@@ -377,7 +377,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       emailMessages.push({
         From: {
-          Email: "noreply@bureauvlieland.nl",
+          Email: "hallo@bureauvlieland.nl",
           Name: "Bureau Vlieland",
         },
         To: [
@@ -454,7 +454,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const customerMailjetResponse = await sendEmailViaMailjet([
         {
           From: {
-            Email: "noreply@bureauvlieland.nl",
+            Email: "hallo@bureauvlieland.nl",
             Name: "Bureau Vlieland",
           },
           To: [

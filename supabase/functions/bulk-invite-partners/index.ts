@@ -271,7 +271,7 @@ async function invitePartner(
           Messages: [
             {
               From: {
-                Email: "noreply@bureauvlieland.nl",
+                Email: "hallo@bureauvlieland.nl",
                 Name: "Bureau Vlieland",
               },
               To: [

@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
     // Prepare email message
     const emailMessage: any = {
       From: {
-        Email: "noreply@bureauvlieland.nl",
+        Email: "hallo@bureauvlieland.nl",
         Name: "Bureau Vlieland Admin",
       },
       To: [{ Email: snelstartEmail, Name: "Boekhouding" }],
