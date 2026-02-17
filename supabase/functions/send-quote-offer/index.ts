@@ -1,9 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import {
-  sanitizeHtml,
   formatDateNL,
-  formatCurrencyNL,
   getPortalBaseUrl,
   isTestMode,
   getSubjectPrefix,
@@ -26,27 +24,15 @@ const corsHeaders = {
 // Request schema
 const SendQuoteOfferSchema = z.object({
   requestId: z.string().uuid(),
-  validUntil: z.string(), // ISO date string
-  personalMessage: z.string().optional(), // Legacy support
-  emailSubject: z.string().optional(), // New: custom subject from admin
-  emailBody: z.string().optional(), // New: custom body from admin
+  validUntil: z.string(),
+  personalMessage: z.string().optional(),
+  emailSubject: z.string().optional(),
+  emailBody: z.string().optional(),
   origin: z.string().optional(),
-  pdfStoragePath: z.string().optional(), // Path in quote-documents bucket
+  pdfStoragePath: z.string().optional(),
   pdfFilename: z.string().optional(),
-  testRecipient: z.string().email().optional(), // Send test email to this address
+  testRecipient: z.string().email().optional(),
 });
-
-interface ProgramItem {
-  block_name: string;
-  block_category: string;
-  provider_name: string;
-  item_quote_status: string | null;
-  admin_price_override: number | null;
-  quoted_price: number | null;
-  preferred_time: string | null;
-  price_type: string | null;
-  day_index: number;
-}
 
 const sendEmailViaMailjet = async (messages: any[]) => {
   const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
@@ -68,190 +54,6 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 
   return await response.json();
 };
-
-function generateIntroHtml(introText: string): string {
-  // Convert plain text intro to HTML paragraphs
-  return introText
-    .split("\n\n")
-    .map((para) => `<p>${sanitizeHtml(para.trim()).replace(/\n/g, "<br>")}</p>`)
-    .filter((p) => p !== "<p></p>")
-    .join("");
-}
-
-function generateQuoteEmailHtml(
-  introHtml: string,
-  dates: string[],
-  numberOfPeople: number,
-  items: ProgramItem[],
-  validUntil: string,
-  portalUrl: string
-): string {
-  // Format dates
-  const formattedDates = dates.map((d) => formatDateNL(d)).join(", ");
-
-  // Calculate total estimate
-  let totalEstimate = 0;
-  const programItems = items.filter((item) => item.item_quote_status !== "cancelled" && item.day_index >= 0);
-  const extraCostItems = items.filter((item) => item.day_index === -1);
-
-  const itemsHtml = programItems
-    .map((item) => {
-      const price = item.admin_price_override ?? item.quoted_price;
-      const isPerPerson = !item.price_type || item.price_type === "per_person";
-      const priceStr = price ? formatCurrencyNL(price) : "Op aanvraag";
-      const priceLabel = isPerPerson ? "p.p." : "";
-      if (price) {
-        totalEstimate += isPerPerson ? price * numberOfPeople : price;
-      }
-
-      const statusLabel =
-        item.item_quote_status === "bevestigd"
-          ? '<span style="color: #059669;">✓ Bevestigd</span>'
-          : item.item_quote_status === "optioneel"
-          ? '<span style="color: #d97706;">○ Optioneel</span>'
-          : "";
-
-      return `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-            <strong>${sanitizeHtml(item.block_name)}</strong><br>
-            <span style="color: #6b7280; font-size: 13px;">${sanitizeHtml(item.provider_name)}</span>
-            ${item.preferred_time ? `<br><span style="color: #6b7280; font-size: 12px;">⏰ ${sanitizeHtml(item.preferred_time)}</span>` : ""}
-          </td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
-            ${priceStr}${priceLabel ? ` ${priceLabel}` : ""}<br>
-            <span style="font-size: 12px;">${statusLabel}</span>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  const extraCostsTotal = extraCostItems.reduce((sum, item) => sum + (item.admin_price_override ?? 0), 0);
-  totalEstimate += extraCostsTotal;
-
-  const extraCostsHtml = extraCostItems.length > 0
-    ? extraCostItems
-        .map((item) => {
-          const price = item.admin_price_override ?? 0;
-          return `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-            <strong>${sanitizeHtml(item.block_name)}</strong>
-          </td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">
-            ${formatCurrencyNL(price)}
-          </td>
-        </tr>
-      `;
-        })
-        .join("")
-    : "";
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f3f4f6;">
-      <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 32px 24px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Uw Maatwerkvoorstel</h1>
-          <p style="color: #bfdbfe; margin: 8px 0 0 0;">Bureau Vlieland</p>
-        </div>
-
-        <!-- Content -->
-        <div style="padding: 32px 24px;">
-          ${introHtml}
-
-          <!-- Program details -->
-          <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 24px 0;">
-            <h3 style="margin: 0 0 12px 0; color: #374151;">Programma details</h3>
-            <table style="width: 100%;">
-              <tr>
-                <td style="color: #6b7280; padding: 4px 0;">Datum:</td>
-                <td style="text-align: right; font-weight: 600;">${formattedDates}</td>
-              </tr>
-              <tr>
-                <td style="color: #6b7280; padding: 4px 0;">Aantal personen:</td>
-                <td style="text-align: right; font-weight: 600;">${numberOfPeople}</td>
-              </tr>
-            </table>
-          </div>
-
-          <!-- Items table -->
-          <h3 style="margin: 24px 0 12px 0; color: #374151;">Programma-onderdelen</h3>
-          <table style="width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
-            <thead>
-              <tr style="background: #f9fafb;">
-                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Activiteit</th>
-                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prijs</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-              ${extraCostsHtml}
-            </tbody>
-            <tfoot>
-              <tr style="background: #f9fafb;">
-                <td style="padding: 12px; font-weight: 600;">Geschat totaal (${numberOfPeople} pers.)</td>
-                <td style="padding: 12px; text-align: right; font-weight: 600; color: #1e3a5f;">
-                  ${formatCurrencyNL(totalEstimate)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-          <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">
-            * Prijzen zijn onder voorbehoud van wijzigingen en exclusief eventuele aanpassingen.
-          </p>
-
-          <!-- Validity info -->
-          <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #f59e0b;">
-            <p style="margin: 0; color: #78350f;">
-              <strong>Dit voorstel is geldig tot ${formatDateNL(validUntil)}</strong><br>
-              Bent u akkoord? Bevestig het voorstel in uw klantomgeving. 
-              Hierna worden de leveranciers op de hoogte gebracht.
-            </p>
-          </div>
-
-          <!-- CTA Button -->
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${portalUrl}" style="display: inline-block; background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              Bekijk voorstel & geef akkoord
-            </a>
-          </div>
-
-          <div style="background: #eff6ff; padding: 14px 18px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #3b82f6;">
-            <p style="margin: 0; font-size: 13px; color: #1e40af;">
-              Wij werken momenteel met een vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag.
-            </p>
-          </div>
-
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
-
-          <p style="margin-bottom: 0;">
-            Met vriendelijke groet,<br>
-            <strong>Bureau Vlieland</strong><br>
-            📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #1e3a5f;">hallo@bureauvlieland.nl</a><br>
-            📞 0562 700 208
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #f9fafb; padding: 20px 24px; text-align: center; color: #6b7280; font-size: 12px;">
-          <p style="margin: 0;">
-            Dit is een automatisch gegenereerde e-mail van Bureau Vlieland.<br>
-            Volg de link in deze mail om uw voorstel te bekijken.
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -298,7 +100,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const { requestId, validUntil, personalMessage, emailSubject, emailBody, origin, pdfStoragePath, pdfFilename, testRecipient } = validationResult.data;
     const isTestEmail = !!testRecipient;
-    const testMode = isTestEmail ? false : isTestMode(origin); // Don't double-redirect for test emails
+    const testMode = isTestEmail ? false : isTestMode(origin);
     const subjectPrefix = isTestEmail ? "[TEST] " : getSubjectPrefix(origin);
 
     console.log(`Sending quote offer for request: ${requestId} [Test mode: ${testMode}]`);
@@ -318,7 +120,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // Fetch items
+    // Fetch items (for logging metadata)
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
       .select("block_name, block_category, provider_name, item_quote_status, admin_price_override, quoted_price, preferred_time, price_type, day_index")
@@ -327,59 +129,58 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (itemsError) {
       console.error("Error fetching items:", itemsError);
-      return new Response(JSON.stringify({ error: "Fout bij ophalen onderdelen" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     // Build portal URL
     const baseUrl = getPortalBaseUrl(origin);
     const portalUrl = `${baseUrl}/mijn-programma/${programRequest.customer_token}`;
 
-    // Determine intro text: use admin-provided emailBody, or fall back to template, or legacy personalMessage
-    let introText: string;
-    let finalSubject: string;
-
+    // Build template variables
+    const formattedDates = (programRequest.selected_dates as string[]).map((d: string) => formatDateNL(d)).join(", ");
+    
+    // Convert admin emailBody (plain text) to HTML for personal_message
+    let personalMessageHtml = "";
     if (emailBody) {
-      // Admin provided custom text from the dialog
-      introText = emailBody;
-      finalSubject = emailSubject || "Uw maatwerkvoorstel van Bureau Vlieland";
-    } else {
-      // Fallback: try template from database
-      const templateVars = {
-        customer_name: programRequest.customer_name,
-        company_name: programRequest.customer_company || "u",
-        dates: (programRequest.selected_dates as string[]).map((d: string) => formatDateNL(d)).join(", "),
-        number_of_people: programRequest.number_of_people,
-        valid_until: formatDateNL(validUntil),
-        portal_url: portalUrl,
-        personal_message: personalMessage || "",
-      };
-
-      const rendered = await getRenderedTemplate("quote_offer_customer", templateVars);
-      if (rendered) {
-        introText = rendered.body;
-        finalSubject = rendered.subject;
-      } else {
-        // Ultimate fallback: hardcoded
-        introText = `Beste ${programRequest.customer_name},\n\nHierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${programRequest.customer_company || "u"} samengesteld.${personalMessage ? `\n\n${personalMessage}` : ""}\n\nDit voorstel is geldig tot ${formatDateNL(validUntil)}. U kunt het voorstel bekijken en akkoord geven in uw persoonlijke klantomgeving.\n\nHeeft u vragen over dit voorstel? Neem gerust contact met ons op.`;
-        finalSubject = "Uw maatwerkvoorstel van Bureau Vlieland";
-      }
+      personalMessageHtml = emailBody
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+    } else if (personalMessage) {
+      personalMessageHtml = personalMessage
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
     }
 
-    // Generate email HTML with intro + program table
-    const introHtml = generateIntroHtml(introText);
-    const emailHtml = generateQuoteEmailHtml(
-      introHtml,
-      programRequest.selected_dates as string[],
-      programRequest.number_of_people,
-      items || [],
-      validUntil,
-      portalUrl
-    );
+    const templateVars = {
+      customer_name: programRequest.customer_name,
+      company_name: programRequest.customer_company || "u",
+      dates: formattedDates,
+      number_of_people: programRequest.number_of_people,
+      valid_until: formatDateNL(validUntil),
+      portal_url: portalUrl,
+      personal_message: personalMessageHtml,
+    };
 
-    // Get recipient email (test email, test mode redirect, or real)
+    // Render the database template
+    const rendered = await getRenderedTemplate("quote_offer_customer", templateVars);
+    
+    let emailHtml: string;
+    let finalSubject: string;
+
+    if (rendered) {
+      emailHtml = rendered.body;
+      finalSubject = emailSubject || rendered.subject;
+    } else {
+      // Fallback if template not found
+      console.error("quote_offer_customer template not found, using minimal fallback");
+      finalSubject = emailSubject || "Uw maatwerkvoorstel van Bureau Vlieland";
+      emailHtml = `<html><body><p>Beste ${programRequest.customer_name},</p><p>Bekijk uw voorstel via: <a href="${portalUrl}">${portalUrl}</a></p></body></html>`;
+    }
+
+    // Get recipient email
     const recipientEmail = isTestEmail
       ? testRecipient!
       : getRecipientEmail(programRequest.customer_email, origin);
@@ -402,38 +203,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
       HTMLPart: emailHtml,
     };
 
-    // Handle PDF: it's already uploaded to storage by the frontend
+    // Handle PDF attachment link
     let quotePdfPath: string | null = pdfStoragePath || null;
-    let pdfDownloadUrl: string | null = null;
 
     if (pdfStoragePath) {
       try {
         const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-        // Generate a signed URL valid for 90 days
         const { data: signedData } = await serviceClient.storage
           .from("quote-documents")
           .createSignedUrl(pdfStoragePath, 60 * 60 * 24 * 90);
         if (signedData?.signedUrl) {
-          pdfDownloadUrl = signedData.signedUrl;
+          const downloadBlock = `
+            <div style="max-width: 600px; margin: 0 auto;">
+              <div style="padding: 0 24px 24px 24px;">
+                <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #1e3a5f; text-align: center;">
+                  <p style="margin: 0 0 12px 0; color: #1e3a5f; font-weight: 600;">📄 Uw voorstel als PDF</p>
+                  <a href="${signedData.signedUrl}" style="display: inline-block; background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px;">
+                    Download PDF
+                  </a>
+                </div>
+              </div>
+            </div>`;
+          emailMessage.HTMLPart = emailMessage.HTMLPart.replace("</body>", `${downloadBlock}</body>`);
         }
       } catch (err) {
         console.error("Error generating signed URL:", err);
-      }
-
-      // Add download link to the email
-      if (pdfDownloadUrl) {
-        const downloadBlock = `
-          <div style="max-width: 600px; margin: 0 auto;">
-            <div style="padding: 0 24px 24px 24px;">
-              <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #1e3a5f; text-align: center;">
-                <p style="margin: 0 0 12px 0; color: #1e3a5f; font-weight: 600;">📄 Uw voorstel als PDF</p>
-                <a href="${pdfDownloadUrl}" style="display: inline-block; background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px;">
-                  Download PDF
-                </a>
-              </div>
-            </div>
-          </div>`;
-        emailMessage.HTMLPart = emailMessage.HTMLPart.replace("</body>", `${downloadBlock}</body>`);
       }
       console.log(`PDF in storage: ${pdfStoragePath}, download link included in email`);
     }
