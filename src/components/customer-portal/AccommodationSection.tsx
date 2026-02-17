@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Pencil,
+  Mail,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuote
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
+import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -42,6 +44,7 @@ export const AccommodationSection = ({
 }: AccommodationSectionProps) => {
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   // Build URL with all parameters for seamless handoff
   const logiesUrl = useMemo(() => {
@@ -127,6 +130,7 @@ export const AccommodationSection = ({
   // State 2: Accommodation with selected quote - show confirmation
   if (hasSelectedQuote && selectedQuote) {
     return (
+      <>
       <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -181,8 +185,31 @@ export const AccommodationSection = ({
           <p className="text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
             De accommodatie neemt contact met u op om de reservering definitief te maken.
           </p>
+
+          {customerToken && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setContactDialogOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Neem contact op met {selectedQuote.accommodation_name}
+            </Button>
+          )}
         </CardContent>
       </Card>
+
+      {customerToken && (
+        <ContactAccommodationDialog
+          open={contactDialogOpen}
+          onOpenChange={setContactDialogOpen}
+          accommodationName={selectedQuote.accommodation_name}
+          quoteId={selectedQuote.id}
+          customerToken={customerToken}
+        />
+      )}
+    </>
     );
   }
 
