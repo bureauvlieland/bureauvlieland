@@ -1,36 +1,49 @@
 
 
-## Plan: Klantportaal programma-items verbeteren
+## Plan: Altijd-zichtbare actierij per programma-item
 
-### Drie wijzigingen
+### Probleem
+Acties zoals verwijderen, tijd wijzigen en akkoord geven zitten verstopt achter de collapsible. De klant moet eerst openklappen om te ontdekken wat er mogelijk is.
 
-**1. "Annuleren" wordt "Verwijderen" per item**
+### Oplossing
+Een compacte actierij toevoegen die altijd zichtbaar is, direct onder de meta-informatie (datum, tijd, prijs). De knoppen zijn contextafhankelijk per status.
 
-Op regels 382, 535 in `CustomerProgramItem.tsx` staat "Annuleren" als label voor het verwijderen van een individueel item. Dit wordt "Verwijderen" om verwarring met het annuleren van het hele programma te voorkomen.
+### Welke acties per status
 
-Locaties:
-- Regel 382: `Verwijderen` (bij unavailable status, blijft gelijk - staat al correct)
-- Regel 535: label wijzigen van "Annuleren" naar "Verwijderen"
+| Status | Zichtbare acties |
+|--------|-----------------|
+| pending / in voorbereiding | Tijd wijzigen, Verwijderen |
+| confirmed (niet geaccepteerd) | Akkoord, Andere tijd, Verwijderen |
+| alternative | Akkoord, Andere tijd, Verwijderen |
+| counter_proposed | Geen (wachten op partner) |
+| Geaccepteerd (customer_accepted_at) | Tijd wijzigen, Verwijderen |
+| cancelled | Geen |
+| self_arranged | Verwijderen |
 
-**2. Tijd prominenter weergeven**
+### Visueel
 
-In de meta-rij (regel 158-167) wordt de tijdweergave visueel zwaarder gemaakt: `font-semibold text-foreground` in plaats van de huidige muted styling. Hierdoor springt de tijd er direct uit.
+```text
+[Afbeelding] Strandwandeling            [Bevestigd]  [v]
+             Aanbieder X
+             Dag 1 - 14 mrt  |  10:00  |  1,5 uur  |  €125,00
+             [v Akkoord]  [Andere tijd]  [Verwijderen]
+```
 
-**3. Prijs inline bij elk item tonen (i.p.v. alleen in apart overzicht)**
+Compacte knoppen (size="sm") met iconen:
+- Akkoord: groene variant met Check-icoon
+- Andere tijd: outline met ArrowLeftRight-icoon
+- Tijd wijzigen: ghost met Edit2-icoon
+- Verwijderen: ghost in destructive kleur met Trash2-icoon
 
-De prijs staat al in de meta-rij (regel 176-194) met `quoted_price` en `price_indication`. Dit werkt goed. Wat ontbreekt is de BTW-uitsplitsing die nu alleen in de collapsible zit (regels 414-428). 
-
-De aanpak: de BTW-uitsplitsing (excl. BTW, BTW-bedrag) compact inline tonen direct onder de prijs in de meta-rij, zodat de klant zonder openklappen al het volledige prijsplaatje ziet. Het aparte PriceSummaryCard blijft bestaan als totaaloverzicht.
-
-### Technische details
+### Technische wijziging
 
 **Bestand: `src/components/customer-portal/CustomerProgramItem.tsx`**
 
-| Wat | Regel(s) | Wijziging |
-|-----|----------|-----------|
-| Tijd bold | 158-167 | Tijd-span krijgt `font-semibold text-foreground` |
-| Prijs+BTW inline | Na 194 | Compact BTW-detail onder prijs in meta-rij |
-| "Annuleren" -> "Verwijderen" | 535 | Label aanpassen |
+1. Na de inline BTW-rij (rond regel 208) een nieuwe altijd-zichtbare actierij toevoegen met `ml-[76px]`, contextafhankelijk per status
+2. Het grote groene/amber bevestigingsblok (regels 248-318) verwijderen - die logica zit nu in de compacte actierij
+3. De "Verwijderen" knop onderaan de collapsible (regels 516-528) verwijderen - nu altijd zichtbaar
+4. De status-specifieke actieblokken voor "unavailable" (regels 373-393) en "alternative times" (regels 350-371) verwijderen - acties zitten nu in de actierij
+5. De collapsible bevat dan alleen nog: beschrijving, locatie, tijd/dag-selectie en notities
 
-De collapsible BTW-sectie (regels 414-428) wordt verwijderd omdat die info nu al zichtbaar is.
+De bestaande props (`onAccept`, `onCounterProposal`, `onRemove`, `onUpdate`) en hun functionaliteit blijven identiek. Het is puur een UI-herschikking.
 
