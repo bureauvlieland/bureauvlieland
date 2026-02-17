@@ -447,7 +447,7 @@ const handler = async (req: Request): Promise<Response> => {
     const providerGroups = groupBlocksByProvider(requestData.blocks);
     const partnerEmails = providerGroups.map(group => ({
       From: {
-        Email: "noreply@bureauvlieland.nl",
+        Email: "hallo@bureauvlieland.nl",
         Name: "Bureau Vlieland"
       },
       To: [{
@@ -472,7 +472,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await sendEmailViaMailjet([
       {
         From: {
-          Email: "noreply@bureauvlieland.nl",
+          Email: "hallo@bureauvlieland.nl",
           Name: "Bureau Vlieland Website"
         },
         To: [
@@ -486,7 +486,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       {
         From: {
-          Email: "noreply@bureauvlieland.nl",
+          Email: "hallo@bureauvlieland.nl",
           Name: "Bureau Vlieland"
         },
         To: [

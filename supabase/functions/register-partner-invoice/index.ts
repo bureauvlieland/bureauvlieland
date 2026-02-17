@@ -31,7 +31,7 @@ async function sendEmailNotification(
         Messages: [
           {
             From: {
-              Email: "noreply@bureauvlieland.nl",
+              Email: "hallo@bureauvlieland.nl",
               Name: "Bureau Vlieland",
             },
             To: [{ Email: to, Name: toName }],

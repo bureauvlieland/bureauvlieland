@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Centralized sender constants - used by all edge functions
+export const SENDER_EMAIL = "hallo@bureauvlieland.nl";
+export const SENDER_NAME = "Bureau Vlieland";
+
 export interface TemplateVariables {
   [key: string]: string | number | undefined | null;
 }

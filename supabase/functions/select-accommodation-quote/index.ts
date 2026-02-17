@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               Messages: [
                 {
-                  From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                  From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: partnerEmail }],
                   Subject: partnerTemplate?.subject || `${subjectPrefix}Uw offerte voor ${request.customer_name} is geaccepteerd`,
                   HTMLPart: partnerHtml,
@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             Messages: [
               {
-                From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                 To: [{ Email: request.customer_email }],
                 Subject: customerTemplate?.subject || "Bevestiging van uw logies keuze",
                 HTMLPart: customerHtml,
@@ -343,7 +343,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 Messages: [{
-                  From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                  From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: rejectedEmail }],
                   Subject: rejectedTemplate?.subject || `${subjectPrefix}Logiesaanvraag ${sanitizeHtml(request.customer_name)} - niet gekozen`,
                   HTMLPart: rejectedHtml,

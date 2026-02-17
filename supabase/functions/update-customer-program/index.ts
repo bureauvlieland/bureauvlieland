@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
         // Email providers about date change (redirected in test mode)
         for (const [, provider] of providerItems) {
           emailMessages.push({
-            From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+            From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
             Subject: `${subjectPrefix}Datumwijziging aanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
             HTMLPart: `
@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
                 const formattedDeparture = new Date(newDepartureDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 
                 emailMessages.push({
-                  From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                  From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: getRecipientEmail(partner.email, origin), Name: partner.name }],
                   Subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
                   HTMLPart: `
@@ -402,7 +402,7 @@ Deno.serve(async (req) => {
         
         // Customer confirmation (always to real customer email)
         emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
           To: [{ Email: program.customer_email, Name: program.customer_name }],
           Subject: `${subjectPrefix}Datumwijziging bevestigd`,
           HTMLPart: `

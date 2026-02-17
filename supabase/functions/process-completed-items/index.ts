@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
                 },
                 body: JSON.stringify({
                   Messages: [{
-                    From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                    From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                     To: [{ Email: recipientEmail, Name: partner.name }],
                     Subject: `${subjectPrefix}${template.subject}`,
                     HTMLPart: template.body,
@@ -306,7 +306,7 @@ Deno.serve(async (req) => {
                 },
                 body: JSON.stringify({
                   Messages: [{
-                    From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                    From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                     To: [{ Email: recipientEmail, Name: partner.name }],
                     Subject: `${subjectPrefix}${template.subject}`,
                     HTMLPart: template.body,

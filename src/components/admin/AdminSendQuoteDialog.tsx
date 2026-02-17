@@ -54,6 +54,7 @@ export const AdminSendQuoteDialog = ({
 }: AdminSendQuoteDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -69,94 +70,34 @@ export const AdminSendQuoteDialog = ({
     .map((d) => format(new Date(d), "d MMMM yyyy", { locale: nl }))
     .join(", ");
 
-  const replaceVariables = (text: string) => {
+  const getDefaultIntro = () => {
     const validUntilFormatted = format(validUntil, "d MMMM yyyy", { locale: nl });
     const companyName = customerCompany || "u";
+    
+    // Default plain text intro that will be wrapped in HTML by the edge function
+    return `Beste ${customerName},
 
-    // Process conditionals first: {{#if var}}...{{else}}...{{/if}} and {{#if var}}...{{/if}}
-    let result = text;
-    let iterations = 0;
-    while (iterations < 20) {
-      const ifElsePattern = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/;
-      const ifOnlyPattern = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/;
-      const elseMatch = result.match(ifElsePattern);
-      const ifMatch = result.match(ifOnlyPattern);
+Hierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${companyName} samengesteld.
 
-      let matchToProcess: RegExpMatchArray | null = null;
-      let hasElse = false;
+Programmadetails:
+- Data: ${formattedDates}
+- Aantal personen: ${numberOfPeople || ""}
+- Geldig tot: ${validUntilFormatted}
 
-      if (elseMatch && ifMatch) {
-        if ((elseMatch.index ?? Infinity) <= (ifMatch.index ?? Infinity)) {
-          matchToProcess = elseMatch;
-          hasElse = true;
-        } else {
-          matchToProcess = ifMatch;
-        }
-      } else if (elseMatch) {
-        matchToProcess = elseMatch;
-        hasElse = true;
-      } else if (ifMatch) {
-        matchToProcess = ifMatch;
-      }
+U kunt het voorstel bekijken en akkoord geven via de knop in de e-mail. Uiteraard kunnen we het programma qua onderdelen en tijden nog aanpassen.
 
-      if (!matchToProcess) break;
+Heeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.
 
-      const varName = matchToProcess[1];
-      // personal_message is always empty in preview (it's part of the body now)
-      const isTruthy = false; // personal_message block should be removed
-
-      if (hasElse) {
-        result = result.replace(matchToProcess[0], isTruthy ? matchToProcess[2] : matchToProcess[3]);
-      } else {
-        result = result.replace(matchToProcess[0], isTruthy ? matchToProcess[2] : "");
-      }
-      iterations++;
-    }
-
-    // Replace simple variables
-    result = result
-      .replace(/\{\{customer_name\}\}/g, customerName)
-      .replace(/\{\{company_name\}\}/g, companyName)
-      .replace(/\{\{dates\}\}/g, formattedDates)
-      .replace(/\{\{number_of_people\}\}/g, String(numberOfPeople || ""))
-      .replace(/\{\{valid_until\}\}/g, validUntilFormatted)
-      .replace(/\{\{portal_url\}\}/g, portalUrl || "")
-      .replace(/\{\{\w+\}\}/g, ""); // Remove any remaining placeholders
-
-    // Clean up double whitespace from removed conditionals
-    result = result.replace(/\n{3,}/g, "\n\n").trim();
-
-    return result;
+Met vriendelijke groet,
+Erwin Soolsma
+Bureau Vlieland`;
   };
 
-  const loadTemplate = async () => {
-    setIsLoadingTemplate(true);
-    try {
-      const { data: template, error } = await supabase
-        .from("email_templates")
-        .select("subject, body_html")
-        .eq("id", "quote_offer_customer")
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (template) {
-        setEmailSubject(replaceVariables(template.subject));
-        setEmailBody(replaceVariables(template.body_html));
-      } else {
-        // Fallback
-        setEmailSubject("Uw maatwerkvoorstel van Bureau Vlieland");
-        setEmailBody(
-          `Beste ${customerName},\n\nHierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${customerCompany || "u"} samengesteld.\n\nDit voorstel is geldig tot ${format(validUntil, "d MMMM yyyy", { locale: nl })}. U kunt het voorstel bekijken en akkoord geven in uw persoonlijke klantomgeving.\n\nHeeft u vragen over dit voorstel? Neem gerust contact met ons op.\n\nMet vriendelijke groet,\nBureau Vlieland`
-        );
-      }
-    } catch (error) {
-      console.error("Error loading template:", error);
-      toast.error("Fout bij laden e-mailtemplate");
-    } finally {
-      setIsLoadingTemplate(false);
-    }
+  const loadTemplate = () => {
+    // No longer fetching from DB to avoid double HTML wrapping
+    // The edge function now handles the HTML structure
+    setEmailSubject("Uw maatwerkvoorstel van Bureau Vlieland");
+    setEmailBody(getDefaultIntro());
   };
 
   const handleOpen = (open: boolean) => {
@@ -200,6 +141,31 @@ export const AdminSendQuoteDialog = ({
       toast.error("Fout bij versturen offerte");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    setIsSendingTest(true);
+    try {
+      const { error } = await supabase.functions.invoke("send-quote-offer", {
+        body: {
+          requestId,
+          validUntil: format(validUntil, "yyyy-MM-dd"),
+          emailSubject,
+          emailBody,
+          origin: window.location.origin,
+          testRecipient: "erwin@bureauvlieland.nl",
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Testmail verstuurd naar erwin@bureauvlieland.nl");
+    } catch (error) {
+      console.error("Error sending test quote:", error);
+      toast.error("Fout bij versturen testmail");
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -360,26 +326,46 @@ export const AdminSendQuoteDialog = ({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => setIsOpen(false)}
-            disabled={isSending}
-          >
-            Annuleren
-          </Button>
-          <Button onClick={handleSend} disabled={isSending || !emailSubject || !emailBody}>
-            {isSending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Versturen...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Offerte versturen
-              </>
-            )}
-          </Button>
+          <div className="flex w-full justify-between sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              disabled={isSending || isSendingTest}
+            >
+              Annuleren
+            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="secondary" 
+                onClick={handleSendTest} 
+                disabled={isSending || isSendingTest || !emailSubject || !emailBody}
+              >
+                {isSendingTest ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Versturen...
+                  </>
+                ) : (
+                  <>
+                    Testmail versturen
+                  </>
+                )}
+              </Button>
+              <Button onClick={handleSend} disabled={isSending || isSendingTest || !emailSubject || !emailBody}>
+                {isSending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Versturen...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Offerte versturen
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

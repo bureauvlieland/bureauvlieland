@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
       `;
 
       emails.push({
-        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
         Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
         HTMLPart: htmlContent,
@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
     `;
 
     emails.push({
-      From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+      From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: program.customer_email, Name: program.customer_name }],
       Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Uw aanvraag is geannuleerd`,
       HTMLPart: customerHtml,

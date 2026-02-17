@@ -1,6 +1,6 @@
 // Using Deno.serve() instead of deprecated import
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-import { getRenderedTemplate, sanitizeHtml, TemplateIds } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, sanitizeHtml, TemplateIds, SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -203,7 +203,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Email to Bureau Vlieland
       {
         From: {
-          Email: "noreply@bureauvlieland.nl",
+          Email: SENDER_EMAIL,
           Name: "Bureau Vlieland Website"
         },
         To: [
@@ -218,8 +218,8 @@ const handler = async (req: Request): Promise<Response> => {
       // Confirmation email to customer
       {
         From: {
-          Email: "noreply@bureauvlieland.nl",
-          Name: "Bureau Vlieland"
+          Email: SENDER_EMAIL,
+          Name: SENDER_NAME
         },
         To: [
           {

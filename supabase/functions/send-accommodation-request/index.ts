@@ -245,13 +245,13 @@ Deno.serve(async (req) => {
     // Send emails
     await sendEmailViaMailjet([
       {
-        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
         To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin van der Most" }],
         Subject: bureauSubject,
         HTMLPart: bureauEmailHtml,
       },
       {
-        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: request.customer_email, Name: request.customer_name }],
         Subject: customerSubject,
         HTMLPart: customerEmailHtml,

@@ -9,6 +9,8 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   getRenderedTemplate,
+  SENDER_EMAIL,
+  SENDER_NAME,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -31,6 +33,7 @@ const SendQuoteOfferSchema = z.object({
   origin: z.string().optional(),
   pdfStoragePath: z.string().optional(), // Path in quote-documents bucket
   pdfFilename: z.string().optional(),
+  testRecipient: z.string().email().optional(), // Send test email to this address
 });
 
 interface ProgramItem {
@@ -293,9 +296,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { requestId, validUntil, personalMessage, emailSubject, emailBody, origin, pdfStoragePath, pdfFilename } = validationResult.data;
-    const testMode = isTestMode(origin);
-    const subjectPrefix = getSubjectPrefix(origin);
+    const { requestId, validUntil, personalMessage, emailSubject, emailBody, origin, pdfStoragePath, pdfFilename, testRecipient } = validationResult.data;
+    const isTestEmail = !!testRecipient;
+    const testMode = isTestEmail ? false : isTestMode(origin); // Don't double-redirect for test emails
+    const subjectPrefix = isTestEmail ? "[TEST] " : getSubjectPrefix(origin);
 
     console.log(`Sending quote offer for request: ${requestId} [Test mode: ${testMode}]`);
 
@@ -375,16 +379,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       portalUrl
     );
 
-    // Get recipient email (redirect in test mode)
-    const recipientEmail = getRecipientEmail(programRequest.customer_email, origin);
+    // Get recipient email (test email, test mode redirect, or real)
+    const recipientEmail = isTestEmail
+      ? testRecipient!
+      : getRecipientEmail(programRequest.customer_email, origin);
 
     const fullSubject = `${subjectPrefix}${finalSubject}`;
 
     // Build email message
     const emailMessage: any = {
       From: {
-        Email: "noreply@bureauvlieland.nl",
-        Name: "Bureau Vlieland",
+        Email: SENDER_EMAIL,
+        Name: SENDER_NAME,
       },
       To: [
         {
@@ -455,24 +461,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
       },
     });
 
-    // Update program request status
-    const updateData: Record<string, any> = {
-      quote_status: "offerte_verstuurd",
-      quote_sent_at: new Date().toISOString(),
-      quote_valid_until: validUntil,
-      quote_personal_message: emailBody || personalMessage || null,
-    };
-    if (quotePdfPath) {
-      updateData.quote_pdf_path = quotePdfPath;
-    }
+    // Update program request status (skip for test emails)
+    if (!isTestEmail) {
+      const updateData: Record<string, any> = {
+        quote_status: "offerte_verstuurd",
+        quote_sent_at: new Date().toISOString(),
+        quote_valid_until: validUntil,
+        quote_personal_message: emailBody || personalMessage || null,
+      };
+      if (quotePdfPath) {
+        updateData.quote_pdf_path = quotePdfPath;
+      }
 
-    const { error: updateError } = await supabase
-      .from("program_requests")
-      .update(updateData)
-      .eq("id", requestId);
+      const { error: updateError } = await supabase
+        .from("program_requests")
+        .update(updateData)
+        .eq("id", requestId);
 
-    if (updateError) {
-      console.error("Error updating program request status:", updateError);
+      if (updateError) {
+        console.error("Error updating program request status:", updateError);
+      }
+    } else {
+      console.log("[TEST] Skipping program_requests status update for test email");
     }
 
     console.log(`Quote offer sent successfully to ${recipientEmail}`);
