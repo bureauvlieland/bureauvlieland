@@ -155,9 +155,8 @@ export const CustomerProgramItem = ({
                 Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
               </span>
             )}
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 font-semibold text-foreground">
               <Clock className="h-3.5 w-3.5" />
-              {/* Display time priority: confirmed_time > proposed_time (as proposal) > preferred_time */}
               {item.confirmed_time 
                 ? item.confirmed_time
                 : item.proposed_time && (item.status === "confirmed" || item.status === "alternative")
@@ -199,6 +198,14 @@ export const CustomerProgramItem = ({
               </span>
             )}
           </div>
+
+          {/* Inline VAT breakdown */}
+          {!isSelfArranged && item.quoted_price && vatRate !== undefined && (
+            <div className="flex items-center gap-3 mt-1 ml-[76px] text-xs text-muted-foreground">
+              <span>Excl. BTW: €{(item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>BTW ({vatRate}%): €{(item.quoted_price - item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          )}
 
           {/* External booking link for self-arranged items */}
           {isSelfArranged && item.external_url && (
@@ -410,23 +417,6 @@ export const CustomerProgramItem = ({
                 <span className="text-xs text-primary font-medium ml-auto shrink-0">Route →</span>
               </a>
             )}
-            {/* Price details - hidden for self-arranged items */}
-            {!isSelfArranged && item.quoted_price && vatRate !== undefined && (
-              <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Excl. BTW</span>
-                  <span>€{(item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">BTW ({vatRate}%)</span>
-                  <span>€{(item.quoted_price - item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between font-medium pt-1 border-t">
-                  <span>Incl. BTW {item.price_type === "per_person" ? "(per persoon)" : "(totaalprijs)"}</span>
-                  <span>€{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              </div>
-            )}
             {/* Time editing */}
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
@@ -532,7 +522,7 @@ export const CustomerProgramItem = ({
                   onClick={onRemove}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Annuleren
+                  Verwijderen
                 </Button>
               )}
             </div>
