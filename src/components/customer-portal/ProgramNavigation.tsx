@@ -19,12 +19,12 @@ interface ProgramNavigationProps {
 }
 
 export const ProgramNavigation = ({ className, isMultiDay = false }: ProgramNavigationProps) => {
-  const [activeSection, setActiveSection] = useState("program");
+  const [activeSection, setActiveSection] = useState(isMultiDay ? "accommodation" : "program");
 
   // Build sections dynamically based on whether it's multi-day
   const sections: Section[] = [
-    { id: "program", label: "Programma", icon: Calendar },
     ...(isMultiDay ? [{ id: "accommodation", label: "Logies", icon: BedDouble }] : []),
+    { id: "program", label: "Programma", icon: Calendar },
     { id: "billing", label: "Facturatie", icon: FileText },
   ];
 
