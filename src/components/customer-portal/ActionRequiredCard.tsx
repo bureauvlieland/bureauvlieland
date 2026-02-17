@@ -60,7 +60,8 @@ export const ActionRequiredCard = ({
   className,
 }: ActionRequiredCardProps) => {
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
-  const isQuoteAwaitingApproval = programType === "quote" && quoteStatus === "offerte_verstuurd";
+  const isQuotePreApproval = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming", "offerte_verstuurd"].includes(quoteStatus);
+  const isQuoteBeingPrepared = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
 
   const getAction = (): ActionConfig | null => {
     // Priority 1: Alternative proposals need customer action
@@ -92,9 +93,20 @@ export const ActionRequiredCard = ({
       };
     }
 
-    // Priority 3: Pending items waiting for partner confirmation
+    // Priority 3: Quote being prepared by admin (concept/in_afstemming)
+    if (isQuoteBeingPrepared) {
+      return {
+        type: "pending",
+        title: "Uw programma wordt voorbereid",
+        description: "Bureau Vlieland stelt uw programma samen. U ontvangt een bericht zodra het voorstel klaar is om te bekijken.",
+        icon: <Clock className="h-5 w-5" />,
+        variant: "neutral",
+      };
+    }
+
+    // Priority 4: Pending items waiting for partner confirmation
     // Skip when quote is awaiting approval - requests haven't been sent yet
-    if (statusSummary.pending > 0 && !isQuoteAwaitingApproval) {
+    if (statusSummary.pending > 0 && !isQuotePreApproval) {
       return {
         type: "pending",
         title: "Aanvragen verstuurd naar aanbieders",

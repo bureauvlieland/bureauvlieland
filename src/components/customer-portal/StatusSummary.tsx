@@ -16,6 +16,7 @@ interface StatusSummaryProps {
   accommodationStatus?: "none" | "requested" | "selected";
   termsAccepted?: boolean;
   isMultiDay?: boolean;
+  isPreApproval?: boolean;
 }
 
 export const StatusSummary = ({
@@ -31,6 +32,7 @@ export const StatusSummary = ({
   accommodationStatus,
   termsAccepted = false,
   isMultiDay = false,
+  isPreApproval = false,
 }: StatusSummaryProps) => {
   // Derive effective accommodation status: prefer explicit prop, fall back to boolean
   const effectiveAccommodationStatus = accommodationStatus ?? (hasAccommodation ? "selected" : "none");
@@ -92,17 +94,21 @@ export const StatusSummary = ({
             <StatusItem
               icon={activitiesConfirmed 
                 ? <CheckCircle className="h-4 w-4 text-green-600" />
-                : alternative > 0 
-                  ? <AlertCircle className="h-4 w-4 text-amber-500" />
-                  : <Clock className="h-4 w-4 text-amber-500" />
+                : isPreApproval
+                  ? <Clock className="h-4 w-4 text-muted-foreground" />
+                  : alternative > 0 
+                    ? <AlertCircle className="h-4 w-4 text-amber-500" />
+                    : <Clock className="h-4 w-4 text-amber-500" />
               }
               label={activitiesConfirmed
                 ? `Bevestigd (${total}/${total})`
-                : alternative > 0
-                  ? `Alternatief bekijken (${confirmed}/${total})`
-                  : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
+                : isPreApproval
+                  ? `In voorbereiding (${total} onderdelen)`
+                  : alternative > 0
+                    ? `Alternatief bekijken (${confirmed}/${total})`
+                    : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
               }
-              color={activitiesConfirmed ? "green" : "amber"}
+              color={activitiesConfirmed ? "green" : isPreApproval ? "muted" : "amber"}
             />
           </div>
 

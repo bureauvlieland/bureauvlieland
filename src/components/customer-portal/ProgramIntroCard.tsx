@@ -27,6 +27,7 @@ export const ProgramIntroCard = ({
 
   const isQuoteMode = programType === "quote";
   const isAwaitingApproval = isQuoteMode && quoteStatus === "offerte_verstuurd";
+  const isBeingPrepared = isQuoteMode && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
   const isConfirmed = !!termsAcceptedAt || quoteStatus === "definitief_bevestigd" || quoteStatus === "akkoord_ontvangen";
 
   const validUntil = quoteValidUntil ? new Date(quoteValidUntil) : null;
@@ -41,6 +42,19 @@ export const ProgramIntroCard = ({
       setIsLoading(false);
     }
   };
+
+  // Quote being prepared by admin
+  if (isBeingPrepared) {
+    return (
+      <Card className="border-muted bg-muted/30">
+        <CardContent className="p-5">
+          <p className="text-sm text-foreground leading-relaxed">
+            Bureau Vlieland stelt uw programma samen. U ontvangt een bericht zodra het voorstel klaar is om te bekijken.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Expired quote
   if (isAwaitingApproval && isExpired && validUntil) {
