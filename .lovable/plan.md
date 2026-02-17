@@ -1,84 +1,79 @@
 
 
-# Plan: Admin-gestuurde partner-notificaties bij maatwerk-programma's
+# Fix: Partner e-mails worden niet verstuurd - ontbrekende provider_email
 
-## Overzicht
+## Probleem
 
-Dit plan combineert het eerder goedgekeurde plan (accept-quote-proposal aanroepen bij admin-akkoord) met een uitbreiding: de mogelijkheid om na het initiële akkoord nog items toe te voegen en die **apart** naar partners te versturen wanneer de admin klaar is.
+De edge function `accept-quote-proposal` vindt 2 items maar groepeert ze in 0 partner-groepen. Dit komt doordat `provider_email` op de items `NULL` is.
 
-## Huidige situatie
+**Oorzaak**: Wanneer een admin een activiteit toevoegt via AdminAddActivitySheet, wordt `provider_email` opgehaald via `selectedBlock.provider?.email`. Maar de building blocks query haalt alleen `(id, name)` op van de partner -- niet `email`. Daardoor is `provider?.email` altijd `undefined` en wordt het item opgeslagen met `provider_email: null`.
 
-- Nieuwe items worden altijd toegevoegd met `skip_partner_notification: true` -- partners worden dus niet direct op de hoogte gebracht
-- Er is geen manier om na het initiële akkoord alsnog notificaties te versturen voor later toegevoegde items
-- De quote-status dropdown doet alleen een database-update, zonder de accept-flow te triggeren
+In de edge function skipt `groupItemsByProvider()` items zonder `provider_email`, waardoor er geen partner-groepen ontstaan en geen e-mails worden verstuurd.
 
-## Wijzigingen
+## Oplossing (twee onderdelen)
 
-### 1. accept-quote-proposal edge function -- admin-modus
+### 1. Building blocks query: email toevoegen aan partner join
 
-Uitbreiden zodat de functie ook door de admin kan worden aangeroepen:
-- Accepteer optionele `request_id` en `admin_override` parameters
-- Bij admin-override: programma ophalen via `request_id`, quote_status-check overslaan
-- Actor in history-log instellen op "admin"
-- Herbruikbaar voor zowel het initiële akkoord als het later versturen van nieuwe items
+In `src/hooks/useBuildingBlocks.ts` wordt de partner join uitgebreid van `(id, name)` naar `(id, name, email)`. Dit zorgt ervoor dat nieuwe items voortaan correct worden opgeslagen met de partner e-mail.
 
-### 2. AdminRequestDetail.tsx -- quote-status naar akkoord
+Betreft 3 plekken in het bestand:
+- `useAdminBuildingBlocks` (regel 40)
+- `useBuildingBlock` (regel 61)
+- Eventuele andere queries die dezelfde join gebruiken
 
-Bij het wijzigen van de quote-status naar `akkoord_ontvangen`:
-- Roep de `accept-quote-proposal` edge function aan (met `admin_override` en `request_id`)
-- Dit verstuurt automatisch alle items met `skip_partner_notification: true` naar partners
+### 2. Edge function: partner e-mail opzoeken als fallback
 
-### 3. AdminRequestDetail.tsx -- "Verstuur naar partners" knop
+In `accept-quote-proposal/index.ts` wordt `groupItemsByProvider()` aangepast zodat items zonder `provider_email` niet worden overgeslagen, maar de e-mail wordt opgezocht in de `partners` tabel. Dit maakt de functie robuust voor bestaande items die al zonder e-mail in de database staan.
 
-Na het akkoord kunnen er nieuwe items worden toegevoegd. Daarvoor:
-- Toon een banner/knop wanneer er items zijn met `skip_partner_notification: true` en de quote_status al `akkoord_ontvangen` is
-- Tekst: "Er zijn X nieuwe onderdelen die nog niet naar partners zijn verstuurd"
-- Knop: "Verstuur naar partners" -- roept dezelfde edge function aan
-- Na het versturen verdwijnt de banner
+De aangepaste flow:
+1. Verzamel alle unieke `provider_id`'s van items (exclusief "bureau")
+2. Haal de e-mails op uit de `partners` tabel in een enkele query
+3. Gebruik de partner e-mail uit de database, met `provider_email` van het item als fallback
 
-### 4. Klantportaal communicatie (eerder goedgekeurd plan)
+### 3. Bestaande items repareren
 
-De eerder goedgekeurde wijzigingen voor de klantpagina blijven ongewijzigd:
-- ActionRequiredCard: "Uw programma wordt voorbereid" bij concept/in_afstemming
-- ProgramIntroCard: Bureau Vlieland-tekst bij pre-approval
-- StatusSummary: "In voorbereiding" bij pre-approval statussen
+De 2 items van BV-2602-0006 hebben nu `provider_email: null`. Na de fix in de edge function worden deze automatisch correct afgehandeld bij de volgende "Verstuur naar partners" actie, omdat de edge function de e-mails dan opzoekt in de partners tabel.
+
+## Bestanden die worden gewijzigd
+
+- `src/hooks/useBuildingBlocks.ts` -- email toevoegen aan partner join (preventief)
+- `supabase/functions/accept-quote-proposal/index.ts` -- partner e-mail lookup als fallback (fix voor bestaande + toekomstige items)
 
 ## Technische details
 
-### Edge function wijzigingen (accept-quote-proposal/index.ts)
-
-Schema uitbreiden:
+**useBuildingBlocks.ts** wijziging:
 ```typescript
-const AcceptQuoteSchema = z.object({
-  token: z.string().optional(),
-  request_id: z.string().optional(),
-  admin_override: z.boolean().optional(),
-  origin: z.string().optional(),
-}).refine(d => d.token || d.request_id, {
-  message: "token of request_id is verplicht"
-});
+// Was:
+provider:partners!building_blocks_provider_id_fkey(id, name)
+// Wordt:
+provider:partners!building_blocks_provider_id_fkey(id, name, email)
 ```
 
-Programma ophalen:
-- Bij `admin_override + request_id`: ophalen via `.eq("id", request_id)` in plaats van via token
-- Quote_status validatie overslaan bij admin_override
-- Bij admin_override: quote_status NIET wijzigen als die al `akkoord_ontvangen` is (zodat herhaald aanroepen voor nieuwe items werkt)
-
-### AdminRequestDetail.tsx wijzigingen
-
-1. `handleQuoteStatusChange`: bij `akkoord_ontvangen` de edge function aanroepen via `supabase.functions.invoke()`
-2. Nieuwe state: `pendingPartnerItems` -- items met `skip_partner_notification: true`
-3. Banner component met "Verstuur naar partners" knop (alleen zichtbaar wanneer `quote_status === "akkoord_ontvangen"` en er onverstuurde items zijn)
-4. Handler `handleSendToPartners` die dezelfde edge function aanroept
-
-### Bestanden die worden gewijzigd
-
-- `supabase/functions/accept-quote-proposal/index.ts` -- admin-modus toevoegen
-- `src/pages/admin/AdminRequestDetail.tsx` -- quote-status handler + verstuur-banner
-- `src/components/customer-portal/ActionRequiredCard.tsx` -- pre-approval states (reeds goedgekeurd)
-- `src/components/customer-portal/ProgramIntroCard.tsx` -- pre-approval tekst (reeds goedgekeurd)
-- `src/components/customer-portal/StatusSummary.tsx` -- isPreApproval prop (reeds goedgekeurd)
-- `src/components/customer-portal/ProgramSidebar.tsx` -- isPreApproval doorgeven (reeds goedgekeurd)
-- `src/components/customer-portal/DesktopProgramView.tsx` -- isPreApproval doorgeven (reeds goedgekeurd)
-
-Geen database-wijzigingen nodig.
+**accept-quote-proposal/index.ts** wijziging in `groupItemsByProvider`:
+```typescript
+// Functie wordt async en accepteert supabase client
+async function groupItemsByProvider(items, supabase) {
+  // 1. Verzamel unieke provider IDs (exclusief bureau)
+  const providerIds = [...new Set(
+    items.filter(i => i.provider_id && i.provider_id !== "bureau")
+         .map(i => i.provider_id)
+  )];
+  
+  // 2. Haal emails op uit partners tabel
+  const { data: partners } = await supabase
+    .from("partners")
+    .select("id, name, email")
+    .in("id", providerIds);
+  
+  const partnerMap = new Map(partners?.map(p => [p.id, p]) || []);
+  
+  // 3. Groepeer items met partner email uit DB
+  for (const item of items) {
+    if (item.provider_id === "bureau") continue;
+    const partner = partnerMap.get(item.provider_id);
+    const email = item.provider_email || partner?.email;
+    if (!email) continue;
+    // ... rest van groupering
+  }
+}
+```
