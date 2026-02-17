@@ -77,15 +77,6 @@ export const CustomerProgramItem = ({
     image_asset: item.image_asset,
   } as BuildingBlock);
   
-  // Get available alternative times from status note (if any)
-  const getAlternativeTimes = () => {
-    if (item.status !== "alternative" || !item.status_note) return [];
-    // Parse times from status note like "Beschikbaar om 10:00 of 16:00"
-    const timeMatches = item.status_note.match(/\d{1,2}:\d{2}/g);
-    return timeMatches || [];
-  };
-  
-  const alternativeTimes = getAlternativeTimes();
 
   return (
     <Card className={cn(
@@ -224,7 +215,7 @@ export const CustomerProgramItem = ({
           
           {/* Quoted price notes from partner */}
           {!isSelfArranged && item.quoted_price && item.quoted_notes && (
-            <p className="mt-1 text-xs text-muted-foreground italic">
+            <p className="mt-1 ml-[76px] text-xs text-muted-foreground italic">
               {item.quoted_notes}
             </p>
           )}
@@ -232,7 +223,7 @@ export const CustomerProgramItem = ({
           {/* Status note from provider */}
           {item.status_note && (
             <div className={cn(
-              "mt-3 p-3 rounded-lg text-sm",
+              "mt-3 ml-[76px] p-3 rounded-lg text-sm",
               statusConfig.bgColor
             )}>
               <div className="flex items-start gap-2">
@@ -244,82 +235,10 @@ export const CustomerProgramItem = ({
               </div>
             </div>
           )}
-          
-          {/* Accept action for confirmed OR alternative items - shows if not yet accepted by customer */}
-          {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
-            <div className={cn(
-              "mt-3 p-4 rounded-lg border",
-              item.status === "confirmed" 
-                ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
-                : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900"
-            )}>
-              <div className="flex-1 mb-3">
-                <p className={cn(
-                  "font-medium",
-                  item.status === "confirmed" 
-                    ? "text-green-800 dark:text-green-300"
-                    : "text-amber-800 dark:text-amber-300"
-                )}>
-                  {item.status === "confirmed" 
-                    ? "Bevestigd door aanbieder" 
-                    : "Alternatief voorstel van aanbieder"}
-                </p>
-                {item.proposed_time && (
-                  <p className={cn(
-                    "text-sm mt-0.5",
-                    item.status === "confirmed"
-                      ? "text-green-700/80 dark:text-green-400/80"
-                      : "text-amber-700/80 dark:text-amber-400/80"
-                  )}>
-                    Voorgestelde tijd: {item.proposed_time}
-                  </p>
-                )}
-                {item.quoted_price && (
-                  <p className={cn(
-                    "text-sm mt-0.5",
-                    item.status === "confirmed"
-                      ? "text-green-700/80 dark:text-green-400/80"
-                      : "text-amber-700/80 dark:text-amber-400/80"
-                  )}>
-                    Totaalprijs: €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={async () => {
-                    setLocalAccepting(true);
-                    await onAccept();
-                    setLocalAccepting(false);
-                  }}
-                  disabled={localAccepting || isAccepting}
-                  size="sm"
-                >
-                  {localAccepting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 mr-2" />
-                  )}
-                  Akkoord
-                </Button>
-                {onCounterProposal && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCounterDialog(true)}
-                    disabled={localAccepting || isAccepting}
-                  >
-                    <ArrowLeftRight className="h-4 w-4 mr-2" />
-                    Andere tijd voorstellen
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Counter proposal pending - waiting for partner response */}
           {item.status === "counter_proposed" && (
-            <div className="mt-3 p-4 rounded-lg border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
+            <div className="mt-3 ml-[76px] p-3 rounded-lg border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
               <div className="flex items-start gap-2">
                 <ArrowLeftRight className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
                 <div>
@@ -341,52 +260,83 @@ export const CustomerProgramItem = ({
 
           {/* Show accepted badge if customer has accepted */}
           {item.customer_accepted_at && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+            <div className="mt-2 ml-[76px] flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4" />
               <span>U hebt akkoord gegeven op dit voorstel</span>
             </div>
           )}
-          
-          {/* Alternative actions */}
-          {item.status === "alternative" && alternativeTimes.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {alternativeTimes.map((time) => (
+
+          {/* Always-visible action row */}
+          {item.status !== "cancelled" && item.status !== "counter_proposed" && (
+            <div className="mt-3 ml-[76px] flex flex-wrap gap-2">
+              {/* Akkoord - for confirmed/alternative items not yet accepted */}
+              {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
                 <Button
-                  key={time}
+                  onClick={async () => {
+                    setLocalAccepting(true);
+                    await onAccept();
+                    setLocalAccepting(false);
+                  }}
+                  disabled={localAccepting || isAccepting}
                   size="sm"
-                  variant="outline"
-                  onClick={() => onUpdate({ preferred_time: time, status: "pending" })}
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Accepteer {time}
+                  {localAccepting ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-1.5" />
+                  )}
+                  Akkoord
                 </Button>
-              ))}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setIsEditingTime(true)}
-              >
-                Andere tijd kiezen
-              </Button>
-            </div>
-          )}
-          
-          {/* Unavailable actions */}
-          {item.status === "unavailable" && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsEditingTime(true)}
-              >
-                Andere tijd/dag kiezen
-              </Button>
+              )}
+
+              {/* Andere tijd - for confirmed/alternative not yet accepted */}
+              {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onCounterProposal && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCounterDialog(true)}
+                  disabled={localAccepting || isAccepting}
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-1.5" />
+                  Andere tijd
+                </Button>
+              )}
+
+              {/* Tijd wijzigen - for pending, unavailable, or already accepted items */}
+              {(item.status === "pending" || item.status === "unavailable" || item.customer_accepted_at) && !isSelfArranged && (
+                item.customer_accepted_at && onCounterProposal ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCounterDialog(true)}
+                  >
+                    <Edit2 className="h-4 w-4 mr-1.5" />
+                    Tijd wijzigen
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditingTime(true);
+                      setIsOpen(true);
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4 mr-1.5" />
+                    Tijd wijzigen
+                  </Button>
+                )
+              )}
+
+              {/* Verwijderen */}
               <Button
                 size="sm"
                 variant="ghost"
                 className="text-destructive hover:text-destructive"
                 onClick={onRemove}
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Trash2 className="h-4 w-4 mr-1.5" />
                 Verwijderen
               </Button>
             </div>
@@ -510,21 +460,6 @@ export const CustomerProgramItem = ({
                 className="mt-1.5"
                 rows={2}
               />
-            </div>
-            
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
-              {item.status !== "cancelled" && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  onClick={onRemove}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Verwijderen
-                </Button>
-              )}
             </div>
           </CollapsibleContent>
         </CardContent>
