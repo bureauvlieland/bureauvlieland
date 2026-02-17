@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,8 +23,6 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 import { timeSlots } from "@/types/buildingBlock";
-import { getBlockImage } from "@/lib/buildingBlockUtils";
-import type { BuildingBlock } from "@/types/buildingBlock";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -71,33 +68,16 @@ export const CustomerProgramItem = ({
   const isNewlyAdded = item.status === "pending" && 
     new Date(item.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
   
-  // Get image URL using the utility function
-  const imageUrl = getBlockImage({
-    image_url: item.image_url,
-    image_asset: item.image_asset,
-  } as BuildingBlock);
-  
 
   return (
-    <Card className={cn(
-      "transition-all",
+    <div className={cn(
+      "transition-all rounded-lg border bg-card p-4",
       hasChanges && "ring-2 ring-primary/50",
       item.status === "cancelled" && "opacity-60"
     )}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardContent className="p-4">
-          {/* Header row with image */}
+          {/* Header row */}
           <div className="flex items-start gap-3">
-            {/* Thumbnail */}
-            <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
-              <img
-                src={imageUrl}
-                alt={item.block_name}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -138,15 +118,16 @@ export const CustomerProgramItem = ({
             </CollapsibleTrigger>
           </div>
           
-          {/* Meta row - offset to align with content (after image) */}
-          <div className="flex items-center gap-4 mt-2 ml-[76px] text-sm text-muted-foreground flex-wrap">
+          {/* Meta row */}
+          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
             {currentDate && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
               </span>
             )}
-            <span className="flex items-center gap-1 font-semibold text-foreground">
+            {/* Time - only on mobile (desktop shows it in timeline column) */}
+            <span className="flex items-center gap-1 font-semibold text-foreground md:hidden">
               <Clock className="h-3.5 w-3.5" />
               {item.confirmed_time 
                 ? item.confirmed_time
@@ -192,7 +173,7 @@ export const CustomerProgramItem = ({
 
           {/* Inline VAT breakdown */}
           {!isSelfArranged && item.quoted_price && vatRate !== undefined && (
-            <div className="flex items-center gap-3 mt-1 ml-[76px] text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
               <span>Excl. BTW: €{(item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               <span>BTW ({vatRate}%): €{(item.quoted_price - item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
@@ -200,7 +181,7 @@ export const CustomerProgramItem = ({
 
           {/* External booking link for self-arranged items */}
           {isSelfArranged && item.external_url && (
-            <div className="mt-2 ml-[76px]">
+            <div className="mt-2">
               <a
                 href={item.external_url!}
                 target="_blank"
@@ -215,7 +196,7 @@ export const CustomerProgramItem = ({
           
           {/* Quoted price notes from partner */}
           {!isSelfArranged && item.quoted_price && item.quoted_notes && (
-            <p className="mt-1 ml-[76px] text-xs text-muted-foreground italic">
+            <p className="mt-1 text-xs text-muted-foreground italic">
               {item.quoted_notes}
             </p>
           )}
@@ -223,7 +204,7 @@ export const CustomerProgramItem = ({
           {/* Status note from provider */}
           {item.status_note && (
             <div className={cn(
-              "mt-3 ml-[76px] p-3 rounded-lg text-sm",
+              "mt-3 p-3 rounded-lg text-sm",
               statusConfig.bgColor
             )}>
               <div className="flex items-start gap-2">
@@ -238,7 +219,7 @@ export const CustomerProgramItem = ({
 
           {/* Counter proposal pending - waiting for partner response */}
           {item.status === "counter_proposed" && (
-            <div className="mt-3 ml-[76px] p-3 rounded-lg border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
+            <div className="mt-3 p-3 rounded-lg border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
               <div className="flex items-start gap-2">
                 <ArrowLeftRight className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
                 <div>
@@ -260,7 +241,7 @@ export const CustomerProgramItem = ({
 
           {/* Show accepted badge if customer has accepted */}
           {item.customer_accepted_at && (
-            <div className="mt-2 ml-[76px] flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+            <div className="mt-2 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4" />
               <span>U hebt akkoord gegeven op dit voorstel</span>
             </div>
@@ -268,7 +249,7 @@ export const CustomerProgramItem = ({
 
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && (
-            <div className="mt-3 ml-[76px] flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2 justify-end">
               {/* Akkoord - for confirmed/alternative items not yet accepted */}
               {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
                 <Button
@@ -462,7 +443,6 @@ export const CustomerProgramItem = ({
               />
             </div>
           </CollapsibleContent>
-        </CardContent>
       </Collapsible>
 
       {/* Counter Proposal Dialog */}
@@ -475,6 +455,6 @@ export const CustomerProgramItem = ({
           allItems={allItems}
         />
       )}
-    </Card>
+    </div>
   );
 };
