@@ -229,6 +229,8 @@ export const MobileProgramView = ({
         onOpenBilling={onOpenBilling}
         onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
         onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
+        programType={program.program_type}
+        quoteStatus={program.quote_status}
       />
 
       {/* 3. Intro card - context-aware explanation */}

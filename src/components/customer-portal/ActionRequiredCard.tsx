@@ -27,6 +27,8 @@ interface ActionRequiredCardProps {
   onOpenBilling: () => void;
   onScrollToTerms?: () => void;
   onScrollToAccommodation?: () => void;
+  programType?: string;
+  quoteStatus?: string | null;
   className?: string;
 }
 
@@ -53,9 +55,12 @@ export const ActionRequiredCard = ({
   onOpenBilling,
   onScrollToTerms,
   onScrollToAccommodation,
+  programType,
+  quoteStatus,
   className,
 }: ActionRequiredCardProps) => {
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
+  const isQuoteAwaitingApproval = programType === "quote" && quoteStatus === "offerte_verstuurd";
 
   const getAction = (): ActionConfig | null => {
     // Priority 1: Alternative proposals need customer action
@@ -88,7 +93,8 @@ export const ActionRequiredCard = ({
     }
 
     // Priority 3: Pending items waiting for partner confirmation
-    if (statusSummary.pending > 0) {
+    // Skip when quote is awaiting approval - requests haven't been sent yet
+    if (statusSummary.pending > 0 && !isQuoteAwaitingApproval) {
       return {
         type: "pending",
         title: "Aanvragen verstuurd naar aanbieders",
