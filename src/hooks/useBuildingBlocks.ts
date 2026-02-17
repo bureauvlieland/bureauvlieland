@@ -37,7 +37,7 @@ export const useAdminBuildingBlocks = () => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners!building_blocks_provider_id_fkey(id, name)
+          provider:partners!building_blocks_provider_id_fkey(id, name, email)
         `)
         .order("category")
         .order("sort_order");
@@ -58,7 +58,7 @@ export const useBuildingBlock = (id: string | undefined) => {
         .from("building_blocks")
         .select(`
           *,
-          provider:partners!building_blocks_provider_id_fkey(id, name)
+          provider:partners!building_blocks_provider_id_fkey(id, name, email)
         `)
         .eq("id", id)
         .maybeSingle();
