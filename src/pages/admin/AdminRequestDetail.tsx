@@ -56,6 +56,7 @@ import {
   Ban,
   Sparkles,
   Plus,
+  Send,
   Pencil,
   Layers,
   Save,
@@ -155,6 +156,8 @@ interface ProgramRequestItem {
   admin_price_notes: string | null;
   // Price type
   price_type: string | null;
+  // Partner notification flag
+  skip_partner_notification: boolean | null;
 }
 
 interface HistoryEntry {
@@ -194,6 +197,7 @@ const AdminRequestDetail = () => {
   const [addCostOpen, setAddCostOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isSendingToPartners, setIsSendingToPartners] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -427,12 +431,23 @@ const AdminRequestDetail = () => {
 
   const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
     try {
-      const { error } = await supabase
-        .from("program_requests")
-        .update({ quote_status: newStatus })
-        .eq("id", request.id);
-
-      if (error) throw error;
+      if (newStatus === "akkoord_ontvangen") {
+        // Trigger the full accept flow including partner notifications
+        const { error } = await supabase.functions.invoke("accept-quote-proposal", {
+          body: {
+            request_id: request.id,
+            admin_override: true,
+            origin: window.location.origin,
+          },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("program_requests")
+          .update({ quote_status: newStatus })
+          .eq("id", request.id);
+        if (error) throw error;
+      }
 
       await logAdminActivity({
         action: "quote_status_changed",
@@ -441,11 +456,42 @@ const AdminRequestDetail = () => {
         details: { old_status: request.quote_status, new_status: newStatus },
       });
 
-      toast.success("Offerte-status bijgewerkt");
+      toast.success(
+        newStatus === "akkoord_ontvangen"
+          ? "Akkoord verwerkt — partners zijn op de hoogte gebracht"
+          : "Offerte-status bijgewerkt"
+      );
       fetchRequestData();
     } catch (error) {
       console.error("Error updating quote status:", error);
       toast.error("Fout bij bijwerken status");
+    }
+  };
+
+  const pendingPartnerItems = items.filter(
+    (item) => item.status !== "cancelled" && item.skip_partner_notification === true
+  );
+
+  const handleSendToPartners = async () => {
+    if (!request) return;
+    setIsSendingToPartners(true);
+    try {
+      const { error } = await supabase.functions.invoke("accept-quote-proposal", {
+        body: {
+          request_id: request.id,
+          admin_override: true,
+          origin: window.location.origin,
+        },
+      });
+      if (error) throw error;
+
+      toast.success(`${pendingPartnerItems.length} onderde${pendingPartnerItems.length === 1 ? "el" : "len"} naar partners verstuurd`);
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error sending to partners:", error);
+      toast.error("Fout bij versturen naar partners");
+    } finally {
+      setIsSendingToPartners(false);
     }
   };
 
@@ -830,7 +876,35 @@ const AdminRequestDetail = () => {
             selectedDates={request.selected_dates as string[]}
           />
 
-          {/* Tabs */}
+          {/* Pending partner notification banner */}
+          {isQuoteMode && request.quote_status === "akkoord_ontvangen" && pendingPartnerItems.length > 0 && (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <Send className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-900">
+                        {pendingPartnerItems.length} {pendingPartnerItems.length === 1 ? "onderdeel is" : "onderdelen zijn"} nog niet naar partners verstuurd
+                      </p>
+                      <p className="text-sm text-amber-700">
+                        Pas tijden en details aan en verstuur wanneer gereed.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleSendToPartners}
+                    disabled={isSendingToPartners}
+                    className="shrink-0"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {isSendingToPartners ? "Versturen..." : "Verstuur naar partners"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs defaultValue="activiteiten" className="space-y-4">
             <TabsList>
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>

@@ -20,8 +20,12 @@ const corsHeaders = {
 };
 
 const AcceptQuoteSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().optional(),
+  request_id: z.string().optional(),
+  admin_override: z.boolean().optional(),
   origin: z.string().optional(),
+}).refine(d => d.token || d.request_id, {
+  message: "token of request_id is verplicht",
 });
 
 interface ProgramItem {
@@ -248,18 +252,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { token, origin } = validationResult.data;
+    const { token, request_id, admin_override, origin } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
+    const isAdmin = !!admin_override;
 
-    console.log(`Accepting quote proposal for token: ${token.substring(0, 8)}... [Test mode: ${testMode}]`);
+    console.log(`Accepting quote proposal [admin: ${isAdmin}] [Test mode: ${testMode}]`);
 
-    // 1. Fetch the program by token
-    const { data: program, error: programError } = await supabase
-      .from("program_requests")
-      .select("*")
-      .eq("customer_token", token)
-      .single();
+    // 1. Fetch the program by token or request_id
+    let programQuery = supabase.from("program_requests").select("*");
+    if (isAdmin && request_id) {
+      programQuery = programQuery.eq("id", request_id);
+    } else if (token) {
+      programQuery = programQuery.eq("customer_token", token);
+    } else {
+      return new Response(
+        JSON.stringify({ error: "token of request_id is verplicht" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: program, error: programError } = await programQuery.single();
 
     if (programError || !program) {
       console.error("Program not found:", programError);
@@ -272,28 +285,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 2. Validate quote status
-    if (program.quote_status !== "offerte_verstuurd") {
-      return new Response(
-        JSON.stringify({
-          error: "Dit voorstel kan niet meer geaccepteerd worden",
-          currentStatus: program.quote_status,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // 3. Check validity date
-    if (program.quote_valid_until) {
-      const validUntil = new Date(program.quote_valid_until);
-      if (validUntil < new Date()) {
+    // 2. Validate quote status (skip for admin override)
+    if (!isAdmin) {
+      if (program.quote_status !== "offerte_verstuurd") {
         return new Response(
           JSON.stringify({
-            error: "Dit voorstel is verlopen",
-            validUntil: program.quote_valid_until,
+            error: "Dit voorstel kan niet meer geaccepteerd worden",
+            currentStatus: program.quote_status,
           }),
           {
             status: 400,
@@ -301,20 +299,39 @@ Deno.serve(async (req: Request): Promise<Response> => {
           }
         );
       }
+
+      // 3. Check validity date (only for customer)
+      if (program.quote_valid_until) {
+        const validUntil = new Date(program.quote_valid_until);
+        if (validUntil < new Date()) {
+          return new Response(
+            JSON.stringify({
+              error: "Dit voorstel is verlopen",
+              validUntil: program.quote_valid_until,
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+      }
     }
 
-    // 4. Update quote_status to akkoord_ontvangen
-    const { error: updateProgramError } = await supabase
-      .from("program_requests")
-      .update({
-        quote_status: "akkoord_ontvangen",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", program.id);
+    // 4. Update quote_status to akkoord_ontvangen (skip if already set for admin re-runs)
+    if (!(isAdmin && program.quote_status === "akkoord_ontvangen")) {
+      const { error: updateProgramError } = await supabase
+        .from("program_requests")
+        .update({
+          quote_status: "akkoord_ontvangen",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", program.id);
 
-    if (updateProgramError) {
-      console.error("Error updating program status:", updateProgramError);
-      throw updateProgramError;
+      if (updateProgramError) {
+        console.error("Error updating program status:", updateProgramError);
+        throw updateProgramError;
+      }
     }
 
     // 5. Fetch items with skip_partner_notification = true
@@ -436,70 +453,74 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // 9. Log history entry
     await supabase.from("program_request_history").insert({
       request_id: program.id,
-      action: "quote_accepted",
-      actor: "customer",
-      actor_name: program.customer_name,
-      notes: `Klant heeft voorstel geaccepteerd. ${partnerGroups.size} partner(s) genotificeerd.`,
+      action: isAdmin ? "admin_sent_to_partners" : "quote_accepted",
+      actor: isAdmin ? "admin" : "customer",
+      actor_name: isAdmin ? "Admin" : program.customer_name,
+      notes: isAdmin
+        ? `Admin heeft ${partnerGroups.size} partner(s) genotificeerd over ${items?.length || 0} item(s).`
+        : `Klant heeft voorstel geaccepteerd. ${partnerGroups.size} partner(s) genotificeerd.`,
     });
 
-    // 10. Send confirmation email to customer
-    const customerEmailHtml = generateCustomerConfirmationEmail(
-      program,
-      partnerGroups.size,
-      customerPortalUrl
-    );
-    const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
+    // 10. Send confirmation email to customer (only for customer-initiated acceptance)
+    if (!isAdmin) {
+      const customerEmailHtml = generateCustomerConfirmationEmail(
+        program,
+        partnerGroups.size,
+        customerPortalUrl
+      );
+      const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
 
-    try {
-      const customerMailjetResponse = await sendEmailViaMailjet([
-        {
-          From: {
-            Email: "hallo@bureauvlieland.nl",
-            Name: "Bureau Vlieland",
-          },
-          To: [
-            {
-              Email: customerRecipientEmail,
-              Name: program.customer_name,
+      try {
+        const customerMailjetResponse = await sendEmailViaMailjet([
+          {
+            From: {
+              Email: "hallo@bureauvlieland.nl",
+              Name: "Bureau Vlieland",
             },
-          ],
-          Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          HTMLPart: customerEmailHtml,
-        },
-      ]);
+            To: [
+              {
+                Email: customerRecipientEmail,
+                Name: program.customer_name,
+              },
+            ],
+            Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+            HTMLPart: customerEmailHtml,
+          },
+        ]);
 
-      await logEmail({
-        email_type: "quote_accepted_customer",
-        subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-        recipient_email: customerRecipientEmail,
-        recipient_name: program.customer_name,
-        related_request_id: program.id,
-        status: "sent",
-        mailjet_message_id:
-          customerMailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
-        sent_by: "system",
-        metadata: {
-          partner_count: partnerGroups.size,
-          test_mode: testMode,
-        },
-      });
+        await logEmail({
+          email_type: "quote_accepted_customer",
+          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+          recipient_email: customerRecipientEmail,
+          recipient_name: program.customer_name,
+          related_request_id: program.id,
+          status: "sent",
+          mailjet_message_id:
+            customerMailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
+          sent_by: "system",
+          metadata: {
+            partner_count: partnerGroups.size,
+            test_mode: testMode,
+          },
+        });
 
-      console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
-    } catch (customerEmailError) {
-      console.error("Error sending customer confirmation:", customerEmailError);
-      await logEmail({
-        email_type: "quote_accepted_customer",
-        subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-        recipient_email: customerRecipientEmail,
-        recipient_name: program.customer_name,
-        related_request_id: program.id,
-        status: "failed",
-        error_message:
-          customerEmailError instanceof Error
-            ? customerEmailError.message
-            : "Unknown error",
-        sent_by: "system",
-      });
+        console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
+      } catch (customerEmailError) {
+        console.error("Error sending customer confirmation:", customerEmailError);
+        await logEmail({
+          email_type: "quote_accepted_customer",
+          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+          recipient_email: customerRecipientEmail,
+          recipient_name: program.customer_name,
+          related_request_id: program.id,
+          status: "failed",
+          error_message:
+            customerEmailError instanceof Error
+              ? customerEmailError.message
+              : "Unknown error",
+          sent_by: "system",
+        });
+      }
     }
 
     console.log(`Quote acceptance completed for ${program.reference_number}`);
