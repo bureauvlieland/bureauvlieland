@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { AcceptQuoteProposalCard } from "./AcceptQuoteProposalCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
-import { CustomerProgramItem } from "./CustomerProgramItem";
+import { CustomerTimeline } from "./CustomerTimeline";
 import { AddActivitySheet } from "./AddActivitySheet";
 import { PaymentStatusCard } from "./PaymentStatusCard";
 import { AccommodationSection } from "./AccommodationSection";
@@ -18,7 +18,10 @@ import { AccommodationSection } from "./AccommodationSection";
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
+import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
+import { useProgramStatus } from "@/hooks/useProgramStatus";
 import {
   Calendar,
   FileText,
@@ -39,7 +42,6 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
-import { supabase } from "@/integrations/supabase/client";
 import { calculateExclVat } from "@/lib/appSettings";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
 
@@ -137,68 +139,19 @@ export const MobileProgramView = ({
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
-  // Fetch VAT rates per building block
-  const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
-  useEffect(() => {
-    const blockIds = program.items.map(i => i.block_id).filter(Boolean) as string[];
-    if (blockIds.length === 0) return;
-    supabase
-      .from("building_blocks")
-      .select("id, vat_rate")
-      .in("id", blockIds)
-      .then(({ data }) => {
-        if (data) {
-          const map: Record<string, number> = {};
-          data.forEach(b => { map[b.id] = b.vat_rate ?? 21; });
-          setVatRateMap(map);
-        }
-      });
-  }, [program.items]);
-
-  const getItemVatRate = (item: ProgramRequestItem): number => {
-    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
-      return vatRateMap[item.block_id];
-    }
-    return 21;
-  };
-
-  const termsAccepted = !!program.terms_accepted_at;
-  const billingComplete = !!(
-    program.billing_company_name &&
-    program.billing_address_street &&
-    program.billing_address_postal &&
-    program.billing_address_city &&
-    program.billing_contact_name
-  );
-
-  const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
-  const isMultiDay = selectedDates.length > 1;
-  const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
+  const { getItemVatRate } = useItemVatRates(program.items);
+  const {
+    termsAccepted,
+    billingComplete,
+    allConfirmed,
+    isMultiDay,
+    hasSelectedAccommodation,
+    isQuoteAwaitingApproval,
+    isPreApproval,
+    totalCost,
+  } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
-  
-  // Check if this is a quote awaiting customer approval
-  const isQuoteAwaitingApproval = program.program_type === "quote" && program.quote_status === "offerte_verstuurd";
-
-  // Pre-approval: quote programs where partners haven't been contacted yet
-  const isPreApproval = program.program_type === "quote" && 
-    !!program.quote_status && 
-    ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
-
-  // Calculate total cost
-  const totalCost = useMemo(() => {
-    let total = 0;
-    program.items.forEach(item => {
-      if (item.status !== "cancelled" && item.block_type !== "self_arranged" && item.quoted_price) {
-        total += item.quoted_price;
-      }
-    });
-    const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
-    if (selectedQuote) {
-      total += selectedQuote.price_total;
-    }
-    return total;
-  }, [program.items, accommodationQuotes]);
 
   // Calculate completed steps
   const completedSteps = useMemo(() => {
@@ -376,38 +329,24 @@ export const MobileProgramView = ({
               }, 0);
               return (
                 <>
-                <div className="relative mt-4">
-                  {/* Vertical timeline line */}
-                  <div className="absolute left-[1.15rem] top-0 bottom-0 w-px bg-border" />
-                  <div className="space-y-1">
-                    {dayItems.map((item) => {
-                      const displayTime = item.confirmed_time || item.proposed_time || item.preferred_time;
-                      return (
-                        <div key={item.id} className="relative flex items-start gap-3 py-2">
-                          {/* Dot */}
-                          <div className="shrink-0 mt-3.5 z-10">
-                            <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-sm" />
-                          </div>
-                          {/* Card */}
-                          <div className="flex-1 min-w-0">
-                            <CustomerProgramItem
-                              item={item}
-                              selectedDates={selectedDates}
-                              onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                              onRemove={() => onRemoveItem(item.id)}
-                              onAccept={() => onAcceptItem(item.id)}
-                              onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                              allItems={program.items}
-                              hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                              invoicingMode={invoicingMode}
-                              isPreApproval={isPreApproval}
-                              vatRate={getItemVatRate(item)}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="mt-4">
+                  <CustomerTimeline items={dayItems}>
+                    {(item) => (
+                      <CustomerProgramItem
+                        item={item}
+                        selectedDates={selectedDates}
+                        onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                        onRemove={() => onRemoveItem(item.id)}
+                        onAccept={() => onAcceptItem(item.id)}
+                        onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                        allItems={program.items}
+                        hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                        invoicingMode={invoicingMode}
+                        isPreApproval={isPreApproval}
+                        vatRate={getItemVatRate(item)}
+                      />
+                    )}
+                  </CustomerTimeline>
                 </div>
                 {dayItems.length === 0 && (
                   <p className="text-center text-muted-foreground py-8">
@@ -428,44 +367,25 @@ export const MobileProgramView = ({
             }}
           </DayTabs>
         ) : (
-          <div className="relative">
-            {/* Vertical timeline line */}
-            <div className="absolute left-[1.15rem] top-0 bottom-0 w-px bg-border" />
-            <div className="space-y-1">
-              {program.items
-                .filter((item) => item.status !== "cancelled" && item.day_index >= 0)
-                .sort((a, b) => {
-                  if (!a.preferred_time && !b.preferred_time) return 0;
-                  if (!a.preferred_time) return 1;
-                  if (!b.preferred_time) return -1;
-                  return a.preferred_time.localeCompare(b.preferred_time);
-                })
-                .map((item) => (
-                  <div key={item.id} className="relative flex items-start gap-3 py-2">
-                    {/* Dot */}
-                    <div className="shrink-0 mt-3.5 z-10">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-sm" />
-                    </div>
-                    {/* Card */}
-                    <div className="flex-1 min-w-0">
-                      <CustomerProgramItem
-                        item={item}
-                        selectedDates={selectedDates}
-                        onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                        onRemove={() => onRemoveItem(item.id)}
-                        onAccept={() => onAcceptItem(item.id)}
-                        onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                        allItems={program.items}
-                        hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                        invoicingMode={invoicingMode}
-                        isPreApproval={isPreApproval}
-                        vatRate={getItemVatRate(item)}
-                      />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
+                <CustomerTimeline
+                  items={program.items.filter((item) => item.status !== "cancelled" && item.day_index >= 0)}
+                >
+                  {(item) => (
+                    <CustomerProgramItem
+                      item={item}
+                      selectedDates={selectedDates}
+                      onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                      onRemove={() => onRemoveItem(item.id)}
+                      onAccept={() => onAcceptItem(item.id)}
+                      onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                      allItems={program.items}
+                      hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                      invoicingMode={invoicingMode}
+                      isPreApproval={isPreApproval}
+                      vatRate={getItemVatRate(item)}
+                    />
+                  )}
+                </CustomerTimeline>
         )}
       </ProgramSection>
 
