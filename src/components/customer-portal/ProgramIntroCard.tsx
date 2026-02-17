@@ -43,17 +43,9 @@ export const ProgramIntroCard = ({
     }
   };
 
-  // Quote being prepared by admin
+  // Quote being prepared by admin - ActionRequiredCard already shows this message
   if (isBeingPrepared) {
-    return (
-      <Card className="border-muted bg-muted/30">
-        <CardContent className="p-5">
-          <p className="text-sm text-foreground leading-relaxed">
-            Bureau Vlieland stelt uw programma samen. U ontvangt een bericht zodra het voorstel klaar is om te bekijken.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   // Expired quote
