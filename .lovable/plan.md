@@ -1,23 +1,45 @@
 
 
-## Plan: Offerte-disclaimer teksten corrigeren
+## Plan: Database-template gebruiken voor offerte-email
 
 ### Probleem
-Op de offerte-preview staan twee zinnen die suggereren dat de klant pas na akkoord toegang krijgt tot de klantomgeving. In werkelijkheid krijgt de klant via de link in de offerte-email direct al toegang.
+De edge function `send-quote-offer` negeert de mooie email-template die al in de database staat. In plaats daarvan wikkelt het alle content in een hardcoded `generateQuoteEmailHtml()` functie die een extra items-tabel toevoegt. Het resultaat is dubbele content.
+
+### Oplossing
+De edge function wordt aangepast om de database-template als volledige email-HTML te gebruiken, inclusief programmadetails, CTA-knop en footer. De hardcoded `generateQuoteEmailHtml()` en `generateIntroHtml()` functies worden verwijderd.
 
 ### Wijzigingen
 
-**`src/pages/admin/AdminQuotePreview.tsx`**
+**1. Database: CTA-knop tekst aanpassen**
 
-Twee teksten worden aangepast:
+In de `email_templates` tabel wordt de CTA-knoptekst gewijzigd van "Bekijk voorstel & geef akkoord" naar **"Bekijk voorstel"**.
 
-1. **Regel 853** (blauwe indicatief-blok):
-   - Was: "Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw persoonlijke klantomgeving."
-   - Wordt: "Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw klantomgeving."
-   - Deze zin klopt inhoudelijk al grotendeels, alleen het woord "persoonlijke" wordt verwijderd voor consistentie.
+**2. `supabase/functions/send-quote-offer/index.ts`**
 
-2. **Regel 868-870** (amber logiesaanvraag-blok):
-   - Was: "Na uw akkoord ontvangt u toegang tot uw klantomgeving waar u de bevestigingen van partners kunt volgen."
-   - Wordt: "U kunt de status van deze aanvraag volgen in uw klantomgeving."
-   - De suggestie dat toegang pas na akkoord komt wordt volledig verwijderd.
+De flow wordt vereenvoudigd:
+
+- De functies `generateIntroHtml()` en `generateQuoteEmailHtml()` (ca. 120 regels) worden verwijderd
+- De `ProgramItem` interface wordt verwijderd (items-tabel niet meer nodig in email)
+- Het ophalen van `program_request_items` blijft behouden (nodig voor logging metadata)
+- De email-HTML wordt direct uit de database-template gehaald via `getRenderedTemplate()`
+- Bij custom `emailBody` van de admin: de template variabelen worden gevuld, maar de `personal_message` variabele bevat de admin-tekst
+- PDF-downloadblok wordt nog steeds ingevoegd voor `</body>` als er een PDF is
+
+De nieuwe flow:
+
+```text
+1. Haal programma-aanvraag op
+2. Bouw template-variabelen (customer_name, company_name, dates, etc.)
+3. Als admin emailBody heeft ingevuld -> gebruik als personal_message
+4. Render database-template met variabelen -> volledige HTML
+5. Voeg eventueel PDF-link toe
+6. Verstuur via Mailjet
+```
+
+### Bestanden
+
+| Bestand | Wat |
+|---------|-----|
+| `email_templates` (database) | CTA-tekst "Bekijk voorstel" |
+| `send-quote-offer/index.ts` | Verwijder hardcoded HTML, gebruik database-template |
 
