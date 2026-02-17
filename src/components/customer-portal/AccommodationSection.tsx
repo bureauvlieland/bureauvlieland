@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { differenceInDays, format, isPast, parseISO } from "date-fns";
+import { differenceInDays, format, isPast } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   BedDouble,
@@ -9,9 +9,6 @@ import {
   Clock,
   CheckCircle2,
   ChevronRight,
-  Eye,
-  Check,
-  AlertTriangle,
   Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +19,7 @@ import { AccommodationQuoteDetailSheet } from "@/components/accommodation-portal
 import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
+import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -190,85 +188,32 @@ export const AccommodationSection = ({
     );
   }
 
-  // State 3: Quotes available - show comparison
+  // State 3: Quotes available - show as collapsible items like program items
   if (submittedQuotes.length > 0) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BedDouble className="h-5 w-5 text-primary" />
-              Logies Offertes
-            </CardTitle>
-            <Badge variant="secondary">
-              {submittedQuotes.length} offerte{submittedQuotes.length > 1 ? "s" : ""}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <>
+        <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
             Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
           </p>
 
-          {/* Compact quote cards */}
           {submittedQuotes.map((quote) => {
             const validUntil = new Date(quote.valid_until);
             const isExpired = isPast(validUntil);
 
             return (
-              <div
+              <AccommodationQuoteItem
                 key={quote.id}
-                className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium truncate">{quote.accommodation_name}</h4>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    {quote.partner?.name && <span>{quote.partner.name}</span>}
-                    {isExpired ? (
-                      <Badge variant="destructive" className="text-xs">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Verlopen
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        <Clock className="h-3 w-3 mr-1" />
-                        t/m {format(validUntil, "d MMM", { locale: nl })}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <p className="font-semibold">{formatPrice(quote.price_total)}</p>
-                  {quote.price_per_person_per_night && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatPrice(quote.price_per_person_per_night)} p.p.p.n.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedQuoteForDetails(quote)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  {!isExpired && (
-                    <Button
-                      size="sm"
-                      onClick={() => setSelectedQuoteForConfirm(quote)}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Kies
-                    </Button>
-                  )}
-                </div>
-              </div>
+                quote={quote}
+                isExpired={isExpired}
+                validUntil={validUntil}
+                onViewDetails={() => setSelectedQuoteForDetails(quote)}
+                onSelect={() => setSelectedQuoteForConfirm(quote)}
+                formatPrice={formatPrice}
+              />
             );
           })}
-        </CardContent>
+        </div>
 
         {/* Detail sheet */}
         <AccommodationQuoteDetailSheet
@@ -294,7 +239,7 @@ export const AccommodationSection = ({
           onConfirm={handleSelectQuote}
           isSelecting={isSelecting}
         />
-      </Card>
+      </>
     );
   }
 

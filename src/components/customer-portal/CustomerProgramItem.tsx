@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 import { timeSlots } from "@/types/buildingBlock";
+import { getBlockImage } from "@/lib/buildingBlockUtils";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -65,7 +66,9 @@ export const CustomerProgramItem = ({
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
     new Date(item.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
-  
+
+  // Get thumbnail image
+  const thumbnailSrc = getBlockImage({ image_url: item.image_url, image_asset: item.image_asset } as any);
 
   return (
     <div className={cn(
@@ -76,6 +79,14 @@ export const CustomerProgramItem = ({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Header row */}
           <div className="flex items-start gap-3">
+            {/* Thumbnail */}
+            {thumbnailSrc && thumbnailSrc !== "/placeholder.svg" && (
+              <img
+                src={thumbnailSrc}
+                alt={item.block_name}
+                className="w-12 h-12 md:w-16 md:h-16 rounded-md object-cover shrink-0"
+              />
+            )}
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">

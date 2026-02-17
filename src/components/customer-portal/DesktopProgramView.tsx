@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ProgramSidebar } from "./ProgramSidebar";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
-import { AcceptQuoteProposalCard } from "./AcceptQuoteProposalCard";
+import { ProgramIntroCard } from "./ProgramIntroCard";
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerTimeline } from "./CustomerTimeline";
 import { AddActivitySheet } from "./AddActivitySheet";
@@ -188,27 +188,26 @@ export const DesktopProgramView = ({
           hasPendingItems={statusSummary.pending > 0}
         />
 
-        {/* 2. Quote Proposal Card - only for maatwerk quotes awaiting approval */}
-        {isQuoteAwaitingApproval && (
-          <AcceptQuoteProposalCard
-            program={program as unknown as ProgramRequestWithItems}
-            onAccept={onAcceptQuoteProposal}
-          />
-        )}
+        {/* 2. Action required card */}
+        <ActionRequiredCard
+          statusSummary={statusSummary}
+          isMultiDay={isMultiDay}
+          hasAccommodation={hasActiveAccommodation}
+          billingComplete={billingComplete}
+          termsAccepted={termsAccepted}
+          onOpenBilling={onOpenBilling}
+          onScrollToTerms={scrollToTerms}
+          onScrollToAccommodation={scrollToAccommodation}
+        />
 
-        {/* 3. Action required card - intelligent priority-based alert (hide when quote awaiting approval) */}
-        {!isQuoteAwaitingApproval && (
-          <ActionRequiredCard
-            statusSummary={statusSummary}
-            isMultiDay={isMultiDay}
-            hasAccommodation={hasActiveAccommodation}
-            billingComplete={billingComplete}
-            termsAccepted={termsAccepted}
-            onOpenBilling={onOpenBilling}
-            onScrollToTerms={scrollToTerms}
-            onScrollToAccommodation={scrollToAccommodation}
-          />
-        )}
+        {/* 3. Intro card - context-aware explanation */}
+        <ProgramIntroCard
+          programType={program.program_type}
+          quoteStatus={program.quote_status}
+          quoteValidUntil={program.quote_valid_until}
+          termsAcceptedAt={program.terms_accepted_at}
+          onAcceptQuoteProposal={onAcceptQuoteProposal}
+        />
 
         {/* 3. Accommodation section - only for multi-day, only if not yet selected */}
         {isMultiDay && (
