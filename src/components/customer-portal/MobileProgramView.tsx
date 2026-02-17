@@ -375,67 +375,96 @@ export const MobileProgramView = ({
                 return s + calculateExclVat(i.quoted_price || 0, rate);
               }, 0);
               return (
-                <div className="space-y-3 mt-4">
-                  {dayItems.map((item) => (
-                    <CustomerProgramItem
-                      key={item.id}
-                      item={item}
-                      selectedDates={selectedDates}
-                      onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                      onRemove={() => onRemoveItem(item.id)}
-                      onAccept={() => onAcceptItem(item.id)}
-                      onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                      allItems={program.items}
-                      hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                      invoicingMode={invoicingMode}
-                      isPreApproval={isPreApproval}
-                      vatRate={getItemVatRate(item)}
-                    />
-                  ))}
-                  {dayItems.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">
-                      Geen activiteiten op deze dag
-                    </p>
-                  )}
-                  {dayPricedItems.length > 0 && (
-                    <div className="flex items-center justify-between pt-3 mt-3 border-t text-sm">
-                      <span className="text-muted-foreground">Dagtotaal</span>
-                      <div className="text-right">
-                        <span className="font-semibold">€{dayTotalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-xs text-muted-foreground ml-2">(excl. BTW: €{dayTotalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
-                      </div>
-                    </div>
-                  )}
+                <>
+                <div className="relative mt-4">
+                  {/* Vertical timeline line */}
+                  <div className="absolute left-[1.15rem] top-0 bottom-0 w-px bg-border" />
+                  <div className="space-y-1">
+                    {dayItems.map((item) => {
+                      const displayTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+                      return (
+                        <div key={item.id} className="relative flex items-start gap-3 py-2">
+                          {/* Dot */}
+                          <div className="shrink-0 mt-3.5 z-10">
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-sm" />
+                          </div>
+                          {/* Card */}
+                          <div className="flex-1 min-w-0">
+                            <CustomerProgramItem
+                              item={item}
+                              selectedDates={selectedDates}
+                              onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                              onRemove={() => onRemoveItem(item.id)}
+                              onAccept={() => onAcceptItem(item.id)}
+                              onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                              allItems={program.items}
+                              hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                              invoicingMode={invoicingMode}
+                              isPreApproval={isPreApproval}
+                              vatRate={getItemVatRate(item)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+                {dayItems.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    Geen activiteiten op deze dag
+                  </p>
+                )}
+                {dayPricedItems.length > 0 && (
+                  <div className="flex items-center justify-between pt-3 mt-3 border-t text-sm">
+                    <span className="text-muted-foreground">Dagtotaal</span>
+                    <div className="text-right">
+                      <span className="font-semibold">€{dayTotalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-xs text-muted-foreground ml-2">(excl. BTW: €{dayTotalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                    </div>
+                  </div>
+                )}
+                </>
               );
             }}
           </DayTabs>
         ) : (
-          <div className="space-y-3">
-            {program.items
-              .filter((item) => item.status !== "cancelled" && item.day_index >= 0)
-              .sort((a, b) => {
-                if (!a.preferred_time && !b.preferred_time) return 0;
-                if (!a.preferred_time) return 1;
-                if (!b.preferred_time) return -1;
-                return a.preferred_time.localeCompare(b.preferred_time);
-              })
-              .map((item) => (
-                <CustomerProgramItem
-                  key={item.id}
-                  item={item}
-                  selectedDates={selectedDates}
-                  onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                  onRemove={() => onRemoveItem(item.id)}
-                  onAccept={() => onAcceptItem(item.id)}
-                  onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                  allItems={program.items}
-                  hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                  invoicingMode={invoicingMode}
-                  isPreApproval={isPreApproval}
-                  vatRate={getItemVatRate(item)}
-                />
-              ))}
+          <div className="relative">
+            {/* Vertical timeline line */}
+            <div className="absolute left-[1.15rem] top-0 bottom-0 w-px bg-border" />
+            <div className="space-y-1">
+              {program.items
+                .filter((item) => item.status !== "cancelled" && item.day_index >= 0)
+                .sort((a, b) => {
+                  if (!a.preferred_time && !b.preferred_time) return 0;
+                  if (!a.preferred_time) return 1;
+                  if (!b.preferred_time) return -1;
+                  return a.preferred_time.localeCompare(b.preferred_time);
+                })
+                .map((item) => (
+                  <div key={item.id} className="relative flex items-start gap-3 py-2">
+                    {/* Dot */}
+                    <div className="shrink-0 mt-3.5 z-10">
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-sm" />
+                    </div>
+                    {/* Card */}
+                    <div className="flex-1 min-w-0">
+                      <CustomerProgramItem
+                        item={item}
+                        selectedDates={selectedDates}
+                        onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                        onRemove={() => onRemoveItem(item.id)}
+                        onAccept={() => onAcceptItem(item.id)}
+                        onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                        allItems={program.items}
+                        hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                        invoicingMode={invoicingMode}
+                        isPreApproval={isPreApproval}
+                        vatRate={getItemVatRate(item)}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
         )}
       </ProgramSection>
