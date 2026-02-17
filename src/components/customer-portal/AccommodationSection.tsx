@@ -15,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AccommodationQuoteDetailSheet } from "@/components/accommodation-portal/AccommodationQuoteDetailSheet";
 import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
@@ -41,7 +40,6 @@ export const AccommodationSection = ({
   customerToken,
   numberOfPeople,
 }: AccommodationSectionProps) => {
-  const [selectedQuoteForDetails, setSelectedQuoteForDetails] = useState<AccommodationQuote | null>(null);
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -207,29 +205,12 @@ export const AccommodationSection = ({
                 quote={quote}
                 isExpired={isExpired}
                 validUntil={validUntil}
-                onViewDetails={() => setSelectedQuoteForDetails(quote)}
                 onSelect={() => setSelectedQuoteForConfirm(quote)}
                 formatPrice={formatPrice}
               />
             );
           })}
         </div>
-
-        {/* Detail sheet */}
-        <AccommodationQuoteDetailSheet
-          quote={selectedQuoteForDetails}
-          open={!!selectedQuoteForDetails}
-          onOpenChange={(open) => !open && setSelectedQuoteForDetails(null)}
-          onSelect={() => {
-            if (selectedQuoteForDetails) {
-              setSelectedQuoteForConfirm(selectedQuoteForDetails);
-            }
-          }}
-          isSelecting={isSelecting}
-          hasSelectedQuote={hasSelectedQuote}
-          numberOfGuests={accommodation.number_of_guests}
-          numberOfNights={numberOfNights}
-        />
 
         {/* Confirmation dialog */}
         <SelectQuoteDialog

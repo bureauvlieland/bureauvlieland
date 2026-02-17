@@ -198,6 +198,8 @@ export const DesktopProgramView = ({
           onOpenBilling={onOpenBilling}
           onScrollToTerms={scrollToTerms}
           onScrollToAccommodation={scrollToAccommodation}
+          programType={program.program_type}
+          quoteStatus={program.quote_status}
         />
 
         {/* 3. Intro card - context-aware explanation */}
