@@ -850,7 +850,7 @@ const AdminQuotePreview = () => {
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm">
                         <p className="font-semibold text-blue-900 mb-1">Indicatief voorstel</p>
                         <p className="text-blue-800">
-                          De genoemde prijzen voor activiteiten zijn gebaseerd op onze actuele tarieven en zijn indicatief. Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw persoonlijke klantomgeving.
+                          De genoemde prijzen voor activiteiten zijn gebaseerd op onze actuele tarieven en zijn indicatief. Na uw akkoord nemen wij contact op met de betrokken partners om beschikbaarheid en definitieve prijzen te bevestigen. U kunt de voortgang hiervan volgen in uw klantomgeving.
                         </p>
                         {accommodationQuote && (
                           <p className="text-blue-800 mt-2">
@@ -866,7 +866,7 @@ const AdminQuotePreview = () => {
                           {format(validUntil, "d MMMM yyyy", { locale: nl })}
                         </p>
                         <p className="text-amber-700 mt-1">
-                          Na uw akkoord ontvangt u toegang tot uw klantomgeving waar u de bevestigingen van partners kunt volgen.
+                          U kunt de status van deze aanvraag volgen in uw klantomgeving.
                         </p>
                       </div>
 
