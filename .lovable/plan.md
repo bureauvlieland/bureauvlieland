@@ -1,23 +1,100 @@
 
 
-## Plan: Logiesaanvraag-status tonen op de offerte
+## Plan: Afzender wijzigen + dubbele content fixen + testmail-knop
 
-### Probleem
-Als er een logiesaanvraag gekoppeld is aan het programma, maar er nog geen offerte is binnengekomen of geselecteerd, staat er niets over logies op de offerte. De klant weet dan niet dat er al een aanvraag loopt.
+Dit plan combineert drie wijzigingen: (1) afzender wijzigen naar hallo@bureauvlieland.nl, (2) dubbele content in offerte-email fixen, (3) testmail-knop toevoegen.
 
-### Oplossing
-Een informatieblok toevoegen op de offerte-preview (PDF) dat aangeeft dat er een logiesaanvraag in behandeling is, inclusief de basisgegevens (data, aantal gasten, type accommodatie).
+### 1. Afzender wijzigen naar hallo@bureauvlieland.nl
 
-### Technische wijzigingen
+**`supabase/functions/_shared/email-templates.ts`**
 
-**`src/pages/admin/AdminQuotePreview.tsx`**
+Een geexporteerde constante toevoegen:
 
-1. **Extra state toevoegen** voor de accommodation request data (aankomst, vertrek, aantal gasten, type) - onafhankelijk van of er al een quote is
-2. **In `fetchData()`**: bij een `linked_accommodation_id`, de accommodation request data altijd ophalen en opslaan (niet alleen wanneer er een quote is)
-3. **In de PDF-sectie**: onder het programma-overzicht en boven de disclaimer, een nieuw blok tonen wanneer er wel een gekoppelde logiesaanvraag is maar geen `accommodationQuote`:
-   - Koptekst "Logies" (zelfde stijl als bestaande sectie)
-   - Informatieblok met amberkleurige achtergrond: "Er loopt een logiesaanvraag voor [aankomst] - [vertrek] voor [x] gasten. Wij verwachten binnenkort voorstellen van accommodatiepartners."
-   - Toont het type accommodatie indien beschikbaar
+```text
+export const SENDER_EMAIL = "hallo@bureauvlieland.nl";
+export const SENDER_NAME = "Bureau Vlieland";
+```
 
-Dit blok verschijnt alleen in de situatie dat er geen `accommodationQuote` is maar wel een `linked_accommodation_id` - zodra er een geselecteerde offerte is, wordt het bestaande logies-blok met prijzen getoond.
+**Alle 20 edge functions** die `noreply@bureauvlieland.nl` hardcoded gebruiken worden aangepast om deze constante te importeren en gebruiken. Dit betreft:
+
+- send-quote-offer
+- send-quote-request
+- send-program-request
+- send-accommodation-request
+- send-accommodation-quote-request
+- send-project-email
+- notify-accommodation-quote
+- select-accommodation-quote
+- update-customer-program
+- update-partner-item-status
+- update-commission-status
+- cancel-program-request
+- process-completed-items
+- invite-partner
+- bulk-invite-partners
+- resend-partner-invitation
+- resend-email
+- register-partner-invoice
+- forward-purchase-invoice
+- confirm-partner-commission
+- accept-quote-proposal
+
+Elke `From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" }` wordt vervangen door `From: { Email: SENDER_EMAIL, Name: SENDER_NAME }`.
+
+### 2. Dubbele content in offerte-email fixen
+
+**`src/components/admin/AdminSendQuoteDialog.tsx`**
+
+De `loadTemplate()` functie wordt vervangen door een synchrone `getDefaultIntro()` die een plain-text intro genereert (geen HTML-template uit de database). Dit voorkomt dat de volledige HTML-template als emailBody naar de edge function wordt gestuurd, waar het opnieuw in HTML wordt gewikkeld.
+
+De standaard intro wordt:
+
+```text
+Beste {naam},
+
+Hierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland.
+Wij hebben dit programma speciaal voor {bedrijf} samengesteld.
+
+Programmadetails:
+- Data: {data}
+- Aantal personen: {aantal}
+- Geldig tot: {datum}
+
+U kunt het voorstel bekijken en akkoord geven via de knop in de e-mail.
+Uiteraard kunnen we het programma qua onderdelen en tijden nog aanpassen.
+
+Heeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.
+
+Met vriendelijke groet,
+Erwin Soolsma
+Bureau Vlieland
+```
+
+Het onderwerp wordt standaard "Uw maatwerkvoorstel van Bureau Vlieland". Geen database-call meer nodig bij openen van het dialoog.
+
+### 3. Testmail-knop toevoegen
+
+**`src/components/admin/AdminSendQuoteDialog.tsx`**
+
+- Nieuwe state: `isSendingTest`
+- Nieuwe functie `handleSendTest()` die `send-quote-offer` aanroept met extra parameter `testRecipient: "erwin@bureauvlieland.nl"`
+- In de DialogFooter komen drie knoppen: Annuleren | Testmail versturen | Offerte versturen
+
+**`supabase/functions/send-quote-offer/index.ts`**
+
+- Schema uitbreiden met `testRecipient: z.string().email().optional()`
+- Wanneer `testRecipient` is ingevuld:
+  - Email wordt naar dat adres gestuurd
+  - Subject krijgt prefix "[TEST] "
+  - De `program_requests` status wordt NIET bijgewerkt
+  - Email wordt wel gelogd
+
+### Samenvatting wijzigingen
+
+| Bestand | Wat |
+|---------|-----|
+| `_shared/email-templates.ts` | SENDER_EMAIL + SENDER_NAME constanten |
+| 20 edge functions | Import + gebruik van constanten i.p.v. hardcoded noreply |
+| `AdminSendQuoteDialog.tsx` | Plain-text intro, testmail-knop |
+| `send-quote-offer/index.ts` | testRecipient parameter |
 
