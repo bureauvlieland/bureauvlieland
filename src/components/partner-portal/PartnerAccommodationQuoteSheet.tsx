@@ -501,7 +501,7 @@ export const PartnerAccommodationQuoteSheet = ({
               <Label htmlFor="accommodationName">Naam accommodatie *</Label>
               <Input
                 id="accommodationName"
-                placeholder="Bijv. Hotel Zeezicht"
+                placeholder="Bijv. Uw accommodatienaam"
                 value={accommodationName}
                 onChange={(e) => setAccommodationName(e.target.value)}
                 disabled={isReadOnly}
