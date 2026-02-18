@@ -1,87 +1,54 @@
 
 
-# Agenda-export via .ics bestand (Outlook / Google / Apple)
+# Agenda-export toevoegen aan Admin Projectdetail
 
-## Samenvatting
+## Wat wordt er aangepast
 
-Een "Toevoegen aan agenda" functie voor zowel partners als klanten, met per-activiteit en alles-in-een export. Dankzij een vaste UID per activiteit worden items bij herhaalde export overschreven in plaats van verdubbeld.
+De admin "Activiteiten" tab op de projectdetailpagina (`AdminRequestDetail.tsx`) krijgt een "Exporteer naar agenda" knop, zodat admins het volledige programma als .ics bestand kunnen downloaden naar hun eigen agenda.
 
-## Duplicate-preventie
+## Wijzigingen
 
-Elk event krijgt een deterministische UID: `bureauvlieland-{item.id}@bureauvlieland.nl`. Kalender-apps (Outlook, Google, Apple) gebruiken deze UID om bestaande events te herkennen en bij te werken in plaats van duplicaten aan te maken.
+### `src/pages/admin/AdminRequestDetail.tsx`
 
----
+1. Import toevoegen: `CalendarPlus` icoon uit lucide-react en `downloadAllEvents` uit `@/lib/calendarExport`
+2. In de knoppenbalk van de "Activiteiten" CardHeader (naast "Template toepassen", "Opslaan als template", etc.) een nieuwe knop toevoegen: **"Exporteer naar agenda"**
+3. De knop exporteert alle actieve items (met `day_index >= 0`) als .ics bestand, met de klantnaam als bestandsnaam
 
-## Nieuwe bestanden
+De bestaande `calendarExport.ts` utility wordt hergebruikt -- er zijn geen nieuwe bestanden of dependencies nodig.
 
-### `src/lib/calendarExport.ts`
+## Technisch detail
 
-Puur client-side .ics generatie zonder extra dependencies.
+De knop wordt toegevoegd rond regel 929-948, in de `flex items-center gap-2` container:
 
-**Functies:**
-- `generateIcsEvent(item, dates, numberOfPeople)` -- genereert een VEVENT-blok met:
-  - `UID`: `bureauvlieland-{item.id}@bureauvlieland.nl` (voorkomt duplicaten)
-  - `DTSTART` / `DTEND`: datum + tijd (of hele dag als geen tijd bekend)
-  - `SUMMARY`: activiteitnaam
-  - `DESCRIPTION`: aanbieder + aantal personen
-  - `LOCATION`: Vlieland (standaard)
-- `downloadSingleEvent(item, dates, numberOfPeople)` -- download .ics voor 1 activiteit
-- `downloadAllEvents(items, dates, numberOfPeople, programName)` -- download .ics met alle activiteiten in 1 bestand
-
-Download via tijdelijke Blob URL + `<a>` element.
-
----
-
-## Bestaande bestanden die worden aangepast
-
-### Partner portaal: `src/components/partner-portal/PartnerUpcomingActivities.tsx`
-
-- **Per activiteit**: klein kalender-icoontje (CalendarPlus) rechts van elk item, met `stopPropagation` zodat het niet de detail-sheet opent
-- **Alles exporteren**: "Exporteer naar agenda" knop in de CardHeader naast de titel
-
-### Klant portaal: `src/components/customer-portal/CustomerProgramItem.tsx`
-
-- **Per activiteit**: "Agenda" knopje in de actie-rij van elk programma-item
-
-### Klant portaal: `src/components/customer-portal/DesktopProgramView.tsx`
-
-- **Alles exporteren**: "Alles naar agenda" knop bovenaan het programma-overzicht
-
-### Klant portaal: `src/components/customer-portal/MobileProgramView.tsx`
-
-- **Alles exporteren**: "Alles naar agenda" knop bovenaan het programma-overzicht
-
----
-
-## Technische details
-
-### .ics formaat voorbeeld
-
-```text
-BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Bureau Vlieland//Programma//NL
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:bureauvlieland-abc123@bureauvlieland.nl
-DTSTART:20260315T100000
-DTEND:20260315T120000
-SUMMARY:Blokartenles
-DESCRIPTION:Aanbieder: VOC Vlieland\n20 personen
-LOCATION:Vlieland
-END:VEVENT
-END:VCALENDAR
+```tsx
+<Button
+  variant="outline"
+  onClick={() => {
+    const activeItems = items.filter(i => i.day_index >= 0);
+    downloadAllEvents(
+      activeItems.map(i => ({
+        id: i.id,
+        block_name: i.block_name,
+        provider_name: i.provider_name,
+        day_index: i.day_index,
+        confirmed_time: i.confirmed_time,
+        proposed_time: i.proposed_time,
+        preferred_time: i.preferred_time,
+        duration: i.duration,
+      })),
+      request.selected_dates as string[],
+      request.number_of_people,
+      request.customer_name || "programma"
+    );
+  }}
+>
+  <CalendarPlus className="h-4 w-4 mr-2" />
+  Exporteer naar agenda
+</Button>
 ```
-
-### Overzicht wijzigingen
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/lib/calendarExport.ts` | Nieuw -- .ics generatie met deterministische UID |
-| `src/components/partner-portal/PartnerUpcomingActivities.tsx` | Kalender-icoon per item + "Exporteer" knop |
-| `src/components/customer-portal/CustomerProgramItem.tsx` | "Agenda" knop per item |
-| `src/components/customer-portal/DesktopProgramView.tsx` | "Alles naar agenda" knop |
-| `src/components/customer-portal/MobileProgramView.tsx` | "Alles naar agenda" knop |
+| `src/pages/admin/AdminRequestDetail.tsx` | CalendarPlus import + "Exporteer naar agenda" knop in activiteiten header |
 
-Geen database-wijzigingen, geen nieuwe dependencies nodig.
-
+Geen database-wijzigingen, geen nieuwe bestanden.
