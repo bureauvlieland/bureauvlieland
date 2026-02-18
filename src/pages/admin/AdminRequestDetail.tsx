@@ -62,6 +62,7 @@ import {
   Save,
   Euro,
   Trash2,
+  CalendarPlus,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { 
@@ -90,6 +91,7 @@ import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
+import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface ProgramRequest {
   id: string;
@@ -158,6 +160,10 @@ interface ProgramRequestItem {
   price_type: string | null;
   // Partner notification flag
   skip_partner_notification: boolean | null;
+  // Calendar export fields
+  confirmed_time: string | null;
+  proposed_time: string | null;
+  duration: string | null;
 }
 
 interface HistoryEntry {
@@ -940,6 +946,30 @@ const AdminRequestDetail = () => {
                     <Button variant="outline" onClick={() => setAddCostOpen(true)}>
                       <Euro className="h-4 w-4 mr-2" />
                       Kosten toevoegen
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const activeItems = items.filter(i => i.day_index >= 0);
+                        downloadAllEvents(
+                          activeItems.map(i => ({
+                            id: i.id,
+                            block_name: i.block_name,
+                            provider_name: i.provider_name,
+                            day_index: i.day_index,
+                            confirmed_time: i.confirmed_time,
+                            proposed_time: i.proposed_time,
+                            preferred_time: i.preferred_time,
+                            duration: i.duration,
+                          })),
+                          request.selected_dates as string[],
+                          request.number_of_people,
+                          request.customer_name || "programma"
+                        );
+                      }}
+                    >
+                      <CalendarPlus className="h-4 w-4 mr-2" />
+                      Exporteer naar agenda
                     </Button>
                     <Button onClick={() => setAddActivityOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
