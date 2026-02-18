@@ -28,5 +28,8 @@
 # Product pages redirects
 /product/*                                   /bouwstenen              301
 
+# Partner portal redirect
+/partner                                     /partner/login           301
+
 # Catch-all: redirect any other old URL to homepage
 /*                                           /                        200
