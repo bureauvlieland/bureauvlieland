@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { format, parseISO, isAfter, addDays, isBefore } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Calendar, Clock, Users, ChevronRight, CalendarDays } from "lucide-react";
+import { Calendar, Clock, Users, ChevronRight, CalendarDays, CalendarPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { downloadSingleEvent, downloadAllEvents } from "@/lib/calendarExport";
 import type { PartnerItem } from "@/types/partner";
 
 interface PartnerUpcomingActivitiesProps {
@@ -83,10 +85,42 @@ export const PartnerUpcomingActivities = ({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <CalendarDays className="h-5 w-5 text-muted-foreground" />
-          Aankomende activiteiten
-        </CardTitle>
-      </CardHeader>
+            <CalendarDays className="h-5 w-5 text-muted-foreground" />
+            Aankomende activiteiten
+          </CardTitle>
+          {upcomingItems.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => {
+                const allDates = upcomingItems.map((item) => {
+                  const dates = (item.program_requests.selected_dates || []) as string[];
+                  return dates;
+                });
+                // Use the first item's dates array (they share the same request typically)
+                const dates = (upcomingItems[0].program_requests.selected_dates || []) as string[];
+                downloadAllEvents(
+                  upcomingItems.map((item) => ({
+                    id: item.id,
+                    block_name: item.block_name,
+                    provider_name: item.provider_name,
+                    day_index: item.day_index,
+                    confirmed_time: item.confirmed_time,
+                    proposed_time: item.proposed_time,
+                    preferred_time: item.preferred_time,
+                    duration: item.duration,
+                  })),
+                  dates,
+                  upcomingItems[0].program_requests.number_of_people
+                );
+              }}
+            >
+              <CalendarPlus className="h-3 w-3 mr-1" />
+              Exporteer naar agenda
+            </Button>
+          )}
+        </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-1">
           {upcomingItems.map((item) => {
@@ -126,6 +160,30 @@ export const PartnerUpcomingActivities = ({
                     </span>
                   </div>
                 </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const dates = (item.program_requests.selected_dates || []) as string[];
+                    downloadSingleEvent(
+                      {
+                        id: item.id,
+                        block_name: item.block_name,
+                        provider_name: item.provider_name,
+                        day_index: item.day_index,
+                        confirmed_time: item.confirmed_time,
+                        proposed_time: item.proposed_time,
+                        preferred_time: item.preferred_time,
+                        duration: item.duration,
+                      },
+                      dates,
+                      item.program_requests.number_of_people
+                    );
+                  }}
+                  className="p-1 rounded hover:bg-muted transition-colors shrink-0"
+                  title="Toevoegen aan agenda"
+                >
+                  <CalendarPlus className="h-4 w-4 text-muted-foreground" />
+                </button>
                 <ChevronRight className={cn(
                   "h-4 w-4 text-muted-foreground shrink-0 transition-transform",
                   "group-hover:translate-x-0.5"
