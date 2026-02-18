@@ -17,8 +17,9 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { downloadSingleEvent } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
@@ -318,6 +319,32 @@ export const CustomerProgramItem = ({
                   </Button>
                 )
               )}
+
+              {/* Agenda export */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  downloadSingleEvent(
+                    {
+                      id: item.id,
+                      block_name: item.block_name,
+                      provider_name: item.provider_name,
+                      day_index: item.day_index,
+                      confirmed_time: item.confirmed_time,
+                      proposed_time: item.proposed_time,
+                      preferred_time: item.preferred_time,
+                      duration: item.duration,
+                      location_address: item.location_address,
+                    },
+                    selectedDates.map((d) => d.toISOString().split("T")[0]),
+                    undefined
+                  );
+                }}
+              >
+                <CalendarPlus className="h-4 w-4 mr-1.5" />
+                Agenda
+              </Button>
 
               {/* Verwijderen */}
               <Button
