@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { CartProvider } from "@/contexts/CartContext";
 import { GlobalCartDrawer } from "@/components/configurator/GlobalCartDrawer";
@@ -146,8 +146,9 @@ const App = () => {
             } />
             {/* Coming soon page */}
             <Route path="/binnenkort" element={<ComingSoon />} />
-            <Route path="/partner/:token" element={<PartnerPortal />} />
+            <Route path="/partner" element={<Navigate to="/partner/login" replace />} />
             <Route path="/partner/login" element={<PartnerLogin />} />
+            <Route path="/partner/:token" element={<PartnerPortal />} />
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
             <Route path="/partner/aanbod" element={<PartnerBlocks />} />
             <Route path="/partner/facturatie" element={<PartnerFinance />} />
