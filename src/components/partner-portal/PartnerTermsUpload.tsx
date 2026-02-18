@@ -329,17 +329,15 @@ export const PartnerTermsUpload = ({
                 De standaard partnervoorwaarden van Bureau Vlieland worden getoond aan klanten. 
                 Deze dekken de meeste situaties.
               </p>
-              {selectedOption === "default" && (
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0"
-                  onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Bekijk standaardvoorwaarden
-                </Button>
-              )}
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                onClick={() => window.open(DEFAULT_TERMS_URL, "_blank")}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Bekijk standaardvoorwaarden
+              </Button>
             </div>
           </div>
         </RadioGroup>
