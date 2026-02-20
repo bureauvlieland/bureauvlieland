@@ -131,51 +131,57 @@ export const CustomerPortalSplash = ({
     <div className="space-y-6">
 
       {/* Fotomosaic hero — volledige breedte, desktop grid */}
-      <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-2 h-56 rounded-xl overflow-hidden">
-        <div className="row-span-2 overflow-hidden">
+      <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-1.5 h-72 rounded-2xl overflow-hidden shadow-medium">
+        {/* Grote foto links — met subtiele gradient overlay */}
+        <div className="row-span-2 relative overflow-hidden group">
           <img
             src={vlielandLandscape}
             alt="Vlieland landschap"
             loading="eager"
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          <div className="absolute bottom-4 left-4 text-white">
+            <p className="text-xs font-medium uppercase tracking-widest opacity-80">Bureau Vlieland</p>
+            <p className="text-lg font-semibold leading-tight">Uw verblijf op het eiland</p>
+          </div>
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden group">
           <img
             src={cyclingGroup}
             alt="Fietsen op Vlieland"
             loading="lazy"
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden group">
           <img
             src={speedboat}
             alt="Speedboot activiteit"
             loading="lazy"
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden group">
           <img
             src={sunsetDinner}
             alt="Diner bij zonsondergang"
             loading="lazy"
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden group">
           <img
             src={beachActivity}
             alt="Strandactiviteit"
             loading="lazy"
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
         </div>
       </div>
 
       {/* Fotomosaic hero — mobiel scrollstrip */}
-      <div className="flex sm:hidden gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+      <div className="flex sm:hidden gap-2 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory">
         {[
           { src: vlielandLandscape, alt: "Vlieland landschap" },
           { src: cyclingGroup, alt: "Fietsen op Vlieland" },
@@ -183,7 +189,7 @@ export const CustomerPortalSplash = ({
           { src: speedboat, alt: "Speedboot activiteit" },
           { src: beachActivity, alt: "Strandactiviteit" },
         ].map((photo) => (
-          <div key={photo.alt} className="shrink-0 w-40 h-40 rounded-xl overflow-hidden">
+          <div key={photo.alt} className="shrink-0 w-52 h-44 rounded-xl overflow-hidden snap-start">
             <img
               src={photo.src}
               alt={photo.alt}
