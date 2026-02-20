@@ -21,6 +21,7 @@ import {
   Receipt,
   ArrowLeftRight,
   Eye,
+  BedDouble,
 } from "lucide-react";
 
 type PeriodKey = "24h" | "7d";
@@ -58,6 +59,8 @@ const ACTION_LABELS: Record<string, { label: string; icon: React.ReactNode }> = 
   // Partner
   status_changed: { label: "Status gewijzigd", icon: <CheckCircle className="h-3 w-3" /> },
   invoice_registered: { label: "Factuur geregistreerd", icon: <Receipt className="h-3 w-3" /> },
+  accommodation_quote_submitted: { label: "Logiesofferte ingediend", icon: <BedDouble className="h-3 w-3" /> },
+  accommodation_quote_declined: { label: "Logiesaanvraag afgewezen", icon: <XCircle className="h-3 w-3" /> },
   // Admin
   quote_status_changed: { label: "Offertestatuswijziging", icon: <FileText className="h-3 w-3" /> },
   partner_invited: { label: "Partner uitgenodigd", icon: <User className="h-3 w-3" /> },
