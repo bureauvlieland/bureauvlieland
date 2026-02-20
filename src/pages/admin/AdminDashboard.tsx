@@ -6,6 +6,7 @@ import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilit
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
+import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -172,9 +173,10 @@ const AdminDashboardContent = () => {
 
         {/* Sidebar — 1/3 */}
         <div className="space-y-4">
+          <DailyActivitySummary />
           <DashboardTodoWidget />
-          <AdminUnavailabilityWidget />
           <PendingCommissionsCard />
+          <AdminUnavailabilityWidget />
         </div>
       </div>
 
