@@ -1,110 +1,125 @@
 
-# Dashboard redesign: Activiteitenfeed als hoofdfocus + Realtime
+# LiveActivityFeed: meer details, betere context, dashboard layout
 
-## Doel
+## Wat er al beschikbaar is in de data (volledig beeld na analyse)
 
-Het dashboard redesignen zodat de live activiteitenfeed de **primaire focus** is. Statistieken blijven beschikbaar maar worden compacter. De feed krijgt realtime updates via Supabase Realtime, meer details per actie, en een betere opmaak.
+### `admin_activity_log` — details JSON bevat al:
+- `partner_invitation_resent`: `{ partner_name, partner_email }` — nu tonen we alleen actie, geen naam
+- `partner_updated`: `{ name }` — partnernaam aanwezig maar niet getoond
+- `quote_status_changed`: `{ old_status, new_status }` — statusovergang aanwezig maar niet getoond
+- `item_status_changed`: `{ action, block_name, item_id }` — activiteitnaam aanwezig maar niet getoond
+- `template_applied`: `{ template_name, items_added }` — volledig bruikbaar maar niet getoond
+- `bulk_invite_partners`: `{ partner_names, successful, failed }` — volledig bruikbaar maar niet getoond
+- `request_cancelled`: `{ reason }` — reden aanwezig maar niet getoond
 
----
+### `program_request_history` — kolommen die er al zijn maar niet gebruikt worden:
+- `item_id` — FK naar `program_request_items` — we fetchen dit **niet**, waardoor `block_name` en `provider_name` ontbreken bij `time_changed`, `item_accepted`, `counter_proposed`, `item_cancelled`
+- `old_value` en `new_value` — bij `time_changed` staat hier `{ value: "18:00" }` resp. `{ value: "17:30" }` — de "van → naar" informatie is aanwezig maar niet uitgelezen
+- `actor_name` — bij partner acties bevat dit al de partnernaam maar dit wordt niet getoond als subtitle
 
-## Layoutwijziging dashboard
-
-### Huidig layout (van boven naar beneden)
-```text
-[4 stat cards]
-[3 logies stat cards]
-[Todo widget]
-[Partner beschikbaarheid | Commissies]
-[Live activiteitenfeed]
-[Recente aanvragen | Recente logies]
-```
-
-### Nieuw layout (2-koloms hoofdindeling)
-```text
-[Compacte stat bar - 1 rij met 7 stats]
-──────────────────────────────────────────────
-[Live activiteitenfeed (groot) | Zijpaneel    ]
-[                               Todos         ]
-[                               Beschikbaarh. ]
-[                               Commissies    ]
-──────────────────────────────────────────────
-[Recente aanvragen | Recente logies] (behoud)
-```
-
-De feed neemt 2/3 van de breedte in beslag. Het zijpaneel 1/3.
+### Klantoffertes openen
+- De edge function logt al `customer_portal_viewed` bij elke fetch — we kunnen ook detecteren wanneer een klant de offerte bekijkt (als `quote_status = 'offerte_verstuurd'`)
+- Dit doen we door in de feed een aparte actie `quote_opened` te loggen
 
 ---
 
-## 1. LiveActivityFeed verbeteringen
+## Concrete verbeteringen per actie
 
-### Realtime via Supabase Realtime
+### Klantacties (`program_request_history`)
 
-De component abonneert op **INSERT** events van `program_request_history`:
+| Actie | Nu | Verbeterd |
+|-------|-----|-----------|
+| `time_changed` | "Klant wijzigt tijdvoorkeur" · Naam | + activiteitnaam + provider + "18:00 → 17:30" uit old/new_value |
+| `item_accepted` | "Klant heeft activiteit goedgekeurd" · Naam | + activiteitnaam + provider uit item_id join |
+| `counter_proposed` | "Klant doet tegenvoorstel" · "notitie..." | + activiteitnaam + provider |
+| `item_cancelled` | "Klant verwijdert activiteit" | + activiteitnaam + provider |
+| `add_activity` | "Klant voegt activiteit toe" · notes | + bloknaam uit notes of new_value |
+| `customer_portal_viewed` | "Klant heeft portaal bekeken" (gedimmed) | + exacte tijd altijd zichtbaar; bij quote_status=verzonden toevoeging "offerte geopend" |
+
+### Partneracties (`program_request_history`)
+
+| Actie | Nu | Verbeterd |
+|-------|-----|-----------|
+| `status_changed` (confirmed) | "Partner bevestigt activiteit" · notes | + activiteitnaam + prijs uit `new_value.quoted_price` (bv "€ 850,-") |
+| `status_changed` (unavailable) | "Partner meldt niet beschikbaar" | + activiteitnaam + `new_value.status_note` als subtitle |
+| `status_changed` (alternative) | "Partner stelt alternatief voor" | + activiteitnaam + toelichting |
+| `status_changed` (executed) | "Partner markeert als uitgevoerd" | + activiteitnaam |
+
+### Adminacties (`admin_activity_log`)
+
+| Actie | Nu | Verbeterd |
+|-------|-----|-----------|
+| `partner_invitation_resent` | "Partneruitnodiging opnieuw verstuurd" (geen naam) | + `details.partner_name` + `details.partner_email` |
+| `partner_updated` | "Admin wijzigt itemstatus" (fout label) | Correct label "Partnergegevens bijgewerkt" + `details.name` |
+| `quote_status_changed` | "Offertestatuswijziging" (geen detail) | + "offerte_verstuurd → akkoord_ontvangen" uit `details.old_status`/`details.new_status` |
+| `item_status_changed` | "Admin wijzigt itemstatus" | + `details.block_name` + actie (`activity_added` vs `activity_edited`) |
+| `template_applied` | Onbekend label | "Template toegepast" + `details.template_name` + `details.items_added` activiteiten |
+| `bulk_invite_partners` | Onbekend label | "Partners uitgenodigd" + `details.partner_names.join(', ')` |
+| `request_cancelled` | Onbekend label | "Aanvraag geannuleerd" + `details.reason` als er een reden is |
+| `partner_created` | Onbekend label | "Nieuwe partner aangemaakt" + partnernaam |
+
+---
+
+## Nieuwe `quote_opened` actie loggen
+
+In `get-customer-program/index.ts` loggen we een extra actie wanneer de klant de portaalpagina opent **en** er een offerte verstuurd is (`quote_sent_at` gevuld):
 
 ```ts
-const channel = supabase
-  .channel("live-activity-feed")
-  .on("postgres_changes", {
-    event: "INSERT",
-    schema: "public",
-    table: "program_request_history",
-  }, async (payload) => {
-    // Fetch gekoppelde klantnaam + referentienummer
-    // Prepend nieuw item bovenaan de lijst
-  })
-  .subscribe();
+// Log offerte-opening (alleen als offerte verstuurd is)
+if (program.quote_sent_at) {
+  supabase.from("program_request_history").insert({
+    request_id: program.id,
+    action: "quote_opened",
+    actor: "customer",
+    actor_name: program.customer_name,
+    notes: "Klant heeft de offerte bekeken",
+  }).then(() => {});
+}
 ```
 
-Bij een nieuw item:
-- Een groene pulserende "Live" indicator verschijnt naast de titel
-- Het nieuwe item "flasht" kort in groen (CSS animatie, 2 sec)
-- De teller toont hoeveel nieuwe items er zijn als je gefilterd hebt
-
-### Grotere feed, meer zichtbare items
-
-- `max-h` verhogen van `400px` naar `calc(100vh - 320px)` — de feed vult de beschikbare hoogte
-- Minimaal 15-20 items zichtbaar (was ~8-10)
-- Items worden geladen: `limit(60)` in plaats van `40`
-
-### Meer detail per feed-item
-
-Elk item toont:
-1. **Icoon + kleurcode** (behoud)
-2. **Actielabel** (behoud, uitgebreid)
-3. **Klantnaam + bedrijf** (behoud)
-4. **Referentienummer** als badge (bijv. `BV-2601-0042`)
-5. **Activiteitnaam** — bij partner `status_changed`: de bloknaam uit `notes` of `new_value`
-6. **Extra context** — bij `counter_proposed`: klantnoot; bij `billing_updated`: bedrijfsnaam
-7. **Exacte tijdstip** als tooltip bij hover (naast relatieve tijd)
-
-### Meer actietypes met labels
-
-Uitbreiden met actietypes die nu als `action` worden getoond:
-
-| action | Actor | Label |
-|--------|-------|-------|
-| `item_cancelled` | customer | "Klant verwijdert activiteit" |
-| `add_activity` | customer | "Klant voegt activiteit toe" |
-| `program_request_submitted` | customer | "Nieuwe programmaanvraag ingediend" |
-| `admin_sent_to_partners` | admin | "Admin stuurt naar partners" |
-| `quote_sent` | admin | "Offerte verzonden naar klant" |
-| `invoice_registered` | partner | "Partner registreert factuur" |
-
-### Nieuwe indicator: "Nieuw" badge
-
-Items die korter dan 5 minuten geleden zijn binnengekomen krijgen een kleine `NIEUW` badge in groen.
+In de feed: label "Klant heeft offerte geopend", icoon `FileText` in groen, gedimmed (net als portal views).
 
 ---
 
-## 2. Compacte stat bar
+## Item-details ophalen via batch-query
 
-De 7 statistieken (4 programma + 3 logies) worden samengevoegd in **één compacte horizontale rij** bovenaan:
+Voor acties met een `item_id` (time_changed, item_accepted, counter_proposed, item_cancelled, status_changed partner) doen we na de hoofdquery een extra batch-fetch:
 
-```text
-[Actieve aanvragen: 12]  [Te bevestigen: 5]  [Bevestigd: 28]  [Partners: 8]  |  [Logies totaal: 6]  [Te verwerken: 2]  [Offertes: 1]
+```ts
+// Collect alle item_ids uit history
+const itemIds = historyData.filter(h => h.item_id).map(h => h.item_id);
+if (itemIds.length > 0) {
+  const { data: itemDetails } = await supabase
+    .from("program_request_items")
+    .select("id, block_name, provider_name")
+    .in("id", itemIds);
+  // Map op feed items
+}
 ```
 
-Elke stat is een klikbare chip die linkt naar de relevante beheerpagina. Minder ruimte = meer ruimte voor de feed.
+Dit voegt toe aan het `FeedItem` interface: `block_name` en `provider_name`.
+
+---
+
+## Tijdweergave: exacte tijd altijd zichtbaar
+
+Momenteel staat de exacte tijd alleen achter een tooltip. We maken de exacte tijd **altijd zichtbaar** als tweede klein label rechts:
+
+```
+[relativeTime]
+[14 jan · 16:42]   ← altijd zichtbaar, klein grijs
+```
+
+---
+
+## Dashboard: volgorde sidebar aanpassen
+
+Commissies omhoog, beschikbaarheid naar beneden. In `AdminDashboard.tsx`:
+```tsx
+<DashboardTodoWidget />
+<PendingCommissionsCard />       {/* omhoog */}
+<AdminUnavailabilityWidget />    {/* naar onder */}
+```
 
 ---
 
@@ -112,73 +127,8 @@ Elke stat is een klikbare chip die linkt naar de relevante beheerpagina. Minder 
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/components/admin/LiveActivityFeed.tsx` | Realtime subscription, grotere feed, meer detail, "Nieuw" badge, Live indicator |
-| `src/pages/admin/AdminDashboard.tsx` | 2-koloms layout, compacte stat bar, feed prominenter |
+| `src/components/admin/LiveActivityFeed.tsx` | item_id ophalen + batch-fetch block_name/provider_name; old_value/new_value uitlezen voor time_changed; uitgebreide getActionMeta en getSubtitle voor alle admin- en partner-acties; exacte tijd altijd zichtbaar; quote_opened actie; nieuwe actielabels voor template_applied, bulk_invite_partners, partner_updated, request_cancelled, partner_created |
+| `src/pages/admin/AdminDashboard.tsx` | Volgorde sidebar: PendingCommissionsCard vóór AdminUnavailabilityWidget |
+| `supabase/functions/get-customer-program/index.ts` | `quote_opened` loggen als fire-and-forget wanneer `quote_sent_at` gevuld |
 
-### Geen database-wijzigingen nodig
-
-`program_request_history` staat al in Supabase Realtime (public schema). De RLS policies staan al admin SELECT toe. Geen migraties nodig.
-
----
-
-## Technische details realtime
-
-De subscription wordt opgezet in een `useEffect` die bij unmount wordt opgeruimd:
-
-```ts
-useEffect(() => {
-  fetchFeed(); // initiële load
-
-  const channel = supabase
-    .channel("activity-feed-realtime")
-    .on("postgres_changes", {
-      event: "INSERT",
-      schema: "public",
-      table: "program_request_history",
-    }, async (payload) => {
-      const newItem = payload.new as any;
-      // Skip customer_portal_viewed om spam te voorkomen
-      if (newItem.action === "customer_portal_viewed") return;
-
-      // Haal klantnaam + referentie op
-      const { data: req } = await supabase
-        .from("program_requests")
-        .select("customer_name, customer_company, reference_number")
-        .eq("id", newItem.request_id)
-        .single();
-
-      const feedItem: FeedItem = {
-        id: `h-${newItem.id}`,
-        actor: newItem.actor,
-        action: newItem.action,
-        actor_name: newItem.actor_name,
-        notes: newItem.notes,
-        new_value: newItem.new_value,
-        created_at: newItem.created_at,
-        request_id: newItem.request_id,
-        customer_name: req?.customer_name,
-        customer_company: req?.customer_company,
-        reference_number: req?.reference_number,
-        isNew: true, // voor flash animatie
-      };
-
-      setItems(prev => [feedItem, ...prev].slice(0, 60));
-    })
-    .subscribe();
-
-  return () => { supabase.removeChannel(channel); };
-}, []);
-```
-
-**Opmerking over `customer_portal_viewed`**: Deze actie wordt bewust **gefilterd uit de realtime feed** (maar blijft in de initiële laadquery) om te voorkomen dat de feed volloopt bij actief klantportaalgebruik. In de initiële load worden ze wel getoond, maar gedimmed weergegeven (lichtere kleur).
-
-### Flash animatie voor nieuwe items
-
-```css
-@keyframes flash-new {
-  0%, 100% { background-color: transparent; }
-  30% { background-color: rgb(220 252 231); } /* green-100 */
-}
-```
-
-Toegepast via een `isNew` flag die na 3 seconden wordt verwijderd.
+Geen database-schemawijzigingen nodig — alle benodigde data is al aanwezig.
