@@ -269,30 +269,17 @@ export const CustomerPortalSplash = ({
             </div>
           </div>
 
-          {/* Contact */}
-          <div className="border-t pt-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-medium text-sm">Vragen?</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">Neem contact op met Bureau Vlieland</p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href="mailto:hallo@bureauvlieland.nl"
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Mail className="h-4 w-4" />
-                  hallo@bureauvlieland.nl
-                </a>
-                <a
-                  href="tel:+31562451515"
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Phone className="h-4 w-4" />
-                  0562 – 45 15 15
-                </a>
-              </div>
-            </div>
+          {/* Contact — compact */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground">
+            <span>Vragen?</span>
+            <a href="mailto:hallo@bureauvlieland.nl" className="flex items-center gap-1 hover:text-foreground transition-colors">
+              <Mail className="h-3 w-3" />
+              hallo@bureauvlieland.nl
+            </a>
+            <a href="tel:+31562700208" className="flex items-center gap-1 hover:text-foreground transition-colors">
+              <Phone className="h-3 w-3" />
+              0562 700 208
+            </a>
           </div>
         </div>
 
