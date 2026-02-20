@@ -49,7 +49,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface MobileProgramViewProps {
   invoicingMode?: string;
-  initialSection?: "accommodation" | "program";
+  initialSection?: "accommodation" | "program" | "billing";
   program: {
     customer_name: string;
     customer_company?: string;
@@ -266,8 +266,8 @@ export const MobileProgramView = ({
         </ProgramSection>
       )}
 
-      {/* 4. Program section - hide when showing accommodation */}
-      {initialSection !== "accommodation" && <ProgramSection
+      {/* 4. Program section - hide when showing accommodation or billing */}
+      {initialSection !== "accommodation" && initialSection !== "billing" && <ProgramSection
         id="program"
         title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
@@ -422,12 +422,12 @@ export const MobileProgramView = ({
         )}
       </ProgramSection>}
 
-      {/* 5. Billing section - hide when showing accommodation */}
-      {initialSection !== "accommodation" && <ProgramSection
+      {/* 5. Billing section — shown in program view AND billing view */}
+      {(initialSection === "program" || initialSection === "billing") && <ProgramSection
         id="billing"
         title="Facturatie & Kosten"
         icon={<FileText className="h-4 w-4 text-primary" />}
-        defaultOpen={allConfirmed && !termsAccepted}
+        defaultOpen={initialSection === "billing" || (allConfirmed && !termsAccepted)}
       >
         <div className="space-y-4">
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
@@ -447,8 +447,8 @@ export const MobileProgramView = ({
         </div>
       </ProgramSection>}
 
-      {/* 6. Accept terms - hide when showing accommodation */}
-      {initialSection !== "accommodation" && !termsAccepted && (
+      {/* 6. Accept terms — shown in program view AND billing view */}
+      {(initialSection === "program" || initialSection === "billing") && !termsAccepted && (
         <div id="terms-section">
           {allConfirmed ? (
             <AcceptTermsCard
@@ -477,9 +477,9 @@ export const MobileProgramView = ({
         </div>
       )}
 
-      {initialSection !== "accommodation" && (
+      {(initialSection === "program" || initialSection === "billing") && (
         <>
-          {/* Accepted terms - permanent visibility */}
+          {/* Accepted terms */}
           {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
             <AcceptedTermsCard
               termsAcceptedAt={program.terms_accepted_at!}
@@ -497,8 +497,8 @@ export const MobileProgramView = ({
             />
           )}
 
-          {/* Floating changes bar */}
-          {hasChanges && (
+          {/* Floating changes bar — only in program view */}
+          {initialSection === "program" && hasChanges && (
             <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -517,116 +517,113 @@ export const MobileProgramView = ({
             </div>
           )}
 
-          {/* Secondary options */}
-          <ProgramSection
-            id="details"
-            title="Programma Details"
-            icon={<Settings className="h-4 w-4 text-primary" />}
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Pas gegevens aan</span>
-                <Button variant="ghost" size="sm" onClick={onOpenEdit}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Bewerken
-                </Button>
-              </div>
-
-              <div className="grid gap-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-primary" />
+          {/* Secondary options — only in program view */}
+          {initialSection === "program" && (
+            <>
+              <ProgramSection
+                id="details"
+                title="Programma Details"
+                icon={<Settings className="h-4 w-4 text-primary" />}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Pas gegevens aan</span>
+                    <Button variant="ghost" size="sm" onClick={onOpenEdit}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Bewerken
+                    </Button>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Contactpersoon</p>
-                    <p className="font-medium">{program.customer_name}</p>
+                  <div className="grid gap-4 text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Contactpersoon</p>
+                        <p className="font-medium">{program.customer_name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Calendar className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Datum(s)</p>
+                        <p className="font-medium">
+                          {selectedDates.map((d, i) => (
+                            <span key={i}>
+                              {i > 0 && ", "}
+                              {format(d, "d MMM yyyy", { locale: nl })}
+                            </span>
+                          ))}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">E-mail</p>
+                        <p className="font-medium">{program.customer_email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Phone className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Telefoon</p>
+                        <p className="font-medium">{program.customer_phone}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Aantal personen</p>
+                        <p className="font-medium">{program.number_of_people}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </ProgramSection>
 
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Calendar className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Datum(s)</p>
-                    <p className="font-medium">
-                      {selectedDates.map((d, i) => (
-                        <span key={i}>
-                          {i > 0 && ", "}
-                          {format(d, "d MMM yyyy", { locale: nl })}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Mail className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">E-mail</p>
-                    <p className="font-medium">{program.customer_email}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Phone className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Telefoon</p>
-                    <p className="font-medium">{program.customer_phone}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Aantal personen</p>
-                    <p className="font-medium">{program.number_of_people}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ProgramSection>
-
-          {/* History section */}
-          {history.length > 0 && (
-            <ProgramSection
-              id="history"
-              title="Geschiedenis"
-              icon={<History className="h-4 w-4 text-primary" />}
-            >
-              <ProgramHistoryTimeline history={history} variant="embedded" />
-            </ProgramSection>
-          )}
-
-          {/* Cancel request section */}
-          <Card className="border-destructive/20">
-            <CardContent className="py-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-medium mb-1 flex items-center gap-2">
-                    <Ban className="h-4 w-4 text-destructive" />
-                    Aanvraag annuleren
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Alle aanbieders worden automatisch op de hoogte gesteld.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                  onClick={onOpenCancel}
+              {history.length > 0 && (
+                <ProgramSection
+                  id="history"
+                  title="Geschiedenis"
+                  icon={<History className="h-4 w-4 text-primary" />}
                 >
-                  Annuleren
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                  <ProgramHistoryTimeline history={history} variant="embedded" />
+                </ProgramSection>
+              )}
+
+              <Card className="border-destructive/20">
+                <CardContent className="py-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-medium mb-1 flex items-center gap-2">
+                        <Ban className="h-4 w-4 text-destructive" />
+                        Aanvraag annuleren
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Alle aanbieders worden automatisch op de hoogte gesteld.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      onClick={onOpenCancel}
+                    >
+                      Annuleren
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           {/* Contact section */}
           <Card className="bg-muted/30">
@@ -660,6 +657,9 @@ export const MobileProgramView = ({
           </Card>
         </>
       )}
+
+
+
 
       {/* Add Activity Sheet */}
       <AddActivitySheet
