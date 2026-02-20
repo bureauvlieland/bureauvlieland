@@ -234,6 +234,10 @@ export const CustomerPortalSplash = ({
               Fijn dat u er bent! Via dit portaal vindt u alles over uw verblijf op Vlieland op één plek.
               Bureau Vlieland coördineert het programma en de logies — u hoeft alleen te kijken, kiezen en akkoord te geven.
             </p>
+            <p className="text-muted-foreground text-sm">
+              Met vriendelijke eilandgroet,<br />
+              <span className="font-medium text-foreground">Erwin</span>
+            </p>
 
             <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
