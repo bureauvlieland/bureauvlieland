@@ -344,11 +344,6 @@ const CustomerProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
-            {effectiveView !== "splash" && isMultiDay && (
-              <Button variant="ghost" size="sm" onClick={() => handleNavigate("splash")}>
-                ← Overzicht
-              </Button>
-            )}
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
               <RefreshCw className="h-4 w-4 mr-2" />
               Vernieuwen
@@ -378,8 +373,8 @@ const CustomerProgram = () => {
       )}
 
 
-      {/* Navigation tabs — always visible (also for single-day, no splash shown) */}
-      {!isMobile && effectiveView !== "splash" && (
+      {/* Navigation tabs — always visible on desktop, including splash */}
+      {!isMobile && (
         <ProgramNavigation
           isMultiDay={isMultiDay}
           activeView={effectiveView}
