@@ -1,134 +1,142 @@
 
-# LiveActivityFeed: meer details, betere context, dashboard layout
+# Klantportaal herinrichting: Logies en Programma los van elkaar
 
-## Wat er al beschikbaar is in de data (volledig beeld na analyse)
+## Probleemstelling
 
-### `admin_activity_log` — details JSON bevat al:
-- `partner_invitation_resent`: `{ partner_name, partner_email }` — nu tonen we alleen actie, geen naam
-- `partner_updated`: `{ name }` — partnernaam aanwezig maar niet getoond
-- `quote_status_changed`: `{ old_status, new_status }` — statusovergang aanwezig maar niet getoond
-- `item_status_changed`: `{ action, block_name, item_id }` — activiteitnaam aanwezig maar niet getoond
-- `template_applied`: `{ template_name, items_added }` — volledig bruikbaar maar niet getoond
-- `bulk_invite_partners`: `{ partner_names, successful, failed }` — volledig bruikbaar maar niet getoond
-- `request_cancelled`: `{ reason }` — reden aanwezig maar niet getoond
+Het huidige klantportaal (`/mijn-programma/:token`) toont Logies en Programma in één geïntegreerde view, waardoor het lijkt alsof het één integraal aanbod is. De klant begrijpt niet:
+- Dat logies en programma twee losstaande trajecten zijn
+- Wie welke factuur stuurt (accommodatieaanbieder vs. Bureau Vlieland vs. individuele partners)
+- Hoe het traject in zijn geheel werkt
 
-### `program_request_history` — kolommen die er al zijn maar niet gebruikt worden:
-- `item_id` — FK naar `program_request_items` — we fetchen dit **niet**, waardoor `block_name` en `provider_name` ontbreken bij `time_changed`, `item_accepted`, `counter_proposed`, `item_cancelled`
-- `old_value` en `new_value` — bij `time_changed` staat hier `{ value: "18:00" }` resp. `{ value: "17:30" }` — de "van → naar" informatie is aanwezig maar niet uitgelezen
-- `actor_name` — bij partner acties bevat dit al de partnernaam maar dit wordt niet getoond als subtitle
-
-### Klantoffertes openen
-- De edge function logt al `customer_portal_viewed` bij elke fetch — we kunnen ook detecteren wanneer een klant de offerte bekijkt (als `quote_status = 'offerte_verstuurd'`)
-- Dit doen we door in de feed een aparte actie `quote_opened` te loggen
+De gewenste tekst onderaan de pagina verduidelijkt dat het voorstel een werkdocument is: "Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen."
 
 ---
 
-## Concrete verbeteringen per actie
+## Nieuw paginaontwerp: Splash + twee aparte tabs/secties
 
-### Klantacties (`program_request_history`)
+### Architectuur: één URL, drie fasen
 
-| Actie | Nu | Verbeterd |
-|-------|-----|-----------|
-| `time_changed` | "Klant wijzigt tijdvoorkeur" · Naam | + activiteitnaam + provider + "18:00 → 17:30" uit old/new_value |
-| `item_accepted` | "Klant heeft activiteit goedgekeurd" · Naam | + activiteitnaam + provider uit item_id join |
-| `counter_proposed` | "Klant doet tegenvoorstel" · "notitie..." | + activiteitnaam + provider |
-| `item_cancelled` | "Klant verwijdert activiteit" | + activiteitnaam + provider |
-| `add_activity` | "Klant voegt activiteit toe" · notes | + bloknaam uit notes of new_value |
-| `customer_portal_viewed` | "Klant heeft portaal bekeken" (gedimmed) | + exacte tijd altijd zichtbaar; bij quote_status=verzonden toevoeging "offerte geopend" |
-
-### Partneracties (`program_request_history`)
-
-| Actie | Nu | Verbeterd |
-|-------|-----|-----------|
-| `status_changed` (confirmed) | "Partner bevestigt activiteit" · notes | + activiteitnaam + prijs uit `new_value.quoted_price` (bv "€ 850,-") |
-| `status_changed` (unavailable) | "Partner meldt niet beschikbaar" | + activiteitnaam + `new_value.status_note` als subtitle |
-| `status_changed` (alternative) | "Partner stelt alternatief voor" | + activiteitnaam + toelichting |
-| `status_changed` (executed) | "Partner markeert als uitgevoerd" | + activiteitnaam |
-
-### Adminacties (`admin_activity_log`)
-
-| Actie | Nu | Verbeterd |
-|-------|-----|-----------|
-| `partner_invitation_resent` | "Partneruitnodiging opnieuw verstuurd" (geen naam) | + `details.partner_name` + `details.partner_email` |
-| `partner_updated` | "Admin wijzigt itemstatus" (fout label) | Correct label "Partnergegevens bijgewerkt" + `details.name` |
-| `quote_status_changed` | "Offertestatuswijziging" (geen detail) | + "offerte_verstuurd → akkoord_ontvangen" uit `details.old_status`/`details.new_status` |
-| `item_status_changed` | "Admin wijzigt itemstatus" | + `details.block_name` + actie (`activity_added` vs `activity_edited`) |
-| `template_applied` | Onbekend label | "Template toegepast" + `details.template_name` + `details.items_added` activiteiten |
-| `bulk_invite_partners` | Onbekend label | "Partners uitgenodigd" + `details.partner_names.join(', ')` |
-| `request_cancelled` | Onbekend label | "Aanvraag geannuleerd" + `details.reason` als er een reden is |
-| `partner_created` | Onbekend label | "Nieuwe partner aangemaakt" + partnernaam |
-
----
-
-## Nieuwe `quote_opened` actie loggen
-
-In `get-customer-program/index.ts` loggen we een extra actie wanneer de klant de portaalpagina opent **en** er een offerte verstuurd is (`quote_sent_at` gevuld):
-
-```ts
-// Log offerte-opening (alleen als offerte verstuurd is)
-if (program.quote_sent_at) {
-  supabase.from("program_request_history").insert({
-    request_id: program.id,
-    action: "quote_opened",
-    actor: "customer",
-    actor_name: program.customer_name,
-    notes: "Klant heeft de offerte bekeken",
-  }).then(() => {});
-}
+```text
+/mijn-programma/:token
+│
+├── [SPLASH] Welkomstpagina — altijd als eerste getoond (of bij directe navigatie)
+│   ├── Uitleg hoe het traject werkt (stappenoverzicht)
+│   ├── Duidelijk: Logies en Programma zijn losse trajecten
+│   ├── Duidelijk: wie factureert wat
+│   └── CTA: "Bekijk uw logies" + "Bekijk uw programma"
+│
+├── [TAB: Logies] — AccommodationSection (huidig)
+│   └── Offertes vergelijken, kiezen
+│
+└── [TAB: Programma] — DesktopProgramView / MobileProgramView (huidig)
+    └── Activiteiten, facturatie, voorwaarden
 ```
 
-In de feed: label "Klant heeft offerte geopend", icoon `FileText` in groen, gedimmed (net als portal views).
+De splash wordt getoond als "eerste bezoek" (via localStorage-flag per token), daarna kunnen klanten vrij navigeren tussen de tabs. Een vaste top-navigatiebalk toont altijd de tabs en de huidige status van elk onderdeel.
 
 ---
 
-## Item-details ophalen via batch-query
+## Gedetailleerde inhoud van de splash
 
-Voor acties met een `item_id` (time_changed, item_accepted, counter_proposed, item_cancelled, status_changed partner) doen we na de hoofdquery een extra batch-fetch:
+### Blok 1: Welkomstboodschap
+- Naam klant/bedrijf + kenmerk
+- Intro: "Fijn dat u er bent. Via dit portaal kunt u uw verblijf op Vlieland samenstellen en goedkeuren."
+- **Werkdocument-disclaimer** prominent zichtbaar:
+  > "Dit voorstel is bedoeld als werkdocument. Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming kunnen we het voorstel definitief maken."
 
-```ts
-// Collect alle item_ids uit history
-const itemIds = historyData.filter(h => h.item_id).map(h => h.item_id);
-if (itemIds.length > 0) {
-  const { data: itemDetails } = await supabase
-    .from("program_request_items")
-    .select("id, block_name, provider_name")
-    .in("id", itemIds);
-  // Map op feed items
-}
+### Blok 2: Hoe werkt het traject?
+Visuele stappenlijn (3-4 stappen):
+
+```text
+1. Logies regelen        2. Programma samenstellen    3. Akkoord geven        4. Klaar!
+   Offertes vergelijken     Activiteiten bekijken         Facturatiegeg. invullen   Bevestiging
+   & keuze maken            & goedkeuren                  & ondertekenen
 ```
 
-Dit voegt toe aan het `FeedItem` interface: `block_name` en `provider_name`.
+### Blok 3: Logies en Programma zijn los
+Twee kaarten naast elkaar:
+
+```text
+┌─────────────────────────────┐  ┌──────────────────────────────┐
+│  🏨 Logies                  │  │  📅 Programma                │
+│                             │  │                              │
+│  Rechtstreeks geboekt bij   │  │  Bureau Vlieland coördineert │
+│  de accommodatieaanbieder.  │  │  de activiteiten.            │
+│                             │  │                              │
+│  Factuur van: Aanbieder     │  │  Factuur van: Bureau Vlieland│
+│                             │  │  + individuele aanbieders    │
+│  [Status badge]             │  │  [Status badge]              │
+│  [Bekijk logies →]          │  │  [Bekijk programma →]        │
+└─────────────────────────────┘  └──────────────────────────────┘
+```
+
+### Blok 4: Contact
+- "Vragen? Neem contact op met Bureau Vlieland"
+- E-mailadres + telefoonnummer
 
 ---
 
-## Tijdweergave: exacte tijd altijd zichtbaar
+## Navigatie: vaste tabbar bovenaan
 
-Momenteel staat de exacte tijd alleen achter een tooltip. We maken de exacte tijd **altijd zichtbaar** als tweede klein label rechts:
+Na de splash navigeert de klant via een sticky tabbar:
 
+```text
+[← Overzicht]  [🏨 Logies · status-badge]  [📅 Programma · status-badge]  [📋 Facturatie]
 ```
-[relativeTime]
-[14 jan · 16:42]   ← altijd zichtbaar, klein grijs
-```
+
+Status badges: "Kies uw logies" / "In behandeling" / "✓ Gekozen" etc.
+
+De bestaande `ProgramNavigation`-component wordt uitgebreid met een "Overzicht" tab die teruglinkt naar de splash.
 
 ---
 
-## Dashboard: volgorde sidebar aanpassen
+## Technische aanpak
 
-Commissies omhoog, beschikbaarheid naar beneden. In `AdminDashboard.tsx`:
-```tsx
-<DashboardTodoWidget />
-<PendingCommissionsCard />       {/* omhoog */}
-<AdminUnavailabilityWidget />    {/* naar onder */}
-```
+### Nieuwe component: `CustomerPortalSplash.tsx`
+Volledig nieuwe component met de welkomstcontent, stappenoverzicht en de twee kaarten (logies / programma). Ontvangt als props:
+- `program` — voor naam, bedrijf, kenmerk
+- `accommodation` + `accommodationQuotes` — voor logies-status badge
+- `statusSummary` — voor programma-status badge
+- `selectedDates`, `numberOfPeople`
+- `onNavigate(tab: "accommodation" | "program")` — navigeert naar de juiste tab
+
+### Aanpassing `CustomerProgram.tsx`
+- Nieuwe state: `activeView: "splash" | "accommodation" | "program"` (default: "splash")
+- Eerste keer bezoek: sla `bv_portal_visited_${token}` op in localStorage → daarna direct naar main view
+- De splash toont altijd als er nog geen logies-keuze gemaakt is en het een meerdaags programma betreft
+
+### Aanpassing navigatie
+`ProgramNavigation` krijgt een "Overzicht" tab links, plus de bestaande tabs worden duidelijker gelabeld met status.
+
+### `DesktopProgramView` / `MobileProgramView`
+- De AccommodationSection wordt **verwijderd** uit de programmaview als `activeView` wordt gebruikt — logies is nu een eigen tab
+- Als `activeView === "accommodation"` → alleen `AccommodationSection` tonen (in een eigen wrapper zonder het programma erbij)
+- Als `activeView === "program"` → huidig programma zonder logies-sectie
+
+### Facturatie-uitleg verplaatsen
+De `InvoiceProvidersCard` krijgt een prominentere plek in de splash (uitleg per blok) én blijft in de facturatietab. De tekst wordt aangescherpt:
+- Logies: "Factuur ontvang je rechtstreeks van [naam accommodatie]"
+- Programma: "Bureau Vlieland factureert de coördinatie en eigen onderdelen; aanbieders factureren hun activiteiten rechtstreeks"
 
 ---
 
-## Bestanden die worden aangepast
+## Bestanden die worden aangemaakt / gewijzigd
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/components/admin/LiveActivityFeed.tsx` | item_id ophalen + batch-fetch block_name/provider_name; old_value/new_value uitlezen voor time_changed; uitgebreide getActionMeta en getSubtitle voor alle admin- en partner-acties; exacte tijd altijd zichtbaar; quote_opened actie; nieuwe actielabels voor template_applied, bulk_invite_partners, partner_updated, request_cancelled, partner_created |
-| `src/pages/admin/AdminDashboard.tsx` | Volgorde sidebar: PendingCommissionsCard vóór AdminUnavailabilityWidget |
-| `supabase/functions/get-customer-program/index.ts` | `quote_opened` loggen als fire-and-forget wanneer `quote_sent_at` gevuld |
+| `src/components/customer-portal/CustomerPortalSplash.tsx` | **Nieuw** — splash/welkomstpagina component |
+| `src/pages/CustomerProgram.tsx` | State voor `activeView`, localStorage-check, renderen splash vs. tabs |
+| `src/components/customer-portal/ProgramNavigation.tsx` | "Overzicht" tab toevoegen + status-badges per tab |
+| `src/components/customer-portal/DesktopProgramView.tsx` | AccommodationSection conditioneel renderen (prop `showAccommodation`) |
+| `src/components/customer-portal/MobileProgramView.tsx` | Idem |
 
-Geen database-schemawijzigingen nodig — alle benodigde data is al aanwezig.
+Geen database-wijzigingen nodig. Geen nieuwe routes nodig (alles binnen `/mijn-programma/:token`).
+
+---
+
+## Openstaande afstemmpunten
+
+1. **Altijd splash tonen bij eerste bezoek**, of alleen als logies nog niet gekozen is?
+2. **Programma zonder logies**: bij eendaagse programma's is er geen accommodatie — splash vereenvoudigt dan tot alleen stap 2+3. Tonen we de splash ook voor eendaagse programma's?
+3. **Werkdocument-disclaimer**: moet deze bij elk bezoek zichtbaar zijn (bijv. bovenaan de tabs), of alleen op de splash?
+4. **Facturatietab**: blijft de facturatie onderdeel van de programmatab, of wordt het een volledig aparte derde tab?
