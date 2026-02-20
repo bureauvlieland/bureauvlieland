@@ -223,28 +223,31 @@ export const MobileProgramView = ({
         hasPendingItems={statusSummary.pending > 0}
       />
 
-      {/* 2. Action Required Card */}
-      <ActionRequiredCard
-        statusSummary={statusSummary}
-        isMultiDay={isMultiDay}
-        hasAccommodation={hasActiveAccommodation}
-        billingComplete={billingComplete}
-        termsAccepted={termsAccepted}
-        onOpenBilling={onOpenBilling}
-        onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
-        onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
-        programType={program.program_type}
-        quoteStatus={program.quote_status}
-      />
+      {/* 2. Action Required Card + Intro card — only on Programma tab */}
+      {initialSection === "program" && (
+        <>
+          <ActionRequiredCard
+            statusSummary={statusSummary}
+            isMultiDay={isMultiDay}
+            hasAccommodation={hasActiveAccommodation}
+            billingComplete={billingComplete}
+            termsAccepted={termsAccepted}
+            onOpenBilling={onOpenBilling}
+            onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
+            onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
+            programType={program.program_type}
+            quoteStatus={program.quote_status}
+          />
 
-      {/* 3. Intro card - context-aware explanation */}
-      <ProgramIntroCard
-        programType={program.program_type}
-        quoteStatus={program.quote_status}
-        quoteValidUntil={program.quote_valid_until}
-        termsAcceptedAt={program.terms_accepted_at}
-        onAcceptQuoteProposal={onAcceptQuoteProposal}
-      />
+          <ProgramIntroCard
+            programType={program.program_type}
+            quoteStatus={program.quote_status}
+            quoteValidUntil={program.quote_valid_until}
+            termsAcceptedAt={program.terms_accepted_at}
+            onAcceptQuoteProposal={onAcceptQuoteProposal}
+          />
+        </>
+      )}
 
       {/* 3. Accommodation section - only for multi-day, shown when initialSection is "accommodation" */}
       {isMultiDay && initialSection === "accommodation" && (

@@ -192,28 +192,31 @@ export const DesktopProgramView = ({
           hasPendingItems={statusSummary.pending > 0}
         />
 
-        {/* 2. Action required card */}
-        <ActionRequiredCard
-          statusSummary={statusSummary}
-          isMultiDay={isMultiDay}
-          hasAccommodation={hasActiveAccommodation}
-          billingComplete={billingComplete}
-          termsAccepted={termsAccepted}
-          onOpenBilling={onOpenBilling}
-          onScrollToTerms={scrollToTerms}
-          onScrollToAccommodation={scrollToAccommodation}
-          programType={program.program_type}
-          quoteStatus={program.quote_status}
-        />
+        {/* 2. Action required card + Intro card — only on Programma tab */}
+        {initialSection === "program" && (
+          <>
+            <ActionRequiredCard
+              statusSummary={statusSummary}
+              isMultiDay={isMultiDay}
+              hasAccommodation={hasActiveAccommodation}
+              billingComplete={billingComplete}
+              termsAccepted={termsAccepted}
+              onOpenBilling={onOpenBilling}
+              onScrollToTerms={scrollToTerms}
+              onScrollToAccommodation={scrollToAccommodation}
+              programType={program.program_type}
+              quoteStatus={program.quote_status}
+            />
 
-        {/* 3. Intro card - context-aware explanation */}
-        <ProgramIntroCard
-          programType={program.program_type}
-          quoteStatus={program.quote_status}
-          quoteValidUntil={program.quote_valid_until}
-          termsAcceptedAt={program.terms_accepted_at}
-          onAcceptQuoteProposal={onAcceptQuoteProposal}
-        />
+            <ProgramIntroCard
+              programType={program.program_type}
+              quoteStatus={program.quote_status}
+              quoteValidUntil={program.quote_valid_until}
+              termsAcceptedAt={program.terms_accepted_at}
+              onAcceptQuoteProposal={onAcceptQuoteProposal}
+            />
+          </>
+        )}
 
         {/* 3. Accommodation section - only for multi-day, shown when initialSection is "accommodation" */}
         {isMultiDay && initialSection === "accommodation" && (
