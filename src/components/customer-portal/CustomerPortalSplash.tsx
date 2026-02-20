@@ -39,7 +39,7 @@ interface CustomerPortalSplashProps {
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
   isMultiDay: boolean;
-  onNavigate: (tab: "accommodation" | "program") => void;
+  onNavigate: (tab: "accommodation" | "program" | "billing") => void;
 }
 
 const steps = [

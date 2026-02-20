@@ -33,12 +33,7 @@ const CustomerProgram = () => {
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
   const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
-  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program">(() => {
-    // Show splash on first visit per token
-    if (!token) return "splash";
-    const visited = localStorage.getItem(`bv_portal_visited_${token}`);
-    return visited ? "program" : "splash";
-  });
+  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "billing">("splash");
   
   const {
     program,
@@ -282,11 +277,10 @@ const CustomerProgram = () => {
     );
   }
 
-  // Navigate to a specific view and mark as visited
-  const handleNavigate = (view: "splash" | "accommodation" | "program") => {
-    if (token && view !== "splash") {
-      localStorage.setItem(`bv_portal_visited_${token}`, "1");
-    }
+  // Navigate to a specific view
+  // Decision 1: Splash always shown for multi-day (no localStorage skip)
+  // Decision 2: Single-day → skip splash, go directly to program
+  const handleNavigate = (view: "splash" | "accommodation" | "program" | "billing") => {
     setActiveView(view);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -333,6 +327,9 @@ const CustomerProgram = () => {
     onAcceptQuoteProposal: acceptQuoteProposal,
   };
 
+  // Decision 2: Single-day programs skip the splash and go directly to program
+  const effectiveView = !isMultiDay && activeView === "splash" ? "program" : activeView;
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -347,7 +344,7 @@ const CustomerProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
-            {activeView !== "splash" && (
+            {effectiveView !== "splash" && isMultiDay && (
               <Button variant="ghost" size="sm" onClick={() => handleNavigate("splash")}>
                 ← Overzicht
               </Button>
@@ -380,18 +377,28 @@ const CustomerProgram = () => {
         </div>
       )}
 
-      {/* Navigation tabs - only show when not on splash */}
-      {activeView !== "splash" && !isMobile && (
+      {/* Decision 3: Werkdocument-disclaimer always visible (not just on splash) */}
+      <div className="border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+        <div className="container mx-auto px-4 py-2 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-800 dark:text-amber-200">
+            <strong>Werkdocument</strong> — Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief.
+          </p>
+        </div>
+      </div>
+
+      {/* Navigation tabs — always visible (also for single-day, no splash shown) */}
+      {!isMobile && effectiveView !== "splash" && (
         <ProgramNavigation
           isMultiDay={isMultiDay}
-          activeView={activeView}
+          activeView={effectiveView}
           onNavigate={handleNavigate}
         />
       )}
 
       <main className="container mx-auto px-4 py-8">
-        {/* Splash view */}
-        {activeView === "splash" && (
+        {/* Splash view — only for multi-day */}
+        {effectiveView === "splash" && (
           <CustomerPortalSplash
             program={program as any}
             selectedDates={selectedDates}
@@ -404,7 +411,7 @@ const CustomerProgram = () => {
         )}
 
         {/* Accommodation view */}
-        {activeView === "accommodation" && isMultiDay && (
+        {effectiveView === "accommodation" && isMultiDay && (
           isMobile ? (
             <MobileProgramView {...viewProps} initialSection="accommodation" />
           ) : (
@@ -413,11 +420,20 @@ const CustomerProgram = () => {
         )}
 
         {/* Program view */}
-        {(activeView === "program" || (activeView === "accommodation" && !isMultiDay)) && (
+        {effectiveView === "program" && (
           isMobile ? (
             <MobileProgramView {...viewProps} initialSection="program" />
           ) : (
             <DesktopProgramView {...viewProps} initialSection="program" />
+          )
+        )}
+
+        {/* Decision 4: Billing as separate tab/view */}
+        {effectiveView === "billing" && (
+          isMobile ? (
+            <MobileProgramView {...viewProps} initialSection="billing" />
+          ) : (
+            <DesktopProgramView {...viewProps} initialSection="billing" />
           )
         )}
       </main>

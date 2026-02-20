@@ -4,13 +4,16 @@ import {
   Calendar,
   BedDouble,
   LayoutGrid,
+  Receipt,
 } from "lucide-react";
+
+type ActiveView = "splash" | "accommodation" | "program" | "billing";
 
 interface ProgramNavigationProps {
   className?: string;
   isMultiDay?: boolean;
-  activeView?: "splash" | "accommodation" | "program";
-  onNavigate?: (view: "splash" | "accommodation" | "program") => void;
+  activeView?: ActiveView;
+  onNavigate?: (view: ActiveView) => void;
 }
 
 export const ProgramNavigation = ({
@@ -19,20 +22,17 @@ export const ProgramNavigation = ({
   activeView = "program",
   onNavigate,
 }: ProgramNavigationProps) => {
-  const handleClick = (view: "splash" | "accommodation" | "program") => {
+  const handleClick = (view: ActiveView) => {
     if (onNavigate) {
       onNavigate(view);
-    } else {
-      // Fallback: scroll to section
-      const sectionMap: Record<string, string> = {
-        accommodation: "accommodation",
-        program: "program",
-        billing: "billing",
-      };
-      const el = document.getElementById(sectionMap[view] || view);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
+
+  const tabClass = (view: ActiveView) =>
+    cn(
+      "shrink-0",
+      activeView === view && "bg-primary/10 text-primary"
+    );
 
   return (
     <nav
@@ -48,10 +48,7 @@ export const ProgramNavigation = ({
             variant={activeView === "splash" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => handleClick("splash")}
-            className={cn(
-              "shrink-0",
-              activeView === "splash" && "bg-primary/10 text-primary"
-            )}
+            className={tabClass("splash")}
           >
             <LayoutGrid className="h-4 w-4 mr-2" />
             Overzicht
@@ -63,10 +60,7 @@ export const ProgramNavigation = ({
               variant={activeView === "accommodation" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => handleClick("accommodation")}
-              className={cn(
-                "shrink-0",
-                activeView === "accommodation" && "bg-primary/10 text-primary"
-              )}
+              className={tabClass("accommodation")}
             >
               <BedDouble className="h-4 w-4 mr-2" />
               Logies
@@ -78,13 +72,21 @@ export const ProgramNavigation = ({
             variant={activeView === "program" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => handleClick("program")}
-            className={cn(
-              "shrink-0",
-              activeView === "program" && "bg-primary/10 text-primary"
-            )}
+            className={tabClass("program")}
           >
             <Calendar className="h-4 w-4 mr-2" />
             Programma
+          </Button>
+
+          {/* Facturatie tab */}
+          <Button
+            variant={activeView === "billing" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => handleClick("billing")}
+            className={tabClass("billing")}
+          >
+            <Receipt className="h-4 w-4 mr-2" />
+            Facturatie
           </Button>
         </div>
       </div>

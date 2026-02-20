@@ -49,7 +49,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface DesktopProgramViewProps {
   invoicingMode?: string;
-  initialSection?: "accommodation" | "program";
+  initialSection?: "accommodation" | "program" | "billing";
   program: {
     customer_name: string;
     customer_company?: string;
@@ -240,9 +240,10 @@ export const DesktopProgramView = ({
           </div>
         )}
 
-        {/* 4. Program, billing, terms, contact - visible when not showing accommodation */}
-        {initialSection !== "accommodation" && (
+        {/* 4. Program, billing, terms, contact - visible when not showing accommodation or billing-only */}
+        {initialSection !== "accommodation" && initialSection !== "billing" && (
           <>
+            {/* Program content only (no billing) */}
             <div id="program" className="scroll-mt-20">
               <Card>
                 <CardHeader className="pb-3">
@@ -392,7 +393,12 @@ export const DesktopProgramView = ({
               </Card>
             </div>
 
-            {/* 5. Billing & Costs section */}
+          </>
+        )}
+
+        {/* Billing-only view (decision 4: separate billing tab) */}
+        {initialSection === "billing" && (
+          <div className="space-y-6">
             <div id="billing" className="scroll-mt-20">
               <CompactBillingSection
                 program={program}
@@ -405,7 +411,6 @@ export const DesktopProgramView = ({
               />
             </div>
 
-            {/* 6. Accept terms */}
             {!termsAccepted && (
               <div id="terms-section" className="scroll-mt-20">
                 {allConfirmed ? (
@@ -435,7 +440,6 @@ export const DesktopProgramView = ({
               </div>
             )}
 
-            {/* Accepted terms */}
             {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
               <AcceptedTermsCard
                 termsAcceptedAt={program.terms_accepted_at!}
@@ -445,65 +449,13 @@ export const DesktopProgramView = ({
               />
             )}
 
-            {/* Payment status after terms acceptance */}
             {termsAccepted && (
               <PaymentStatusCard
                 items={program.items}
                 termsAcceptedAt={program.terms_accepted_at!}
               />
             )}
-
-            {/* Floating changes bar */}
-            {hasChanges && (
-              <div className="sticky bottom-4 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg max-w-[calc(100%-340px)]">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium">
-                      {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Aanbieders worden op de hoogte gesteld
-                    </p>
-                  </div>
-                  <Button onClick={onSubmitChanges}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Wijzigingen doorvoeren
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Contact section */}
-            <Card className="bg-muted/30">
-              <CardContent className="py-6">
-                <div className="flex items-start gap-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1">Vragen of hulp nodig?</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Neem gerust contact met ons op. We helpen u graag verder.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      <a href="mailto:hallo@bureauvlieland.nl">
-                        <Button variant="outline" size="sm">
-                          <Mail className="h-4 w-4 mr-2" />
-                          hallo@bureauvlieland.nl
-                        </Button>
-                      </a>
-                      <a href="tel:+31562700208">
-                        <Button variant="outline" size="sm">
-                          <Phone className="h-4 w-4 mr-2" />
-                          0562 700 208
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
+          </div>
         )}
       </div>
 
