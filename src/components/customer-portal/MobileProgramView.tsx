@@ -223,8 +223,8 @@ export const MobileProgramView = ({
         hasPendingItems={statusSummary.pending > 0}
       />
 
-      {/* 2. Action Required Card + Intro card — only on Programma tab */}
-      {initialSection === "program" && (
+      {/* 2. Action Required Card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}
+      {(initialSection === "program" || !initialSection) && (
         <>
           <ActionRequiredCard
             statusSummary={statusSummary}
