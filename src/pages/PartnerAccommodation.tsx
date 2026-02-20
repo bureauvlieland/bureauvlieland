@@ -32,6 +32,7 @@ interface AccommodationRequest {
   wants_activities: boolean;
   status: string;
   created_at: string;
+  linked_program_id: string | null;
 }
 
 interface AccommodationQuote {
@@ -246,6 +247,22 @@ const PartnerAccommodationContent = () => {
         console.error("Failed to create review todo:", todoError);
       }
 
+      // Log to program_request_history so the activity feed picks it up
+      if (selectedRequest.linked_program_id) {
+        supabase.from("program_request_history").insert({
+          request_id: selectedRequest.linked_program_id,
+          action: "accommodation_quote_submitted",
+          actor: "partner",
+          actor_name: partnerName,
+          notes: quoteData.accommodationName,
+          new_value: {
+            price_total: quoteData.priceTotal,
+            accommodation_name: quoteData.accommodationName,
+            quote_id: selectedRequest.quote.id,
+          },
+        }).then(() => {});
+      }
+
       toast({
         title: "Offerte ingediend",
         description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland. Zij zullen deze beoordelen.",
@@ -280,6 +297,21 @@ const PartnerAccommodationContent = () => {
         .eq("id", selectedRequest.quote.id);
 
       if (error) throw error;
+
+      // Log to program_request_history so the activity feed picks it up
+      if (selectedRequest.linked_program_id) {
+        supabase.from("program_request_history").insert({
+          request_id: selectedRequest.linked_program_id,
+          action: "accommodation_quote_declined",
+          actor: "partner",
+          actor_name: partnerName,
+          notes: declineReason || null,
+          new_value: {
+            accommodation_name: selectedRequest.quote?.id,
+            quote_id: selectedRequest.quote?.id,
+          },
+        }).then(() => {});
+      }
 
       toast({
         title: "Aanvraag afgewezen",

@@ -21,6 +21,7 @@ import {
   UserPlus,
   Activity,
   Building2,
+  BedDouble,
   User,
   Shield,
   PlusCircle,
@@ -99,6 +100,10 @@ function getActionMeta(item: FeedItem): { label: string; icon: React.ReactNode; 
         if (newStatus === "executed")
           return { label: "Partner markeert als uitgevoerd", icon: <PlayCircle className="h-4 w-4" />, color: "text-purple-600 bg-purple-50" };
         return { label: "Partner wijzigt status", icon: <Activity className="h-4 w-4" />, color: "text-slate-600 bg-slate-50" };
+      case "accommodation_quote_submitted":
+        return { label: "Partner dient logiesofferte in", icon: <BedDouble className="h-4 w-4" />, color: "text-teal-600 bg-teal-50" };
+      case "accommodation_quote_declined":
+        return { label: "Partner wijst logiesaanvraag af", icon: <XCircle className="h-4 w-4" />, color: "text-red-600 bg-red-50" };
       case "invoice_registered":
         return { label: "Partner registreert factuur", icon: <FileText className="h-4 w-4" />, color: "text-purple-600 bg-purple-50" };
       default:
@@ -182,6 +187,17 @@ function getSubtitle(item: FeedItem): string | null {
     if (price) parts.push(`€ ${Number(price).toLocaleString("nl-NL")}`);
     if (statusNote) parts.push(statusNote);
     return parts.length > 0 ? parts.join(" · ") : notes || actor_name || null;
+  }
+  if (actor === "partner" && action === "accommodation_quote_submitted") {
+    const accommodationName = (new_value as any)?.accommodation_name || notes;
+    const price = (new_value as any)?.price_total;
+    const parts: string[] = [];
+    if (accommodationName) parts.push(accommodationName);
+    if (price) parts.push(`€ ${Number(price).toLocaleString("nl-NL")}`);
+    return parts.length > 0 ? parts.join(" · ") : actor_name || null;
+  }
+  if (actor === "partner" && action === "accommodation_quote_declined") {
+    return notes || actor_name || null;
   }
   if (actor === "partner" && action === "invoice_registered") {
     return block_name || notes || null;
