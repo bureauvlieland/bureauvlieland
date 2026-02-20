@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgramSidebar } from "./ProgramSidebar";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
@@ -265,32 +266,39 @@ export const DesktopProgramView = ({
                         referenceNumber={program.reference_number}
                         variant="sm"
                       />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
-                          downloadAllEvents(
-                            activeItems.map(i => ({
-                              id: i.id,
-                              block_name: i.block_name,
-                              provider_name: i.provider_name,
-                              day_index: i.day_index,
-                              confirmed_time: i.confirmed_time,
-                              proposed_time: i.proposed_time,
-                              preferred_time: i.preferred_time,
-                              duration: i.duration,
-                              location_address: i.location_address,
-                            })),
-                            selectedDates.map(d => d.toISOString().split("T")[0]),
-                            program.number_of_people,
-                            `Programma ${program.customer_company || program.customer_name}`
-                          );
-                        }}
-                      >
-                        <CalendarPlus className="h-4 w-4 mr-1" />
-                        Agenda
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
+                                downloadAllEvents(
+                                  activeItems.map(i => ({
+                                    id: i.id,
+                                    block_name: i.block_name,
+                                    provider_name: i.provider_name,
+                                    day_index: i.day_index,
+                                    confirmed_time: i.confirmed_time,
+                                    proposed_time: i.proposed_time,
+                                    preferred_time: i.preferred_time,
+                                    duration: i.duration,
+                                    location_address: i.location_address,
+                                  })),
+                                  selectedDates.map(d => d.toISOString().split("T")[0]),
+                                  program.number_of_people,
+                                  `Programma ${program.customer_company || program.customer_name}`
+                                );
+                              }}
+                            >
+                              <CalendarPlus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Exporteren naar agenda</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {(program as any).quote_pdf_url && (
                         <Button
                           variant="outline"
@@ -303,7 +311,6 @@ export const DesktopProgramView = ({
                       )}
                       {!termsAccepted && (
                         <Button
-                          variant="outline"
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
                         >

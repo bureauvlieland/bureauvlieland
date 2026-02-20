@@ -287,7 +287,8 @@ export const MobileProgramView = ({
               />
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
+                className="h-7 w-7"
                 onClick={(e) => {
                   e.stopPropagation();
                   const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
@@ -308,10 +309,8 @@ export const MobileProgramView = ({
                     `Programma ${program.customer_company || program.customer_name}`
                   );
                 }}
-                className="h-7 text-xs"
               >
-                <CalendarPlus className="h-3 w-3 mr-1" />
-                Agenda
+                <CalendarPlus className="h-3 w-3" />
               </Button>
               {(program as any).quote_pdf_url && (
                 <Button
@@ -329,7 +328,6 @@ export const MobileProgramView = ({
               )}
               {!termsAccepted && (
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();

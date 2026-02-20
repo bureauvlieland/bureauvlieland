@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -271,18 +272,25 @@ export const ProgramPdfDownload = ({
   };
 
   return (
-    <Button
-      onClick={generatePdf}
-      disabled={isGenerating}
-      variant="outline"
-      size={variant === "sm" ? "sm" : "default"}
-    >
-      {isGenerating ? (
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-      ) : (
-        <Download className="h-4 w-4 mr-2" />
-      )}
-      {variant === "sm" ? "PDF" : "Download PDF"}
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={generatePdf}
+            disabled={isGenerating}
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>PDF downloaden</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
