@@ -160,7 +160,7 @@ export function DailyActivitySummary() {
       setIsLoading(true);
       const since = periodSince(period);
 
-      const [{ data: historyData }, { data: adminData }] = await Promise.all([
+      const [{ data: historyData }, { data: adminData }, { data: quotesData }] = await Promise.all([
         supabase
           .from("program_request_history")
           .select("actor, action")
@@ -170,7 +170,22 @@ export function DailyActivitySummary() {
           .select("action")
           .gte("created_at", since)
           .not("action", "eq", "request_viewed"),
+        // Backfill: historical accommodation quote actions not yet in history table
+        supabase
+          .from("accommodation_quotes")
+          .select("id, status, submitted_at")
+          .not("submitted_at", "is", null)
+          .in("status", ["submitted", "selected", "rejected", "declined", "expired"])
+          .gte("submitted_at", since),
       ]);
+
+      // Track which quote IDs are already in history to avoid double-counting
+      const historyQuoteIds = new Set(
+        (historyData || [])
+          .filter((h) => h.action === "accommodation_quote_submitted" || h.action === "accommodation_quote_declined")
+          .map((h: any) => (h as any)?.new_value?.quote_id)
+          .filter(Boolean)
+      );
 
       // Aggregate history by actor + action
       const customerCounts: Record<string, number> = {};
@@ -181,6 +196,14 @@ export function DailyActivitySummary() {
           customerCounts[row.action] = (customerCounts[row.action] || 0) + 1;
         } else if (row.actor === "partner") {
           partnerCounts[row.action] = (partnerCounts[row.action] || 0) + 1;
+        }
+      }
+
+      // Add backfill quote counts (only those not already tracked in history)
+      for (const q of quotesData || []) {
+        if (!historyQuoteIds.has(q.id)) {
+          const action = q.status === "declined" ? "accommodation_quote_declined" : "accommodation_quote_submitted";
+          partnerCounts[action] = (partnerCounts[action] || 0) + 1;
         }
       }
 
