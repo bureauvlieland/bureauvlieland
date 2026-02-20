@@ -10,13 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Users,
-  Building2,
-  FileText,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
   Hotel,
-  Send,
+  TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -27,7 +22,6 @@ interface DashboardStats {
   confirmedItems: number;
   totalPartners: number;
   activePartners: number;
-  // Accommodation stats
   totalAccommodationRequests: number;
   pendingAccommodationRequests: number;
   quotedAccommodationRequests: number;
@@ -49,6 +43,26 @@ interface DashboardStats {
   }>;
 }
 
+const StatChip = ({
+  label,
+  value,
+  to,
+  color = "text-foreground",
+}: {
+  label: string;
+  value: number | string;
+  to: string;
+  color?: string;
+}) => (
+  <Link
+    to={to}
+    className="flex items-center gap-2 px-3 py-1.5 bg-card border rounded-lg hover:bg-muted/60 transition-colors group flex-shrink-0"
+  >
+    <span className="text-xs text-muted-foreground whitespace-nowrap">{label}</span>
+    <span className={`text-sm font-bold ${color} group-hover:text-primary transition-colors`}>{value}</span>
+  </Link>
+);
+
 const AdminDashboardContent = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,47 +70,27 @@ const AdminDashboardContent = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch request stats
-        const { data: requests, error: reqError } = await supabase
-          .from("program_requests")
-          .select("id, customer_name, customer_company, status, created_at");
+        const [
+          { data: requests },
+          { data: items },
+          { data: partners },
+          { data: accommodationRequests },
+        ] = await Promise.all([
+          supabase.from("program_requests").select("id, customer_name, customer_company, status, created_at"),
+          supabase.from("program_request_items").select("id, status, request_id"),
+          supabase.from("partners").select("id, is_active"),
+          supabase.from("accommodation_requests").select("id, customer_name, customer_company, status, created_at, number_of_guests"),
+        ]);
 
-        if (reqError) throw reqError;
-
-        // Fetch item stats
-        const { data: items, error: itemError } = await supabase
-          .from("program_request_items")
-          .select("id, status, request_id");
-
-        if (itemError) throw itemError;
-
-        // Fetch partner stats
-        const { data: partners, error: partnerError } = await supabase
-          .from("partners")
-          .select("id, is_active");
-
-        if (partnerError) throw partnerError;
-
-        // Fetch accommodation request stats
-        const { data: accommodationRequests, error: accError } = await supabase
-          .from("accommodation_requests")
-          .select("id, customer_name, customer_company, status, created_at, number_of_guests");
-
-        if (accError) throw accError;
-
-        // Calculate stats
         const activeRequests = requests?.filter(r => r.status === "active") || [];
         const pendingItems = items?.filter(i => i.status === "pending") || [];
         const confirmedItems = items?.filter(i => i.status === "confirmed") || [];
         const activePartners = partners?.filter(p => p.is_active) || [];
-
-        // Accommodation stats
-        const pendingAccommodation = accommodationRequests?.filter(r => 
+        const pendingAccommodation = accommodationRequests?.filter(r =>
           r.status === "submitted" || r.status === "processing"
         ) || [];
         const quotedAccommodation = accommodationRequests?.filter(r => r.status === "quoted") || [];
 
-        // Get recent requests with item count
         const recentRequests = (requests || [])
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5)
@@ -105,7 +99,6 @@ const AdminDashboardContent = () => {
             item_count: items?.filter(i => i.request_id === req.id).length || 0,
           }));
 
-        // Get recent accommodation requests
         const recentAccommodationRequests = (accommodationRequests || [])
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5);
@@ -137,10 +130,10 @@ const AdminDashboardContent = () => {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-3 gap-4">
+          <Skeleton className="h-[600px] col-span-2" />
+          <Skeleton className="h-[600px]" />
         </div>
         <Skeleton className="h-64" />
       </div>
@@ -148,193 +141,87 @@ const AdminDashboardContent = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-5">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-600">Overzicht van Bureau Vlieland</p>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground text-sm">Bureau Vlieland — realtime overzicht</p>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Actieve aanvragen</p>
-                <p className="text-3xl font-bold text-slate-900">{stats?.activeRequests}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              {stats?.totalRequests} totaal
-            </p>
-          </CardContent>
-        </Card>
+      {/* Compact stat bar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <StatChip label="Actieve aanvragen" value={stats?.activeRequests ?? 0} to="/admin/aanvragen" color="text-blue-600" />
+        <StatChip label="Te bevestigen" value={stats?.pendingItems ?? 0} to="/admin/aanvragen" color="text-amber-600" />
+        <StatChip label="Bevestigd" value={stats?.confirmedItems ?? 0} to="/admin/aanvragen" color="text-green-600" />
+        <StatChip label="Partners" value={`${stats?.activePartners ?? 0}/${stats?.totalPartners ?? 0}`} to="/admin/partners" />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Te bevestigen items</p>
-                <p className="text-3xl font-bold text-amber-600">{stats?.pendingItems}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-amber-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Wachten op partner reactie
-            </p>
-          </CardContent>
-        </Card>
+        {/* Separator */}
+        <div className="h-6 w-px bg-border flex-shrink-0 mx-1" />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Bevestigde items</p>
-                <p className="text-3xl font-bold text-green-600">{stats?.confirmedItems}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Klaar voor uitvoering
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Actieve partners</p>
-                <p className="text-3xl font-bold text-slate-900">{stats?.activePartners}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              {stats?.totalPartners} totaal
-            </p>
-          </CardContent>
-        </Card>
+        <StatChip label="Logies totaal" value={stats?.totalAccommodationRequests ?? 0} to="/admin/logies" color="text-indigo-600" />
+        <StatChip label="Te verwerken" value={stats?.pendingAccommodationRequests ?? 0} to="/admin/logies" color="text-amber-600" />
+        <StatChip label="Offertes verstuurd" value={stats?.quotedAccommodationRequests ?? 0} to="/admin/logies" color="text-purple-600" />
       </div>
 
-      {/* Accommodation stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Logies aanvragen</p>
-                <p className="text-3xl font-bold text-slate-900">{stats?.totalAccommodationRequests}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                <Hotel className="h-6 w-6 text-indigo-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Totaal ingediend
-            </p>
-          </CardContent>
-        </Card>
+      {/* 2-column main layout: feed (2/3) + sidebar (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        {/* Live activity feed — takes 2/3 */}
+        <div className="lg:col-span-2">
+          <LiveActivityFeed />
+        </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Te verwerken logies</p>
-                <p className="text-3xl font-bold text-amber-600">{stats?.pendingAccommodationRequests}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-amber-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Nieuw of in behandeling
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Offertes verstuurd</p>
-                <p className="text-3xl font-bold text-blue-600">{stats?.quotedAccommodationRequests}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Send className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Wacht op klantkeuze
-            </p>
-          </CardContent>
-        </Card>
+        {/* Sidebar — 1/3 */}
+        <div className="space-y-4">
+          <DashboardTodoWidget />
+          <AdminUnavailabilityWidget />
+          <PendingCommissionsCard />
+        </div>
       </div>
-
-      {/* Todo widget */}
-      <DashboardTodoWidget />
-
-      {/* Partner Availability and Pending Commissions */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <AdminUnavailabilityWidget />
-        <PendingCommissionsCard />
-      </div>
-
-      {/* Live activity feed */}
-      <LiveActivityFeed />
 
       {/* Recent requests grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-5">
         {/* Recent program requests */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4" />
               Recente programma aanvragen
             </CardTitle>
-            <CardDescription>De laatste 5 programma aanvragen</CardDescription>
+            <CardDescription className="text-xs">De laatste 5 programma aanvragen</CardDescription>
           </CardHeader>
           <CardContent>
             {stats?.recentRequests.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">Nog geen aanvragen</p>
+              <p className="text-muted-foreground text-center py-8 text-sm">Nog geen aanvragen</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {stats?.recentRequests.map((request) => (
                   <Link
                     key={request.id}
                     to={`/admin/aanvragen/${request.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-slate-50 transition-colors"
+                    className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-slate-600" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <Users className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900">{request.customer_name}</p>
-                        <p className="text-sm text-slate-500">
-                          {request.customer_company || "Particulier"} • {request.item_count} activiteiten
+                        <p className="font-medium text-sm text-foreground">{request.customer_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {request.customer_company || "Particulier"} · {request.item_count} activiteiten
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="text-right flex-shrink-0">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         request.status === "active"
                           ? "bg-green-100 text-green-700"
                           : request.status === "cancelled"
                           ? "bg-red-100 text-red-700"
-                          : "bg-slate-100 text-slate-700"
+                          : "bg-muted text-muted-foreground"
                       }`}>
                         {request.status === "active" ? "Actief" : request.status === "cancelled" ? "Geannuleerd" : request.status}
                       </span>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {new Date(request.created_at).toLocaleDateString("nl-NL")}
                       </p>
                     </div>
@@ -347,37 +234,37 @@ const AdminDashboardContent = () => {
 
         {/* Recent accommodation requests */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Hotel className="h-5 w-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Hotel className="h-4 w-4" />
               Recente logies aanvragen
             </CardTitle>
-            <CardDescription>De laatste 5 logies aanvragen</CardDescription>
+            <CardDescription className="text-xs">De laatste 5 logies aanvragen</CardDescription>
           </CardHeader>
           <CardContent>
             {stats?.recentAccommodationRequests.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">Nog geen logies aanvragen</p>
+              <p className="text-muted-foreground text-center py-8 text-sm">Nog geen logies aanvragen</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {stats?.recentAccommodationRequests.map((request) => (
                   <Link
                     key={request.id}
                     to={`/admin/logies/${request.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-slate-50 transition-colors"
+                    className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <Hotel className="h-5 w-5 text-indigo-600" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                        <Hotel className="h-4 w-4 text-indigo-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900">{request.customer_name}</p>
-                        <p className="text-sm text-slate-500">
-                          {request.customer_company || "Particulier"} • {request.number_of_guests} gasten
+                        <p className="font-medium text-sm text-foreground">{request.customer_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {request.customer_company || "Particulier"} · {request.number_of_guests} gasten
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="text-right flex-shrink-0">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         request.status === "submitted"
                           ? "bg-blue-100 text-blue-700"
                           : request.status === "processing"
@@ -386,15 +273,15 @@ const AdminDashboardContent = () => {
                           ? "bg-purple-100 text-purple-700"
                           : request.status === "accepted"
                           ? "bg-green-100 text-green-700"
-                          : "bg-slate-100 text-slate-700"
+                          : "bg-muted text-muted-foreground"
                       }`}>
-                        {request.status === "submitted" ? "Nieuw" 
+                        {request.status === "submitted" ? "Nieuw"
                           : request.status === "processing" ? "In behandeling"
-                          : request.status === "quoted" ? "Offertes verstuurd"
+                          : request.status === "quoted" ? "Offertes"
                           : request.status === "accepted" ? "Geaccepteerd"
                           : request.status}
                       </span>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {new Date(request.created_at).toLocaleDateString("nl-NL")}
                       </p>
                     </div>
