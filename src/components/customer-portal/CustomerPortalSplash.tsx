@@ -128,9 +128,9 @@ export const CustomerPortalSplash = ({
       : null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 py-4">
+    <div className="space-y-6">
 
-      {/* Fotomosaic hero — desktop grid */}
+      {/* Fotomosaic hero — volledige breedte, desktop grid */}
       <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-2 h-56 rounded-xl overflow-hidden">
         <div className="row-span-2 overflow-hidden">
           <img
@@ -194,80 +194,105 @@ export const CustomerPortalSplash = ({
         ))}
       </div>
 
-      {/* Blok 1: Welkomstboodschap */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
-            Welkom{program.customer_company ? `, ${program.customer_company}` : program.customer_name ? `, ${program.customer_name}` : ""}
-          </h1>
-          {program.reference_number && (
-            <p className="text-sm text-muted-foreground mt-1">Kenmerk: {program.reference_number}</p>
-          )}
-          {dateRange && (
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {dateRange}
-              {program.number_of_people > 0 && (
-                <>
-                  <span className="mx-1">·</span>
-                  <Users className="h-3.5 w-3.5" />
-                  {program.number_of_people} personen
-                </>
+      {/* Hoofdlayout: 2/3 links + 1/3 rechts (zelfde als vervolgpagina's) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-8 items-start">
+
+        {/* Linkerkolom: welkom + uitleg + stappen + contact */}
+        <div className="space-y-6">
+
+          {/* Welkomstboodschap */}
+          <div className="space-y-3">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Welkom{program.customer_company ? `, ${program.customer_company}` : program.customer_name ? `, ${program.customer_name}` : ""}
+              </h1>
+              {program.reference_number && (
+                <p className="text-sm text-muted-foreground mt-1">Kenmerk: {program.reference_number}</p>
               )}
+              {dateRange && (
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {dateRange}
+                  {program.number_of_people > 0 && (
+                    <>
+                      <span className="mx-1">·</span>
+                      <Users className="h-3.5 w-3.5" />
+                      {program.number_of_people} personen
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+
+            <p className="text-muted-foreground">
+              Fijn dat u er bent! Via dit portaal vindt u alles over uw verblijf op Vlieland op één plek.
+              Bureau Vlieland coördineert het programma en de logies — u hoeft alleen te kijken, kiezen en akkoord te geven.
             </p>
-          )}
-        </div>
 
-        <p className="text-muted-foreground">
-          Fijn dat u er bent! Via dit portaal vindt u alles over uw verblijf op Vlieland op één plek.
-          Bureau Vlieland coördineert het programma en de logies — u hoeft alleen te kijken, kiezen en akkoord te geven.
-        </p>
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen.
+                Na afstemming maken we het voorstel definitief.
+              </p>
+            </div>
+          </div>
 
-        {/* Werkdocument disclaimer */}
-        <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            <strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen.
-            Na afstemming maken we het voorstel definitief.
-          </p>
-        </div>
-      </div>
+          {/* Hoe werkt het traject? */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Hoe werkt het traject?</h2>
+            <div className="relative">
+              <div className="absolute top-6 left-6 right-6 h-0.5 bg-border hidden sm:block" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {visibleSteps.map((step) => {
+                  const Icon = step.icon;
+                  return (
+                    <div key={step.number} className="relative flex flex-col items-center text-center gap-2 p-3">
+                      <div className="z-10 w-12 h-12 rounded-full bg-background border-2 border-primary/30 flex items-center justify-center">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Stap {step.number}</p>
+                        <p className="text-sm font-semibold">{step.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
-      {/* Blok 2: Hoe werkt het traject? */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Hoe werkt het traject?</h2>
-        <div className="relative">
-          {/* Connecting line */}
-          <div className="absolute top-6 left-6 right-6 h-0.5 bg-border hidden sm:block" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {visibleSteps.map((step) => {
-              const Icon = step.icon;
-              return (
-                <div key={step.number} className="relative flex flex-col items-center text-center gap-2 p-3">
-                  <div className="z-10 w-12 h-12 rounded-full bg-background border-2 border-primary/30 flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Stap {step.number}</p>
-                    <p className="text-sm font-semibold">{step.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Contact */}
+          <div className="border-t pt-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-medium text-sm">Vragen?</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">Neem contact op met Bureau Vlieland</p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="mailto:hallo@bureauvlieland.nl"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Mail className="h-4 w-4" />
+                  hallo@bureauvlieland.nl
+                </a>
+                <a
+                  href="tel:+31562451515"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Phone className="h-4 w-4" />
+                  0562 – 45 15 15
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Blok 3: Logies en Programma los van elkaar */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Twee onafhankelijke trajecten</h2>
-        <p className="text-sm text-muted-foreground">
-          Logies en programma worden los van elkaar geregeld. Elk onderdeel heeft zijn eigen aanbieder en facturatie.
-        </p>
-
-        <div className={`grid gap-4 ${isMultiDay ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
-          {/* Logies card – alleen tonen bij meerdaags */}
+        {/* Rechterkolom (1/3): logies + programma kaarten */}
+        <div className="space-y-4">
+          {/* Logies card — alleen bij meerdaags */}
           {isMultiDay && (
             <Card className="border-2 hover:border-primary/50 transition-colors">
               <CardContent className="p-5 space-y-4">
@@ -345,32 +370,6 @@ export const CustomerPortalSplash = ({
               </Button>
             </CardContent>
           </Card>
-        </div>
-      </div>
-
-      {/* Blok 4: Contact */}
-      <div className="border-t pt-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-medium text-sm">Vragen?</h3>
-            <p className="text-sm text-muted-foreground mt-0.5">Neem contact op met Bureau Vlieland</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="mailto:hallo@bureauvlieland.nl"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Mail className="h-4 w-4" />
-              hallo@bureauvlieland.nl
-            </a>
-            <a
-              href="tel:+31562451515"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Phone className="h-4 w-4" />
-              0562 – 45 15 15
-            </a>
-          </div>
         </div>
       </div>
     </div>
