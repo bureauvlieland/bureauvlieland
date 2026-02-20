@@ -5,6 +5,7 @@ import { PendingCommissionsCard } from "@/components/admin/PendingCommissionsCar
 import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilityWidget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
+import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -286,6 +287,9 @@ const AdminDashboardContent = () => {
         <AdminUnavailabilityWidget />
         <PendingCommissionsCard />
       </div>
+
+      {/* Live activity feed */}
+      <LiveActivityFeed />
 
       {/* Recent requests grid */}
       <div className="grid lg:grid-cols-2 gap-6">
