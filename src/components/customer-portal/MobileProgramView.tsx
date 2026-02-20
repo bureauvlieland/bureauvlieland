@@ -49,6 +49,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface MobileProgramViewProps {
   invoicingMode?: string;
+  initialSection?: "accommodation" | "program";
   program: {
     customer_name: string;
     customer_company?: string;
@@ -114,6 +115,7 @@ interface MobileProgramViewProps {
 
 export const MobileProgramView = ({
   invoicingMode,
+  initialSection,
   program,
   history,
   selectedDates,
@@ -244,8 +246,8 @@ export const MobileProgramView = ({
         onAcceptQuoteProposal={onAcceptQuoteProposal}
       />
 
-      {/* 3. Accommodation section - only for multi-day */}
-      {isMultiDay && (
+      {/* 3. Accommodation section - only for multi-day, shown when initialSection is "accommodation" */}
+      {isMultiDay && initialSection === "accommodation" && (
         <ProgramSection
           id="accommodation"
           title="Logies"
@@ -264,8 +266,8 @@ export const MobileProgramView = ({
         </ProgramSection>
       )}
 
-      {/* 4. Program section */}
-      <ProgramSection
+      {/* 4. Program section - hide when showing accommodation */}
+      {initialSection !== "accommodation" && <ProgramSection
         id="program"
         title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
@@ -418,10 +420,10 @@ export const MobileProgramView = ({
                   )}
                 </CustomerTimeline>
         )}
-      </ProgramSection>
+      </ProgramSection>}
 
-      {/* 5. Billing section - always visible */}
-      <ProgramSection
+      {/* 5. Billing section - hide when showing accommodation */}
+      {initialSection !== "accommodation" && <ProgramSection
         id="billing"
         title="Facturatie & Kosten"
         icon={<FileText className="h-4 w-4 text-primary" />}
@@ -443,10 +445,10 @@ export const MobileProgramView = ({
             invoicingMode={invoicingMode}
           />
         </div>
-      </ProgramSection>
+      </ProgramSection>}
 
-      {/* 6. Accept terms - always visible as placeholder or full card */}
-      {!termsAccepted && (
+      {/* 6. Accept terms - hide when showing accommodation */}
+      {initialSection !== "accommodation" && !termsAccepted && (
         <div id="terms-section">
           {allConfirmed ? (
             <AcceptTermsCard
@@ -475,186 +477,189 @@ export const MobileProgramView = ({
         </div>
       )}
 
-      {/* Accepted terms - permanent visibility */}
-      {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
-        <AcceptedTermsCard
-          termsAcceptedAt={program.terms_accepted_at!}
-          signatureName={program.signature_name || null}
-          signatureId={program.signature_id || null}
-          acceptedTerms={program.acceptedTerms}
-        />
-      )}
+      {initialSection !== "accommodation" && (
+        <>
+          {/* Accepted terms - permanent visibility */}
+          {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
+            <AcceptedTermsCard
+              termsAcceptedAt={program.terms_accepted_at!}
+              signatureName={program.signature_name || null}
+              signatureId={program.signature_id || null}
+              acceptedTerms={program.acceptedTerms}
+            />
+          )}
 
-      {/* Payment status after terms acceptance */}
-      {termsAccepted && (
-        <PaymentStatusCard
-          items={program.items}
-          termsAcceptedAt={program.terms_accepted_at!}
-        />
-      )}
+          {/* Payment status after terms acceptance */}
+          {termsAccepted && (
+            <PaymentStatusCard
+              items={program.items}
+              termsAcceptedAt={program.terms_accepted_at!}
+            />
+          )}
 
-
-      {/* Floating changes bar */}
-      {hasChanges && (
-        <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium">
-                {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Aanbieders worden op de hoogte gesteld
-              </p>
-            </div>
-            <Button onClick={onSubmitChanges}>
-              <Send className="h-4 w-4 mr-2" />
-              Doorvoeren
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Secondary options - collapsible */}
-      <ProgramSection
-        id="details"
-        title="Programma Details"
-        icon={<Settings className="h-4 w-4 text-primary" />}
-      >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Pas gegevens aan</span>
-            <Button variant="ghost" size="sm" onClick={onOpenEdit}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Bewerken
-            </Button>
-          </div>
-
-          <div className="grid gap-4 text-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground">Contactpersoon</p>
-                <p className="font-medium">{program.customer_name}</p>
+          {/* Floating changes bar */}
+          {hasChanges && (
+            <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-medium">
+                    {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Aanbieders worden op de hoogte gesteld
+                  </p>
+                </div>
+                <Button onClick={onSubmitChanges}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Doorvoeren
+                </Button>
               </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-primary" />
+          {/* Secondary options */}
+          <ProgramSection
+            id="details"
+            title="Programma Details"
+            icon={<Settings className="h-4 w-4 text-primary" />}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Pas gegevens aan</span>
+                <Button variant="ghost" size="sm" onClick={onOpenEdit}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Bewerken
+                </Button>
               </div>
-              <div>
-                <p className="text-muted-foreground">Datum(s)</p>
-                <p className="font-medium">
-                  {selectedDates.map((d, i) => (
-                    <span key={i}>
-                      {i > 0 && ", "}
-                      {format(d, "d MMM yyyy", { locale: nl })}
-                    </span>
-                  ))}
-                </p>
+
+              <div className="grid gap-4 text-sm">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Contactpersoon</p>
+                    <p className="font-medium">{program.customer_name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Datum(s)</p>
+                    <p className="font-medium">
+                      {selectedDates.map((d, i) => (
+                        <span key={i}>
+                          {i > 0 && ", "}
+                          {format(d, "d MMM yyyy", { locale: nl })}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">E-mail</p>
+                    <p className="font-medium">{program.customer_email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Phone className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Telefoon</p>
+                    <p className="font-medium">{program.customer_phone}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Aantal personen</p>
+                    <p className="font-medium">{program.number_of_people}</p>
+                  </div>
+                </div>
               </div>
             </div>
+          </ProgramSection>
 
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <Mail className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground">E-mail</p>
-                <p className="font-medium">{program.customer_email}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <Phone className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground">Telefoon</p>
-                <p className="font-medium">{program.customer_phone}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground">Aantal personen</p>
-                <p className="font-medium">{program.number_of_people}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ProgramSection>
-
-      {/* History section */}
-      {history.length > 0 && (
-        <ProgramSection
-          id="history"
-          title="Geschiedenis"
-          icon={<History className="h-4 w-4 text-primary" />}
-        >
-          <ProgramHistoryTimeline history={history} variant="embedded" />
-        </ProgramSection>
-      )}
-
-      {/* Cancel request section */}
-      <Card className="border-destructive/20">
-        <CardContent className="py-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-medium mb-1 flex items-center gap-2">
-                <Ban className="h-4 w-4 text-destructive" />
-                Aanvraag annuleren
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Alle aanbieders worden automatisch op de hoogte gesteld.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={onOpenCancel}
+          {/* History section */}
+          {history.length > 0 && (
+            <ProgramSection
+              id="history"
+              title="Geschiedenis"
+              icon={<History className="h-4 w-4 text-primary" />}
             >
-              Annuleren
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <ProgramHistoryTimeline history={history} variant="embedded" />
+            </ProgramSection>
+          )}
 
-      {/* Contact section */}
-      <Card className="bg-muted/30">
-        <CardContent className="py-6">
-          <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-medium mb-1">Vragen of hulp nodig?</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                Neem gerust contact met ons op.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <a href="mailto:hallo@bureauvlieland.nl">
-                  <Button variant="outline" size="sm">
-                    <Mail className="h-4 w-4 mr-2" />
-                    E-mail
-                  </Button>
-                </a>
-                <a href="tel:+31562700208">
-                  <Button variant="outline" size="sm">
-                    <Phone className="h-4 w-4 mr-2" />
-                    Bellen
-                  </Button>
-                </a>
+          {/* Cancel request section */}
+          <Card className="border-destructive/20">
+            <CardContent className="py-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-medium mb-1 flex items-center gap-2">
+                    <Ban className="h-4 w-4 text-destructive" />
+                    Aanvraag annuleren
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Alle aanbieders worden automatisch op de hoogte gesteld.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                  onClick={onOpenCancel}
+                >
+                  Annuleren
+                </Button>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* Contact section */}
+          <Card className="bg-muted/30">
+            <CardContent className="py-6">
+              <div className="flex items-start gap-4">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-medium mb-1">Vragen of hulp nodig?</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Neem gerust contact met ons op.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <a href="mailto:hallo@bureauvlieland.nl">
+                      <Button variant="outline" size="sm">
+                        <Mail className="h-4 w-4 mr-2" />
+                        E-mail
+                      </Button>
+                    </a>
+                    <a href="tel:+31562700208">
+                      <Button variant="outline" size="sm">
+                        <Phone className="h-4 w-4 mr-2" />
+                        Bellen
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Add Activity Sheet */}
       <AddActivitySheet

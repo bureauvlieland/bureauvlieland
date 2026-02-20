@@ -11,6 +11,7 @@ import { BillingDetailsDialog, type BillingDetails } from "@/components/customer
 import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigation";
 import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
+import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -32,6 +33,12 @@ const CustomerProgram = () => {
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
   const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
+  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program">(() => {
+    // Show splash on first visit per token
+    if (!token) return "splash";
+    const visited = localStorage.getItem(`bv_portal_visited_${token}`);
+    return visited ? "program" : "splash";
+  });
   
   const {
     program,
@@ -275,6 +282,15 @@ const CustomerProgram = () => {
     );
   }
 
+  // Navigate to a specific view and mark as visited
+  const handleNavigate = (view: "splash" | "accommodation" | "program") => {
+    if (token && view !== "splash") {
+      localStorage.setItem(`bv_portal_visited_${token}`, "1");
+    }
+    setActiveView(view);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Date range for display
   const dateRange = selectedDates.length > 0
     ? selectedDates.length === 1
@@ -284,6 +300,7 @@ const CustomerProgram = () => {
 
   // Shared props for both views
   const invoicingMode = (program as any).invoicing_mode || "partner_direct";
+  const isMultiDay = selectedDates.length > 1;
 
   const viewProps = {
     program: program as any,
@@ -329,10 +346,17 @@ const CustomerProgram = () => {
           <Link to="/" className="flex items-center gap-2">
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
-          <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Vernieuwen
-          </Button>
+          <div className="flex items-center gap-2">
+            {activeView !== "splash" && (
+              <Button variant="ghost" size="sm" onClick={() => handleNavigate("splash")}>
+                ← Overzicht
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Vernieuwen
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -356,16 +380,45 @@ const CustomerProgram = () => {
         </div>
       )}
 
-      {/* Desktop navigation - only show on lg screens */}
-      {!isMobile && <ProgramNavigation isMultiDay={selectedDates.length > 1} />}
+      {/* Navigation tabs - only show when not on splash */}
+      {activeView !== "splash" && !isMobile && (
+        <ProgramNavigation
+          isMultiDay={isMultiDay}
+          activeView={activeView}
+          onNavigate={handleNavigate}
+        />
+      )}
 
       <main className="container mx-auto px-4 py-8">
+        {/* Splash view */}
+        {activeView === "splash" && (
+          <CustomerPortalSplash
+            program={program as any}
+            selectedDates={selectedDates}
+            statusSummary={statusSummary}
+            accommodation={accommodation}
+            accommodationQuotes={accommodationQuotes}
+            isMultiDay={isMultiDay}
+            onNavigate={handleNavigate}
+          />
+        )}
 
-        {/* Responsive content */}
-        {isMobile ? (
-          <MobileProgramView {...viewProps} />
-        ) : (
-          <DesktopProgramView {...viewProps} />
+        {/* Accommodation view */}
+        {activeView === "accommodation" && isMultiDay && (
+          isMobile ? (
+            <MobileProgramView {...viewProps} initialSection="accommodation" />
+          ) : (
+            <DesktopProgramView {...viewProps} initialSection="accommodation" />
+          )
+        )}
+
+        {/* Program view */}
+        {(activeView === "program" || (activeView === "accommodation" && !isMultiDay)) && (
+          isMobile ? (
+            <MobileProgramView {...viewProps} initialSection="program" />
+          ) : (
+            <DesktopProgramView {...viewProps} initialSection="program" />
+          )
         )}
       </main>
 
@@ -421,3 +474,4 @@ const CustomerProgram = () => {
 };
 
 export default CustomerProgram;
+

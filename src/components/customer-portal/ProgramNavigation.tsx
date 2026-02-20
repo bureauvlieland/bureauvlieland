@@ -1,65 +1,36 @@
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Calendar,
-  FileText,
   BedDouble,
+  LayoutGrid,
 } from "lucide-react";
-
-interface Section {
-  id: string;
-  label: string;
-  icon: typeof Calendar;
-}
 
 interface ProgramNavigationProps {
   className?: string;
   isMultiDay?: boolean;
+  activeView?: "splash" | "accommodation" | "program";
+  onNavigate?: (view: "splash" | "accommodation" | "program") => void;
 }
 
-export const ProgramNavigation = ({ className, isMultiDay = false }: ProgramNavigationProps) => {
-  const [activeSection, setActiveSection] = useState(isMultiDay ? "accommodation" : "program");
-
-  // Build sections dynamically based on whether it's multi-day
-  const sections: Section[] = [
-    ...(isMultiDay ? [{ id: "accommodation", label: "Logies", icon: BedDouble }] : []),
-    { id: "program", label: "Programma", icon: Calendar },
-    { id: "billing", label: "Facturatie", icon: FileText },
-  ];
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      {
-        rootMargin: "-100px 0px -50% 0px",
-        threshold: 0,
-      }
-    );
-
-    sections.forEach(({ id }) => {
-      const element = document.getElementById(id);
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
-    return () => observer.disconnect();
-  }, [isMultiDay]);
-
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+export const ProgramNavigation = ({
+  className,
+  isMultiDay = false,
+  activeView = "program",
+  onNavigate,
+}: ProgramNavigationProps) => {
+  const handleClick = (view: "splash" | "accommodation" | "program") => {
+    if (onNavigate) {
+      onNavigate(view);
+    } else {
+      // Fallback: scroll to section
+      const sectionMap: Record<string, string> = {
+        accommodation: "accommodation",
+        program: "program",
+        billing: "billing",
+      };
+      const el = document.getElementById(sectionMap[view] || view);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -72,21 +43,49 @@ export const ProgramNavigation = ({ className, isMultiDay = false }: ProgramNavi
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-1 py-2 overflow-x-auto">
-          {sections.map(({ id, label, icon: Icon }) => (
+          {/* Overzicht tab */}
+          <Button
+            variant={activeView === "splash" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => handleClick("splash")}
+            className={cn(
+              "shrink-0",
+              activeView === "splash" && "bg-primary/10 text-primary"
+            )}
+          >
+            <LayoutGrid className="h-4 w-4 mr-2" />
+            Overzicht
+          </Button>
+
+          {/* Logies tab - alleen bij meerdaagse programma's */}
+          {isMultiDay && (
             <Button
-              key={id}
-              variant={activeSection === id ? "secondary" : "ghost"}
+              variant={activeView === "accommodation" ? "secondary" : "ghost"}
               size="sm"
-              onClick={() => scrollToSection(id)}
+              onClick={() => handleClick("accommodation")}
               className={cn(
                 "shrink-0",
-                activeSection === id && "bg-primary/10 text-primary"
+                activeView === "accommodation" && "bg-primary/10 text-primary"
               )}
             >
-              <Icon className="h-4 w-4 mr-2" />
-              {label}
+              <BedDouble className="h-4 w-4 mr-2" />
+              Logies
             </Button>
-          ))}
+          )}
+
+          {/* Programma tab */}
+          <Button
+            variant={activeView === "program" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => handleClick("program")}
+            className={cn(
+              "shrink-0",
+              activeView === "program" && "bg-primary/10 text-primary"
+            )}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Programma
+          </Button>
         </div>
       </div>
     </nav>
