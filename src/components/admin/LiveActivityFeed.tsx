@@ -293,53 +293,107 @@ export function LiveActivityFeed() {
   const fetchFeed = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: historyData } = await supabase
-        .from("program_request_history")
-        .select(`
-          id,
-          request_id,
-          item_id,
-          action,
-          actor,
-          actor_name,
-          notes,
-          new_value,
-          old_value,
-          created_at,
-          program_requests!inner(
-            customer_name,
-            customer_company,
-            reference_number
-          )
-        `)
-        .in("actor", ["customer", "partner"])
-        .order("created_at", { ascending: false })
-        .limit(60);
+      // Run all three sources in parallel
+      const [historyResult, adminResult, quotesResult] = await Promise.all([
+        supabase
+          .from("program_request_history")
+          .select(`
+            id,
+            request_id,
+            item_id,
+            action,
+            actor,
+            actor_name,
+            notes,
+            new_value,
+            old_value,
+            created_at,
+            program_requests!inner(
+              customer_name,
+              customer_company,
+              reference_number
+            )
+          `)
+          .in("actor", ["customer", "partner"])
+          .order("created_at", { ascending: false })
+          .limit(60),
 
-      const { data: adminData } = await supabase
-        .from("admin_activity_log")
-        .select("id, action, entity_id, entity_type, details, created_at")
-        .not("action", "eq", "request_viewed")
-        .order("created_at", { ascending: false })
-        .limit(20);
+        supabase
+          .from("admin_activity_log")
+          .select("id, action, entity_id, entity_type, details, created_at")
+          .not("action", "eq", "request_viewed")
+          .order("created_at", { ascending: false })
+          .limit(20),
 
-      // Batch-fetch item details for enrichment
+        // Backfill: historical accommodation quote actions based on timestamps
+        // Only fetch quotes that have been acted upon (submitted or declined)
+        // and whose IDs are not already covered by a program_request_history row
+        supabase
+          .from("accommodation_quotes")
+          .select(`
+            id,
+            status,
+            accommodation_name,
+            price_total,
+            partner_id,
+            partner_notes,
+            submitted_at,
+            request_id
+          `)
+          .not("submitted_at", "is", null)
+          .in("status", ["submitted", "selected", "rejected", "declined", "expired"])
+          .order("submitted_at", { ascending: false })
+          .limit(40),
+      ]);
+
+      const historyData = historyResult.data;
+      const adminData = adminResult.data;
+      const quotesData = quotesResult.data;
+
+      // Batch-fetch item details for history enrichment
       const itemIds = (historyData || [])
         .filter((h: any) => h.item_id)
         .map((h: any) => h.item_id as string);
 
-      let itemDetailsMap: Record<string, { block_name: string; provider_name: string }> = {};
-      if (itemIds.length > 0) {
-        const { data: itemDetails } = await supabase
-          .from("program_request_items")
-          .select("id, block_name, provider_name")
-          .in("id", itemIds);
-        if (itemDetails) {
-          itemDetailsMap = Object.fromEntries(
-            itemDetails.map((i: any) => [i.id, { block_name: i.block_name, provider_name: i.provider_name }])
-          );
-        }
-      }
+      // Collect unique partner_ids and request_ids from quotes for enrichment
+      const quotePartnerIds = [...new Set((quotesData || []).map((q: any) => q.partner_id))].filter(Boolean);
+      const quoteRequestIds = [...new Set((quotesData || []).map((q: any) => q.request_id))].filter(Boolean);
+
+      // Check which quote IDs are already present in the history feed to avoid duplicates
+      const historyQuoteIds = new Set(
+        (historyData || [])
+          .filter((h: any) => h.action === "accommodation_quote_submitted" || h.action === "accommodation_quote_declined")
+          .map((h: any) => (h.new_value as any)?.quote_id)
+          .filter(Boolean)
+      );
+
+      // Run enrichment queries in parallel
+      const [itemDetailsResult, partnersResult, accRequestsResult] = await Promise.all([
+        itemIds.length > 0
+          ? supabase.from("program_request_items").select("id, block_name, provider_name").in("id", itemIds)
+          : Promise.resolve({ data: [] }),
+
+        quotePartnerIds.length > 0
+          ? supabase.from("partners").select("id, name").in("id", quotePartnerIds)
+          : Promise.resolve({ data: [] }),
+
+        quoteRequestIds.length > 0
+          ? supabase
+              .from("accommodation_requests")
+              .select("id, customer_name, customer_company, reference_number, linked_program_id")
+              .in("id", quoteRequestIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const itemDetailsMap: Record<string, { block_name: string; provider_name: string }> = Object.fromEntries(
+        (itemDetailsResult.data || []).map((i: any) => [i.id, { block_name: i.block_name, provider_name: i.provider_name }])
+      );
+      const partnerMap: Record<string, string> = Object.fromEntries(
+        (partnersResult.data || []).map((p: any) => [p.id, p.name])
+      );
+      const accRequestMap: Record<string, any> = Object.fromEntries(
+        (accRequestsResult.data || []).map((r: any) => [r.id, r])
+      );
 
       const historyItems: FeedItem[] = (historyData || []).map((h: any) => {
         const itemDetail = h.item_id ? itemDetailsMap[h.item_id] : null;
@@ -372,11 +426,38 @@ export function LiveActivityFeed() {
         created_at: a.created_at,
       }));
 
-      const combined = [...historyItems, ...adminItems].sort(
+      // Pseudo-events from historical accommodation quotes (backfill)
+      // Skip quotes already tracked via program_request_history
+      const quoteItems: FeedItem[] = (quotesData || [])
+        .filter((q: any) => !historyQuoteIds.has(q.id))
+        .map((q: any) => {
+          const accReq = accRequestMap[q.request_id];
+          const isDeclined = q.status === "declined";
+          return {
+            id: `q-${q.id}`,
+            actor: "partner" as FeedItem["actor"],
+            action: isDeclined ? "accommodation_quote_declined" : "accommodation_quote_submitted",
+            actor_name: partnerMap[q.partner_id] || null,
+            notes: isDeclined ? (q.partner_notes || null) : null,
+            new_value: {
+              accommodation_name: q.accommodation_name,
+              price_total: q.price_total,
+              quote_id: q.id,
+            },
+            created_at: q.submitted_at,
+            // Link to the linked program if available, otherwise null (accommodation-only)
+            request_id: accReq?.linked_program_id || null,
+            customer_name: accReq?.customer_name || null,
+            customer_company: accReq?.customer_company || null,
+            reference_number: accReq?.reference_number || null,
+          };
+        });
+
+      const combined = [...historyItems, ...adminItems, ...quoteItems].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      setItems(combined.slice(0, 60));
+      setItems(combined.slice(0, 80));
     } catch (err) {
       console.error("Error fetching activity feed:", err);
     } finally {
