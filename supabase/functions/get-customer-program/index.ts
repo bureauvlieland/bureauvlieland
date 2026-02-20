@@ -55,6 +55,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Log customer portal view (fire-and-forget, non-blocking)
+    supabase.from("program_request_history").insert({
+      request_id: program.id,
+      action: "customer_portal_viewed",
+      actor: "customer",
+      actor_name: program.customer_name,
+      notes: "Klant heeft het portaal bezocht",
+    }).then(() => {});
+
     // Fetch items
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
