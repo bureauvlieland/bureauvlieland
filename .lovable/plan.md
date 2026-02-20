@@ -1,47 +1,31 @@
 
-# Fix: ProgramIntroCard en ActionRequiredCard alleen op Programma-tab
+## Verwijder permanente Werkdocument-disclaimer
 
-## Probleem
+### Wat er nu staat (regels 380–388, `CustomerProgram.tsx`)
 
-In de huidige implementatie worden twee kaarten altijd bovenaan `DesktopProgramView` en `MobileProgramView` getoond, ongeacht welke tab actief is:
+```tsx
+{/* Decision 3: Werkdocument-disclaimer always visible (not just on splash) */}
+<div className="border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+  <div className="container mx-auto px-4 py-2 flex items-center gap-2">
+    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+    <p className="text-xs text-amber-800 dark:text-amber-200">
+      <strong>Werkdocument</strong> — Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief.
+    </p>
+  </div>
+</div>
+```
 
-1. **`ProgramIntroCard`** — de blauwe kaart met de uitleg "Hieronder vindt u het programma…" en de knop "Akkoord, start reserveringen". Volledig programmaspecifiek.
-2. **`ActionRequiredCard`** — de actiekaart met openstaande stappen. Wanneer Logies-tab actief is, verwijst deze naar programmaacties die niet relevant zijn.
+### Wijziging
 
-Beide worden gerenderd vóór de `initialSection`-conditionals, dus ze verschijnen ook op de Logies-tab.
+Dit blok wordt volledig verwijderd. De disclaimer staat al in de splash-pagina (`CustomerPortalSplash.tsx`) en hoeft niet op elke tab herhaald te worden.
 
-## Oplossing
+### Impact-check
 
-Wrap beide kaarten in een conditie: render ze **alleen** wanneer `initialSection === "program"` (of `initialSection` is undefined, voor toekomstige eendaagse programma's zonder tab-splitsing).
+- `AlertCircle` wordt na verwijdering mogelijk nergens meer gebruikt in dit bestand. Die import wordt dan ook opgeruimd.
+- Geen andere componenten of bestanden worden aangeraakt.
 
-De `ProgramOverviewCard` (datum, personen, kenmerk) blijft zichtbaar op alle tabs — die is tab-onafhankelijk als header.
-
-## Wijzigingen per bestand
-
-### `DesktopProgramView.tsx`
-- `ProgramIntroCard`: omhullen met `{initialSection === "program" && (...)}`
-- `ActionRequiredCard`: omhullen met `{(initialSection === "program" || !initialSection) && (...)}`
-
-### `MobileProgramView.tsx`
-- Idem: `ProgramIntroCard` alleen bij `initialSection === "program"`
-- `ActionRequiredCard` alleen bij `initialSection === "program" || !initialSection`
-
-## Wat blijft staan op de Logies-tab
-
-- `ProgramOverviewCard` (datum/pax/kenmerk — altijd relevant)
-- `AccommodationSection` (logiesinhoud zelf)
-- Sidebar (`ProgramSidebar` op desktop) — blijft altijd zichtbaar
-
-## Wat verdwijnt van de Logies-tab
-
-- `ProgramIntroCard` (offerte-uitleg + akkoordknop)
-- `ActionRequiredCard` (programma-gerelateerde acties)
-
-## Bestanden gewijzigd
+### Bestanden gewijzigd
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `src/components/customer-portal/DesktopProgramView.tsx` | Conditioneel renderen ProgramIntroCard + ActionRequiredCard |
-| `src/components/customer-portal/MobileProgramView.tsx` | Idem |
-
-Geen database-wijzigingen, geen nieuwe componenten.
+| `src/pages/CustomerProgram.tsx` | Amber disclaimer-blok verwijderd + eventueel `AlertCircle`-import opgeruimd |
