@@ -49,6 +49,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface DesktopProgramViewProps {
   invoicingMode?: string;
+  initialSection?: "accommodation" | "program";
   program: {
     customer_name: string;
     customer_company?: string;
@@ -115,6 +116,7 @@ interface DesktopProgramViewProps {
 
 export const DesktopProgramView = ({
   invoicingMode,
+  initialSection,
   program,
   history,
   selectedDates,
@@ -213,8 +215,8 @@ export const DesktopProgramView = ({
           onAcceptQuoteProposal={onAcceptQuoteProposal}
         />
 
-        {/* 3. Accommodation section - only for multi-day, only if not yet selected */}
-        {isMultiDay && (
+        {/* 3. Accommodation section - only for multi-day, shown when initialSection is "accommodation" */}
+        {isMultiDay && initialSection === "accommodation" && (
           <div id="accommodation" className="scroll-mt-20">
             <Card>
               <CardHeader className="pb-3">
@@ -238,268 +240,271 @@ export const DesktopProgramView = ({
           </div>
         )}
 
-        {/* 4. Program section - always visible */}
-        <div id="program" className="scroll-mt-20">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Programma
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <ProgramPdfDownload
-                    customerName={program.customer_name}
-                    customerCompany={program.customer_company}
-                    selectedDates={selectedDates}
-                    numberOfPeople={program.number_of_people}
-                    items={program.items}
-                    referenceNumber={program.reference_number}
-                    variant="sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
-                      downloadAllEvents(
-                        activeItems.map(i => ({
-                          id: i.id,
-                          block_name: i.block_name,
-                          provider_name: i.provider_name,
-                          day_index: i.day_index,
-                          confirmed_time: i.confirmed_time,
-                          proposed_time: i.proposed_time,
-                          preferred_time: i.preferred_time,
-                          duration: i.duration,
-                          location_address: i.location_address,
-                        })),
-                        selectedDates.map(d => d.toISOString().split("T")[0]),
-                        program.number_of_people,
-                        `Programma ${program.customer_company || program.customer_name}`
-                      );
-                    }}
-                  >
-                    <CalendarPlus className="h-4 w-4 mr-1" />
-                    Agenda
-                  </Button>
-                  {(program as any).quote_pdf_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open((program as any).quote_pdf_url, "_blank")}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Bekijk offerte
-                    </Button>
-                  )}
-                  {!termsAccepted && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsAddActivityOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Toevoegen
-                    </Button>
-                  )}
-                  <Badge variant="secondary">
-                    {statusSummary.total} activiteiten
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {selectedDates.length > 1 ? (
-                <DayTabs
-                  selectedDates={selectedDates}
-                  activeDay={activeDay}
-                  onDayChange={onDayChange}
-                  itemCountPerDay={itemCountPerDay}
-                >
-                    {(dayIndex) => {
-                      const dayItems = getItemsForDay(dayIndex);
-                      const dayPricedItems = dayItems.filter(i => i.status !== "cancelled" && i.quoted_price);
-                      const dayTotalIncl = dayPricedItems.reduce((s, i) => s + (i.quoted_price || 0), 0);
-                      const dayTotalExcl = dayPricedItems.reduce((s, i) => {
-                        const rate = getItemVatRate(i);
-                        return s + calculateExclVat(i.quoted_price || 0, rate);
-                      }, 0);
-                      return (
-                        <>
-                        <CustomerTimeline items={dayItems} showTimeColumn>
-                          {(item) => (
-                            <CustomerProgramItem
-                              item={item}
-                              selectedDates={selectedDates}
-                              onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                              onRemove={() => onRemoveItem(item.id)}
-                              onAccept={() => onAcceptItem(item.id)}
-                              onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                              allItems={program.items}
-                              hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                              invoicingMode={invoicingMode}
-                              isPreApproval={isPreApproval}
-                              vatRate={getItemVatRate(item)}
-                            />
-                          )}
-                        </CustomerTimeline>
-                        {dayItems.length === 0 && (
-                          <p className="text-center text-muted-foreground py-8">
-                            Geen activiteiten op deze dag
-                          </p>
-                        )}
-                        {dayPricedItems.length > 0 && (
-                          <div className="flex items-center justify-between pt-3 mt-3 border-t text-sm">
-                            <span className="text-muted-foreground">Dagtotaal</span>
-                            <div className="text-right">
-                              <span className="font-semibold">€{dayTotalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              <span className="text-xs text-muted-foreground ml-2">(excl. BTW: €{dayTotalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
-                            </div>
-                          </div>
-                        )}
-                        </>
-                      );
-                    }}
-                </DayTabs>
-              ) : (
-                <CustomerTimeline
-                  items={program.items.filter((item) => item.status !== "cancelled" && item.day_index >= 0)}
-                  showTimeColumn
-                >
-                  {(item) => (
-                    <CustomerProgramItem
-                      item={item}
-                      selectedDates={selectedDates}
-                      onUpdate={(updates) => onUpdateItem(item.id, updates)}
-                      onRemove={() => onRemoveItem(item.id)}
-                      onAccept={() => onAcceptItem(item.id)}
-                      onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
-                      allItems={program.items}
-                      hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
-                      invoicingMode={invoicingMode}
-                      isPreApproval={isPreApproval}
-                      vatRate={getItemVatRate(item)}
-                    />
-                  )}
-                </CustomerTimeline>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 5. Billing & Costs section - always visible, not in accordion */}
-        <div id="billing" className="scroll-mt-20">
-          <CompactBillingSection
-            program={program}
-            items={program.items}
-            numberOfPeople={program.number_of_people}
-            termsAccepted={termsAccepted}
-            selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
-            onEditBilling={onOpenBilling}
-            invoicingMode={invoicingMode}
-          />
-        </div>
-
-        {/* 6. Accept terms - always visible as placeholder or full card */}
-        {!termsAccepted && (
-          <div id="terms-section" className="scroll-mt-20">
-            {allConfirmed ? (
-              <AcceptTermsCard
-                onAccept={onAcceptTerms}
-                isBillingComplete={billingComplete}
-                onOpenBilling={onOpenBilling}
-                items={program.items}
-                accommodationQuotes={accommodationQuotes}
-                selectedDates={selectedDates}
-              />
-            ) : (
-              <Card className="border-dashed bg-muted/30">
-                <CardContent className="py-6">
-                  <div className="flex items-start gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Voorwaarden</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Zodra alle activiteiten in je programma bevestigd zijn, verschijnen hier de voorwaarden ter ondertekening.
-                      </p>
+        {/* 4. Program, billing, terms, contact - visible when not showing accommodation */}
+        {initialSection !== "accommodation" && (
+          <>
+            <div id="program" className="scroll-mt-20">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Programma
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <ProgramPdfDownload
+                        customerName={program.customer_name}
+                        customerCompany={program.customer_company}
+                        selectedDates={selectedDates}
+                        numberOfPeople={program.number_of_people}
+                        items={program.items}
+                        referenceNumber={program.reference_number}
+                        variant="sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
+                          downloadAllEvents(
+                            activeItems.map(i => ({
+                              id: i.id,
+                              block_name: i.block_name,
+                              provider_name: i.provider_name,
+                              day_index: i.day_index,
+                              confirmed_time: i.confirmed_time,
+                              proposed_time: i.proposed_time,
+                              preferred_time: i.preferred_time,
+                              duration: i.duration,
+                              location_address: i.location_address,
+                            })),
+                            selectedDates.map(d => d.toISOString().split("T")[0]),
+                            program.number_of_people,
+                            `Programma ${program.customer_company || program.customer_name}`
+                          );
+                        }}
+                      >
+                        <CalendarPlus className="h-4 w-4 mr-1" />
+                        Agenda
+                      </Button>
+                      {(program as any).quote_pdf_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open((program as any).quote_pdf_url, "_blank")}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Bekijk offerte
+                        </Button>
+                      )}
+                      {!termsAccepted && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsAddActivityOpen(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Toevoegen
+                        </Button>
+                      )}
+                      <Badge variant="secondary">
+                        {statusSummary.total} activiteiten
+                      </Badge>
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  {selectedDates.length > 1 ? (
+                    <DayTabs
+                      selectedDates={selectedDates}
+                      activeDay={activeDay}
+                      onDayChange={onDayChange}
+                      itemCountPerDay={itemCountPerDay}
+                    >
+                      {(dayIndex) => {
+                        const dayItems = getItemsForDay(dayIndex);
+                        const dayPricedItems = dayItems.filter(i => i.status !== "cancelled" && i.quoted_price);
+                        const dayTotalIncl = dayPricedItems.reduce((s, i) => s + (i.quoted_price || 0), 0);
+                        const dayTotalExcl = dayPricedItems.reduce((s, i) => {
+                          const rate = getItemVatRate(i);
+                          return s + calculateExclVat(i.quoted_price || 0, rate);
+                        }, 0);
+                        return (
+                          <>
+                            <CustomerTimeline items={dayItems} showTimeColumn>
+                              {(item) => (
+                                <CustomerProgramItem
+                                  item={item}
+                                  selectedDates={selectedDates}
+                                  onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                                  onRemove={() => onRemoveItem(item.id)}
+                                  onAccept={() => onAcceptItem(item.id)}
+                                  onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                                  allItems={program.items}
+                                  hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                                  invoicingMode={invoicingMode}
+                                  isPreApproval={isPreApproval}
+                                  vatRate={getItemVatRate(item)}
+                                />
+                              )}
+                            </CustomerTimeline>
+                            {dayItems.length === 0 && (
+                              <p className="text-center text-muted-foreground py-8">
+                                Geen activiteiten op deze dag
+                              </p>
+                            )}
+                            {dayPricedItems.length > 0 && (
+                              <div className="flex items-center justify-between pt-3 mt-3 border-t text-sm">
+                                <span className="text-muted-foreground">Dagtotaal</span>
+                                <div className="text-right">
+                                  <span className="font-semibold">€{dayTotalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  <span className="text-xs text-muted-foreground ml-2">(excl. BTW: €{dayTotalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      }}
+                    </DayTabs>
+                  ) : (
+                    <CustomerTimeline
+                      items={program.items.filter((item) => item.status !== "cancelled" && item.day_index >= 0)}
+                      showTimeColumn
+                    >
+                      {(item) => (
+                        <CustomerProgramItem
+                          item={item}
+                          selectedDates={selectedDates}
+                          onUpdate={(updates) => onUpdateItem(item.id, updates)}
+                          onRemove={() => onRemoveItem(item.id)}
+                          onAccept={() => onAcceptItem(item.id)}
+                          onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                          allItems={program.items}
+                          hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
+                          invoicingMode={invoicingMode}
+                          isPreApproval={isPreApproval}
+                          vatRate={getItemVatRate(item)}
+                        />
+                      )}
+                    </CustomerTimeline>
+                  )}
                 </CardContent>
               </Card>
-            )}
-          </div>
-        )}
-
-        {/* Accepted terms - permanent visibility after acceptance */}
-        {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
-          <AcceptedTermsCard
-            termsAcceptedAt={program.terms_accepted_at!}
-            signatureName={program.signature_name || null}
-            signatureId={program.signature_id || null}
-            acceptedTerms={program.acceptedTerms}
-          />
-        )}
-
-        {/* Payment status after terms acceptance */}
-        {termsAccepted && (
-          <PaymentStatusCard
-            items={program.items}
-            termsAcceptedAt={program.terms_accepted_at!}
-          />
-        )}
-
-
-        {/* Floating changes bar */}
-        {hasChanges && (
-          <div className="sticky bottom-4 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg max-w-[calc(100%-340px)]">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-medium">
-                  {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Aanbieders worden op de hoogte gesteld
-                </p>
-              </div>
-              <Button onClick={onSubmitChanges}>
-                <Send className="h-4 w-4 mr-2" />
-                Wijzigingen doorvoeren
-              </Button>
             </div>
-          </div>
-        )}
 
-        {/* Contact section */}
-        <Card className="bg-muted/30">
-          <CardContent className="py-6">
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Building2 className="h-5 w-5 text-primary" />
+            {/* 5. Billing & Costs section */}
+            <div id="billing" className="scroll-mt-20">
+              <CompactBillingSection
+                program={program}
+                items={program.items}
+                numberOfPeople={program.number_of_people}
+                termsAccepted={termsAccepted}
+                selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
+                onEditBilling={onOpenBilling}
+                invoicingMode={invoicingMode}
+              />
+            </div>
+
+            {/* 6. Accept terms */}
+            {!termsAccepted && (
+              <div id="terms-section" className="scroll-mt-20">
+                {allConfirmed ? (
+                  <AcceptTermsCard
+                    onAccept={onAcceptTerms}
+                    isBillingComplete={billingComplete}
+                    onOpenBilling={onOpenBilling}
+                    items={program.items}
+                    accommodationQuotes={accommodationQuotes}
+                    selectedDates={selectedDates}
+                  />
+                ) : (
+                  <Card className="border-dashed bg-muted/30">
+                    <CardContent className="py-6">
+                      <div className="flex items-start gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <h3 className="font-medium">Voorwaarden</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Zodra alle activiteiten in je programma bevestigd zijn, verschijnen hier de voorwaarden ter ondertekening.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-              <div>
-                <h3 className="font-medium mb-1">Vragen of hulp nodig?</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Neem gerust contact met ons op. We helpen u graag verder.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <a href="mailto:hallo@bureauvlieland.nl">
-                    <Button variant="outline" size="sm">
-                      <Mail className="h-4 w-4 mr-2" />
-                      hallo@bureauvlieland.nl
-                    </Button>
-                  </a>
-                  <a href="tel:+31562700208">
-                    <Button variant="outline" size="sm">
-                      <Phone className="h-4 w-4 mr-2" />
-                      0562 700 208
-                    </Button>
-                  </a>
+            )}
+
+            {/* Accepted terms */}
+            {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
+              <AcceptedTermsCard
+                termsAcceptedAt={program.terms_accepted_at!}
+                signatureName={program.signature_name || null}
+                signatureId={program.signature_id || null}
+                acceptedTerms={program.acceptedTerms}
+              />
+            )}
+
+            {/* Payment status after terms acceptance */}
+            {termsAccepted && (
+              <PaymentStatusCard
+                items={program.items}
+                termsAcceptedAt={program.terms_accepted_at!}
+              />
+            )}
+
+            {/* Floating changes bar */}
+            {hasChanges && (
+              <div className="sticky bottom-4 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg max-w-[calc(100%-340px)]">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium">
+                      {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Aanbieders worden op de hoogte gesteld
+                    </p>
+                  </div>
+                  <Button onClick={onSubmitChanges}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Wijzigingen doorvoeren
+                  </Button>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+
+            {/* Contact section */}
+            <Card className="bg-muted/30">
+              <CardContent className="py-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1">Vragen of hulp nodig?</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Neem gerust contact met ons op. We helpen u graag verder.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <a href="mailto:hallo@bureauvlieland.nl">
+                        <Button variant="outline" size="sm">
+                          <Mail className="h-4 w-4 mr-2" />
+                          hallo@bureauvlieland.nl
+                        </Button>
+                      </a>
+                      <a href="tel:+31562700208">
+                        <Button variant="outline" size="sm">
+                          <Phone className="h-4 w-4 mr-2" />
+                          0562 700 208
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Sidebar */}
