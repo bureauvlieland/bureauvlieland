@@ -377,15 +377,6 @@ const CustomerProgram = () => {
         </div>
       )}
 
-      {/* Decision 3: Werkdocument-disclaimer always visible (not just on splash) */}
-      <div className="border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-        <div className="container mx-auto px-4 py-2 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-          <p className="text-xs text-amber-800 dark:text-amber-200">
-            <strong>Werkdocument</strong> — Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief.
-          </p>
-        </div>
-      </div>
 
       {/* Navigation tabs — always visible (also for single-day, no splash shown) */}
       {!isMobile && effectiveView !== "splash" && (
