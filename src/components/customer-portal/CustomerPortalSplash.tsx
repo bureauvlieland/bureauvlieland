@@ -16,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import vlielandLandscape from "@/assets/vlieland-landscape.jpg";
+import cyclingGroup from "@/assets/cycling-group.jpg";
+import sunsetDinner from "@/assets/sunset-dinner.jpg";
+import speedboat from "@/assets/speedboat.jpg";
+import beachActivity from "@/assets/beach-activity.jpg";
 
 interface StatusSummary {
   total: number;
@@ -124,6 +129,71 @@ export const CustomerPortalSplash = ({
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-4">
+
+      {/* Fotomosaic hero — desktop grid */}
+      <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-2 h-56 rounded-xl overflow-hidden">
+        <div className="row-span-2 overflow-hidden">
+          <img
+            src={vlielandLandscape}
+            alt="Vlieland landschap"
+            loading="eager"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+        <div className="overflow-hidden">
+          <img
+            src={cyclingGroup}
+            alt="Fietsen op Vlieland"
+            loading="lazy"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+        <div className="overflow-hidden">
+          <img
+            src={speedboat}
+            alt="Speedboot activiteit"
+            loading="lazy"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+        <div className="overflow-hidden">
+          <img
+            src={sunsetDinner}
+            alt="Diner bij zonsondergang"
+            loading="lazy"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+        <div className="overflow-hidden">
+          <img
+            src={beachActivity}
+            alt="Strandactiviteit"
+            loading="lazy"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+      </div>
+
+      {/* Fotomosaic hero — mobiel scrollstrip */}
+      <div className="flex sm:hidden gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+        {[
+          { src: vlielandLandscape, alt: "Vlieland landschap" },
+          { src: cyclingGroup, alt: "Fietsen op Vlieland" },
+          { src: sunsetDinner, alt: "Diner bij zonsondergang" },
+          { src: speedboat, alt: "Speedboot activiteit" },
+          { src: beachActivity, alt: "Strandactiviteit" },
+        ].map((photo) => (
+          <div key={photo.alt} className="shrink-0 w-40 h-40 rounded-xl overflow-hidden">
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
       {/* Blok 1: Welkomstboodschap */}
       <div className="space-y-4">
         <div>
@@ -149,7 +219,8 @@ export const CustomerPortalSplash = ({
         </div>
 
         <p className="text-muted-foreground">
-          Via dit portaal kunt u uw verblijf op Vlieland samenstellen en goedkeuren. Bureau Vlieland coördineert alles — u houdt overzicht.
+          Fijn dat u er bent! Via dit portaal vindt u alles over uw verblijf op Vlieland op één plek.
+          Bureau Vlieland coördineert het programma en de logies — u hoeft alleen te kijken, kiezen en akkoord te geven.
         </p>
 
         {/* Werkdocument disclaimer */}
