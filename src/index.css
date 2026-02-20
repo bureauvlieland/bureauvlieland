@@ -135,3 +135,12 @@ All colors MUST be HSL.
     transform: scale(1.1) translate(-5%, -5%);
   }
 }
+
+@keyframes flash-new {
+  0%, 100% { background-color: transparent; }
+  30% { background-color: hsl(142 76% 93%); }
+}
+
+.animate-flash-new {
+  animation: flash-new 3s ease-in-out;
+}
