@@ -64,6 +64,17 @@ Deno.serve(async (req) => {
       notes: "Klant heeft het portaal bezocht",
     }).then(() => {});
 
+    // Log quote_opened when customer views an active quote (fire-and-forget)
+    if (program.quote_sent_at) {
+      supabase.from("program_request_history").insert({
+        request_id: program.id,
+        action: "quote_opened",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: "Klant heeft de offerte bekeken",
+      }).then(() => {});
+    }
+
     // Fetch items
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
