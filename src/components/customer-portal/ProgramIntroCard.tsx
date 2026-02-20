@@ -78,10 +78,13 @@ export const ProgramIntroCard = ({
         <CardContent className="p-5 space-y-4">
           <div className="space-y-2">
             <p className="text-sm text-foreground leading-relaxed">
-              Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld.
-              U kunt uiteraard nog wijzigingen aanbrengen — activiteiten verwijderen, tijden aanpassen
-              of onderdelen toevoegen. Zodra u tevreden bent, kunt u het programma akkoord geven.
-              Onze partners worden vervolgens per e-mail op de hoogte gesteld en bevestigen de definitieve reserveringen.
+              Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld. U kunt uiteraard nog wijzigingen aanbrengen — activiteiten verwijderen, tijden aanpassen of onderdelen toevoegen.
+            </p>
+            <p className="text-sm text-foreground leading-relaxed">
+              Dat kunnen we natuurlijk ook samen doen. Neem in dat geval gewoon even contact op met Bureau Vlieland.
+            </p>
+            <p className="text-sm text-foreground leading-relaxed">
+              Zodra u tevreden bent, kunt u het programma akkoord geven. Onze partners worden vervolgens per e-mail op de hoogte gesteld en bevestigen de definitieve reserveringen.
             </p>
             {validUntil && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
