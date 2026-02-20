@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Eye,
   FileCheck,
@@ -36,15 +36,20 @@ interface FeedItem {
   actor: "customer" | "partner" | "admin";
   action: string;
   new_value?: Record<string, unknown> | null;
+  old_value?: Record<string, unknown> | null;
   actor_name?: string | null;
   notes?: string | null;
   created_at: string;
   isNew?: boolean;
   // From program_request_history
   request_id?: string;
+  item_id?: string | null;
   customer_name?: string | null;
   customer_company?: string | null;
   reference_number?: string | null;
+  // Enriched from program_request_items
+  block_name?: string | null;
+  provider_name?: string | null;
   // From admin_activity_log
   entity_id?: string | null;
   entity_type?: string | null;
@@ -58,6 +63,8 @@ function getActionMeta(item: FeedItem): { label: string; icon: React.ReactNode; 
     switch (action) {
       case "customer_portal_viewed":
         return { label: "Klant heeft portaal bekeken", icon: <Eye className="h-4 w-4" />, color: "text-blue-600 bg-blue-50" };
+      case "quote_opened":
+        return { label: "Klant heeft offerte geopend", icon: <FileText className="h-4 w-4" />, color: "text-green-600 bg-green-50" };
       case "terms_accepted":
         return { label: "Klant heeft voorwaarden ondertekend", icon: <FileCheck className="h-4 w-4" />, color: "text-green-600 bg-green-50" };
       case "item_accepted":
@@ -105,12 +112,26 @@ function getActionMeta(item: FeedItem): { label: string; icon: React.ReactNode; 
         return { label: "Offertestatuswijziging", icon: <FileText className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
       case "partner_invited":
         return { label: "Partner uitgenodigd", icon: <UserPlus className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
+      case "partner_invitation_resent":
+        return { label: "Uitnodiging opnieuw verstuurd", icon: <UserPlus className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
+      case "partner_created":
+        return { label: "Nieuwe partner aangemaakt", icon: <UserPlus className="h-4 w-4" />, color: "text-green-600 bg-green-50" };
+      case "partner_updated":
+        return { label: "Partnergegevens bijgewerkt", icon: <Activity className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
       case "item_status_changed":
-        return { label: "Admin wijzigt itemstatus", icon: <Activity className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
+        return { label: "Admin wijzigt activiteitstatus", icon: <Activity className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
       case "admin_sent_to_partners":
         return { label: "Admin stuurt naar partners", icon: <Send className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
       case "quote_sent":
         return { label: "Offerte verzonden naar klant", icon: <Send className="h-4 w-4" />, color: "text-green-600 bg-green-50" };
+      case "template_applied":
+        return { label: "Template toegepast", icon: <FileCheck className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
+      case "bulk_invite_partners":
+        return { label: "Partners uitgenodigd (bulk)", icon: <UserPlus className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
+      case "request_cancelled":
+        return { label: "Aanvraag geannuleerd", icon: <XCircle className="h-4 w-4" />, color: "text-red-600 bg-red-50" };
+      case "invoice_registered":
+        return { label: "Factuur geregistreerd", icon: <Receipt className="h-4 w-4" />, color: "text-purple-600 bg-purple-50" };
       default:
         return { label: action, icon: <Activity className="h-4 w-4" />, color: "text-indigo-600 bg-indigo-50" };
     }
@@ -120,12 +141,97 @@ function getActionMeta(item: FeedItem): { label: string; icon: React.ReactNode; 
 }
 
 function getSubtitle(item: FeedItem): string | null {
-  const { action, notes, new_value, customer_company } = item;
+  const { action, actor, notes, new_value, old_value, details, customer_company, block_name, provider_name, actor_name } = item;
+
+  // Customer actions
+  if (action === "time_changed") {
+    const from = (old_value as any)?.value;
+    const to = (new_value as any)?.value;
+    const activity = block_name || (new_value as any)?.block_name;
+    const parts: string[] = [];
+    if (activity) parts.push(activity);
+    if (provider_name && provider_name !== activity) parts.push(`@ ${provider_name}`);
+    if (from && to) parts.push(`${from} → ${to}`);
+    else if (to) parts.push(`→ ${to}`);
+    return parts.length > 0 ? parts.join(" · ") : notes || null;
+  }
+  if (action === "item_accepted" || action === "item_cancelled") {
+    const activity = block_name || (new_value as any)?.block_name;
+    if (activity) return provider_name ? `${activity} @ ${provider_name}` : activity;
+    return notes || null;
+  }
+  if (action === "counter_proposed") {
+    const activity = block_name || (new_value as any)?.block_name;
+    const parts: string[] = [];
+    if (activity) parts.push(activity);
+    if (notes) parts.push(`"${notes}"`);
+    return parts.length > 0 ? parts.join(" — ") : null;
+  }
+  if (action === "add_activity") {
+    return (new_value as any)?.block_name || notes || null;
+  }
+  if (action === "billing_updated") return customer_company || null;
+
+  // Partner actions
+  if (actor === "partner" && action === "status_changed") {
+    const activity = block_name;
+    const price = (new_value as any)?.quoted_price;
+    const statusNote = (new_value as any)?.status_note;
+    const parts: string[] = [];
+    if (activity) parts.push(activity);
+    if (price) parts.push(`€ ${Number(price).toLocaleString("nl-NL")}`);
+    if (statusNote) parts.push(statusNote);
+    return parts.length > 0 ? parts.join(" · ") : notes || actor_name || null;
+  }
+  if (actor === "partner" && action === "invoice_registered") {
+    return block_name || notes || null;
+  }
+
+  // Admin actions — read from details JSON
+  if (actor === "admin") {
+    const d = details as any;
+    if (action === "partner_invitation_resent" || action === "partner_invited") {
+      const name = d?.partner_name || d?.name;
+      const email = d?.partner_email || d?.email;
+      if (name && email) return `${name} (${email})`;
+      if (name) return name;
+      if (email) return email;
+    }
+    if (action === "partner_created" || action === "partner_updated") {
+      return d?.name || d?.partner_name || null;
+    }
+    if (action === "quote_status_changed") {
+      const from = d?.old_status;
+      const to = d?.new_status;
+      if (from && to) return `${from} → ${to}`;
+      return to || from || null;
+    }
+    if (action === "item_status_changed") {
+      const blockN = d?.block_name;
+      const act = d?.action;
+      if (blockN && act) return `${blockN} (${act})`;
+      return blockN || null;
+    }
+    if (action === "template_applied") {
+      const tname = d?.template_name;
+      const count = d?.items_added;
+      if (tname) return count ? `${tname} — ${count} activiteiten` : tname;
+    }
+    if (action === "bulk_invite_partners") {
+      const names = d?.partner_names;
+      if (Array.isArray(names) && names.length > 0) {
+        return names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
+      }
+      const ok = d?.successful;
+      if (ok) return `${ok} verstuurd`;
+    }
+    if (action === "request_cancelled") {
+      return d?.reason || null;
+    }
+  }
+
+  // Fallback
   if (action === "status_changed" && notes) return notes;
-  if (action === "counter_proposed" && notes) return `"${notes}"`;
-  if (action === "billing_updated" && customer_company) return customer_company;
-  if (action === "item_accepted" && notes) return notes;
-  if (action === "add_activity" && notes) return notes;
   if ((new_value as any)?.block_name) return (new_value as any).block_name;
   return null;
 }
@@ -176,11 +282,13 @@ export function LiveActivityFeed() {
         .select(`
           id,
           request_id,
+          item_id,
           action,
           actor,
           actor_name,
           notes,
           new_value,
+          old_value,
           created_at,
           program_requests!inner(
             customer_name,
@@ -199,19 +307,44 @@ export function LiveActivityFeed() {
         .order("created_at", { ascending: false })
         .limit(20);
 
-      const historyItems: FeedItem[] = (historyData || []).map((h: any) => ({
-        id: `h-${h.id}`,
-        actor: h.actor as FeedItem["actor"],
-        action: h.action,
-        actor_name: h.actor_name,
-        notes: h.notes,
-        new_value: h.new_value,
-        created_at: h.created_at,
-        request_id: h.request_id,
-        customer_name: h.program_requests?.customer_name,
-        customer_company: h.program_requests?.customer_company,
-        reference_number: h.program_requests?.reference_number,
-      }));
+      // Batch-fetch item details for enrichment
+      const itemIds = (historyData || [])
+        .filter((h: any) => h.item_id)
+        .map((h: any) => h.item_id as string);
+
+      let itemDetailsMap: Record<string, { block_name: string; provider_name: string }> = {};
+      if (itemIds.length > 0) {
+        const { data: itemDetails } = await supabase
+          .from("program_request_items")
+          .select("id, block_name, provider_name")
+          .in("id", itemIds);
+        if (itemDetails) {
+          itemDetailsMap = Object.fromEntries(
+            itemDetails.map((i: any) => [i.id, { block_name: i.block_name, provider_name: i.provider_name }])
+          );
+        }
+      }
+
+      const historyItems: FeedItem[] = (historyData || []).map((h: any) => {
+        const itemDetail = h.item_id ? itemDetailsMap[h.item_id] : null;
+        return {
+          id: `h-${h.id}`,
+          actor: h.actor as FeedItem["actor"],
+          action: h.action,
+          actor_name: h.actor_name,
+          notes: h.notes,
+          new_value: h.new_value,
+          old_value: h.old_value,
+          created_at: h.created_at,
+          request_id: h.request_id,
+          item_id: h.item_id,
+          customer_name: h.program_requests?.customer_name,
+          customer_company: h.program_requests?.customer_company,
+          reference_number: h.program_requests?.reference_number,
+          block_name: itemDetail?.block_name || null,
+          provider_name: itemDetail?.provider_name || null,
+        };
+      });
 
       const adminItems: FeedItem[] = (adminData || []).map((a: any) => ({
         id: `a-${a.id}`,
@@ -252,11 +385,24 @@ export function LiveActivityFeed() {
           // Skip portal views to avoid spamming the feed
           if (newItem.action === "customer_portal_viewed") return;
 
-          const { data: req } = await supabase
-            .from("program_requests")
-            .select("customer_name, customer_company, reference_number")
-            .eq("id", newItem.request_id)
-            .single();
+          // Fetch request metadata + item details in parallel
+          const [reqResult, itemResult] = await Promise.all([
+            supabase
+              .from("program_requests")
+              .select("customer_name, customer_company, reference_number")
+              .eq("id", newItem.request_id)
+              .single(),
+            newItem.item_id
+              ? supabase
+                  .from("program_request_items")
+                  .select("block_name, provider_name")
+                  .eq("id", newItem.item_id)
+                  .single()
+              : Promise.resolve({ data: null }),
+          ]);
+
+          const req = reqResult.data;
+          const itemDetail = itemResult.data;
 
           const feedItem: FeedItem = {
             id: `h-${newItem.id}`,
@@ -265,11 +411,15 @@ export function LiveActivityFeed() {
             actor_name: newItem.actor_name,
             notes: newItem.notes,
             new_value: newItem.new_value,
+            old_value: newItem.old_value,
             created_at: newItem.created_at,
             request_id: newItem.request_id,
+            item_id: newItem.item_id,
             customer_name: req?.customer_name,
             customer_company: req?.customer_company,
             reference_number: req?.reference_number,
+            block_name: (itemDetail as any)?.block_name || null,
+            provider_name: (itemDetail as any)?.provider_name || null,
             isNew: true,
           };
 
@@ -294,7 +444,7 @@ export function LiveActivityFeed() {
   }, [fetchFeed]);
 
   const filtered = filter === "all" ? items : items.filter((i) => i.actor === filter);
-  const dimmed = (item: FeedItem) => item.action === "customer_portal_viewed";
+  const dimmed = (item: FeedItem) => item.action === "customer_portal_viewed" || item.action === "quote_opened";
 
   return (
     <TooltipProvider>
@@ -407,16 +557,14 @@ export function LiveActivityFeed() {
                         </p>
                       </div>
                     </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 mt-0.5 cursor-default">
-                          {relativeTime(item.created_at)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">
-                        <p className="text-xs">{formatExactTime(item.created_at)}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0 mt-0.5">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {relativeTime(item.created_at)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                        {formatExactTime(item.created_at)}
+                      </span>
+                    </div>
                   </div>
                 );
 
