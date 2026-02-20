@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { CheckCircle, Loader2, Clock, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -24,6 +25,7 @@ export const ProgramIntroCard = ({
   onAcceptQuoteProposal,
 }: ProgramIntroCardProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
 
   const isQuoteMode = programType === "quote";
   const isAwaitingApproval = isQuoteMode && quoteStatus === "offerte_verstuurd";
@@ -93,10 +95,21 @@ export const ProgramIntroCard = ({
               </p>
             )}
           </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Checkbox
+              id="akkoord-checkbox"
+              checked={isChecked}
+              onCheckedChange={(v) => setIsChecked(!!v)}
+            />
+            <Label htmlFor="akkoord-checkbox" className="text-sm cursor-pointer">
+              Ik ben akkoord met het programma
+            </Label>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Button
+              variant="outline"
               onClick={handleAccept}
-              disabled={isLoading}
+              disabled={isLoading || !isChecked}
               className="whitespace-nowrap"
             >
               {isLoading ? (
