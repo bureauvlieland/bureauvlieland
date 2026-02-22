@@ -121,19 +121,23 @@ export const TemplateSelector = ({
         {/* Start empty option */}
         <Card
           className={cn(
-            "border-dashed hover:border-primary/50 transition-all duration-200 cursor-pointer flex items-center justify-center",
+            "group relative overflow-hidden border-2 border-dashed border-primary/30 hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer flex items-center justify-center bg-gradient-to-br from-primary/5 via-transparent to-accent/10",
             templates.length === 0 && "sm:col-span-2"
           )}
           onClick={onStartEmpty}
         >
-          <CardContent className="p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="h-6 w-6 text-muted-foreground" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/15 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <CardContent className="relative z-10 p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mx-auto mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+              <Sparkles className="h-7 w-7 text-primary transition-transform duration-300 group-hover:scale-110" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Start leeg</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors duration-200">Start leeg</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Stel zelf uw programma samen uit alle beschikbare activiteiten
             </p>
+            <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Aan de slag →
+            </div>
           </CardContent>
         </Card>
       </div>
