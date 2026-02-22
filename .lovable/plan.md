@@ -1,59 +1,29 @@
 
 
-# Configurator vereenvoudigen en toegankelijker maken
+# Modal bij toevoegen activiteit aan programma
 
-## Wat gaan we veranderen?
+## Wat verandert er?
 
-De programma-configurator op de website wordt laagdrempeliger en meer begeleidend. We vereenvoudigen de wizard-stappen, voegen meer uitleg toe, en verwijderen prijsindicaties die een verkeerd beeld geven.
+Wanneer een bezoeker op "Toevoegen" klikt bij een bouwsteen, opent er een compacte modal/dialog in plaats van dat het item direct wordt toegevoegd. In deze modal kan de bezoeker:
+
+1. **De dag kiezen** (alleen zichtbaar bij meerdaagse programma's) -- dropdown of knoppen met de geselecteerde data
+2. **Een voorkeurstijd opgeven** -- tijdselectie in stappen van 5 minuten (bijv. "10:00", "14:30") of "Flexibel"
+3. **Bevestigen** -- pas bij klik op "Toevoegen aan programma" wordt het item daadwerkelijk aan de cart toegevoegd
+
+Dit voorkomt dat activiteiten zonder tijd in het programma belanden en maakt het direct duidelijk op welke dag iets gepland staat.
 
 ---
 
-## 1. Wizard stap 1: Vereenvoudig programmatypes
+## Gebruikerservaring
 
-**Nu:** 6 opties (Teamuitje, Heisessie, Incentive reis, Zakelijk evenement, Meerdaags bedrijfsuitje, Overig) -- dit is overweldigend en de grenzen zijn vaag.
-
-**Straks:** 3 duidelijke opties met meer begeleidende tekst:
-
-| Optie | Omschrijving |
-|-------|-------------|
-| **Zakelijk** | Teamuitje, heisessie, incentive of bedrijfsevenement |
-| **Prive** | Familieweekend, vriendengroep, jubileum of bruiloft |
-| **Losse activiteiten** | Ik wil alleen losse activiteiten boeken |
-
-Elk met een sfeerbeeld, korte toelichting en een subtekst met voorbeelden zodat bezoekers zich herkennen.
-
-De `ProgramType` type wordt aangepast naar `"zakelijk" | "prive" | "los"`.
-
-## 2. Meer begeleidende teksten door de hele wizard
-
-Elke stap krijgt een vriendelijkere intro met uitleg *waarom* we iets vragen:
-
-- **Stap 1:** "We stemmen het aanbod graag af op uw situatie. Waar mogen we u mee helpen?"
-- **Stap 2:** "Met deze gegevens kunnen wij de beschikbaarheid checken en een passend voorstel samenstellen."
-- **Stap 2.5 (templates):** "Wilt u een idee hoe een dag op Vlieland eruit kan zien? Bekijk een van onze voorbeeldprogramma's, of stel zelf iets samen."
-- **Stap 3 (logies):** "Op Vlieland is het aanbod aan accommodaties beperkt. Wij kennen alle mogelijkheden en helpen u graag aan een geschikte plek."
-
-## 3. Prijzen verwijderen uit voorbeeldprogramma's
-
-**TemplateSelector.tsx:** Verwijder de `~EUR X p.p.` badge van de template-kaarten.
-
-**TemplatePreviewSheet.tsx:** Verwijder het volledige prijsoverzicht-blok ("Indicatieve totaalprijs") en de individuele item-prijzen uit de preview. Houd alleen het programma-overzicht (tijden en activiteiten).
-
-## 4. "Zo werkt het" blok aanpassen
-
-De huidige stappen zijn vrij zakelijk. We herschrijven ze in warmere, begeleidende taal:
-
-1. "Stel uw programma samen" -- "Kies activiteiten die passen bij uw groep"
-2. "Wij checken beschikbaarheid" -- "Onze lokale partners bekijken of alles kan"
-3. "U ontvangt een voorstel" -- "Met definitieve tijden en prijzen"
-4. "Bevestig wat u wilt" -- "U bepaalt per onderdeel wat doorgaat"
-5. "Wij coördineren alles" -- "Zodat u zich nergens zorgen over hoeft te maken"
-
-Minder stappen (5 i.p.v. 6) en meer op de bezoeker gericht.
-
-## 5. Bouwsteenkaarten: prijs minder prominent
-
-Op de `BuildingBlockCard` wordt de prijsbadge rechtsbovenin verwijderd. In plaats daarvan een subtielere "Vanaf EUR X p.p." onderaan bij de meta-info, zodat prijs niet het eerste is dat opvalt maar wel beschikbaar blijft.
+1. Bezoeker klikt "Toevoegen" op een bouwsteenkaart
+2. Een compacte dialog opent met:
+   - Naam en afbeelding van de activiteit (klein, ter herkenning)
+   - **Dag** -- dropdown met "Dag 1 (ma 24 mrt)", "Dag 2 (di 25 mrt)" etc. (alleen bij 2+ dagen, anders verborgen)
+   - **Voorkeurstijd** -- tijdpicker met "Flexibel" als standaard, of selecteer een specifiek tijdstip
+   - Begeleidende tekst: "Op welk moment past deze activiteit het beste in uw programma?"
+3. Klik op "Toevoegen aan programma" voegt het item toe met de gekozen dag en tijd
+4. Toast-melding bevestigt de toevoeging
 
 ---
 
@@ -61,13 +31,24 @@ Op de `BuildingBlockCard` wordt de prijsbadge rechtsbovenin verwijderd. In plaat
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `ConfiguratorWizard.tsx` | ProgramType naar 3 opties, begeleidende teksten per stap |
-| `TemplateSelector.tsx` | Prijsindicatie verwijderen van kaarten |
-| `TemplatePreviewSheet.tsx` | Prijsblok + item-prijzen verwijderen |
-| `HowItWorksBlock.tsx` | Stappen herschrijven (5 i.p.v. 6), warmere taal |
-| `BuildingBlockCard.tsx` | Prijsbadge verplaatsen van prominent naar subtiel |
-| `ProgrammaSamenstellen.tsx` | Hero-teksten aanpassen, meer begeleidend |
-| `src/types/buildingBlock.ts` | (evt.) ProgramType type update als het daar staat |
+| `src/components/configurator/AddToCartDialog.tsx` | **Nieuw** -- Dialog component met dag- en tijdkeuze |
+| `src/pages/ProgrammaSamenstellen.tsx` | `handleAddToCart` opent dialog i.p.v. direct toevoegen; state voor geselecteerd blok |
+| `src/components/configurator/BuildingBlockCard.tsx` | Geen wijziging nodig (onAdd callback blijft hetzelfde) |
+| `src/components/configurator/BuildingBlockListItem.tsx` | Geen wijziging nodig |
 
-Geen database-wijzigingen nodig. Puur frontend-aanpassingen.
+### Nieuw component: `AddToCartDialog`
 
+- Props: `block` (BuildingBlock), `isOpen`, `onClose`, `selectedDates` (Date[]), `onConfirm(blockId, dayIndex, preferredTime)`
+- Dag-selectie: Radio-buttons of Select met geformatteerde datums ("Dag 1 -- ma 24 mrt")
+- Tijd-selectie: Select met "Flexibel" (standaard) + tijdslots van 08:00 t/m 22:00 in stappen van 5 minuten
+- Bij eendaagse programma's wordt dag-selectie verborgen en staat dayIndex vast op 0
+- Bevestigknop: "Toevoegen aan programma"
+
+### Wijziging in `ProgrammaSamenstellen.tsx`
+
+- Nieuwe state: `pendingBlock` (BuildingBlock | null) voor de te openen dialog
+- `handleAddToCart` zet `pendingBlock` i.p.v. direct `addToCart` aan te roepen
+- Nieuwe `handleConfirmAdd(blockId, dayIndex, preferredTime)` die `addToCart` + `updateItem` aanroept en de dialog sluit
+- Dialog wordt gerenderd met `pendingBlock`, `selectedDates` als props
+
+Geen database-wijzigingen nodig.
