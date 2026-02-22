@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
@@ -454,6 +455,17 @@ const CustomerProgram = () => {
         dateRange={dateRange}
         isSubmitting={isCancelling}
       />
+
+      {/* Chat Widget */}
+      {token && program && (
+        <ChatWidget
+          source="customer_portal"
+          sourceToken={token}
+          visitorName={program.customer_name}
+          visitorEmail={program.customer_email}
+          requestId={program.id}
+        />
+      )}
 
       <BillingDetailsDialog
         isOpen={showBillingDialog}

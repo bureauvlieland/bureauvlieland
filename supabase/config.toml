@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.send-customer-accommodation-message]
 verify_jwt = false
+
+[functions.notify-new-chat]
+verify_jwt = false

@@ -72,6 +72,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminTemplates from "./pages/admin/AdminTemplates";
 import AdminPurchaseInvoices from "./pages/admin/AdminPurchaseInvoices";
+import AdminChat from "./pages/admin/AdminChat";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
@@ -184,6 +185,7 @@ const App = () => {
             <Route path="/admin/logies" element={<AdminAccommodation />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />
+            <Route path="/admin/chat" element={<AdminChat />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

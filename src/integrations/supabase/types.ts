@@ -681,6 +681,115 @@ export type Database = {
           },
         ]
       }
+      chat_admin_presence: {
+        Row: {
+          id: string
+          is_online: boolean
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_online?: boolean
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_online?: boolean
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          request_id: string | null
+          source: string
+          source_partner_id: string | null
+          source_token: string | null
+          status: string
+          updated_at: string
+          visitor_email: string
+          visitor_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          request_id?: string | null
+          source: string
+          source_partner_id?: string | null
+          source_token?: string | null
+          status?: string
+          updated_at?: string
+          visitor_email?: string
+          visitor_name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          request_id?: string | null
+          source?: string
+          source_partner_id?: string | null
+          source_token?: string | null
+          status?: string
+          updated_at?: string
+          visitor_email?: string
+          visitor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_name: string
+          sender_type: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_name?: string
+          sender_type: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_name?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_log: {
         Row: {
           created_at: string

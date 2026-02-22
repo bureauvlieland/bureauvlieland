@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 interface PartnerLayoutProps {
   children: ReactNode;
@@ -292,6 +293,14 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
             {children}
           </main>
         </div>
+
+        {/* Chat Widget */}
+        <ChatWidget
+          source="partner_portal"
+          sourcePartnerId={partner.id}
+          visitorName={partner.name}
+          visitorEmail={partner.email}
+        />
       </div>
     </SidebarProvider>
   );
