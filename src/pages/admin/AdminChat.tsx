@@ -1,37 +1,57 @@
 import { useState, useRef, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { useAdminChat } from "@/hooks/useAdminChat";
+import { useAdminChat, type ChatStatusFilter } from "@/hooks/useAdminChat";
+import { useConversationProjects } from "@/hooks/useConversationProjects";
+import { ChatConversationItem } from "@/components/admin/chat/ChatConversationItem";
+import { ChatMessageBubble } from "@/components/admin/chat/ChatMessageBubble";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-import { format, formatDistanceToNow } from "date-fns";
-import { nl } from "date-fns/locale";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import {
   MessageCircle,
   Send,
   X,
-  User,
-  Building2,
-  Clock,
-  CheckCheck,
+  FileText,
+  Save,
 } from "lucide-react";
 
 const AdminChat = () => {
   const {
     conversations,
+    filteredConversations,
     activeConversationId,
     setActiveConversationId,
     messages,
     unreadCount,
     isOnline,
+    statusFilter,
+    setStatusFilter,
     updatePresence,
     sendMessage,
     closeConversation,
+    saveChatToProject,
   } = useAdminChat();
 
+  const projectRefs = useConversationProjects(conversations);
+  const navigate = useNavigate();
+
   const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll
@@ -59,10 +79,28 @@ const AdminChat = () => {
     (c) => c.id === activeConversationId
   );
 
+  const handleSaveToProject = async () => {
+    if (!activeConversationId) return;
+    setSaving(true);
+    const success = await saveChatToProject(activeConversationId);
+    setSaving(false);
+    if (success) {
+      toast.success("Chatgeschiedenis opgeslagen bij project");
+    } else {
+      toast.error("Kon chatgeschiedenis niet opslaan");
+    }
+  };
+
+  // Count conversations per tab for badges
+  const waitingCount = conversations.filter(
+    (c) => c.status === "waiting" || c.status === "active"
+  ).length;
+  
+
   return (
     <AdminLayout>
       <div className="h-[calc(100vh-56px)] lg:h-screen flex">
-        {/* Sidebar: conversations list */}
+        {/* Sidebar */}
         <div className="w-80 border-r bg-white flex flex-col">
           {/* Header */}
           <div className="p-4 border-b space-y-3">
@@ -85,54 +123,44 @@ const AdminChat = () => {
             </div>
           </div>
 
+          {/* Status tabs */}
+          <div className="px-3 pt-3">
+            <Tabs
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as ChatStatusFilter)}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="waiting" className="flex-1 text-xs gap-1">
+                  Inbox
+                  {waitingCount > 0 && (
+                    <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
+                      {waitingCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="closed" className="flex-1 text-xs">
+                  Gesloten
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           {/* Conversations */}
           <div className="flex-1 overflow-y-auto">
-            {conversations.length === 0 && (
+            {filteredConversations.length === 0 && (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 Geen gesprekken
               </div>
             )}
-            {conversations.map((conv) => (
-              <button
+            {filteredConversations.map((conv) => (
+              <ChatConversationItem
                 key={conv.id}
+                conversation={conv}
+                isActive={activeConversationId === conv.id}
+                projectRef={conv.request_id ? projectRefs[conv.request_id] : undefined}
                 onClick={() => setActiveConversationId(conv.id)}
-                className={cn(
-                  "w-full text-left px-4 py-3 border-b hover:bg-slate-50 transition-colors",
-                  activeConversationId === conv.id && "bg-slate-100"
-                )}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {conv.source === "partner_portal" ? (
-                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  ) : (
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
-                  <span className="font-medium text-sm truncate">
-                    {conv.visitor_name || "Bezoeker"}
-                  </span>
-                  <Badge
-                    variant={conv.status === "active" ? "default" : "secondary"}
-                    className="ml-auto text-[10px] px-1.5"
-                  >
-                    {conv.status === "active"
-                      ? "Actief"
-                      : conv.status === "waiting"
-                      ? "Wacht"
-                      : "Gesloten"}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {conv.visitor_email}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(conv.last_message_at), {
-                    addSuffix: true,
-                    locale: nl,
-                  })}
-                </p>
-              </button>
+              />
             ))}
           </div>
         </div>
@@ -150,76 +178,75 @@ const AdminChat = () => {
             <>
               {/* Chat header */}
               <div className="px-4 py-3 bg-white border-b flex items-center justify-between">
-                <div>
-                  <p className="font-medium">
-                    {activeConversation.visitor_name || "Bezoeker"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {activeConversation.visitor_email} •{" "}
-                    {activeConversation.source === "partner_portal"
-                      ? "Partnerportaal"
-                      : "Klantportaal"}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="font-medium">
+                      {activeConversation.visitor_name || "Bezoeker"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {activeConversation.visitor_email} •{" "}
+                      {activeConversation.source === "partner_portal"
+                        ? "Partnerportaal"
+                        : "Klantportaal"}
+                    </p>
+                  </div>
+                  {activeConversation.request_id && projectRefs[activeConversation.request_id] && (
+                    <button
+                      onClick={() => navigate(`/admin/requests/${activeConversation.request_id}`)}
+                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full flex items-center gap-1 hover:bg-primary/20 transition-colors"
+                    >
+                      <FileText className="h-3 w-3" />
+                      {projectRefs[activeConversation.request_id]}
+                    </button>
+                  )}
                 </div>
-                {activeConversation.status !== "closed" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => closeConversation(activeConversation.id)}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Sluiten
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {activeConversation.request_id && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={saving}>
+                          <Save className="h-4 w-4 mr-1" />
+                          Opslaan bij project
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Chat opslaan bij project?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            De volledige chatgeschiedenis wordt opgeslagen als notitie bij het project
+                            {projectRefs[activeConversation.request_id!] && (
+                              <> ({projectRefs[activeConversation.request_id!]})</>
+                            )}
+                            . Dit is zichtbaar in de projecttijdlijn.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleSaveToProject}>
+                            Opslaan
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                  {activeConversation.status !== "closed" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => closeConversation(activeConversation.id)}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Sluiten
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Messages */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.map((msg) => {
-                  const isAdmin = msg.sender_type === "admin";
-                  return (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex",
-                        isAdmin ? "justify-end" : "justify-start"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm",
-                          isAdmin
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-white border rounded-bl-md"
-                        )}
-                      >
-                        {!isAdmin && (
-                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                            {msg.sender_name}
-                          </p>
-                        )}
-                        <p className="whitespace-pre-wrap break-words">
-                          {msg.content}
-                        </p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <span
-                            className={cn(
-                              "text-[10px]",
-                              isAdmin
-                                ? "text-primary-foreground/60"
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            {format(new Date(msg.created_at), "HH:mm")}
-                          </span>
-                          {isAdmin && msg.read_at && (
-                            <CheckCheck className="h-3 w-3 text-primary-foreground/60" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {messages.map((msg) => (
+                  <ChatMessageBubble key={msg.id} message={msg} />
+                ))}
               </div>
 
               {/* Input */}
