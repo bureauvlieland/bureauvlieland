@@ -26,13 +26,6 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         
-        {/* Price badge */}
-        <div className="absolute top-3 right-3 bg-background/95 backdrop-blur-sm px-3 py-1 rounded-full">
-          <span className="font-semibold text-foreground">{formatBlockPrice(block)}</span>
-          {formatPriceNote(block) && (
-            <span className="text-muted-foreground text-sm ml-1">{formatPriceNote(block)}</span>
-          )}
-        </div>
 
         {/* Category badge */}
         <div className="absolute bottom-3 left-3 flex gap-2">
@@ -56,7 +49,7 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
         </p>
 
         {/* Meta info */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-2">
           {block.duration && (
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -76,6 +69,11 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
             </div>
           )}
         </div>
+
+        {/* Subtle price */}
+        <p className="text-xs text-muted-foreground mb-4">
+          {block.is_from_price ? "Vanaf" : ""} {formatBlockPrice(block)} {formatPriceNote(block)}
+        </p>
 
         {/* Provider */}
         <p className="text-xs text-muted-foreground mb-4">
