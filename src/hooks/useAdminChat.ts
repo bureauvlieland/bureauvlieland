@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 import type { ChatConversation, ChatMessage } from "./useChat";
+
+export type ChatStatusFilter = "waiting" | "active" | "closed";
 
 export function useAdminChat() {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -8,6 +11,7 @@ export function useAdminChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOnline, setIsOnline] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>("waiting");
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -19,10 +23,30 @@ export function useAdminChat() {
     if (data) setConversations(data as unknown as ChatConversation[]);
   }, []);
 
+  // Derived filtered lists
+  const waitingConversations = useMemo(
+    () => conversations.filter((c) => c.status === "waiting" || c.status === "active"),
+    [conversations]
+  );
+
+  // "Onbeantwoord" = conversations where status is waiting/active and there are unread visitor messages
+  // We approximate by filtering on status; the actual unread logic uses the unread count per conversation
+  const filteredConversations = useMemo(() => {
+    switch (statusFilter) {
+      case "waiting":
+        return conversations.filter((c) => c.status === "waiting" || c.status === "active");
+      case "active":
+        return conversations.filter((c) => c.status === "active");
+      case "closed":
+        return conversations.filter((c) => c.status === "closed");
+      default:
+        return conversations;
+    }
+  }, [conversations, statusFilter]);
+
   useEffect(() => {
     loadConversations();
 
-    // Realtime for new conversations / updates
     const channel = supabase
       .channel("admin-chat-conversations")
       .on("postgres_changes", {
@@ -75,7 +99,6 @@ export function useAdminChat() {
           if (prev.some(m => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
-        // Auto-mark as read if visitor message
         if (newMsg.sender_type === "visitor") {
           supabase
             .from("chat_messages")
@@ -173,15 +196,54 @@ export function useAdminChat() {
     loadConversations();
   }, [activeConversationId, loadConversations]);
 
+  // Save chat history to project communications
+  const saveChatToProject = useCallback(async (conversationId: string): Promise<boolean> => {
+    const conv = conversations.find(c => c.id === conversationId);
+    if (!conv?.request_id) return false;
+
+    // Fetch all messages for this conversation
+    const { data: msgs } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+
+    if (!msgs || msgs.length === 0) return false;
+
+    const formattedContent = (msgs as unknown as ChatMessage[])
+      .map(m => `[${format(new Date(m.created_at), "HH:mm")}] ${m.sender_name}: ${m.content}`)
+      .join("\n");
+
+    const { error } = await supabase
+      .from("project_communications")
+      .insert({
+        request_id: conv.request_id,
+        communication_type: "note",
+        direction: "internal",
+        subject: `Chat met ${conv.visitor_name || "Bezoeker"}`,
+        content: formattedContent,
+        contact_name: conv.visitor_name || null,
+        contact_email: conv.visitor_email || null,
+        communication_date: conv.created_at,
+      });
+
+    return !error;
+  }, [conversations]);
+
   return {
     conversations,
+    filteredConversations,
+    waitingConversations,
     activeConversationId,
     setActiveConversationId,
     messages,
     unreadCount,
     isOnline,
+    statusFilter,
+    setStatusFilter,
     updatePresence,
     sendMessage,
     closeConversation,
+    saveChatToProject,
   };
 }
