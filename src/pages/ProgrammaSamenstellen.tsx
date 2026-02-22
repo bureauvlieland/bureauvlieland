@@ -418,7 +418,7 @@ const ProgrammaSamenstellen = () => {
 
                   {/* Right: Cart sidebar (sticky) - hidden on mobile/tablet */}
                   <div className="lg:col-span-1 hidden lg:block">
-                    <div className="sticky top-24">
+                    <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin">
                       <ConfiguratorCart
                         cartItems={cartItems}
                         numberOfPeople={numberOfPeople}
