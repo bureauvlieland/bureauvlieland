@@ -2,8 +2,11 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2 } from "lucide-react";
+import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2, ChevronDown } from "lucide-react";
 import { ShareProgramDialog } from "./ShareProgramDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 
@@ -62,6 +65,7 @@ export const ProgramEditor = ({
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [activeDay, setActiveDay] = useState(0);
   const [highlightedDay, setHighlightedDay] = useState<number | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const prevItemsRef = useRef<CartItemDetail[]>(cartItems);
   const { toast } = useToast();
   
@@ -469,59 +473,55 @@ export const ProgramEditor = ({
   }
 
   // Compact mode (original sidebar layout)
+  // (detailsOpen state moved to top of component)
+
+  const dateSummary = effectiveDates.length > 0
+    ? effectiveDates.map(d => format(d, "d MMM", { locale: nl })).join(", ")
+    : "Geen datum";
+
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Begin met het invullen van je groepsgrootte en gewenste datum(s).
-      </p>
+    <div className="space-y-3">
+      {/* Collapsible people & date summary */}
+      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors text-left">
+            <span className="text-sm font-medium">
+              {numberOfPeople} personen — {dateSummary}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${detailsOpen ? "rotate-180" : ""}`} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-3">
+          <div>
+            <Label htmlFor="numberOfPeople" className="text-sm font-medium">
+              Hoeveel personen?
+            </Label>
+            <Input
+              id="numberOfPeople"
+              type="number"
+              min={1}
+              max={500}
+              value={numberOfPeople}
+              onChange={(e) => onPeopleChange(parseInt(e.target.value, 10) || 1)}
+              disabled={isReadOnly("numberOfPeople")}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Wanneer willen jullie komen?</Label>
+            <div className="mt-1">
+              <MultiDatePicker
+                selectedDates={effectiveDates}
+                onAddDate={onAddDate}
+                onRemoveDate={onRemoveDate}
+              />
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* People and date inputs */}
-      <div className="space-y-3">
-        <div>
-          <Label htmlFor="numberOfPeople" className="text-sm font-medium">
-            Hoeveel personen?
-          </Label>
-          <p className="text-xs text-muted-foreground mb-1.5">
-            Dit bepaalt de indicatieve prijs per activiteit
-          </p>
-          <Input
-            id="numberOfPeople"
-            type="number"
-            min={1}
-            max={500}
-            value={numberOfPeople}
-            onChange={(e) => onPeopleChange(parseInt(e.target.value, 10) || 1)}
-            disabled={isReadOnly("numberOfPeople")}
-          />
-        </div>
-
-        <div>
-          <Label className="text-sm font-medium">Wanneer willen jullie komen?</Label>
-          <p className="text-xs text-muted-foreground mb-1.5">
-            {effectiveDates.length === 0 
-              ? "Selecteer één of meerdere dagen (max 7)"
-              : "Aanbieders controleren de beschikbaarheid"}
-          </p>
-          <MultiDatePicker
-            selectedDates={effectiveDates}
-            onAddDate={onAddDate}
-            onRemoveDate={onRemoveDate}
-          />
-        </div>
-      </div>
-
-      {/* Separator and activities header */}
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-sm mb-1">Gekozen activiteiten</h4>
-        <p className="text-xs text-muted-foreground mb-3">
-          {effectiveDates.length > 1 
-            ? "Activiteiten zijn ingedeeld per dag. Verplaats ze via de dag-selector."
-            : "Sleep activiteiten in de gewenste dagvolgorde"}
-        </p>
-      </div>
-
-      {/* Activities list */}
-      <div className="space-y-3">
+      {/* Activities - flat list, no billing groups */}
+      <div className="space-y-2">
         {effectiveDates.length > 1 ? (
           <DayTabs
             selectedDates={effectiveDates}
@@ -533,85 +533,22 @@ export const ProgramEditor = ({
             {(dayIndex) => renderDayItems(dayIndex)}
           </DayTabs>
         ) : (
-          <>
-            {groupedBlocks.bureau.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <span>Gefactureerd door Bureau Vlieland</span>
-                </div>
-                <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
-                  {renderBlockGroup(groupedBlocks.bureau, "bureau")}
-                </div>
-              </div>
-            )}
-
-            {groupedBlocks.partner.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Users2 className="h-4 w-4 text-primary" />
-                  <span>Gefactureerd door aanbieders</span>
-                </div>
-                <div className="space-y-2 ml-6 bg-muted/50 rounded-lg p-2">
-                  {renderBlockGroup(groupedBlocks.partner, "partner")}
-                </div>
-              </div>
-            )}
-
-            {groupedBlocks.self_arranged.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
-                  <Info className="h-4 w-4" />
-                  <span>Zelf te regelen</span>
-                </div>
-                <div className="space-y-2 ml-6 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2">
-                  {renderBlockGroup(groupedBlocks.self_arranged, "self")}
-                </div>
-                <p className="text-xs text-muted-foreground ml-6">
-                  Links ontvang je na het versturen van je aanvraag
-                </p>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Bureau fee */}
-        {hasBillableItems && (
-          <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10 rounded-lg">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Coördinatiefee</p>
-              <p className="text-xs text-muted-foreground">Wij regelen de communicatie met alle aanbieders</p>
-            </div>
-            <span className="text-sm font-medium">€ {bureauFee}</span>
-          </div>
+          renderDayItems(0)
         )}
       </div>
 
-      {/* Pricing summary */}
+      {/* Simplified pricing */}
       {hasBillableItems && (
-        <div className="border-t pt-3 space-y-1.5 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Subtotaal excl. BTW</span>
-            <span>€ {Math.round(indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>BTW (21%)</span>
-            <span>€ {Math.round(indicativeTotal - indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Coördinatiefee ({numberOfPeople} pers.)</span>
-            <span>€ {bureauFee}</span>
-          </div>
-          <div className="flex justify-between font-semibold text-foreground pt-2 border-t">
-            <span>Indicatief totaal incl. BTW</span>
+        <div className="border-t pt-3">
+          <div className="flex justify-between font-semibold text-base">
+            <span>Indicatief totaal</span>
             <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            * Prijzen zijn indicatief incl. 21% BTW. Exacte prijzen na bevestiging door aanbieders.
+            * Exacte prijzen na bevestiging door aanbieders
           </p>
         </div>
       )}
-
 
       {/* Self-arranged only message */}
       {!hasBillableItems && groupedBlocks.self_arranged.length > 0 && (
@@ -620,30 +557,21 @@ export const ProgramEditor = ({
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="space-y-2">
+      {/* Sticky CTA */}
+      <div className="sticky bottom-0 bg-background pt-3 pb-1 border-t -mx-1 px-1">
         <Button
           onClick={onSubmit}
-          className="w-full"
+          className="w-full text-base font-semibold"
           size="lg"
           disabled={effectiveDates.length === 0 || numberOfPeople < 1 || !hasBillableItems}
         >
-          {isCustomerView ? "Wijziging aanvragen" : "Controleren en aanvragen"}
-          <ArrowRight className="ml-2 h-4 w-4" />
+          {isCustomerView ? "Wijziging aanvragen" : "Vrijblijvend aanvragen"}
+          <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
-        <Button
-          onClick={() => setIsShareDialogOpen(true)}
-          variant="outline"
-          className="w-full"
-          size="sm"
-        >
-          <Share2 className="mr-2 h-4 w-4" />
-          Deel programma
-        </Button>
+        <p className="text-xs text-center text-muted-foreground mt-1.5">
+          Je kunt alles nog controleren en je gegevens invullen
+        </p>
       </div>
-      <p className="text-xs text-center text-muted-foreground">
-        Je kunt alles nog controleren en je gegevens invullen
-      </p>
 
       <ShareProgramDialog
         isOpen={isShareDialogOpen}

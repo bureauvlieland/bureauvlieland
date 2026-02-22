@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ShoppingCart, Maximize2 } from "lucide-react";
+import { ShoppingCart, Maximize2, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type CartItemDetail, calculateIndicativeTotal } from "@/types/buildingBlock";
 import { ProgramEditor } from "./ProgramEditor";
 import { ProgramEditorSheet } from "./ProgramEditorSheet";
+import { ShareProgramDialog } from "./ShareProgramDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { trackBeginCheckout } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
@@ -44,6 +45,7 @@ export const ConfiguratorCart = ({
   onDateChange,
 }: ConfiguratorCartProps) => {
   const [isEditorSheetOpen, setIsEditorSheetOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   
 
@@ -119,22 +121,33 @@ export const ConfiguratorCart = ({
       <Card className={cn("p-5", isInDrawer && "border-0 shadow-none px-1 py-2")}>
         {!isInDrawer && (
           <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
               Uw Programma
               <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                {cartItems.length} {cartItems.length === 1 ? "item" : "items"}
+                {cartItems.length}
               </span>
             </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsEditorSheetOpen(true)}
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-            >
-              <Maximize2 className="h-4 w-4" />
-              <span className="hidden xl:inline">Uitklappen</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => setIsShareDialogOpen(true)}
+                title="Deel programma"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => setIsEditorSheetOpen(true)}
+                title="Uitklappen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
@@ -167,6 +180,16 @@ export const ConfiguratorCart = ({
         onRemoveDate={handleRemoveDate}
         onSubmit={handleSubmit}
         onReorderItems={onReorderItems}
+      />
+
+      {/* Share dialog */}
+      <ShareProgramDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+        cartItems={cartItems}
+        numberOfPeople={numberOfPeople}
+        selectedDate={effectiveDates[0]}
+        selectedDates={effectiveDates}
       />
     </>
   );
