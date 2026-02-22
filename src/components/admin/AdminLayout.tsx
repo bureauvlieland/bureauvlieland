@@ -37,6 +37,7 @@ import {
   Receipt,
   HandCoins,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -63,6 +64,7 @@ const menuSections: MenuSection[] = [
       { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
       { title: "CRM", url: "/admin/crm", icon: Users },
       { title: "Partners", url: "/admin/partners", icon: Building2 },
+      { title: "Chat", url: "/admin/chat", icon: MessageCircle },
     ],
   },
   {
