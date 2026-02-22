@@ -55,6 +55,11 @@ const Catering = () => {
           content="Bureau Vlieland en Zuiver Traiteur verzorgen de volledige catering voor zakelijke evenementen op Vlieland. Van lunch tot strand-BBQ." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/catering" />
+        <meta property="og:title" content="Catering op Vlieland – Bureau Vlieland & Zuiver Traiteur" />
+        <meta property="og:description" content="Bureau Vlieland en Zuiver Traiteur verzorgen de volledige catering voor zakelijke evenementen op Vlieland. Van lunch tot strand-BBQ." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/catering" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen">
         <Navigation />

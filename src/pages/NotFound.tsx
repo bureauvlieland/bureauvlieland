@@ -1,5 +1,6 @@
 import { useLocation, Navigate } from "react-router-dom";
 import { useEffect, useMemo } from "react";
+import { Helmet } from "react-helmet";
 
 // Map old URLs to new destinations for SEO-friendly redirects
 const getRedirectDestination = (pathname: string): string | null => {
@@ -69,6 +70,10 @@ const NotFound = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted">
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Pagina niet gevonden – Bureau Vlieland</title>
+      </Helmet>
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">404</h1>
         <p className="mb-4 text-xl text-muted-foreground">Pagina niet gevonden</p>

@@ -141,32 +141,8 @@ export const StructuredData = () => {
       }
     ];
 
-    // Event Schema
-    const event = {
-      "@context": "https://schema.org",
-      "@type": "Event",
-      "name": "Bedrijfsuitje op Vlieland",
-      "description": "Organiseer uw bedrijfsuitje, teambuilding of incentive reis op het prachtige Waddeneiland Vlieland. Bureau Vlieland verzorgt het complete arrangement.",
-      "organizer": {
-        "@type": "LocalBusiness",
-        "name": "Bureau Vlieland",
-        "url": "https://bureauvlieland.nl"
-      },
-      "location": {
-        "@type": "Place",
-        "name": "Vlieland",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Vlieland",
-          "addressCountry": "NL"
-        }
-      },
-      "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
-      "eventStatus": "https://schema.org/EventScheduled"
-    };
-
     // Insert all schemas
-    const schemas = [localBusiness, ...services, ...reviews, event];
+    const schemas = [localBusiness, ...services, ...reviews];
     
     schemas.forEach((schema, index) => {
       const script = document.createElement('script');

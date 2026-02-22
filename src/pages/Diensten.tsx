@@ -12,10 +12,15 @@ const Diensten = () => {
   
   return (
     <div className="min-h-screen">
-      <Helmet>
+       <Helmet>
         <title>Onze diensten – Bureau Vlieland | Programma, regie & catering</title>
         <meta name="description" content="Bureau Vlieland verzorgt complete programma's voor teams en organisaties op Vlieland: van inhoudelijke sessies tot catering en lokale begeleiding." />
         <link rel="canonical" href="https://bureauvlieland.nl/diensten" />
+        <meta property="og:title" content="Onze diensten – Bureau Vlieland | Programma, regie & catering" />
+        <meta property="og:description" content="Bureau Vlieland verzorgt complete programma's voor teams en organisaties op Vlieland: van inhoudelijke sessies tot catering en lokale begeleiding." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/diensten" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <Navigation />
       <main id="main-content">

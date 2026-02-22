@@ -27,6 +27,11 @@ const TeamuitjeVlieland = () => {
           content="Een teamuitje op Vlieland gericht op samenwerking en verbinding. Bureau Vlieland organiseert complete teamuitjes met inhoud." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/teamuitje-vlieland" />
+        <meta property="og:title" content="Teamuitje op Vlieland – teambuilding met verdieping" />
+        <meta property="og:description" content="Een teamuitje op Vlieland gericht op samenwerking en verbinding. Bureau Vlieland organiseert complete teamuitjes met inhoud." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/teamuitje-vlieland" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Teamuitje op Vlieland"

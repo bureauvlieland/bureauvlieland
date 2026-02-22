@@ -27,6 +27,11 @@ const HeisessieVlieland = () => {
           content="Een heisessie op Vlieland biedt rust en focus. Bureau Vlieland organiseert strategiesessies en MT-dagen op maat." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/heisessie-vlieland" />
+        <meta property="og:title" content="Heisessie op Vlieland – rust en focus voor strategie" />
+        <meta property="og:description" content="Een heisessie op Vlieland biedt rust en focus. Bureau Vlieland organiseert strategiesessies en MT-dagen op maat." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/heisessie-vlieland" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Heisessie op Vlieland"

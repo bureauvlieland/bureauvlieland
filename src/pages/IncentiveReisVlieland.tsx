@@ -27,6 +27,11 @@ const IncentiveReisVlieland = () => {
           content="Een incentive reis op Vlieland als beloning of motivatie. Bureau Vlieland organiseert exclusieve programma's op maat." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/incentive-reis-vlieland" />
+        <meta property="og:title" content="Incentive reis op Vlieland – exclusief en verzorgd" />
+        <meta property="og:description" content="Een incentive reis op Vlieland als beloning of motivatie. Bureau Vlieland organiseert exclusieve programma's op maat." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/incentive-reis-vlieland" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Incentive reis op Vlieland"

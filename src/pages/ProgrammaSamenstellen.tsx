@@ -239,6 +239,11 @@ const ProgrammaSamenstellen = () => {
           content="Stel uw programma op Vlieland samen. Kies activiteiten, catering en vervoer voor uw groep. Wij controleren beschikbaarheid en zorgen dat alles goed op elkaar aansluit."
         />
         <link rel="canonical" href="https://bureauvlieland.nl/programma-samenstellen" />
+        <meta property="og:title" content="Programma Samenstellen | Bureau Vlieland" />
+        <meta property="og:description" content="Stel uw programma op Vlieland samen. Kies activiteiten, catering en vervoer voor uw groep." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/programma-samenstellen" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <Navigation />
 

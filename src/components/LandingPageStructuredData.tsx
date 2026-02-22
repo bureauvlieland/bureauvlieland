@@ -31,9 +31,9 @@ export const LandingPageStructuredData = ({
         email: "hallo@bureauvlieland.nl",
         address: {
           "@type": "PostalAddress",
-          streetAddress: "Dorpsstraat 99",
-          addressLocality: "Oost-Vlieland",
-          postalCode: "8899 AB",
+          streetAddress: "Sikkelduin 11",
+          addressLocality: "Vlieland",
+          postalCode: "8899 CG",
           addressCountry: "NL"
         },
         geo: {

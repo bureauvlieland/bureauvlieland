@@ -12,12 +12,18 @@ import { Link } from "react-router-dom";
 const Evenementen = () => {
   return (
     <>
-      <Helmet>
+       <Helmet>
         <title>Evenementen op Vlieland | Bureau Vlieland</title>
         <meta 
           name="description" 
           content="Ontdek de mooiste evenementen op Vlieland: van de Vuurtorenloop hardloopfeest tot de culinaire Amusetour. Bureau Vlieland organiseert uw deelname."
         />
+        <link rel="canonical" href="https://bureauvlieland.nl/evenementen" />
+        <meta property="og:title" content="Evenementen op Vlieland | Bureau Vlieland" />
+        <meta property="og:description" content="Ontdek de mooiste evenementen op Vlieland: van de Vuurtorenloop hardloopfeest tot de culinaire Amusetour. Bureau Vlieland organiseert uw deelname." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/evenementen" />
+        <meta property="og:type" content="website" />
       </Helmet>
 
       <Navigation />
