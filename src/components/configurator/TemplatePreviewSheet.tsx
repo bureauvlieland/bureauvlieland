@@ -2,9 +2,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, Euro, MapPin } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
-import { calculateTemplatePrice } from "@/lib/templateLoader";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
 interface TemplatePreviewSheetProps {
@@ -28,15 +27,6 @@ export const TemplatePreviewSheet = ({
     return `Dag ${dayIndex + 1}`;
   };
 
-  const formatPrice = (price: number | null) => {
-    if (!price) return "Op aanvraag";
-    return new Intl.NumberFormat("nl-NL", {
-      style: "currency",
-      currency: "EUR",
-    }).format(price);
-  };
-
-  const totalPrice = template ? calculateTemplatePrice(template, numberOfPeople) : null;
 
   // Group items by day
   const itemsByDay = template?.items?.reduce((acc, item) => {
@@ -113,11 +103,6 @@ export const TemplatePreviewSheet = ({
                             </Badge>
                           )}
                         </div>
-                        {item.block?.price_adult && (
-                          <div className="text-sm text-muted-foreground">
-                            €{item.block.price_adult}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -127,24 +112,9 @@ export const TemplatePreviewSheet = ({
 
             <Separator className="my-6" />
 
-            {/* Price summary */}
-            <div className="bg-primary/5 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">
-                    Indicatieve totaalprijs
-                  </div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {formatPrice(totalPrice)}
-                  </div>
-                </div>
-                <Euro className="h-8 w-8 text-primary/30" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Prijs op basis van {numberOfPeople} personen. Definitieve prijs
-                na offerte.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Na uw aanvraag ontvangt u een voorstel met definitieve tijden en prijzen.
+            </p>
 
             <Button
               className="w-full"

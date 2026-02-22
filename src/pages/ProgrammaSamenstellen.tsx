@@ -242,11 +242,14 @@ const ProgrammaSamenstellen = () => {
           <div className="relative z-10 text-center text-primary-foreground px-4 max-w-4xl">
             {showWizard ? (
               <>
-                <h1 className="text-4xl md:text-6xl font-display font-bold mb-4">
+               <h1 className="text-4xl md:text-6xl font-display font-bold mb-4">
                   Welkom bij Bureau Vlieland
                 </h1>
-                <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
-                  Laten we samen uw perfecte programma op Vlieland samenstellen.
+                <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-2">
+                  Wij helpen u graag bij het samenstellen van een programma op Vlieland. Stap voor stap, geheel vrijblijvend.
+                </p>
+                <p className="text-base text-primary-foreground/80 max-w-xl mx-auto">
+                  Na uw aanvraag ontvangt u een voorstel met definitieve tijden en prijzen.
                 </p>
               </>
             ) : (

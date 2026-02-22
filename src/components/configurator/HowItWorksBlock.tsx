@@ -1,35 +1,30 @@
-import { CheckCircle2, CalendarDays, Search, FileCheck, Receipt, Eye } from "lucide-react";
+import { CheckCircle2, Search, FileCheck, ThumbsUp, Heart } from "lucide-react";
 
 const steps = [
   {
     icon: CheckCircle2,
-    title: "Kies wat past bij uw groep",
-    description: "Selecteer activiteiten, catering en vervoer",
-  },
-  {
-    icon: CalendarDays,
-    title: "Meerdere dagen?",
-    description: "Wij kunnen ook logies verzorgen",
+    title: "Stel uw programma samen",
+    description: "Kies activiteiten die passen bij uw groep",
   },
   {
     icon: Search,
-    title: "Beschikbaarheid controleren",
-    description: "Wij checken bij alle aanbieders",
+    title: "Wij checken beschikbaarheid",
+    description: "Onze lokale partners bekijken of alles kan",
   },
   {
     icon: FileCheck,
-    title: "Bevestiging per onderdeel",
-    description: "U ontvangt bericht zodra bevestigd",
+    title: "U ontvangt een voorstel",
+    description: "Met definitieve tijden en prijzen",
   },
   {
-    icon: Receipt,
-    title: "Directe facturering",
-    description: "Elke aanbieder factureert rechtstreeks",
+    icon: ThumbsUp,
+    title: "Bevestig wat u wilt",
+    description: "U bepaalt per onderdeel wat doorgaat",
   },
   {
-    icon: Eye,
-    title: "Wij bewaken het overzicht",
-    description: "Bureau Vlieland coördineert alles",
+    icon: Heart,
+    title: "Wij coördineren alles",
+    description: "Zodat u zich nergens zorgen over hoeft te maken",
   },
 ];
 

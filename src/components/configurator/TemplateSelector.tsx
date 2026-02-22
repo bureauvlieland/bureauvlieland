@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, ChevronLeft, ChevronRight, Clock, Users } from "lucide-react";
+import { Sparkles, ChevronLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
@@ -30,10 +30,6 @@ export const TemplateSelector = ({
     return `${days} dagen`;
   };
 
-  const formatPrice = (price: number | null) => {
-    if (!price) return null;
-    return `~€${Math.round(price)} p.p.`;
-  };
 
   if (isLoading) {
     return (
@@ -54,10 +50,10 @@ export const TemplateSelector = ({
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="text-center mb-8">
         <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-          Begin met een voorbeeldprogramma?
+          Wilt u een idee hoe een dag op Vlieland eruit kan zien?
         </h2>
         <p className="text-muted-foreground">
-          Kies een kant-en-klaar arrangement of stel zelf uw programma samen
+          Bekijk een van onze voorbeeldprogramma's, of stel zelf iets samen
         </p>
       </div>
 
@@ -78,15 +74,10 @@ export const TemplateSelector = ({
               </div>
             )}
             <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
+              <div className="mb-2">
                 <h3 className="font-semibold text-lg text-foreground">
                   {template.name}
                 </h3>
-                {template.indicative_price_pp && (
-                  <span className="text-sm font-medium text-primary">
-                    {formatPrice(template.indicative_price_pp)}
-                  </span>
-                )}
               </div>
               
               <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">

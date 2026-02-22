@@ -16,9 +16,6 @@ import {
 } from "lucide-react";
 
 import teamBeach from "@/assets/team-beach.jpg";
-import mindsetOutdoor from "@/assets/mindset22-outdoor.jpg";
-import speedboatImg from "@/assets/speedboat.jpg";
-import eventOutdoor from "@/assets/event-outdoor.jpg";
 import dunesGroupImg from "@/assets/dunes-group.jpg";
 import beachActivityImg from "@/assets/beach-activity.jpg";
 import { format, addDays } from "date-fns";
@@ -29,55 +26,38 @@ import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
 export type ProgramType = 
-  | "teamuitje" 
-  | "heisessie" 
-  | "incentive" 
-  | "bedrijfsevenement" 
-  | "meerdaags" 
-  | "overig";
+  | "zakelijk" 
+  | "prive" 
+  | "los";
 
 interface ProgramTypeOption {
   id: ProgramType;
   label: string;
   description: string;
+  examples: string;
   image: string;
 }
 
 const programTypes: ProgramTypeOption[] = [
   {
-    id: "teamuitje",
-    label: "Teamuitje",
-    description: "Eendaags programma voor teambuilding",
+    id: "zakelijk",
+    label: "Zakelijk",
+    description: "Wij organiseren een passend programma voor uw bedrijf of organisatie",
+    examples: "Teamuitje, heisessie, incentive of bedrijfsevenement",
     image: teamBeach,
   },
   {
-    id: "heisessie",
-    label: "Heisessie",
-    description: "Strategische sessie met focus op inhoud",
-    image: mindsetOutdoor,
-  },
-  {
-    id: "incentive",
-    label: "Incentive reis",
-    description: "Beloningsprogramma voor medewerkers",
-    image: speedboatImg,
-  },
-  {
-    id: "bedrijfsevenement",
-    label: "Zakelijk evenement",
-    description: "Jubileum, productlancering of relatie-event",
-    image: eventOutdoor,
-  },
-  {
-    id: "meerdaags",
-    label: "Meerdaags bedrijfsuitje",
-    description: "Uitgebreid programma met overnachting",
+    id: "prive",
+    label: "Privé",
+    description: "Een onvergetelijk verblijf op Vlieland met familie of vrienden",
+    examples: "Familieweekend, vriendengroep, jubileum of bruiloft",
     image: dunesGroupImg,
   },
   {
-    id: "overig",
-    label: "Overig",
-    description: "Ander type programma of combinatie",
+    id: "los",
+    label: "Losse activiteiten",
+    description: "Boek één of meerdere activiteiten zonder compleet programma",
+    examples: "Ik wil alleen losse activiteiten boeken",
     image: beachActivityImg,
   },
 ];
@@ -205,21 +185,21 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
       {step === 1 && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-              Wat voor programma wilt u organiseren?
+           <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
+              Waar mogen we u mee helpen?
             </h2>
             <p className="text-muted-foreground">
-              Kies het type dat het beste past bij uw wensen
+              We stemmen het aanbod graag af op uw situatie
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             {programTypes.map((type) => (
               <div
                 key={type.id}
                 className={cn(
                   "relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 group",
-                  "h-[140px] sm:h-[160px]",
+                  "h-[200px] sm:h-[220px]",
                   data.programType === type.id
                     ? "ring-3 ring-primary ring-offset-2 ring-offset-background shadow-lg"
                     : "hover:shadow-md"
@@ -244,7 +224,8 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
                 )}
                 <div className="absolute inset-0 p-4 flex flex-col justify-end">
                   <h3 className="font-semibold text-lg text-white">{type.label}</h3>
-                  <p className="text-sm text-white/80 line-clamp-2">{type.description}</p>
+                  <p className="text-sm text-white/90 mb-1">{type.description}</p>
+                  <p className="text-xs text-white/70">{type.examples}</p>
                 </div>
               </div>
             ))}
@@ -272,7 +253,7 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
               Wanneer en met hoeveel personen?
             </h2>
             <p className="text-muted-foreground">
-              Selecteer uw datum(s) en groepsgrootte
+              Met deze gegevens kunnen wij de beschikbaarheid checken en een passend voorstel samenstellen
             </p>
           </div>
 
@@ -412,7 +393,7 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
               Wilt u dat wij ook logies regelen?
             </h2>
             <p className="text-muted-foreground">
-              Voor uw {data.selectedDates.length}-daags programma met {data.numberOfPeople} personen
+              Op Vlieland is het aanbod aan accommodaties beperkt. Wij kennen alle mogelijkheden en helpen u graag aan een geschikte plek.
             </p>
           </div>
 
