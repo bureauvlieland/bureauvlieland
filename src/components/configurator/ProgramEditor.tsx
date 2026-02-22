@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2, ChevronDown } from "lucide-react";
+import { CartItemDetails } from "./CartItemDetails";
 import { ShareProgramDialog } from "./ShareProgramDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
@@ -206,31 +207,20 @@ export const ProgramEditor = ({
       return block ? { block, cartItem: item } : null;
     }).filter(Boolean) as { block: BuildingBlock; cartItem: CartItemDetail }[];
 
-    const itemIds = allItems.map((item) => item.cartItem.blockId);
-
     return (
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
-            {allItems.map(({ block, cartItem }) => (
-              <SortableCartItem
-                key={block.id}
-                id={block.id}
-                block={block}
-                item={cartItem}
-                onUpdate={(updates) => onUpdateItem(block.id, updates)}
-                onRemove={() => onRemoveItem(block.id)}
-                selectedDates={effectiveDates}
-                showDaySelector={effectiveDates.length > 1}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="space-y-2">
+        {allItems.map(({ block, cartItem }) => (
+          <CartItemDetails
+            key={block.id}
+            block={block}
+            item={cartItem}
+            onUpdate={(updates) => onUpdateItem(block.id, updates)}
+            onRemove={() => onRemoveItem(block.id)}
+            selectedDates={effectiveDates}
+            showDaySelector={effectiveDates.length > 1}
+          />
+        ))}
+      </div>
     );
   };
 
