@@ -1,100 +1,73 @@
 
-# Live Chat: Klant- en Partnerportaal
 
-## Wat wordt het?
+# Configurator vereenvoudigen en toegankelijker maken
 
-Een chat-widget (floating button rechtsonder) op het klantportaal en partnerportaal waarmee bezoekers direct een bericht kunnen sturen naar Bureau Vlieland. Als admin reageer je via een chatvenster in de admin-omgeving. Wordt er niet binnen ~2 minuten gereageerd, dan verschijnt automatisch de melding "We kijken of er iemand beschikbaar is" en kan de bezoeker een bericht achterlaten (inclusief naam/email als die nog niet bekend is). Je ontvangt een e-mailnotificatie bij elk nieuw gesprek.
+## Wat gaan we veranderen?
+
+De programma-configurator op de website wordt laagdrempeliger en meer begeleidend. We vereenvoudigen de wizard-stappen, voegen meer uitleg toe, en verwijderen prijsindicaties die een verkeerd beeld geven.
 
 ---
 
-## Gebruikerservaring
+## 1. Wizard stap 1: Vereenvoudig programmatypes
 
-### Klant / Partner ziet:
-1. Floating chat-icoon rechtsonder (bijv. blauw rondje met chat-icoontje)
-2. Klik opent een compact chatvenster
-3. Kan direct typen en versturen
-4. Als admin online is: realtime antwoorden
-5. Als admin niet reageert binnen 2 minuten: "We kijken of er iemand beschikbaar is. Laat gerust een bericht achter, dan nemen we zo snel mogelijk contact op."
-6. Klantportaal: naam/email al bekend via programma-data, automatisch ingevuld
-7. Partnerportaal: naam/email bekend via ingelogde partner
+**Nu:** 6 opties (Teamuitje, Heisessie, Incentive reis, Zakelijk evenement, Meerdaags bedrijfsuitje, Overig) -- dit is overweldigend en de grenzen zijn vaag.
 
-### Admin ziet:
-1. Nieuw menu-item "Chat" in de admin-sidebar
-2. Lijst van actieve en recente gesprekken (links)
-3. Chatvenster (rechts) met realtime berichten
-4. Badge/indicator bij nieuwe ongelezen berichten
-5. Online/offline toggle om beschikbaarheid aan te geven
+**Straks:** 3 duidelijke opties met meer begeleidende tekst:
+
+| Optie | Omschrijving |
+|-------|-------------|
+| **Zakelijk** | Teamuitje, heisessie, incentive of bedrijfsevenement |
+| **Prive** | Familieweekend, vriendengroep, jubileum of bruiloft |
+| **Losse activiteiten** | Ik wil alleen losse activiteiten boeken |
+
+Elk met een sfeerbeeld, korte toelichting en een subtekst met voorbeelden zodat bezoekers zich herkennen.
+
+De `ProgramType` type wordt aangepast naar `"zakelijk" | "prive" | "los"`.
+
+## 2. Meer begeleidende teksten door de hele wizard
+
+Elke stap krijgt een vriendelijkere intro met uitleg *waarom* we iets vragen:
+
+- **Stap 1:** "We stemmen het aanbod graag af op uw situatie. Waar mogen we u mee helpen?"
+- **Stap 2:** "Met deze gegevens kunnen wij de beschikbaarheid checken en een passend voorstel samenstellen."
+- **Stap 2.5 (templates):** "Wilt u een idee hoe een dag op Vlieland eruit kan zien? Bekijk een van onze voorbeeldprogramma's, of stel zelf iets samen."
+- **Stap 3 (logies):** "Op Vlieland is het aanbod aan accommodaties beperkt. Wij kennen alle mogelijkheden en helpen u graag aan een geschikte plek."
+
+## 3. Prijzen verwijderen uit voorbeeldprogramma's
+
+**TemplateSelector.tsx:** Verwijder de `~EUR X p.p.` badge van de template-kaarten.
+
+**TemplatePreviewSheet.tsx:** Verwijder het volledige prijsoverzicht-blok ("Indicatieve totaalprijs") en de individuele item-prijzen uit de preview. Houd alleen het programma-overzicht (tijden en activiteiten).
+
+## 4. "Zo werkt het" blok aanpassen
+
+De huidige stappen zijn vrij zakelijk. We herschrijven ze in warmere, begeleidende taal:
+
+1. "Stel uw programma samen" -- "Kies activiteiten die passen bij uw groep"
+2. "Wij checken beschikbaarheid" -- "Onze lokale partners bekijken of alles kan"
+3. "U ontvangt een voorstel" -- "Met definitieve tijden en prijzen"
+4. "Bevestig wat u wilt" -- "U bepaalt per onderdeel wat doorgaat"
+5. "Wij coördineren alles" -- "Zodat u zich nergens zorgen over hoeft te maken"
+
+Minder stappen (5 i.p.v. 6) en meer op de bezoeker gericht.
+
+## 5. Bouwsteenkaarten: prijs minder prominent
+
+Op de `BuildingBlockCard` wordt de prijsbadge rechtsbovenin verwijderd. In plaats daarvan een subtielere "Vanaf EUR X p.p." onderaan bij de meta-info, zodat prijs niet het eerste is dat opvalt maar wel beschikbaar blijft.
 
 ---
 
 ## Technisch overzicht
 
-### Database (3 nieuwe tabellen)
+| Bestand | Wijziging |
+|---------|-----------|
+| `ConfiguratorWizard.tsx` | ProgramType naar 3 opties, begeleidende teksten per stap |
+| `TemplateSelector.tsx` | Prijsindicatie verwijderen van kaarten |
+| `TemplatePreviewSheet.tsx` | Prijsblok + item-prijzen verwijderen |
+| `HowItWorksBlock.tsx` | Stappen herschrijven (5 i.p.v. 6), warmere taal |
+| `BuildingBlockCard.tsx` | Prijsbadge verplaatsen van prominent naar subtiel |
+| `ProgrammaSamenstellen.tsx` | Hero-teksten aanpassen, meer begeleidend |
+| `src/types/buildingBlock.ts` | (evt.) ProgramType type update als het daar staat |
 
-**`chat_conversations`**
-- `id` (uuid, PK)
-- `source` (text: 'customer_portal' | 'partner_portal')
-- `source_token` (text, nullable) -- customer_token voor klanten
-- `source_partner_id` (text, nullable) -- partner id
-- `visitor_name` (text)
-- `visitor_email` (text)
-- `request_id` (uuid, nullable) -- link naar programma
-- `status` (text: 'active' | 'waiting' | 'closed')
-- `last_message_at` (timestamptz)
-- `created_at`, `updated_at`
+Geen database-wijzigingen nodig. Puur frontend-aanpassingen.
 
-**`chat_messages`**
-- `id` (uuid, PK)
-- `conversation_id` (uuid, FK)
-- `sender_type` (text: 'visitor' | 'admin')
-- `sender_name` (text)
-- `content` (text)
-- `read_at` (timestamptz, nullable)
-- `created_at` (timestamptz)
-
-**`chat_admin_presence`**
-- `id` (uuid, PK)
-- `user_id` (uuid, FK naar auth.users)
-- `is_online` (boolean)
-- `last_seen_at` (timestamptz)
-
-RLS-policies:
-- Berichten leesbaar/schrijfbaar via conversation source_token of source_partner_id (voor bezoekers)
-- Admins hebben volledige toegang
-- Realtime enabled op `chat_messages` en `chat_admin_presence`
-
-### Frontend componenten
-
-| Component | Locatie | Beschrijving |
-|-----------|---------|--------------|
-| `ChatWidget` | Floating component | Bubble + chatvenster, getoond op klant- en partnerportaal |
-| `ChatWindow` | Onderdeel van widget | Berichtenlijst, invoerveld, "offline" fallback |
-| `AdminChatPage` | `/admin/chat` | Gesprekkenlijst + chatvenster voor admin |
-| `AdminChatSidebar` | Admin layout | Badge met ongelezen count |
-
-### Realtime
-- Supabase Realtime op `chat_messages` voor live updates
-- Supabase Realtime op `chat_admin_presence` voor online-status
-
-### E-mail notificatie
-- Nieuwe edge function `notify-new-chat` die een e-mail stuurt naar hallo@bureauvlieland.nl bij het eerste bericht in een nieuw gesprek (of na 2 minuten zonder admin-reactie)
-- Gebruikt bestaande Mailjet/Resend integratie
-
-### Waar wordt de widget getoond?
-- `CustomerProgram.tsx` -- klantportaal (alle views)
-- `PartnerLayout.tsx` -- partnerportaal (alle pagina's)
-- Niet op de publieke website of admin-omgeving
-
----
-
-## Stappenplan
-
-1. Database-migratie: 3 tabellen + RLS + realtime publicatie
-2. `ChatWidget` component bouwen (floating bubble + chatvenster)
-3. `useChat` hook voor berichten ophalen/versturen via Supabase realtime
-4. Widget integreren in `CustomerProgram.tsx` en `PartnerLayout.tsx`
-5. `AdminChatPage` bouwen met gesprekkenlijst + chatvenster
-6. Admin-sidebar uitbreiden met chat-link + ongelezen-badge
-7. Admin online/offline presence tracking
-8. Edge function `notify-new-chat` voor e-mail notificaties
-9. "Offline" fallback-flow in widget (bericht achterlaten)
