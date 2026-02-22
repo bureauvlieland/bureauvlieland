@@ -41,7 +41,7 @@ export const AccommodationQuoteItem = ({
   formatPrice,
 }: AccommodationQuoteItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { data: extras = [] } = useQuoteExtras(isOpen ? quote.id : undefined);
+  const { data: extras = [] } = useQuoteExtras(quote.id);
 
   const extrasTotal = calculateExtrasTotal(extras);
   const grandTotal = quote.price_total + extrasTotal;
