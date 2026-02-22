@@ -471,6 +471,8 @@ const ProgrammaSamenstellen = () => {
         isOpen={!!pendingBlock}
         onClose={() => setPendingBlock(null)}
         selectedDates={selectedDates}
+        cartItems={cartItems}
+        allBlocks={buildingBlocks}
         onConfirm={handleConfirmAdd}
       />
     </div>
