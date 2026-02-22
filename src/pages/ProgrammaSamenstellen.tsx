@@ -6,7 +6,8 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useKenBurns } from "@/hooks/use-ken-burns";
-import { type BuildingBlockCategory } from "@/types/buildingBlock";
+import { type BuildingBlockCategory, type BuildingBlock } from "@/types/buildingBlock";
+import { AddToCartDialog } from "@/components/configurator/AddToCartDialog";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockCard } from "@/components/configurator/BuildingBlockCard";
 import { BuildingBlockListItem } from "@/components/configurator/BuildingBlockListItem";
@@ -71,6 +72,7 @@ const ProgrammaSamenstellen = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
+  const [pendingBlock, setPendingBlock] = useState<BuildingBlock | null>(null);
 
   // Check for existing draft on mount - if draft exists, skip wizard
   useEffect(() => {
@@ -184,14 +186,28 @@ const ProgrammaSamenstellen = () => {
   // Cart handlers
   const handleAddToCart = (blockId: string) => {
     const block = buildingBlocks.find(b => b.id === blockId);
-    const added = addToCart(blockId);
-    if (added && block) {
-      toast({
-        title: "Toegevoegd aan uw programma",
-        description: block.name,
-        duration: 2000,
-      });
+    if (!block) return;
+    // Open the dialog instead of adding directly
+    setPendingBlock(block);
+  };
+
+  const handleConfirmAdd = (blockId: string, dayIndex: number, preferredTime: string | null) => {
+    const block = buildingBlocks.find(b => b.id === blockId);
+    const added = addToCart(blockId, dayIndex);
+    if (added) {
+      // Set preferred time if specified
+      if (preferredTime) {
+        updateItem(blockId, { preferredTime });
+      }
+      if (block) {
+        toast({
+          title: "Toegevoegd aan uw programma",
+          description: block.name,
+          duration: 2000,
+        });
+      }
     }
+    setPendingBlock(null);
   };
 
   const handleSubmit = () => {
@@ -447,6 +463,15 @@ const ProgrammaSamenstellen = () => {
         numberOfPeople={numberOfPeople}
         selectedDate={selectedDate}
         selectedDates={selectedDates}
+      />
+
+      {/* Add to Cart Dialog */}
+      <AddToCartDialog
+        block={pendingBlock}
+        isOpen={!!pendingBlock}
+        onClose={() => setPendingBlock(null)}
+        selectedDates={selectedDates}
+        onConfirm={handleConfirmAdd}
       />
     </div>
   );
