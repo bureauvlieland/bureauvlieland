@@ -12,6 +12,12 @@ const Contact = () => {
       <Helmet>
         <title>Contact - Bureau Vlieland</title>
         <meta name="description" content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw bedrijfsevenement op Vlieland. Telefonisch, per e-mail of kom langs op het eiland." />
+        <link rel="canonical" href="https://bureauvlieland.nl/contact" />
+        <meta property="og:title" content="Contact - Bureau Vlieland" />
+        <meta property="og:description" content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw bedrijfsevenement op Vlieland. Telefonisch, per e-mail of kom langs op het eiland." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/contact" />
+        <meta property="og:type" content="website" />
       </Helmet>
       
       <Navigation />

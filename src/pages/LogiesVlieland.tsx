@@ -98,6 +98,11 @@ const LogiesVlieland = () => {
           content="Zoek en vergelijk groepsaccommodaties op Vlieland. Hotels, vakantiehuizen en groepsverblijven - wij regelen de offertes, jij kiest." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/logies-vlieland" />
+        <meta property="og:title" content="Logies op Vlieland voor groepen | Bureau Vlieland" />
+        <meta property="og:description" content="Zoek en vergelijk groepsaccommodaties op Vlieland. Hotels, vakantiehuizen en groepsverblijven - wij regelen de offertes, jij kiest." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/logies-vlieland" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Logies op Vlieland voor groepen"

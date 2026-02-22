@@ -27,6 +27,11 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
           content="Een meerdaags bedrijfsuitje op Vlieland met rust en verdieping. Bureau Vlieland regelt het complete programma inclusief overnachting." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/meerdaags-bedrijfsuitje-vlieland" />
+        <meta property="og:title" content="Meerdaags bedrijfsuitje op Vlieland – met overnachting" />
+        <meta property="og:description" content="Een meerdaags bedrijfsuitje op Vlieland met rust en verdieping. Bureau Vlieland regelt het complete programma inclusief overnachting." />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:url" content="https://bureauvlieland.nl/meerdaags-bedrijfsuitje-vlieland" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <LandingPageStructuredData
         serviceName="Meerdaags bedrijfsuitje op Vlieland"
