@@ -1,7 +1,5 @@
 import { StatusSummary } from "./StatusSummary";
 import { PriceSummaryCard } from "./PriceSummaryCard";
-import { FietsverhuurBanner } from "@/components/FietsverhuurBanner";
-import { BootticketBanner } from "@/components/BootticketBanner";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -153,9 +151,6 @@ export const ProgramSidebar = ({
         />
       )}
 
-      {/* Fietsverhuur banner */}
-      <FietsverhuurBanner variant="sidebar" />
-      <BootticketBanner variant="sidebar" />
 
       {/* Quick actions */}
       <div className="space-y-2">

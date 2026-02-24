@@ -1,38 +1,8 @@
-import { FietsverhuurBanner } from "@/components/FietsverhuurBanner";
-import { BootticketBanner } from "@/components/BootticketBanner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+// ExtrasSection - placeholder for future extras in the customer portal
+// FietsverhuurBanner and BootticketBanner removed: Bureau Vlieland regelt dit nu.
 
-interface ExtrasSectionProps {
-  variant?: "default" | "compact";
-}
-
-export const ExtrasSection = ({ variant = "default" }: ExtrasSectionProps) => {
-  if (variant === "compact") {
-    return (
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          Extra's
-        </h3>
-        <FietsverhuurBanner variant="compact" />
-        <BootticketBanner variant="compact" />
-      </div>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          Extra's
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <FietsverhuurBanner />
-        <BootticketBanner />
-      </CardContent>
-    </Card>
-  );
+export const ExtrasSection = () => {
+  // Currently no extras to display — Bureau Vlieland handles bike rental and ferry tickets.
+  // This component can be re-used when new extras are added in the future.
+  return null;
 };
