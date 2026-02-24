@@ -206,6 +206,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Synchroniseer auth user email als deze afwijkt van partner email
+    const { data: authUser } = await adminClient.auth.admin.getUserById(partner.auth_user_id);
+    if (authUser?.user?.email !== partner.email) {
+      console.log(`Syncing auth email from ${authUser?.user?.email} to ${partner.email}`);
+      const { error: emailUpdateError } = await adminClient.auth.admin.updateUserById(partner.auth_user_id, {
+        email: partner.email,
+        email_confirm: true,
+      });
+      if (emailUpdateError) {
+        console.error("Error syncing auth email:", emailUpdateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to sync auth email" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Generate a new readable temporary password and reset it
     const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
 
