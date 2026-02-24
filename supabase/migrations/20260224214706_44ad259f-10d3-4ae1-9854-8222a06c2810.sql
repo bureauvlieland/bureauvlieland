@@ -1,0 +1,2 @@
+ALTER TABLE public.program_requests DROP CONSTRAINT program_requests_program_type_check;
+ALTER TABLE public.program_requests ADD CONSTRAINT program_requests_program_type_check CHECK (program_type = ANY (ARRAY['self_service'::text, 'quote'::text, 'maatwerk_zakelijk'::text, 'maatwerk_prive'::text]));
