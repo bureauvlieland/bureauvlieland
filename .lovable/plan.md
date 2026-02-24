@@ -1,85 +1,74 @@
 
 
-# Navigatie, links en footer optimalisatie voor conversie
+# Partner notificatie bij verlopen logiesofferte
 
-## Bevindingen
+## Probleem
+Wanneer de `valid_until` datum van een logiesofferte verstreken is, krijgt de partner daar geen melding van. Hierdoor weten ze niet dat hun offerte niet meer geldig is en kunnen ze de geldigheid niet verlengen of het aanbod aanpassen.
 
-### Hoofdnavigatie -- huidige situatie
-- "Voorbeeldprogramma's" staat zowel in het dropdown "Voor bedrijven" als standalone link -- dubbel
-- "Logies" heeft een standalone link, maar is een niche-pagina voor een navigatiebalk
-- "Catering" ontbreekt in de navigatie, terwijl het een populaire dienst is
-- CTA-knop "Programma samenstellen" is goed maar kan sterker qua tekst en styling
-- "Voor bedrijven" is visueel prominenter (font-semibold, text-foreground) dan "Voor prive & trouwen" (text-muted-foreground) -- dit is goed voor de zakelijke focus
+## Oplossing
+Twee mechanismen toevoegen:
 
-### Footer -- huidige situatie
-- "Maatwerk aanvragen" linkt naar /contact -- beter naar /programma-samenstellen (maatwerk track)
-- Kolom 4 "Direct aan de slag" bevat goede links maar kan conversiegericht verbeterd worden
+### 1. Dagelijkse controle in `check-pending-items` -- nieuwe CHECK 5
+De bestaande cron-job krijgt een extra controle die:
+- Alle `accommodation_quotes` ophaalt met status `submitted` waar `valid_until < vandaag`
+- Per verlopen offerte:
+  - De status bijwerkt naar `expired`
+  - Een e-mail stuurt naar de partner met de melding dat hun offerte verlopen is
+  - Een admin-todo aanmaakt van type `quote_expired_partner`
 
-### CTA-inconsistenties op landingspagina's
-- Sommige pagina's linken secundaire CTA naar `/contact`, andere naar `/offerte`
-- `/offerte` is een apart formulier dat grotendeels overlapt met de "Laten regelen" track in de configurator
-- Labels wisselen: "Liever persoonlijk advies?" vs "Maatwerk aanvragen" vs "Maatwerkofferte aanvragen"
+De e-mail bevat:
+- Naam van de accommodatie en de klant
+- De oorspronkelijke geldigheidsperiode
+- Link naar het partnerportaal om de offerte te verlengen
 
-## Plan
+### 2. Auto-todo type toevoegen
+- Nieuw type `quote_expired_partner` in `autoTodoCreator.ts` met label "Offerte verlopen" en rode styling
 
-### 1. Hoofdnavigatie aanpassen
-
-**Verwijderen:**
-- Standalone link "Voorbeeldprogramma's" (staat al in dropdown)
-- Standalone link "Logies" (verplaatsen naar dropdown of footer-only)
-
-**Toevoegen/wijzigen:**
-- "Diensten" als direct link (verwijst naar /diensten)
-- "Catering" als direct link (populaire pagina)
-- CTA-knop tekst wijzigen naar "Gratis programma samenstellen" of "Start uw programma" voor meer urgentie
-
-**Nieuwe structuur desktop:**
-```text
-[Logo]  Voor bedrijven v  Voor prive v  Diensten  Catering  Over ons v  [CTA: Start uw programma]
-```
-
-**Mobile:** CTA bovenaan behouden, zelfde structuurwijzigingen
-
-### 2. Footer aanpassen
-
-- "Maatwerk aanvragen" link wijzigen van `/contact` naar `/programma-samenstellen`
-- "Logies regelen" link laten staan (footer is de juiste plek)
-
-### 3. CTA-links op landingspagina's uniformeren
-
-Alle secundaire CTA's ("Maatwerk aanvragen" / "Liever persoonlijk advies?") verwijzen naar `/programma-samenstellen` in plaats van naar `/contact` of `/offerte`. De configurator biedt immers al de "Laten regelen" maatwerk-track.
-
-Betreft de volgende bestanden:
-- `Diensten.tsx`: `/offerte` wordt `/programma-samenstellen`
-- `BedrijfsuitjeVlieland.tsx`: `/contact` wordt `/programma-samenstellen`, label "Liever maatwerk?" 
-- `HeisessieVlieland.tsx`: `/contact` wordt `/programma-samenstellen`
-- `ZakelijkEvenementVlieland.tsx`: `/contact` wordt `/programma-samenstellen`
-- `FamilieweekendVlieland.tsx`: `/contact` wordt `/programma-samenstellen`
-- `IncentiveReisVlieland.tsx`: idem
-- `ForWho.tsx`: `/offerte` wordt `/programma-samenstellen`
-- `Index.tsx`: "Bekijk onze diensten" secundaire CTA blijft, primaire CTA tekst consistent maken
-- `LogiesVlieland.tsx`: `/contact` CTA wordt `/programma-samenstellen`
-
-Label uniformeren naar: **"Liever maatwerk?"** of **"Maatwerk aanvragen"** (consistent op alle pagina's)
+### 3. Partner kan geldigheid verlengen
+In het partnerportaal (`PartnerAccommodationQuoteSheet.tsx`) moet een partner bij een verlopen offerte de `valid_until` datum kunnen aanpassen. Wanneer ze een nieuwe datum kiezen:
+- Status gaat terug van `expired` naar `submitted`
+- `valid_until` wordt bijgewerkt
+- Bureau Vlieland krijgt een admin-todo dat de offerte verlengd is
 
 ## Technisch overzicht
 
 | Bestand | Wijziging |
 |---|---|
-| `src/components/Navigation.tsx` | Verwijder dubbele standalone links, voeg Diensten en Catering toe, CTA-tekst aanpassen |
-| `src/components/Footer.tsx` | "Maatwerk aanvragen" link naar /programma-samenstellen |
-| `src/pages/Diensten.tsx` | Secundaire CTA /offerte naar /programma-samenstellen |
-| `src/pages/BedrijfsuitjeVlieland.tsx` | Secundaire CTA /contact naar /programma-samenstellen |
-| `src/pages/HeisessieVlieland.tsx` | Idem |
-| `src/pages/ZakelijkEvenementVlieland.tsx` | Idem |
-| `src/pages/FamilieweekendVlieland.tsx` | Idem |
-| `src/pages/IncentiveReisVlieland.tsx` | Idem |
-| `src/pages/LogiesVlieland.tsx` | Idem |
-| `src/components/ForWho.tsx` | /offerte naar /programma-samenstellen |
-| `src/pages/Index.tsx` | CTA-tekst consistent maken |
+| `supabase/functions/check-pending-items/index.ts` | CHECK 5: verlopen quotes detecteren, status updaten, e-mail sturen, todo aanmaken |
+| `supabase/functions/_shared/email-templates.ts` | Nieuw template `quote_expired_partner` |
+| `src/lib/autoTodoCreator.ts` | Nieuw type `quote_expired_partner` toevoegen |
+| `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` | Datum-verlenging UI bij verlopen offerte |
+
+### CHECK 5 logica (pseudo-code)
+
+```text
+1. Haal alle accommodation_quotes op waar:
+   - status = 'submitted'
+   - valid_until < vandaag
+   - request niet geannuleerd en niet verlopen
+2. Per quote:
+   a. Update status naar 'expired'
+   b. Haal partner e-mail op
+   c. Stuur e-mail: "Uw offerte voor [klant] is verlopen"
+   d. Maak admin_todo aan (type: quote_expired_partner)
+```
+
+### E-mail inhoud (Nederlands)
+- Onderwerp: "Uw logiesofferte voor [klantnaam] is verlopen"
+- Body: "Uw offerte '[accommodatie_naam]' voor [klantnaam] was geldig tot [datum] en is inmiddels verlopen. U kunt de geldigheid verlengen via uw partnerportaal."
+- CTA-knop: "Offerte bekijken"
+
+### Partner verlenging
+In de quote sheet voor partners wordt bij status `expired` een gele banner getoond:
+- Tekst: "Deze offerte is verlopen. Pas de geldigheid aan om de offerte opnieuw beschikbaar te maken."
+- Datumveld om nieuwe `valid_until` te kiezen
+- Bij opslaan: status terug naar `submitted`, melding naar admin
+
+## Database
+- De `accommodation_quotes` status check constraint moet `expired` al bevatten (dit is al het geval)
+- Geen schema-wijzigingen nodig
 
 ## Wat niet verandert
-- De /offerte en /contact pagina's zelf blijven bestaan (direct bereikbaar, SEO-waarde)
-- Admin, partner-portal, customer-portal navigatie
-- Dropdown-inhoud "Voor bedrijven" en "Voor prive & trouwen"
-- Footer-structuur (kolommen, externe links)
+- Klantportaal (toont al "Verlopen" badge)
+- Admin accommodatie-overzicht (werkt al met expired status)
+- Andere e-mailflows
