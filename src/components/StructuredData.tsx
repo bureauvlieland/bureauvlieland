@@ -9,8 +9,8 @@ export const StructuredData = () => {
       "name": "Bureau Vlieland",
       "description": "Specialist in teambuilding, incentives en evenementen op Vlieland. Wij verzorgen unieke arrangementen en groepsuitjes op het prachtige Waddeneiland.",
       "url": "https://bureauvlieland.nl",
-      "logo": "https://bureauvlieland.nl/logo.jpg",
-      "image": "https://bureauvlieland.nl/hero-vlieland.jpg",
+      "logo": "https://bureauvlieland.nl/og-image.png",
+      "image": "https://bureauvlieland.nl/og-image.png",
       "telephone": "+31562700208",
       "email": "hallo@bureauvlieland.nl",
       "address": {
