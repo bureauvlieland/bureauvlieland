@@ -1,81 +1,70 @@
 
 
-# SEO & kwaliteitsverbeteringen doorvoeren
+# Fix: Partner e-mail synchronisatie bij uitnodiging
 
-## Overzicht
+## Analyse van het probleem
 
-Zes concrete verbeteringen die samen de technische SEO, structured data en gebruikerservaring verbeteren.
+Er zijn twee samenhangende bugs gevonden bij Brouwerij Fortuna (en potentieel andere partners):
 
----
+### Kernprobleem: e-mail desynchronisatie
 
-## 1. HTML-taal van "en" naar "nl"
+1. Partner werd op 11 feb aangemaakt met e-mail `info@fortuna-vlieland.nl` — dit werd ook het auth (login) e-mailadres
+2. Later is het e-mailadres in het partner record gewijzigd naar `winkel@fortunavlieland.nl`
+3. Het auth user e-mailadres bleef staan op `info@fortuna-vlieland.nl`
 
-Het `<html lang="en">` in `index.html` wordt gewijzigd naar `<html lang="nl">`. Dit helpt zoekmachines en screenreaders de taal correct herkennen.
+Dit veroorzaakt drie fouten:
+- **"Wachtwoord vergeten" werkt niet**: de partner vult `winkel@fortunavlieland.nl` in, maar er bestaat geen auth user met dat adres
+- **Herinneringsmail misleidt**: de mail gaat naar `winkel@fortunavlieland.nl` en toont dat als loginadres, maar inloggen moet met `info@fortuna-vlieland.nl`
+- **Inloggen met het genoemde wachtwoord faalt**: de partner gebruikt `winkel@fortunavlieland.nl` + het nieuwe wachtwoord, maar de auth user staat op een ander adres
 
-## 2. Adres consistent maken (Sikkelduin 11)
+### Acute fix voor Fortuna
 
-`LandingPageStructuredData.tsx` bevat een fout adres ("Dorpsstraat 99, Oost-Vlieland, 8899 AB"). Dit wordt gecorrigeerd naar het juiste adres dat al in `StructuredData.tsx` en `Footer.tsx` staat:
-- Sikkelduin 11
-- 8899 CG Vlieland
+Het auth user e-mailadres moet worden bijgewerkt naar `winkel@fortunavlieland.nl` zodat login en wachtwoord-reset weer werken.
 
-## 3. Ongeldig Event-schema verwijderen
+### Structurele fix
 
-Het `Event`-schema in `StructuredData.tsx` mist verplichte velden (`startDate`, `endDate`) en is niet geldig. Dit schema wordt volledig verwijderd. De overige schemas (LocalBusiness, Services, Reviews) blijven staan.
-
-## 4. Open Graph & Twitter meta-tags toevoegen aan landingspagina's
-
-De volgende pagina's missen `og:title`, `og:description` en `og:image` tags:
-- BedrijfsuitjeVlieland
-- TeamuitjeVlieland
-- HeisessieVlieland
-- MeerdaagsBedrijfsuitjeVlieland
-- ZakelijkEvenementVlieland
-- BedrijfsuitjeIdeeenVlieland
-- IncentiveReisVlieland
-- LogiesVlieland
-- Catering
-- Diensten
-- Contact
-- Evenementen
-- ProgrammaSamenstellen
-
-Voor elke pagina wordt binnen de bestaande `<Helmet>` de `og:title`, `og:description`, `og:image` en `og:url` toegevoegd (op basis van de al aanwezige title en description). De pagina's die dit al hebben (TrouwenOpVlieland, GroepsweekendVlieland, JubileumVlieland, FamilieweekendVlieland, OverOns) worden overgeslagen.
-
-## 5. 404-pagina: noindex meta-tag
-
-De `NotFound.tsx` pagina krijgt een `<Helmet>` met `<meta name="robots" content="noindex, nofollow" />` zodat 404-pagina's niet worden geindexeerd.
-
-## 6. Hero-afbeelding homepage: fetchpriority="high"
-
-De hero-afbeelding in `Hero.tsx` krijgt `fetchpriority="high"` en `loading="eager"` voor betere LCP-score (Largest Contentful Paint).
+De `resend-partner-invitation` edge function moet bij het resetten ook het auth user e-mailadres synchroniseren met het partner record, zodat dit probleem niet meer kan optreden.
 
 ---
 
-## Technische details
+## Wijzigingen
 
-### `index.html`
-- Regel 2: `lang="en"` wordt `lang="nl"`
+### 1. Database: Auth user e-mail bijwerken voor Fortuna
 
-### `src/components/LandingPageStructuredData.tsx`
-- Regels 33-37: Adres wijzigen naar Sikkelduin 11, 8899 CG, Vlieland
+Via de `resend-partner-invitation` fix wordt dit automatisch opgelost bij de eerstvolgende resend. Maar we moeten het nu direct fixen.
 
-### `src/components/StructuredData.tsx`
-- Regels 144-166: Volledig Event-schema verwijderen
-- Regel 169: Event uit de schemas-array verwijderen
+We doen dit via een aanpassing in de `resend-partner-invitation` edge function die het auth e-mailadres synchroniseert -- en daarna opnieuw de uitnodiging versturen.
 
-### `src/components/Hero.tsx`
-- `fetchpriority="high"` en `loading="eager"` toevoegen aan de hero `<img>` tag
+### 2. `supabase/functions/resend-partner-invitation/index.ts`
 
-### `src/pages/NotFound.tsx`
-- `Helmet` importeren en `<meta name="robots" content="noindex, nofollow" />` toevoegen
+Na het ophalen van de partner data en voor het resetten van het wachtwoord, de volgende logica toevoegen:
 
-### Landingspagina's (13 bestanden)
-Per pagina worden binnen de bestaande `<Helmet>` de volgende tags toegevoegd:
 ```
-<meta property="og:title" content="[bestaande title]" />
-<meta property="og:description" content="[bestaande description]" />
-<meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
-<meta property="og:url" content="https://bureauvlieland.nl/[pad]" />
-<meta property="og:type" content="website" />
+// Synchroniseer auth user email als deze afwijkt van partner email
+const { data: authUser } = await adminClient.auth.admin.getUserById(partner.auth_user_id);
+if (authUser?.user?.email !== partner.email) {
+  await adminClient.auth.admin.updateUserById(partner.auth_user_id, {
+    email: partner.email,
+    email_confirm: true,
+  });
+}
 ```
+
+Dit zorgt ervoor dat bij elke resend het auth e-mailadres wordt gesynchroniseerd met het partner record. Zo kan de partner altijd inloggen met het e-mailadres dat in de uitnodigingsmail staat.
+
+### 3. `supabase/functions/invite-partner/index.ts`
+
+Geen wijziging nodig — bij de eerste invite wordt de auth user aangemaakt met `partner.email`, dus daar is geen mismatch.
+
+### 4. Wachtwoord vergeten flow
+
+Geen codewijziging nodig. Zodra het auth e-mailadres is gesynchroniseerd, werkt de bestaande `resetPasswordForEmail()` flow correct.
+
+---
+
+## Stappen na implementatie
+
+1. Edge function deployen
+2. Vanuit admin opnieuw uitnodiging sturen naar Fortuna
+3. Fortuna ontvangt mail op `winkel@fortunavlieland.nl` met correct wachtwoord en kan inloggen met datzelfde adres
 
