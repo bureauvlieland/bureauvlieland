@@ -67,6 +67,8 @@ const Index = () => {
               src={heroImage}
               alt="Professionele catering en evenementen op Vlieland met vuurtoren op de achtergrond"
               className="w-full h-full object-cover"
+              fetchPriority="high"
+              loading="eager"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
           </div>
