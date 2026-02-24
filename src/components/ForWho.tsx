@@ -300,9 +300,9 @@ export const ForWho = () => {
                     Evenement organiseren
                   </Button>
                 </Link>
-                <Link to="/offerte">
+                <Link to="/programma-samenstellen">
                   <Button variant="outline">
-                    Offerte aanvragen
+                    Liever maatwerk?
                   </Button>
                 </Link>
               </div>

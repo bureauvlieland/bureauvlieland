@@ -97,17 +97,17 @@ export const Navigation = () => {
 
             {/* Direct links */}
             <Link
-              to="/logies-vlieland"
+              to="/diensten"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Logies
+              Diensten
             </Link>
 
             <Link
-              to="/voorbeeldprogrammas"
+              to="/catering"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Voorbeeldprogramma's
+              Catering
             </Link>
 
             {/* Over ons Dropdown */}
@@ -133,7 +133,7 @@ export const Navigation = () => {
                 size="sm"
                 className="bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                Programma samenstellen
+                Start uw programma
               </Button>
             </Link>
           </div>
@@ -162,7 +162,7 @@ export const Navigation = () => {
                   variant="default"
                   className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
                 >
-                  Programma samenstellen
+                  Start uw programma
                 </Button>
               </Link>
 
@@ -218,19 +218,19 @@ export const Navigation = () => {
 
               {/* Direct links Mobile */}
               <Link
-                to="/logies-vlieland"
+                to="/diensten"
                 onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                Logies
+                Diensten
               </Link>
 
               <Link
-                to="/voorbeeldprogrammas"
+                to="/catering"
                 onClick={() => setIsMenuOpen(false)}
                 className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                Voorbeeldprogramma's
+                Catering
               </Link>
 
               {/* Over ons Dropdown Mobile */}

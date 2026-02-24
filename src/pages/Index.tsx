@@ -174,9 +174,9 @@ const Index = () => {
                     Stel uw programma samen
                   </Button>
                 </Link>
-                <Link to="/contact">
+                <Link to="/programma-samenstellen">
                   <Button size="lg" variant="outline">
-                    Liever persoonlijk advies?
+                    Liever maatwerk?
                   </Button>
                 </Link>
               </div>
