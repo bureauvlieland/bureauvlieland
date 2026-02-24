@@ -1,36 +1,46 @@
 
-# Template afbeelding beheerbaar maken
+# Maatwerk-melding in klantportaal
 
 ## Probleem
-- De templates "Relax & Enjoy Vlieland" en "Katalys" hebben geen afbeelding
-- In de admin template-editor (AdminTemplateSheet) ontbreekt een invoerveld voor de afbeelding, ondanks dat het veld wel in het formulier-schema zit
-- Beheerders kunnen dus geen afbeelding instellen of wijzigen
+Na het indienen van een maatwerk aanvraag (`program_type` = `maatwerk_zakelijk` of `maatwerk_prive`) wordt de klant doorgestuurd naar het klantportaal. Omdat Bureau Vlieland nog geen programma heeft samengesteld, is de pagina leeg en toont het onjuiste meldingen als "Aanvragen verstuurd naar aanbieders" en "0 activiteiten".
 
 ## Oplossing
-Een afbeeldingsveld toevoegen aan de "Algemeen" tab van de template-editor, met twee opties:
-1. Een URL-invoerveld (voor directe links, bijv. uit de media-bibliotheek)
-2. Een "Kies uit mediabibliotheek" knop die de bestaande MediaPickerDialog opent
+De klant krijgt een duidelijke melding dat Bureau Vlieland bezig is met het samenstellen van het programma. Dit moet op meerdere plekken worden aangepast:
 
-## Technische aanpak
+### 1. `ProgramOverviewCard.tsx` -- Titel en subtitel aanpassen
+- Herkennen van `maatwerk_zakelijk` en `maatwerk_prive` als programmatype
+- Bij 0 items: titel wordt "Uw maatwerkprogramma" en subtitel wordt "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
+- Type-label wordt "Maatwerk" in plaats van "Meerdaags verblijf"
 
-### Bestand: `src/components/admin/AdminTemplateSheet.tsx`
+### 2. `ProgramIntroCard.tsx` -- Nieuwe toestand voor maatwerk-in-voorbereiding
+- Wanneer `program_type` begint met `maatwerk_` en er 0 items zijn: toon een kaart met de boodschap dat Bureau Vlieland aan het werk is
+- Tekst: "Bureau Vlieland is bezig met het samenstellen van uw programma op maat. Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op om uw wensen te bespreken."
+- Visueel: een vriendelijke info-kaart (niet een waarschuwing)
 
-Toevoegen van een `image_url` FormField in de "Algemeen" tab (na het beschrijving-veld, rond regel 428):
+### 3. `CustomerPortalSplash.tsx` -- Maatwerk-aware welkomstboodschap
+- Bij maatwerk-type: werkdocument-banner aanpassen naar "Bureau Vlieland is uw programma aan het samenstellen"
+- Programma-kaart: badge "In voorbereiding" en aangepaste tekst
 
-- Een tekstveld voor de URL
-- Een preview van de huidige afbeelding (als er een URL is ingevuld)
-- Een knop "Kies afbeelding" die de bestaande `MediaPickerDialog` opent
-- Bij selectie uit de mediabibliotheek wordt de URL automatisch ingevuld
+### 4. `DesktopProgramView.tsx` en `MobileProgramView.tsx` -- Lege-staat aanpassen
+- Wanneer maatwerk + 0 items: in plaats van "0 activiteiten" badge en lege dag-tabs, toon een placeholder-kaart met de maatwerk-melding
+- Verberg de "Toevoegen" knop (klant hoeft zelf niets toe te voegen bij maatwerk)
 
-Het veld gebruikt het reeds bestaande `image_url` in het zod-schema (regel 153) en de `useUpdateTemplate` hook slaat het al op (regel 240).
+### 5. `ProgramType` type uitbreiden
+- In `src/types/programRequest.ts`: `ProgramType` uitbreiden met `"maatwerk_zakelijk" | "maatwerk_prive"`
 
-### Wijzigingen samengevat
+## Technisch overzicht
 
-| Bestand | Actie |
+| Bestand | Wijziging |
 |---|---|
-| `src/components/admin/AdminTemplateSheet.tsx` | FormField voor `image_url` toevoegen met preview + MediaPickerDialog integratie |
+| `src/types/programRequest.ts` | `ProgramType` uitbreiden met maatwerk-types |
+| `src/components/customer-portal/ProgramOverviewCard.tsx` | Titel/subtitel/type-label voor maatwerk |
+| `src/components/customer-portal/ProgramIntroCard.tsx` | Nieuwe "maatwerk in voorbereiding" state |
+| `src/components/customer-portal/CustomerPortalSplash.tsx` | Welkomstboodschap + programma-kaart aanpassen |
+| `src/components/customer-portal/DesktopProgramView.tsx` | Lege-staat placeholder bij maatwerk |
+| `src/components/customer-portal/MobileProgramView.tsx` | Idem voor mobiel |
 
-### Wat niet verandert
-- Database schema (kolom `image_url` bestaat al op `program_templates`)
-- Form schema / hooks (ondersteunen `image_url` al)
-- Fallback-logica voor templates zonder afbeelding blijft werken
+## Wat niet verandert
+- Database schema (geen migraties nodig)
+- Edge functions
+- De configurator / intake flow
+- Bestaande self-service en quote flows
