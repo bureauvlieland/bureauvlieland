@@ -1,70 +1,118 @@
 
+# Configurator redesign: "Laten regelen" vs "Zelf regelen"
 
-# Fietshuur & Overtocht Doeksen: van "zelf regelen" naar Bureau Vlieland
+## Concept
 
-## Wat verandert er?
+De huidige configurator dwingt iedereen door hetzelfde traject: wizard -> bouwstenen kiezen -> aanvraag versturen. Dit wordt opgesplitst in twee duidelijke tracks, al in de allereerste stap van de wizard:
 
-Fietshuur en de overtocht met Rederij Doeksen worden niet langer als "zelf te regelen" gepresenteerd aan klanten. Bureau Vlieland regelt dit voortaan. Dit heeft impact op drie gebieden:
+```text
++------------------------------------------+
+|     Waar mogen we u mee helpen?           |
++------------------------------------------+
+|                                           |
+|  +----------------+  +----------------+  |
+|  |                |  |                |  |
+|  |  LATEN REGELEN |  |  ZELF REGELEN  |  |
+|  |                |  |                |  |
+|  |  Bureau        |  |  Stel zelf uw  |  |
+|  |  Vlieland      |  |  programma     |  |
+|  |  stelt een     |  |  samen uit     |  |
+|  |  programma     |  |  losse         |  |
+|  |  op maat voor  |  |  activiteiten  |  |
+|  |  u samen       |  |                |  |
+|  +----------------+  +----------------+  |
+|                                           |
++------------------------------------------+
+```
+
+### Track 1: "Laten regelen" (maatwerk aanvraag)
+Een kort, laagdrempelig traject:
+1. Keuze "Laten regelen"
+2. Korte intake: type (zakelijk/prive), groepsgrootte, datum(s), eventueel voorbeeldprogramma bekijken
+3. Contactgegevens + wensen/opmerkingen
+4. Klaar -- Bureau Vlieland neemt het over
+
+Dit combineert de huidige wizard-stappen met het offerte-formulier tot een vloeiend geheel, zonder dat de klant zelf bouwstenen hoeft te kiezen.
+
+### Track 2: "Zelf regelen" (huidige configurator)
+De bestaande bouwstenen-configurator, maar:
+- Wizard ingekort: alleen groepsgrootte + datum
+- Direct naar de bouwstenen-grid
+- "Losse activiteiten" positionering
+- Communicatie als "zelf samenstellen"
 
 ---
 
-## 1. Database: building blocks updaten
+## Technische aanpak
 
-De twee bouwstenen `fiets-huur` en `boot-retour` krijgen `block_type = 'bureau'` (dit staat al zo, maar we verwijderen ook de `external_url` zodat ze niet meer als extern worden gepresenteerd).
+### 1. ConfiguratorWizard.tsx -- Nieuwe stap 1: Track-keuze
 
-**SQL:**
-```sql
-UPDATE building_blocks 
-SET external_url = NULL 
-WHERE id IN ('fiets-huur', 'boot-retour');
-```
+Stap 1 wordt vervangen. In plaats van drie opties (Zakelijk / Prive / Los) komen er twee grote kaarten:
 
-## 2. Database: lopende projecten updaten
+| Optie | Titel | Beschrijving |
+|---|---|---|
+| `laten_regelen` | Laten regelen | "Bureau Vlieland stelt een programma op maat voor u samen. U vertelt ons wat u zoekt, wij doen de rest." |
+| `zelf_regelen` | Zelf regelen | "Stel zelf uw programma samen uit ons aanbod van activiteiten, catering en vervoer." |
 
-Er zijn **12 items** in actieve projecten die nog `block_type = 'self_arranged'` hebben voor fietshuur of de overtocht. Deze worden omgezet naar `bureau`:
+**Bij "Laten regelen":**
+- Stap 2: Type (zakelijk/prive) + groepsgrootte + datum(s) -- gecombineerd op 1 scherm
+- Stap 3: Voorbeeldprogramma's tonen (optioneel, ter inspiratie -- niet om te laden in cart)
+- Stap 4: Contactgegevens + wensen -- vergelijkbaar met het huidige offerte-formulier maar geintegreerd in de wizard
+- Submit creëert een `program_request` met `program_type` = het gekozen type, zonder items (of met template-referentie)
 
-**SQL:**
-```sql
-UPDATE program_request_items 
-SET block_type = 'bureau', external_url = NULL
-WHERE block_type = 'self_arranged'
-  AND block_id IN ('fiets-huur', 'boot-retour')
-  AND request_id IN (
-    SELECT id FROM program_requests WHERE status = 'active'
-  );
-```
+**Bij "Zelf regelen":**
+- Stap 2: Groepsgrootte + datum(s) (compacter, zonder type-keuze)
+- Direct door naar de bouwstenen-grid (bestaande flow)
 
-## 3. UI: externe-link banners verwijderen uit klantportaal
+### 2. Nieuw component: MaatwerkIntakeForm.tsx
 
-De `FietsverhuurBanner` en `BootticketBanner` in het klantportaal sturen klanten naar externe boekingssites. Nu Bureau Vlieland dit regelt, moeten deze banners weg uit het klantportaal.
+Een inline formulier (binnen de wizard) voor het "Laten regelen" track:
+- Naam, email, telefoon (verplicht)
+- Bedrijf (optioneel)
+- Wensen/omschrijving (vrij tekstveld)
+- Logies gewenst? (ja/nee toggle, alleen bij meerdaags)
+- Submit-knop: "Aanvraag versturen"
 
-### Bestanden die worden aangepast:
+Bij submit:
+- Creëert een `program_request` record in de database (zelfde tabel als nu)
+- Roept de bestaande `send-program-request` edge function aan (met lege blocks-array)
+- Toont succesbericht met link naar klantportaal
 
-| Bestand | Wijziging |
+### 3. TemplateSelector.tsx -- Aanpassing voor "Laten regelen"
+
+In het "Laten regelen" track worden templates getoond als **inspiratie**, niet om in een cart te laden. De "Gebruik" knop wordt vervangen door "Dit spreekt mij aan" -- dit slaat de template-naam op als notitie bij de aanvraag, maar laadt niets in een cart.
+
+### 4. ProgrammaSamenstellen.tsx -- Routing-logica
+
+De pagina krijgt logica om te schakelen tussen tracks:
+- Bij `laten_regelen`: de wizard loopt door tot en met het intake-formulier, de bouwstenen-grid wordt nooit getoond
+- Bij `zelf_regelen`: bestaande flow, wizard eindigt bij de bouwstenen-grid
+
+### 5. Hero-tekst en HowItWorksBlock aanpassen
+
+- Hero bij "Laten regelen": "Wij regelen uw programma op Vlieland"
+- Hero bij "Zelf regelen": "Stel zelf uw programma samen"
+- HowItWorksBlock wordt contextafhankelijk (of verwijderd in het "Laten regelen" track)
+
+### 6. Database
+
+Geen schema-wijzigingen nodig. Het bestaande `program_requests` tabel ondersteunt al aanvragen zonder items. Het `program_type` veld kan het type vastleggen, en `general_notes` vangt wensen op. Eventueel kan `program_description` de geselecteerde template-inspiratie bevatten.
+
+---
+
+## Bestanden die worden aangemaakt of aangepast
+
+| Bestand | Actie |
 |---|---|
-| `src/components/customer-portal/ProgramSidebar.tsx` | Verwijder imports en rendering van `FietsverhuurBanner` en `BootticketBanner` |
-| `src/components/customer-portal/ExtrasSection.tsx` | Verwijder `FietsverhuurBanner` en `BootticketBanner`, toon alleen de sectie als er in de toekomst andere extra's zijn (of verwijder component volledig) |
+| `src/components/configurator/ConfiguratorWizard.tsx` | Stap 1 vervangen door track-keuze, flow splitsen |
+| `src/components/configurator/MaatwerkIntakeForm.tsx` | **Nieuw** -- inline intake-formulier voor "Laten regelen" |
+| `src/components/configurator/TemplateSelector.tsx` | "Gebruik" knop aanpassen voor inspiratie-modus |
+| `src/pages/ProgrammaSamenstellen.tsx` | Track-routing, hero-tekst per track |
+| `src/components/configurator/HowItWorksBlock.tsx` | Optioneel verbergen bij "Laten regelen" |
 
-### Bestanden die NIET worden aangepast:
+## Wat NIET verandert
 
-- `FietsverhuurBanner.tsx` en `BootticketBanner.tsx` blijven bestaan -- ze worden nog gebruikt op de publieke website (Footer, ExtraServices)
-- `ExtraServices.tsx` (publieke diensten-pagina) -- blijft ongewijzigd
-- `Footer.tsx` -- de fietsverhuur-link in de footer blijft staan (dit is een algemene service-link, geen klantportaal)
-
----
-
-## Technische details
-
-### Database migratie
-Twee UPDATE-statements via de migratie-tool:
-1. `building_blocks`: `external_url = NULL` voor `fiets-huur` en `boot-retour`
-2. `program_request_items`: `block_type = 'bureau'` en `external_url = NULL` voor alle self_arranged items met die block_ids in actieve projecten
-
-### ProgramSidebar.tsx (regels 3-4, 156-158)
-- Verwijder de imports van `FietsverhuurBanner` en `BootticketBanner`
-- Verwijder de twee banner-regels uit de sidebar
-
-### ExtrasSection.tsx
-- Verwijder de `FietsverhuurBanner` en `BootticketBanner` imports en rendering
-- Omdat er geen overige extra's overblijven, wordt het component leeg. We laten het als een lege wrapper zodat het in de toekomst opnieuw gevuld kan worden, of verwijderen de rendering ervan
-
+- De bouwstenen-grid, cart, AddToCartDialog, RequestFormModal -- deze blijven intact voor het "Zelf regelen" track
+- Database schema -- geen migraties nodig
+- Edge functions -- bestaande `send-program-request` wordt hergebruikt
+- Het offerte-formulier op `/offerte` -- blijft bestaan als alternatief
