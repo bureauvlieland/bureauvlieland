@@ -1,7 +1,7 @@
 import { StatusSummary } from "./StatusSummary";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Ban, ArrowRight } from "lucide-react";
+import { RefreshCw, Ban, ArrowRight, Ship, Bike, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
@@ -151,6 +151,40 @@ export const ProgramSidebar = ({
         />
       )}
 
+
+      {/* Fietsverhuur & Boottickets - Bureau Vlieland regelt dit */}
+      <div className="space-y-2">
+        <a
+          href="https://bureauvlieland.fietsreserveren.nl/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 hover:bg-primary/10 transition-colors group"
+        >
+          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <Bike className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Fietsen nodig?</p>
+            <p className="text-xs text-muted-foreground">Wij regelen het — of boek zelf</p>
+          </div>
+          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+        </a>
+        <a
+          href="https://rederij-doeksen.nl/groepen"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 hover:bg-primary/10 transition-colors group"
+        >
+          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <Ship className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Boottickets nodig?</p>
+            <p className="text-xs text-muted-foreground">Wij regelen het — of boek zelf</p>
+          </div>
+          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+        </a>
+      </div>
 
       {/* Quick actions */}
       <div className="space-y-2">
