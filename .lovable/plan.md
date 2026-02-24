@@ -1,46 +1,85 @@
 
-# Kopieer vanuit eerder programma + kleinere agenda-knop
 
-## Wat wordt er gebouwd
-Een nieuwe "Kopieer vanuit programma" functie op de admin aanvraag-detailpagina. Bij klikken opent een dialoog die automatisch vergelijkbare eerdere programma's suggereert op basis van:
-- Aantal dagen (zelfde duur)
-- Vergelijkbaar aantal personen (marge van +/- 30%)
-- Eventuele overeenkomsten in program_type of program_description
+# Navigatie, links en footer optimalisatie voor conversie
 
-Daarnaast wordt de "Exporteer naar agenda" knop compacter gemaakt (alleen icoon, of kleiner formaat).
+## Bevindingen
 
-## Hoe het werkt
-1. Admin klikt op "Kopieer vanuit programma" naast de bestaande knoppen
-2. Een dialoog opent met een lijst eerdere programma's, gesorteerd op relevantie (eerst programma's met zelfde duur + vergelijkbaar aantal personen)
-3. Bij selectie toont het de activiteiten van dat programma als preview
-4. Bij "Toepassen" worden alle items gekopieerd naar het huidige project (zelfde logica als template toepassen)
+### Hoofdnavigatie -- huidige situatie
+- "Voorbeeldprogramma's" staat zowel in het dropdown "Voor bedrijven" als standalone link -- dubbel
+- "Logies" heeft een standalone link, maar is een niche-pagina voor een navigatiebalk
+- "Catering" ontbreekt in de navigatie, terwijl het een populaire dienst is
+- CTA-knop "Programma samenstellen" is goed maar kan sterker qua tekst en styling
+- "Voor bedrijven" is visueel prominenter (font-semibold, text-foreground) dan "Voor prive & trouwen" (text-muted-foreground) -- dit is goed voor de zakelijke focus
+
+### Footer -- huidige situatie
+- "Maatwerk aanvragen" linkt naar /contact -- beter naar /programma-samenstellen (maatwerk track)
+- Kolom 4 "Direct aan de slag" bevat goede links maar kan conversiegericht verbeterd worden
+
+### CTA-inconsistenties op landingspagina's
+- Sommige pagina's linken secundaire CTA naar `/contact`, andere naar `/offerte`
+- `/offerte` is een apart formulier dat grotendeels overlapt met de "Laten regelen" track in de configurator
+- Labels wisselen: "Liever persoonlijk advies?" vs "Maatwerk aanvragen" vs "Maatwerkofferte aanvragen"
+
+## Plan
+
+### 1. Hoofdnavigatie aanpassen
+
+**Verwijderen:**
+- Standalone link "Voorbeeldprogramma's" (staat al in dropdown)
+- Standalone link "Logies" (verplaatsen naar dropdown of footer-only)
+
+**Toevoegen/wijzigen:**
+- "Diensten" als direct link (verwijst naar /diensten)
+- "Catering" als direct link (populaire pagina)
+- CTA-knop tekst wijzigen naar "Gratis programma samenstellen" of "Start uw programma" voor meer urgentie
+
+**Nieuwe structuur desktop:**
+```text
+[Logo]  Voor bedrijven v  Voor prive v  Diensten  Catering  Over ons v  [CTA: Start uw programma]
+```
+
+**Mobile:** CTA bovenaan behouden, zelfde structuurwijzigingen
+
+### 2. Footer aanpassen
+
+- "Maatwerk aanvragen" link wijzigen van `/contact` naar `/programma-samenstellen`
+- "Logies regelen" link laten staan (footer is de juiste plek)
+
+### 3. CTA-links op landingspagina's uniformeren
+
+Alle secundaire CTA's ("Maatwerk aanvragen" / "Liever persoonlijk advies?") verwijzen naar `/programma-samenstellen` in plaats van naar `/contact` of `/offerte`. De configurator biedt immers al de "Laten regelen" maatwerk-track.
+
+Betreft de volgende bestanden:
+- `Diensten.tsx`: `/offerte` wordt `/programma-samenstellen`
+- `BedrijfsuitjeVlieland.tsx`: `/contact` wordt `/programma-samenstellen`, label "Liever maatwerk?" 
+- `HeisessieVlieland.tsx`: `/contact` wordt `/programma-samenstellen`
+- `ZakelijkEvenementVlieland.tsx`: `/contact` wordt `/programma-samenstellen`
+- `FamilieweekendVlieland.tsx`: `/contact` wordt `/programma-samenstellen`
+- `IncentiveReisVlieland.tsx`: idem
+- `ForWho.tsx`: `/offerte` wordt `/programma-samenstellen`
+- `Index.tsx`: "Bekijk onze diensten" secundaire CTA blijft, primaire CTA tekst consistent maken
+- `LogiesVlieland.tsx`: `/contact` CTA wordt `/programma-samenstellen`
+
+Label uniformeren naar: **"Liever maatwerk?"** of **"Maatwerk aanvragen"** (consistent op alle pagina's)
 
 ## Technisch overzicht
 
 | Bestand | Wijziging |
 |---|---|
-| `src/components/admin/CopyFromProgramDialog.tsx` | Nieuw component: dialoog die vergelijkbare programma's ophaalt en laat selecteren |
-| `src/pages/admin/AdminRequestDetail.tsx` | Nieuwe knop "Kopieer vanuit programma" + state; agenda-knop verkleinen naar `size="icon"` met tooltip |
+| `src/components/Navigation.tsx` | Verwijder dubbele standalone links, voeg Diensten en Catering toe, CTA-tekst aanpassen |
+| `src/components/Footer.tsx` | "Maatwerk aanvragen" link naar /programma-samenstellen |
+| `src/pages/Diensten.tsx` | Secundaire CTA /offerte naar /programma-samenstellen |
+| `src/pages/BedrijfsuitjeVlieland.tsx` | Secundaire CTA /contact naar /programma-samenstellen |
+| `src/pages/HeisessieVlieland.tsx` | Idem |
+| `src/pages/ZakelijkEvenementVlieland.tsx` | Idem |
+| `src/pages/FamilieweekendVlieland.tsx` | Idem |
+| `src/pages/IncentiveReisVlieland.tsx` | Idem |
+| `src/pages/LogiesVlieland.tsx` | Idem |
+| `src/components/ForWho.tsx` | /offerte naar /programma-samenstellen |
+| `src/pages/Index.tsx` | CTA-tekst consistent maken |
 
-### Nieuw: `CopyFromProgramDialog.tsx`
-- Ontvangt `requestId`, `durationDays`, `numberOfPeople`, `programDescription` als props
-- Query: haalt `program_requests` op die:
-  - Niet het huidige project zijn
-  - Niet geannuleerd zijn
-  - Minimaal 1 item hebben (subquery of join-count)
-  - Gesorteerd: eerst zelfde `duration_days` (berekend uit `selected_dates`), dan dichtst bij qua `number_of_people`
-- Toont lijst met: klantnaam, referentienummer, datum, aantal personen, aantal activiteiten
-- Bij selectie: haalt `program_request_items` op voor dat project en toont preview per dag
-- Bij "Toepassen": kopieert items naar huidig project met `skip_partner_notification: true`, zelfde mapping als `ApplyTemplateDialog`
-
-### Wijziging: `AdminRequestDetail.tsx`
-- Import `CopyFromProgramDialog` + state `copyFromProgramOpen`
-- Nieuwe knop na "Template toepassen": "Kopieer programma" met `Copy` icoon
-- "Exporteer naar agenda" knop wordt `size="sm"` met alleen het icoon + tooltip voor uitleg
-
-### Scoring/matching logica
-De dialoog berekent een eenvoudige relevantie-score per programma:
-- Zelfde aantal dagen: +2 punten
-- Vergelijkbaar aantal personen (binnen 30%): +1 punt
-- Zelfde program_type: +1 punt
-- Resultaten gesorteerd op score (aflopend), max 20 programma's getoond
+## Wat niet verandert
+- De /offerte en /contact pagina's zelf blijven bestaan (direct bereikbaar, SEO-waarde)
+- Admin, partner-portal, customer-portal navigatie
+- Dropdown-inhoud "Voor bedrijven" en "Voor prive & trouwen"
+- Footer-structuur (kolommen, externe links)
