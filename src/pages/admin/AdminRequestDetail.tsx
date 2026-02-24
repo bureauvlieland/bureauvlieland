@@ -90,8 +90,11 @@ import { InvoicingModeSelector } from "@/components/admin/InvoicingModeSelector"
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
+import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Copy } from "lucide-react";
 
 interface ProgramRequest {
   id: string;
@@ -199,6 +202,7 @@ const AdminRequestDetail = () => {
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
+  const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
@@ -937,6 +941,10 @@ const AdminRequestDetail = () => {
                       <Layers className="h-4 w-4 mr-2" />
                       Template toepassen
                     </Button>
+                    <Button variant="outline" onClick={() => setCopyFromProgramOpen(true)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Kopieer programma
+                    </Button>
                     {items.length > 0 && (
                       <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
                         <Save className="h-4 w-4 mr-2" />
@@ -947,30 +955,37 @@ const AdminRequestDetail = () => {
                       <Euro className="h-4 w-4 mr-2" />
                       Kosten toevoegen
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        const activeItems = items.filter(i => i.day_index >= 0);
-                        downloadAllEvents(
-                          activeItems.map(i => ({
-                            id: i.id,
-                            block_name: i.block_name,
-                            provider_name: i.provider_name,
-                            day_index: i.day_index,
-                            confirmed_time: i.confirmed_time,
-                            proposed_time: i.proposed_time,
-                            preferred_time: i.preferred_time,
-                            duration: i.duration,
-                          })),
-                          request.selected_dates as string[],
-                          request.number_of_people,
-                          request.customer_name || "programma"
-                        );
-                      }}
-                    >
-                      <CalendarPlus className="h-4 w-4 mr-2" />
-                      Exporteer naar agenda
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const activeItems = items.filter(i => i.day_index >= 0);
+                              downloadAllEvents(
+                                activeItems.map(i => ({
+                                  id: i.id,
+                                  block_name: i.block_name,
+                                  provider_name: i.provider_name,
+                                  day_index: i.day_index,
+                                  confirmed_time: i.confirmed_time,
+                                  proposed_time: i.proposed_time,
+                                  preferred_time: i.preferred_time,
+                                  duration: i.duration,
+                                })),
+                                request.selected_dates as string[],
+                                request.number_of_people,
+                                request.customer_name || "programma"
+                              );
+                            }}
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Exporteer naar agenda</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button onClick={() => setAddActivityOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Activiteit toevoegen
@@ -1233,7 +1248,7 @@ const AdminRequestDetail = () => {
                         .filter((i) => i.provider_email && i.provider_id)
                         .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
                     ).values()
-                  )
+      )
                 }
               />
             </TabsContent>
@@ -1354,6 +1369,24 @@ const AdminRequestDetail = () => {
           open={applyTemplateOpen}
           onOpenChange={setApplyTemplateOpen}
           requestId={request.id}
+          onSuccess={fetchRequestData}
+        />
+      )}
+
+      {/* Copy from program dialog */}
+      {request && (
+        <CopyFromProgramDialog
+          open={copyFromProgramOpen}
+          onOpenChange={setCopyFromProgramOpen}
+          requestId={request.id}
+          durationDays={(() => {
+            const dates = request.selected_dates as string[];
+            if (dates.length <= 1) return dates.length;
+            const sorted = [...dates].sort();
+            return Math.ceil((new Date(sorted[sorted.length - 1]).getTime() - new Date(sorted[0]).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          })()}
+          numberOfPeople={request.number_of_people}
+          programType={request.program_type}
           onSuccess={fetchRequestData}
         />
       )}
