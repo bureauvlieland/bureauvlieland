@@ -35,6 +35,7 @@ import {
   Download,
   FileText,
   CalendarPlus,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -214,6 +215,7 @@ export const DesktopProgramView = ({
               quoteStatus={program.quote_status}
               quoteValidUntil={program.quote_valid_until}
               termsAcceptedAt={program.terms_accepted_at}
+              isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
               onAcceptQuoteProposal={onAcceptQuoteProposal}
             />
           </>
@@ -309,7 +311,7 @@ export const DesktopProgramView = ({
                           Bekijk offerte
                         </Button>
                       )}
-                      {!termsAccepted && (
+                      {!termsAccepted && !program.program_type?.startsWith("maatwerk_") && (
                         <Button
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
@@ -318,14 +320,26 @@ export const DesktopProgramView = ({
                           Toevoegen
                         </Button>
                       )}
-                      <Badge variant="secondary">
-                        {statusSummary.total} activiteiten
-                      </Badge>
+                      {!(program.program_type?.startsWith("maatwerk_") && statusSummary.total === 0) && (
+                        <Badge variant="secondary">
+                          {statusSummary.total} activiteiten
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {selectedDates.length > 1 ? (
+                  {program.program_type?.startsWith("maatwerk_") && program.items.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                      <Sparkles className="h-8 w-8 text-primary/50" />
+                      <p className="text-muted-foreground">
+                        Bureau Vlieland is uw programma aan het samenstellen.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Zodra het programma klaar is, vindt u het hier terug.
+                      </p>
+                    </div>
+                  ) : selectedDates.length > 1 ? (
                     <DayTabs
                       selectedDates={selectedDates}
                       activeDay={activeDay}

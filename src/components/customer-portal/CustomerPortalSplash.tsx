@@ -38,6 +38,7 @@ interface CustomerPortalSplashProps {
     reference_number?: string | null;
     number_of_people: number;
     terms_accepted_at?: string;
+    program_type?: string;
   };
   selectedDates: Date[];
   statusSummary: StatusSummary;
@@ -112,8 +113,12 @@ export const CustomerPortalSplash = ({
   onNavigate,
 }: CustomerPortalSplashProps) => {
   const termsAccepted = !!program.terms_accepted_at;
+  const isMaatwerk = !!program.program_type?.startsWith("maatwerk_");
+  const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
   const accStatus = getAccommodationStatus(accommodation, accommodationQuotes);
-  const progStatus = getProgramStatus(statusSummary, termsAccepted);
+  const progStatus = isMaatwerkEmpty 
+    ? { label: "In voorbereiding", variant: "outline" as const }
+    : getProgramStatus(statusSummary, termsAccepted);
   const visibleSteps = steps.filter((s) => !s.multiDayOnly || isMultiDay);
 
   const dateRange =
@@ -242,8 +247,11 @@ export const CustomerPortalSplash = ({
             <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen.
-                Na afstemming maken we het voorstel definitief.
+                {isMaatwerk ? (
+                  <><strong>Bureau Vlieland is uw programma aan het samenstellen.</strong> Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op.</>
+                ) : (
+                  <><strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief.</>
+                )}
               </p>
             </div>
           </div>
@@ -346,8 +354,10 @@ export const CustomerPortalSplash = ({
               </div>
 
               <p className="text-sm text-muted-foreground">
-                Bureau Vlieland coördineert de activiteiten en stemt af met de aanbieders.
-                Bekijk het programma, geef feedback en geef akkoord.
+                {isMaatwerkEmpty
+                  ? "Bureau Vlieland stelt uw programma op maat samen. U vindt het straks hier terug."
+                  : "Bureau Vlieland coördineert de activiteiten en stemt af met de aanbieders. Bekijk het programma, geef feedback en geef akkoord."
+                }
               </p>
 
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">

@@ -38,6 +38,7 @@ import {
   BedDouble,
   Download,
   CalendarPlus,
+  Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -244,6 +245,7 @@ export const MobileProgramView = ({
             quoteStatus={program.quote_status}
             quoteValidUntil={program.quote_valid_until}
             termsAcceptedAt={program.terms_accepted_at}
+            isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
             onAcceptQuoteProposal={onAcceptQuoteProposal}
           />
         </>
@@ -326,7 +328,7 @@ export const MobileProgramView = ({
                   Offerte
                 </Button>
               )}
-              {!termsAccepted && (
+              {!termsAccepted && !program.program_type?.startsWith("maatwerk_") && (
                 <Button
                   size="sm"
                   onClick={(e) => {
@@ -339,14 +341,26 @@ export const MobileProgramView = ({
                   Toevoegen
                 </Button>
               )}
-              <Badge variant="secondary">
-                {statusSummary.total} activiteiten
-              </Badge>
+              {!(program.program_type?.startsWith("maatwerk_") && statusSummary.total === 0) && (
+                <Badge variant="secondary">
+                  {statusSummary.total} activiteiten
+                </Badge>
+              )}
             </div>
           }
         defaultOpen
       >
-        {selectedDates.length > 1 ? (
+        {program.program_type?.startsWith("maatwerk_") && program.items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+            <Sparkles className="h-8 w-8 text-primary/50" />
+            <p className="text-muted-foreground">
+              Bureau Vlieland is uw programma aan het samenstellen.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Zodra het programma klaar is, vindt u het hier terug.
+            </p>
+          </div>
+        ) : selectedDates.length > 1 ? (
           <DayTabs
             selectedDates={selectedDates}
             activeDay={activeDay}
