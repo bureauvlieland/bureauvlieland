@@ -56,7 +56,7 @@ import {
   useUpdateTemplateItem,
   useTemplateWithItems,
 } from "@/hooks/useProgramTemplates";
-import { Loader2, Trash2, Plus, Clock, GripVertical } from "lucide-react";
+import { Loader2, Trash2, Plus, Clock, GripVertical, ImageIcon, X } from "lucide-react";
 import type { ProgramTemplate, ProgramTemplateItem } from "@/types/programTemplate";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import {
@@ -70,6 +70,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddTemplateItemDialog } from "./AddTemplateItemDialog";
+import { MediaPickerDialog } from "./MediaPickerDialog";
 
 // Sortable item row component
 const SortableTemplateItem = ({ 
@@ -168,6 +169,7 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const isEditing = !!template;
   
@@ -427,6 +429,56 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
                     )}
                   />
                   
+                  <FormField
+                    control={form.control}
+                    name="image_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Afbeelding</FormLabel>
+                        {field.value && (
+                          <div className="relative w-full h-32 rounded-lg overflow-hidden bg-muted">
+                            <img
+                              src={field.value}
+                              alt="Template afbeelding"
+                              className="w-full h-full object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 h-6 w-6"
+                              onClick={() => field.onChange("")}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="https://..."
+                              className="flex-1"
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setMediaPickerOpen(true)}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-1" />
+                            Kies
+                          </Button>
+                        </div>
+                        <FormDescription>
+                          URL van de afbeelding, of kies uit de mediabibliotheek
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -677,6 +729,13 @@ export const AdminTemplateSheet = ({ open, onOpenChange, template }: AdminTempla
           
         />
       )}
+      
+      {/* Media Picker Dialog */}
+      <MediaPickerDialog
+        open={mediaPickerOpen}
+        onOpenChange={setMediaPickerOpen}
+        onSelect={(url) => form.setValue("image_url", url, { shouldDirty: true })}
+      />
     </>
   );
 };
