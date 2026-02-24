@@ -2,7 +2,8 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, ArrowRight, Building2, Users2, Info, Share2, ChevronDown } from "lucide-react";
+import { ArrowRight, Building2, Users2, Info, Share2, ChevronDown } from "lucide-react";
+import { EmptyCartTips } from "./EmptyCartTips";
 import { CartItemDetails } from "./CartItemDetails";
 import { ShareProgramDialog } from "./ShareProgramDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -267,10 +268,8 @@ export const ProgramEditor = ({
 
   if (cartItems.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8">
-        <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
-        <p className="font-medium">Uw programma is nog leeg</p>
-        <p className="text-sm mt-1">Voeg onderdelen toe om te beginnen</p>
+      <div className="py-8 px-4">
+        <EmptyCartTips />
       </div>
     );
   }

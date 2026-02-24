@@ -434,6 +434,7 @@ const ProgrammaSamenstellen = () => {
                         onRemoveDate={removeDate}
                         onSubmit={handleSubmit}
                         onReorderItems={reorderItems}
+                        onCategoryFilter={setSelectedCategory}
                       />
                     </div>
                   </div>

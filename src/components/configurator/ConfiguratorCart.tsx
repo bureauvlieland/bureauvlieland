@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ShoppingCart, Maximize2, Share2 } from "lucide-react";
+import { EmptyCartTips } from "./EmptyCartTips";
 import { cn } from "@/lib/utils";
 import { type CartItemDetail, calculateIndicativeTotal } from "@/types/buildingBlock";
 import { ProgramEditor } from "./ProgramEditor";
@@ -23,6 +24,7 @@ interface ConfiguratorCartProps {
   onSubmit: () => void;
   onReorderItems?: (items: CartItemDetail[]) => void;
   isInDrawer?: boolean;
+  onCategoryFilter?: (category: import("@/types/buildingBlock").BuildingBlockCategory | "all") => void;
   // Legacy compatibility
   selectedDate?: Date | undefined;
   onDateChange?: (date: Date | undefined) => void;
@@ -40,6 +42,7 @@ export const ConfiguratorCart = ({
   onSubmit,
   onReorderItems,
   isInDrawer = false,
+  onCategoryFilter,
   // Legacy fallback
   selectedDate,
   onDateChange,
@@ -107,11 +110,7 @@ export const ConfiguratorCart = ({
   if (cartItems.length === 0) {
     return (
       <Card className={cn("p-5 bg-muted/30 border-dashed", isInDrawer && "border-0 shadow-none bg-transparent")}>
-        <div className="text-center text-muted-foreground">
-          <ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-50" />
-          <p className="font-medium">Uw programma is nog leeg</p>
-          <p className="text-sm mt-1">Voeg onderdelen toe om te beginnen</p>
-        </div>
+        <EmptyCartTips onFilterCategory={onCategoryFilter} />
       </Card>
     );
   }
