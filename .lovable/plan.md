@@ -1,74 +1,46 @@
 
 
-# Partner notificatie bij verlopen logiesofferte
+# Tips voor nieuwe gebruikers in de configurator
 
-## Probleem
-Wanneer de `valid_until` datum van een logiesofferte verstreken is, krijgt de partner daar geen melding van. Hierdoor weten ze niet dat hun offerte niet meer geldig is en kunnen ze de geldigheid niet verlengen of het aanbod aanpassen.
+## Wat wordt er gebouwd
+Wanneer een gebruiker in de "Zelf regelen" track start zonder template (leeg programma), tonen we een helpende "Aan de slag" tipskaart in plaats van alleen "Uw programma is nog leeg". Deze tips geven de gebruiker richting over de logische volgorde van samenstellen.
 
-## Oplossing
-Twee mechanismen toevoegen:
+## Wat de gebruiker ziet
+In de lege cart-sidebar (desktop) en in de lege cart-drawer (mobiel) verschijnt een visueel aantrekkelijk blok met:
 
-### 1. Dagelijkse controle in `check-pending-items` -- nieuwe CHECK 5
-De bestaande cron-job krijgt een extra controle die:
-- Alle `accommodation_quotes` ophaalt met status `submitted` waar `valid_until < vandaag`
-- Per verlopen offerte:
-  - De status bijwerkt naar `expired`
-  - Een e-mail stuurt naar de partner met de melding dat hun offerte verlopen is
-  - Een admin-todo aanmaakt van type `quote_expired_partner`
+1. **Stappen-suggestie** met iconen:
+   - "Begin met de **overtocht** — u moet tenslotte eerst op het eiland komen"
+   - "Voeg **fietsen** toe — de handigste manier om over Vlieland te bewegen"
+   - "Kies vervolgens uw **activiteiten** en **catering**"
 
-De e-mail bevat:
-- Naam van de accommodatie en de klant
-- De oorspronkelijke geldigheidsperiode
-- Link naar het partnerportaal om de offerte te verlengen
+2. **Snelknoppen** om direct naar de juiste categorie te filteren:
+   - "Vervoer bekijken" knop (filtert op categorie `vervoer`)
+   - "Alle onderdelen bekijken" link
 
-### 2. Auto-todo type toevoegen
-- Nieuw type `quote_expired_partner` in `autoTodoCreator.ts` met label "Offerte verlopen" en rode styling
-
-### 3. Partner kan geldigheid verlengen
-In het partnerportaal (`PartnerAccommodationQuoteSheet.tsx`) moet een partner bij een verlopen offerte de `valid_until` datum kunnen aanpassen. Wanneer ze een nieuwe datum kiezen:
-- Status gaat terug van `expired` naar `submitted`
-- `valid_until` wordt bijgewerkt
-- Bureau Vlieland krijgt een admin-todo dat de offerte verlengd is
+De tips verdwijnen automatisch zodra het eerste item aan de cart wordt toegevoegd.
 
 ## Technisch overzicht
 
 | Bestand | Wijziging |
 |---|---|
-| `supabase/functions/check-pending-items/index.ts` | CHECK 5: verlopen quotes detecteren, status updaten, e-mail sturen, todo aanmaken |
-| `supabase/functions/_shared/email-templates.ts` | Nieuw template `quote_expired_partner` |
-| `src/lib/autoTodoCreator.ts` | Nieuw type `quote_expired_partner` toevoegen |
-| `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` | Datum-verlenging UI bij verlopen offerte |
+| `src/components/configurator/ConfiguratorCart.tsx` | Lege-staat vervangen door `EmptyCartTips` component met optionele `onCategoryFilter` callback |
+| `src/components/configurator/ProgramEditor.tsx` | Zelfde lege-staat aanpassen (voor expanded modus) |
+| `src/components/configurator/EmptyCartTips.tsx` | Nieuw component met tips en snelknoppen |
+| `src/pages/ProgrammaSamenstellen.tsx` | `onCategoryFilter` prop doorgeven zodat tips-knoppen de categorie kunnen instellen |
 
-### CHECK 5 logica (pseudo-code)
+### `EmptyCartTips.tsx` (nieuw)
+- Compact kaartje met 3 genummerde tips
+- Gebruikt `Ship`, `Bike`, `Utensils` iconen uit lucide-react
+- Optionele `onFilterCategory` prop: wanneer aanwezig, toon een "Bekijk vervoer" knop die `onFilterCategory("vervoer")` aanroept
+- Friendly tone, u-vorm
 
-```text
-1. Haal alle accommodation_quotes op waar:
-   - status = 'submitted'
-   - valid_until < vandaag
-   - request niet geannuleerd en niet verlopen
-2. Per quote:
-   a. Update status naar 'expired'
-   b. Haal partner e-mail op
-   c. Stuur e-mail: "Uw offerte voor [klant] is verlopen"
-   d. Maak admin_todo aan (type: quote_expired_partner)
-```
-
-### E-mail inhoud (Nederlands)
-- Onderwerp: "Uw logiesofferte voor [klantnaam] is verlopen"
-- Body: "Uw offerte '[accommodatie_naam]' voor [klantnaam] was geldig tot [datum] en is inmiddels verlopen. U kunt de geldigheid verlengen via uw partnerportaal."
-- CTA-knop: "Offerte bekijken"
-
-### Partner verlenging
-In de quote sheet voor partners wordt bij status `expired` een gele banner getoond:
-- Tekst: "Deze offerte is verlopen. Pas de geldigheid aan om de offerte opnieuw beschikbaar te maken."
-- Datumveld om nieuwe `valid_until` te kiezen
-- Bij opslaan: status terug naar `submitted`, melding naar admin
-
-## Database
-- De `accommodation_quotes` status check constraint moet `expired` al bevatten (dit is al het geval)
-- Geen schema-wijzigingen nodig
+### Wijzigingen in bestaande bestanden
+- `ConfiguratorCart.tsx` (regel 107-116): lege staat vervangt `ShoppingCart` icoon + tekst door `<EmptyCartTips />`
+- `ProgramEditor.tsx` (regel 268-276): zelfde vervanging
+- `ProgrammaSamenstellen.tsx`: geeft `setSelectedCategory` als callback door aan `ConfiguratorCart` via een nieuwe optionele prop `onCategoryFilter`
 
 ## Wat niet verandert
-- Klantportaal (toont al "Verlopen" badge)
-- Admin accommodatie-overzicht (werkt al met expired status)
-- Andere e-mailflows
+- Het "Zo werkt het" blok bovenaan de pagina
+- De wizard flow
+- Template-selectie flow
+- De configurator wanneer er al items in de cart zitten
