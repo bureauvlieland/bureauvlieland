@@ -196,6 +196,8 @@ export const PartnerAccommodationQuoteSheet = ({
 
   // Fetch partner room types for selection - must be before any early returns
   const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);
+  const [isExtending, setIsExtending] = useState(false);
+  const [newValidUntil, setNewValidUntil] = useState("");
 
   if (!request) return null;
 
@@ -297,9 +299,44 @@ export const PartnerAccommodationQuoteSheet = ({
     }
   };
 
+  const isExpired = existingQuote?.status === "expired";
   const isReadOnly = existingQuote?.status === "selected" || existingQuote?.status === "rejected" || existingQuote?.status === "declined";
   const canSubmit = existingQuote?.status === "pending" || existingQuote?.status === "submitted";
   const isDeclined = existingQuote?.status === "declined";
+
+  const handleExtendValidity = async () => {
+    if (!existingQuote || !newValidUntil) return;
+    setIsExtending(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({ status: "submitted", valid_until: newValidUntil })
+        .eq("id", existingQuote.id);
+      if (error) throw error;
+
+      // Create admin todo for notification
+      const { createAutoTodo } = await import("@/lib/autoTodoCreator");
+      const customerName = request?.customer_company || request?.customer_name || "";
+      await createAutoTodo({
+        type: "quote_expired_partner",
+        requestId: existingQuote.id,
+        partnerId: partnerId,
+        title: `Offerte verlengd: ${accommodationName} voor ${customerName} (nieuw: ${newValidUntil})`,
+        description: `De partner heeft de geldigheid van de offerte verlengd tot ${newValidUntil}.`,
+        priority: "normal",
+      });
+
+      const { toast } = await import("@/hooks/use-toast");
+      toast.call(null, { title: "Geldigheid verlengd", description: "De offerte is weer beschikbaar." });
+      onRefresh?.();
+      onClose();
+    } catch (err) {
+      console.error("Error extending validity:", err);
+    } finally {
+      setIsExtending(false);
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -414,6 +451,39 @@ export const PartnerAccommodationQuoteSheet = ({
             <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
               <X className="h-5 w-5" />
               <span className="font-medium">De klant heeft een andere accommodatie gekozen.</span>
+            </div>
+          )}
+
+          {isExpired && (
+            <div className="space-y-3">
+              <div className="p-3 bg-amber-50 text-amber-800 rounded-lg space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  <span className="font-medium">Deze offerte is verlopen</span>
+                </div>
+                <p className="text-sm">
+                  Pas de geldigheid aan om de offerte opnieuw beschikbaar te maken.
+                </p>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="newValidUntil" className="text-xs">Nieuwe geldigheid</Label>
+                    <Input
+                      id="newValidUntil"
+                      type="date"
+                      value={newValidUntil}
+                      onChange={(e) => setNewValidUntil(e.target.value)}
+                      min={format(new Date(), "yyyy-MM-dd")}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleExtendValidity}
+                    disabled={!newValidUntil || isExtending}
+                    size="sm"
+                  >
+                    {isExtending ? "Bezig..." : "Verlengen"}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 

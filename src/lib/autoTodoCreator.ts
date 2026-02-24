@@ -9,7 +9,8 @@ export type AutoTodoType =
   | "quote_review"
   | "quote_pending_partner"
   | "quote_pending_customer"
-  | "request_no_response";
+  | "request_no_response"
+  | "quote_expired_partner";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -142,6 +143,9 @@ export const autoTodoTitles = {
 
   request_no_response: (customerName: string) =>
     `Aanvraag ${customerName} is lang inactief`,
+
+  quote_expired_partner: (partnerName: string, customerName: string) =>
+    `Logiesofferte ${partnerName} voor ${customerName} is verlopen`,
 };
 
 /**
@@ -194,6 +198,11 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
   },
   request_no_response: {
     label: "Inactieve aanvraag",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
+  },
+  quote_expired_partner: {
+    label: "Offerte verlopen",
     color: "text-red-700",
     bgColor: "bg-red-100",
   },

@@ -330,6 +330,169 @@ Deno.serve(async (req) => {
       }
     }
 
+    // =============================================
+    // CHECK 5: Expired accommodation quotes
+    // =============================================
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    const { data: expiredQuotes, error: expiredError } = await supabase
+      .from("accommodation_quotes")
+      .select(`
+        id,
+        partner_id,
+        request_id,
+        accommodation_name,
+        valid_until,
+        partner:partners(name, email),
+        request:accommodation_requests(
+          customer_name,
+          customer_company,
+          status,
+          expires_at,
+          linked_program_id
+        )
+      `)
+      .eq("status", "submitted")
+      .lt("valid_until", today);
+
+    if (expiredError) {
+      console.error("Error fetching expired quotes:", expiredError);
+    } else {
+      // Filter out quotes where the request is cancelled or expired
+      const activeExpired = (expiredQuotes || []).filter(q => {
+        const req = q.request as any;
+        return req && req.status !== "cancelled" && req.status !== "expired" && new Date(req.expires_at) > new Date();
+      });
+
+      console.log(`Found ${activeExpired.length} expired accommodation quotes`);
+
+      for (const quote of activeExpired) {
+        // Update status to expired
+        const { error: updateError } = await supabase
+          .from("accommodation_quotes")
+          .update({ status: "expired" })
+          .eq("id", quote.id);
+
+        if (updateError) {
+          console.error(`Error updating quote ${quote.id} to expired:`, updateError);
+          continue;
+        }
+
+        const partner = quote.partner as any;
+        const req = quote.request as any;
+        const partnerName = partner?.name || "Onbekend";
+        const partnerEmail = partner?.email;
+        const customerName = req?.customer_company || req?.customer_name || "Onbekend";
+
+        // Send email to partner
+        if (partnerEmail) {
+          const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
+          const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
+
+          if (mailjetApiKey && mailjetSecretKey) {
+            // Try to use DB template first
+            const { data: template } = await supabase
+              .from("email_templates")
+              .select("subject, body_html")
+              .eq("id", "quote_expired_partner")
+              .eq("is_active", true)
+              .maybeSingle();
+
+            const validUntilFormatted = new Date(quote.valid_until).toLocaleDateString("nl-NL", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+
+            const portalUrl = "https://bureauvlieland.nl/partner/logies";
+            const subject = template
+              ? template.subject
+                  .replace(/\{\{customer_name\}\}/g, customerName)
+                  .replace(/\{\{accommodation_name\}\}/g, quote.accommodation_name)
+              : `Uw logiesofferte voor ${customerName} is verlopen`;
+
+            const body = template
+              ? template.body_html
+                  .replace(/\{\{customer_name\}\}/g, customerName)
+                  .replace(/\{\{accommodation_name\}\}/g, quote.accommodation_name)
+                  .replace(/\{\{valid_until\}\}/g, validUntilFormatted)
+                  .replace(/\{\{partner_name\}\}/g, partnerName)
+                  .replace(/\{\{portal_url\}\}/g, portalUrl)
+              : `<p>Beste ${partnerName},</p>
+                 <p>Uw offerte '<strong>${quote.accommodation_name}</strong>' voor ${customerName} was geldig tot ${validUntilFormatted} en is inmiddels verlopen.</p>
+                 <p>U kunt de geldigheid verlengen via uw partnerportaal.</p>
+                 <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Offerte bekijken</a></p>
+                 <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`;
+
+            try {
+              const emailResp = await fetch("https://api.mailjet.com/v3.1/send", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
+                },
+                body: JSON.stringify({
+                  Messages: [{
+                    From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                    To: [{ Email: partnerEmail, Name: partnerName }],
+                    Subject: subject,
+                    HTMLPart: body,
+                  }],
+                }),
+              });
+
+              if (emailResp.ok) {
+                console.log(`Sent expired quote email to ${partnerEmail}`);
+
+                // Log email
+                await supabase.from("email_log").insert({
+                  email_type: "quote_expired_partner",
+                  subject,
+                  recipient_email: partnerEmail,
+                  recipient_name: partnerName,
+                  related_accommodation_id: (req as any)?.id || null,
+                  related_partner_id: quote.partner_id,
+                  status: "sent",
+                  sent_at: new Date().toISOString(),
+                });
+              } else {
+                console.error(`Failed to send expired quote email:`, await emailResp.text());
+              }
+            } catch (emailErr) {
+              console.error("Error sending expired quote email:", emailErr);
+            }
+          }
+        }
+
+        // Create admin todo
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "quote_expired_partner")
+          .eq("auto_entity_id", quote.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (!existingTodo) {
+          const { error: todoError } = await supabase
+            .from("admin_todos")
+            .insert({
+              title: `Logiesofferte ${partnerName} voor ${customerName} is verlopen`,
+              description: `De offerte '${quote.accommodation_name}' was geldig tot ${quote.valid_until}. De partner heeft een notificatie ontvangen.`,
+              priority: "normal",
+              status: "todo",
+              related_partner_id: quote.partner_id,
+              related_request_id: req?.linked_program_id || null,
+              auto_type: "quote_expired_partner",
+              auto_entity_id: quote.id,
+            });
+
+          if (!todoError) totalCreated++;
+        }
+      }
+    }
+
     console.log(`Job completed: ${totalCreated} reminders created, ${totalSkipped} skipped`);
 
     return new Response(
