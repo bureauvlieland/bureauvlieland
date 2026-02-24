@@ -53,12 +53,12 @@ export const BootticketBanner = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           <span className="absolute bottom-2 left-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
             <Ship className="h-4 w-4" />
-            Boottickets reserveren
+            Zelf je boottickets boeken?
           </span>
         </div>
         <div className="p-3 bg-card">
           <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-            Boek groepstickets voor de veerboot bij Rederij Doeksen.
+            Reserveer groepstickets bij Rederij Doeksen.
           </p>
           <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
             Reserveer nu <ExternalLink className="h-3 w-3" />
