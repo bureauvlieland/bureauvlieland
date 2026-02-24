@@ -1,46 +1,46 @@
 
-# Maatwerk-melding in klantportaal
+# Kopieer vanuit eerder programma + kleinere agenda-knop
 
-## Probleem
-Na het indienen van een maatwerk aanvraag (`program_type` = `maatwerk_zakelijk` of `maatwerk_prive`) wordt de klant doorgestuurd naar het klantportaal. Omdat Bureau Vlieland nog geen programma heeft samengesteld, is de pagina leeg en toont het onjuiste meldingen als "Aanvragen verstuurd naar aanbieders" en "0 activiteiten".
+## Wat wordt er gebouwd
+Een nieuwe "Kopieer vanuit programma" functie op de admin aanvraag-detailpagina. Bij klikken opent een dialoog die automatisch vergelijkbare eerdere programma's suggereert op basis van:
+- Aantal dagen (zelfde duur)
+- Vergelijkbaar aantal personen (marge van +/- 30%)
+- Eventuele overeenkomsten in program_type of program_description
 
-## Oplossing
-De klant krijgt een duidelijke melding dat Bureau Vlieland bezig is met het samenstellen van het programma. Dit moet op meerdere plekken worden aangepast:
+Daarnaast wordt de "Exporteer naar agenda" knop compacter gemaakt (alleen icoon, of kleiner formaat).
 
-### 1. `ProgramOverviewCard.tsx` -- Titel en subtitel aanpassen
-- Herkennen van `maatwerk_zakelijk` en `maatwerk_prive` als programmatype
-- Bij 0 items: titel wordt "Uw maatwerkprogramma" en subtitel wordt "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
-- Type-label wordt "Maatwerk" in plaats van "Meerdaags verblijf"
-
-### 2. `ProgramIntroCard.tsx` -- Nieuwe toestand voor maatwerk-in-voorbereiding
-- Wanneer `program_type` begint met `maatwerk_` en er 0 items zijn: toon een kaart met de boodschap dat Bureau Vlieland aan het werk is
-- Tekst: "Bureau Vlieland is bezig met het samenstellen van uw programma op maat. Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op om uw wensen te bespreken."
-- Visueel: een vriendelijke info-kaart (niet een waarschuwing)
-
-### 3. `CustomerPortalSplash.tsx` -- Maatwerk-aware welkomstboodschap
-- Bij maatwerk-type: werkdocument-banner aanpassen naar "Bureau Vlieland is uw programma aan het samenstellen"
-- Programma-kaart: badge "In voorbereiding" en aangepaste tekst
-
-### 4. `DesktopProgramView.tsx` en `MobileProgramView.tsx` -- Lege-staat aanpassen
-- Wanneer maatwerk + 0 items: in plaats van "0 activiteiten" badge en lege dag-tabs, toon een placeholder-kaart met de maatwerk-melding
-- Verberg de "Toevoegen" knop (klant hoeft zelf niets toe te voegen bij maatwerk)
-
-### 5. `ProgramType` type uitbreiden
-- In `src/types/programRequest.ts`: `ProgramType` uitbreiden met `"maatwerk_zakelijk" | "maatwerk_prive"`
+## Hoe het werkt
+1. Admin klikt op "Kopieer vanuit programma" naast de bestaande knoppen
+2. Een dialoog opent met een lijst eerdere programma's, gesorteerd op relevantie (eerst programma's met zelfde duur + vergelijkbaar aantal personen)
+3. Bij selectie toont het de activiteiten van dat programma als preview
+4. Bij "Toepassen" worden alle items gekopieerd naar het huidige project (zelfde logica als template toepassen)
 
 ## Technisch overzicht
 
 | Bestand | Wijziging |
 |---|---|
-| `src/types/programRequest.ts` | `ProgramType` uitbreiden met maatwerk-types |
-| `src/components/customer-portal/ProgramOverviewCard.tsx` | Titel/subtitel/type-label voor maatwerk |
-| `src/components/customer-portal/ProgramIntroCard.tsx` | Nieuwe "maatwerk in voorbereiding" state |
-| `src/components/customer-portal/CustomerPortalSplash.tsx` | Welkomstboodschap + programma-kaart aanpassen |
-| `src/components/customer-portal/DesktopProgramView.tsx` | Lege-staat placeholder bij maatwerk |
-| `src/components/customer-portal/MobileProgramView.tsx` | Idem voor mobiel |
+| `src/components/admin/CopyFromProgramDialog.tsx` | Nieuw component: dialoog die vergelijkbare programma's ophaalt en laat selecteren |
+| `src/pages/admin/AdminRequestDetail.tsx` | Nieuwe knop "Kopieer vanuit programma" + state; agenda-knop verkleinen naar `size="icon"` met tooltip |
 
-## Wat niet verandert
-- Database schema (geen migraties nodig)
-- Edge functions
-- De configurator / intake flow
-- Bestaande self-service en quote flows
+### Nieuw: `CopyFromProgramDialog.tsx`
+- Ontvangt `requestId`, `durationDays`, `numberOfPeople`, `programDescription` als props
+- Query: haalt `program_requests` op die:
+  - Niet het huidige project zijn
+  - Niet geannuleerd zijn
+  - Minimaal 1 item hebben (subquery of join-count)
+  - Gesorteerd: eerst zelfde `duration_days` (berekend uit `selected_dates`), dan dichtst bij qua `number_of_people`
+- Toont lijst met: klantnaam, referentienummer, datum, aantal personen, aantal activiteiten
+- Bij selectie: haalt `program_request_items` op voor dat project en toont preview per dag
+- Bij "Toepassen": kopieert items naar huidig project met `skip_partner_notification: true`, zelfde mapping als `ApplyTemplateDialog`
+
+### Wijziging: `AdminRequestDetail.tsx`
+- Import `CopyFromProgramDialog` + state `copyFromProgramOpen`
+- Nieuwe knop na "Template toepassen": "Kopieer programma" met `Copy` icoon
+- "Exporteer naar agenda" knop wordt `size="sm"` met alleen het icoon + tooltip voor uitleg
+
+### Scoring/matching logica
+De dialoog berekent een eenvoudige relevantie-score per programma:
+- Zelfde aantal dagen: +2 punten
+- Vergelijkbaar aantal personen (binnen 30%): +1 punt
+- Zelfde program_type: +1 punt
+- Resultaten gesorteerd op score (aflopend), max 20 programma's getoond
