@@ -2,7 +2,7 @@
 export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced" | "counter_proposed";
 
 // Program type: self-service (customer-initiated) vs quote (admin-initiated)
-export type ProgramType = "self_service" | "quote";
+export type ProgramType = "self_service" | "quote" | "maatwerk_zakelijk" | "maatwerk_prive";
 
 // Quote status for admin-created programs
 export type QuoteStatus =

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Loader2, Clock, AlertTriangle } from "lucide-react";
+import { CheckCircle, Loader2, Clock, AlertTriangle, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -13,6 +13,7 @@ interface ProgramIntroCardProps {
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string;
   itemCount?: number;
+  isMaatwerkEmpty?: boolean;
   onAcceptQuoteProposal?: () => Promise<boolean>;
 }
 
@@ -22,6 +23,7 @@ export const ProgramIntroCard = ({
   quoteValidUntil,
   termsAcceptedAt,
   itemCount,
+  isMaatwerkEmpty,
   onAcceptQuoteProposal,
 }: ProgramIntroCardProps) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +46,26 @@ export const ProgramIntroCard = ({
       setIsLoading(false);
     }
   };
+
+  // Maatwerk in preparation — no items yet
+  if (isMaatwerkEmpty) {
+    return (
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-5">
+          <div className="flex items-start gap-3">
+            <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">Uw maatwerkprogramma wordt samengesteld</p>
+              <p className="text-sm text-muted-foreground">
+                Bureau Vlieland is bezig met het samenstellen van uw programma op maat.
+                Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op om uw wensen te bespreken.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Quote being prepared by admin - ActionRequiredCard already shows this message
   if (isBeingPrepared) {

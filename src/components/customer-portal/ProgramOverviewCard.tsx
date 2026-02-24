@@ -46,7 +46,8 @@ export const ProgramOverviewCard = ({
   hasPendingItems,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
-  const isQuoteMode = programType === "quote";
+  const isMaatwerk = programType === "maatwerk_zakelijk" || programType === "maatwerk_prive";
+  const isQuoteMode = programType === "quote" || isMaatwerk;
   
   // Calculate quote validity
   const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;
@@ -55,6 +56,7 @@ export const ProgramOverviewCard = ({
   
   // Determine program type label
   const getProgramTypeLabel = () => {
+    if (isMaatwerk) return "Maatwerk";
     if (isQuoteMode) {
       if (termsAcceptedAt) return "Boeking bevestigd";
       if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
@@ -138,7 +140,7 @@ export const ProgramOverviewCard = ({
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-                  {isQuoteMode ? "Uw maatwerkvoorstel" : "Uw zakelijke programma op Vlieland"}
+                  {isMaatwerk ? "Uw maatwerkprogramma" : isQuoteMode ? "Uw maatwerkvoorstel" : "Uw zakelijke programma op Vlieland"}
                 </h1>
                 {referenceNumber && (
                   <Badge variant="outline" className="font-mono text-xs">
@@ -159,7 +161,9 @@ export const ProgramOverviewCard = ({
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                {isQuoteMode 
+                {isMaatwerk
+                  ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
+                  : isQuoteMode 
                   ? "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
                   : hasPendingItems
                     ? "Uw aanvragen zijn verstuurd naar de aanbieders. Wij stemmen alles op elkaar af."
