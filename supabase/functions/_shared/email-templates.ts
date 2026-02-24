@@ -239,4 +239,7 @@ export const TemplateIds = {
   
   // Quote offer
   QUOTE_OFFER_CUSTOMER: "quote_offer_customer",
+
+  // Quote expired notification for partner
+  QUOTE_EXPIRED_PARTNER: "quote_expired_partner",
 } as const;
