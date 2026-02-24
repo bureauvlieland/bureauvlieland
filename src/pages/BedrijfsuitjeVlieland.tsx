@@ -232,7 +232,7 @@ const BedrijfsuitjeVlieland = () => {
                 variant="heroOutline"
                 className="text-lg px-8"
               >
-                <Link to="/contact">Liever persoonlijk advies?</Link>
+                <Link to="/programma-samenstellen">Liever maatwerk?</Link>
               </Button>
             </div>
           </div>

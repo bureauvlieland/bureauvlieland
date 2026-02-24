@@ -76,9 +76,9 @@ const Diensten = () => {
                   Stel je programma samen
                 </Button>
               </Link>
-              <Link to="/offerte">
+              <Link to="/programma-samenstellen">
                 <Button size="lg" variant="heroOutline">
-                  Maatwerkofferte aanvragen
+                  Liever maatwerk?
                 </Button>
               </Link>
             </div>

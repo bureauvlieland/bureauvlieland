@@ -255,8 +255,8 @@ const IncentiveReisVlieland = () => {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="gap-2 bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
-                  <Link to="/contact">
-                    Maatwerk aanvragen
+                  <Link to="/programma-samenstellen">
+                    Liever maatwerk?
                   </Link>
                 </Button>
               </div>
