@@ -97,6 +97,13 @@ export const Navigation = () => {
 
             {/* Direct links */}
             <Link
+              to="/logies-vlieland"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Logies
+            </Link>
+
+            <Link
               to="/diensten"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -217,6 +224,14 @@ export const Navigation = () => {
               </div>
 
               {/* Direct links Mobile */}
+              <Link
+                to="/logies-vlieland"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-left px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Logies
+              </Link>
+
               <Link
                 to="/diensten"
                 onClick={() => setIsMenuOpen(false)}
