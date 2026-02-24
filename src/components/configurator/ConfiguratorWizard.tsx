@@ -5,62 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { 
-  Users, 
-  Calendar as CalendarIcon, 
-  ChevronRight, 
+import {
+  Users,
+  Calendar as CalendarIcon,
+  ChevronRight,
   ChevronLeft,
   Home,
   ArrowRight,
-  Check
+  Check,
+  Sparkles,
+  Wrench,
 } from "lucide-react";
 
 import teamBeach from "@/assets/team-beach.jpg";
 import dunesGroupImg from "@/assets/dunes-group.jpg";
-import beachActivityImg from "@/assets/beach-activity.jpg";
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { TemplateSelector } from "./TemplateSelector";
+import { MaatwerkIntakeForm } from "./MaatwerkIntakeForm";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
-export type ProgramType = 
-  | "zakelijk" 
-  | "prive" 
-  | "los";
+export type ProgramType = "zakelijk" | "prive" | "los";
 
-interface ProgramTypeOption {
-  id: ProgramType;
-  label: string;
-  description: string;
-  examples: string;
-  image: string;
-}
-
-const programTypes: ProgramTypeOption[] = [
-  {
-    id: "zakelijk",
-    label: "Zakelijk",
-    description: "Wij organiseren een passend programma voor uw bedrijf of organisatie",
-    examples: "Teamuitje, heisessie, incentive of bedrijfsevenement",
-    image: teamBeach,
-  },
-  {
-    id: "prive",
-    label: "Privé",
-    description: "Een onvergetelijk verblijf op Vlieland met familie of vrienden",
-    examples: "Familieweekend, vriendengroep, jubileum of bruiloft",
-    image: dunesGroupImg,
-  },
-  {
-    id: "los",
-    label: "Losse activiteiten",
-    description: "Boek één of meerdere activiteiten zonder compleet programma",
-    examples: "Ik wil alleen losse activiteiten boeken",
-    image: beachActivityImg,
-  },
-];
+type Track = "laten_regelen" | "zelf_regelen";
 
 interface WizardData {
   programType: ProgramType | null;
@@ -77,6 +46,7 @@ interface ConfiguratorWizardProps {
 }
 
 export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData }: ConfiguratorWizardProps) => {
+  const [track, setTrack] = useState<Track | null>(null);
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>({
     programType: initialData?.programType ?? null,
@@ -85,19 +55,27 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
     wantsAccommodation: initialData?.wantsAccommodation ?? null,
     selectedTemplate: null,
   });
+  const [templateInspiration, setTemplateInspiration] = useState<string | null>(null);
   const [pendingTemplate, setPendingTemplate] = useState<ProgramTemplate | null>(null);
 
-  // Fetch full template with items when a template is selected
   const { data: fullTemplate } = useTemplateWithItems(pendingTemplate?.id || null);
 
   const minDate = addDays(new Date(), 7);
   const isMultiDay = data.selectedDates.length > 1;
 
-  const canProceedStep1 = data.programType !== null;
+  // For "zelf regelen" track
   const canProceedStep2 = data.numberOfPeople >= 8 && data.selectedDates.length > 0;
-  const canProceedStep3 = data.wantsAccommodation !== null;
 
-  // When full template is loaded, trigger the callback
+  // For "laten regelen" track - combined step with type + people + dates
+  const canProceedLatenStep2 =
+    data.programType !== null && data.numberOfPeople >= 8 && data.selectedDates.length > 0;
+
+  // Handle template loaded for "zelf regelen"
+  if (fullTemplate && pendingTemplate && fullTemplate.id === pendingTemplate.id) {
+    setPendingTemplate(null);
+    onTemplateSelected(fullTemplate, data);
+  }
+
   const handleTemplateLoaded = (template: ProgramTemplate) => {
     if (fullTemplate && fullTemplate.id === template.id) {
       onTemplateSelected(fullTemplate, data);
@@ -106,138 +84,292 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
     }
   };
 
-  // Effect to handle when fullTemplate loads
-  if (fullTemplate && pendingTemplate && fullTemplate.id === pendingTemplate.id) {
-    setPendingTemplate(null);
-    onTemplateSelected(fullTemplate, data);
-  }
-
-  const handleNext = () => {
-    if (step === 2) {
-      // After step 2, go to template selection (step 2.5)
-      setStep(2.5);
-    } else if (step === 2.5) {
-      // From template selection, skip if they chose "start empty" - handled by onStartEmpty
-      if (isMultiDay) {
-        setStep(3);
-      } else {
-        onComplete({ ...data, wantsAccommodation: false });
-      }
-    } else if (step === 3) {
-      onComplete(data);
-    } else {
-      setStep(step + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (step === 2.5) {
-      setStep(2);
-    } else if (step === 3) {
-      setStep(2.5);
-    } else {
-      setStep(step - 1);
-    }
-  };
-
-  const handleStartEmpty = () => {
-    if (isMultiDay) {
-      setStep(3);
-    } else {
-      onComplete({ ...data, wantsAccommodation: false });
-    }
-  };
-
   const handleDateSelect = (dates: Date[] | undefined) => {
     if (dates) {
-      // Limit to 7 days max
       const limitedDates = dates.slice(0, 7).sort((a, b) => a.getTime() - b.getTime());
       setData({ ...data, selectedDates: limitedDates });
     }
   };
 
-  // Calculate progress step for indicator
-  const getProgressStep = () => {
-    if (step <= 1) return 1;
-    if (step <= 2.5) return 2;
-    return 3;
+  // --- Track choice (step 1) ---
+  const handleTrackSelect = (selectedTrack: Track) => {
+    setTrack(selectedTrack);
+    setStep(2);
   };
 
-  const progressStep = getProgressStep();
+  // --- Navigation ---
+  const handleNext = () => {
+    if (track === "zelf_regelen") {
+      if (step === 2) setStep(2.5); // template selection
+      else if (step === 2.5) {
+        // start empty for zelf regelen
+        onComplete({ ...data, wantsAccommodation: false });
+      }
+    } else if (track === "laten_regelen") {
+      if (step === 2) setStep(2.5); // templates as inspiration
+      else if (step === 2.5) {
+        // Go to accommodation question or intake
+        if (isMultiDay) setStep(3);
+        else setStep(4); // skip accommodation, go to intake
+      } else if (step === 3) setStep(4); // accommodation -> intake
+    }
+  };
+
+  const handleBack = () => {
+    if (step === 2) {
+      setTrack(null);
+      setStep(1);
+    } else if (step === 2.5) setStep(2);
+    else if (step === 3) setStep(2.5);
+    else if (step === 4) {
+      if (isMultiDay) setStep(3);
+      else setStep(2.5);
+    }
+  };
+
+  const handleStartEmpty = () => {
+    if (track === "zelf_regelen") {
+      onComplete({ ...data, wantsAccommodation: false });
+    } else {
+      // "Laten regelen" - skip templates, go to accommodation or intake
+      if (isMultiDay) setStep(3);
+      else setStep(4);
+    }
+  };
+
+  // Progress
+  const getProgressSteps = () => {
+    if (track === "laten_regelen") {
+      const steps = isMultiDay ? 4 : 3;
+      let current = 1;
+      if (step >= 2) current = 2;
+      if (step >= 2.5) current = isMultiDay ? 2 : 2;
+      if (step >= 3) current = 3;
+      if (step >= 4) current = steps;
+      return { total: steps, current };
+    }
+    // zelf regelen or choosing
+    let current = 1;
+    if (step >= 2) current = 2;
+    return { total: 2, current };
+  };
+
+  const progress = getProgressSteps();
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* Progress indicator */}
-      <div className="flex items-center justify-center gap-2 mb-8">
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={cn(
-              "h-2 rounded-full transition-all duration-300",
-              s === progressStep ? "w-12 bg-primary" : "w-8",
-              s < progressStep ? "bg-primary/60" : s > progressStep ? "bg-muted" : ""
-            )}
-          />
-        ))}
-      </div>
+      {track && (
+        <div className="flex items-center justify-center gap-2 mb-8">
+          {Array.from({ length: progress.total }, (_, i) => i + 1).map((s) => (
+            <div
+              key={s}
+              className={cn(
+                "h-2 rounded-full transition-all duration-300",
+                s === progress.current ? "w-12 bg-primary" : "w-8",
+                s < progress.current ? "bg-primary/60" : s > progress.current ? "bg-muted" : ""
+              )}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Step 1: Program Type */}
+      {/* Step 1: Track Choice */}
       {step === 1 && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-8">
-           <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
               Waar mogen we u mee helpen?
             </h2>
             <p className="text-muted-foreground">
-              We stemmen het aanbod graag af op uw situatie
+              Kies hoe u uw programma op Vlieland wilt samenstellen
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4">
-            {programTypes.map((type) => (
-              <div
-                key={type.id}
-                className={cn(
-                  "relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 group",
-                  "h-[200px] sm:h-[220px]",
-                  data.programType === type.id
-                    ? "ring-3 ring-primary ring-offset-2 ring-offset-background shadow-lg"
-                    : "hover:shadow-md"
-                )}
-                onClick={() => setData({ ...data, programType: type.id })}
-              >
+          <div className="grid sm:grid-cols-2 gap-5">
+            {/* Laten regelen */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
+              onClick={() => handleTrackSelect("laten_regelen")}
+            >
+              <div className="aspect-[4/3] overflow-hidden">
                 <img
-                  src={type.image}
-                  alt={type.label}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  src={teamBeach}
+                  alt="Bureau Vlieland regelt uw programma"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className={cn(
-                  "absolute inset-0 transition-colors duration-300",
-                  data.programType === type.id
-                    ? "bg-primary/60"
-                    : "bg-black/45 group-hover:bg-black/55"
-                )} />
-                {data.programType === type.id && (
-                  <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-1">
-                    <Check className="h-4 w-4" />
-                  </div>
-                )}
-                <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                  <h3 className="font-semibold text-lg text-white">{type.label}</h3>
-                  <p className="text-sm text-white/90 mb-1">{type.description}</p>
-                  <p className="text-xs text-white/70">{type.examples}</p>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               </div>
-            ))}
+              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-xl">Laten regelen</h3>
+                </div>
+                <p className="text-sm text-white/90 leading-relaxed">
+                  Bureau Vlieland stelt een programma op maat voor u samen. U vertelt ons wat u zoekt, wij doen de rest.
+                </p>
+              </div>
+            </Card>
+
+            {/* Zelf regelen */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
+              onClick={() => handleTrackSelect("zelf_regelen")}
+            >
+              <div className="aspect-[4/3] overflow-hidden">
+                <img
+                  src={dunesGroupImg}
+                  alt="Stel zelf uw programma samen"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                    <Wrench className="h-4 w-4 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-xl">Zelf regelen</h3>
+                </div>
+                <p className="text-sm text-white/90 leading-relaxed">
+                  Stel zelf uw programma samen uit ons aanbod van activiteiten, catering en vervoer.
+                </p>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2 for "Laten regelen": Type + People + Dates combined */}
+      {step === 2 && track === "laten_regelen" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
+              Vertel ons meer over uw groep
+            </h2>
+            <p className="text-muted-foreground">
+              Met deze gegevens kunnen wij een passend voorstel samenstellen
+            </p>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <Button
-              onClick={handleNext}
-              disabled={!canProceedStep1}
-              className="gap-2"
-              size="lg"
-            >
+          {/* Type selection (compact) */}
+          <div>
+            <Label className="text-base font-medium mb-3 block">Wat voor gelegenheid?</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: "zakelijk" as const, label: "Zakelijk", desc: "Teamuitje, heisessie, incentive" },
+                { id: "prive" as const, label: "Privé", desc: "Familie, vrienden, jubileum, bruiloft" },
+              ].map((type) => (
+                <Card
+                  key={type.id}
+                  className={cn(
+                    "cursor-pointer transition-all duration-200",
+                    data.programType === type.id
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "hover:border-primary/30"
+                  )}
+                  onClick={() => setData({ ...data, programType: type.id })}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      {data.programType === type.id && (
+                        <Check className="h-4 w-4 text-primary" />
+                      )}
+                      <h3 className="font-semibold">{type.label}</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{type.desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* People */}
+            <div className="space-y-2">
+              <Label className="text-base font-medium">
+                <Users className="h-4 w-4 inline mr-2" />
+                Aantal personen
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={8}
+                  max={200}
+                  value={data.numberOfPeople}
+                  onChange={(e) =>
+                    setData({ ...data, numberOfPeople: Math.max(1, parseInt(e.target.value) || 1) })
+                  }
+                  className="w-24 text-center text-lg"
+                />
+                <span className="text-muted-foreground text-sm">personen</span>
+              </div>
+              {data.numberOfPeople < 8 && (
+                <p className="text-xs text-destructive">Minimaal 8 personen</p>
+              )}
+            </div>
+
+            {/* Dates */}
+            <div className="space-y-2">
+              <Label className="text-base font-medium">
+                <CalendarIcon className="h-4 w-4 inline mr-2" />
+                Datum(s)
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      data.selectedDates.length === 0 && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {data.selectedDates.length === 0
+                      ? "Kies datum(s)"
+                      : data.selectedDates.length === 1
+                        ? format(data.selectedDates[0], "d MMMM yyyy", { locale: nl })
+                        : `${data.selectedDates.length} dagen geselecteerd`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="multiple"
+                    selected={data.selectedDates}
+                    onSelect={handleDateSelect}
+                    disabled={(date) => date < minDate}
+                    initialFocus
+                    locale={nl}
+                    numberOfMonths={1}
+                  />
+                  <div className="p-3 border-t text-xs text-muted-foreground">
+                    Tip: Selecteer meerdere dagen voor een meerdaags programma
+                  </div>
+                </PopoverContent>
+              </Popover>
+              {data.selectedDates.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {data.selectedDates.map((date, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                    >
+                      {format(date, "d MMM", { locale: nl })}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-4">
+            <Button variant="ghost" onClick={handleBack} className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Terug
+            </Button>
+            <Button onClick={handleNext} disabled={!canProceedLatenStep2} className="gap-2" size="lg">
               Volgende
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -245,20 +377,19 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         </div>
       )}
 
-      {/* Step 2: People & Date */}
-      {step === 2 && (
+      {/* Step 2 for "Zelf regelen": People + Dates only */}
+      {step === 2 && track === "zelf_regelen" && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
               Wanneer en met hoeveel personen?
             </h2>
             <p className="text-muted-foreground">
-              Met deze gegevens kunnen wij de beschikbaarheid checken en een passend voorstel samenstellen
+              Zodat wij het aanbod kunnen afstemmen
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Number of people */}
             <Card>
               <CardContent className="p-6">
                 <Label className="text-base font-medium mb-4 block">
@@ -271,23 +402,19 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
                     min={8}
                     max={200}
                     value={data.numberOfPeople}
-                    onChange={(e) => setData({ 
-                      ...data, 
-                      numberOfPeople: Math.max(1, parseInt(e.target.value) || 1) 
-                    })}
+                    onChange={(e) =>
+                      setData({ ...data, numberOfPeople: Math.max(1, parseInt(e.target.value) || 1) })
+                    }
                     className="w-24 text-center text-lg"
                   />
                   <span className="text-muted-foreground">personen</span>
                 </div>
                 {data.numberOfPeople < 8 && (
-                  <p className="text-sm text-destructive mt-2">
-                    Minimaal 8 personen vereist
-                  </p>
+                  <p className="text-sm text-destructive mt-2">Minimaal 8 personen vereist</p>
                 )}
               </CardContent>
             </Card>
 
-            {/* Date selection */}
             <Card>
               <CardContent className="p-6">
                 <Label className="text-base font-medium mb-4 block">
@@ -304,13 +431,11 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {data.selectedDates.length === 0 ? (
-                        "Kies datum(s)"
-                      ) : data.selectedDates.length === 1 ? (
-                        format(data.selectedDates[0], "d MMMM yyyy", { locale: nl })
-                      ) : (
-                        `${data.selectedDates.length} dagen geselecteerd`
-                      )}
+                      {data.selectedDates.length === 0
+                        ? "Kies datum(s)"
+                        : data.selectedDates.length === 1
+                          ? format(data.selectedDates[0], "d MMMM yyyy", { locale: nl })
+                          : `${data.selectedDates.length} dagen geselecteerd`}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -328,7 +453,6 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
                     </div>
                   </PopoverContent>
                 </Popover>
-
                 {data.selectedDates.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {data.selectedDates.map((date, i) => (
@@ -345,28 +469,12 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
             </Card>
           </div>
 
-          {isMultiDay && (
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Home className="h-5 w-5 text-primary" />
-                <p className="text-sm text-foreground">
-                  U heeft een meerdaags programma. In de volgende stap vragen we of wij ook logies voor u mogen regelen.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           <div className="flex justify-between pt-4">
             <Button variant="ghost" onClick={handleBack} className="gap-2">
               <ChevronLeft className="h-4 w-4" />
               Terug
             </Button>
-            <Button
-              onClick={handleNext}
-              disabled={!canProceedStep2}
-              className="gap-2"
-              size="lg"
-            >
+            <Button onClick={handleNext} disabled={!canProceedStep2} className="gap-2" size="lg">
               Volgende
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -379,21 +487,30 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         <TemplateSelector
           durationDays={data.selectedDates.length}
           numberOfPeople={data.numberOfPeople}
-          onSelectTemplate={handleTemplateLoaded}
+          onSelectTemplate={
+            track === "laten_regelen"
+              ? (template) => {
+                  setTemplateInspiration(template.name);
+                  if (isMultiDay) setStep(3);
+                  else setStep(4);
+                }
+              : handleTemplateLoaded
+          }
           onStartEmpty={handleStartEmpty}
           onBack={handleBack}
+          inspirationMode={track === "laten_regelen"}
         />
       )}
 
-      {/* Step 3: Accommodation (only for multi-day) */}
-      {step === 3 && (
+      {/* Step 3: Accommodation (laten regelen, multi-day only) */}
+      {step === 3 && track === "laten_regelen" && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
               Wilt u dat wij ook logies regelen?
             </h2>
             <p className="text-muted-foreground">
-              Op Vlieland is het aanbod aan accommodaties beperkt. Wij kennen alle mogelijkheden en helpen u graag aan een geschikte plek.
+              Op Vlieland is het aanbod beperkt. Wij kennen alle mogelijkheden en helpen u graag.
             </p>
           </div>
 
@@ -408,17 +525,19 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
               onClick={() => setData({ ...data, wantsAccommodation: true })}
             >
               <CardContent className="p-6 text-center">
-                <div className={cn(
-                  "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                  data.wantsAccommodation === true 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted text-muted-foreground"
-                )}>
+                <div
+                  className={cn(
+                    "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
+                    data.wantsAccommodation === true
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
                   <Home className="h-8 w-8" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2">Ja, graag</h3>
                 <p className="text-sm text-muted-foreground">
-                  Wij zoeken passende accommodatie voor uw groep en vragen offertes op bij onze partners.
+                  Wij zoeken passende accommodatie voor uw groep.
                 </p>
               </CardContent>
             </Card>
@@ -433,17 +552,19 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
               onClick={() => setData({ ...data, wantsAccommodation: false })}
             >
               <CardContent className="p-6 text-center">
-                <div className={cn(
-                  "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                  data.wantsAccommodation === false 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted text-muted-foreground"
-                )}>
+                <div
+                  className={cn(
+                    "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
+                    data.wantsAccommodation === false
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
                   <ArrowRight className="h-8 w-8" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2">Nee, ik regel dit zelf</h3>
                 <p className="text-sm text-muted-foreground">
-                  U regelt zelf de overnachting of heeft dit al geregeld.
+                  U regelt zelf de overnachting.
                 </p>
               </CardContent>
             </Card>
@@ -456,15 +577,27 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
             </Button>
             <Button
               onClick={handleNext}
-              disabled={!canProceedStep3}
+              disabled={data.wantsAccommodation === null}
               className="gap-2"
               size="lg"
             >
-              Naar het aanbod
+              Volgende
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Step 4: Maatwerk Intake Form (laten regelen only) */}
+      {step === 4 && track === "laten_regelen" && (
+        <MaatwerkIntakeForm
+          programType={data.programType as "zakelijk" | "prive"}
+          numberOfPeople={data.numberOfPeople}
+          selectedDates={data.selectedDates}
+          wantsAccommodation={data.wantsAccommodation ?? false}
+          templateInspiration={templateInspiration}
+          onBack={handleBack}
+        />
       )}
     </div>
   );

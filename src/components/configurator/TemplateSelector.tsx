@@ -13,6 +13,7 @@ interface TemplateSelectorProps {
   onSelectTemplate: (template: ProgramTemplate) => void;
   onStartEmpty: () => void;
   onBack: () => void;
+  inspirationMode?: boolean;
 }
 
 export const TemplateSelector = ({
@@ -21,6 +22,7 @@ export const TemplateSelector = ({
   onSelectTemplate,
   onStartEmpty,
   onBack,
+  inspirationMode = false,
 }: TemplateSelectorProps) => {
   const { data: templates = [], isLoading } = useTemplatesByDuration(durationDays);
   const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
@@ -50,10 +52,14 @@ export const TemplateSelector = ({
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="text-center mb-8">
         <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-          Wilt u een idee hoe een dag op Vlieland eruit kan zien?
+          {inspirationMode
+            ? "Ter inspiratie: bekijk een voorbeeldprogramma"
+            : "Wilt u een idee hoe een dag op Vlieland eruit kan zien?"}
         </h2>
         <p className="text-muted-foreground">
-          Bekijk een van onze voorbeeldprogramma's, of stel zelf iets samen
+          {inspirationMode
+            ? "Kies een programma dat u aanspreekt, of ga direct verder"
+            : "Bekijk een van onze voorbeeldprogramma's, of stel zelf iets samen"}
         </p>
       </div>
 
@@ -111,7 +117,7 @@ export const TemplateSelector = ({
                     onSelectTemplate(template);
                   }}
                 >
-                  Gebruik
+                  {inspirationMode ? "Dit spreekt mij aan" : "Gebruik"}
                 </Button>
               </div>
             </CardContent>
@@ -131,9 +137,11 @@ export const TemplateSelector = ({
             <div className="w-16 h-16 rounded-2xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mx-auto mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
               <Sparkles className="h-7 w-7 text-primary transition-transform duration-300 group-hover:scale-110" />
             </div>
-            <h3 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors duration-200">Start leeg</h3>
+            <h3 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors duration-200">{inspirationMode ? "Overslaan" : "Start leeg"}</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Stel zelf uw programma samen uit alle beschikbare activiteiten
+              {inspirationMode
+                ? "Ga direct verder zonder voorbeeldprogramma"
+                : "Stel zelf uw programma samen uit alle beschikbare activiteiten"}
             </p>
             <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Aan de slag →
