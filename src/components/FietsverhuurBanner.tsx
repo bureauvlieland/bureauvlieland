@@ -58,14 +58,14 @@ export const FietsverhuurBanner = ({
           <div className="absolute bottom-3 left-3 right-3">
             <p className="text-white font-semibold text-sm flex items-center gap-1.5">
               <Bike className="h-4 w-4" />
-              Fietsen reserveren
+              Liever zelf fietsen boeken?
             </p>
           </div>
         </div>
         <div className="p-3 bg-card">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Ontdek Vlieland op de fiets. Reserveer eenvoudig voor uw hele groep.
-          </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Reserveer eenvoudig fietsen voor uw groep.
+            </p>
           <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
             Reserveer nu <ExternalLink className="h-3 w-3" />
           </span>
