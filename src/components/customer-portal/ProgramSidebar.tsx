@@ -164,8 +164,8 @@ export const ProgramSidebar = ({
             <Bike className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm">Fietsen nodig?</p>
-            <p className="text-xs text-muted-foreground">Wij regelen het — of boek zelf</p>
+            <p className="font-medium text-sm">Liever zelf fietsen boeken?</p>
+            <p className="text-xs text-muted-foreground">Reserveer direct bij de fietsverhuur</p>
           </div>
           <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
         </a>
@@ -179,8 +179,8 @@ export const ProgramSidebar = ({
             <Ship className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm">Boottickets nodig?</p>
-            <p className="text-xs text-muted-foreground">Wij regelen het — of boek zelf</p>
+            <p className="font-medium text-sm">Zelf je boottickets boeken?</p>
+            <p className="text-xs text-muted-foreground">Reserveer direct bij Rederij Doeksen</p>
           </div>
           <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
         </a>
