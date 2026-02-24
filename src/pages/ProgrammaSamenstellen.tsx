@@ -267,23 +267,20 @@ const ProgrammaSamenstellen = () => {
                   Welkom bij Bureau Vlieland
                 </h1>
                 <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-2">
-                  Wij helpen u graag bij het samenstellen van een programma op Vlieland. Stap voor stap, geheel vrijblijvend.
+                  Wij helpen u graag bij het organiseren van een onvergetelijk programma op Vlieland.
                 </p>
                 <p className="text-base text-primary-foreground/80 max-w-xl mx-auto">
-                  Na uw aanvraag ontvangt u een voorstel met definitieve tijden en prijzen.
+                  Geheel vrijblijvend. Na uw aanvraag ontvangt u een voorstel op maat.
                 </p>
               </>
             ) : (
               <>
                 <h1 className="text-4xl md:text-6xl font-display font-bold mb-4">
-                  Stel uw programma op Vlieland samen
+                  Stel zelf uw programma samen
                 </h1>
                 <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-2">
                   Kies activiteiten, catering en vervoer voor uw groep.
                   Wij controleren beschikbaarheid en zorgen dat alles goed op elkaar aansluit.
-                </p>
-                <p className="text-base text-primary-foreground/80 max-w-2xl mx-auto mb-3">
-                  Bij meerdaagse verblijven kunnen wij ook passende logies voor uw groep verzorgen.
                 </p>
                 <p className="text-sm text-primary-foreground/70 max-w-xl mx-auto">
                   Activiteiten worden uitgevoerd door zorgvuldig geselecteerde lokale partners.
