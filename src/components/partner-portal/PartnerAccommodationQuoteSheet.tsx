@@ -465,6 +465,20 @@ export const PartnerAccommodationQuoteSheet = ({
             </div>
           )}
 
+          {existingQuote?.status === "declined" && (
+            <div className="flex gap-3 p-3 bg-muted/50 border border-border rounded-lg">
+              <Ban className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-medium">U heeft deze aanvraag afgewezen</span>
+                {existingQuote.partner_notes && (
+                  <p className="text-sm text-muted-foreground">
+                    Reden: {existingQuote.partner_notes}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {isExpired && (
             <div className="space-y-3">
               <div className="p-3 bg-amber-50 text-amber-800 rounded-lg space-y-3">

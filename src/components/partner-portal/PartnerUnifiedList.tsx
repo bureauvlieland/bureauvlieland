@@ -79,6 +79,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   submitted: { label: "Offerte verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
   selected: { label: "Akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
   rejected: { label: "Niet gekozen", color: "text-destructive", bgColor: "bg-destructive/10" },
+  declined: { label: "Afgewezen (door u)", color: "text-muted-foreground", bgColor: "bg-muted" },
   expired: { label: "Verlopen", color: "text-muted-foreground", bgColor: "bg-muted" },
 };
 
@@ -163,7 +164,7 @@ export const PartnerUnifiedList = ({
         status: q.status,
         urgencyScore: getUrgencyScore(q.status),
         peopleCount: req.number_of_guests,
-        isRecentlyRejected: q.status === "rejected" && isRecentlyUpdated(q.updated_at),
+        isRecentlyRejected: (q.status === "rejected" || q.status === "declined") && isRecentlyUpdated(q.updated_at),
         originalItem: q,
       };
     }),
@@ -187,7 +188,7 @@ export const PartnerUnifiedList = ({
         return ["accepted", "selected"].includes(item.status) &&
           !item.canInvoice;
       case "completed":
-        return ["invoiced", "cancelled", "unavailable", "rejected", "executed"].includes(item.status) &&
+        return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed"].includes(item.status) &&
           !item.canInvoice;
       default:
         return true;
@@ -222,7 +223,7 @@ export const PartnerUnifiedList = ({
       ["executed", "invoiced"].includes(i.status)
     );
     const negativeItems = filteredItems.filter(i => 
-      ["cancelled", "unavailable", "rejected"].includes(i.status)
+      ["cancelled", "unavailable", "rejected", "declined"].includes(i.status)
     );
 
     return (
