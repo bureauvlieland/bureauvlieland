@@ -1,29 +1,34 @@
 
 
-# "Beschrijving voor klant" tonen aan partners
+# Afwijkende uitvoerder kiezen bij programma-onderdelen
 
 ## Probleem
-Wanneer een admin een activiteit aanmaakt of bewerkt, kan er een "Beschrijving voor klant" worden ingevuld (bijv. "Max. 36 personen per boot, 2 boten nodig"). Dit veld (`admin_price_notes`) wordt opgeslagen maar **niet getoond** in het partnerportaal. Hierdoor mist de partner cruciale context over de aanvraag.
+Wanneer Bureau Vlieland een activiteit aan een programma toevoegt of bewerkt, is de uitvoerder altijd gekoppeld aan de bouwsteen (of "Bureau Vlieland" bij bureau-facturatie). Er is geen mogelijkheid om een andere partner als uitvoerder te kiezen. Bijvoorbeeld: een diner dat normaal door Bureau Vlieland wordt geleverd, maar in de praktijk wordt uitgevoerd door Strandhotel Seeduyn omdat zij dit in hun logiesofferte hebben opgenomen.
 
 ## Oplossing
-Het veld `admin_price_notes` tonen in twee plekken in het partnerportaal:
+Een "Uitvoerder" dropdown toevoegen aan beide admin-sheets, waarmee een partner uit de lijst gekozen kan worden als daadwerkelijke uitvoerder. Deze partner ontvangt dan de notificatie bij akkoord op het programma.
 
-### 1. `src/components/partner-portal/PartnerItemSheet.tsx`
-- Na de "Details" sectie (bij datum/tijd/duur) een nieuw blokje toevoegen dat `admin_price_notes` toont
-- Label: "Toelichting Bureau Vlieland" met een info-achtige styling
-- Wordt alleen getoond als het veld gevuld is
+## Technische wijzigingen
 
-### 2. `src/components/partner-portal/PartnerItemCard.tsx`
-- Onder de bestaande "Opmerking klant" sectie ook `admin_price_notes` tonen
-- Compacte weergave met een onderscheidend label zodat het duidelijk is dat dit van Bureau Vlieland komt (niet van de klant)
+### 1. `src/components/admin/AdminAddActivitySheet.tsx`
+- Partners ophalen via een query: `supabase.from("partners").select("id, name, email").eq("is_active", true).order("name")`
+- Nieuw veld **"Uitvoerder"** toevoegen als dropdown (Select/Combobox), standaard gevuld met de provider van de gekozen bouwsteen
+- Optie "Bureau Vlieland" altijd bovenaan
+- Bij opslaan: `provider_id`, `provider_name` en `provider_email` worden gezet op de gekozen partner
+- Het bestaande "Gefactureerd door" veld (bureau vs partner) blijft, maar de partnernaam past zich aan op de gekozen uitvoerder
 
-## Technische details
-- Het veld `admin_price_notes` zit al in de data (de edge function haalt `*` op uit `program_request_items`)
-- Het type `PartnerItem` in `src/types/partner.ts` heeft dit veld niet expliciet, maar doordat de query `*` selecteert, is het wel beschikbaar in de response. We voegen het toe aan het type voor correctheid.
-- Geen database- of backend-wijzigingen nodig
-- Werkt direct voor alle bestaande aanvragen waar dit veld gevuld is
+### 2. `src/components/admin/AdminEditActivitySheet.tsx`
+- Dezelfde partners-query toevoegen
+- Nieuw "Uitvoerder" dropdown, standaard gevuld met de huidige `provider_id` van het item
+- Bij opslaan: `provider_id`, `provider_name` en `provider_email` bijwerken naar de gekozen partner
+- De bestaande "Gefactureerd door" radio wordt aangepast: de partner-optie toont de naam van de gekozen uitvoerder
 
-## Bestanden die worden aangepast
-1. **`src/types/partner.ts`** -- `admin_price_notes: string | null` toevoegen aan `PartnerItem`
-2. **`src/components/partner-portal/PartnerItemSheet.tsx`** -- Toelichting-blok toevoegen in de details-sectie
-3. **`src/components/partner-portal/PartnerItemCard.tsx`** -- Compacte toelichting-regel toevoegen
+### 3. Geen database- of backend-wijzigingen nodig
+- De kolommen `provider_id`, `provider_name` en `provider_email` bestaan al op `program_request_items`
+- De `accept-quote-proposal` edge function gebruikt deze velden al om partners te notificeren, dus de juiste uitvoerder wordt automatisch op de hoogte gebracht bij akkoord
+
+## Resultaat
+- Admin kan bij het toevoegen/bewerken van een programma-onderdeel een afwijkende uitvoerder kiezen
+- De gekozen uitvoerder wordt automatisch genotificeerd bij akkoord op het programma
+- De factuurstroom (bureau vs partner) werkt onafhankelijk van de uitvoerder-keuze
+
