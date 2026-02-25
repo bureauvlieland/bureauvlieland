@@ -12,6 +12,7 @@ import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/Part
 import { PartnerUpcomingActivities } from "@/components/partner-portal/PartnerUpcomingActivities";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ const PartnerDashboardContent = () => {
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState<string>("");
   const [partnerName, setPartnerName] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"action" | "in_progress" | "completed">("action");
+  const [activeTab, setActiveTab] = useState<"action" | "in_progress" | "expired" | "accepted" | "completed">("action");
 
   // Accommodation quote sheet
   interface RequestWithQuote {
@@ -527,20 +528,25 @@ const PartnerDashboardContent = () => {
   // Tab counts for badges
   const actionCount = pendingTotal + toInvoiceCount;
   
-  // In progress: items in confirmed/alternative (without customer acceptance), accepted, executed
-  // that are NOT ready for invoicing
+  // In progress: confirmed/alternative/submitted (not accepted, not expired)
   const inProgressCount =
     data.items.filter((i) => {
+      return ["confirmed", "alternative"].includes(i.status) && !i.customer_accepted_at;
+    }).length +
+    accommodationQuotes.filter((q) => q.status === "submitted").length;
+
+  // Expired count
+  const expiredCount = accommodationQuotes.filter((q) => q.status === "expired").length;
+
+  // Accepted/Akkoord count (not invoiceable)
+  const acceptedCount =
+    data.items.filter((i) => {
       const effectiveStatus = getEffectiveStatus(i);
-      // Include if in progress but not yet invoiceable
-      const isInProgress = ["confirmed", "alternative", "accepted", "executed"].includes(effectiveStatus);
       const canInvoice = (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
         !i.invoiced_number && i.program_requests.terms_accepted_at;
-      // Exclude items waiting on customer that haven't been accepted
-      const isWaitingOnCustomer = (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at;
-      return isInProgress && !canInvoice && !isWaitingOnCustomer;
+      return ["accepted", "selected"].includes(effectiveStatus) && !canInvoice;
     }).length +
-    accommodationQuotes.filter((q) => ["submitted", "selected"].includes(q.status)).length;
+    accommodationQuotes.filter((q) => q.status === "selected").length;
 
   return (
     <>
@@ -606,66 +612,61 @@ const PartnerDashboardContent = () => {
         {/* Workflow tabs with unified list */}
         <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "action" | "in_progress" | "completed")}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
         >
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
-            <TabsTrigger value="action" className="relative">
-              Actie nodig
-              {actionCount > 0 && (
-                <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                  {actionCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="in_progress">
-              In behandeling
-              {inProgressCount > 0 && (
-                <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                  {inProgressCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="completed">Afgerond</TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
+              <TabsTrigger value="action" className="relative whitespace-nowrap">
+                Actie nodig
+                {actionCount > 0 && (
+                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                    {actionCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="in_progress" className="whitespace-nowrap">
+                In behandeling
+                {inProgressCount > 0 && (
+                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                    {inProgressCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="expired" className="whitespace-nowrap">
+                Verlopen
+                {expiredCount > 0 && (
+                  <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
+                    {expiredCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="accepted" className="whitespace-nowrap">
+                Akkoord
+                {acceptedCount > 0 && (
+                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                    {acceptedCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="whitespace-nowrap">Afgerond</TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
-          <TabsContent value="action" className="mt-6">
-            <PartnerUnifiedList
-              items={data.items}
-              accommodationQuotes={accommodationQuotes}
-              filter="action"
-              onSelectItem={(item) => {
-                setSelectedItem(item);
-                setShowSheet(true);
-              }}
-              onSelectQuote={handleSelectQuote}
-            />
-          </TabsContent>
-
-          <TabsContent value="in_progress" className="mt-6">
-            <PartnerUnifiedList
-              items={data.items}
-              accommodationQuotes={accommodationQuotes}
-              filter="in_progress"
-              onSelectItem={(item) => {
-                setSelectedItem(item);
-                setShowSheet(true);
-              }}
-              onSelectQuote={handleSelectQuote}
-            />
-          </TabsContent>
-
-          <TabsContent value="completed" className="mt-6">
-            <PartnerUnifiedList
-              items={data.items}
-              accommodationQuotes={accommodationQuotes}
-              filter="completed"
-              onSelectItem={(item) => {
-                setSelectedItem(item);
-                setShowSheet(true);
-              }}
-              onSelectQuote={handleSelectQuote}
-            />
-          </TabsContent>
+          {(["action", "in_progress", "expired", "accepted", "completed"] as const).map((tab) => (
+            <TabsContent key={tab} value={tab} className="mt-6">
+              <PartnerUnifiedList
+                items={data.items}
+                accommodationQuotes={accommodationQuotes}
+                filter={tab}
+                onSelectItem={(item) => {
+                  setSelectedItem(item);
+                  setShowSheet(true);
+                }}
+                onSelectQuote={handleSelectQuote}
+              />
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
 
