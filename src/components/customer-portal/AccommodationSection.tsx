@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Pencil,
   Mail,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ export const AccommodationSection = ({
   const hasSelectedQuote = quotes.some((q) => q.status === "selected");
   const selectedQuote = quotes.find((q) => q.status === "selected");
   const submittedQuotes = quotes.filter((q) => q.status === "submitted");
+  const expiredQuotes = quotes.filter((q) => q.status === "expired");
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
@@ -266,6 +268,37 @@ export const AccommodationSection = ({
           />
         )}
       </>
+    );
+  }
+
+  // State 3b: Only expired quotes, no submitted ones
+  if (expiredQuotes.length > 0 && submittedQuotes.length === 0) {
+    return (
+      <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row md:items-start gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold">Logiesofferte verlopen</h3>
+                <p className="text-sm text-muted-foreground">
+                  De ontvangen offerte van{" "}
+                  <strong>{expiredQuotes[0].accommodation_name}</strong> is helaas verlopen.
+                  Neem contact op met Bureau Vlieland om een nieuwe offerte aan te vragen.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    Geldig t/m {format(new Date(expiredQuotes[0].valid_until), "d MMMM yyyy", { locale: nl })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
