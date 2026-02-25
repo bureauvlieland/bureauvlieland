@@ -356,8 +356,9 @@ const PartnerAccommodationContent = () => {
   const pendingRequests = requests.filter(r => r.quote?.status === "pending");
   const submittedRequests = requests.filter(r => r.quote?.status === "submitted");
   const expiredRequests = requests.filter(r => r.quote?.status === "expired");
+  const acceptedRequests = requests.filter(r => r.quote?.status === "selected");
   const closedRequests = requests.filter(r => 
-    r.quote?.status === "selected" || r.quote?.status === "rejected" || r.quote?.status === "declined"
+    r.quote?.status === "rejected" || r.quote?.status === "declined"
   );
 
   return (
@@ -393,7 +394,7 @@ const PartnerAccommodationContent = () => {
           <ScrollArea className="w-full">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
               <TabsTrigger value="pending" className="relative whitespace-nowrap">
-                Te beantwoorden
+                Actie nodig
                 {pendingRequests.length > 0 && (
                   <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                     {pendingRequests.length}
@@ -401,7 +402,7 @@ const PartnerAccommodationContent = () => {
                 )}
               </TabsTrigger>
               <TabsTrigger value="submitted" className="whitespace-nowrap">
-                Offerte verstuurd
+                In behandeling
                 {submittedRequests.length > 0 && (
                   <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
                     {submittedRequests.length}
@@ -413,6 +414,14 @@ const PartnerAccommodationContent = () => {
                 {expiredRequests.length > 0 && (
                   <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
                     {expiredRequests.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="accepted" className="whitespace-nowrap">
+                Akkoord
+                {acceptedRequests.length > 0 && (
+                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+                    {acceptedRequests.length}
                   </span>
                 )}
               </TabsTrigger>
@@ -483,6 +492,30 @@ const PartnerAccommodationContent = () => {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {expiredRequests.map((request) => (
+                  <PartnerAccommodationRequestCard
+                    key={request.id}
+                    request={request}
+                    quote={request.quote}
+                    onSubmitQuote={() => {
+                      setSelectedRequest(request);
+                      setShowQuoteSheet(true);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="accepted" className="mt-6">
+            {acceptedRequests.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <p>Geen akkoord offertes.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {acceptedRequests.map((request) => (
                   <PartnerAccommodationRequestCard
                     key={request.id}
                     request={request}

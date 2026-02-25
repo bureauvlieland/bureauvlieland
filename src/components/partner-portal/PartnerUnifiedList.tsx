@@ -38,7 +38,7 @@ export interface UnifiedListItem {
 interface PartnerUnifiedListProps {
   items: PartnerItem[];
   accommodationQuotes: PartnerAccommodationQuote[];
-  filter: "action" | "in_progress" | "completed";
+  filter: "action" | "in_progress" | "expired" | "accepted" | "completed";
   onSelectItem: (item: PartnerItem) => void;
   onSelectQuote: (quote: PartnerAccommodationQuote) => void;
 }
@@ -74,7 +74,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
   // Accommodation statuses
   submitted: { label: "Offerte verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  selected: { label: "Gekozen", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
+  selected: { label: "Akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
   rejected: { label: "Afgewezen", color: "text-muted-foreground", bgColor: "bg-muted" },
   expired: { label: "Verlopen", color: "text-muted-foreground", bgColor: "bg-muted" },
 };
@@ -170,19 +170,22 @@ export const PartnerUnifiedList = ({
   const filterItem = (item: UnifiedListItem): boolean => {
     switch (filter) {
       case "action":
-        // Needs action: pending, counter_proposed, or can be invoiced
         return (
           item.status === "pending" ||
           item.status === "counter_proposed" ||
           item.canInvoice === true
         );
       case "in_progress":
-        // In progress: confirmed, alternative, submitted, accepted, executed (not invoiceable)
-        return ["confirmed", "alternative", "submitted", "accepted", "executed", "selected"].includes(item.status) &&
+        return ["confirmed", "alternative", "submitted"].includes(item.status) &&
+          !item.canInvoice;
+      case "expired":
+        return item.status === "expired";
+      case "accepted":
+        return ["accepted", "selected"].includes(item.status) &&
           !item.canInvoice;
       case "completed":
-        // Completed: invoiced, cancelled, unavailable, rejected, expired
-        return ["invoiced", "cancelled", "unavailable", "rejected", "expired"].includes(item.status);
+        return ["invoiced", "cancelled", "unavailable", "rejected", "executed"].includes(item.status) &&
+          !item.canInvoice;
       default:
         return true;
     }
@@ -196,6 +199,8 @@ export const PartnerUnifiedList = ({
     const emptyMessages: Record<string, string> = {
       action: "Geen openstaande acties",
       in_progress: "Geen items in behandeling",
+      expired: "Geen verlopen offertes",
+      accepted: "Geen akkoord items",
       completed: "Geen afgeronde items",
     };
 
