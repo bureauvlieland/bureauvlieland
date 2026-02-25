@@ -41,6 +41,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   ArrowLeft,
+  Eye,
   Building2,
   Calendar,
   Users,
@@ -64,6 +65,7 @@ import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/t
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
 import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToCustomerDialog";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
+import { AdminAccommodationQuoteSheet } from "@/components/admin/AdminAccommodationQuoteSheet";
 
 interface LinkedProgram {
   id: string;
@@ -116,6 +118,7 @@ export default function AdminAccommodationDetail() {
   const [adminNotes, setAdminNotes] = useState("");
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [forwardQuoteId, setForwardQuoteId] = useState<string | null>(null);
+  const [selectedQuoteForView, setSelectedQuoteForView] = useState<any>(null);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -741,6 +744,14 @@ export default function AdminAccommodationDetail() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedQuoteForView(quote)}
+                                  title="Bekijken"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                                 {quote.status === "submitted" && !(quote as any).forwarded_at && (
                                   <Button
                                     variant="outline"
@@ -1029,6 +1040,15 @@ export default function AdminAccommodationDetail() {
           />
         );
       })()}
+
+      {/* Quote Detail Sheet */}
+      <AdminAccommodationQuoteSheet
+        open={!!selectedQuoteForView}
+        onOpenChange={(open) => { if (!open) setSelectedQuoteForView(null); }}
+        quote={selectedQuoteForView}
+        numberOfGuests={request?.number_of_guests || 0}
+        numberOfNights={nights}
+      />
     </AdminLayout>
   );
 }
