@@ -38,6 +38,12 @@ import { timeSlots } from "@/types/buildingBlock";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 
+interface PartnerOption {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
 interface ProgramRequestItem {
   id: string;
   block_id: string;
@@ -88,6 +94,21 @@ export const AdminEditActivitySheet = ({
   const [locationLat, setLocationLat] = useState<number | null>(null);
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [locationAddress, setLocationAddress] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState("");
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
+
+  // Fetch partners for executor dropdown
+  useEffect(() => {
+    const fetchPartners = async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("id, name, email")
+        .eq("is_active", true)
+        .order("name");
+      if (data) setPartners(data);
+    };
+    if (open) fetchPartners();
+  }, [open]);
 
   // Initialize form when item changes
   useEffect(() => {
@@ -99,6 +120,7 @@ export const AdminEditActivitySheet = ({
       setPriceOverride(item.admin_price_override?.toString() || "");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
+      setSelectedProviderId(item.provider_id || "bureau-vlieland");
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
       setLocationAddress(item.location_address || "");
@@ -113,10 +135,10 @@ export const AdminEditActivitySheet = ({
       const time = preferredTime === "flexibel" ? null : preferredTime;
       const price = priceOverride ? parseFloat(priceOverride) : null;
 
-      // Determine provider based on invoicedBy selection
+      // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
+      const selectedPartner = partners.find(p => p.id === selectedProviderId);
       
-      // If switching to bureau invoicing, update provider info
       const updateData: Record<string, unknown> = {
         block_name: customName,
         admin_price_notes: customDescription || null,
@@ -128,14 +150,14 @@ export const AdminEditActivitySheet = ({
         location_lat: locationLat,
         location_lng: locationLng,
         location_address: locationAddress || null,
+        provider_id: selectedProviderId || "bureau-vlieland",
+        provider_name: selectedProviderId === "bureau-vlieland" 
+          ? "Bureau Vlieland" 
+          : (selectedPartner?.name || item.provider_name),
+        provider_email: selectedProviderId === "bureau-vlieland" 
+          ? null 
+          : (selectedPartner?.email || item.provider_email),
       };
-
-      // Only change provider if switching to bureau
-      if (isBureauInvoiced && item.block_type !== "bureau") {
-        updateData.provider_id = "bureau-vlieland";
-        updateData.provider_name = "Bureau Vlieland";
-        updateData.provider_email = null;
-      }
 
       const { error } = await supabase
         .from("program_request_items")
@@ -204,8 +226,9 @@ export const AdminEditActivitySheet = ({
 
   if (!item) return null;
 
-  const originalProviderName = item.provider_name;
-  const isCurrentlyBureau = item.block_type === "bureau";
+  const selectedProviderName = selectedProviderId === "bureau-vlieland"
+    ? "Bureau Vlieland"
+    : (partners.find(p => p.id === selectedProviderId)?.name || item.provider_name);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -241,6 +264,24 @@ export const AdminEditActivitySheet = ({
             />
           </div>
 
+          {/* Uitvoerder (executor) selection */}
+          <div className="space-y-2">
+            <Label htmlFor="editProvider">Uitvoerder</Label>
+            <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
+              <SelectTrigger id="editProvider">
+                <SelectValue placeholder="Kies een uitvoerder..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bureau-vlieland">Bureau Vlieland</SelectItem>
+                {partners.map((partner) => (
+                  <SelectItem key={partner.id} value={partner.id}>
+                    {partner.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Invoiced by */}
           <div className="space-y-3">
             <Label>Gefactureerd door</Label>
@@ -255,30 +296,24 @@ export const AdminEditActivitySheet = ({
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="partner" id="edit-invoice-partner" disabled={isCurrentlyBureau} />
+                <RadioGroupItem value="partner" id="edit-invoice-partner" />
                 <Label htmlFor="edit-invoice-partner" className="font-normal cursor-pointer">
-                  {originalProviderName}
+                  {selectedProviderName}
                 </Label>
               </div>
             </RadioGroup>
 
-            {/* Warning when switching to Bureau invoicing */}
-            {invoicedBy === "bureau" && !isCurrentlyBureau && (
+            {/* Warning when Bureau invoicing is selected but executor is a partner */}
+            {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau-vlieland" && (
               <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-sm">
                 <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                 <div className="text-amber-800">
                   <p className="font-medium">Let op: Partner wordt niet genotificeerd</p>
                   <p className="text-amber-700 mt-1">
-                    {originalProviderName} ziet dit item niet meer in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland.
+                    {selectedProviderName} ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland.
                   </p>
                 </div>
               </div>
-            )}
-            
-            {isCurrentlyBureau && (
-              <p className="text-xs text-muted-foreground">
-                Dit item is al ingesteld op Bureau facturatie. Terugzetten naar partner is niet mogelijk.
-              </p>
             )}
           </div>
 
