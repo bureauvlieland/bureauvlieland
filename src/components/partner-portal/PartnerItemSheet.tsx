@@ -374,6 +374,19 @@ export const PartnerItemSheet = ({
             </div>
           </div>
 
+          {/* Admin price notes / Toelichting Bureau Vlieland */}
+          {item.admin_price_notes && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Toelichting Bureau Vlieland</h3>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                  <p className="text-sm">{item.admin_price_notes}</p>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Price indication */}
           {item.price_indication && (
             <>
