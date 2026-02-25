@@ -11,6 +11,8 @@ import {
   Users,
   Calendar,
   FileSignature,
+  Ban,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +33,9 @@ export interface UnifiedListItem {
   isModified?: boolean;
   hasCounter?: boolean;
   canInvoice?: boolean;
-  awaitingTerms?: boolean; // Customer accepted but waiting for terms signature
+  awaitingTerms?: boolean;
+  isRecentlyCancelled?: boolean;
+  isRecentlyRejected?: boolean;
   originalItem: PartnerItem | PartnerAccommodationQuote;
 }
 
@@ -49,10 +53,10 @@ const getUrgencyScore = (status: string, canInvoice?: boolean): number => {
     counter_proposed: 95,
     alternative: 50,
     confirmed: 40,
-    submitted: 40, // accommodation
+    submitted: 40,
     accepted: 30,
     executed: canInvoice ? 90 : 20,
-    selected: 30, // accommodation
+    selected: 30,
     invoiced: 10,
     cancelled: 0,
     unavailable: 0,
@@ -71,11 +75,10 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   executed: { label: "Uitgevoerd", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
   invoiced: { label: "Gefactureerd", color: "text-muted-foreground", bgColor: "bg-muted" },
   unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
-  cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  // Accommodation statuses
+  cancelled: { label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive/10" },
   submitted: { label: "Offerte verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
   selected: { label: "Akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  rejected: { label: "Afgewezen", color: "text-muted-foreground", bgColor: "bg-muted" },
+  rejected: { label: "Niet gekozen", color: "text-destructive", bgColor: "bg-destructive/10" },
   expired: { label: "Verlopen", color: "text-muted-foreground", bgColor: "bg-muted" },
 };
 
@@ -91,11 +94,12 @@ const isModifiedByCustomer = (item: PartnerItem): boolean => {
   return hoursSinceUpdate < 48;
 };
 
+const isRecentlyUpdated = (updatedAt: string): boolean => {
+  const hoursSinceUpdate = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60);
+  return hoursSinceUpdate < 48;
+};
+
 const canItemBeInvoiced = (item: PartnerItem): boolean => {
-  // Item can be invoiced if:
-  // - Status is accepted/executed OR status is confirmed but customer has accepted
-  // - Not yet invoiced
-  // - Customer has accepted terms
   const hasCustomerAccepted = !!item.customer_accepted_at;
   const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
   
@@ -116,18 +120,15 @@ export const PartnerUnifiedList = ({
   // Transform and merge items
   const unified: UnifiedListItem[] = [
     ...items
-      .filter((i) => i.day_index >= 0) // Exclude overige kosten
+      .filter((i) => i.day_index >= 0)
       .map((i) => {
       const dates = (i.program_requests.selected_dates || []) as string[];
       const activityDate = dates[i.day_index] || "";
       const canInvoice = canItemBeInvoiced(i);
       
-      // Determine effective status - if customer has accepted but status is still confirmed,
-      // treat it as "accepted" for display purposes
       const hasCustomerAccepted = !!i.customer_accepted_at;
       const effectiveStatus = (i.status === "confirmed" && hasCustomerAccepted) ? "accepted" : i.status;
       
-      // Check if item is waiting for terms acceptance
       const awaitingTerms = hasCustomerAccepted && 
         !i.invoiced_number && 
         !i.program_requests.terms_accepted_at;
@@ -146,6 +147,7 @@ export const PartnerUnifiedList = ({
         hasCounter: i.status === "counter_proposed",
         canInvoice,
         awaitingTerms,
+        isRecentlyCancelled: i.status === "cancelled" && isRecentlyUpdated(i.updated_at),
         originalItem: i,
       };
     }),
@@ -161,6 +163,7 @@ export const PartnerUnifiedList = ({
         status: q.status,
         urgencyScore: getUrgencyScore(q.status),
         peopleCount: req.number_of_guests,
+        isRecentlyRejected: q.status === "rejected" && isRecentlyUpdated(q.updated_at),
         originalItem: q,
       };
     }),
@@ -213,108 +216,161 @@ export const PartnerUnifiedList = ({
     );
   }
 
+  // For "completed" tab, split into subgroups
+  if (filter === "completed") {
+    const positiveItems = filteredItems.filter(i => 
+      ["executed", "invoiced"].includes(i.status)
+    );
+    const negativeItems = filteredItems.filter(i => 
+      ["cancelled", "unavailable", "rejected"].includes(i.status)
+    );
+
+    return (
+      <div className="space-y-6">
+        {positiveItems.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1">
+              Uitgevoerd / Gefactureerd
+            </h3>
+            {positiveItems.map((item) => (
+              <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
+            ))}
+          </div>
+        )}
+        {negativeItems.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-destructive uppercase tracking-wide px-1 flex items-center gap-1.5">
+              <Ban className="h-3.5 w-3.5" />
+              Geannuleerd / Afgewezen
+            </h3>
+            {negativeItems.map((item) => (
+              <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      {filteredItems.map((item) => {
-        const statusInfo = statusConfig[item.status] || statusConfig.pending;
-        const isActivity = item.type === "activity";
-
-        return (
-          <Card
-            key={`${item.type}-${item.id}`}
-            className={cn(
-              "cursor-pointer hover:bg-muted/50 transition-colors",
-              item.isModified && "bg-amber-50 dark:bg-amber-950/20"
-            )}
-            onClick={() => {
-              if (isActivity) {
-                onSelectItem(item.originalItem as PartnerItem);
-              } else {
-                onSelectQuote(item.originalItem as PartnerAccommodationQuote);
-              }
-            }}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                {/* Type icon */}
-                <div
-                  className={cn(
-                    "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                    isActivity
-                      ? "bg-primary/10 text-primary"
-                      : "bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {isActivity ? (
-                    <Activity className="h-5 w-5" />
-                  ) : (
-                    <BedDouble className="h-5 w-5" />
-                  )}
-                </div>
-
-                {/* Main content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {item.isNew && (
-                      <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
-                    )}
-                    {item.isModified && (
-                      <RefreshCw className="h-4 w-4 text-amber-500 shrink-0" />
-                    )}
-                    {item.hasCounter && (
-                      <ArrowLeftRight className="h-4 w-4 text-purple-500 shrink-0" />
-                    )}
-                    {item.canInvoice && (
-                      <Receipt className="h-4 w-4 text-purple-500 shrink-0" />
-                    )}
-                    <span className="font-medium truncate">{item.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
-                    <span className="truncate">{item.customer}</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="hidden sm:flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {item.date
-                        ? item.endDate
-                          ? `${format(parseISO(item.date), "d MMM", { locale: nl })} - ${format(parseISO(item.endDate), "d MMM", { locale: nl })}`
-                          : format(parseISO(item.date), "d MMM yyyy", { locale: nl })
-                        : "Geen datum"}
-                    </span>
-                    <span className="hidden md:inline">•</span>
-                    <span className="hidden md:flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" />
-                      {item.peopleCount}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Status badge */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {item.awaitingTerms && !item.canInvoice && (
-                    <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-                      <FileSignature className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Wacht op AV</span>
-                    </div>
-                  )}
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "font-normal border-0",
-                      statusInfo.color,
-                      statusInfo.bgColor
-                    )}
-                  >
-                    {item.canInvoice ? "Te factureren" : statusInfo.label}
-                  </Badge>
-                </div>
-
-                {/* Chevron */}
-                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {filteredItems.map((item) => (
+        <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
+      ))}
     </div>
+  );
+};
+
+// Extracted card component
+const ItemCard = ({
+  item,
+  onSelectItem,
+  onSelectQuote,
+}: {
+  item: UnifiedListItem;
+  onSelectItem: (item: PartnerItem) => void;
+  onSelectQuote: (quote: PartnerAccommodationQuote) => void;
+}) => {
+  const statusInfo = statusConfig[item.status] || statusConfig.pending;
+  const isActivity = item.type === "activity";
+  const isRecentNegative = item.isRecentlyCancelled || item.isRecentlyRejected;
+
+  return (
+    <Card
+      className={cn(
+        "cursor-pointer hover:bg-muted/50 transition-colors",
+        item.isModified && "bg-amber-50 dark:bg-amber-950/20",
+        isRecentNegative && "bg-destructive/5 border-destructive/30"
+      )}
+      onClick={() => {
+        if (isActivity) {
+          onSelectItem(item.originalItem as PartnerItem);
+        } else {
+          onSelectQuote(item.originalItem as PartnerAccommodationQuote);
+        }
+      }}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          {/* Type icon */}
+          <div
+            className={cn(
+              "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+              isActivity
+                ? "bg-primary/10 text-primary"
+                : "bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400"
+            )}
+          >
+            {isActivity ? (
+              <Activity className="h-5 w-5" />
+            ) : (
+              <BedDouble className="h-5 w-5" />
+            )}
+          </div>
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {item.isNew && (
+                <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
+              )}
+              {item.isModified && (
+                <RefreshCw className="h-4 w-4 text-amber-500 shrink-0" />
+              )}
+              {item.hasCounter && (
+                <ArrowLeftRight className="h-4 w-4 text-purple-500 shrink-0" />
+              )}
+              {item.canInvoice && (
+                <Receipt className="h-4 w-4 text-purple-500 shrink-0" />
+              )}
+              {isRecentNegative && (
+                <XCircle className="h-4 w-4 text-destructive shrink-0" />
+              )}
+              <span className="font-medium truncate">{item.name}</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
+              <span className="truncate">{item.customer}</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {item.date
+                  ? item.endDate
+                    ? `${format(parseISO(item.date), "d MMM", { locale: nl })} - ${format(parseISO(item.endDate), "d MMM", { locale: nl })}`
+                    : format(parseISO(item.date), "d MMM yyyy", { locale: nl })
+                  : "Geen datum"}
+              </span>
+              <span className="hidden md:inline">•</span>
+              <span className="hidden md:flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" />
+                {item.peopleCount}
+              </span>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          <div className="flex items-center gap-2 shrink-0">
+            {item.awaitingTerms && !item.canInvoice && (
+              <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                <FileSignature className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Wacht op AV</span>
+              </div>
+            )}
+            <Badge
+              variant="outline"
+              className={cn(
+                "font-normal border-0",
+                statusInfo.color,
+                statusInfo.bgColor
+              )}
+            >
+              {item.canInvoice ? "Te factureren" : statusInfo.label}
+            </Badge>
+          </div>
+
+          {/* Chevron */}
+          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
