@@ -548,6 +548,18 @@ const PartnerDashboardContent = () => {
     }).length +
     accommodationQuotes.filter((q) => q.status === "selected").length;
 
+  // Recently cancelled/rejected count (< 48 hours)
+  const recentCancelledCount = (() => {
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const recentItems = data.items.filter(
+      (i) => i.status === "cancelled" && new Date(i.updated_at).getTime() > cutoff
+    ).length;
+    const recentQuotes = accommodationQuotes.filter(
+      (q) => q.status === "rejected" && new Date(q.updated_at).getTime() > cutoff
+    ).length;
+    return recentItems + recentQuotes;
+  })();
+
   return (
     <>
       <div className="p-6 space-y-6">
@@ -648,7 +660,14 @@ const PartnerDashboardContent = () => {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="completed" className="whitespace-nowrap">Afgerond</TabsTrigger>
+              <TabsTrigger value="completed" className="whitespace-nowrap">
+                Afgerond
+                {recentCancelledCount > 0 && (
+                  <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
+                    {recentCancelledCount}
+                  </span>
+                )}
+              </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>

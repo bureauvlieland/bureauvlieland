@@ -448,9 +448,20 @@ export const PartnerAccommodationQuoteSheet = ({
           )}
 
           {existingQuote?.status === "rejected" && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-              <X className="h-5 w-5" />
-              <span className="font-medium">De klant heeft een andere accommodatie gekozen.</span>
+            <div className="flex gap-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg">
+              <X className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-medium text-red-700 dark:text-red-400">
+                  {request.status === "cancelled"
+                    ? "De hele logiesaanvraag is geannuleerd"
+                    : "De klant heeft voor een andere accommodatie gekozen"}
+                </span>
+                <p className="text-sm text-muted-foreground">
+                  {request.status === "cancelled"
+                    ? "Het bijbehorende programma of de logiesaanvraag is geannuleerd door de klant."
+                    : "Uw offerte is helaas niet geselecteerd. Bedankt voor uw voorstel."}
+                </p>
+              </div>
             </div>
           )}
 

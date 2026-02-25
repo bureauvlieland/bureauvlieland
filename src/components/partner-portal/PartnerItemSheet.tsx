@@ -302,6 +302,24 @@ export const PartnerItemSheet = ({
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {/* Cancellation alert */}
+          {item.status === "cancelled" && (
+            <div className="flex gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-medium text-destructive">Deze aanvraag is geannuleerd</p>
+                {request.cancellation_reason ? (
+                  <p className="text-sm text-muted-foreground">
+                    Reden: {request.cancellation_reason}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Het programma is geannuleerd door de klant.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           {/* Bureau Central badge - show when invoicing_mode is bureau_central */}
           {request.invoicing_mode === "bureau_central" && (
             <BureauCentralBadge variant="full" />

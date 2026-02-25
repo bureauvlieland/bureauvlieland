@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
           status,
           reference_number,
           cancelled_at,
+          cancellation_reason,
           terms_accepted_at,
           invoicing_mode,
           billing_company_name,
@@ -84,10 +85,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter out items from cancelled programs
-    const activeItems = items?.filter(
-      (item) => item.program_requests?.status !== "cancelled"
-    ) || [];
+    // Include all items (including from cancelled programs, so partners can see cancellations)
+    const activeItems = items || [];
 
     // Get all request IDs to fetch sibling items for conflict detection
     const requestIds = [...new Set(activeItems.map(i => i.request_id))];
