@@ -130,6 +130,60 @@ Deno.serve(async (req) => {
       })
       .eq("request_id", program.id);
 
+    // Cancel linked accommodation request and its quotes
+    if (program.linked_accommodation_id) {
+      console.log(`Cancelling linked accommodation request: ${program.linked_accommodation_id}`);
+
+      // Cancel accommodation request
+      await supabase
+        .from("accommodation_requests")
+        .update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", program.linked_accommodation_id);
+
+      // Cancel all pending/submitted quotes for this accommodation
+      await supabase
+        .from("accommodation_quotes")
+        .update({
+          status: "rejected",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("request_id", program.linked_accommodation_id)
+        .in("status", ["pending", "submitted"]);
+    }
+
+    // Also check reverse: if an accommodation_request links to this program
+    const { data: linkedAccommodations } = await supabase
+      .from("accommodation_requests")
+      .select("id")
+      .eq("linked_program_id", program.id)
+      .neq("status", "cancelled");
+
+    if (linkedAccommodations && linkedAccommodations.length > 0) {
+      for (const acc of linkedAccommodations) {
+        console.log(`Cancelling accommodation request linked to program: ${acc.id}`);
+        
+        await supabase
+          .from("accommodation_requests")
+          .update({
+            status: "cancelled",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", acc.id);
+
+        await supabase
+          .from("accommodation_quotes")
+          .update({
+            status: "rejected",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("request_id", acc.id)
+          .in("status", ["pending", "submitted"]);
+      }
+    }
+
     // Log to history
     await supabase.from("program_request_history").insert({
       request_id: program.id,
