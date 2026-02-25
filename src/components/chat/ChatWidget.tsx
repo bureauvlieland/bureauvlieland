@@ -75,18 +75,23 @@ export const ChatWidget = ({
     <>
       {/* Floating bubble */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center"
-          aria-label="Open chat"
-        >
-          <MessageCircle className="h-6 w-6" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
-              {unreadCount}
-            </span>
-          )}
-        </button>
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full shadow-sm border">
+            Hulp nodig?
+          </span>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center relative"
+            aria-label="Open chat"
+          >
+            <MessageCircle className="h-6 w-6" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       )}
 
       {/* Chat window */}
