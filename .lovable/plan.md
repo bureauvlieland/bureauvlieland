@@ -1,36 +1,29 @@
 
 
-# Logiesoffertes bekijken vanuit Admin detail pagina
+# "Beschrijving voor klant" tonen aan partners
 
-## Wat er nu is
-De admin detailpagina (`/admin/logies/:id`) toont een tabel met ontvangen offertes, maar je kunt alleen basisinformatie zien (partner, prijs, status). Er is geen manier om de volledige offertedetails te bekijken (kamerconfiguratie, extra's, beschrijving, voorwaarden, partner notities, bijlagen).
+## Probleem
+Wanneer een admin een activiteit aanmaakt of bewerkt, kan er een "Beschrijving voor klant" worden ingevuld (bijv. "Max. 36 personen per boot, 2 boten nodig"). Dit veld (`admin_price_notes`) wordt opgeslagen maar **niet getoond** in het partnerportaal. Hierdoor mist de partner cruciale context over de aanvraag.
 
-## Wat er verandert
-Elke offerte-rij in de tabel krijgt een **"Bekijken"** knop (oog-icoon) die een detailsheet opent met alle offerte-informatie.
+## Oplossing
+Het veld `admin_price_notes` tonen in twee plekken in het partnerportaal:
 
-### Nieuw bestand: `src/components/admin/AdminAccommodationQuoteSheet.tsx`
-Een Sheet-component specifiek voor de admin context, gebaseerd op het bestaande `AccommodationQuoteDetailSheet` patroon maar met admin-specifieke informatie:
-- Prijs totaal + prijs p.p.p.n.
-- Kamerconfiguratie (type, aantal, prijs per nacht, bezetting)
-- Extra's (via `useQuoteExtras` hook)
-- Inbegrepen items
-- Beschrijving en voorwaarden
-- Partner notities
-- Offerte bijlage / externe link
-- Geldigheid
-- Status badge
-- Commissie-informatie (percentage, bedrag, status) -- admin-only info
-- Facturatiegegevens (gefactureerd bedrag, datum, nummer) -- admin-only info
-- Doorgestuurd-status en datum
+### 1. `src/components/partner-portal/PartnerItemSheet.tsx`
+- Na de "Details" sectie (bij datum/tijd/duur) een nieuw blokje toevoegen dat `admin_price_notes` toont
+- Label: "Toelichting Bureau Vlieland" met een info-achtige styling
+- Wordt alleen getoond als het veld gevuld is
 
-### Wijziging: `src/pages/admin/AdminAccommodationDetail.tsx`
-- Import van de nieuwe `AdminAccommodationQuoteSheet`
-- State toevoegen: `selectedQuoteForView` 
-- Per offerte-rij een "Bekijken" knop toevoegen die de sheet opent
-- De sheet ontvangt het request object voor context (aantal gasten, aantal nachten)
+### 2. `src/components/partner-portal/PartnerItemCard.tsx`
+- Onder de bestaande "Opmerking klant" sectie ook `admin_price_notes` tonen
+- Compacte weergave met een onderscheidend label zodat het duidelijk is dat dit van Bureau Vlieland komt (niet van de klant)
 
 ## Technische details
-- Geen database-wijzigingen nodig -- alle data wordt al opgehaald
-- De `useQuoteExtras` hook wordt hergebruikt voor extra's per offerte
-- Het sheet toont meer informatie dan de klant-versie: commissie, facturatie, doorstuurstatus
-- Geen nieuwe API-calls -- quote data komt uit de bestaande query, extras via bestaande hook
+- Het veld `admin_price_notes` zit al in de data (de edge function haalt `*` op uit `program_request_items`)
+- Het type `PartnerItem` in `src/types/partner.ts` heeft dit veld niet expliciet, maar doordat de query `*` selecteert, is het wel beschikbaar in de response. We voegen het toe aan het type voor correctheid.
+- Geen database- of backend-wijzigingen nodig
+- Werkt direct voor alle bestaande aanvragen waar dit veld gevuld is
+
+## Bestanden die worden aangepast
+1. **`src/types/partner.ts`** -- `admin_price_notes: string | null` toevoegen aan `PartnerItem`
+2. **`src/components/partner-portal/PartnerItemSheet.tsx`** -- Toelichting-blok toevoegen in de details-sectie
+3. **`src/components/partner-portal/PartnerItemCard.tsx`** -- Compacte toelichting-regel toevoegen
