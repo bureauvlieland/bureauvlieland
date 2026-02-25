@@ -355,8 +355,9 @@ const PartnerAccommodationContent = () => {
   // Tab filtering
   const pendingRequests = requests.filter(r => r.quote?.status === "pending");
   const submittedRequests = requests.filter(r => r.quote?.status === "submitted");
+  const expiredRequests = requests.filter(r => r.quote?.status === "expired");
   const closedRequests = requests.filter(r => 
-    r.quote?.status === "selected" || r.quote?.status === "rejected" || r.quote?.status === "expired" || r.quote?.status === "declined"
+    r.quote?.status === "selected" || r.quote?.status === "rejected" || r.quote?.status === "declined"
   );
 
   return (
@@ -407,6 +408,14 @@ const PartnerAccommodationContent = () => {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="expired" className="whitespace-nowrap">
+                Verlopen
+                {expiredRequests.length > 0 && (
+                  <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
+                    {expiredRequests.length}
+                  </span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="closed" className="whitespace-nowrap">
                 Afgerond
               </TabsTrigger>
@@ -450,6 +459,30 @@ const PartnerAccommodationContent = () => {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {submittedRequests.map((request) => (
+                  <PartnerAccommodationRequestCard
+                    key={request.id}
+                    request={request}
+                    quote={request.quote}
+                    onSubmitQuote={() => {
+                      setSelectedRequest(request);
+                      setShowQuoteSheet(true);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="expired" className="mt-6">
+            {expiredRequests.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <p>Geen verlopen offertes.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {expiredRequests.map((request) => (
                   <PartnerAccommodationRequestCard
                     key={request.id}
                     request={request}
