@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Trash2, Save } from "lucide-react";
+import { Info, Trash2, Save } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -303,14 +303,14 @@ export const AdminEditActivitySheet = ({
               </div>
             </RadioGroup>
 
-            {/* Warning when Bureau invoicing is selected but executor is a partner */}
+            {/* Info when Bureau invoicing is selected but executor is a partner */}
             {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau-vlieland" && (
-              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-sm">
-                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <div className="text-amber-800">
-                  <p className="font-medium">Let op: Partner wordt niet genotificeerd</p>
-                  <p className="text-amber-700 mt-1">
-                    {selectedProviderName} ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland.
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-blue-800">
+                  <p className="font-medium">Facturatie via Bureau Vlieland</p>
+                  <p className="text-blue-700 mt-1">
+                    {selectedProviderName} ontvangt wel een aanvraag en ziet dit item in hun portaal, maar hoeft geen factuur in te dienen. De facturatie loopt via Bureau Vlieland.
                   </p>
                 </div>
               </div>
