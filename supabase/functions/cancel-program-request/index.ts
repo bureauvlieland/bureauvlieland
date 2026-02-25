@@ -130,9 +130,11 @@ Deno.serve(async (req) => {
       })
       .eq("request_id", program.id);
 
-    // Cancel linked accommodation request and its quotes
-    if (program.linked_accommodation_id) {
-      console.log(`Cancelling linked accommodation request: ${program.linked_accommodation_id}`);
+    // Cancel linked accommodation request and its quotes, collect partner info for emails
+    const accommodationPartners = new Map<string, { name: string; email: string; accommodationName: string }>();
+
+    const cancelAccommodation = async (accommodationId: string) => {
+      console.log(`Cancelling accommodation request: ${accommodationId}`);
 
       // Cancel accommodation request
       await supabase
@@ -141,17 +143,41 @@ Deno.serve(async (req) => {
           status: "cancelled",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", program.linked_accommodation_id);
+        .eq("id", accommodationId);
 
-      // Cancel all pending/submitted quotes for this accommodation
+      // Fetch quotes with partner info BEFORE cancelling them
+      const { data: quotesToCancel } = await supabase
+        .from("accommodation_quotes")
+        .select("id, partner_id, accommodation_name, partner:partners(id, name, email)")
+        .eq("request_id", accommodationId)
+        .in("status", ["pending", "submitted"]);
+
+      if (quotesToCancel) {
+        for (const q of quotesToCancel) {
+          const partner = q.partner as { id: string; name: string; email: string } | null;
+          if (partner?.email && !accommodationPartners.has(partner.id)) {
+            accommodationPartners.set(partner.id, {
+              name: partner.name,
+              email: partner.email,
+              accommodationName: q.accommodation_name,
+            });
+          }
+        }
+      }
+
+      // Cancel all pending/submitted quotes
       await supabase
         .from("accommodation_quotes")
         .update({
           status: "rejected",
           updated_at: new Date().toISOString(),
         })
-        .eq("request_id", program.linked_accommodation_id)
+        .eq("request_id", accommodationId)
         .in("status", ["pending", "submitted"]);
+    };
+
+    if (program.linked_accommodation_id) {
+      await cancelAccommodation(program.linked_accommodation_id);
     }
 
     // Also check reverse: if an accommodation_request links to this program
@@ -163,24 +189,7 @@ Deno.serve(async (req) => {
 
     if (linkedAccommodations && linkedAccommodations.length > 0) {
       for (const acc of linkedAccommodations) {
-        console.log(`Cancelling accommodation request linked to program: ${acc.id}`);
-        
-        await supabase
-          .from("accommodation_requests")
-          .update({
-            status: "cancelled",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", acc.id);
-
-        await supabase
-          .from("accommodation_quotes")
-          .update({
-            status: "rejected",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("request_id", acc.id)
-          .in("status", ["pending", "submitted"]);
+        await cancelAccommodation(acc.id);
       }
     }
 
@@ -250,6 +259,43 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Accommodation partner cancellation emails
+    for (const [partnerId, accPartner] of accommodationPartners) {
+      // Skip if this partner already got an activity cancellation email
+      if (providers.has(partnerId)) continue;
+
+      const accHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>
+          
+          <p>Beste ${sanitizeHtml(accPartner.name)},</p>
+          
+          <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd. Hierdoor vervalt ook de logiesaanvraag.</p>
+          
+          <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
+            ${program.customer_company ? `<p style="margin: 0 0 10px 0;"><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
+            <p style="margin: 0 0 10px 0;"><strong>Accommodatie:</strong> ${sanitizeHtml(accPartner.accommodationName)}</p>
+            ${reason ? `<p style="margin: 15px 0 0 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
+          </div>
+          
+          <p>Je hoeft verder geen actie te ondernemen. Je offerte is automatisch ingetrokken.</p>
+          
+          <p style="color: #718096; font-size: 14px; margin-top: 30px;">
+            Met vriendelijke groet,<br>
+            Bureau Vlieland
+          </p>
+        </div>
+      `;
+
+      emails.push({
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
+        Subject: `${subjectPrefix}Logiesaanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+        HTMLPart: accHtml,
+      });
+    }
+
     // Customer confirmation email using template
     const customerTemplateVariables = {
       customer_name: sanitizeHtml(program.customer_name),
@@ -274,7 +320,7 @@ Deno.serve(async (req) => {
         </div>
         ` : ""}
         
-        <p>Alle ${providers.size} betrokken aanbieder(s) zijn automatisch op de hoogte gesteld.</p>
+        <p>Alle ${providers.size + accommodationPartners.size} betrokken aanbieder(s) zijn automatisch op de hoogte gesteld.</p>
         
         <p>Wilt u toch een programma samenstellen? U kunt altijd een nieuwe aanvraag indienen via onze website.</p>
         
@@ -302,7 +348,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, providersNotified: providers.size }),
+      JSON.stringify({ success: true, providersNotified: providers.size, accommodationPartnersNotified: accommodationPartners.size }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
