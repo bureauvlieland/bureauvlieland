@@ -176,8 +176,12 @@ Deno.serve(async (req) => {
         .in("status", ["pending", "submitted"]);
     };
 
+    // Track which accommodation IDs we already cancelled to avoid duplicates
+    const cancelledAccommodationIds = new Set<string>();
+
     if (program.linked_accommodation_id) {
       await cancelAccommodation(program.linked_accommodation_id);
+      cancelledAccommodationIds.add(program.linked_accommodation_id);
     }
 
     // Also check reverse: if an accommodation_request links to this program
@@ -189,7 +193,36 @@ Deno.serve(async (req) => {
 
     if (linkedAccommodations && linkedAccommodations.length > 0) {
       for (const acc of linkedAccommodations) {
-        await cancelAccommodation(acc.id);
+        if (!cancelledAccommodationIds.has(acc.id)) {
+          await cancelAccommodation(acc.id);
+          cancelledAccommodationIds.add(acc.id);
+        }
+      }
+    }
+
+    // Fallback: find unlinked accommodation requests by customer email + overlapping dates
+    // This catches cases where the link was never established
+    const programDates = program.selected_dates as string[];
+    if (programDates && programDates.length >= 2) {
+      const earliestDate = programDates[0];
+      const latestDate = programDates[programDates.length - 1];
+
+      const { data: unlinkedAccommodations } = await supabase
+        .from("accommodation_requests")
+        .select("id")
+        .eq("customer_email", program.customer_email)
+        .neq("status", "cancelled")
+        .lte("arrival_date", latestDate)
+        .gte("departure_date", earliestDate);
+
+      if (unlinkedAccommodations && unlinkedAccommodations.length > 0) {
+        for (const acc of unlinkedAccommodations) {
+          if (!cancelledAccommodationIds.has(acc.id)) {
+            console.log(`Fallback: cancelling unlinked accommodation ${acc.id} matched by email+dates`);
+            await cancelAccommodation(acc.id);
+            cancelledAccommodationIds.add(acc.id);
+          }
+        }
       }
     }
 
