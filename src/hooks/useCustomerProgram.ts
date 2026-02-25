@@ -43,7 +43,7 @@ interface UseCustomerProgramReturn {
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
   acceptTerms: (signatureName?: string) => Promise<boolean>;
-  cancelRequest: (reason?: string) => Promise<boolean>;
+  cancelRequest: (reason?: string, cancelAccommodation?: boolean) => Promise<boolean>;
   acceptItem: (itemId: string) => Promise<boolean>;
   cancelItem: (itemId: string) => Promise<boolean>;
   submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
@@ -623,7 +623,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
-  const cancelRequest = useCallback(async (reason?: string): Promise<boolean> => {
+  const cancelRequest = useCallback(async (reason?: string, cancelAccommodation?: boolean): Promise<boolean> => {
     if (!program) return false;
 
     try {
@@ -631,6 +631,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         body: {
           token: token,
           reason,
+          cancelAccommodation: cancelAccommodation ?? true,
           origin: window.location.origin, // For test mode detection
         },
       });

@@ -21,6 +21,7 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 interface CancelRequest {
   token: string;
   reason?: string;
+  cancelAccommodation?: boolean;
   origin?: string;
 }
 
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, reason, origin }: CancelRequest = await req.json();
+    const { token, reason, cancelAccommodation: shouldCancelAccommodation = true, origin }: CancelRequest = await req.json();
     
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
     // Cancel linked accommodation request and its quotes, collect partner info for emails
     const accommodationPartners = new Map<string, { name: string; email: string; accommodationName: string }>();
 
-    const cancelAccommodation = async (accommodationId: string) => {
+    const cancelAccommodationRequest = async (accommodationId: string) => {
       console.log(`Cancelling accommodation request: ${accommodationId}`);
 
       // Cancel accommodation request
@@ -176,54 +177,58 @@ Deno.serve(async (req) => {
         .in("status", ["pending", "submitted"]);
     };
 
-    // Track which accommodation IDs we already cancelled to avoid duplicates
-    const cancelledAccommodationIds = new Set<string>();
+    // Only cancel accommodation if requested (default: true for backwards compatibility)
+    if (shouldCancelAccommodation) {
+      // Track which accommodation IDs we already cancelled to avoid duplicates
+      const cancelledAccommodationIds = new Set<string>();
 
-    if (program.linked_accommodation_id) {
-      await cancelAccommodation(program.linked_accommodation_id);
-      cancelledAccommodationIds.add(program.linked_accommodation_id);
-    }
-
-    // Also check reverse: if an accommodation_request links to this program
-    const { data: linkedAccommodations } = await supabase
-      .from("accommodation_requests")
-      .select("id")
-      .eq("linked_program_id", program.id)
-      .neq("status", "cancelled");
-
-    if (linkedAccommodations && linkedAccommodations.length > 0) {
-      for (const acc of linkedAccommodations) {
-        if (!cancelledAccommodationIds.has(acc.id)) {
-          await cancelAccommodation(acc.id);
-          cancelledAccommodationIds.add(acc.id);
-        }
+      if (program.linked_accommodation_id) {
+        await cancelAccommodationRequest(program.linked_accommodation_id);
+        cancelledAccommodationIds.add(program.linked_accommodation_id);
       }
-    }
 
-    // Fallback: find unlinked accommodation requests by customer email + overlapping dates
-    // This catches cases where the link was never established
-    const programDates = program.selected_dates as string[];
-    if (programDates && programDates.length >= 2) {
-      const earliestDate = programDates[0];
-      const latestDate = programDates[programDates.length - 1];
-
-      const { data: unlinkedAccommodations } = await supabase
+      // Also check reverse: if an accommodation_request links to this program
+      const { data: linkedAccommodations } = await supabase
         .from("accommodation_requests")
         .select("id")
-        .eq("customer_email", program.customer_email)
-        .neq("status", "cancelled")
-        .lte("arrival_date", latestDate)
-        .gte("departure_date", earliestDate);
+        .eq("linked_program_id", program.id)
+        .neq("status", "cancelled");
 
-      if (unlinkedAccommodations && unlinkedAccommodations.length > 0) {
-        for (const acc of unlinkedAccommodations) {
+      if (linkedAccommodations && linkedAccommodations.length > 0) {
+        for (const acc of linkedAccommodations) {
           if (!cancelledAccommodationIds.has(acc.id)) {
-            console.log(`Fallback: cancelling unlinked accommodation ${acc.id} matched by email+dates`);
-            await cancelAccommodation(acc.id);
+            await cancelAccommodationRequest(acc.id);
             cancelledAccommodationIds.add(acc.id);
           }
         }
       }
+
+      // Fallback: find unlinked accommodation requests by customer email + overlapping dates
+      const programDates = program.selected_dates as string[];
+      if (programDates && programDates.length >= 2) {
+        const earliestDate = programDates[0];
+        const latestDate = programDates[programDates.length - 1];
+
+        const { data: unlinkedAccommodations } = await supabase
+          .from("accommodation_requests")
+          .select("id")
+          .eq("customer_email", program.customer_email)
+          .neq("status", "cancelled")
+          .lte("arrival_date", latestDate)
+          .gte("departure_date", earliestDate);
+
+        if (unlinkedAccommodations && unlinkedAccommodations.length > 0) {
+          for (const acc of unlinkedAccommodations) {
+            if (!cancelledAccommodationIds.has(acc.id)) {
+              console.log(`Fallback: cancelling unlinked accommodation ${acc.id} matched by email+dates`);
+              await cancelAccommodationRequest(acc.id);
+              cancelledAccommodationIds.add(acc.id);
+            }
+          }
+        }
+      }
+    } else {
+      console.log("Skipping accommodation cancellation (cancelAccommodation=false)");
     }
 
     // Log to history

@@ -207,9 +207,9 @@ const CustomerProgram = () => {
     return success;
   };
 
-  const handleCancelRequest = async (reason?: string) => {
+  const handleCancelRequest = async (reason?: string, cancelAccommodation?: boolean) => {
     setIsCancelling(true);
-    const success = await cancelRequest(reason);
+    const success = await cancelRequest(reason, cancelAccommodation);
     setIsCancelling(false);
     setShowCancelDialog(false);
 
@@ -454,6 +454,7 @@ const CustomerProgram = () => {
         providerCount={uniqueProviders.size}
         dateRange={dateRange}
         isSubmitting={isCancelling}
+        hasLinkedAccommodation={!!accommodation}
       />
 
       {/* Chat Widget */}
