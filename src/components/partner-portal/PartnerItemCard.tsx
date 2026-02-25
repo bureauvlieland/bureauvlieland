@@ -248,6 +248,14 @@ export const PartnerItemCard = ({
           </div>
         )}
 
+        {/* Admin price notes / Toelichting Bureau Vlieland */}
+        {item.admin_price_notes && (
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+            <p className="text-primary font-medium mb-1">Toelichting Bureau Vlieland:</p>
+            <p>{item.admin_price_notes}</p>
+          </div>
+        )}
+
         {/* Invoice details (when showing invoiced items) */}
         {showInvoiceDetails && item.invoiced_number && (
           <div className="border-t pt-4 space-y-2">
