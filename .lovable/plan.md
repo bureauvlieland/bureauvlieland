@@ -1,65 +1,60 @@
 
+# Betere communicatie bij geannuleerde en afgewezen items voor partners
 
-# Data Fix + Keuze-dialoog bij annulering
+## Probleem
 
-## Deel 1: Data fix - LOG-2602-0001 op cancelled zetten
+Partners worden onvoldoende geinformeerd over twee scenario's:
+1. **Programma geannuleerd**: Items worden op "Geannuleerd" gezet maar verdwijnen naar de "Afgerond" tab zonder opvallende melding
+2. **Logiesofferte afgewezen** (andere partner gekozen): Status wordt "Niet gekozen" maar de partner ziet dit alleen als ze actief in "Afgerond" kijken
 
-De logiesaanvraag van Jack Frieling (LOG-2602-0001, id `f6b3e236-eff4-43d4-b360-aebab4d47c6e`) staat nog op `processing` met 2 openstaande offertes (Seeduyn: `submitted`, Badhotel Bruin: `submitted`). Deze moeten nu handmatig worden bijgewerkt:
+## Oplossing
 
-- **accommodation_requests**: status -> `cancelled`
-- **accommodation_quotes**: beide `submitted` offertes -> `rejected`
+### 1. Visuele indicator voor recent geannuleerde/afgewezen items
 
-Dit wordt uitgevoerd via een database insert-tool (UPDATE statements).
+In de `PartnerUnifiedList` een tijdelijke visuele indicator tonen voor items die recent (< 48 uur) zijn geannuleerd of afgewezen. Dit werkt vergelijkbaar met de bestaande "Nieuw" en "Gewijzigd door klant" indicators.
 
----
+**Bestand**: `src/components/partner-portal/PartnerUnifiedList.tsx`
+- Bij het mappen van items: detecteer of een item recent is geannuleerd/afgewezen (op basis van `updated_at` < 48 uur)
+- Toon een rode/oranje dot of badge naast het item
+- Voeg een count-indicator toe aan de "Afgerond" tab wanneer er recent geannuleerde/afgewezen items zijn
 
-## Deel 2: Keuze-dialoog "Wil je ook de logies annuleren?"
+### 2. Annuleringsreden zichtbaar maken in detail-sheets
 
-### Wat verandert er?
+**Bestand**: `src/components/partner-portal/PartnerItemSheet.tsx`
+- Bij status `cancelled`: toon een alert-blok met "Deze aanvraag is geannuleerd door de klant" en eventueel de annuleringsreden (uit `program_requests.cancellation_reason`)
 
-Wanneer een klant (of later een admin) een programma annuleert en er een gekoppelde logiesaanvraag bestaat, verschijnt er een extra keuze in het annuleringsscherm:
+**Bestand**: `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx`
+- Bij status `rejected`: toon contextinformatie:
+  - Als het programma is geannuleerd: "De hele aanvraag is geannuleerd"
+  - Als een andere partner is gekozen: "De klant heeft voor een andere accommodatie gekozen"
 
-> "Er is ook een logiesaanvraag gekoppeld aan dit programma. Wil je deze ook annuleren?"
-> - Ja, annuleer ook de logies
-> - Nee, alleen het programma annuleren
+### 3. "Afgerond" tab opsplitsen met subtitels
 
-### Bestanden die worden aangepast
+**Bestand**: `src/components/partner-portal/PartnerUnifiedList.tsx`
+- In de "Afgerond" tab: groepeer items visueel met subheadings:
+  - "Uitgevoerd / Gefactureerd" (positief afgerond)
+  - "Geannuleerd / Afgewezen" (negatief afgerond)
+- Dit maakt het direct duidelijk welke items positief en welke negatief zijn afgerond
 
-#### 1. `src/components/customer-portal/CancelRequestDialog.tsx`
-- Nieuwe prop `hasLinkedAccommodation: boolean` toevoegen
-- Als `true`: toon een checkbox of radio-groep met de keuze "Ook logiesaanvraag annuleren"
-- De keuze wordt meegegeven aan `onConfirm` als extra parameter (`cancelAccommodation: boolean`)
+### 4. Reden-context meegeven vanuit de database
 
-#### 2. `src/hooks/useCustomerProgram.ts`
-- De `cancelRequest` functie krijgt een extra parameter: `cancelAccommodation: boolean`
-- Deze wordt doorgegeven aan de edge function
+**Data**: De `program_requests` tabel heeft al een `cancellation_reason` veld. Voor logiesoffertes checken we of de `accommodation_requests` status `cancelled` is (hele aanvraag geannuleerd) versus dat er een andere quote `selected` is (andere partner gekozen).
 
-#### 3. `supabase/functions/cancel-program-request/index.ts`
-- Nieuw veld in de request body: `cancelAccommodation: boolean` (default: `true` voor backwards compatibility)
-- Als `cancelAccommodation` is `false`: sla de hele accommodatie-annuleringslogica over (zowel de directe link, reverse link, als fallback)
-- Als `true` (of niet meegegeven): bestaande gedrag behouden
+**Bestand**: `src/hooks/usePartnerDashboard.ts`
+- Bij het ophalen van items: voeg `cancellation_reason` toe vanuit de gerelateerde `program_requests`
+- Bij accommodation quotes: voeg context toe over waarom de offerte is afgewezen
 
-#### 4. `src/pages/CustomerProgram.tsx`
-- De `hasLinkedAccommodation` prop doorgeven aan `CancelRequestDialog`, gebaseerd op de bestaande `accommodation` state
-- De `handleCancelRequest` handler updaten om de `cancelAccommodation` boolean door te geven
+## Technische details
 
-### UX-ontwerp
+### Gewijzigde bestanden
 
-In het bestaande annuleringsvenster, na het overzichtsblok (activiteiten/aanbieders/datum), wordt een extra sectie getoond wanneer er een logiesaanvraag is:
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/components/partner-portal/PartnerUnifiedList.tsx` | Recent-geannuleerd indicator, subgroepen in Afgerond tab |
+| `src/components/partner-portal/PartnerItemSheet.tsx` | Annuleringsreden alert-blok tonen |
+| `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` | Context bij afwijzing tonen |
+| `src/hooks/usePartnerDashboard.ts` | Annuleringsreden en afwijzingscontext ophalen |
+| `src/types/partner.ts` | Optioneel veld `cancellation_reason` toevoegen aan PartnerItem type |
 
-```text
-+-----------------------------------------------+
-| [Hotel-icoon] Gekoppelde logiesaanvraag        |
-|                                                |
-| Er is een logiesaanvraag gekoppeld aan dit     |
-| programma.                                     |
-|                                                |
-| [x] Ook de logiesaanvraag annuleren            |
-|     Logiespartners worden op de hoogte gesteld  |
-|                                                |
-| [ ] Alleen het programma annuleren             |
-|     De logiesaanvraag blijft actief            |
-+-----------------------------------------------+
-```
-
-De checkbox staat standaard **aan** (logies ook annuleren), zodat het veiligste pad de default is.
+### Geen database-wijzigingen nodig
+Alle benodigde data (cancellation_reason, status, updated_at) is al beschikbaar in de bestaande tabellen.
