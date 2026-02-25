@@ -1,53 +1,36 @@
 
-# Tabstructuur partner portal herindelen naar 5 tabs
 
-## Huidige situatie
-Het partner dashboard (`PartnerDashboard.tsx`) en de logies-pagina (`PartnerAccommodation.tsx`) hebben nu 3-4 tabs die niet goed aansluiten bij de werkelijke lifecycle. "Verlopen" en "Gekozen/Akkoord" vallen nu samen onder "Afgerond" of "In behandeling", waardoor partners ze niet goed terugvinden.
+# Logiesoffertes bekijken vanuit Admin detail pagina
 
-## Nieuwe tabstructuur (beide pagina's)
+## Wat er nu is
+De admin detailpagina (`/admin/logies/:id`) toont een tabel met ontvangen offertes, maar je kunt alleen basisinformatie zien (partner, prijs, status). Er is geen manier om de volledige offertedetails te bekijken (kamerconfiguratie, extra's, beschrijving, voorwaarden, partner notities, bijlagen).
 
-```text
-Actie nodig | In behandeling | Verlopen | Akkoord | Afgerond
-```
+## Wat er verandert
+Elke offerte-rij in de tabel krijgt een **"Bekijken"** knop (oog-icoon) die een detailsheet opent met alle offerte-informatie.
 
-- **Actie nodig**: pending, counter_proposed, te factureren
-- **In behandeling**: confirmed, alternative, submitted (offerte verstuurd, wacht op reactie)
-- **Verlopen**: expired (offertetermijn verstreken)
-- **Akkoord**: accepted, selected (klant/bureau heeft gekozen)
-- **Afgerond**: executed, invoiced, cancelled, unavailable, rejected, declined
+### Nieuw bestand: `src/components/admin/AdminAccommodationQuoteSheet.tsx`
+Een Sheet-component specifiek voor de admin context, gebaseerd op het bestaande `AccommodationQuoteDetailSheet` patroon maar met admin-specifieke informatie:
+- Prijs totaal + prijs p.p.p.n.
+- Kamerconfiguratie (type, aantal, prijs per nacht, bezetting)
+- Extra's (via `useQuoteExtras` hook)
+- Inbegrepen items
+- Beschrijving en voorwaarden
+- Partner notities
+- Offerte bijlage / externe link
+- Geldigheid
+- Status badge
+- Commissie-informatie (percentage, bedrag, status) -- admin-only info
+- Facturatiegegevens (gefactureerd bedrag, datum, nummer) -- admin-only info
+- Doorgestuurd-status en datum
 
-## Wijzigingen
+### Wijziging: `src/pages/admin/AdminAccommodationDetail.tsx`
+- Import van de nieuwe `AdminAccommodationQuoteSheet`
+- State toevoegen: `selectedQuoteForView` 
+- Per offerte-rij een "Bekijken" knop toevoegen die de sheet opent
+- De sheet ontvangt het request object voor context (aantal gasten, aantal nachten)
 
-### 1. `src/components/partner-portal/PartnerUnifiedList.tsx`
-- Filter-functie uitbreiden van 3 naar 5 categorien:
-  - `"expired"`: alleen `expired` status
-  - `"accepted"`: `accepted` en `selected` statussen (niet te factureren)
-  - `"in_progress"`: confirmed, alternative, submitted (zonder accepted/selected/expired)
-  - `"completed"`: invoiced, cancelled, unavailable, rejected, executed
-- Type van `filter` prop aanpassen
-- Lege-state berichten toevoegen voor de twee nieuwe tabs
-
-### 2. `src/pages/PartnerDashboard.tsx`
-- `activeTab` state uitbreiden met `"expired"` en `"accepted"`
-- TabsList van 3 naar 5 tabs met badges/counts
-- TabsContent blokken toevoegen voor "Verlopen" en "Akkoord"
-- Count-variabelen toevoegen voor de nieuwe tabs
-- Grid layout aanpassen (van `grid-cols-3` naar responsive layout)
-
-### 3. `src/pages/PartnerAccommodation.tsx`
-- Tabs hernoemen/aanpassen om consistent te zijn:
-  - "Te beantwoorden" wordt "Actie nodig" (pending)
-  - "Offerte verstuurd" wordt "In behandeling" (submitted)
-  - "Verlopen" blijft (expired)
-  - Nieuwe tab "Akkoord" (selected)
-  - "Afgerond" (rejected, declined)
-- Count badges bij alle relevante tabs
-
-### 4. `src/components/partner-portal/PartnerUnifiedList.tsx` (statusConfig)
-- Label "Gekozen" aanpassen naar "Akkoord" voor `selected` status, zodat het consistent is met de tab-naam
-
-## Resultaat
-- Kreeft-offerte (expired) staat duidelijk in de "Verlopen" tab
-- Gekozen/akkoord offertes staan apart en zijn niet meer verborgen
-- "Afgerond" bevat alleen echt afgeronde zaken (uitgevoerd, gefactureerd, geannuleerd)
-- Consistente structuur op zowel het dashboard als de logies-pagina
+## Technische details
+- Geen database-wijzigingen nodig -- alle data wordt al opgehaald
+- De `useQuoteExtras` hook wordt hergebruikt voor extra's per offerte
+- Het sheet toont meer informatie dan de klant-versie: commissie, facturatie, doorstuurstatus
+- Geen nieuwe API-calls -- quote data komt uit de bestaande query, extras via bestaande hook
