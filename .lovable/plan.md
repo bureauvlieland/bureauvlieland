@@ -1,26 +1,65 @@
 
 
-# Waarschuwing "Gefactureerd door" corrigeren
+# Data Fix + Keuze-dialoog bij annulering
 
-## Probleem
-De huidige waarschuwing bij "Gefactureerd door: Bureau Vlieland" zegt dat de partner niet genotificeerd wordt en het item niet in hun portaal ziet. Dit klopt niet: de notificatie en portaalzichtbaarheid zijn gebaseerd op `provider_id` (de uitvoerder), niet op `block_type` (de factureringspartij). De partner wordt dus wel degelijk genotificeerd en ziet het item wel.
+## Deel 1: Data fix - LOG-2602-0001 op cancelled zetten
 
-## Oplossing
-De waarschuwingstekst aanpassen in beide sheets zodat deze correct weergeeft wat er gebeurt:
-- De partner wordt wel genotificeerd en ziet het item in hun portaal
-- De factuur loopt via Bureau Vlieland, dus de partner hoeft geen factuur in te dienen
+De logiesaanvraag van Jack Frieling (LOG-2602-0001, id `f6b3e236-eff4-43d4-b360-aebab4d47c6e`) staat nog op `processing` met 2 openstaande offertes (Seeduyn: `submitted`, Badhotel Bruin: `submitted`). Deze moeten nu handmatig worden bijgewerkt:
 
-## Bestanden die worden aangepast
+- **accommodation_requests**: status -> `cancelled`
+- **accommodation_quotes**: beide `submitted` offertes -> `rejected`
 
-### 1. `src/components/admin/AdminEditActivitySheet.tsx`
-De bestaande amber-waarschuwing wijzigen naar een informatieve melding (blauw/info-stijl):
-- **Titel**: "Facturatie via Bureau Vlieland"
-- **Tekst**: "[Partnernaam] ontvangt wel een aanvraag en ziet dit item in hun portaal, maar hoeft geen factuur in te dienen. De facturatie loopt via Bureau Vlieland."
+Dit wordt uitgevoerd via een database insert-tool (UPDATE statements).
 
-### 2. `src/components/admin/AdminAddActivitySheet.tsx`
-Dezelfde aanpassing doorvoeren in de "Toevoegen" sheet, zodat beide sheets consistent zijn.
+---
 
-## Technische details
-- Alleen tekst- en stijlwijzigingen (amber -> info/blauw)
-- Icoon wijzigen van `AlertTriangle` naar `Info`
-- Geen logica-aanpassingen nodig -- de bestaande notificatie-flow via `skip_partner_notification` en `provider_id` werkt al correct
+## Deel 2: Keuze-dialoog "Wil je ook de logies annuleren?"
+
+### Wat verandert er?
+
+Wanneer een klant (of later een admin) een programma annuleert en er een gekoppelde logiesaanvraag bestaat, verschijnt er een extra keuze in het annuleringsscherm:
+
+> "Er is ook een logiesaanvraag gekoppeld aan dit programma. Wil je deze ook annuleren?"
+> - Ja, annuleer ook de logies
+> - Nee, alleen het programma annuleren
+
+### Bestanden die worden aangepast
+
+#### 1. `src/components/customer-portal/CancelRequestDialog.tsx`
+- Nieuwe prop `hasLinkedAccommodation: boolean` toevoegen
+- Als `true`: toon een checkbox of radio-groep met de keuze "Ook logiesaanvraag annuleren"
+- De keuze wordt meegegeven aan `onConfirm` als extra parameter (`cancelAccommodation: boolean`)
+
+#### 2. `src/hooks/useCustomerProgram.ts`
+- De `cancelRequest` functie krijgt een extra parameter: `cancelAccommodation: boolean`
+- Deze wordt doorgegeven aan de edge function
+
+#### 3. `supabase/functions/cancel-program-request/index.ts`
+- Nieuw veld in de request body: `cancelAccommodation: boolean` (default: `true` voor backwards compatibility)
+- Als `cancelAccommodation` is `false`: sla de hele accommodatie-annuleringslogica over (zowel de directe link, reverse link, als fallback)
+- Als `true` (of niet meegegeven): bestaande gedrag behouden
+
+#### 4. `src/pages/CustomerProgram.tsx`
+- De `hasLinkedAccommodation` prop doorgeven aan `CancelRequestDialog`, gebaseerd op de bestaande `accommodation` state
+- De `handleCancelRequest` handler updaten om de `cancelAccommodation` boolean door te geven
+
+### UX-ontwerp
+
+In het bestaande annuleringsvenster, na het overzichtsblok (activiteiten/aanbieders/datum), wordt een extra sectie getoond wanneer er een logiesaanvraag is:
+
+```text
++-----------------------------------------------+
+| [Hotel-icoon] Gekoppelde logiesaanvraag        |
+|                                                |
+| Er is een logiesaanvraag gekoppeld aan dit     |
+| programma.                                     |
+|                                                |
+| [x] Ook de logiesaanvraag annuleren            |
+|     Logiespartners worden op de hoogte gesteld  |
+|                                                |
+| [ ] Alleen het programma annuleren             |
+|     De logiesaanvraag blijft actief            |
++-----------------------------------------------+
+```
+
+De checkbox staat standaard **aan** (logies ook annuleren), zodat het veiligste pad de default is.
