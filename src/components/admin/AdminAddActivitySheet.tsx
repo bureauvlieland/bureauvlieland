@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -55,6 +55,22 @@ export const AdminAddActivitySheet = ({
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [selectedBlock, setSelectedBlock] = useState<BuildingBlock | null>(null);
   
+  // Partners list for executor selection
+  const [partners, setPartners] = useState<{ id: string; name: string; email: string | null }[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+
+  useEffect(() => {
+    const fetchPartners = async () => {
+      const { data } = await supabase
+        .from("partners")
+        .select("id, name, email")
+        .eq("is_active", true)
+        .order("name");
+      if (data) setPartners(data);
+    };
+    if (open) fetchPartners();
+  }, [open]);
+
   // Form state
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [preferredTime, setPreferredTime] = useState<string>("flexibel");
@@ -102,6 +118,7 @@ export const AdminAddActivitySheet = ({
     setCustomName(block.name);
     setCustomDescription(block.price_adult_note || block.short_description || "");
     setInvoicedBy(block.block_type === "bureau" ? "bureau" : "partner");
+    setSelectedProviderId(block.provider_id || "bureau-vlieland");
     setLocationLat(block.location_lat ?? null);
     setLocationLng(block.location_lng ?? null);
     setLocationAddress(block.location_address || "");
@@ -119,11 +136,16 @@ export const AdminAddActivitySheet = ({
       const time = preferredTime === "flexibel" ? null : preferredTime;
       const price = priceOverride ? parseFloat(priceOverride) : null;
       
-      // Determine provider based on invoicedBy selection
+      // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
-      const providerId = isBureauInvoiced ? "bureau-vlieland" : (selectedBlock.provider_id || "bureau-vlieland");
-      const providerName = isBureauInvoiced ? "Bureau Vlieland" : (selectedBlock.provider?.name || "Bureau Vlieland");
-      const providerEmail = isBureauInvoiced ? null : (selectedBlock.provider?.email || null);
+      const selectedPartner = partners.find(p => p.id === selectedProviderId);
+      const providerId = selectedProviderId || "bureau-vlieland";
+      const providerName = selectedProviderId === "bureau-vlieland" 
+        ? "Bureau Vlieland" 
+        : (selectedPartner?.name || selectedBlock.provider?.name || "Bureau Vlieland");
+      const providerEmail = selectedProviderId === "bureau-vlieland" 
+        ? null 
+        : (selectedPartner?.email || selectedBlock.provider?.email || null);
       const blockType = isBureauInvoiced ? "bureau" : selectedBlock.block_type;
       
       // Insert the new item
@@ -245,6 +267,24 @@ export const AdminAddActivitySheet = ({
               />
             </div>
 
+            {/* Uitvoerder (executor) selection */}
+            <div className="space-y-2">
+              <Label htmlFor="provider">Uitvoerder</Label>
+              <Select value={selectedProviderId} onValueChange={setSelectedProviderId}>
+                <SelectTrigger id="provider">
+                  <SelectValue placeholder="Kies een uitvoerder..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bureau-vlieland">Bureau Vlieland</SelectItem>
+                  {partners.map((partner) => (
+                    <SelectItem key={partner.id} value={partner.id}>
+                      {partner.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Invoiced by */}
             <div className="space-y-3">
               <Label>Gefactureerd door</Label>
@@ -261,19 +301,19 @@ export const AdminAddActivitySheet = ({
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="partner" id="invoice-partner" />
                   <Label htmlFor="invoice-partner" className="font-normal cursor-pointer">
-                    {selectedBlock.provider?.name || "Partner"}
+                    {partners.find(p => p.id === selectedProviderId)?.name || selectedBlock.provider?.name || "Partner"}
                   </Label>
                 </div>
               </RadioGroup>
               
               {/* Warning when Bureau invoicing is selected */}
-              {invoicedBy === "bureau" && selectedBlock.provider_id && selectedBlock.provider_id !== "bureau-vlieland" && (
+              {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau-vlieland" && (
                 <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-sm">
                   <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                   <div className="text-amber-800">
                     <p className="font-medium">Let op: Partner wordt niet genotificeerd</p>
                     <p className="text-amber-700 mt-1">
-                      {selectedBlock.provider?.name} ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland.
+                      {partners.find(p => p.id === selectedProviderId)?.name || selectedBlock.provider?.name} ziet dit item niet in hun portaal. Coördinatie met de uitvoerder verloopt via Bureau Vlieland.
                     </p>
                   </div>
                 </div>
