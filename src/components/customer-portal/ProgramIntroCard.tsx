@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, Loader2, Clock, AlertTriangle, Sparkles } from "lucide-react";
+import { EmptyCartTips } from "@/components/configurator/EmptyCartTips";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -171,14 +172,26 @@ export const ProgramIntroCard = ({
   // Self-service / default
   const hasItems = (itemCount ?? 0) > 0;
 
+  if (!hasItems) {
+    return (
+      <Card className="border-muted bg-muted/30">
+        <CardContent className="p-5">
+          <p className="text-sm text-foreground leading-relaxed mb-4">
+            Hieronder vindt u uw programma. U kunt activiteiten toevoegen om uw programma samen te stellen.
+          </p>
+          <EmptyCartTips />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-muted bg-muted/30">
       <CardContent className="p-5">
         <p className="text-sm text-foreground leading-relaxed">
-          {hasItems
-            ? "Hieronder vindt u uw programma. Wij hebben de aanvragen verstuurd naar de aanbieders. Zodra zij reageren ontvangt u een e-mail. U kunt in de tussentijd onderdelen wijzigen, verwijderen of toevoegen."
-            : "Hieronder vindt u uw programma. U kunt activiteiten toevoegen om uw programma samen te stellen."
-          }
+          Hieronder vindt u uw programma. Wij hebben de aanvragen verstuurd naar de aanbieders.
+          Zodra zij reageren ontvangt u een e-mail. U kunt in de tussentijd onderdelen wijzigen,
+          verwijderen of toevoegen.
         </p>
       </CardContent>
     </Card>
