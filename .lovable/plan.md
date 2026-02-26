@@ -1,60 +1,119 @@
 
-# Betere communicatie bij geannuleerde en afgewezen items voor partners
 
-## Probleem
+# Geoptimaliseerde navigatiestructuur - 3 varianten
 
-Partners worden onvoldoende geinformeerd over twee scenario's:
-1. **Programma geannuleerd**: Items worden op "Geannuleerd" gezet maar verdwijnen naar de "Afgerond" tab zonder opvallende melding
-2. **Logiesofferte afgewezen** (andere partner gekozen): Status wordt "Niet gekozen" maar de partner ziet dit alleen als ze actief in "Afgerond" kijken
+## Huidige situatie
 
-## Oplossing
+De navigatie heeft **7 top-level elementen** plus een CTA-knop:
 
-### 1. Visuele indicator voor recent geannuleerde/afgewezen items
+```text
+[Logo] | Voor bedrijven v | Voor prive v | Logies | Diensten | Catering | Over ons v | [Start uw programma]
+```
 
-In de `PartnerUnifiedList` een tijdelijke visuele indicator tonen voor items die recent (< 48 uur) zijn geannuleerd of afgewezen. Dit werkt vergelijkbaar met de bestaande "Nieuw" en "Gewijzigd door klant" indicators.
+**Problemen:**
+- Te veel keuzes op hetzelfde niveau (Hick's Law: meer opties = langzamere beslissing)
+- "Diensten" en "Catering" zijn informatief maar nemen primaire ruimte in
+- "Voorbeeldprogramma's" (social proof, hoge conversiewaarde) zit verstopt in een dropdown
+- Geen direct contactkanaal (telefoon/WhatsApp)
+- B2B en B2C krijgen gelijke visuele prioriteit terwijl B2B de primaire doelgroep is
 
-**Bestand**: `src/components/partner-portal/PartnerUnifiedList.tsx`
-- Bij het mappen van items: detecteer of een item recent is geannuleerd/afgewezen (op basis van `updated_at` < 48 uur)
-- Toon een rode/oranje dot of badge naast het item
-- Voeg een count-indicator toe aan de "Afgerond" tab wanneer er recent geannuleerde/afgewezen items zijn
+---
 
-### 2. Annuleringsreden zichtbaar maken in detail-sheets
+## Variant A: "Funnel-first" (aanbevolen)
 
-**Bestand**: `src/components/partner-portal/PartnerItemSheet.tsx`
-- Bij status `cancelled`: toon een alert-blok met "Deze aanvraag is geannuleerd door de klant" en eventueel de annuleringsreden (uit `program_requests.cancellation_reason`)
+Maximale focus op conversie. Minder keuzes, sterkere hiërarchie.
 
-**Bestand**: `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx`
-- Bij status `rejected`: toon contextinformatie:
-  - Als het programma is geannuleerd: "De hele aanvraag is geannuleerd"
-  - Als een andere partner is gekozen: "De klant heeft voor een andere accommodatie gekozen"
+```text
+[Logo] | Bedrijfsuitjes v | Prive v | Inspiratie | Over ons v | 06-xxx | [Start uw programma]
+```
 
-### 3. "Afgerond" tab opsplitsen met subtitels
+**4 top-level items + telefoonnummer + CTA** (was 7)
 
-**Bestand**: `src/components/partner-portal/PartnerUnifiedList.tsx`
-- In de "Afgerond" tab: groepeer items visueel met subheadings:
-  - "Uitgevoerd / Gefactureerd" (positief afgerond)
-  - "Geannuleerd / Afgewezen" (negatief afgerond)
-- Dit maakt het direct duidelijk welke items positief en welke negatief zijn afgerond
+| Element | Inhoud |
+|---------|--------|
+| Bedrijfsuitjes | Alle zakelijke landingspagina's (bedrijfsuitje, teambuilding, heisessie, etc.) |
+| Prive | Trouwen, groepsweekend, jubileum, familieweekend |
+| Inspiratie | Link naar /voorbeeldprogrammas (was verstopt in dropdown) |
+| Over ons | Over Bureau Vlieland, Samenwerken, Contact |
+| 06-xxx | Telefoonnummer als klikbare link (vertrouwen + direct contact) |
+| CTA | "Start uw programma" (ongewijzigd) |
 
-### 4. Reden-context meegeven vanuit de database
+**Waar gaan Logies, Diensten en Catering?**
+- "Logies" en "Catering" worden sub-items onder een mega-dropdown "Bedrijfsuitjes" of verhuizen naar de footer en relevante landingspagina's
+- "Diensten" verdwijnt als top-level item; de inhoud is al beschikbaar via de homepage en landingspagina's
 
-**Data**: De `program_requests` tabel heeft al een `cancellation_reason` veld. Voor logiesoffertes checken we of de `accommodation_requests` status `cancelled` is (hele aanvraag geannuleerd) versus dat er een andere quote `selected` is (andere partner gekozen).
+**Voordelen:** Minimale cognitieve belasting, telefoon wekt vertrouwen, voorbeeldprogramma's prominent
+**Nadelen:** Logies en Catering minder vindbaar voor directe zoekers
 
-**Bestand**: `src/hooks/usePartnerDashboard.ts`
-- Bij het ophalen van items: voeg `cancellation_reason` toe vanuit de gerelateerde `program_requests`
-- Bij accommodation quotes: voeg context toe over waarom de offerte is afgewezen
+---
 
-## Technische details
+## Variant B: "Gegroepeerd aanbod"
 
-### Gewijzigde bestanden
+Consolideert het aanbod onder een enkel dropdown maar behoudt Logies als apart item (key revenue driver).
 
-| Bestand | Wijziging |
-|---------|-----------|
-| `src/components/partner-portal/PartnerUnifiedList.tsx` | Recent-geannuleerd indicator, subgroepen in Afgerond tab |
-| `src/components/partner-portal/PartnerItemSheet.tsx` | Annuleringsreden alert-blok tonen |
-| `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` | Context bij afwijzing tonen |
-| `src/hooks/usePartnerDashboard.ts` | Annuleringsreden en afwijzingscontext ophalen |
-| `src/types/partner.ts` | Optioneel veld `cancellation_reason` toevoegen aan PartnerItem type |
+```text
+[Logo] | Ons aanbod v | Logies | Inspiratie | Over ons v | [Bel ons] | [Start uw programma]
+```
 
-### Geen database-wijzigingen nodig
-Alle benodigde data (cancellation_reason, status, updated_at) is al beschikbaar in de bestaande tabellen.
+**4 top-level items + 2 knoppen** (was 7)
+
+| Element | Inhoud |
+|---------|--------|
+| Ons aanbod | Mega-dropdown met 2 kolommen: "Voor bedrijven" (alle zakelijke pagina's) en "Voor prive" (trouwen, etc.) + onderaan: Diensten, Catering |
+| Logies | Directe link (blijft prominent als key revenue driver) |
+| Inspiratie | Link naar /voorbeeldprogrammas |
+| Over ons | Over Bureau Vlieland, Samenwerken, Contact |
+| Bel ons | Ghost-button met telefoonnummer of icoon |
+| CTA | "Start uw programma" |
+
+**Voordelen:** Logies blijft prominent, "Ons aanbod" geeft een compleet overzicht, minder top-level keuzes
+**Nadelen:** Mega-dropdown kan overweldigend zijn als het niet goed is vormgegeven
+
+---
+
+## Variant C: "Doelgroep-gestuurd"
+
+Behoudt de huidige doelgroep-scheiding maar comprimeert het aanbod.
+
+```text
+[Logo] | Voor bedrijven v | Voor prive v | Over ons v | 06-xxx | [Start uw programma]
+```
+
+**3 top-level items + telefoonnummer + CTA** (was 7)
+
+| Element | Inhoud |
+|---------|--------|
+| Voor bedrijven | Alle zakelijke pagina's + Voorbeeldprogramma's bovenaan (highlighted) + Diensten + Catering als sub-items |
+| Voor prive | Trouwen, groepsweekend, jubileum, familieweekend + Logies als sub-item |
+| Over ons | Over Bureau Vlieland, Samenwerken, Contact |
+| 06-xxx | Telefoonnummer |
+| CTA | "Start uw programma" |
+
+**Voordelen:** Heel weinig keuzes, gebruiker kiest meteen "ben ik zakelijk of prive?"
+**Nadelen:** Logies en Catering zijn minder direct vindbaar; dropdown wordt langer
+
+---
+
+## Vergelijking
+
+| Criterium | Variant A | Variant B | Variant C |
+|-----------|-----------|-----------|-----------|
+| Top-level items | 4 | 4 | 3 |
+| Cognitieve belasting | Laag | Laag | Zeer laag |
+| Logies vindbaar | Minder | Direct | In dropdown |
+| Voorbeeldprogramma's | Prominent | Prominent | In dropdown |
+| Telefoon zichtbaar | Ja | Ja | Ja |
+| Complexiteit implementatie | Laag | Middel (mega-dropdown) | Laag |
+
+---
+
+## Technische aanpak (alle varianten)
+
+Alleen het bestand `src/components/Navigation.tsx` wordt aangepast:
+
+- Menu-items herstructureren volgens de gekozen variant
+- Eventueel een mega-dropdown component toevoegen (variant B)
+- Telefoonnummer toevoegen als `<a href="tel:+316...">` met Phone-icoon
+- Mobiele navigatie meeveranderen (zelfde structuur, collapsible accordions)
+- Geen database-wijzigingen, geen nieuwe routes
+
