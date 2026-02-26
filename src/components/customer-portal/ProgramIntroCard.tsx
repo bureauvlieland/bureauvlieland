@@ -169,13 +169,16 @@ export const ProgramIntroCard = ({
   }
 
   // Self-service / default
+  const hasItems = (itemCount ?? 0) > 0;
+
   return (
     <Card className="border-muted bg-muted/30">
       <CardContent className="p-5">
         <p className="text-sm text-foreground leading-relaxed">
-          Hieronder vindt u uw programma. Wij hebben de aanvragen verstuurd naar de aanbieders.
-          Zodra zij reageren ontvangt u een e-mail. U kunt in de tussentijd onderdelen wijzigen,
-          verwijderen of toevoegen.
+          {hasItems
+            ? "Hieronder vindt u uw programma. Wij hebben de aanvragen verstuurd naar de aanbieders. Zodra zij reageren ontvangt u een e-mail. U kunt in de tussentijd onderdelen wijzigen, verwijderen of toevoegen."
+            : "Hieronder vindt u uw programma. U kunt activiteiten toevoegen om uw programma samen te stellen."
+          }
         </p>
       </CardContent>
     </Card>
