@@ -64,6 +64,7 @@ interface AccommodationQuote {
 
 interface RequestWithQuote extends AccommodationRequest {
   quote: AccommodationQuote | null;
+  invoicingMode?: string | null;
 }
 
 const PartnerAccommodationContent = () => {
@@ -190,6 +191,25 @@ const PartnerAccommodationContent = () => {
         } : null,
       };
     });
+
+    // Fetch invoicing_mode for requests linked to programs
+    const linkedProgramIds = combined
+      .filter(r => r.linked_program_id && r.quote?.status === "selected")
+      .map(r => r.linked_program_id!);
+
+    if (linkedProgramIds.length > 0) {
+      const { data: programs } = await supabase
+        .from("program_requests")
+        .select("id, invoicing_mode")
+        .in("id", linkedProgramIds);
+
+      if (programs) {
+        for (const req of combined) {
+          const prog = programs.find(p => p.id === req.linked_program_id);
+          if (prog) req.invoicingMode = prog.invoicing_mode;
+        }
+      }
+    }
 
     setRequests(combined);
     setIsLoading(false);
@@ -520,6 +540,7 @@ const PartnerAccommodationContent = () => {
                     key={request.id}
                     request={request}
                     quote={request.quote}
+                    invoicingMode={request.invoicingMode}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);

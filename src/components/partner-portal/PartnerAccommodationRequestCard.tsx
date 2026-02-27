@@ -72,12 +72,14 @@ interface PartnerAccommodationRequestCardProps {
   request: AccommodationRequest;
   quote: AccommodationQuote | null;
   onSubmitQuote: () => void;
+  invoicingMode?: string | null;
 }
 
 export const PartnerAccommodationRequestCard = ({
   request,
   quote,
   onSubmitQuote,
+  invoicingMode,
 }: PartnerAccommodationRequestCardProps) => {
   const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
   const statusConfig = QUOTE_STATUS_CONFIG[quote?.status || "pending"];
@@ -194,12 +196,25 @@ export const PartnerAccommodationRequestCard = ({
               <span>Uw offerte is geaccepteerd!</span>
             </div>
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>De klant boekt rechtstreeks bij u. Na afloop van het verblijf:</p>
-              <ol className="list-decimal list-inside space-y-0.5 text-xs">
-                <li>U stuurt de factuur direct naar de klant</li>
-                <li>Registreer de factuur hier in het portaal</li>
-                <li>Bureau Vlieland factureert de commissie aan u</li>
-              </ol>
+              {invoicingMode === "bureau_central" ? (
+                <>
+                  <p>Facturatie verloopt via Bureau Vlieland. Na afloop:</p>
+                  <ol className="list-decimal list-inside space-y-0.5 text-xs">
+                    <li>U stuurt de factuur naar Bureau Vlieland</li>
+                    <li>Registreer de factuur hier in het portaal</li>
+                    <li>Bureau Vlieland factureert de klant</li>
+                  </ol>
+                </>
+              ) : (
+                <>
+                  <p>De klant boekt rechtstreeks bij u. Na afloop van het verblijf:</p>
+                  <ol className="list-decimal list-inside space-y-0.5 text-xs">
+                    <li>U stuurt de factuur direct naar de klant</li>
+                    <li>Registreer de factuur hier in het portaal</li>
+                    <li>Bureau Vlieland factureert de commissie aan u</li>
+                  </ol>
+                </>
+              )}
             </div>
           </div>
         )}
