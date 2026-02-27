@@ -54,6 +54,7 @@ const CustomerProgram = () => {
     acceptItem,
     submitCounterProposal,
     acceptQuoteProposal,
+    approveQuoteItem,
     statusSummary,
     // Accommodation
     accommodation,
@@ -326,6 +327,7 @@ const CustomerProgram = () => {
     onSelectAccommodationQuote: selectAccommodationQuote,
     // Quote proposal
     onAcceptQuoteProposal: acceptQuoteProposal,
+    onApproveQuoteItem: approveQuoteItem,
   };
 
   // Decision 2: Single-day programs skip the splash and go directly to program

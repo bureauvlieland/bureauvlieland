@@ -1328,6 +1328,7 @@ export type Database = {
           confirmed_time: string | null
           created_at: string
           customer_accepted_at: string | null
+          customer_approved_at: string | null
           customer_counter_at: string | null
           customer_counter_note: string | null
           customer_counter_time: string | null
@@ -1386,6 +1387,7 @@ export type Database = {
           confirmed_time?: string | null
           created_at?: string
           customer_accepted_at?: string | null
+          customer_approved_at?: string | null
           customer_counter_at?: string | null
           customer_counter_note?: string | null
           customer_counter_time?: string | null
@@ -1444,6 +1446,7 @@ export type Database = {
           confirmed_time?: string | null
           created_at?: string
           customer_accepted_at?: string | null
+          customer_approved_at?: string | null
           customer_counter_at?: string | null
           customer_counter_note?: string | null
           customer_counter_time?: string | null

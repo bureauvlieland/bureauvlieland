@@ -33,12 +33,14 @@ interface CustomerProgramItemProps {
   onRemove: () => void;
   onAccept?: () => Promise<boolean>;
   onCounterProposal?: (counterTime: string, counterNote: string) => Promise<boolean>;
+  onApproveQuoteItem?: () => Promise<boolean>;
   allItems?: ProgramRequestItem[];
   hasChanges?: boolean;
   isAccepting?: boolean;
   invoicingMode?: string;
   vatRate?: number;
   isPreApproval?: boolean;
+  isQuoteMode?: boolean;
 }
 
 export const CustomerProgramItem = ({
@@ -48,16 +50,19 @@ export const CustomerProgramItem = ({
   onRemove,
   onAccept,
   onCounterProposal,
+  onApproveQuoteItem,
   allItems = [],
   hasChanges = false,
   isAccepting = false,
   invoicingMode,
   vatRate,
   isPreApproval = false,
+  isQuoteMode = false,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [localAccepting, setLocalAccepting] = useState(false);
+  const [localApproving, setLocalApproving] = useState(false);
   const [showCounterDialog, setShowCounterDialog] = useState(false);
   
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
@@ -102,6 +107,11 @@ export const CustomerProgramItem = ({
                   <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
                     <ExternalLink className="h-3.5 w-3.5" />
                     Zelf te regelen
+                  </Badge>
+                ) : isQuoteMode && item.customer_approved_at ? (
+                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
+                    <Check className="h-3.5 w-3.5" />
+                    Goedgekeurd
                   </Badge>
                 ) : (
                   <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={(isPreApproval || invoicingMode === "bureau_central") && item.status === "pending" ? "In voorbereiding" : undefined} />
@@ -260,6 +270,27 @@ export const CustomerProgramItem = ({
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && (
             <div className="mt-3 flex flex-wrap gap-2 justify-end">
+              {/* Per-item akkoord for quote mode items with status bevestigd */}
+              {isQuoteMode && item.item_quote_status === "bevestigd" && !item.customer_approved_at && onApproveQuoteItem && (
+                <Button
+                  onClick={async () => {
+                    setLocalApproving(true);
+                    await onApproveQuoteItem();
+                    setLocalApproving(false);
+                  }}
+                  disabled={localApproving}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {localApproving ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-1.5" />
+                  )}
+                  Akkoord
+                </Button>
+              )}
+
               {/* Akkoord - for confirmed/alternative items not yet accepted */}
               {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
                 <Button

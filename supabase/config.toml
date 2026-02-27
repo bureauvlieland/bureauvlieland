@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.notify-new-chat]
 verify_jwt = false
+
+[functions.approve-quote-item]
+verify_jwt = false

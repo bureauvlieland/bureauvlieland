@@ -48,6 +48,7 @@ interface UseCustomerProgramReturn {
   cancelItem: (itemId: string) => Promise<boolean>;
   submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   acceptQuoteProposal: () => Promise<boolean>;
+  approveQuoteItem: (itemId: string) => Promise<boolean>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
   // Accommodation data
   accommodation: AccommodationRequest | null;
@@ -425,6 +426,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       skip_partner_notification: false,
       price_type: block.price_type || "per_person",
       external_url: block.external_url || null,
+      // Per-item approval
+      customer_approved_at: null,
     };
 
     setProgram((prev) => {
@@ -764,6 +767,29 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  // Approve a single quote item (per-item approval in quote mode)
+  const approveQuoteItem = useCallback(async (itemId: string): Promise<boolean> => {
+    if (!program) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke("approve-quote-item", {
+        body: {
+          token: token,
+          item_id: itemId,
+          origin: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error approving quote item:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, progress: 0 };
@@ -801,6 +827,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     cancelItem,
     submitCounterProposal,
     acceptQuoteProposal,
+    approveQuoteItem,
     statusSummary,
     // Accommodation
     accommodation,
