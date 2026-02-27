@@ -57,6 +57,7 @@ interface AccommodationRequest {
   status: string;
   created_at: string;
   linked_program_id?: string | null;
+  invoicingMode?: string | null;
 }
 
 interface BillingDetails {
@@ -246,6 +247,8 @@ export const PartnerAccommodationQuoteSheet = ({
   const roomTypeLabels = request.room_types
     .map(rt => ROOM_TYPES.find(r => r.value === rt)?.label)
     .filter(Boolean);
+
+  const effectiveInvoicingMode = billingDetails?.invoicing_mode ?? request.invoicingMode ?? null;
 
   const toggleInclude = (item: string) => {
     setIncludes(prev => 
@@ -456,7 +459,7 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
                 <div className="text-sm text-muted-foreground space-y-1.5">
                   <p className="font-medium text-foreground">Wat nu?</p>
-                  {billingDetails?.invoicing_mode === "bureau_central" ? (
+                  {effectiveInvoicingMode === "bureau_central" ? (
                     <ol className="list-decimal list-inside space-y-1">
                       <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
                       <li>Na afloop van het verblijf stuurt u de factuur naar <strong>Bureau Vlieland</strong></li>
@@ -475,7 +478,7 @@ export const PartnerAccommodationQuoteSheet = ({
               </div>
 
               {/* Customer billing details - only relevant for partner_direct */}
-              {billingDetails?.invoicing_mode === "bureau_central" ? (
+              {effectiveInvoicingMode === "bureau_central" ? (
                 <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
                   <p className="font-medium text-foreground mb-1">Facturatie via Bureau Vlieland</p>
                   <p>U stuurt uw factuur naar Bureau Vlieland. De exacte facturatiegegevens van Bureau Vlieland ontvangt u bij de factuurregistratie.</p>
