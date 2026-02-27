@@ -334,14 +334,18 @@ export const PartnerItemSheet = ({
                 {request.customer_company || request.customer_name}
               </div>
               <div className="grid gap-2 text-sm text-muted-foreground">
-                <a href={`mailto:${request.customer_email}`} className="flex items-center gap-2 hover:text-foreground">
-                  <Mail className="h-3 w-3" />
-                  {request.customer_email}
-                </a>
-                <a href={`tel:${request.customer_phone}`} className="flex items-center gap-2 hover:text-foreground">
-                  <Phone className="h-3 w-3" />
-                  {request.customer_phone}
-                </a>
+                {request.invoicing_mode !== "bureau_central" && (
+                  <>
+                    <a href={`mailto:${request.customer_email}`} className="flex items-center gap-2 hover:text-foreground">
+                      <Mail className="h-3 w-3" />
+                      {request.customer_email}
+                    </a>
+                    <a href={`tel:${request.customer_phone}`} className="flex items-center gap-2 hover:text-foreground">
+                      <Phone className="h-3 w-3" />
+                      {request.customer_phone}
+                    </a>
+                  </>
+                )}
                 <div className="flex items-center gap-2">
                   <Users className="h-3 w-3" />
                   {request.number_of_people} personen
@@ -580,31 +584,33 @@ export const PartnerItemSheet = ({
 
           {/* Quick Actions */}
           <div className="space-y-3">
-            {/* Email link */}
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex-1"
-                asChild
-              >
-                <a href={`mailto:${request.customer_email}?subject=Betreft: ${item.block_name} - ${request.reference_number || request.customer_company || request.customer_name}`}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email klant
-                </a>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="flex-1"
-                asChild
-              >
-                <a href={`tel:${request.customer_phone}`}>
-                  <Phone className="h-4 w-4 mr-2" />
-                  Bellen
-                </a>
-              </Button>
-            </div>
+            {/* Email/phone links - hidden for bureau_central */}
+            {request.invoicing_mode !== "bureau_central" && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1"
+                  asChild
+                >
+                  <a href={`mailto:${request.customer_email}?subject=Betreft: ${item.block_name} - ${request.reference_number || request.customer_company || request.customer_name}`}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email klant
+                  </a>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1"
+                  asChild
+                >
+                  <a href={`tel:${request.customer_phone}`}>
+                    <Phone className="h-4 w-4 mr-2" />
+                    Bellen
+                  </a>
+                </Button>
+              </div>
+            )}
 
             {/* Can respond: show response button or form */}
             {canRespond && !showResponseForm && (

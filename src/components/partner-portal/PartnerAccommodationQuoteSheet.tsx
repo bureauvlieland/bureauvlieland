@@ -482,7 +482,7 @@ export const PartnerAccommodationQuoteSheet = ({
                   <p className="font-medium text-foreground">Wat nu?</p>
                   {effectiveInvoicingMode === "bureau_central" ? (
                     <ol className="list-decimal list-inside space-y-1">
-                      <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
+                      <li>Bureau Vlieland coördineert de reservering met de klant</li>
                       <li>Na afloop van het verblijf stuurt u uw factuur (geoffreerde prijs) naar <strong>Bureau Vlieland</strong></li>
                       <li>Registreer de factuur hieronder in het portaal</li>
                       <li>Bureau Vlieland stuurt u vervolgens een commissiefactuur ({existingQuote?.commission_percentage ?? 10}%)</li>
@@ -546,11 +546,11 @@ export const PartnerAccommodationQuoteSheet = ({
                 </Card>
               ) : billingDetails && !billingDetails.billing_company_name ? (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg text-sm text-amber-700 dark:text-amber-400">
-                  De klant heeft nog geen facturatiegegevens ingevuld. U kunt contact opnemen via {request.customer_email} om deze op te vragen.
+                  De klant heeft nog geen facturatiegegevens ingevuld. Neem contact op met Bureau Vlieland voor meer informatie.
                 </div>
               ) : !request.linked_program_id ? (
                 <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-                  Neem contact op met de klant voor facturatiegegevens: {request.customer_name} ({request.customer_email})
+                  Neem contact op met Bureau Vlieland voor facturatiegegevens.
                 </div>
               ) : null}
               

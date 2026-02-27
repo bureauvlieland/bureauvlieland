@@ -124,10 +124,23 @@ Deno.serve(async (req) => {
     }
 
     // Attach sibling items to each partner item for conflict detection
-    const itemsWithSiblings = activeItems.map(item => ({
-      ...item,
-      sibling_items: allRequestItems[item.request_id] || []
-    }));
+    // Also strip customer contact details for bureau_central projects
+    const itemsWithSiblings = activeItems.map(item => {
+      const isBureauCentral = item.program_requests?.invoicing_mode === "bureau_central";
+      const programRequests = isBureauCentral
+        ? {
+            ...item.program_requests,
+            customer_email: undefined,
+            customer_phone: undefined,
+          }
+        : item.program_requests;
+
+      return {
+        ...item,
+        program_requests: programRequests,
+        sibling_items: allRequestItems[item.request_id] || [],
+      };
+    });
 
     // Group items by status for easy display (new status flow)
     const pendingConfirmation = itemsWithSiblings.filter((i) => i.status === "pending");
