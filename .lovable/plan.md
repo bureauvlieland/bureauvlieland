@@ -1,119 +1,52 @@
 
+Doel: dit definitief oplossen zodat klantcontactgegevens nooit meer zichtbaar zijn bij `bureau_central`, ook niet bij impersonatie of onvolledige data in de UI.
 
-# Geoptimaliseerde navigatiestructuur - 3 varianten
+1) Probleem exact afkaderen (op basis van huidige data en screenshot)
+- De screenshot komt uit `PartnerAccommodationQuoteSheet` (sectie “Wat nu?”).
+- In de database staat voor dit concrete dossier (`Richard Melvin Dijkstra`) `invoicing_mode = bureau_central`.
+- Conclusie: de bug zit niet in de brondata, maar in de aanlevering/doorvoer naar de sheet (mode ontbreekt of is `null` op render-moment), waardoor de UI nu terugvalt naar “direct klantcontact”.
 
-## Huidige situatie
+2) Privacy-first fail-safe invoeren in de UI (belangrijkste structurele fix)
+- In `PartnerAccommodationQuoteSheet` de logica omdraaien van “toon klant tenzij bureau_central” naar:
+  - toon klantcontact alléén als mode expliciet `partner_direct` is;
+  - bij `bureau_central` én bij `unknown/null` nooit klantcontact tonen.
+- Voor de “Wat nu?”-tekst drie paden maken:
+  - `bureau_central`: alleen Bureau Vlieland-instructies;
+  - `partner_direct`: directe klantinstructies;
+  - `unknown`: neutrale veilige melding (“facturatiemodus wordt geladen / neem contact op met Bureau Vlieland”), zonder e-mail/telefoon van klant.
+- Hiermee voorkomen we dat PII ooit uitlekt door timing, ontbrekende velden of regressies.
 
-De navigatie heeft **7 top-level elementen** plus een CTA-knop:
+3) Dataketting robuust maken in dashboard-flow
+- In `src/pages/PartnerDashboard.tsx` bij `handleSelectQuote` en selectie-state expliciet controleren dat `linked_program_id` en `invoicing_mode` worden meegenomen (bestaat al deels, maar ik maak dit defensief en consistent).
+- In `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` de mode-resolutie uitbreiden met fallback-volgorde:
+  1. `request.invoicingMode` uit parent state;
+  2. `billingDetails.invoicing_mode` uit gekoppeld programma;
+  3. fallback lookup via `accommodation_request_id` → `linked_program_id` → `program_requests.invoicing_mode` (ook bruikbaar als `linked_program_id` initieel niet in state zat).
+- Resultaat: ook als één bron ontbreekt, wordt mode alsnog bepaald; en tot die tijd blijft UI veilig afgeschermd.
 
-```text
-[Logo] | Voor bedrijven v | Voor prive v | Logies | Diensten | Catering | Over ons v | [Start uw programma]
-```
+4) Backend-aanlevering hard maken voor partnerdashboard
+- In `supabase/functions/get-partner-dashboard/index.ts` de mapping voor accommodatiequotes uitbreiden zodat `invoicing_mode` altijd betrouwbaar gezet wordt als dat afleidbaar is.
+- Als `linked_program_id` ontbreekt of mapping faalt: expliciet `invoicing_mode: null` zetten (geen impliciete fallback naar direct), zodat frontend veilige “unknown”-route pakt.
+- Redactie van `customer_email` en `customer_phone` voor `bureau_central` blijft server-side gehandhaafd (defense in depth).
 
-**Problemen:**
-- Te veel keuzes op hetzelfde niveau (Hick's Law: meer opties = langzamere beslissing)
-- "Diensten" en "Catering" zijn informatief maar nemen primaire ruimte in
-- "Voorbeeldprogramma's" (social proof, hoge conversiewaarde) zit verstopt in een dropdown
-- Geen direct contactkanaal (telefoon/WhatsApp)
-- B2B en B2C krijgen gelijke visuele prioriteit terwijl B2B de primaire doelgroep is
+5) Oude/parallelle partner-logiesflow gelijk trekken
+- `src/pages/PartnerAccommodation.tsx` gebruikt dezelfde sheet en eigen datastroom; daar dezelfde defensieve mode-resolutie toepassen zodat gedrag identiek is op beide routes.
+- `src/components/partner-portal/PartnerAccommodationTable.tsx` klant-email alleen tonen bij expliciet `partner_direct`; anders bedrijfsnaam/naam zonder contactdetail.
+- Hiermee voorkom je dat het op dashboard wel goed is maar op logies-tab nog lekt.
 
----
+6) Validatieplan (gericht op jouw concrete case)
+- Testcase A (impersonatie): `/partner/dashboard?impersonate=het-vlielandhotel` openen, geselecteerde RMD-offerte openen:
+  - verwacht: geen klant-email/telefoon;
+  - verwacht: “Factureer aan Bureau Vlieland”-instructie zichtbaar.
+- Testcase B (echte partner login): hetzelfde dossier openen:
+  - verwacht exact hetzelfde resultaat als A.
+- Testcase C (partner_direct dossier):
+  - verwacht: klantcontact en directe factuurinstructie wel zichtbaar.
+- Testcase D (tijdelijke missing mode simuleren):
+  - verwacht: géén klantcontact; neutrale veilige melding.
+- Extra: hard refresh op productie-URL na release om cache-effect uit te sluiten.
 
-## Variant A: "Funnel-first" (aanbevolen)
-
-Maximale focus op conversie. Minder keuzes, sterkere hiërarchie.
-
-```text
-[Logo] | Bedrijfsuitjes v | Prive v | Inspiratie | Over ons v | 06-xxx | [Start uw programma]
-```
-
-**4 top-level items + telefoonnummer + CTA** (was 7)
-
-| Element | Inhoud |
-|---------|--------|
-| Bedrijfsuitjes | Alle zakelijke landingspagina's (bedrijfsuitje, teambuilding, heisessie, etc.) |
-| Prive | Trouwen, groepsweekend, jubileum, familieweekend |
-| Inspiratie | Link naar /voorbeeldprogrammas (was verstopt in dropdown) |
-| Over ons | Over Bureau Vlieland, Samenwerken, Contact |
-| 06-xxx | Telefoonnummer als klikbare link (vertrouwen + direct contact) |
-| CTA | "Start uw programma" (ongewijzigd) |
-
-**Waar gaan Logies, Diensten en Catering?**
-- "Logies" en "Catering" worden sub-items onder een mega-dropdown "Bedrijfsuitjes" of verhuizen naar de footer en relevante landingspagina's
-- "Diensten" verdwijnt als top-level item; de inhoud is al beschikbaar via de homepage en landingspagina's
-
-**Voordelen:** Minimale cognitieve belasting, telefoon wekt vertrouwen, voorbeeldprogramma's prominent
-**Nadelen:** Logies en Catering minder vindbaar voor directe zoekers
-
----
-
-## Variant B: "Gegroepeerd aanbod"
-
-Consolideert het aanbod onder een enkel dropdown maar behoudt Logies als apart item (key revenue driver).
-
-```text
-[Logo] | Ons aanbod v | Logies | Inspiratie | Over ons v | [Bel ons] | [Start uw programma]
-```
-
-**4 top-level items + 2 knoppen** (was 7)
-
-| Element | Inhoud |
-|---------|--------|
-| Ons aanbod | Mega-dropdown met 2 kolommen: "Voor bedrijven" (alle zakelijke pagina's) en "Voor prive" (trouwen, etc.) + onderaan: Diensten, Catering |
-| Logies | Directe link (blijft prominent als key revenue driver) |
-| Inspiratie | Link naar /voorbeeldprogrammas |
-| Over ons | Over Bureau Vlieland, Samenwerken, Contact |
-| Bel ons | Ghost-button met telefoonnummer of icoon |
-| CTA | "Start uw programma" |
-
-**Voordelen:** Logies blijft prominent, "Ons aanbod" geeft een compleet overzicht, minder top-level keuzes
-**Nadelen:** Mega-dropdown kan overweldigend zijn als het niet goed is vormgegeven
-
----
-
-## Variant C: "Doelgroep-gestuurd"
-
-Behoudt de huidige doelgroep-scheiding maar comprimeert het aanbod.
-
-```text
-[Logo] | Voor bedrijven v | Voor prive v | Over ons v | 06-xxx | [Start uw programma]
-```
-
-**3 top-level items + telefoonnummer + CTA** (was 7)
-
-| Element | Inhoud |
-|---------|--------|
-| Voor bedrijven | Alle zakelijke pagina's + Voorbeeldprogramma's bovenaan (highlighted) + Diensten + Catering als sub-items |
-| Voor prive | Trouwen, groepsweekend, jubileum, familieweekend + Logies als sub-item |
-| Over ons | Over Bureau Vlieland, Samenwerken, Contact |
-| 06-xxx | Telefoonnummer |
-| CTA | "Start uw programma" |
-
-**Voordelen:** Heel weinig keuzes, gebruiker kiest meteen "ben ik zakelijk of prive?"
-**Nadelen:** Logies en Catering zijn minder direct vindbaar; dropdown wordt langer
-
----
-
-## Vergelijking
-
-| Criterium | Variant A | Variant B | Variant C |
-|-----------|-----------|-----------|-----------|
-| Top-level items | 4 | 4 | 3 |
-| Cognitieve belasting | Laag | Laag | Zeer laag |
-| Logies vindbaar | Minder | Direct | In dropdown |
-| Voorbeeldprogramma's | Prominent | Prominent | In dropdown |
-| Telefoon zichtbaar | Ja | Ja | Ja |
-| Complexiteit implementatie | Laag | Middel (mega-dropdown) | Laag |
-
----
-
-## Technische aanpak (alle varianten)
-
-Alleen het bestand `src/components/Navigation.tsx` wordt aangepast:
-
-- Menu-items herstructureren volgens de gekozen variant
-- Eventueel een mega-dropdown component toevoegen (variant B)
-- Telefoonnummer toevoegen als `<a href="tel:+316...">` met Phone-icoon
-- Mobiele navigatie meeveranderen (zelfde structuur, collapsible accordions)
-- Geen database-wijzigingen, geen nieuwe routes
-
+Technische notities
+- Geen schemawijziging nodig; dit is primair frontend + backend function hardening.
+- Ik houd alle wijzigingen beperkt tot bestaande patronen/onderdelen zodat regressierisico laag blijft.
+- Kernprincipe na fix: “alleen tonen bij expliciete toestemming van datamodel” i.p.v. “verbergen bij speciale uitzondering”.
