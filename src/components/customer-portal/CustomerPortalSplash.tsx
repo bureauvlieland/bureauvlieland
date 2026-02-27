@@ -39,6 +39,7 @@ interface CustomerPortalSplashProps {
     number_of_people: number;
     terms_accepted_at?: string;
     program_type?: string;
+    invoicing_mode?: string | null;
   };
   selectedDates: Date[];
   statusSummary: StatusSummary;
@@ -119,8 +120,8 @@ export const CustomerPortalSplash = ({
   const progStatus = isMaatwerkEmpty 
     ? { label: "In voorbereiding", variant: "outline" as const }
     : getProgramStatus(statusSummary, termsAccepted);
+  const effectiveInvoicingMode = program.invoicing_mode ?? null;
   const visibleSteps = steps.filter((s) => !s.multiDayOnly || isMultiDay);
-
   const dateRange =
     selectedDates.length > 0
       ? selectedDates.length === 1
@@ -319,8 +320,22 @@ export const CustomerPortalSplash = ({
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
                   <Receipt className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="text-xs text-muted-foreground">
-                    <strong>Factuur van:</strong> de accommodatieaanbieder rechtstreeks aan u.
-                    Bureau Vlieland is geen partij in de financiële afhandeling van het logies.
+                    {effectiveInvoicingMode === "partner_direct" ? (
+                      <>
+                        <strong>Factuur van:</strong> de accommodatieaanbieder rechtstreeks aan u.
+                        Bureau Vlieland is geen partij in de financiële afhandeling van het logies.
+                      </>
+                    ) : effectiveInvoicingMode === "bureau_central" ? (
+                      <>
+                        <strong>Factuur van:</strong> Bureau Vlieland.
+                        De accommodatieaanbieder factureert Bureau Vlieland (inkoop).
+                      </>
+                    ) : (
+                      <>
+                        <strong>Factuur van:</strong> Bureau Vlieland.
+                        Facturatiemodel wordt geladen.
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -363,8 +378,22 @@ export const CustomerPortalSplash = ({
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
                 <Receipt className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="text-xs text-muted-foreground">
-                  <strong>Factuur van:</strong> Bureau Vlieland (coördinatie) én individuele aanbieders
-                  voor hun eigen activiteiten — afhankelijk van het facturatiemodel.
+                  {effectiveInvoicingMode === "partner_direct" ? (
+                    <>
+                      <strong>Factuur van:</strong> Bureau Vlieland (coördinatie) én individuele aanbieders
+                      voor hun eigen activiteiten — afhankelijk van het facturatiemodel.
+                    </>
+                  ) : effectiveInvoicingMode === "bureau_central" ? (
+                    <>
+                      <strong>Factuur van:</strong> Bureau Vlieland.
+                      Aanbieders factureren Bureau Vlieland (inkoop).
+                    </>
+                  ) : (
+                    <>
+                      <strong>Factuur van:</strong> Bureau Vlieland.
+                      Facturatiemodel wordt geladen.
+                    </>
+                  )}
                 </div>
               </div>
 
