@@ -175,13 +175,33 @@ const PartnerAccommodationContent = () => {
       return;
     }
 
+    // Fetch linked program invoicing modes for all requests with a linked_program_id
+    const linkedProgramIds = (requestsData || [])
+      .map((r) => r.linked_program_id)
+      .filter((id): id is string => Boolean(id));
+
+    const invoicingModeMap = new Map<string, string>();
+    if (linkedProgramIds.length > 0) {
+      const { data: programs } = await supabase
+        .from("program_requests")
+        .select("id, invoicing_mode")
+        .in("id", linkedProgramIds);
+      (programs || []).forEach((p) => {
+        if (p.invoicing_mode) invoicingModeMap.set(p.id, p.invoicing_mode);
+      });
+    }
+
     // Combine requests with their quotes
     const combined: RequestWithQuote[] = (requestsData || []).map((req) => {
       const matchingQuote = quotes?.find(q => q.request_id === req.id);
+      const invoicingMode = req.linked_program_id
+        ? invoicingModeMap.get(req.linked_program_id) ?? null
+        : null;
       return {
         ...req,
         room_types: (req.room_types as string[]) || [],
         location_preference: (req.location_preference as string[]) || [],
+        invoicingMode: invoicingMode,
         quote: matchingQuote ? {
           ...matchingQuote,
           room_configuration: Array.isArray(matchingQuote.room_configuration) 
@@ -192,43 +212,7 @@ const PartnerAccommodationContent = () => {
       };
     });
 
-    // Fetch invoicing_mode for requests with selected quotes
-    const selectedRequests = combined.filter(r => r.quote?.status === "selected");
-
-    if (selectedRequests.length > 0) {
-      if (impersonatePartnerId) {
-        const linkedProgramIds = selectedRequests
-          .map((req) => req.linked_program_id)
-          .filter((id): id is string => Boolean(id));
-
-        if (linkedProgramIds.length > 0) {
-          const { data: programs } = await supabase
-            .from("program_requests")
-            .select("id, invoicing_mode")
-            .in("id", linkedProgramIds);
-
-          for (const req of selectedRequests) {
-            const program = programs?.find((p) => p.id === req.linked_program_id);
-            if (program?.invoicing_mode) req.invoicingMode = program.invoicing_mode;
-          }
-        }
-      } else {
-        const results = await Promise.all(
-          selectedRequests.map(async (req) => {
-            const { data } = await supabase.rpc("get_invoicing_mode_for_accommodation", {
-              _user_id: session.user.id,
-              _accommodation_request_id: req.id,
-            });
-            return { requestId: req.id, invoicingMode: data as string | null };
-          })
-        );
-
-        for (const result of results) {
-          const req = combined.find(r => r.id === result.requestId);
-          if (req && result.invoicingMode) req.invoicingMode = result.invoicingMode;
-        }
-      }
-    }
+    // invoicing_mode already resolved above for all requests
 
     setRequests(combined);
     setIsLoading(false);
