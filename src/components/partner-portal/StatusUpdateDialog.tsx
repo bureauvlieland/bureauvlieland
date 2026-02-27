@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CheckCircle, XCircle, MessageSquare, Loader2, Euro, Clock } from "lucide-react";
+import { minutesToTime } from "@/lib/timeUtils";
 import type { PartnerItem } from "@/types/partner";
 import { generateTimeSlots, getBlockedTimeSlotsFromPartnerItems, isTimeSlotBlocked, type PartnerConflictItem } from "@/lib/timeUtils";
 import { cn } from "@/lib/utils";
@@ -66,8 +67,8 @@ export const StatusUpdateDialog = ({
   const handleSubmit = async () => {
     let hasError = false;
 
-    // Time is required for confirmed and alternative
-    if (status === "confirmed" || status === "alternative") {
+    // Time is required only for alternative
+    if (status === "alternative") {
       if (!proposedTime) {
         setTimeError("Tijd is verplicht");
         hasError = true;
@@ -166,47 +167,17 @@ export const StatusUpdateDialog = ({
           {/* Price input for confirmed status */}
           {status === "confirmed" && (
             <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
-              {/* Blocked time slots warning */}
-              {blockedTimeSlots.length > 0 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                    <Clock className="h-4 w-4 inline mr-1" />
-                    Bezette tijden:
-                  </p>
-                  <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                    {blockedTimeSlots.map(slot => (
-                      <li key={slot.itemId}>
-                        {slot.startTime} - {slot.endTime}: {slot.itemName}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="proposedTime" className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  Tijdsvoorstel *
-                </Label>
-                <select
-                  id="proposedTime"
-                  value={proposedTime}
-                  onChange={(e) => {
-                    setProposedTime(e.target.value);
-                    setTimeError("");
-                  }}
-                  className={cn(
-                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    timeError && "border-destructive"
-                  )}
-                >
-                  <option value="">Selecteer een tijd...</option>
-                  {availableTimeSlots.map(time => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
-                {timeError && <p className="text-sm text-destructive">{timeError}</p>}
+              {/* Read-only preferred time */}
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">Gewenste tijd:</span>
+                <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                  {item?.preferred_time || "Niet opgegeven"}
+                </span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                U bevestigt de activiteit op de gewenste tijd van de klant.
+              </p>
 
               <div className="space-y-2">
                 <Label htmlFor="quotedPrice" className="flex items-center gap-1">
@@ -232,7 +203,7 @@ export const StatusUpdateDialog = ({
                   <p className="text-sm text-destructive">{priceError}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Dit is de prijs voor {item.program_requests.number_of_people} personen. 
+                  Dit is de prijs voor {item?.program_requests.number_of_people} personen. 
                   De klant ziet deze prijs direct na bevestiging.
                 </p>
               </div>
@@ -252,7 +223,7 @@ export const StatusUpdateDialog = ({
 
           {status === "alternative" && (
             <div className="space-y-4 p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-              {/* Blocked time slots warning */}
+              {/* Blocked time slots - show actual end times without buffer */}
               {blockedTimeSlots.length > 0 && (
                 <div className="p-3 bg-background rounded-lg border">
                   <p className="text-sm font-medium mb-2">
@@ -260,12 +231,19 @@ export const StatusUpdateDialog = ({
                     Bezette tijden:
                   </p>
                   <ul className="text-xs text-muted-foreground space-y-1">
-                    {blockedTimeSlots.map(slot => (
-                      <li key={slot.itemId}>
-                        {slot.startTime} - {slot.endTime}: {slot.itemName}
-                      </li>
-                    ))}
+                    {blockedTimeSlots.map(slot => {
+                      const actualEndMinutes = slot.endMinutes - 30;
+                      const actualEndTime = minutesToTime(actualEndMinutes);
+                      return (
+                        <li key={slot.itemId}>
+                          {slot.startTime} – {actualEndTime}: {slot.itemName}
+                        </li>
+                      );
+                    })}
                   </ul>
+                  <p className="text-xs text-muted-foreground mt-2 italic">
+                    Er wordt 30 min marge aangehouden tussen activiteiten.
+                  </p>
                 </div>
               )}
 
