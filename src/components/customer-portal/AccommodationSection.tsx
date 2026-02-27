@@ -189,17 +189,30 @@ export const AccommodationSection = ({
             De accommodatie neemt contact met u op om de reservering definitief te maken.
           </p>
 
-          {customerToken && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setContactDialogOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              Neem contact op met {selectedQuote.accommodation_name}
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {onEditAccommodation && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEditAccommodation}
+                className="w-full sm:w-auto"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Gegevens wijzigen
+              </Button>
+            )}
+            {customerToken && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setContactDialogOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Neem contact op met {selectedQuote.accommodation_name}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

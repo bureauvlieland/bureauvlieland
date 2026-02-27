@@ -60,12 +60,14 @@ import {
   ExternalLink,
   Paperclip,
   Link as LinkIcon,
+  Pencil,
 } from "lucide-react";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
 import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToCustomerDialog";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 import { AdminAccommodationQuoteSheet } from "@/components/admin/AdminAccommodationQuoteSheet";
+import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodationGuestsDialog";
 
 interface LinkedProgram {
   id: string;
@@ -119,6 +121,7 @@ export default function AdminAccommodationDetail() {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [forwardQuoteId, setForwardQuoteId] = useState<string | null>(null);
   const [selectedQuoteForView, setSelectedQuoteForView] = useState<any>(null);
+  const [showEditGuestsDialog, setShowEditGuestsDialog] = useState(false);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -335,6 +338,56 @@ export default function AdminAccommodationDetail() {
     },
   });
 
+  // Update guests mutation with quote reset
+  const updateGuestsMutation = useMutation({
+    mutationFn: async (newGuests: number) => {
+      await supabase
+        .from("accommodation_requests")
+        .update({ number_of_guests: newGuests, status: "processing", updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (linkedProgram) {
+        await supabase
+          .from("program_requests")
+          .update({ number_of_people: newGuests, updated_at: new Date().toISOString() })
+          .eq("id", linkedProgram.id);
+      }
+
+      if (quotes && quotes.length > 0) {
+        const activeQuoteIds = quotes
+          .filter(q => ["pending", "submitted", "selected"].includes(q.status))
+          .map(q => q.id);
+        if (activeQuoteIds.length > 0) {
+          await supabase
+            .from("accommodation_quotes")
+            .update({ status: "pending", submitted_at: null, selected_at: null, updated_at: new Date().toISOString() })
+            .in("id", activeQuoteIds);
+        }
+      }
+
+      if (linkedProgram) {
+        await supabase.from("program_request_history").insert({
+          request_id: linkedProgram.id,
+          action: "people_changed",
+          actor: "admin",
+          actor_name: "Bureau Vlieland",
+          old_value: { people: request?.number_of_guests },
+          new_value: { people: newGuests },
+          notes: `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests} (admin). Logiesoffertes gereset.`,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-linked-program", id] });
+      toast({ title: "Aantal gasten bijgewerkt", description: "Offertes zijn gereset." });
+    },
+    onError: () => {
+      toast({ title: "Fout bij bijwerken", variant: "destructive" });
+    },
+  });
+
   const togglePartner = (partnerId: string) => {
     setSelectedPartners((prev) =>
       prev.includes(partnerId)
@@ -467,10 +520,19 @@ export default function AdminAccommodationDetail() {
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                     <Users className="h-5 w-5 text-slate-500" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm text-slate-500">Gasten</p>
                       <p className="font-medium">{request.number_of_guests} personen</p>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setShowEditGuestsDialog(true)}
+                      title="Aantal gasten wijzigen"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                   {request.room_count && (
                     <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
@@ -1048,6 +1110,14 @@ export default function AdminAccommodationDetail() {
         quote={selectedQuoteForView}
         numberOfGuests={request?.number_of_guests || 0}
         numberOfNights={nights}
+      />
+
+      {/* Edit Guests Dialog */}
+      <EditAccommodationGuestsDialog
+        isOpen={showEditGuestsDialog}
+        onClose={() => setShowEditGuestsDialog(false)}
+        currentGuests={request?.number_of_guests || 0}
+        onSave={(newGuests) => updateGuestsMutation.mutateAsync(newGuests)}
       />
     </AdminLayout>
   );
