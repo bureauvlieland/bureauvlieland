@@ -70,6 +70,7 @@ interface BillingDetails {
   billing_contact_email: string | null;
   billing_reference: string | null;
   terms_accepted_at: string | null;
+  invoicing_mode: string | null;
 }
 
 interface AccommodationQuote {
@@ -184,7 +185,7 @@ export const PartnerAccommodationQuoteSheet = ({
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase
         .from("program_requests")
-        .select("billing_company_name, billing_kvk_number, billing_vat_number, billing_address_street, billing_address_postal, billing_address_city, billing_contact_name, billing_contact_email, billing_reference, terms_accepted_at")
+        .select("billing_company_name, billing_kvk_number, billing_vat_number, billing_address_street, billing_address_postal, billing_address_city, billing_contact_name, billing_contact_email, billing_reference, terms_accepted_at, invoicing_mode")
         .eq("id", request.linked_program_id!)
         .maybeSingle();
       
@@ -455,17 +456,31 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
                 <div className="text-sm text-muted-foreground space-y-1.5">
                   <p className="font-medium text-foreground">Wat nu?</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
-                    <li>Na afloop van het verblijf stuurt u de factuur direct naar de klant</li>
-                    <li>Registreer de factuur hieronder in het portaal</li>
-                    <li>Bureau Vlieland factureert vervolgens de commissie aan u</li>
-                  </ol>
+                  {billingDetails?.invoicing_mode === "bureau_central" ? (
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
+                      <li>Na afloop van het verblijf stuurt u de factuur naar <strong>Bureau Vlieland</strong></li>
+                      <li>Registreer de factuur hieronder in het portaal</li>
+                      <li>Bureau Vlieland factureert de klant en draagt zorg voor de betaling aan u</li>
+                    </ol>
+                  ) : (
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
+                      <li>Na afloop van het verblijf stuurt u de factuur direct naar de klant</li>
+                      <li>Registreer de factuur hieronder in het portaal</li>
+                      <li>Bureau Vlieland factureert vervolgens de commissie aan u</li>
+                    </ol>
+                  )}
                 </div>
               </div>
 
-              {/* Customer billing details */}
-              {billingDetails?.billing_company_name ? (
+              {/* Customer billing details - only relevant for partner_direct */}
+              {billingDetails?.invoicing_mode === "bureau_central" ? (
+                <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Facturatie via Bureau Vlieland</p>
+                  <p>U stuurt uw factuur naar Bureau Vlieland. De exacte facturatiegegevens van Bureau Vlieland ontvangt u bij de factuurregistratie.</p>
+                </div>
+              ) : billingDetails?.billing_company_name ? (
                 <Card>
                   <CardContent className="pt-4 space-y-2">
                     <p className="text-sm font-medium flex items-center gap-2">
