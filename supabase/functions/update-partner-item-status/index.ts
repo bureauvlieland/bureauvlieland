@@ -533,7 +533,7 @@ Deno.serve(async (req) => {
       if (status === "confirmed") {
         templateId = TemplateIds.STATUS_CONFIRMED;
       } else if (status === "alternative") {
-        templateId = "STATUS_ALTERNATIVE"; // May not exist yet, will use fallback
+        templateId = TemplateIds.STATUS_ALTERNATIVE;
       } else {
         templateId = TemplateIds.STATUS_UNAVAILABLE;
       }

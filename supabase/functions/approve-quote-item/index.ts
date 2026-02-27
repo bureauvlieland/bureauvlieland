@@ -240,16 +240,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     if (partnerEmail && item.provider_id !== "bureau") {
-      // Get partner token for portal link
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("partner_token")
-        .eq("id", item.provider_id)
-        .single();
-
-      const partnerPortalUrl = partner?.partner_token
-        ? `${baseUrl}/partner/${partner.partner_token}`
-        : `${baseUrl}/partner`;
+      const partnerPortalUrl = `${baseUrl}/partner/login`;
 
       const emailHtml = generatePartnerNotificationEmail(
         item.provider_name,

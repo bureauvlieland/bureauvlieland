@@ -170,7 +170,8 @@ Deno.serve(async (req) => {
       const testMode = isTestMode(origin);
       const subjectPrefix = getSubjectPrefix(origin);
 
-      const portalUrl = `${origin}/mijn-logies/${token}`;
+      const baseUrl = getPortalBaseUrl(origin);
+      const portalUrl = `${baseUrl}/mijn-logies/${token}`;
 
       // Prepare template variables for partner email
       const partnerTemplateVariables = {
