@@ -190,7 +190,21 @@ export const PartnerAccommodationQuoteSheet = ({
         .eq("id", request.linked_program_id!)
         .maybeSingle();
       
-      if (data) setBillingDetails(data);
+      if (data) {
+        setBillingDetails(data);
+      } else {
+        // Fallback: fetch invoicing_mode via security definer function
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: mode } = await supabase.rpc("get_invoicing_mode_for_accommodation", {
+            _user_id: session.user.id,
+            _accommodation_request_id: request.id,
+          });
+          if (mode) {
+            setBillingDetails({ invoicing_mode: mode as string } as BillingDetails);
+          }
+        }
+      }
     };
 
     fetchBilling();
