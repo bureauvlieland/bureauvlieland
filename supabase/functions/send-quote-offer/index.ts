@@ -275,6 +275,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (updateError) {
         console.error("Error updating program request status:", updateError);
       }
+
+      // Auto-set active items to "bevestigd" so customer can approve them
+      const { error: itemsUpdateError } = await supabase
+        .from("program_request_items")
+        .update({ item_quote_status: "bevestigd" })
+        .eq("request_id", requestId)
+        .neq("status", "cancelled")
+        .in("item_quote_status", ["concept", "in_afstemming"]);
+
+      if (itemsUpdateError) {
+        console.error("Error updating item quote statuses:", itemsUpdateError);
+      }
     } else {
       console.log("[TEST] Skipping program_requests status update for test email");
     }
