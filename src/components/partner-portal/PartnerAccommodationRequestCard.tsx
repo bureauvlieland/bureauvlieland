@@ -188,9 +188,19 @@ export const PartnerAccommodationRequestCard = ({
 
         {/* Status-specific message */}
         {isSelected && (
-          <div className="flex items-center gap-2 p-2 bg-green-50 text-green-700 rounded-lg text-sm">
-            <Check className="h-4 w-4" />
-            <span>Uw offerte is geaccepteerd door de klant!</span>
+          <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg space-y-2">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium text-sm">
+              <Check className="h-4 w-4" />
+              <span>Uw offerte is geaccepteerd!</span>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>De klant boekt rechtstreeks bij u. Na afloop van het verblijf:</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-xs">
+                <li>U stuurt de factuur direct naar de klant</li>
+                <li>Registreer de factuur hier in het portaal</li>
+                <li>Bureau Vlieland factureert de commissie aan u</li>
+              </ol>
+            </div>
           </div>
         )}
 
