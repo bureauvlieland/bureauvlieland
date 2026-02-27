@@ -209,6 +209,7 @@ export interface PartnerAccommodationQuote {
     special_requests: string | null;
     status: string;
     created_at: string;
+    linked_program_id?: string | null;
   };
 }
 

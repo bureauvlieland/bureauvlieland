@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -174,6 +175,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [billingDetails, setBillingDetails] = useState<BillingDetails | null>(null);
+  const [searchParams] = useSearchParams();
 
   // Fetch billing details when quote is selected and linked to a program
   useEffect(() => {
@@ -184,16 +186,21 @@ export const PartnerAccommodationQuoteSheet = ({
 
     const fetchBilling = async () => {
       const { supabase } = await import("@/integrations/supabase/client");
+      const isImpersonating = Boolean(searchParams.get("impersonate"));
+
       const { data } = await supabase
         .from("program_requests")
         .select("billing_company_name, billing_kvk_number, billing_vat_number, billing_address_street, billing_address_postal, billing_address_city, billing_contact_name, billing_contact_email, billing_reference, terms_accepted_at, invoicing_mode")
         .eq("id", request.linked_program_id!)
         .maybeSingle();
-      
+
       if (data) {
         setBillingDetails(data);
-      } else {
-        // Fallback: fetch invoicing_mode via security definer function
+        return;
+      }
+
+      // Fallback: for real partner sessions we still resolve invoicing_mode via helper function.
+      if (!isImpersonating) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           const { data: mode } = await supabase.rpc("get_invoicing_mode_for_accommodation", {
@@ -208,7 +215,7 @@ export const PartnerAccommodationQuoteSheet = ({
     };
 
     fetchBilling();
-  }, [isOpen, existingQuote?.status, request?.linked_program_id]);
+  }, [isOpen, existingQuote?.status, request?.linked_program_id, request?.id, searchParams]);
 
   useEffect(() => {
     if (isOpen && existingQuote) {
