@@ -633,7 +633,7 @@ const AdminRequestDetail = () => {
                     <div>
                       <p className="font-medium text-primary">Maatwerkofferte</p>
                       <p className="text-sm text-muted-foreground">
-                        Geen automatische partner-notificaties. Stem handmatig af en verstuur offerte wanneer gereed.
+                        Bureau Vlieland beheert de offerte en factureert centraal. Partners ontvangen wel automatische aanvraag- en statusmeldingen.
                       </p>
                     </div>
                   </div>

@@ -248,8 +248,8 @@ const AdminProgramNewContent = () => {
                       <Badge variant="secondary" className="text-xs">Aanbevolen</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Bureau Vlieland stelt het programma samen en stemt af met partners. 
-                      Klant ontvangt een offerte ter goedkeuring. Geen automatische partner-notificaties.
+                      Bureau Vlieland stelt het programma samen, verstuurt de offerte en factureert centraal. 
+                      Partners ontvangen automatisch aanvraag- en statusmeldingen.
                     </p>
                   </div>
                 </Label>
