@@ -134,18 +134,22 @@ export const PartnerItemCard = ({
             {request.customer_company || request.customer_name}
           </div>
           <div className="grid sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Mail className="h-3 w-3" />
-              <a href={`mailto:${request.customer_email}`} className="hover:underline">
-                {request.customer_email}
-              </a>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-3 w-3" />
-              <a href={`tel:${request.customer_phone}`} className="hover:underline">
-                {request.customer_phone}
-              </a>
-            </div>
+            {request.invoicing_mode !== "bureau_central" && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3 w-3" />
+                  <a href={`mailto:${request.customer_email}`} className="hover:underline">
+                    {request.customer_email}
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3 w-3" />
+                  <a href={`tel:${request.customer_phone}`} className="hover:underline">
+                    {request.customer_phone}
+                  </a>
+                </div>
+              </>
+            )}
             <div className="flex items-center gap-2">
               <Users className="h-3 w-3" />
               {request.number_of_people} personen

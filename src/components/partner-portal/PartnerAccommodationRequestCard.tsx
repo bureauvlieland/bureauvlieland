@@ -58,6 +58,7 @@ interface AccommodationRequest {
   wants_activities: boolean;
   status: string;
   created_at: string;
+  invoicingMode?: string | null;
 }
 
 interface AccommodationQuote {
@@ -112,7 +113,7 @@ export const PartnerAccommodationRequestCard = ({
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {request.customer_name}
-              {request.customer_company && ` • ${request.customer_email}`}
+              {request.customer_company && request.invoicingMode !== "bureau_central" && ` • ${request.customer_email}`}
             </p>
           </div>
           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
