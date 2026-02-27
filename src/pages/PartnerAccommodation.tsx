@@ -192,23 +192,41 @@ const PartnerAccommodationContent = () => {
       };
     });
 
-    // Fetch invoicing_mode for requests with selected quotes via security definer function
+    // Fetch invoicing_mode for requests with selected quotes
     const selectedRequests = combined.filter(r => r.quote?.status === "selected");
-    
+
     if (selectedRequests.length > 0) {
-      const results = await Promise.all(
-        selectedRequests.map(async (req) => {
-          const { data } = await supabase.rpc("get_invoicing_mode_for_accommodation", {
-            _user_id: session.user.id,
-            _accommodation_request_id: req.id,
-          });
-          return { requestId: req.id, invoicingMode: data as string | null };
-        })
-      );
-      
-      for (const result of results) {
-        const req = combined.find(r => r.id === result.requestId);
-        if (req && result.invoicingMode) req.invoicingMode = result.invoicingMode;
+      if (impersonatePartnerId) {
+        const linkedProgramIds = selectedRequests
+          .map((req) => req.linked_program_id)
+          .filter((id): id is string => Boolean(id));
+
+        if (linkedProgramIds.length > 0) {
+          const { data: programs } = await supabase
+            .from("program_requests")
+            .select("id, invoicing_mode")
+            .in("id", linkedProgramIds);
+
+          for (const req of selectedRequests) {
+            const program = programs?.find((p) => p.id === req.linked_program_id);
+            if (program?.invoicing_mode) req.invoicingMode = program.invoicing_mode;
+          }
+        }
+      } else {
+        const results = await Promise.all(
+          selectedRequests.map(async (req) => {
+            const { data } = await supabase.rpc("get_invoicing_mode_for_accommodation", {
+              _user_id: session.user.id,
+              _accommodation_request_id: req.id,
+            });
+            return { requestId: req.id, invoicingMode: data as string | null };
+          })
+        );
+
+        for (const result of results) {
+          const req = combined.find(r => r.id === result.requestId);
+          if (req && result.invoicingMode) req.invoicingMode = result.invoicingMode;
+        }
       }
     }
 

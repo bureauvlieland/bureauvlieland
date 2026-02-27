@@ -178,7 +178,8 @@ Deno.serve(async (req) => {
             budget_range,
             special_requests,
             status,
-            created_at
+            created_at,
+            linked_program_id
           )
         `)
         .eq("partner_id", partner.id)

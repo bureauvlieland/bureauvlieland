@@ -54,6 +54,8 @@ const PartnerDashboardContent = () => {
     wants_activities: boolean;
     status: string;
     created_at: string;
+    linked_program_id?: string | null;
+    invoicingMode?: string | null;
     quote: {
       id: string;
       status: string;
@@ -417,6 +419,7 @@ const PartnerDashboardContent = () => {
       wants_activities: false,
       status: req.status,
       created_at: req.created_at,
+      linked_program_id: req.linked_program_id ?? null,
       quote: {
         id: quote.id,
         status: quote.status,
