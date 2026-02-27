@@ -80,7 +80,7 @@ export function InvoicingModeSelector({
                 <span className="font-medium">Bureau Vlieland factureert klant</span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Partners factureren Bureau Vlieland (inkoop). Bureau Vlieland factureert klant met opslag.
+                Partners factureren Bureau Vlieland (inkoop). Bureau Vlieland factureert klant.
               </p>
             </Label>
           </div>
