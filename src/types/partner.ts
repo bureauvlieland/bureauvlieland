@@ -210,6 +210,7 @@ export interface PartnerAccommodationQuote {
     status: string;
     created_at: string;
     linked_program_id?: string | null;
+    invoicing_mode?: string | null;
   };
 }
 

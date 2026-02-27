@@ -420,6 +420,7 @@ const PartnerDashboardContent = () => {
       status: req.status,
       created_at: req.created_at,
       linked_program_id: req.linked_program_id ?? null,
+      invoicingMode: req.invoicing_mode ?? null,
       quote: {
         id: quote.id,
         status: quote.status,
