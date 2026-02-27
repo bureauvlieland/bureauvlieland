@@ -90,7 +90,7 @@ export const PartnerAccommodationTable = ({
                   <div>
                     <p className="font-medium text-sm">{request.customer_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {request.customer_company || request.customer_email}
+                      {request.customer_company || (request.invoicing_mode === "partner_direct" ? request.customer_email : "")}
                     </p>
                   </div>
                 </TableCell>
