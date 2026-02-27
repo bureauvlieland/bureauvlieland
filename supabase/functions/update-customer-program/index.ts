@@ -208,6 +208,96 @@ Deno.serve(async (req) => {
       if (programDetails.numberOfPeople) {
         updateData.number_of_people = programDetails.numberOfPeople;
         historyNotes.push(`Aantal personen: ${program.number_of_people} → ${programDetails.numberOfPeople}`);
+
+        // Sync number_of_guests to linked accommodation request
+        if (program.linked_accommodation_id) {
+          await supabase
+            .from("accommodation_requests")
+            .update({
+              number_of_guests: programDetails.numberOfPeople,
+              status: "processing",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", program.linked_accommodation_id);
+
+          // Reset ALL accommodation quotes (including selected) back to pending
+          const { data: resetQuotes } = await supabase
+            .from("accommodation_quotes")
+            .select("id, partner_id, accommodation_name, status, partner:partners(id, name, email)")
+            .eq("request_id", program.linked_accommodation_id)
+            .in("status", ["pending", "submitted", "selected"]);
+
+          if (resetQuotes && resetQuotes.length > 0) {
+            const quoteIds = resetQuotes.map(q => q.id);
+            await supabase
+              .from("accommodation_quotes")
+              .update({
+                status: "pending",
+                submitted_at: null,
+                selected_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .in("id", quoteIds);
+
+            console.log(`Reset ${quoteIds.length} accommodation quotes to pending due to people change`);
+
+            // Notify each accommodation partner about the change
+            for (const quote of resetQuotes) {
+              const partnerData = quote.partner as unknown;
+              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string } | null;
+              if (partner?.email) {
+                emailMessages.push({
+                  From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                  To: [{ Email: getRecipientEmail(partner.email, origin), Name: partner.name }],
+                  Subject: `${subjectPrefix}Gewijzigd aantal gasten - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+                  HTMLPart: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                      <div style="background: #0d9488; padding: 24px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
+                      </div>
+                      <div style="padding: 32px;">
+                        <h2 style="color: #0d9488; margin-bottom: 16px;">Gewijzigd aantal gasten</h2>
+                        <p>Beste ${sanitizeHtml(partner.name)},</p>
+                        <p>Het aantal gasten voor de aanvraag van <strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> is gewijzigd.</p>
+                        <div style="background: #f0fdfa; border: 1px solid #99f6e4; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                          <p style="margin: 0 0 8px;"><strong>Wijziging:</strong></p>
+                          <p style="margin: 0; font-size: 18px; color: #0d9488;">
+                            ${program.number_of_people} → ${programDetails.numberOfPeople} gasten
+                          </p>
+                          <p style="margin: 8px 0 0;"><strong>Accommodatie:</strong> ${sanitizeHtml(quote.accommodation_name)}</p>
+                        </div>
+                        <p>Graag uw offerte herzien of opnieuw indienen via het Partner Portal:</p>
+                        <p style="text-align: center; margin: 24px 0;">
+                          <a href="https://bureauvlieland.nl/partner/login" style="display: inline-block; background: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                            Open Partner Portal
+                          </a>
+                        </p>
+                        <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+                      </div>
+                    </div>
+                  `,
+                });
+
+                await supabase.from("email_log").insert({
+                  email_type: "accommodation_people_change",
+                  subject: `${subjectPrefix}Gewijzigd aantal gasten - ${program.customer_company || program.customer_name}`,
+                  recipient_email: getRecipientEmail(partner.email, origin),
+                  recipient_name: partner.name,
+                  related_request_id: program.id,
+                  related_accommodation_id: program.linked_accommodation_id,
+                  related_partner_id: partner.id,
+                  status: "pending",
+                  sent_by: "update-customer-program",
+                  metadata: {
+                    old_people: program.number_of_people,
+                    new_people: programDetails.numberOfPeople,
+                    accommodation_name: quote.accommodation_name,
+                  },
+                });
+              }
+            }
+          }
+        }
       }
 
       if (programDetails.programDescription !== undefined) {
