@@ -413,9 +413,20 @@ export const PartnerAccommodationQuoteSheet = ({
           {/* Status message for closed quotes */}
           {existingQuote?.status === "selected" && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-                <Check className="h-5 w-5" />
-                <span className="font-medium">Deze offerte is geaccepteerd door de klant!</span>
+              <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
+                  <Check className="h-5 w-5" />
+                  <span>Deze offerte is geaccepteerd door de klant!</span>
+                </div>
+                <div className="text-sm text-muted-foreground space-y-1.5">
+                  <p className="font-medium text-foreground">Wat nu?</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
+                    <li>Na afloop van het verblijf stuurt u de factuur direct naar de klant</li>
+                    <li>Registreer de factuur hieronder in het portaal</li>
+                    <li>Bureau Vlieland factureert vervolgens de commissie aan u</li>
+                  </ol>
+                </div>
               </div>
               
               {/* Invoice registration section */}
