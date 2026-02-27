@@ -399,16 +399,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         continue;
       }
 
-      // Fetch partner token for portal link
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("partner_token")
-        .eq("id", partnerId)
-        .single();
-
-      const partnerPortalUrl = partner?.partner_token
-        ? `${baseUrl}/partner/${partner.partner_token}`
-        : `${baseUrl}/partner`;
+      const partnerPortalUrl = `${baseUrl}/partner/login`;
 
       // Generate email
       const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl);

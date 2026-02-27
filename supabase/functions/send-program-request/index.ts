@@ -62,36 +62,16 @@ const ProgramRequestSchema = z.object({
   origin: z.string().optional(), // For test mode detection
 });
 
-// Test mode configuration
-const TEST_EMAIL = "erwin@bureauvlieland.nl";
-const PRODUCTION_DOMAINS = ["bureauvlieland.nl", "bureauvlieland.lovable.app"];
-
-const isTestMode = (origin: string | undefined): boolean => {
-  if (!origin) return true; // Safe default: if unknown, treat as test
-  return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
-};
-
-const getRecipientEmail = (originalEmail: string, origin: string | undefined): string => {
-  return isTestMode(origin) ? TEST_EMAIL : originalEmail;
-};
-
-const getSubjectPrefix = (origin: string | undefined): string => {
-  return isTestMode(origin) ? "[TEST] " : "";
-};
+// Import shared email utilities
+import { 
+  sanitizeHtml, 
+  isTestMode, 
+  getRecipientEmail, 
+  getSubjectPrefix 
+} from "../_shared/email-templates.ts";
 
 type ProgramRequest = z.infer<typeof ProgramRequestSchema>;
 type BlockItem = z.infer<typeof BlockItemSchema>;
-
-// Sanitize HTML to prevent XSS in emails
-function sanitizeHtml(str: string | undefined | null): string {
-  if (!str) return "";
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 const sendEmailViaMailjet = async (messages: any[]) => {
   const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
@@ -225,9 +205,9 @@ function generatePartnerEmailHtml(
       
       <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
         <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partner Portal</h3>
-        <p style="margin-bottom: 0;">
-          Binnenkort kun je al je aanvragen terugvinden in de Partner Portal. 
-          Je ontvangt hiervoor een persoonlijke toegangslink.
+        <p>Je kunt al je aanvragen terugvinden en beheren in de Partner Portal.</p>
+        <p style="margin-bottom: 0; text-align: center;">
+          <a href="https://bureauvlieland.nl/partner/login" style="display: inline-block; background: #1a365d; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Ga naar Partner Portal</a>
         </p>
       </div>
       
