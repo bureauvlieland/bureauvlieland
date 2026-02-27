@@ -56,6 +56,20 @@ interface AccommodationRequest {
   wants_activities: boolean;
   status: string;
   created_at: string;
+  linked_program_id?: string | null;
+}
+
+interface BillingDetails {
+  billing_company_name: string | null;
+  billing_kvk_number: string | null;
+  billing_vat_number: string | null;
+  billing_address_street: string | null;
+  billing_address_postal: string | null;
+  billing_address_city: string | null;
+  billing_contact_name: string | null;
+  billing_contact_email: string | null;
+  billing_reference: string | null;
+  terms_accepted_at: string | null;
 }
 
 interface AccommodationQuote {
@@ -157,8 +171,29 @@ export const PartnerAccommodationQuoteSheet = ({
   const [roomConfiguration, setRoomConfiguration] = useState<RoomConfig[]>([]);
   const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [billingDetails, setBillingDetails] = useState<BillingDetails | null>(null);
 
-  // Initialize form when opening
+  // Fetch billing details when quote is selected and linked to a program
+  useEffect(() => {
+    if (!isOpen || existingQuote?.status !== "selected" || !request?.linked_program_id) {
+      setBillingDetails(null);
+      return;
+    }
+
+    const fetchBilling = async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("program_requests")
+        .select("billing_company_name, billing_kvk_number, billing_vat_number, billing_address_street, billing_address_postal, billing_address_city, billing_contact_name, billing_contact_email, billing_reference, terms_accepted_at")
+        .eq("id", request.linked_program_id!)
+        .maybeSingle();
+      
+      if (data) setBillingDetails(data);
+    };
+
+    fetchBilling();
+  }, [isOpen, existingQuote?.status, request?.linked_program_id]);
+
   useEffect(() => {
     if (isOpen && existingQuote) {
       setAccommodationName(existingQuote.accommodation_name || "");
@@ -428,6 +463,50 @@ export const PartnerAccommodationQuoteSheet = ({
                   </ol>
                 </div>
               </div>
+
+              {/* Customer billing details */}
+              {billingDetails?.billing_company_name ? (
+                <Card>
+                  <CardContent className="pt-4 space-y-2">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      Facturatiegegevens klant
+                    </p>
+                    <div className="text-sm space-y-1">
+                      <p className="font-medium">{billingDetails.billing_company_name}</p>
+                      {billingDetails.billing_address_street && (
+                        <p className="text-muted-foreground">
+                          {billingDetails.billing_address_street}
+                          {billingDetails.billing_address_postal || billingDetails.billing_address_city
+                            ? `, ${[billingDetails.billing_address_postal, billingDetails.billing_address_city].filter(Boolean).join(" ")}`
+                            : ""}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-muted-foreground">
+                        {billingDetails.billing_kvk_number && <span>KvK: {billingDetails.billing_kvk_number}</span>}
+                        {billingDetails.billing_vat_number && <span>BTW: {billingDetails.billing_vat_number}</span>}
+                      </div>
+                      {billingDetails.billing_contact_name && (
+                        <p className="text-muted-foreground">
+                          t.a.v. {billingDetails.billing_contact_name}
+                          {billingDetails.billing_contact_email && ` (${billingDetails.billing_contact_email})`}
+                        </p>
+                      )}
+                      {billingDetails.billing_reference && (
+                        <p className="text-muted-foreground">Referentie: {billingDetails.billing_reference}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : billingDetails && !billingDetails.billing_company_name ? (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg text-sm text-amber-700 dark:text-amber-400">
+                  De klant heeft nog geen facturatiegegevens ingevuld. U kunt contact opnemen via {request.customer_email} om deze op te vragen.
+                </div>
+              ) : !request.linked_program_id ? (
+                <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                  Neem contact op met de klant voor facturatiegegevens: {request.customer_name} ({request.customer_email})
+                </div>
+              ) : null}
               
               {/* Invoice registration section */}
               {existingQuote.invoiced_number ? (
