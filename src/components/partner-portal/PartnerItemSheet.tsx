@@ -42,6 +42,7 @@ import {
   generateTimeSlots, 
   getBlockedTimeSlotsFromPartnerItems, 
   isTimeSlotBlocked,
+  minutesToTime,
   type PartnerConflictItem 
 } from "@/lib/timeUtils";
 
@@ -148,8 +149,8 @@ export const PartnerItemSheet = ({
     // Validate based on response type
     let hasError = false;
 
-    // Time is required for both confirmed and alternative
-    if (responseType === "confirmed" || responseType === "alternative") {
+    // Time is required only for alternative
+    if (responseType === "alternative") {
       if (!proposedTime) {
         setTimeError("Tijd is verplicht");
         hasError = true;
@@ -181,12 +182,17 @@ export const PartnerItemSheet = ({
     const priceValue = quotedPrice ? parseFloat(quotedPrice.replace(",", ".")) : undefined;
     const validPrice = priceValue && !isNaN(priceValue) && priceValue > 0 ? priceValue : undefined;
 
+    // For confirmed: use preferred_time automatically; for alternative: use form value
+    const effectiveProposedTime = responseType === "confirmed" 
+      ? (item.preferred_time || undefined) 
+      : (proposedTime || undefined);
+
     const success = await onStatusUpdate(
       responseType,
       responseType === "confirmed" ? undefined : statusNote || undefined,
       validPrice,
       quotedNotes || undefined,
-      proposedTime || undefined,
+      effectiveProposedTime,
       undefined // proposedDate not used in current UI
     );
     
@@ -234,8 +240,10 @@ export const PartnerItemSheet = ({
       setResponseType("confirmed");
       if (item.quoted_price) setQuotedPrice(item.quoted_price.toString().replace(".", ","));
       if (item.quoted_notes) setQuotedNotes(item.quoted_notes);
-      // Default to customer's counter-proposed time
       if (item.customer_counter_time) setProposedTime(item.customer_counter_time);
+    } else {
+      // Default: pre-fill proposedTime with preferred_time for alternative
+      if (item.preferred_time) setProposedTime(item.preferred_time);
     }
     setShowResponseForm(true);
   };
@@ -700,48 +708,17 @@ export const PartnerItemSheet = ({
                 {/* Conditional fields based on response type */}
                 {responseType === "confirmed" && (
                   <div className="space-y-4 pt-2">
-                    {/* Blocked time slots warning */}
-                    {blockedTimeSlots.length > 0 && (
-                      <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                          <Clock className="h-4 w-4 inline mr-1" />
-                          Bezette tijden op deze dag:
-                        </p>
-                        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                          {blockedTimeSlots.map(slot => (
-                            <li key={slot.itemId}>
-                              {slot.startTime} - {slot.endTime}: {slot.itemName}
-                            </li>
-                          ))}
-                        </ul>
+                    {/* Read-only preferred time */}
+                    <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">Gewenste tijd:</span>
+                        <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                          {item.preferred_time || "Niet opgegeven"}
+                        </span>
                       </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label htmlFor="proposedTime" className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        Tijdsvoorstel *
-                      </Label>
-                      <select
-                        id="proposedTime"
-                        value={proposedTime}
-                        onChange={(e) => {
-                          setProposedTime(e.target.value);
-                          setTimeError("");
-                        }}
-                        className={cn(
-                          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          timeError && "border-destructive"
-                        )}
-                      >
-                        <option value="">Selecteer een tijd...</option>
-                        {availableTimeSlots.map(time => (
-                          <option key={time} value={time}>{time}</option>
-                        ))}
-                      </select>
-                      {timeError && <p className="text-sm text-destructive">{timeError}</p>}
-                      <p className="text-xs text-muted-foreground">
-                        Kies een beschikbare tijd (30 min marge tussen activiteiten)
+                      <p className="text-xs text-muted-foreground mt-1">
+                        U bevestigt de activiteit op de gewenste tijd van de klant.
                       </p>
                     </div>
                     
@@ -786,20 +763,28 @@ export const PartnerItemSheet = ({
 
                 {responseType === "alternative" && (
                   <div className="space-y-4 pt-2">
-                    {/* Blocked time slots warning */}
+                    {/* Blocked time slots - show actual end times without buffer */}
                     {blockedTimeSlots.length > 0 && (
                       <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                         <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
                           <Clock className="h-4 w-4 inline mr-1" />
-                          Bezette tijden op deze dag:
+                          Bezette tijden op dag {item.day_index + 1}:
                         </p>
                         <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                          {blockedTimeSlots.map(slot => (
-                            <li key={slot.itemId}>
-                              {slot.startTime} - {slot.endTime}: {slot.itemName}
-                            </li>
-                          ))}
+                          {blockedTimeSlots.map(slot => {
+                            // Calculate actual end time without 30-min buffer
+                            const actualEndMinutes = slot.endMinutes - 30;
+                            const actualEndTime = minutesToTime(actualEndMinutes);
+                            return (
+                              <li key={slot.itemId}>
+                                {slot.startTime} – {actualEndTime}: {slot.itemName}
+                              </li>
+                            );
+                          })}
                         </ul>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
+                          Er wordt 30 min marge aangehouden tussen activiteiten.
+                        </p>
                       </div>
                     )}
 
