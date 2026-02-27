@@ -258,7 +258,27 @@ export const InvoiceRegistrationDialog = ({
           <Separator />
 
           {/* Billing Details Section */}
-          {billingDetails?.billing_company_name && (
+          {isBureauCentral ? (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wide flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Factureer aan Bureau Vlieland
+              </h4>
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">{bureauInfo.companyName}</p>
+                {bureauInfo.address && <p className="text-muted-foreground">{bureauInfo.address}</p>}
+                {bureauInfo.kvkNumber && <p className="text-muted-foreground">KvK: {bureauInfo.kvkNumber}</p>}
+                {bureauInfo.vatNumber && <p className="text-muted-foreground">BTW: {bureauInfo.vatNumber}</p>}
+                {bureauInfo.email && (
+                  <a href={`mailto:${bureauInfo.email}`} className="flex items-center gap-1 text-amber-700 dark:text-amber-400 hover:underline">
+                    <Mail className="h-3 w-3" />
+                    {bureauInfo.email}
+                  </a>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Factureer dezelfde geoffreerde prijs. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
+            </div>
+          ) : billingDetails?.billing_company_name ? (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
@@ -319,7 +339,7 @@ export const InvoiceRegistrationDialog = ({
                 )}
               </div>
             </div>
-          )}
+          ) : null}
 
           <Separator />
 

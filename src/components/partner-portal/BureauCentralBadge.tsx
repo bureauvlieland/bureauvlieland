@@ -58,7 +58,7 @@ export const BureauCentralBadge = ({ bureauDetails, variant = "full" }: BureauCe
       </AlertTitle>
       <AlertDescription className="text-amber-700 dark:text-amber-400">
         <p className="mb-3">
-          Dit project wordt centraal gefactureerd. Factureer na uitvoering aan Bureau Vlieland (niet aan de klant).
+          Dit project wordt centraal gefactureerd. U stuurt uw factuur voor de geoffreerde prijs naar Bureau Vlieland (niet naar de klant). Bureau Vlieland stuurt u vervolgens een commissiefactuur.
         </p>
         <div className="bg-white dark:bg-amber-950/50 rounded-md p-3 space-y-1 text-sm">
           <p className="font-semibold">{defaultDetails.companyName}</p>
