@@ -1,40 +1,52 @@
 
 
-## Plan: Fix "Bevestigen" vs "Alternatief voorstellen" in PartnerItemSheet
+## Plan: Aantal personen wijzigen met automatische heroffertering
 
-### Probleem
-Het `PartnerItemSheet.tsx` reactieformulier heeft drie problemen:
-1. **Bevestigen** en **Alternatief voorstellen** tonen vrijwel dezelfde UI (beide een tijdkiezer + bezette tijden). Bij "Bevestigen" moet de gewenste tijd gewoon zichtbaar zijn als read-only tekst, niet als dropdown.
-2. Bij **Alternatief voorstellen** moet het tijdveld vooringevuld worden met de gewenste tijd (`preferred_time`) en aanpasbaar zijn.
-3. De **bezette tijden** in het gele blok tonen items van alle dagen in plaats van alleen de huidige dag. De `sibling_items` worden in de frontend gefilterd op `day_index`, maar de weergegeven eindtijden bevatten de 30-min buffer, wat verwarrend is.
+### Wat wordt opgelost
+Na acceptatie van een logiesofferte kan het aantal personen momenteel niet meer worden gewijzigd met heroffertering. Dit plan voegt toe:
+- Admin kan aantal gasten aanpassen op de logies-detailpagina
+- Klant kan aantal personen aanpassen (bestaande dialog), waarna de logiesofferte automatisch wordt gereset
+- Partner krijgt een nieuwe aanvraag en klant kan opnieuw akkoord geven
 
-### Oplossing
+### Wijzigingen
 
-**Bestand: `src/components/partner-portal/PartnerItemSheet.tsx`**
+**1. Backend: `update-customer-program` edge function uitbreiden**
+Momenteel wordt bij `numberOfPeople`-wijziging wel het programma bijgewerkt en de accommodatie-gasten gesynchroniseerd, maar worden geaccepteerde/geselecteerde quotes NIET gereset. Fix:
+- Bij `numberOfPeople`-wijziging: ook `accommodation_requests.number_of_guests` bijwerken
+- Alle quotes met status `selected`, `submitted` of `pending` resetten naar `pending` (inclusief `selected_at: null`, `submitted_at: null`)
+- Accommodation request status terugzetten naar `processing`
+- E-mail naar betrokken logiespartners sturen met het gewijzigde aantal gasten
+- E-mail-bevestiging naar klant inclusief melding dat logiespartners opnieuw offreren
 
-**1. "Bevestigen" sectie (regels 701-784) vereenvoudigen:**
-- Verwijder de tijdkiezer (`<select>`) en het blok met bezette tijden
-- Toon in plaats daarvan de gewenste tijd als read-only tekst: "Gewenste tijd: 18:30"
-- Bij submit wordt `item.preferred_time` automatisch als `proposedTime` meegestuurd (de partner bevestigt immers de gewenste tijd)
-- Houd de prijsvelden en toelichting
+**2. Admin UI: Bewerkknop op `AdminAccommodationDetail`**
+- Voeg een "Bewerken" knop toe naast het gasten-blokje in de aanvraagdetails
+- Opent een compacte dialog (`EditAccommodationGuestsDialog`) met:
+  - Invoerveld voor nieuw aantal gasten
+  - Waarschuwing dat alle offertes worden gereset en partners opnieuw worden gecontacteerd
+- Bij opslaan:
+  - Update `accommodation_requests.number_of_guests` direct
+  - Update `program_requests.number_of_people` van het gekoppelde programma
+  - Reset alle quotes naar `pending`
+  - Zet accommodation request status op `processing`
+  - Stuur e-mails naar logiespartners via dezelfde logica als de edge function
 
-**2. "Alternatief" sectie (regels 787-868) verbeteren:**
-- Pre-fill `proposedTime` met `item.preferred_time` wanneer het formulier opent (in `handleOpenResponseForm`)
-- Houd de tijdkiezer aanpasbaar
-- Houd de bezette tijden zichtbaar, maar corrigeer de weergave
+**3. Klantportaal: bestaande flow compleet maken**
+- De `EditProgramDetailsDialog` bestaat al en stuurt `numberOfPeople` mee
+- De edge function `update-customer-program` moet bovenstaande reset-logica ook uitvoeren bij people changes (punt 1)
+- De `AccommodationSection` moet de "Gegevens wijzigen" knop ook tonen wanneer een offerte is geselecteerd (nu alleen bij status "In behandeling")
 
-**3. Bezette tijden corrigeer weergave:**
-- De eindtijd in het gele blok bevat nu de 30-min buffer (bijv. "13:30 - 15:00" terwijl de activiteit tot 14:30 duurt). Toon de werkelijke eindtijd zonder buffer, en vermeld de 30-min marge apart als tekstregel.
-- Controleer of de `day_index` filter in de frontend correct werkt (line 101-102) - als `sibling_items` items van alle dagen bevat maar de filter correct is, dan is het probleem visueel; als de filter niet werkt, fix die.
+### Technische details
 
-**4. Submit-logica aanpassen (regels 147-198):**
-- Bij "confirmed": stuur `item.preferred_time` als `proposedTime` mee (niet het formulierveld)
-- Verwijder de tijdvalidatie voor "confirmed" (geen keuze meer nodig)
-- Bij "alternative": valideer het formulierveld `proposedTime` zoals nu
-
-### Samenvatting wijzigingen
-
-| Bestand | Wat |
+| Bestand | Wijziging |
 |---|---|
-| `src/components/partner-portal/PartnerItemSheet.tsx` | Bevestigen: read-only tijd, geen picker. Alternatief: pre-fill preferred_time. Bezette tijden: toon zonder buffer. Submit-logica aanpassen. |
+| `supabase/functions/update-customer-program/index.ts` | Bij `numberOfPeople` change: sync `number_of_guests`, reset alle accommodation quotes naar pending, reset accommodation status naar processing, email partners en klant |
+| `src/pages/admin/AdminAccommodationDetail.tsx` | Bewerkknop + dialog voor aantal gasten, met directe DB-update + quote reset + email-trigger |
+| `src/components/customer-portal/AccommodationSection.tsx` | "Gegevens wijzigen" knop ook tonen bij geselecteerde offerte (state 2) |
 
+### Flow na implementatie
+1. Admin of klant wijzigt aantal personen
+2. Alle bestaande quotes (incl. geselecteerde) worden gereset naar "pending"
+3. Accommodation request status gaat terug naar "processing"
+4. Partners ontvangen e-mail met nieuw aantal en verzoek tot heroffertering
+5. Partners dienen nieuwe offerte in via Partner Portal
+6. Klant ziet opnieuw de offertes en kan opnieuw akkoord geven
