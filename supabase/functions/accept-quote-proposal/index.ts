@@ -355,12 +355,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 5. Fetch items with skip_partner_notification = true
+    // 5. Fetch items with skip_partner_notification = true AND not already approved individually
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
       .select("*")
       .eq("request_id", program.id)
       .eq("skip_partner_notification", true)
+      .is("customer_approved_at", null)
       .neq("status", "cancelled");
 
     if (itemsError) {

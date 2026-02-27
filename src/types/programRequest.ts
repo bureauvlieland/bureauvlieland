@@ -262,6 +262,8 @@ export interface ProgramRequestItem {
   // Image fields (joined from building_blocks)
   image_url: string | null;
   image_asset: string | null;
+  // Per-item customer approval (quote mode)
+  customer_approved_at: string | null;
   // Quote mode fields
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;

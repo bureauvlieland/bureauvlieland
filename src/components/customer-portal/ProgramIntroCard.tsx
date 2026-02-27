@@ -16,6 +16,7 @@ interface ProgramIntroCardProps {
   itemCount?: number;
   isMaatwerkEmpty?: boolean;
   onAcceptQuoteProposal?: () => Promise<boolean>;
+  hasUnapprovedItems?: boolean;
 }
 
 export const ProgramIntroCard = ({
@@ -26,6 +27,7 @@ export const ProgramIntroCard = ({
   itemCount,
   isMaatwerkEmpty,
   onAcceptQuoteProposal,
+  hasUnapprovedItems,
 }: ProgramIntroCardProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
@@ -103,13 +105,13 @@ export const ProgramIntroCard = ({
         <CardContent className="p-5 space-y-4">
           <div className="space-y-2">
             <p className="text-sm text-foreground leading-relaxed">
-              Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld. U kunt uiteraard nog wijzigingen aanbrengen — activiteiten verwijderen, tijden aanpassen of onderdelen toevoegen.
+              Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld. U kunt per onderdeel akkoord geven, of alle resterende onderdelen in één keer accorderen.
             </p>
             <p className="text-sm text-foreground leading-relaxed">
-              Dat kunnen we natuurlijk ook samen doen. Neem in dat geval gewoon even contact op met Bureau Vlieland.
+              Onderdelen die u goedkeurt worden direct naar de betreffende aanbieder gestuurd om de reservering te starten.
             </p>
             <p className="text-sm text-foreground leading-relaxed">
-              Zodra u tevreden bent, kunt u het programma akkoord geven. Onze partners worden vervolgens per e-mail op de hoogte gesteld en bevestigen de definitieve reserveringen.
+              Wilt u wijzigingen aanbrengen? Neem gerust contact op met Bureau Vlieland.
             </p>
             {validUntil && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -118,39 +120,43 @@ export const ProgramIntroCard = ({
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Checkbox
-              id="akkoord-checkbox"
-              checked={isChecked}
-              onCheckedChange={(v) => setIsChecked(!!v)}
-            />
-            <Label htmlFor="akkoord-checkbox" className="text-sm cursor-pointer">
-              Ik ben akkoord met het programma
-            </Label>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={handleAccept}
-              disabled={isLoading || !isChecked}
-              className="whitespace-nowrap"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Verwerken...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Akkoord, start reserveringen
-                </>
-              )}
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              De leveranciers worden hierna benaderd
-            </span>
-          </div>
+          {hasUnapprovedItems && (
+            <>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox
+                  id="akkoord-checkbox"
+                  checked={isChecked}
+                  onCheckedChange={(v) => setIsChecked(!!v)}
+                />
+                <Label htmlFor="akkoord-checkbox" className="text-sm cursor-pointer">
+                  Ik ben akkoord met alle resterende onderdelen
+                </Label>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleAccept}
+                  disabled={isLoading || !isChecked}
+                  className="whitespace-nowrap"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verwerken...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Alle resterende akkoord geven
+                    </>
+                  )}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  De leveranciers worden hierna benaderd
+                </span>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     );

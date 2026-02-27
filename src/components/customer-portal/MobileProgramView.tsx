@@ -112,6 +112,7 @@ interface MobileProgramViewProps {
   onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
+  onApproveQuoteItem: (itemId: string) => Promise<boolean>;
 }
 
 export const MobileProgramView = ({
@@ -141,8 +142,14 @@ export const MobileProgramView = ({
   accommodationQuotes,
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
+  onApproveQuoteItem,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
+
+  const isQuoteMode = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
+  const hasUnapprovedItems = isQuoteMode && program.items.some(
+    (i) => i.item_quote_status === "bevestigd" && !i.customer_approved_at && i.status !== "cancelled"
+  );
 
   const { getItemVatRate } = useItemVatRates(program.items);
   const {
@@ -247,6 +254,7 @@ export const MobileProgramView = ({
             termsAcceptedAt={program.terms_accepted_at}
             isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
             onAcceptQuoteProposal={onAcceptQuoteProposal}
+            hasUnapprovedItems={hasUnapprovedItems}
           />
         </>
       )}
@@ -387,10 +395,12 @@ export const MobileProgramView = ({
                         onRemove={() => onRemoveItem(item.id)}
                         onAccept={() => onAcceptItem(item.id)}
                         onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                        onApproveQuoteItem={() => onApproveQuoteItem(item.id)}
                         allItems={program.items}
                         hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                         invoicingMode={invoicingMode}
                         isPreApproval={isPreApproval}
+                        isQuoteMode={isQuoteMode}
                         vatRate={getItemVatRate(item)}
                       />
                     )}
@@ -426,10 +436,12 @@ export const MobileProgramView = ({
                       onRemove={() => onRemoveItem(item.id)}
                       onAccept={() => onAcceptItem(item.id)}
                       onCounterProposal={(counterTime, counterNote) => onCounterProposal(item.id, counterTime, counterNote)}
+                      onApproveQuoteItem={() => onApproveQuoteItem(item.id)}
                       allItems={program.items}
                       hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                       invoicingMode={invoicingMode}
                       isPreApproval={isPreApproval}
+                      isQuoteMode={isQuoteMode}
                       vatRate={getItemVatRate(item)}
                     />
                   )}
