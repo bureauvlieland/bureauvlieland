@@ -255,5 +255,6 @@ export const getBlockedTimeSlotsFromPartnerItems = (
         endMinutes,
       };
     })
-    .filter((slot): slot is TimeSlot => slot !== null);
+    .filter((slot): slot is TimeSlot => slot !== null)
+    .sort((a, b) => a.startMinutes - b.startMinutes);
 };
