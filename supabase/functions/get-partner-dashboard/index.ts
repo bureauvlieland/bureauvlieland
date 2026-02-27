@@ -204,6 +204,50 @@ Deno.serve(async (req) => {
           (q) => q.accommodation_requests?.status !== "cancelled"
         );
 
+        // Resolve invoicing mode from linked program and redact customer contact for bureau_central
+        const linkedProgramIds = [
+          ...new Set(
+            accommodationQuotes
+              .map((q) => q.accommodation_requests?.linked_program_id)
+              .filter((id): id is string => Boolean(id))
+          ),
+        ];
+
+        const invoicingModeByProgramId = new Map<string, string>();
+
+        if (linkedProgramIds.length > 0) {
+          const { data: programModes } = await supabase
+            .from("program_requests")
+            .select("id, invoicing_mode")
+            .in("id", linkedProgramIds);
+
+          (programModes || []).forEach((program) => {
+            if (program?.id && program?.invoicing_mode) {
+              invoicingModeByProgramId.set(program.id, program.invoicing_mode);
+            }
+          });
+        }
+
+        accommodationQuotes = accommodationQuotes.map((quote) => {
+          const linkedProgramId = quote.accommodation_requests?.linked_program_id;
+          const invoicingMode = linkedProgramId ? invoicingModeByProgramId.get(linkedProgramId) ?? null : null;
+          const isBureauCentral = invoicingMode === "bureau_central";
+
+          return {
+            ...quote,
+            accommodation_requests: {
+              ...quote.accommodation_requests,
+              invoicing_mode: invoicingMode,
+              ...(isBureauCentral
+                ? {
+                    customer_email: undefined,
+                    customer_phone: undefined,
+                  }
+                : {}),
+            },
+          };
+        });
+
         accommodationSummary = {
           pending: accommodationQuotes.filter((q) => q.status === "pending").length,
           submitted: accommodationQuotes.filter((q) => q.status === "submitted").length,
