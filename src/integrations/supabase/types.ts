@@ -1860,6 +1860,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_invoicing_mode_for_accommodation: {
+        Args: { _accommodation_request_id: string; _user_id: string }
+        Returns: string
+      }
       get_partner_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
