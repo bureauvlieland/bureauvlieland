@@ -1,75 +1,39 @@
 
 
-## Plan: Partnernotificaties altijd versturen (ook bij maatwerk)
+## Plan: Bannertekst aanpassen + orphaned items fixen met partnermail
 
-### Probleem
-Bij maatwerk-aanvragen (en soms ook bij reguliere aanvragen) kan het veld `provider_email` op een `program_request_item` leeg (NULL) zijn. De huidige code in zowel `cancel-program-request` als `update-customer-program` slaat partners zonder `provider_email` over. Hierdoor krijgen partners geen annulerings- of wijzigingsmails.
+### 1. Bannertekst corrigeren (2 bestanden)
 
-De `block_type !== "self_arranged"` filter is correct (eigen-regeling items hoeven geen partnernotificatie), maar de `provider_email`-check is te streng: als het veld niet ingevuld is, moet er een fallback-lookup naar de `partners` tabel gedaan worden.
+**`src/pages/admin/AdminRequestDetail.tsx` (regel 636)**
+Huidige tekst: "Geen automatische partner-notificaties. Stem handmatig af en verstuur offerte wanneer gereed."
+Nieuwe tekst: "Bureau Vlieland beheert de offerte en factureert centraal. Partners ontvangen wel automatische aanvraag- en statusmeldingen."
 
-### Oplossing
-Een herbruikbare helper-functie toevoegen die voor alle items zonder `provider_email` de e-mail ophaalt uit de `partners` tabel (op basis van `provider_id`). Dit wordt toegepast in beide edge functions.
+**`src/pages/admin/AdminProgramNew.tsx` (regel 250-253)**
+Huidige tekst bevat "Geen automatische partner-notificaties."
+Nieuwe tekst: "Bureau Vlieland stelt het programma samen, verstuurt de offerte en factureert centraal. Partners ontvangen automatisch aanvraag- en statusmeldingen."
 
-### Wijzigingen
+### 2. Eenmalige edge function voor retroactieve fix
 
-**1. `supabase/functions/cancel-program-request/index.ts`**
-- Na het ophalen van items: voor items zonder `provider_email` (maar met `provider_id` en `block_type !== "self_arranged"`), een batch-lookup doen in de `partners` tabel
-- De gevonden e-mails invullen voordat de provider-map wordt opgebouwd
-- Zo krijgen alle relevante partners een annuleringsmail
+Een nieuwe edge function `fix-orphaned-cancellations` die:
 
-**2. `supabase/functions/update-customer-program/index.ts`**
-- Dezelfde fallback-lookup toevoegen op alle plekken waar `provider_email` wordt gecontroleerd:
-  - Bij `numberOfPeople` wijziging (regel ~345)
-  - Bij individuele item-statusupdates (regel ~626, ~694)
-  - Bij `acceptTerms` flow (regel ~980)
-  - Bij nieuwe items toevoegen (regel ~1163)
+1. Alle `program_request_items` ophaalt waar het programma status `cancelled` heeft maar het item niet
+2. Per item de partner-email opzoekt in de `partners` tabel (dezelfde `enrichProviderEmails` logica)
+3. Partners groepeert per project zodat elke partner een overzichtelijke annuleringsmail krijgt
+4. Alle items op `cancelled` zet
+5. Resultaat teruggeeft met hoeveel items zijn bijgewerkt en hoeveel partners gemaild
 
-### Technische aanpak
+**Huidige data:** 13 orphaned items over 2 geannuleerde projecten (BV-2602-0008 en BV-2602-0001). Partners: Brouwerij Fortuna, Cafe Boven, Rederij Doeksen, Zeehondentochten Vlieland, Trattoria Oliva. Bureau Vlieland-items (`block_type: bureau`) worden wel geannuleerd maar krijgen geen mail.
 
-Beide edge functions krijgen een helper-functie bovenaan:
+**Stappen na implementatie:**
+- Edge function deployen
+- Eenmalig aanroepen via curl
+- Resultaat verifiteren
+- Optioneel: edge function weer verwijderen
 
-```typescript
-async function enrichProviderEmails(
-  supabase: any,
-  items: any[]
-): Promise<void> {
-  // Collect provider_ids that lack an email
-  const missingEmailIds = [
-    ...new Set(
-      items
-        .filter(i => !i.provider_email && i.provider_id && i.block_type !== "self_arranged")
-        .map(i => i.provider_id)
-    ),
-  ];
-  if (missingEmailIds.length === 0) return;
+### Samenvatting
 
-  const { data: partners } = await supabase
-    .from("partners")
-    .select("id, email, name")
-    .in("id", missingEmailIds);
-
-  const partnerMap = new Map((partners || []).map(p => [p.id, p]));
-
-  for (const item of items) {
-    if (!item.provider_email && item.provider_id) {
-      const partner = partnerMap.get(item.provider_id);
-      if (partner) {
-        item.provider_email = partner.email;
-        if (!item.provider_name) item.provider_name = partner.name;
-      }
-    }
-  }
-}
-```
-
-Vervolgens wordt `await enrichProviderEmails(supabase, items)` aangeroepen direct na het ophalen van de items, voordat de bestaande filter-/map-logica draait. De rest van de code hoeft niet te veranderen.
-
-| Bestand | Wijziging |
+| Wijziging | Bestand |
 |---|---|
-| `supabase/functions/cancel-program-request/index.ts` | Helper toevoegen + aanroepen na items-fetch (regel ~95) |
-| `supabase/functions/update-customer-program/index.ts` | Dezelfde helper toevoegen + aanroepen op relevante plekken waar items worden verwerkt |
+| Bannertekst aanpassen | `AdminRequestDetail.tsx`, `AdminProgramNew.tsx` |
+| Eenmalige fix edge function | `supabase/functions/fix-orphaned-cancellations/index.ts` |
 
-### Resultaat
-- Alle partners met een `block_type !== "self_arranged"` krijgen notificaties, ongeacht of `provider_email` op het item staat
-- Geen wijziging in gedrag voor items die al een `provider_email` hebben
-- `self_arranged` items blijven correct uitgesloten
