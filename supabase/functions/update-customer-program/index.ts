@@ -100,6 +100,37 @@ const sanitizeHtml = (str: string | undefined | null): string => {
     .replace(/'/g, "&#039;");
 };
 
+async function enrichProviderEmails(
+  supabase: any,
+  items: any[]
+): Promise<void> {
+  const missingEmailIds = [
+    ...new Set(
+      items
+        .filter((i: any) => !i.provider_email && i.provider_id && i.block_type !== "self_arranged")
+        .map((i: any) => i.provider_id)
+    ),
+  ];
+  if (missingEmailIds.length === 0) return;
+
+  const { data: partners } = await supabase
+    .from("partners")
+    .select("id, email, name")
+    .in("id", missingEmailIds);
+
+  const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+
+  for (const item of items) {
+    if (!item.provider_email && item.provider_id) {
+      const partner = partnerMap.get(item.provider_id);
+      if (partner) {
+        item.provider_email = partner.email;
+        if (!item.provider_name) item.provider_name = partner.name;
+      }
+    }
+  }
+}
+
 const changeTypeLabels: Record<PendingChange["type"], string> = {
   time_changed: "Tijd gewijzigd",
   day_changed: "Dag gewijzigd",
@@ -342,6 +373,7 @@ Deno.serve(async (req) => {
           .neq("status", "cancelled");
         
         // Group by provider
+        await enrichProviderEmails(supabase, activeItems || []);
         const providerItems = new Map<string, { name: string; email: string; items: string[] }>();
         (activeItems || []).forEach((item) => {
           if (item.provider_email && item.block_type !== "self_arranged") {
@@ -625,6 +657,7 @@ Deno.serve(async (req) => {
       });
 
       // Notify partner if they have an email
+      await enrichProviderEmails(supabase, [item]);
       if (item.provider_email && item.block_type !== "self_arranged") {
         emailMessages.push({
           From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
@@ -691,6 +724,7 @@ Deno.serve(async (req) => {
       });
 
       // Email partner about counter proposal using template
+      await enrichProviderEmails(supabase, [item]);
       if (item.provider_email && item.block_type !== "self_arranged") {
         const counterProposalRecipient = getRecipientEmail(item.provider_email, origin);
         
@@ -977,6 +1011,7 @@ Deno.serve(async (req) => {
         .eq("status", "confirmed");
 
       // Group by provider for billing details email
+      await enrichProviderEmails(supabase, confirmedItems || []);
       const providerItems = new Map<string, { name: string; email: string; items: any[] }>();
       (confirmedItems || []).forEach((item) => {
         if (item.provider_email && item.block_type !== "self_arranged") {

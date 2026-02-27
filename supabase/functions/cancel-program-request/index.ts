@@ -25,6 +25,37 @@ interface CancelRequest {
   origin?: string;
 }
 
+async function enrichProviderEmails(
+  supabase: any,
+  items: any[]
+): Promise<void> {
+  const missingEmailIds = [
+    ...new Set(
+      items
+        .filter(i => !i.provider_email && i.provider_id && i.block_type !== "self_arranged")
+        .map(i => i.provider_id)
+    ),
+  ];
+  if (missingEmailIds.length === 0) return;
+
+  const { data: partners } = await supabase
+    .from("partners")
+    .select("id, email, name")
+    .in("id", missingEmailIds);
+
+  const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+
+  for (const item of items) {
+    if (!item.provider_email && item.provider_id) {
+      const partner = partnerMap.get(item.provider_id);
+      if (partner) {
+        item.provider_email = partner.email;
+        if (!item.provider_name) item.provider_name = partner.name;
+      }
+    }
+  }
+}
+
 const sendEmailViaMailjet = async (messages: any[]) => {
   const response = await fetch("https://api.mailjet.com/v3.1/send", {
     method: "POST",
@@ -93,6 +124,9 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("request_id", program.id)
       .neq("status", "cancelled");
+
+    // Enrich items that lack provider_email with a fallback lookup
+    await enrichProviderEmails(supabase, items || []);
 
     // Get unique providers with emails
     const providers = new Map<string, { name: string; email: string; items: string[] }>();
