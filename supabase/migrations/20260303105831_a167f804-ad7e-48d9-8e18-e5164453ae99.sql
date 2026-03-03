@@ -1,0 +1,1 @@
+UPDATE auth.users SET email = 'info@torenzicht.nl' WHERE id = '843eb8a2-7640-472d-a301-75cbddd17202';
