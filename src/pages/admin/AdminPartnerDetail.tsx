@@ -355,11 +355,28 @@ const AdminPartnerDetail = () => {
         toast.success("Partner aangemaakt");
         navigate(`/admin/partners/${formData.id}`);
       } else {
+        // Check if email changed — sync via edge function
+        const emailChanged = partner && formData.email !== partner.email;
+
+        if (emailChanged) {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke(
+            "update-partner-email",
+            { body: { partnerId: id, newEmail: formData.email } }
+          );
+          if (emailError || emailResult?.error) {
+            throw new Error(emailResult?.error || "Fout bij synchroniseren e-mailadres");
+          }
+          if (emailResult?.authSynced) {
+            toast.info("E-mailadres ook bijgewerkt in het login-account");
+          }
+        }
+
+        // Update remaining fields (email already handled if changed)
         const { error } = await supabase
           .from("partners")
           .update({
             name: formData.name,
-            email: formData.email,
+            ...(emailChanged ? {} : { email: formData.email }),
             phone: formData.phone || null,
             kvk_number: formData.kvk_number || null,
             address_street: formData.address_street || null,

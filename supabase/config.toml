@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.approve-quote-item]
 verify_jwt = false
+
+[functions.update-partner-email]
+verify_jwt = false

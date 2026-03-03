@@ -1,29 +1,61 @@
 
 
-## Plan: Auth e-mail synchronisatie fixen
+## Plan: Items automatisch op "bevestigd" zetten bij versturen offerte
 
-### Stap 1 — Direct fix: e-mailadres Torenzicht corrigeren
+### Probleem
 
-Het auth-account van Torenzicht staat op `info@torenzichtvlieland.nl`. Dit moet worden bijgewerkt naar `info@torenzicht.nl` zodat wachtwoord-reset werkt. Dit doe ik via de Supabase Admin API in een edge function of via een directe database-update op `auth.users`.
+Wanneer een admin een offerte verstuurt, behouden items hun `item_quote_status` van `concept`. Daardoor ziet de klant "In voorbereiding" en kan niet per item of in bulk akkoord geven. De per-item "Akkoord"-knop en de bulk "Alle resterende akkoord geven"-knop zijn al gebouwd en werken correct -- ze worden alleen nooit zichtbaar omdat items nooit op `bevestigd` komen.
 
-### Stap 2 — Structurele fix: admin e-mail sync bij opslaan
+### Oplossing
 
-Wanneer een admin het e-mailadres van een partner wijzigt in het AdminPartnerDetail-scherm, wordt momenteel alleen de `partners` tabel bijgewerkt. De wijziging moet ook worden doorgevoerd naar het gekoppelde `auth.users` account.
+Een kleine wijziging in `send-quote-offer`: na het updaten van de `program_requests` status naar `offerte_verstuurd`, ook alle actieve items met `item_quote_status` `concept` of `in_afstemming` automatisch op `bevestigd` zetten.
 
-**Aanpak:** Een nieuwe edge function `update-partner-email` die:
-1. Valideert dat de aanroeper admin is
-2. Het partner-record update in de `partners` tabel
-3. Via de Supabase Admin API (`auth.admin.updateUserById`) het auth-e-mailadres synchroniseert
-4. Wordt aangeroepen vanuit het admin partner-detail scherm wanneer het e-mailadres wijzigt
+### Wat er wijzigt
 
-**Bestanden:**
+**1 bestand: `supabase/functions/send-quote-offer/index.ts`**
 
-| Bestand | Wijziging |
-|---|---|
-| `supabase/functions/update-partner-email/index.ts` | Nieuw — edge function voor e-mail sync |
-| Admin partner detail component | Aanroep naar edge function bij e-mail wijziging |
+Na de bestaande program_requests update (rond regel 270-277) wordt toegevoegd:
 
-### Waarom niet in de frontend?
+```typescript
+// Auto-set active items to "bevestigd" so customer can approve them
+const { error: itemsUpdateError } = await supabase
+  .from("program_request_items")
+  .update({ item_quote_status: "bevestigd" })
+  .eq("request_id", requestId)
+  .neq("status", "cancelled")
+  .in("item_quote_status", ["concept", "in_afstemming"]);
 
-De Supabase client-side SDK heeft geen `auth.admin.updateUserById` — dat vereist de service role key die alleen server-side beschikbaar is. Daarom is een edge function noodzakelijk.
+if (itemsUpdateError) {
+  console.error("Error updating item quote statuses:", itemsUpdateError);
+}
+```
 
+### Wat al werkt en ongewijzigd blijft
+
+- Per-item "Akkoord"-knop in `CustomerProgramItem.tsx` (verschijnt bij `item_quote_status === "bevestigd"` en geen `customer_approved_at`)
+- Bulk "Alle resterende akkoord geven" in `ProgramIntroCard.tsx`
+- `approve-quote-item` edge function (per-item akkoord, stuurt partner notificatie)
+- `accept-quote-proposal` edge function (bulk akkoord, stuurt alle partner notificaties, slaat reeds goedgekeurde items over)
+- Definitief per-item akkoord na partner-reactie (bestaande confirmed/alternative flow)
+
+### Resulterende flow
+
+```text
+Admin stelt programma samen (items op "concept")
+         |
+Admin verstuurt offerte
+ -> quote_status = "offerte_verstuurd"
+ -> items automatisch naar item_quote_status = "bevestigd"
+         |
+Klant ziet programma met "Akkoord"-knoppen per item
+ + bulk "Alle resterende akkoord geven"
+         |
+Klant geeft per item of in bulk akkoord
+ -> partners worden per item ingelicht
+ -> quote_status wordt "akkoord_ontvangen" als alles akkoord is
+         |
+Partners reageren (bevestigen / alternatief / afwijzen)
+         |
+Klant geeft definitief per-item akkoord
+ op bevestigde/alternatieve onderdelen
+```
