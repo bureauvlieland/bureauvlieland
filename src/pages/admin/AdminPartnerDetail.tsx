@@ -182,6 +182,7 @@ const AdminPartnerDetail = () => {
         id: data.id,
         name: data.name,
         email: data.email,
+        contact_email: (data as any).contact_email || "",
         phone: data.phone || "",
         kvk_number: data.kvk_number || "",
         address_street: data.address_street || "",
