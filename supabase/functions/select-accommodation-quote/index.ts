@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
             </div>
           `;
 
-          const rejectedEmail = getRecipientEmail(partner.email, origin);
+          const rejectedEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
           try {
             await fetch("https://api.mailjet.com/v3.1/send", {
               method: "POST",

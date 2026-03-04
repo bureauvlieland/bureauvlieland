@@ -183,17 +183,17 @@ Deno.serve(async (req) => {
       // Fetch quotes with partner info BEFORE cancelling them
       const { data: quotesToCancel } = await supabase
         .from("accommodation_quotes")
-        .select("id, partner_id, accommodation_name, partner:partners(id, name, email)")
+        .select("id, partner_id, accommodation_name, partner:partners(id, name, email, contact_email)")
         .eq("request_id", accommodationId)
         .in("status", ["pending", "submitted"]);
 
       if (quotesToCancel) {
         for (const q of quotesToCancel) {
-          const partner = q.partner as { id: string; name: string; email: string } | null;
+          const partner = q.partner as { id: string; name: string; email: string; contact_email: string | null } | null;
           if (partner?.email && !accommodationPartners.has(partner.id)) {
             accommodationPartners.set(partner.id, {
               name: partner.name,
-              email: partner.email,
+              email: partner.contact_email || partner.email,
               accommodationName: q.accommodation_name,
             });
           }

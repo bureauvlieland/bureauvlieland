@@ -240,11 +240,11 @@ Deno.serve(async (req) => {
     console.log("Mailjet result:", mailjetResult);
 
     // Log emails
-    for (const partner of partners) {
+    for (const partner of partners as any[]) {
       await logEmail({
         email_type: "accommodation_quote_request_partner",
         subject: email_subject,
-        recipient_email: partner.email,
+        recipient_email: partner.contact_email || partner.email,
         recipient_name: partner.name,
         related_accommodation_id: request_id,
         related_partner_id: partner.id,
