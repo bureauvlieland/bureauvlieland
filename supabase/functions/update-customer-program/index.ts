@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
           // Reset ALL accommodation quotes (including selected) back to pending
           const { data: resetQuotes } = await supabase
             .from("accommodation_quotes")
-            .select("id, partner_id, accommodation_name, status, partner:partners(id, name, email)")
+            .select("id, partner_id, accommodation_name, status, partner:partners(id, name, email, contact_email)")
             .eq("request_id", program.linked_accommodation_id)
             .in("status", ["pending", "submitted", "selected"]);
 
@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
             // Notify each accommodation partner about the change
             for (const quote of resetQuotes) {
               const partnerData = quote.partner as unknown;
-              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string } | null;
+              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string; contact_email: string | null } | null;
               if (partner?.email) {
                 emailMessages.push({
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
