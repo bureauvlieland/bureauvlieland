@@ -154,6 +154,8 @@ export type Database = {
           proforma_commission: number | null
           proforma_deadline: string | null
           proforma_sent_at: string | null
+          proposed_arrival_date: string | null
+          proposed_departure_date: string | null
           quote_attachment_filename: string | null
           quote_attachment_path: string | null
           quote_external_url: string | null
@@ -193,6 +195,8 @@ export type Database = {
           proforma_commission?: number | null
           proforma_deadline?: string | null
           proforma_sent_at?: string | null
+          proposed_arrival_date?: string | null
+          proposed_departure_date?: string | null
           quote_attachment_filename?: string | null
           quote_attachment_path?: string | null
           quote_external_url?: string | null
@@ -232,6 +236,8 @@ export type Database = {
           proforma_commission?: number | null
           proforma_deadline?: string | null
           proforma_sent_at?: string | null
+          proposed_arrival_date?: string | null
+          proposed_departure_date?: string | null
           quote_attachment_filename?: string | null
           quote_attachment_path?: string | null
           quote_external_url?: string | null
