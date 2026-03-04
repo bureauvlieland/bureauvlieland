@@ -68,6 +68,7 @@ interface Partner {
   is_active: boolean;
   auth_user_id: string | null;
   password_set_at: string | null;
+  initial_password: string | null;
   partner_token: string;
   created_at: string;
   partner_type: string | null;
