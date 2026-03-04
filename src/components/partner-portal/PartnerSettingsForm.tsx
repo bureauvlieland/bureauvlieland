@@ -284,7 +284,7 @@ export const PartnerSettingsForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">E-mailadres</Label>
+              <Label htmlFor="email">Login e-mailadres</Label>
               <Input
                 id="email"
                 value={partner.email}
@@ -292,9 +292,23 @@ export const PartnerSettingsForm = () => {
                 className="bg-muted"
               />
               <p className="text-xs text-muted-foreground">
-                E-mailadres kan niet worden gewijzigd.
+                Dit adres wordt gebruikt voor inloggen. Neem contact op met Bureau Vlieland om het te wijzigen.
               </p>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="contact_email">Contactadres voor notificaties</Label>
+            <Input
+              id="contact_email"
+              type="email"
+              value={formData.contact_email}
+              onChange={(e) => handleChange("contact_email", e.target.value)}
+              placeholder="Optioneel — standaard wordt het loginadres gebruikt"
+            />
+            <p className="text-xs text-muted-foreground">
+              Als ingevuld, worden aanvraagnotificaties naar dit adres gestuurd in plaats van het loginadres.
+            </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
