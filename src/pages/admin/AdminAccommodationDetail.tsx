@@ -802,7 +802,14 @@ export default function AdminAccommodationDetail() {
                               </span>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={quoteStatus.variant}>{quoteStatus.label}</Badge>
+                              <div className="flex flex-col gap-1">
+                                <Badge variant={quoteStatus.variant}>{quoteStatus.label}</Badge>
+                                {quote.status === "declined" && (quote as any).proposed_arrival_date && (
+                                  <span className="text-xs text-primary font-medium">
+                                    Alt: {format(new Date((quote as any).proposed_arrival_date), "d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "d MMM", { locale: nl })}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
