@@ -160,8 +160,10 @@ export const PartnerAccommodationQuoteSheet = ({
   onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [responseType, setResponseType] = useState<"submit_quote" | "decline">("submit_quote");
+  const [responseType, setResponseType] = useState<"submit_quote" | "decline" | "alternative_dates">("submit_quote");
   const [declineReason, setDeclineReason] = useState("");
+  const [proposedArrivalDate, setProposedArrivalDate] = useState("");
+  const [proposedDepartureDate, setProposedDepartureDate] = useState("");
   const [accommodationName, setAccommodationName] = useState("");
   const [description, setDescription] = useState("");
   const [priceTotal, setPriceTotal] = useState<string>("");
