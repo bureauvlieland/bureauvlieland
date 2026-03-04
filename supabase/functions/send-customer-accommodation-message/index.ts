@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     // Get partner email
     const { data: partner } = await supabase
       .from("partners")
-      .select("email, name, booking_contact_name")
+      .select("email, contact_email, name, booking_contact_name")
       .eq("id", quote.partner_id)
       .maybeSingle();
 
