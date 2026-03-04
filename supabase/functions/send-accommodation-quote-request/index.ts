@@ -228,10 +228,10 @@ Deno.serve(async (req) => {
       // For status "pending": do nothing to the record, just send the email (reminder)
     }
 
-    // Send emails to each partner
-    const emailMessages = partners.map((partner) => ({
+    // Send emails to each partner (prefer contact_email for notifications)
+    const emailMessages = partners.map((partner: any) => ({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-      To: [{ Email: partner.email, Name: partner.name }],
+      To: [{ Email: partner.contact_email || partner.email, Name: partner.name }],
       Subject: email_subject,
       HTMLPart: wrapInEmailTemplate(email_body, partner.name),
     }));
