@@ -15,6 +15,7 @@ interface PartnerDetails {
   id: string;
   name: string;
   email: string;
+  contact_email: string | null;
   phone: string | null;
   kvk_number: string | null;
   address_street: string | null;
