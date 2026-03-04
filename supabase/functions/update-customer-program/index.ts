@@ -457,14 +457,15 @@ Deno.serve(async (req) => {
             // Notify each accommodation partner
             for (const quote of activeQuotes) {
               const partnerData = quote.partner as unknown;
-              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string } | null;
+              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string; contact_email: string | null } | null;
               if (partner?.email) {
+                const notifyEmail = partner.contact_email || partner.email;
                 const formattedArrival = new Date(newArrivalDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
                 const formattedDeparture = new Date(newDepartureDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 
                 emailMessages.push({
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                  To: [{ Email: getRecipientEmail(partner.email, origin), Name: partner.name }],
+                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
                   Subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
                   HTMLPart: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
