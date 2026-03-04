@@ -306,8 +306,10 @@ const PartnerAccommodationContent = () => {
     }
   };
 
-  const handleQuoteDecline = async (declineReason: string) => {
+  const handleQuoteDecline = async (declineReason: string, proposedArrival?: string, proposedDeparture?: string) => {
     if (!selectedRequest?.quote) return false;
+
+    const hasAlternativeDates = proposedArrival && proposedDeparture;
 
     try {
       const { error } = await supabase
@@ -316,6 +318,8 @@ const PartnerAccommodationContent = () => {
           status: "declined",
           partner_notes: declineReason || null,
           submitted_at: new Date().toISOString(),
+          proposed_arrival_date: proposedArrival || null,
+          proposed_departure_date: proposedDeparture || null,
         })
         .eq("id", selectedRequest.quote.id);
 
@@ -325,20 +329,38 @@ const PartnerAccommodationContent = () => {
       if (selectedRequest.linked_program_id) {
         supabase.from("program_request_history").insert({
           request_id: selectedRequest.linked_program_id,
-          action: "accommodation_quote_declined",
+          action: hasAlternativeDates ? "accommodation_alternative_dates" : "accommodation_quote_declined",
           actor: "partner",
           actor_name: partnerName,
-          notes: declineReason || null,
+          notes: hasAlternativeDates
+            ? `Alternatieve datums voorgesteld: ${proposedArrival} t/m ${proposedDeparture}${declineReason ? `. ${declineReason}` : ""}`
+            : declineReason || null,
           new_value: {
             accommodation_name: selectedRequest.quote?.id,
             quote_id: selectedRequest.quote?.id,
+            ...(hasAlternativeDates ? { proposed_arrival_date: proposedArrival, proposed_departure_date: proposedDeparture } : {}),
           },
         }).then(() => {});
       }
 
+      // Create admin todo when alternative dates are proposed
+      if (hasAlternativeDates) {
+        const customerLabel = selectedRequest.customer_company || selectedRequest.customer_name;
+        supabase.from("admin_todos").insert({
+          title: `Alternatieve datums: ${partnerName} voor ${customerLabel}`,
+          description: `${partnerName} is niet beschikbaar van ${selectedRequest.arrival_date} t/m ${selectedRequest.departure_date}, maar stelt voor: ${proposedArrival} t/m ${proposedDeparture}.${declineReason ? ` Toelichting: ${declineReason}` : ""}`,
+          priority: "high",
+          auto_type: "accommodation_alternative_dates",
+          auto_entity_id: selectedRequest.quote.id,
+          related_partner_id: partnerId,
+        }).then(() => {});
+      }
+
       toast({
-        title: "Aanvraag afgewezen",
-        description: "De aanvraag is gemarkeerd als niet beschikbaar.",
+        title: hasAlternativeDates ? "Alternatieve datums voorgesteld" : "Aanvraag afgewezen",
+        description: hasAlternativeDates
+          ? "Bureau Vlieland ontvangt uw voorstel en neemt contact op met de klant."
+          : "De aanvraag is gemarkeerd als niet beschikbaar.",
       });
 
       await fetchData();
@@ -349,7 +371,7 @@ const PartnerAccommodationContent = () => {
       console.error("Error declining quote:", err);
       toast({
         title: "Fout",
-        description: "Kon aanvraag niet afwijzen. Probeer het opnieuw.",
+        description: "Kon aanvraag niet verwerken. Probeer het opnieuw.",
         variant: "destructive",
       });
       return false;

@@ -130,7 +130,7 @@ interface PartnerAccommodationQuoteSheetProps {
     roomConfiguration: RoomConfig[];
     quoteExternalUrl: string;
   }) => Promise<boolean>;
-  onDecline?: (reason: string) => Promise<boolean>;
+  onDecline?: (reason: string, proposedArrival?: string, proposedDeparture?: string) => Promise<boolean>;
   onRefresh?: () => void;
 }
 
@@ -160,8 +160,10 @@ export const PartnerAccommodationQuoteSheet = ({
   onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [responseType, setResponseType] = useState<"submit_quote" | "decline">("submit_quote");
+  const [responseType, setResponseType] = useState<"submit_quote" | "decline" | "alternative_dates">("submit_quote");
   const [declineReason, setDeclineReason] = useState("");
+  const [proposedArrivalDate, setProposedArrivalDate] = useState("");
+  const [proposedDepartureDate, setProposedDepartureDate] = useState("");
   const [accommodationName, setAccommodationName] = useState("");
   const [description, setDescription] = useState("");
   const [priceTotal, setPriceTotal] = useState<string>("");
@@ -234,6 +236,8 @@ export const PartnerAccommodationQuoteSheet = ({
       setQuoteExternalUrl(existingQuote.quote_external_url || "");
       setResponseType("submit_quote");
       setDeclineReason(existingQuote.status === "declined" ? existingQuote.partner_notes || "" : "");
+      setProposedArrivalDate("");
+      setProposedDepartureDate("");
     } else if (isOpen) {
       // Default values for new quote - use partner name and description as defaults
       setAccommodationName(partnerName);
@@ -249,6 +253,8 @@ export const PartnerAccommodationQuoteSheet = ({
       setQuoteExternalUrl("");
       setResponseType("submit_quote");
       setDeclineReason("");
+      setProposedArrivalDate("");
+      setProposedDepartureDate("");
     }
   }, [isOpen, existingQuote, partnerName, partnerDescription]);
 
@@ -347,7 +353,9 @@ export const PartnerAccommodationQuoteSheet = ({
     
     setIsSubmitting(true);
     try {
-      const success = await onDecline(declineReason.trim());
+      const arrival = responseType === "alternative_dates" ? proposedArrivalDate : undefined;
+      const departure = responseType === "alternative_dates" ? proposedDepartureDate : undefined;
+      const success = await onDecline(declineReason.trim(), arrival, departure);
       console.log("onDecline result:", success);
       if (success) {
         onClose();
@@ -686,6 +694,17 @@ export const PartnerAccommodationQuoteSheet = ({
                   </div>
                 </div>
                 <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="alternative_dates" id="alternative_dates" className="mt-0.5" />
+                  <div className="flex-1">
+                    <Label htmlFor="alternative_dates" className="font-medium cursor-pointer">
+                      Niet beschikbaar, maar wel op andere datum
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Stel alternatieve datums voor aan Bureau Vlieland
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="decline" id="decline" className="mt-0.5" />
                   <div className="flex-1">
                     <Label htmlFor="decline" className="font-medium cursor-pointer">
@@ -698,6 +717,48 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
               </RadioGroup>
             </div>
+          )}
+
+          {/* Alternative Dates Form */}
+          {canSubmit && responseType === "alternative_dates" && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="proposedArrival">Voorgestelde aankomst *</Label>
+                    <Input
+                      id="proposedArrival"
+                      type="date"
+                      value={proposedArrivalDate}
+                      onChange={(e) => setProposedArrivalDate(e.target.value)}
+                      min={format(new Date(), "yyyy-MM-dd")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="proposedDeparture">Voorgesteld vertrek *</Label>
+                    <Input
+                      id="proposedDeparture"
+                      type="date"
+                      value={proposedDepartureDate}
+                      onChange={(e) => setProposedDepartureDate(e.target.value)}
+                      min={proposedArrivalDate || format(new Date(), "yyyy-MM-dd")}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="altReason">Toelichting (optioneel)</Label>
+                  <Textarea
+                    id="altReason"
+                    placeholder="Bijv. In deze week hebben wij wel kamers beschikbaar..."
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    rows={3}
+                    maxLength={500}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           {/* Decline Form */}
@@ -997,6 +1058,29 @@ export const PartnerAccommodationQuoteSheet = ({
                   <>
                     <Send className="h-4 w-4 mr-2" />
                     {existingQuote?.submitted_at ? "Offerte bijwerken" : "Offerte indienen"}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {canSubmit && responseType === "alternative_dates" && (
+            <div className="flex gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Annuleren
+              </Button>
+              <Button 
+                type="button"
+                onClick={handleDecline} 
+                className="flex-1"
+                disabled={isSubmitting || !proposedArrivalDate || !proposedDepartureDate}
+              >
+                {isSubmitting ? (
+                  "Bezig..."
+                ) : (
+                  <>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Alternatieve datums voorstellen
                   </>
                 )}
               </Button>
