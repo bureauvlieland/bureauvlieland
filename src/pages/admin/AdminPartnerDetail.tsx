@@ -46,6 +46,8 @@ import {
   Users,
   ExternalLink,
   BedDouble,
+  Copy,
+  Key,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
