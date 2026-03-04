@@ -1064,6 +1064,29 @@ export const PartnerAccommodationQuoteSheet = ({
             </div>
           )}
 
+          {canSubmit && responseType === "alternative_dates" && (
+            <div className="flex gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Annuleren
+              </Button>
+              <Button 
+                type="button"
+                onClick={handleDecline} 
+                className="flex-1"
+                disabled={isSubmitting || !proposedArrivalDate || !proposedDepartureDate}
+              >
+                {isSubmitting ? (
+                  "Bezig..."
+                ) : (
+                  <>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Alternatieve datums voorstellen
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {canSubmit && responseType === "decline" && (
             <div className="flex gap-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">
