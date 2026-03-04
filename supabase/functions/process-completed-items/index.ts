@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
           // Get partner info
           const { data: partner } = await supabase
             .from("partners")
-            .select("name, email, partner_token, accommodation_commission_percentage, commission_percentage")
+            .select("name, email, contact_email, partner_token, accommodation_commission_percentage, commission_percentage")
             .eq("id", quote.partner_id)
             .single();
 
