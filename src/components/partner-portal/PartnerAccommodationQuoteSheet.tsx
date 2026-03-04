@@ -719,6 +719,48 @@ export const PartnerAccommodationQuoteSheet = ({
             </div>
           )}
 
+          {/* Alternative Dates Form */}
+          {canSubmit && responseType === "alternative_dates" && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="proposedArrival">Voorgestelde aankomst *</Label>
+                    <Input
+                      id="proposedArrival"
+                      type="date"
+                      value={proposedArrivalDate}
+                      onChange={(e) => setProposedArrivalDate(e.target.value)}
+                      min={format(new Date(), "yyyy-MM-dd")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="proposedDeparture">Voorgesteld vertrek *</Label>
+                    <Input
+                      id="proposedDeparture"
+                      type="date"
+                      value={proposedDepartureDate}
+                      onChange={(e) => setProposedDepartureDate(e.target.value)}
+                      min={proposedArrivalDate || format(new Date(), "yyyy-MM-dd")}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="altReason">Toelichting (optioneel)</Label>
+                  <Textarea
+                    id="altReason"
+                    placeholder="Bijv. In deze week hebben wij wel kamers beschikbaar..."
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    rows={3}
+                    maxLength={500}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Decline Form */}
           {canSubmit && responseType === "decline" && (
             <>
