@@ -130,7 +130,7 @@ interface PartnerAccommodationQuoteSheetProps {
     roomConfiguration: RoomConfig[];
     quoteExternalUrl: string;
   }) => Promise<boolean>;
-  onDecline?: (reason: string) => Promise<boolean>;
+  onDecline?: (reason: string, proposedArrival?: string, proposedDeparture?: string) => Promise<boolean>;
   onRefresh?: () => void;
 }
 
