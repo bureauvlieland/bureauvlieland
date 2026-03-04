@@ -437,7 +437,7 @@ Deno.serve(async (req) => {
               partner_id,
               accommodation_name,
               status,
-              partner:partners(id, name, email)
+              partner:partners(id, name, email, contact_email)
             `)
             .eq("request_id", program.linked_accommodation_id)
             .in("status", ["pending", "submitted"]);
