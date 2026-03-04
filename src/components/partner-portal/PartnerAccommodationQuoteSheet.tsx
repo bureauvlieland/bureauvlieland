@@ -236,6 +236,8 @@ export const PartnerAccommodationQuoteSheet = ({
       setQuoteExternalUrl(existingQuote.quote_external_url || "");
       setResponseType("submit_quote");
       setDeclineReason(existingQuote.status === "declined" ? existingQuote.partner_notes || "" : "");
+      setProposedArrivalDate("");
+      setProposedDepartureDate("");
     } else if (isOpen) {
       // Default values for new quote - use partner name and description as defaults
       setAccommodationName(partnerName);
