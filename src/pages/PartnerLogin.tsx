@@ -102,7 +102,7 @@ const PartnerLogin = () => {
           return;
         }
 
-        // Mark partner as activated and track login
+        // Mark partner as activated, track login, and clear initial password
         try {
           const now = new Date().toISOString();
           await supabase
@@ -110,6 +110,7 @@ const PartnerLogin = () => {
             .update({ 
               password_set_at: now,
               last_login_at: now,
+              initial_password: null,
             })
             .eq("auth_user_id", data.user.id);
         } catch (err) {

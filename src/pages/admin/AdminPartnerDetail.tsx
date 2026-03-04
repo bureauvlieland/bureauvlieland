@@ -787,6 +787,35 @@ const AdminPartnerDetail = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Show initial password if partner hasn't logged in yet */}
+                      {partner.auth_user_id && !partner.password_set_at && (partner as any).initial_password && (
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Key className="h-4 w-4" />
+                            Tijdelijk wachtwoord
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono">
+                              {(partner as any).initial_password}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                navigator.clipboard.writeText((partner as any).initial_password);
+                                toast.success("Wachtwoord gekopieerd");
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Dit wachtwoord wordt automatisch gewist zodra de partner inlogt.
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                 </CardContent>
