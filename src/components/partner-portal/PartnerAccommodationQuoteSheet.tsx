@@ -253,6 +253,8 @@ export const PartnerAccommodationQuoteSheet = ({
       setQuoteExternalUrl("");
       setResponseType("submit_quote");
       setDeclineReason("");
+      setProposedArrivalDate("");
+      setProposedDepartureDate("");
     }
   }, [isOpen, existingQuote, partnerName, partnerDescription]);
 
