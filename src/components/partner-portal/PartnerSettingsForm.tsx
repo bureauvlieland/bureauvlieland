@@ -47,6 +47,7 @@ export const PartnerSettingsForm = () => {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
+    contact_email: "",
     phone: "",
     kvk_number: "",
     address_street: "",
