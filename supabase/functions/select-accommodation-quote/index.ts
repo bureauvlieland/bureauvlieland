@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     // Fetch rejected quotes with partner info to notify them
     const { data: rejectedQuotes } = await supabase
       .from("accommodation_quotes")
-      .select("id, accommodation_name, partner:partners(id, name, email)")
+      .select("id, accommodation_name, partner:partners(id, name, email, contact_email)")
       .eq("request_id", request.id)
       .eq("status", "rejected")
       .neq("id", quoteId);
