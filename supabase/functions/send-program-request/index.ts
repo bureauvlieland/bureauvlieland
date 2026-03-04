@@ -69,6 +69,7 @@ import {
   getRecipientEmail, 
   getSubjectPrefix 
 } from "../_shared/email-templates.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 type ProgramRequest = z.infer<typeof ProgramRequestSchema>;
 type BlockItem = z.infer<typeof BlockItemSchema>;
