@@ -115,7 +115,7 @@ async function enrichProviderEmails(
 
   const { data: partners } = await supabase
     .from("partners")
-    .select("id, email, name")
+    .select("id, email, contact_email, name")
     .in("id", missingEmailIds);
 
   const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
@@ -124,7 +124,7 @@ async function enrichProviderEmails(
     if (!item.provider_email && item.provider_id) {
       const partner = partnerMap.get(item.provider_id);
       if (partner) {
-        item.provider_email = partner.email;
+        item.provider_email = partner.contact_email || partner.email;
         if (!item.provider_name) item.provider_name = partner.name;
       }
     }
