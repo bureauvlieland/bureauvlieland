@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     // Fetch selected partners
     const { data: partners, error: partnersError } = await supabase
       .from("partners")
-      .select("*")
+      .select("*, contact_email")
       .in("id", partner_ids);
 
     if (partnersError || !partners?.length) {

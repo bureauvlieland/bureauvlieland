@@ -500,7 +500,7 @@ Deno.serve(async (req) => {
                 await supabase.from("email_log").insert({
                   email_type: "accommodation_date_change",
                   subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${program.customer_company || program.customer_name}`,
-                  recipient_email: getRecipientEmail(partner.email, origin),
+                  recipient_email: getRecipientEmail(notifyEmail, origin),
                   recipient_name: partner.name,
                   related_request_id: program.id,
                   related_accommodation_id: program.linked_accommodation_id,
