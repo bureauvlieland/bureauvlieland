@@ -380,6 +380,7 @@ const AdminPartnerDetail = () => {
           .update({
             name: formData.name,
             ...(emailChanged ? {} : { email: formData.email }),
+            contact_email: formData.contact_email || null,
             phone: formData.phone || null,
             kvk_number: formData.kvk_number || null,
             address_street: formData.address_street || null,
@@ -392,7 +393,7 @@ const AdminPartnerDetail = () => {
               formData.partner_type === "accommodation" || formData.partner_type === "both"
                 ? formData.accommodation_commission_percentage
                 : null,
-          })
+          } as any)
           .eq("id", id);
 
         if (error) throw error;
