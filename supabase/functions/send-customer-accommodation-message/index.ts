@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     // Get partner email
     const { data: partner } = await supabase
       .from("partners")
-      .select("email, name, booking_contact_name")
+      .select("email, contact_email, name, booking_contact_name")
       .eq("id", quote.partner_id)
       .maybeSingle();
 
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const recipientEmail = getRecipientEmail(partner.email, origin);
+    const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
     const subjectPrefix = getSubjectPrefix(origin);
 
     // Send via Mailjet
