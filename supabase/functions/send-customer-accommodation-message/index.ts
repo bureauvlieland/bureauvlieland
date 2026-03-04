@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const recipientEmail = getRecipientEmail(partner.email, origin);
+    const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
     const subjectPrefix = getSubjectPrefix(origin);
 
     // Send via Mailjet

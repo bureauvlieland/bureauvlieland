@@ -343,7 +343,7 @@ const PartnerAccommodationContent = () => {
         }).then(() => {});
       }
 
-      // Create admin todo when alternative dates are proposed
+      // Create admin todo + send notification email when alternative dates are proposed
       if (hasAlternativeDates) {
         const customerLabel = selectedRequest.customer_company || selectedRequest.customer_name;
         supabase.from("admin_todos").insert({
@@ -354,6 +354,19 @@ const PartnerAccommodationContent = () => {
           auto_entity_id: selectedRequest.quote.id,
           related_partner_id: partnerId,
         }).then(() => {});
+
+        // Log as project communication so admin sees it in the timeline
+        if (selectedRequest.linked_program_id) {
+          supabase.from("project_communications").insert({
+            request_id: selectedRequest.linked_program_id,
+            accommodation_id: selectedRequest.id,
+            communication_type: "note",
+            direction: "inbound",
+            subject: `Alternatieve datums voorgesteld door ${partnerName}`,
+            content: `${partnerName} is niet beschikbaar van ${selectedRequest.arrival_date} t/m ${selectedRequest.departure_date}, maar stelt voor: ${proposedArrival} t/m ${proposedDeparture}.${declineReason ? ` Toelichting: ${declineReason}` : ""}`,
+            contact_name: partnerName,
+          }).then(() => {});
+        }
       }
 
       toast({
