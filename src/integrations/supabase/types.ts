@@ -1170,6 +1170,7 @@ export type Database = {
           booking_contact_name: string | null
           booking_contact_phone: string | null
           commission_percentage: number
+          contact_email: string | null
           created_at: string
           email: string
           id: string
@@ -1203,6 +1204,7 @@ export type Database = {
           booking_contact_name?: string | null
           booking_contact_phone?: string | null
           commission_percentage?: number
+          contact_email?: string | null
           created_at?: string
           email: string
           id: string
@@ -1236,6 +1238,7 @@ export type Database = {
           booking_contact_name?: string | null
           booking_contact_phone?: string | null
           commission_percentage?: number
+          contact_email?: string | null
           created_at?: string
           email?: string
           id?: string
