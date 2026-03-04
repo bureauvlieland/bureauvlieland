@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
             const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
 
             if (mailjetApiKey && mailjetSecretKey) {
-              const recipientEmail = getRecipientEmail(partner.email, origin);
+              const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
               const subjectPrefix = getSubjectPrefix(origin);
 
               const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
