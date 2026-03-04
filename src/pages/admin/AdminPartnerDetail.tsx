@@ -132,6 +132,7 @@ const AdminPartnerDetail = () => {
     id: "",
     name: "",
     email: "",
+    contact_email: "",
     phone: "",
     kvk_number: "",
     address_street: "",
