@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
           // Get partner info for email
           const { data: partner } = await supabase
             .from("partners")
-            .select("name, email, partner_token, commission_percentage")
+            .select("name, email, contact_email, partner_token, commission_percentage")
             .eq("id", item.provider_id)
             .single();
 
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
             const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
 
             if (mailjetApiKey && mailjetSecretKey) {
-              const recipientEmail = getRecipientEmail(partner.email, origin);
+              const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
               const subjectPrefix = getSubjectPrefix(origin);
 
               const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
           // Get partner info
           const { data: partner } = await supabase
             .from("partners")
-            .select("name, email, partner_token, accommodation_commission_percentage, commission_percentage")
+            .select("name, email, contact_email, partner_token, accommodation_commission_percentage, commission_percentage")
             .eq("id", quote.partner_id)
             .single();
 
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
             const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
 
             if (mailjetApiKey && mailjetSecretKey) {
-              const recipientEmail = getRecipientEmail(partner.email, origin);
+              const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
               const subjectPrefix = getSubjectPrefix(origin);
 
               const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {

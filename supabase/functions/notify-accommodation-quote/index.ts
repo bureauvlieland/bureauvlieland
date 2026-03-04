@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       .from("accommodation_quotes")
       .select(`
         *,
-        partner:partners(*),
+        partner:partners(*, contact_email),
         request:accommodation_requests(
           *,
           linked_program:program_requests!accommodation_requests_linked_program_id_fkey(customer_token)

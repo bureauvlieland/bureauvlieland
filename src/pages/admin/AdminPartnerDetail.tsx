@@ -56,6 +56,7 @@ interface Partner {
   id: string;
   name: string;
   email: string;
+  contact_email: string | null;
   phone: string | null;
   kvk_number: string | null;
   address_street: string | null;
@@ -131,6 +132,7 @@ const AdminPartnerDetail = () => {
     id: "",
     name: "",
     email: "",
+    contact_email: "",
     phone: "",
     kvk_number: "",
     address_street: "",
@@ -180,6 +182,7 @@ const AdminPartnerDetail = () => {
         id: data.id,
         name: data.name,
         email: data.email,
+        contact_email: (data as any).contact_email || "",
         phone: data.phone || "",
         kvk_number: data.kvk_number || "",
         address_street: data.address_street || "",
@@ -377,6 +380,7 @@ const AdminPartnerDetail = () => {
           .update({
             name: formData.name,
             ...(emailChanged ? {} : { email: formData.email }),
+            contact_email: formData.contact_email || null,
             phone: formData.phone || null,
             kvk_number: formData.kvk_number || null,
             address_street: formData.address_street || null,
@@ -389,7 +393,7 @@ const AdminPartnerDetail = () => {
               formData.partner_type === "accommodation" || formData.partner_type === "both"
                 ? formData.accommodation_commission_percentage
                 : null,
-          })
+          } as any)
           .eq("id", id);
 
         if (error) throw error;
@@ -553,7 +557,7 @@ const AdminPartnerDetail = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Login e-mailadres *</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
@@ -565,6 +569,27 @@ const AdminPartnerDetail = () => {
                       className="pl-10"
                     />
                   </div>
+                  <p className="text-xs text-slate-500">
+                    Dit adres wordt gebruikt voor inloggen en wachtwoord-reset
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email">Contactadres (optioneel)</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={formData.contact_email}
+                      onChange={(e) => handleChange("contact_email", e.target.value)}
+                      placeholder="notificaties@bedrijf.nl"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Als ingevuld, worden notificaties naar dit adres gestuurd i.p.v. het loginadres
+                  </p>
                 </div>
 
                 <div className="space-y-2">

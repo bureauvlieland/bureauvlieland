@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     // Fetch selected partners
     const { data: partners, error: partnersError } = await supabase
       .from("partners")
-      .select("*")
+      .select("*, contact_email")
       .in("id", partner_ids);
 
     if (partnersError || !partners?.length) {
@@ -228,10 +228,10 @@ Deno.serve(async (req) => {
       // For status "pending": do nothing to the record, just send the email (reminder)
     }
 
-    // Send emails to each partner
-    const emailMessages = partners.map((partner) => ({
+    // Send emails to each partner (prefer contact_email for notifications)
+    const emailMessages = partners.map((partner: any) => ({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-      To: [{ Email: partner.email, Name: partner.name }],
+      To: [{ Email: partner.contact_email || partner.email, Name: partner.name }],
       Subject: email_subject,
       HTMLPart: wrapInEmailTemplate(email_body, partner.name),
     }));
@@ -240,11 +240,11 @@ Deno.serve(async (req) => {
     console.log("Mailjet result:", mailjetResult);
 
     // Log emails
-    for (const partner of partners) {
+    for (const partner of partners as any[]) {
       await logEmail({
         email_type: "accommodation_quote_request_partner",
         subject: email_subject,
-        recipient_email: partner.email,
+        recipient_email: partner.contact_email || partner.email,
         recipient_name: partner.name,
         related_accommodation_id: request_id,
         related_partner_id: partner.id,

@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     // Fetch rejected quotes with partner info to notify them
     const { data: rejectedQuotes } = await supabase
       .from("accommodation_quotes")
-      .select("id, accommodation_name, partner:partners(id, name, email)")
+      .select("id, accommodation_name, partner:partners(id, name, email, contact_email)")
       .eq("request_id", request.id)
       .eq("status", "rejected")
       .neq("id", quoteId);
@@ -204,8 +204,8 @@ Deno.serve(async (req) => {
         getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables),
       ]);
 
-      // Partner email
-      const partnerEmail = getRecipientEmail(quote.partner?.email || "", origin);
+      // Partner email (prefer contact_email for notifications)
+      const partnerEmail = getRecipientEmail(quote.partner?.contact_email || quote.partner?.email || "", origin);
       if (partnerEmail) {
         const partnerHtml = partnerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
             </div>
           `;
 
-          const rejectedEmail = getRecipientEmail(partner.email, origin);
+          const rejectedEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
           try {
             await fetch("https://api.mailjet.com/v3.1/send", {
               method: "POST",

@@ -229,14 +229,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const baseUrl = getPortalBaseUrl(origin);
     let partnerEmail = item.provider_email;
 
-    // Fallback: look up partner email
+    // Fallback: look up partner email (prefer contact_email for notifications)
     if (!partnerEmail && item.provider_id && item.provider_id !== "bureau") {
       const { data: partner } = await supabase
         .from("partners")
-        .select("email, partner_token")
+        .select("email, contact_email, partner_token")
         .eq("id", item.provider_id)
         .single();
-      partnerEmail = partner?.email;
+      partnerEmail = partner?.contact_email || partner?.email;
     }
 
     if (partnerEmail && item.provider_id !== "bureau") {

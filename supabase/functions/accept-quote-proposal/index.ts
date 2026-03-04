@@ -80,11 +80,11 @@ async function groupItemsByProvider(items: ProgramItem[], supabase: any): Promis
   )];
 
   // Fetch partner emails from DB as fallback
-  let partnerMap = new Map<string, { id: string; name: string; email: string }>();
+  let partnerMap = new Map<string, { id: string; name: string; email: string; contact_email: string | null }>();
   if (providerIds.length > 0) {
     const { data: partners } = await supabase
       .from("partners")
-      .select("id, name, email")
+      .select("id, name, email, contact_email")
       .in("id", providerIds);
     partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
   }
@@ -93,7 +93,7 @@ async function groupItemsByProvider(items: ProgramItem[], supabase: any): Promis
     if (item.provider_id === "bureau") continue;
 
     const partner = partnerMap.get(item.provider_id);
-    const email = item.provider_email || partner?.email;
+    const email = item.provider_email || (partner ? (partner.contact_email || partner.email) : undefined);
     if (!email) continue;
 
     if (!groups.has(item.provider_id)) {

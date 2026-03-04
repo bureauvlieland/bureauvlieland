@@ -1,58 +1,61 @@
 
 
-## Plan: Contactadres los van loginadres voor partners
+## Plan: Items automatisch op "bevestigd" zetten bij versturen offerte
 
 ### Probleem
-Drie Island Events hotels (De Wadden, Doniastate, Seeduyn) willen communicatie ontvangen op `info@islandevents.nl`, maar het loginsysteem vereist unieke e-mailadressen. Daarnaast zijn De Wadden en Doniastate gewijzigd in het admin-panel zonder dat de auth-accounts zijn meegesynchroniseerd.
 
-### Huidige situatie
-
-| Partner | partners.email | auth.email | Gewenst contact |
-|---|---|---|---|
-| Hotel De Wadden | info@islandevents.nl | dewadden@westcordhotels.nl | info@islandevents.nl |
-| Hotel Doniastate | info@islandevents.nl | info@doniastatevlieland.nl | info@islandevents.nl |
-| Strandhotel Seeduyn | info@islandevents.nl | info@islandevents.nl | info@islandevents.nl |
+Wanneer een admin een offerte verstuurt, behouden items hun `item_quote_status` van `concept`. Daardoor ziet de klant "In voorbereiding" en kan niet per item of in bulk akkoord geven. De per-item "Akkoord"-knop en de bulk "Alle resterende akkoord geven"-knop zijn al gebouwd en werken correct -- ze worden alleen nooit zichtbaar omdat items nooit op `bevestigd` komen.
 
 ### Oplossing
 
-Twee velden scheiden:
-- **`email`** = login/auth e-mailadres (uniek per partner, gesynchroniseerd met auth)
-- **`contact_email`** = optioneel contactadres voor notificaties (mag gedeeld worden)
+Een kleine wijziging in `send-quote-offer`: na het updaten van de `program_requests` status naar `offerte_verstuurd`, ook alle actieve items met `item_quote_status` `concept` of `in_afstemming` automatisch op `bevestigd` zetten.
 
-Alle e-mail verstuurlogica gebruikt: `contact_email ?? email`
+### Wat er wijzigt
 
-### Stappen
+**1 bestand: `supabase/functions/send-quote-offer/index.ts`**
 
-**1. Database migratie**
-- Kolom `contact_email` (text, nullable) toevoegen aan `partners`
-- `contact_email` instellen op `info@islandevents.nl` voor alle drie de hotels
-- `email` herstellen naar de unieke auth-adressen voor De Wadden en Doniastate
+Na de bestaande program_requests update (rond regel 270-277) wordt toegevoegd:
 
-**2. Edge functions updaten (6-8 bestanden)**
+```typescript
+// Auto-set active items to "bevestigd" so customer can approve them
+const { error: itemsUpdateError } = await supabase
+  .from("program_request_items")
+  .update({ item_quote_status: "bevestigd" })
+  .eq("request_id", requestId)
+  .neq("status", "cancelled")
+  .in("item_quote_status", ["concept", "in_afstemming"]);
 
-Overal waar `partner.email` wordt gebruikt voor het versturen van notificaties, wijzigen naar `partner.contact_email || partner.email`:
+if (itemsUpdateError) {
+  console.error("Error updating item quote statuses:", itemsUpdateError);
+}
+```
 
-- `enrichProviderEmails` in `cancel-program-request` en `update-customer-program` — query `contact_email, email` en gebruik `contact_email || email`
-- `accept-quote-proposal` — zelfde patroon
-- `approve-quote-item` — fallback lookup aanpassen
-- `process-completed-items` — `partner.contact_email || partner.email`
-- `select-accommodation-quote` — idem
-- `send-accommodation-quote-request` — idem
-- `notify-accommodation-quote` — idem
+### Wat al werkt en ongewijzigd blijft
 
-De `resend-email` en `resend-partner-invitation` functies blijven `partner.email` gebruiken — dit zijn login-gerelateerde mails die naar het auth-adres moeten.
+- Per-item "Akkoord"-knop in `CustomerProgramItem.tsx` (verschijnt bij `item_quote_status === "bevestigd"` en geen `customer_approved_at`)
+- Bulk "Alle resterende akkoord geven" in `ProgramIntroCard.tsx`
+- `approve-quote-item` edge function (per-item akkoord, stuurt partner notificatie)
+- `accept-quote-proposal` edge function (bulk akkoord, stuurt alle partner notificaties, slaat reeds goedgekeurde items over)
+- Definitief per-item akkoord na partner-reactie (bestaande confirmed/alternative flow)
 
-**3. Admin UI**
-- `AdminPartnerDetail.tsx`: nieuw veld "Contactadres (optioneel)" toevoegen
-- Toelichting: "Als ingevuld, worden notificaties naar dit adres gestuurd in plaats van het loginadres"
-- Partner detail pagina: beide adressen tonen
+### Resulterende flow
 
-**4. Partner portal**
-- `PartnerSettingsForm.tsx`: contactadres tonen/bewerken
-
-### Resultaat
-- Elke partner heeft een uniek loginadres (wachtwoord-reset werkt altijd)
-- Notificaties gaan naar het contactadres als dat is ingevuld
-- Meerdere partners kunnen hetzelfde contactadres delen
-- Bestaande partners zonder contactadres: geen wijziging (notificaties blijven naar loginadres gaan)
-
+```text
+Admin stelt programma samen (items op "concept")
+         |
+Admin verstuurt offerte
+ -> quote_status = "offerte_verstuurd"
+ -> items automatisch naar item_quote_status = "bevestigd"
+         |
+Klant ziet programma met "Akkoord"-knoppen per item
+ + bulk "Alle resterende akkoord geven"
+         |
+Klant geeft per item of in bulk akkoord
+ -> partners worden per item ingelicht
+ -> quote_status wordt "akkoord_ontvangen" als alles akkoord is
+         |
+Partners reageren (bevestigen / alternatief / afwijzen)
+         |
+Klant geeft definitief per-item akkoord
+ op bevestigde/alternatieve onderdelen
+```

@@ -115,7 +115,7 @@ async function enrichProviderEmails(
 
   const { data: partners } = await supabase
     .from("partners")
-    .select("id, email, name")
+    .select("id, email, contact_email, name")
     .in("id", missingEmailIds);
 
   const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
@@ -124,7 +124,7 @@ async function enrichProviderEmails(
     if (!item.provider_email && item.provider_id) {
       const partner = partnerMap.get(item.provider_id);
       if (partner) {
-        item.provider_email = partner.email;
+        item.provider_email = partner.contact_email || partner.email;
         if (!item.provider_name) item.provider_name = partner.name;
       }
     }
@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
           // Reset ALL accommodation quotes (including selected) back to pending
           const { data: resetQuotes } = await supabase
             .from("accommodation_quotes")
-            .select("id, partner_id, accommodation_name, status, partner:partners(id, name, email)")
+            .select("id, partner_id, accommodation_name, status, partner:partners(id, name, email, contact_email)")
             .eq("request_id", program.linked_accommodation_id)
             .in("status", ["pending", "submitted", "selected"]);
 
@@ -275,11 +275,12 @@ Deno.serve(async (req) => {
             // Notify each accommodation partner about the change
             for (const quote of resetQuotes) {
               const partnerData = quote.partner as unknown;
-              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string } | null;
+              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string; contact_email: string | null } | null;
               if (partner?.email) {
+                const notifyEmail = partner.contact_email || partner.email;
                 emailMessages.push({
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                  To: [{ Email: getRecipientEmail(partner.email, origin), Name: partner.name }],
+                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
                   Subject: `${subjectPrefix}Gewijzigd aantal gasten - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
                   HTMLPart: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -436,7 +437,7 @@ Deno.serve(async (req) => {
               partner_id,
               accommodation_name,
               status,
-              partner:partners(id, name, email)
+              partner:partners(id, name, email, contact_email)
             `)
             .eq("request_id", program.linked_accommodation_id)
             .in("status", ["pending", "submitted"]);
@@ -456,14 +457,15 @@ Deno.serve(async (req) => {
             // Notify each accommodation partner
             for (const quote of activeQuotes) {
               const partnerData = quote.partner as unknown;
-              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string } | null;
+              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string; contact_email: string | null } | null;
               if (partner?.email) {
+                const notifyEmail = partner.contact_email || partner.email;
                 const formattedArrival = new Date(newArrivalDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
                 const formattedDeparture = new Date(newDepartureDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 
                 emailMessages.push({
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                  To: [{ Email: getRecipientEmail(partner.email, origin), Name: partner.name }],
+                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
                   Subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
                   HTMLPart: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -498,7 +500,7 @@ Deno.serve(async (req) => {
                 await supabase.from("email_log").insert({
                   email_type: "accommodation_date_change",
                   subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${program.customer_company || program.customer_name}`,
-                  recipient_email: getRecipientEmail(partner.email, origin),
+                  recipient_email: getRecipientEmail(notifyEmail, origin),
                   recipient_name: partner.name,
                   related_request_id: program.id,
                   related_accommodation_id: program.linked_accommodation_id,
