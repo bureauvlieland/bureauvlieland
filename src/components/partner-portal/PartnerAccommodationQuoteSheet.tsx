@@ -353,7 +353,9 @@ export const PartnerAccommodationQuoteSheet = ({
     
     setIsSubmitting(true);
     try {
-      const success = await onDecline(declineReason.trim());
+      const arrival = responseType === "alternative_dates" ? proposedArrivalDate : undefined;
+      const departure = responseType === "alternative_dates" ? proposedDepartureDate : undefined;
+      const success = await onDecline(declineReason.trim(), arrival, departure);
       console.log("onDecline result:", success);
       if (success) {
         onClose();
