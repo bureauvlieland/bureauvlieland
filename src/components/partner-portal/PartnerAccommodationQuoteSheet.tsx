@@ -694,6 +694,17 @@ export const PartnerAccommodationQuoteSheet = ({
                   </div>
                 </div>
                 <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="alternative_dates" id="alternative_dates" className="mt-0.5" />
+                  <div className="flex-1">
+                    <Label htmlFor="alternative_dates" className="font-medium cursor-pointer">
+                      Niet beschikbaar, maar wel op andere datum
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Stel alternatieve datums voor aan Bureau Vlieland
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                   <RadioGroupItem value="decline" id="decline" className="mt-0.5" />
                   <div className="flex-1">
                     <Label htmlFor="decline" className="font-medium cursor-pointer">
