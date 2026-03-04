@@ -209,12 +209,13 @@ async function invitePartner(
       };
     }
 
-    // Link auth user to partner and set invited_at
+    // Link auth user to partner, set invited_at and store initial password
     const { error: updateError } = await adminClient
       .from("partners")
       .update({ 
         auth_user_id: authUser.user.id,
         invited_at: new Date().toISOString(),
+        initial_password: tempPassword,
       })
       .eq("id", partner.id);
 

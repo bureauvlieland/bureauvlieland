@@ -1181,6 +1181,7 @@ export type Database = {
           email: string
           id: string
           image_url: string | null
+          initial_password: string | null
           invited_at: string | null
           is_active: boolean
           kvk_number: string | null
@@ -1215,6 +1216,7 @@ export type Database = {
           email: string
           id: string
           image_url?: string | null
+          initial_password?: string | null
           invited_at?: string | null
           is_active?: boolean
           kvk_number?: string | null
@@ -1249,6 +1251,7 @@ export type Database = {
           email?: string
           id?: string
           image_url?: string | null
+          initial_password?: string | null
           invited_at?: string | null
           is_active?: boolean
           kvk_number?: string | null

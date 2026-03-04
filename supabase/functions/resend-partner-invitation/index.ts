@@ -243,10 +243,10 @@ Deno.serve(async (req) => {
     const loginLink = `${origin}/partner/login`;
     const portalLink = `${origin}/partner`;
 
-    // Update invited_at timestamp
+    // Update invited_at timestamp and store new initial password
     await adminClient
       .from("partners")
-      .update({ invited_at: new Date().toISOString() })
+      .update({ invited_at: new Date().toISOString(), initial_password: tempPassword })
       .eq("id", partnerId);
 
     // Send invitation email via Mailjet

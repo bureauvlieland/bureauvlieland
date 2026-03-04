@@ -258,10 +258,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Link auth user to partner
+    // Link auth user to partner and store initial password
     const { error: updateError } = await adminClient
       .from("partners")
-      .update({ auth_user_id: authUser.user.id })
+      .update({ auth_user_id: authUser.user.id, initial_password: tempPassword })
       .eq("id", partnerId);
 
     if (updateError) {
