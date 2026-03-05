@@ -210,7 +210,8 @@ Deno.serve(async (req) => {
           customer_company,
           arrival_date,
           departure_date,
-          number_of_guests
+          number_of_guests,
+          reference_number
         )
       `)
       .eq("status", "selected")
