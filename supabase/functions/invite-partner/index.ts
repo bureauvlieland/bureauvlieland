@@ -240,7 +240,8 @@ Deno.serve(async (req) => {
     const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
 
     // Create auth user
-    const { data: authUser, error: createError } = await adminClient.auth.admin.createUser({
+    let authUser;
+    const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
       email: partner.email,
       password: tempPassword,
       email_confirm: true, // Auto-confirm email
@@ -251,11 +252,41 @@ Deno.serve(async (req) => {
     });
 
     if (createError) {
-      console.error("Error creating auth user:", createError);
-      return new Response(
-        JSON.stringify({ error: `Failed to create account: ${createError.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // If email already exists (orphaned account from previous invite), delete and retry
+      if (createError.code === "email_exists") {
+        console.log("Existing auth user found for email, cleaning up orphaned account...");
+        const { data: { users } } = await adminClient.auth.admin.listUsers();
+        const existingUser = users?.find((u) => u.email === partner.email);
+        if (existingUser) {
+          // Remove old role entries
+          await adminClient.from("user_roles").delete().eq("user_id", existingUser.id);
+          // Delete the orphaned auth user
+          await adminClient.auth.admin.deleteUser(existingUser.id);
+        }
+        // Retry creation
+        const { data: retryUser, error: retryError } = await adminClient.auth.admin.createUser({
+          email: partner.email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: { partner_id: partnerId, partner_name: partner.name },
+        });
+        if (retryError) {
+          console.error("Error creating auth user on retry:", retryError);
+          return new Response(
+            JSON.stringify({ error: `Failed to create account: ${retryError.message}` }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        authUser = retryUser;
+      } else {
+        console.error("Error creating auth user:", createError);
+        return new Response(
+          JSON.stringify({ error: `Failed to create account: ${createError.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      authUser = createdUser;
     }
 
     // Link auth user to partner and store initial password
