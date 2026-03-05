@@ -143,6 +143,9 @@ Deno.serve(async (req) => {
               const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
               const subjectPrefix = getSubjectPrefix(origin);
 
+              const programRef = item.program_requests?.reference_number;
+              const replyTo = buildReplyTo(programRef);
+
               const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
                 method: "POST",
                 headers: {
