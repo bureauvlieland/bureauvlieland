@@ -6,6 +6,7 @@ import {
   getPortalBaseUrl,
   getSubjectPrefix,
   getRecipientEmail,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 
 const corsHeaders = {

@@ -67,7 +67,8 @@ import {
   sanitizeHtml, 
   isTestMode, 
   getRecipientEmail, 
-  getSubjectPrefix 
+  getSubjectPrefix,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
