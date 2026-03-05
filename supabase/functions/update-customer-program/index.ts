@@ -1206,7 +1206,8 @@ Deno.serve(async (req) => {
               .join(", ");
             
             emailMessages.push({
-              From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+              From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+              ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
               To: [{ Email: getRecipientEmail(block.provider.email, origin), Name: block.provider.name }],
               Subject: `${subjectPrefix}Nieuwe activiteit toegevoegd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
               HTMLPart: `
