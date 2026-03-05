@@ -795,7 +795,7 @@ Deno.serve(async (req) => {
         }
         
         emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
           To: [{ Email: counterProposalRecipient, Name: item.provider_name }],
           Subject: `${subjectPrefix}${emailSubject}`,
           HTMLPart: emailBody,
