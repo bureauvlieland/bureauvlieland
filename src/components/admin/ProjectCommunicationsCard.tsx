@@ -93,6 +93,9 @@ export function ProjectCommunicationsCard({
     }
   };
 
+  const isInbound = (comm: any) => 
+    comm.communication_type === "email_in" || comm.direction === "inbound";
+
   const displayCount = expanded ? communications.length : 5;
   const visibleCommunications = communications.slice(0, displayCount);
   const hasMore = communications.length > 5;
