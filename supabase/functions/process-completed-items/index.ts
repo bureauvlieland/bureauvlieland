@@ -57,7 +57,8 @@ Deno.serve(async (req) => {
           id,
           customer_name,
           customer_company,
-          selected_dates
+          selected_dates,
+          reference_number
         )
       `)
       .eq("status", "executed")
