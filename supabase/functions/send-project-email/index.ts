@@ -66,6 +66,26 @@ Deno.serve(async (req) => {
       partnerId,
     } = await req.json();
 
+    // Lookup reference number for Reply-To
+    let referenceNumber: string | null = null;
+    if (requestId) {
+      const { data: pr } = await supabase
+        .from("program_requests")
+        .select("reference_number")
+        .eq("id", requestId)
+        .maybeSingle();
+      referenceNumber = pr?.reference_number || null;
+    }
+    if (!referenceNumber && accommodationId) {
+      const { data: ar } = await supabase
+        .from("accommodation_requests")
+        .select("reference_number")
+        .eq("id", accommodationId)
+        .maybeSingle();
+      referenceNumber = ar?.reference_number || null;
+    }
+    const replyTo = buildReplyTo(referenceNumber);
+
     if (!recipientEmail || !subject || !body) {
       return new Response(
         JSON.stringify({ error: "recipientEmail, subject en body zijn verplicht" }),
