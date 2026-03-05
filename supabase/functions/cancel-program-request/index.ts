@@ -328,6 +328,7 @@ Deno.serve(async (req) => {
       emails.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
         Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
         HTMLPart: htmlContent,
       });
