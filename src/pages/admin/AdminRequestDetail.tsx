@@ -92,6 +92,7 @@ import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
+import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy } from "lucide-react";
