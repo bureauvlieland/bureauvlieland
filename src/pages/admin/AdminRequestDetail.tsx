@@ -865,12 +865,10 @@ const AdminRequestDetail = () => {
                   <p className="text-sm text-muted-foreground">
                     Meerdaags programma — logies regelen?
                   </p>
-                  <Button asChild>
-                    <Link to={buildLogiesUrl()}>
+                  <Button onClick={() => setCreateAccommodationOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Logiesaanvraag maken
-                    </Link>
-                  </Button>
+                    </Button>
                 </CardContent>
               </Card>
             )}
