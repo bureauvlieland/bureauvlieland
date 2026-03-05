@@ -423,23 +423,6 @@ const AdminRequestDetail = () => {
   const customerPortalUrl = `/mijn-programma/${request.customer_token}`;
   const isQuoteMode = request.program_type === "quote";
 
-  // Build URL for accommodation request with pre-filled data
-  const buildLogiesUrl = () => {
-    const params = new URLSearchParams();
-    const dates = request.selected_dates as string[];
-    
-    if (dates.length > 0) {
-      // Sort dates and use first as arrival, last as departure
-      const sorted = [...dates].sort();
-      params.set("arrival", format(new Date(sorted[0]), "yyyy-MM-dd"));
-      params.set("departure", format(new Date(sorted[sorted.length - 1]), "yyyy-MM-dd"));
-    }
-    
-    params.set("guests", request.number_of_people.toString());
-    params.set("programToken", request.customer_token);
-    
-    return `/logies-aanvragen?${params.toString()}`;
-  };
 
   const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
     try {
