@@ -1319,9 +1319,10 @@ Deno.serve(async (req) => {
         // Provider emails (redirected in test mode)
         emailMessages.push({
           From: {
-            Email: "noreply@bureauvlieland.nl",
-            Name: "Bureau Vlieland",
+            Email: SENDER_EMAIL,
+            Name: SENDER_NAME,
           },
+          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
           To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.providerName }],
           Subject: `${subjectPrefix}Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`,
           HTMLPart: `
