@@ -1,13 +1,12 @@
 
 
-
-## Plan: Alternatieve datum voorstellen bij afwijzing logiesaanvraag
+## Plan: Admin logiesaanvraag maken vanuit projectpagina
 
 ### Status: ✅ Geïmplementeerd
 
 ### Wat is gebouwd
 
-1. **Database**: `proposed_arrival_date` en `proposed_departure_date` kolommen toegevoegd aan `accommodation_quotes`
-2. **Partner portal**: Derde optie "Niet beschikbaar, maar wel op andere datum" met datumvelden in `PartnerAccommodationQuoteSheet`
-3. **Decline handler**: `handleQuoteDecline` in `PartnerAccommodation.tsx` slaat voorgestelde datums op, maakt auto-todo aan voor admin
-4. **Admin zichtbaarheid**: Alternatieve datums getoond in de offerte-tabel op `AdminAccommodationDetail.tsx`
+1. **`AdminCreateAccommodationSheet.tsx`**: Nieuw sheet-component waarmee admin direct een logiesaanvraag kan aanmaken vanuit de projectpagina, met automatisch overgenomen klantgegevens
+2. **`AdminRequestDetail.tsx`**: Knop "Logiesaanvraag maken" opent nu de sheet i.p.v. navigeren naar publieke pagina
+3. **Database**: Direct insert in `accommodation_requests` met `linked_program_id`, update `program_requests.linked_accommodation_id`
+4. **Geen klant-notificatie**: Aanvraag wordt aangemaakt als bureau, zonder automatische bevestigingsmails
