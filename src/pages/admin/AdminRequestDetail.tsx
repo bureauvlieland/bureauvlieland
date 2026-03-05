@@ -206,6 +206,7 @@ const AdminRequestDetail = () => {
   const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
+  const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
