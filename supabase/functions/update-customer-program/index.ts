@@ -1372,9 +1372,10 @@ Deno.serve(async (req) => {
       // Customer confirmation (always to real customer email)
       emailMessages.push({
         From: {
-          Email: "noreply@bureauvlieland.nl",
-          Name: "Bureau Vlieland",
+          Email: SENDER_EMAIL,
+          Name: SENDER_NAME,
         },
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
         To: [{ Email: program.customer_email, Name: program.customer_name }],
         Subject: `${subjectPrefix}Wijzigingen in je programma bevestigd`,
         HTMLPart: `
