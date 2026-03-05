@@ -1,20 +1,37 @@
 
 
-## Probleem
+## Plan: Mailjet Parse API — Inkomende e-mails koppelen aan projecten
 
-Het formulier verstuurt niet omdat er een validatiefout optreedt die niet zichtbaar is. De oorzaak:
+### Status: ✅ Geïmplementeerd
 
-1. De `Select` voor ontvanger heeft `defaultValue={recipients[0].email}` — dus de dropdown **toont** de klant
-2. Maar `handleRecipientSelect` wordt alleen aangeroepen bij `onValueChange` — **niet** bij mount
-3. Daardoor blijft `recipientEmail` in het formulier leeg (`""`)
-4. Zod-validatie faalt op `z.string().email()` voor een lege string → submit wordt geblokkeerd, maar de foutmelding is niet zichtbaar omdat het veld verborgen is (alleen zichtbaar bij `recipientType === "custom"`)
+### Wat is gebouwd
 
-## Oplossing
+1. **`buildReplyTo()` helper** in `_shared/email-templates.ts`: genereert dynamische Reply-To adressen zoals `reply+BV-2503-0012@bureauvlieland.nl`
 
-In `SendProjectEmailSheet.tsx`:
+2. **Consistente afzenderadressen**: Alle 7 `noreply@bureauvlieland.nl` referenties in `update-customer-program/index.ts` vervangen door `SENDER_EMAIL` (`hallo@bureauvlieland.nl`)
 
-1. **`defaultValues` vullen met eerste recipient** — als er recipients zijn, direct `recipientEmail`, `recipientName` en `recipientType` invullen op basis van `recipients[0]`
-2. **`useEffect` toevoegen** — wanneer de sheet opent en recipients veranderen, het formulier resetten met de juiste waarden (zodat het ook werkt bij heropenen)
+3. **Reply-To headers** toegevoegd aan 12 edge functions:
+   - `send-project-email` (met reference_number lookup)
+   - `send-quote-offer`
+   - `approve-quote-item`
+   - `update-customer-program`
+   - `notify-accommodation-quote`
+   - `select-accommodation-quote`
+   - `cancel-program-request`
+   - `process-completed-items`
+   - `send-accommodation-quote-request` (import only, emails gaan naar partners)
 
-Dit is een eenvoudige fix in één bestand.
+4. **`inbound-email/index.ts`**: Nieuwe edge function die Mailjet Parse API POST's ontvangt:
+   - Parseert referentienummer uit To-adres
+   - Zoekt project op via `program_requests.reference_number` of `accommodation_requests.reference_number`
+   - Slaat bericht op in `project_communications` (type: `email_in`, direction: `inbound`)
+   - Maakt admin todo aan voor follow-up
+   - Retourneert altijd 200 OK (voorkomt Mailjet retries)
 
+5. **Admin UI**: Inbound e-mails tonen "Inkomend" badge in `ProjectCommunicationsCard`
+
+### Handmatige configuratie vereist
+
+1. **Mailjet Dashboard**: Parse API activeren
+2. **Webhook URL**: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
+3. **DNS/Route**: Configureren voor `reply+*@bureauvlieland.nl`
