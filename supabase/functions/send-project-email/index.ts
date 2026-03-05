@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: recipientName || recipientEmail }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: htmlBody,
           },
