@@ -1391,6 +1391,23 @@ const AdminRequestDetail = () => {
           onSuccess={fetchRequestData}
         />
       )}
+      {/* Create accommodation sheet */}
+      {request && (
+        <AdminCreateAccommodationSheet
+          open={createAccommodationOpen}
+          onOpenChange={setCreateAccommodationOpen}
+          project={{
+            id: request.id,
+            customer_name: request.customer_name,
+            customer_email: request.customer_email,
+            customer_phone: request.customer_phone,
+            customer_company: request.customer_company,
+            number_of_people: request.number_of_people,
+            selected_dates: request.selected_dates as string[],
+          }}
+          onCreated={fetchRequestData}
+        />
+      )}
     </>
   );
 };
