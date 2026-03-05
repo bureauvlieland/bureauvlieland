@@ -1,5 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SENDER_EMAIL, SENDER_NAME, buildReplyTo } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -662,7 +663,7 @@ Deno.serve(async (req) => {
       await enrichProviderEmails(supabase, [item]);
       if (item.provider_email && item.block_type !== "self_arranged") {
         emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
           To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
           Subject: `${subjectPrefix}Annulering - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
           HTMLPart: `
@@ -794,7 +795,7 @@ Deno.serve(async (req) => {
         }
         
         emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
           To: [{ Email: counterProposalRecipient, Name: item.provider_name }],
           Subject: `${subjectPrefix}${emailSubject}`,
           HTMLPart: emailBody,
@@ -1035,7 +1036,8 @@ Deno.serve(async (req) => {
         ).join("");
 
         emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
           To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
           Subject: `${subjectPrefix}Definitieve boeking - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
           HTMLPart: `
@@ -1085,7 +1087,8 @@ Deno.serve(async (req) => {
       });
 
       emailMessages.push({
-        From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
         To: [{ Email: program.customer_email, Name: program.customer_name }],
         Subject: `${subjectPrefix}Boeking definitief bevestigd`,
         HTMLPart: `
@@ -1203,7 +1206,8 @@ Deno.serve(async (req) => {
               .join(", ");
             
             emailMessages.push({
-              From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+              From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+              ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
               To: [{ Email: getRecipientEmail(block.provider.email, origin), Name: block.provider.name }],
               Subject: `${subjectPrefix}Nieuwe activiteit toegevoegd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
               HTMLPart: `
@@ -1315,9 +1319,10 @@ Deno.serve(async (req) => {
         // Provider emails (redirected in test mode)
         emailMessages.push({
           From: {
-            Email: "noreply@bureauvlieland.nl",
-            Name: "Bureau Vlieland",
+            Email: SENDER_EMAIL,
+            Name: SENDER_NAME,
           },
+          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
           To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.providerName }],
           Subject: `${subjectPrefix}Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`,
           HTMLPart: `
@@ -1367,9 +1372,10 @@ Deno.serve(async (req) => {
       // Customer confirmation (always to real customer email)
       emailMessages.push({
         From: {
-          Email: "noreply@bureauvlieland.nl",
-          Name: "Bureau Vlieland",
+          Email: SENDER_EMAIL,
+          Name: SENDER_NAME,
         },
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
         To: [{ Email: program.customer_email, Name: program.customer_name }],
         Subject: `${subjectPrefix}Wijzigingen in je programma bevestigd`,
         HTMLPart: `

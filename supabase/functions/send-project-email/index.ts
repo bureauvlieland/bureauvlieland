@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { buildReplyTo } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -65,6 +66,26 @@ Deno.serve(async (req) => {
       partnerId,
     } = await req.json();
 
+    // Lookup reference number for Reply-To
+    let referenceNumber: string | null = null;
+    if (requestId) {
+      const { data: pr } = await supabase
+        .from("program_requests")
+        .select("reference_number")
+        .eq("id", requestId)
+        .maybeSingle();
+      referenceNumber = pr?.reference_number || null;
+    }
+    if (!referenceNumber && accommodationId) {
+      const { data: ar } = await supabase
+        .from("accommodation_requests")
+        .select("reference_number")
+        .eq("id", accommodationId)
+        .maybeSingle();
+      referenceNumber = ar?.reference_number || null;
+    }
+    const replyTo = buildReplyTo(referenceNumber);
+
     if (!recipientEmail || !subject || !body) {
       return new Response(
         JSON.stringify({ error: "recipientEmail, subject en body zijn verplicht" }),
@@ -104,6 +125,7 @@ Deno.serve(async (req) => {
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: recipientName || recipientEmail }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: htmlBody,
           },

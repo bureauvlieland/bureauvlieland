@@ -7,6 +7,7 @@ import {
   isTestMode, 
   getSubjectPrefix, 
   getRecipientEmail,
+  buildReplyTo,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -281,6 +282,7 @@ Deno.serve(async (req) => {
       .join(", ");
 
     // Build emails
+    const replyTo = buildReplyTo(program.reference_number);
     const emails: any[] = [];
 
     // Partner emails using template
@@ -326,6 +328,7 @@ Deno.serve(async (req) => {
       emails.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
         Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
         HTMLPart: htmlContent,
       });
@@ -363,6 +366,7 @@ Deno.serve(async (req) => {
       emails.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
         Subject: `${subjectPrefix}Logiesaanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
         HTMLPart: accHtml,
       });
@@ -406,6 +410,7 @@ Deno.serve(async (req) => {
     emails.push({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: program.customer_email, Name: program.customer_name }],
+      ...(replyTo ? { ReplyTo: replyTo } : {}),
       Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Uw aanvraag is geannuleerd`,
       HTMLPart: customerHtml,
     });

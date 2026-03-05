@@ -6,6 +6,7 @@ import {
   sanitizeHtml, 
   formatDateNL, 
   formatCurrencyNL,
+  buildReplyTo,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -221,10 +222,14 @@ Deno.serve(async (req) => {
     const emailHtml = template?.body || getFallbackEmailHtml(request, quote, partner, portalUrl, nights);
     const emailSubject = template?.subject || `Nieuwe offerte ontvangen: ${quote.accommodation_name}`;
 
+    // Build Reply-To from accommodation reference
+    const replyTo = buildReplyTo(request.reference_number);
+
     await sendEmailViaMailjet([
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: request.customer_email, Name: request.customer_name }],
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
         Subject: emailSubject,
         HTMLPart: emailHtml,
       },

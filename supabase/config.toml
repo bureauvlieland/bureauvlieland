@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.update-partner-email]
 verify_jwt = false
+
+[functions.inbound-email]
+verify_jwt = false

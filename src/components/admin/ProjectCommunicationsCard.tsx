@@ -93,6 +93,9 @@ export function ProjectCommunicationsCard({
     }
   };
 
+  const isInbound = (comm: any) => 
+    comm.communication_type === "email_in" || comm.direction === "inbound";
+
   const displayCount = expanded ? communications.length : 5;
   const visibleCommunications = communications.slice(0, displayCount);
   const hasMore = communications.length > 5;
@@ -153,6 +156,11 @@ export function ProjectCommunicationsCard({
                           <span className="text-sm font-medium">
                             {config?.label || comm.communication_type}
                           </span>
+                          {isInbound(comm) && (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              Inkomend
+                            </Badge>
+                          )}
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(comm.communication_date), "d MMM yyyy, HH:mm", {
                               locale: nl,

@@ -7,6 +7,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   getRenderedTemplate,
+  buildReplyTo,
   SENDER_EMAIL,
   SENDER_NAME,
 } from "../_shared/email-templates.ts";
@@ -188,11 +189,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const fullSubject = `${subjectPrefix}${finalSubject}`;
 
     // Build email message
+    const replyTo = buildReplyTo(programRequest.reference_number);
     const emailMessage: any = {
       From: {
         Email: SENDER_EMAIL,
         Name: SENDER_NAME,
       },
+      ...(replyTo ? { ReplyTo: replyTo } : {}),
       To: [
         {
           Email: recipientEmail,

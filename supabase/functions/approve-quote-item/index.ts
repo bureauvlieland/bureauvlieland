@@ -7,6 +7,7 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -251,11 +252,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       const recipientEmail = getRecipientEmail(partnerEmail, origin);
 
+      const replyTo = buildReplyTo(program.reference_number);
       try {
         const mailjetResponse = await sendEmailViaMailjet([
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: item.provider_name }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name} - ${program.reference_number || ""}`,
             HTMLPart: emailHtml,
           },

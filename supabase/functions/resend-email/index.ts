@@ -1,7 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { getRenderedTemplate, sanitizeHtml, TemplateIds } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, sanitizeHtml, buildReplyTo, TemplateIds } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
