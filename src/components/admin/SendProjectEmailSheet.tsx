@@ -68,16 +68,39 @@ export function SendProjectEmailSheet({
 }: SendProjectEmailSheetProps) {
   const [isSending, setIsSending] = useState(false);
 
+  const firstRecipient = recipients.length > 0 ? recipients[0] : null;
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      recipientType: recipients.length > 0 ? "customer" : "custom",
-      recipientEmail: "",
-      recipientName: "",
+      recipientType: firstRecipient ? firstRecipient.type : "custom",
+      recipientEmail: firstRecipient?.email || "",
+      recipientName: firstRecipient?.name || "",
       subject: "",
       body: "",
     },
   });
+
+  useEffect(() => {
+    if (open && recipients.length > 0) {
+      const r = recipients[0];
+      form.reset({
+        recipientType: r.type,
+        recipientEmail: r.email,
+        recipientName: r.name,
+        subject: "",
+        body: "",
+      });
+    } else if (open) {
+      form.reset({
+        recipientType: "custom",
+        recipientEmail: "",
+        recipientName: "",
+        subject: "",
+        body: "",
+      });
+    }
+  }, [open]);
 
   const recipientType = form.watch("recipientType");
 
