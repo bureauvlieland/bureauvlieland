@@ -304,6 +304,8 @@ Deno.serve(async (req) => {
               const recipientEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
               const subjectPrefix = getSubjectPrefix(origin);
 
+              const accReplyTo = buildReplyTo(request?.reference_number);
+              
               const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
                 method: "POST",
                 headers: {
@@ -314,6 +316,7 @@ Deno.serve(async (req) => {
                   Messages: [{
                     From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                     To: [{ Email: recipientEmail, Name: partner.name }],
+                    ...(accReplyTo ? { ReplyTo: accReplyTo } : {}),
                     Subject: `${subjectPrefix}${template.subject}`,
                     HTMLPart: template.body,
                   }],
