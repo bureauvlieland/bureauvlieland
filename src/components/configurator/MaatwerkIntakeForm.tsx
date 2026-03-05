@@ -108,6 +108,7 @@ export const MaatwerkIntakeForm = ({
           general_notes: formData.wishes || null,
           program_type: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: programDescription,
+          invoicing_mode: "bureau_central",
         })
         .select()
         .single();
