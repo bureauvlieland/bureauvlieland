@@ -92,6 +92,7 @@ import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
+import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy } from "lucide-react";
@@ -205,6 +206,7 @@ const AdminRequestDetail = () => {
   const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
+  const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
@@ -421,23 +423,6 @@ const AdminRequestDetail = () => {
   const customerPortalUrl = `/mijn-programma/${request.customer_token}`;
   const isQuoteMode = request.program_type === "quote";
 
-  // Build URL for accommodation request with pre-filled data
-  const buildLogiesUrl = () => {
-    const params = new URLSearchParams();
-    const dates = request.selected_dates as string[];
-    
-    if (dates.length > 0) {
-      // Sort dates and use first as arrival, last as departure
-      const sorted = [...dates].sort();
-      params.set("arrival", format(new Date(sorted[0]), "yyyy-MM-dd"));
-      params.set("departure", format(new Date(sorted[sorted.length - 1]), "yyyy-MM-dd"));
-    }
-    
-    params.set("guests", request.number_of_people.toString());
-    params.set("programToken", request.customer_token);
-    
-    return `/logies-aanvragen?${params.toString()}`;
-  };
 
   const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
     try {
@@ -863,12 +848,10 @@ const AdminRequestDetail = () => {
                   <p className="text-sm text-muted-foreground">
                     Meerdaags programma — logies regelen?
                   </p>
-                  <Button asChild>
-                    <Link to={buildLogiesUrl()}>
+                  <Button onClick={() => setCreateAccommodationOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Logiesaanvraag maken
-                    </Link>
-                  </Button>
+                    </Button>
                 </CardContent>
               </Card>
             )}
@@ -1406,6 +1389,23 @@ const AdminRequestDetail = () => {
           onOpenChange={setAddCostOpen}
           requestId={request.id}
           onSuccess={fetchRequestData}
+        />
+      )}
+      {/* Create accommodation sheet */}
+      {request && (
+        <AdminCreateAccommodationSheet
+          open={createAccommodationOpen}
+          onOpenChange={setCreateAccommodationOpen}
+          project={{
+            id: request.id,
+            customer_name: request.customer_name,
+            customer_email: request.customer_email,
+            customer_phone: request.customer_phone,
+            customer_company: request.customer_company,
+            number_of_people: request.number_of_people,
+            selected_dates: request.selected_dates as string[],
+          }}
+          onCreated={fetchRequestData}
         />
       )}
     </>
