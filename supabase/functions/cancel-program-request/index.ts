@@ -282,6 +282,7 @@ Deno.serve(async (req) => {
       .join(", ");
 
     // Build emails
+    const replyTo = buildReplyTo(program.reference_number);
     const emails: any[] = [];
 
     // Partner emails using template
