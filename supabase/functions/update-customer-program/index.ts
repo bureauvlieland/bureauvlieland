@@ -663,7 +663,7 @@ Deno.serve(async (req) => {
       await enrichProviderEmails(supabase, [item]);
       if (item.provider_email && item.block_type !== "self_arranged") {
         emailMessages.push({
-          From: { Email: "noreply@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
           To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
           Subject: `${subjectPrefix}Annulering - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
           HTMLPart: `
