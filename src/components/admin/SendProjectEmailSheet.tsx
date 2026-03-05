@@ -227,7 +227,7 @@ export function SendProjectEmailSheet({
             />
 
             <p className="text-xs text-muted-foreground">
-              Het bericht wordt verstuurd vanuit noreply@bureauvlieland.nl met Bureau Vlieland-opmaak.
+              Het bericht wordt verstuurd vanuit hallo@bureauvlieland.nl met Bureau Vlieland-opmaak.
             </p>
 
             <div className="flex gap-2 pt-4">
