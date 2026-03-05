@@ -246,3 +246,18 @@ export const TemplateIds = {
   // Quote expired notification for partner
   QUOTE_EXPIRED_PARTNER: "quote_expired_partner",
 } as const;
+
+/**
+ * Build a dynamic Reply-To address for project-related emails.
+ * Enables Mailjet Parse API to route replies back to the correct project.
+ * 
+ * @param referenceNumber - The project reference (e.g., "BV-2503-0012" or "LOG-2503-0001")
+ * @returns Mailjet-compatible ReplyTo object, or undefined if no reference
+ */
+export function buildReplyTo(referenceNumber: string | null | undefined): { Email: string; Name: string } | undefined {
+  if (!referenceNumber) return undefined;
+  return {
+    Email: `reply+${referenceNumber}@bureauvlieland.nl`,
+    Name: SENDER_NAME,
+  };
+}
