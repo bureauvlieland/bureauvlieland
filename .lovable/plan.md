@@ -1,37 +1,50 @@
 
 
-## Plan: Mailjet Parse API — Inkomende e-mails koppelen aan projecten
+## Probleem
 
-### Status: ✅ Geïmplementeerd
+Partner Torenzicht probeert "Wachtwoord vergeten" te gebruiken op de loginpagina. Dit faalt op twee manieren:
 
-### Wat is gebouwd
+1. **Reset email verzenden mislukt** — `supabase.auth.resetPasswordForEmail()` gebruikt het ingebouwde Supabase e-mailsysteem, maar er is geen custom e-maildomain geconfigureerd. Het standaard Supabase e-mailsysteem heeft strikte rate limits (~3/uur) en beperkte deliverability.
 
-1. **`buildReplyTo()` helper** in `_shared/email-templates.ts`: genereert dynamische Reply-To adressen zoals `reply+BV-2503-0012@bureauvlieland.nl`
+2. **Oude uitnodigingslink verlopen** — De partner is uitgenodigd op 11 februari, nooit ingelogd. Supabase recovery links verlopen na 1 uur.
 
-2. **Consistente afzenderadressen**: Alle 7 `noreply@bureauvlieland.nl` referenties in `update-customer-program/index.ts` vervangen door `SENDER_EMAIL` (`hallo@bureauvlieland.nl`)
+**Kern van het probleem:** De "wachtwoord vergeten" flow gebruikt Supabase's ingebouwde e-mail, terwijl alle andere partner-communicatie via Mailjet loopt (betrouwbaar en werkend). Dit moet consistent worden gemaakt.
 
-3. **Reply-To headers** toegevoegd aan 12 edge functions:
-   - `send-project-email` (met reference_number lookup)
-   - `send-quote-offer`
-   - `approve-quote-item`
-   - `update-customer-program`
-   - `notify-accommodation-quote`
-   - `select-accommodation-quote`
-   - `cancel-program-request`
-   - `process-completed-items`
-   - `send-accommodation-quote-request` (import only, emails gaan naar partners)
+---
 
-4. **`inbound-email/index.ts`**: Nieuwe edge function die Mailjet Parse API POST's ontvangt:
-   - Parseert referentienummer uit To-adres
-   - Zoekt project op via `program_requests.reference_number` of `accommodation_requests.reference_number`
-   - Slaat bericht op in `project_communications` (type: `email_in`, direction: `inbound`)
-   - Maakt admin todo aan voor follow-up
-   - Retourneert altijd 200 OK (voorkomt Mailjet retries)
+## Oplossing: Custom wachtwoord-reset via Mailjet
 
-5. **Admin UI**: Inbound e-mails tonen "Inkomend" badge in `ProjectCommunicationsCard`
+### Stap 1: Nieuwe edge function `send-partner-reset-email`
 
-### Handmatige configuratie vereist
+Maakt gebruik van `supabase.auth.admin.generateLink({ type: 'recovery', email })` om een recovery URL te genereren, en stuurt deze vervolgens via Mailjet naar de partner — dezelfde betrouwbare route als alle andere partner e-mails.
 
-1. **Mailjet Dashboard**: Parse API activeren
-2. **Webhook URL**: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
-3. **DNS/Route**: Configureren voor `reply+*@bureauvlieland.nl`
+- Geen JWT vereist (partner is niet ingelogd)
+- Beveiligd met rate-limiting check (max 1 per 60 seconden per e-mailadres, via `email_log` tabel)
+- Valideert dat het e-mailadres gekoppeld is aan een actieve partner
+- Logt de e-mail in `email_log`
+
+### Stap 2: PartnerLogin.tsx aanpassen
+
+`handleForgotPassword` wijzigen om de nieuwe edge function aan te roepen in plaats van `supabase.auth.resetPasswordForEmail`:
+
+```text
+Oud: supabase.auth.resetPasswordForEmail(email, { redirectTo })
+Nieuw: supabase.functions.invoke("send-partner-reset-email", { body: { email } })
+```
+
+### Stap 3: Config
+
+Toevoegen aan `supabase/config.toml`: `[functions.send-partner-reset-email]` met `verify_jwt = false`.
+
+---
+
+## Samenvatting wijzigingen
+
+| Type | Bestand |
+|---|---|
+| Nieuw | `supabase/functions/send-partner-reset-email/index.ts` |
+| Gewijzigd | `src/pages/PartnerLogin.tsx` (handleForgotPassword) |
+| Gewijzigd | `supabase/config.toml` (nieuwe function entry) |
+
+**Direct resultaat:** Partner Torenzicht (en alle partners) kunnen betrouwbaar hun wachtwoord resetten via Mailjet, zonder afhankelijk te zijn van Supabase's ingebouwde e-mailservice.
+
