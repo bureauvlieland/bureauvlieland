@@ -150,8 +150,8 @@ const PartnerLogin = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/partner/reset-password`,
+      const { data, error } = await supabase.functions.invoke("send-partner-reset-email", {
+        body: { email: email.trim() },
       });
 
       if (error) throw error;
