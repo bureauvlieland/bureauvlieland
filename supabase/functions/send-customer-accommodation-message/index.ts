@@ -103,6 +103,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check invoicing mode for privacy
+    const isBureauCentral = (() => {
+      if (!accRequest.linked_program_id) return false;
+      // We already have programRequest but need invoicing_mode
+      return false; // will be set below
+    })();
+
+    // Fetch invoicing mode from the linked program
+    let invoicingMode = "partner_direct";
+    if (accRequest.linked_program_id) {
+      const { data: linkedProg } = await supabase
+        .from("program_requests")
+        .select("invoicing_mode")
+        .eq("id", accRequest.linked_program_id)
+        .maybeSingle();
+      if (linkedProg?.invoicing_mode) {
+        invoicingMode = linkedProg.invoicing_mode;
+      }
+    }
+    const isCentralBilling = invoicingMode === "bureau_central";
+
     // Get partner email
     const { data: partner } = await supabase
       .from("partners")
@@ -122,6 +143,19 @@ Deno.serve(async (req) => {
     const arrivalFormatted = formatDateNL(accRequest.arrival_date);
     const departureFormatted = formatDateNL(accRequest.departure_date);
 
+    // For bureau_central: hide customer PII, route via Bureau Vlieland
+    const senderLabel = isCentralBilling ? "Bureau Vlieland" : sanitizeHtml(programRequest.customer_name);
+    const replyToEmail = isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email;
+    const replyToName = isCentralBilling ? "Bureau Vlieland" : programRequest.customer_name;
+
+    const contactInfoBlock = isCentralBilling
+      ? `<p style="margin: 0;">Bureau Vlieland<br>📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></p>`
+      : `<p style="margin: 0;">
+            ${sanitizeHtml(programRequest.customer_name)}${programRequest.customer_company ? ` — ${sanitizeHtml(programRequest.customer_company)}` : ""}<br>
+            📧 <a href="mailto:${sanitizeHtml(programRequest.customer_email)}" style="color: #0066cc;">${sanitizeHtml(programRequest.customer_email)}</a><br>
+            📞 ${sanitizeHtml(programRequest.customer_phone)}
+          </p>`;
+
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
@@ -129,21 +163,17 @@ Deno.serve(async (req) => {
         </div>
         <div style="padding: 24px; line-height: 1.6; color: #333;">
           <p>Beste ${sanitizeHtml(partner.booking_contact_name || partner.name)},</p>
-          <p><strong>${sanitizeHtml(programRequest.customer_name)}</strong> heeft een bericht over de reservering bij <strong>${sanitizeHtml(quote.accommodation_name)}</strong> voor ${arrivalFormatted} t/m ${departureFormatted}.</p>
+          <p><strong>${senderLabel}</strong> heeft een bericht over de reservering bij <strong>${sanitizeHtml(quote.accommodation_name)}</strong> voor ${arrivalFormatted} t/m ${departureFormatted}.</p>
           <div style="background: #f8fafc; border-left: 4px solid #1e3a5f; padding: 16px; margin: 16px 0; border-radius: 4px;">
             <p style="margin: 0 0 8px; font-weight: 600; color: #1e3a5f;">${sanitizeHtml(subject)}</p>
             <p style="margin: 0;">${sanitizedMessage}</p>
           </div>
-          <p style="font-size: 14px; color: #666;">U kunt direct antwoorden op deze e-mail — uw reactie gaat naar de klant.</p>
+          <p style="font-size: 14px; color: #666;">U kunt direct antwoorden op deze e-mail — uw reactie gaat naar ${isCentralBilling ? "Bureau Vlieland" : "de klant"}.</p>
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;">
         <div style="padding: 16px 24px; color: #666; font-size: 13px; background: #f8fafc;">
-          <p style="margin: 0 0 4px;"><strong>Contactgegevens klant:</strong></p>
-          <p style="margin: 0;">
-            ${sanitizeHtml(programRequest.customer_name)}${programRequest.customer_company ? ` — ${sanitizeHtml(programRequest.customer_company)}` : ""}<br>
-            📧 <a href="mailto:${sanitizeHtml(programRequest.customer_email)}" style="color: #0066cc;">${sanitizeHtml(programRequest.customer_email)}</a><br>
-            📞 ${sanitizeHtml(programRequest.customer_phone)}
-          </p>
+          <p style="margin: 0 0 4px;"><strong>${isCentralBilling ? "Contactgegevens:" : "Contactgegevens klant:"}</strong></p>
+          ${contactInfoBlock}
         </div>
         <div style="padding: 16px 24px; color: #999; font-size: 12px;">
           <p style="margin: 0;">Verstuurd via Bureau Vlieland &nbsp;|&nbsp; <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></p>
