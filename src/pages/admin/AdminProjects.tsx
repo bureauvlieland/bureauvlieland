@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -41,7 +42,14 @@ import {
   Send,
   FileCheck,
   XCircle,
+  BarChart3,
+  CalendarDays,
+  List,
+  TableIcon,
 } from "lucide-react";
+import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
+import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
+import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
