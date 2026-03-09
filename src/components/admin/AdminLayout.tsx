@@ -23,7 +23,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   Users,
-  
   ClipboardList,
   LogOut,
   Menu,
@@ -38,6 +37,7 @@ import {
   HandCoins,
   ChevronDown,
   MessageCircle,
+  Hotel,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
