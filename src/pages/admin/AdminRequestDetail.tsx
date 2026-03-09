@@ -493,6 +493,33 @@ const AdminRequestDetail = () => {
     }
   };
 
+  const handlePublishProgram = async () => {
+    if (!request) return;
+    setIsPublishing(true);
+    try {
+      const { error } = await supabase
+        .from("program_requests")
+        .update({ program_published_at: new Date().toISOString() })
+        .eq("id", request.id);
+      if (error) throw error;
+
+      await logAdminActivity({
+        action: "program_published",
+        entityType: EntityTypes.REQUEST,
+        entityId: request.id,
+        details: { items_count: items.length },
+      });
+
+      toast.success("Programma gepubliceerd naar de klant");
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error publishing program:", error);
+      toast.error("Fout bij publiceren programma");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const handleItemQuoteStatusChange = async (itemId: string, newStatus: ItemQuoteStatus) => {
     try {
       const { error } = await supabase
