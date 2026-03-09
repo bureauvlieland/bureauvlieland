@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,19 +19,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
@@ -42,11 +31,9 @@ import {
   Mail,
   Phone,
   FileText,
-  Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { logAdminActivity } from "@/lib/adminLogger";
 import { AdminPartnersContent } from "@/pages/admin/AdminPartners";
 
 interface Customer {
@@ -64,19 +51,19 @@ interface Customer {
 const AdminCRMContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("customers");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [partnerToDelete, setPartnerToDelete] = useState<Partner | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  const activeTab = searchParams.get("tab") || "customers";
+  const setActiveTab = (tab: string) => {
+    setSearchParams(tab === "customers" ? {} : { tab });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch unique customers from program_requests
         const { data: requests, error: reqError } = await supabase
           .from("program_requests")
           .select("*")
@@ -84,7 +71,6 @@ const AdminCRMContent = () => {
 
         if (reqError) throw reqError;
 
-        // Group by email to get unique customers
         const customerMap = new Map<string, Customer>();
         (requests || []).forEach((req) => {
           const existing = customerMap.get(req.customer_email);
@@ -105,33 +91,6 @@ const AdminCRMContent = () => {
           }
         });
         setCustomers(Array.from(customerMap.values()));
-
-        // Fetch partners with item counts
-        const { data: partnersData, error: partnerError } = await supabase
-          .from("partners")
-          .select("*")
-          .order("name", { ascending: true });
-
-        if (partnerError) throw partnerError;
-
-        // Get item counts per partner
-        const { data: items, error: itemError } = await supabase
-          .from("program_request_items")
-          .select("provider_id");
-
-        if (itemError) throw itemError;
-
-        const itemCounts = new Map<string, number>();
-        (items || []).forEach((item) => {
-          itemCounts.set(item.provider_id, (itemCounts.get(item.provider_id) || 0) + 1);
-        });
-
-        setPartners(
-          (partnersData || []).map((p) => ({
-            ...p,
-            item_count: itemCounts.get(p.id) || 0,
-          }))
-        );
       } catch (error) {
         console.error("Error fetching CRM data:", error);
         toast({
@@ -147,7 +106,6 @@ const AdminCRMContent = () => {
     fetchData();
   }, [toast]);
 
-  // Filter and sort
   const filteredCustomers = useMemo(() => {
     return customers
       .filter((c) => {
@@ -161,128 +119,11 @@ const AdminCRMContent = () => {
       .sort((a, b) => a.customer_name.localeCompare(b.customer_name));
   }, [customers, searchQuery]);
 
-  const filteredPartners = useMemo(() => {
-    return partners
-      .filter((p) => {
-        const query = searchQuery.toLowerCase();
-        return (
-          p.name.toLowerCase().includes(query) ||
-          p.email.toLowerCase().includes(query)
-        );
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [partners, searchQuery]);
-
   const handleImpersonateCustomer = (token: string) => {
     window.open(`/mijn-programma/${token}`, "_blank");
   };
 
-  const handleImpersonatePartner = (token: string) => {
-    // Since we removed token access, navigate to partner dashboard
-    // For now, open the legacy token URL which redirects to login
-    window.open(`/partner/${token}`, "_blank");
-  };
-
-  const handleDeletePartner = async () => {
-    if (!partnerToDelete) return;
-    
-    setIsDeleting(true);
-    try {
-      // Check if partner has linked building blocks
-      const { data: blocks } = await supabase
-        .from("building_blocks")
-        .select("id")
-        .eq("provider_id", partnerToDelete.id)
-        .limit(1);
-      
-      if (blocks && blocks.length > 0) {
-        toast({
-          title: "Kan partner niet verwijderen",
-          description: "Deze partner heeft nog gekoppelde bouwstenen. Verwijder eerst de bouwstenen of wijs ze toe aan een andere partner.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if partner has program request items
-      const { data: items } = await supabase
-        .from("program_request_items")
-        .select("id")
-        .eq("provider_id", partnerToDelete.id)
-        .limit(1);
-      
-      if (items && items.length > 0) {
-        toast({
-          title: "Kan partner niet verwijderen",
-          description: "Deze partner heeft nog gekoppelde aanvragen. Verwijder eerst de aanvraag-items of wijs ze toe aan een andere partner.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if partner has active accommodation quotes (not declined/expired/rejected)
-      const { data: quotes } = await supabase
-        .from("accommodation_quotes")
-        .select("id")
-        .eq("partner_id", partnerToDelete.id)
-        .not("status", "in", '("declined","expired","rejected")')
-        .limit(1);
-      
-      if (quotes && quotes.length > 0) {
-        toast({
-          title: "Kan partner niet verwijderen",
-          description: "Deze partner heeft nog gekoppelde logies offertes. Verwijder eerst de offertes.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-
-      // Delete any declined/expired/rejected quotes first (they don't block deletion conceptually)
-      await supabase
-        .from("accommodation_quotes")
-        .delete()
-        .eq("partner_id", partnerToDelete.id)
-        .in("status", ["declined", "expired", "rejected"]);
-
-      // Delete the partner
-      const { error } = await supabase
-        .from("partners")
-        .delete()
-        .eq("id", partnerToDelete.id);
-
-      if (error) throw error;
-
-      // Log the activity
-      await logAdminActivity({
-        action: "delete",
-        entityType: "partner",
-        entityId: partnerToDelete.id,
-        details: { partner_name: partnerToDelete.name },
-      });
-
-      // Update local state
-      setPartners((prev) => prev.filter((p) => p.id !== partnerToDelete.id));
-
-      toast({
-        title: "Partner verwijderd",
-        description: `${partnerToDelete.name} is succesvol verwijderd.`,
-      });
-    } catch (error) {
-      console.error("Error deleting partner:", error);
-      toast({
-        title: "Fout",
-        description: "Kon partner niet verwijderen",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setPartnerToDelete(null);
-    }
-  };
-
-  if (isLoading) {
+  if (isLoading && activeTab === "customers") {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-48" />
@@ -295,42 +136,38 @@ const AdminCRMContent = () => {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">CRM</h1>
-        <p className="text-slate-600">Beheer klanten en partners</p>
+        <h1 className="text-2xl font-bold text-foreground">CRM</h1>
+        <p className="text-muted-foreground">Beheer klanten en partners</p>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input
-          placeholder="Zoek op naam, email of bedrijf..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="customers" className="gap-2">
             <Users className="h-4 w-4" />
             Klanten
-            <Badge variant="secondary" className="ml-1">
-              {filteredCustomers.length}
-            </Badge>
+            {activeTab === "customers" && (
+              <Badge variant="secondary" className="ml-1">
+                {filteredCustomers.length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="partners" className="gap-2">
             <Building2 className="h-4 w-4" />
             Partners
-            <Badge variant="secondary" className="ml-1">
-              {filteredPartners.length}
-            </Badge>
           </TabsTrigger>
         </TabsList>
 
         {/* Customers tab */}
-        <TabsContent value="customers" className="mt-4">
+        <TabsContent value="customers" className="mt-4 space-y-4">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Zoek op naam, email of bedrijf..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           <Card>
             <CardContent className="p-0">
               <Table>
@@ -347,7 +184,7 @@ const AdminCRMContent = () => {
                 <TableBody>
                   {filteredCustomers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Geen klanten gevonden
                       </TableCell>
                     </TableRow>
@@ -359,16 +196,16 @@ const AdminCRMContent = () => {
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-sm">
-                              <Mail className="h-3 w-3 text-slate-400" />
+                              <Mail className="h-3 w-3 text-muted-foreground" />
                               <a
                                 href={`mailto:${customer.customer_email}`}
-                                className="text-blue-600 hover:underline"
+                                className="text-primary hover:underline"
                               >
                                 {customer.customer_email}
                               </a>
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-slate-500">
-                              <Phone className="h-3 w-3 text-slate-400" />
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Phone className="h-3 w-3" />
                               {customer.customer_phone}
                             </div>
                           </div>
@@ -418,132 +255,11 @@ const AdminCRMContent = () => {
           </Card>
         </TabsContent>
 
-        {/* Partners tab */}
+        {/* Partners tab — full content from AdminPartners */}
         <TabsContent value="partners" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Partners</CardTitle>
-              <Button onClick={() => navigate("/admin/partners/nieuw")}>
-                Partner toevoegen
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Naam</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Commissie</TableHead>
-                    <TableHead>Activiteiten</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPartners.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                        Geen partners gevonden
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredPartners.map((partner) => (
-                      <TableRow key={partner.id}>
-                        <TableCell className="font-medium">{partner.name}</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-sm">
-                              <Mail className="h-3 w-3 text-slate-400" />
-                              <a
-                                href={`mailto:${partner.email}`}
-                                className="text-blue-600 hover:underline"
-                              >
-                                {partner.email}
-                              </a>
-                            </div>
-                            {partner.phone && (
-                              <div className="flex items-center gap-1 text-sm text-slate-500">
-                                <Phone className="h-3 w-3 text-slate-400" />
-                                {partner.phone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{partner.commission_percentage}%</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{partner.item_count}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={partner.is_active ? "default" : "secondary"}>
-                            {partner.is_active ? "Actief" : "Inactief"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => navigate(`/admin/partners/${partner.id}`)}
-                              >
-                                <Building2 className="h-4 w-4 mr-2" />
-                                Bewerken
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleImpersonatePartner(partner.partner_token)}
-                              >
-                                <LogIn className="h-4 w-4 mr-2" />
-                                Bekijk portal
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => {
-                                  setPartnerToDelete(partner);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Verwijderen
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <AdminPartnersContent />
         </TabsContent>
       </Tabs>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Partner verwijderen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Weet je zeker dat je <strong>{partnerToDelete?.name}</strong> wilt verwijderen? 
-              Dit kan niet ongedaan worden gemaakt.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeletePartner}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Verwijderen..." : "Verwijderen"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
