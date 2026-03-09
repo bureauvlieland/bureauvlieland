@@ -1,25 +1,29 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+## CRM en Partners samenvoegen
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+### Huidige situatie
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+- **AdminCRM** (`/admin/crm`): Twee tabs — Klanten (unieke klanten uit program_requests) en Partners (simpele tabel met naam, contact, commissie, status, dropdown-acties)
+- **AdminPartners** (`/admin/partners`): Uitgebreid partneroverzicht met onboarding stats, unavailability indicators, bulk invite, reset connections, checkboxes, type/commissie filters, actief-switch, etc.
+- Sidebar heeft beide als aparte items: "CRM" en "Partners"
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+### Wat we gaan doen
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+1. **CRM wordt het gecombineerde overzicht** — De Partners-tab in AdminCRM wordt vervangen door de volledige AdminPartnersContent component (met alle bestaande functionaliteit: onboarding stats, bulk invite, unavailability, filters, etc.)
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+2. **Sidebar**: "Partners" verwijderen als apart item, alleen "CRM" behouden (met twee tabs: Klanten en Partners)
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+3. **Route `/admin/partners`** blijft werken als redirect naar `/admin/crm?tab=partners`. Detail-routes (`/admin/partners/:id`, `/admin/partners/nieuw`) blijven ongewijzigd.
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+### Technische wijzigingen
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+| Bestand | Wijziging |
+|---|---|
+| `src/pages/admin/AdminCRM.tsx` | Partners-tab vervangen door import van `AdminPartnersContent` uit AdminPartners. Klanten-tab behouden zoals nu. |
+| `src/pages/admin/AdminPartners.tsx` | `AdminPartnersContent` exporteren als named export zodat CRM het kan importeren. |
+| `src/components/admin/AdminLayout.tsx` | "Partners" verwijderen uit sidebar items |
+| `src/App.tsx` | Route `/admin/partners` redirect naar `/admin/crm` (detail-routes behouden) |
+
+De zoekbalk in CRM wordt per tab gescheiden — elke tab behoudt zijn eigen zoekfunctionaliteit.
+
