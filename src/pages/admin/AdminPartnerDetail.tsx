@@ -149,6 +149,7 @@ const AdminPartnerDetail = () => {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [relatedRequests, setRelatedRequests] = useState<RelatedRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [accommodationQuotes, setAccommodationQuotes] = useState<RelatedAccommodationQuote[]>([]);
