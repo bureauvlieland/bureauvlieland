@@ -253,6 +253,7 @@ export const MobileProgramView = ({
             quoteStatus={program.quote_status}
             quoteValidUntil={program.quote_valid_until}
             termsAcceptedAt={program.terms_accepted_at}
+            itemCount={program.items.filter(i => i.status !== "cancelled").length}
             isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
             onAcceptQuoteProposal={onAcceptQuoteProposal}
             hasUnapprovedItems={hasUnapprovedItems}
