@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
         partner_id,
         request_id,
         created_at,
-        partner:partners(name),
+        partner:partners(name, email, contact_email),
         request:accommodation_requests(
           customer_name,
           customer_company,
@@ -316,7 +316,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const partnerName = (quote.partner as any)?.name || "Onbekend";
+        const partnerData = quote.partner as any;
+        const partnerName = partnerData?.name || "Onbekend";
         const req = quote.request as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const daysSince = Math.floor(
@@ -336,6 +337,39 @@ Deno.serve(async (req) => {
           });
 
         if (!todoError) totalCreated++;
+
+        // Send reminder email to partner
+        if (canSendEmail && partnerData) {
+          const partnerEmail = partnerData.contact_email || partnerData.email;
+          const portalUrl = "https://bureauvlieland.nl/partner/logies";
+          const arrivalFormatted = req?.arrival_date ? new Date(req.arrival_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+          const departureFormatted = req?.departure_date ? new Date(req.departure_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+          await sendReminderEmail({
+            templateId: "reminder_quote_pending",
+            recipientEmail: partnerEmail,
+            recipientName: partnerName,
+            subject: `Herinnering: logiesofferte gevraagd voor ${customerName}`,
+            variables: {
+              partner_name: partnerName,
+              customer_name: customerName,
+              arrival_date: arrivalFormatted,
+              departure_date: departureFormatted,
+              number_of_guests: String(req?.number_of_guests || ""),
+              days_since: String(daysSince),
+              portal_url: portalUrl,
+            },
+            fallbackHtml: `<p>Beste ${partnerName},</p>
+              <p>Wij hebben ${daysSince} dagen geleden een logiesofferte-aanvraag verstuurd voor ${customerName} (${arrivalFormatted} – ${departureFormatted}, ${req?.number_of_guests || "?"} gasten), maar we hebben nog geen reactie ontvangen.</p>
+              <p>Kunt u via uw partnerportaal een offerte indienen?</p>
+              <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Naar het portaal</a></p>
+              <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+            logExtra: {
+              email_type: "reminder_quote_pending",
+              related_partner_id: quote.partner_id,
+            },
+          });
+        }
       }
     }
 
