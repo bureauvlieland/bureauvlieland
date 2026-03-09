@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,17 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -46,10 +57,12 @@ import {
   CalendarDays,
   List,
   TableIcon,
+  Trash2,
 } from "lucide-react";
 import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
 import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
 import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
+import { toast } from "@/hooks/use-toast";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
