@@ -31,17 +31,118 @@ Deno.serve(async (req) => {
         "reminder_days_partner_quote",
         "reminder_days_customer_quote",
         "reminder_days_customer_request",
+        "reminder_email_enabled",
       ]);
 
-    const settings: Record<string, number> = {};
+    const settings: Record<string, any> = {};
     for (const row of settingsRows || []) {
-      settings[row.id] = typeof row.value === "number" ? row.value : parseInt(String(row.value), 10) || 0;
+      settings[row.id] = row.value;
     }
 
-    const partnerQuoteDays = settings["reminder_days_partner_quote"] || DEFAULT_REMINDER_DAYS_PARTNER;
-    const customerQuoteDays = settings["reminder_days_customer_quote"] || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
-    const customerRequestDays = settings["reminder_days_customer_request"] || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
+    const partnerQuoteDays = Number(settings["reminder_days_partner_quote"]) || DEFAULT_REMINDER_DAYS_PARTNER;
+    const customerQuoteDays = Number(settings["reminder_days_customer_quote"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
+    const customerRequestDays = Number(settings["reminder_days_customer_request"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
     const partnerActivityDays = DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY;
+    const reminderEmailEnabled = settings["reminder_email_enabled"] !== false;
+
+    const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
+    const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
+    const canSendEmail = reminderEmailEnabled && !!mailjetApiKey && !!mailjetSecretKey;
+
+    // Helper: send a reminder email via Mailjet
+    async function sendReminderEmail(opts: {
+      templateId: string;
+      recipientEmail: string;
+      recipientName: string;
+      subject: string;
+      fallbackHtml: string;
+      variables: Record<string, string>;
+      logExtra: {
+        email_type: string;
+        related_partner_id?: string;
+        related_request_id?: string;
+        related_item_id?: string;
+      };
+    }) {
+      // Check deduplication
+      const dedupeFilter: Record<string, string> = {
+        email_type: opts.logExtra.email_type,
+        recipient_email: opts.recipientEmail,
+      };
+      if (opts.logExtra.related_item_id) {
+        dedupeFilter.related_item_id = opts.logExtra.related_item_id;
+      }
+      
+      const dedupeQuery = supabase
+        .from("email_log")
+        .select("id")
+        .eq("email_type", opts.logExtra.email_type)
+        .eq("recipient_email", opts.recipientEmail);
+      
+      if (opts.logExtra.related_item_id) {
+        dedupeQuery.eq("related_item_id", opts.logExtra.related_item_id);
+      }
+
+      const { data: alreadySent } = await dedupeQuery.maybeSingle();
+      if (alreadySent) {
+        console.log(`Skipping ${opts.logExtra.email_type} — already sent to ${opts.recipientEmail}`);
+        return;
+      }
+
+      // Try DB template
+      const { data: template } = await supabase
+        .from("email_templates")
+        .select("subject, body_html")
+        .eq("id", opts.templateId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      let subject = opts.subject;
+      let body = opts.fallbackHtml;
+
+      if (template) {
+        subject = template.subject;
+        body = template.body_html;
+        for (const [key, val] of Object.entries(opts.variables)) {
+          const re = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+          subject = subject.replace(re, val);
+          body = body.replace(re, val);
+        }
+      }
+
+      try {
+        const resp = await fetch("https://api.mailjet.com/v3.1/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
+          },
+          body: JSON.stringify({
+            Messages: [{
+              From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+              To: [{ Email: opts.recipientEmail, Name: opts.recipientName }],
+              Subject: subject,
+              HTMLPart: body,
+            }],
+          }),
+        });
+
+        const status = resp.ok ? "sent" : "failed";
+        if (!resp.ok) console.error(`Failed to send ${opts.logExtra.email_type}:`, await resp.text());
+        else console.log(`Sent ${opts.logExtra.email_type} to ${opts.recipientEmail}`);
+
+        await supabase.from("email_log").insert({
+          ...opts.logExtra,
+          subject,
+          recipient_email: opts.recipientEmail,
+          recipient_name: opts.recipientName,
+          status,
+          sent_at: status === "sent" ? new Date().toISOString() : null,
+        });
+      } catch (err) {
+        console.error(`Error sending ${opts.logExtra.email_type}:`, err);
+      }
+    }
 
     let totalCreated = 0;
     let totalSkipped = 0;
@@ -96,7 +197,7 @@ Deno.serve(async (req) => {
 
         const { data: partner } = await supabase
           .from("partners")
-          .select("name")
+          .select("name, email, contact_email")
           .eq("id", item.provider_id)
           .maybeSingle();
 
@@ -131,6 +232,36 @@ Deno.serve(async (req) => {
           });
 
         if (!todoError) totalCreated++;
+
+        // Send reminder email to partner
+        if (canSendEmail && partner) {
+          const partnerEmail = partner.contact_email || partner.email;
+          const portalUrl = "https://bureauvlieland.nl/partner";
+          await sendReminderEmail({
+            templateId: "reminder_activity_pending",
+            recipientEmail: partnerEmail,
+            recipientName: partnerName,
+            subject: `Herinnering: reactie gevraagd op "${item.block_name}"`,
+            variables: {
+              partner_name: partnerName,
+              block_name: item.block_name,
+              customer_name: customerName,
+              days_since: String(daysSinceCreated),
+              portal_url: portalUrl,
+            },
+            fallbackHtml: `<p>Beste ${partnerName},</p>
+              <p>Wij hebben ${daysSinceCreated} dagen geleden een aanvraag verstuurd voor de activiteit '<strong>${item.block_name}</strong>' (klant: ${customerName}), maar we hebben nog geen reactie van u ontvangen.</p>
+              <p>Kunt u via uw partnerportaal aangeven of u beschikbaar bent?</p>
+              <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Naar het portaal</a></p>
+              <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+            logExtra: {
+              email_type: "reminder_activity_pending",
+              related_partner_id: item.provider_id,
+              related_request_id: request.id,
+              related_item_id: item.id,
+            },
+          });
+        }
       }
     }
 
@@ -147,7 +278,7 @@ Deno.serve(async (req) => {
         partner_id,
         request_id,
         created_at,
-        partner:partners(name),
+        partner:partners(name, email, contact_email),
         request:accommodation_requests(
           customer_name,
           customer_company,
@@ -185,7 +316,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const partnerName = (quote.partner as any)?.name || "Onbekend";
+        const partnerData = quote.partner as any;
+        const partnerName = partnerData?.name || "Onbekend";
         const req = quote.request as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const daysSince = Math.floor(
@@ -205,6 +337,39 @@ Deno.serve(async (req) => {
           });
 
         if (!todoError) totalCreated++;
+
+        // Send reminder email to partner
+        if (canSendEmail && partnerData) {
+          const partnerEmail = partnerData.contact_email || partnerData.email;
+          const portalUrl = "https://bureauvlieland.nl/partner/logies";
+          const arrivalFormatted = req?.arrival_date ? new Date(req.arrival_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+          const departureFormatted = req?.departure_date ? new Date(req.departure_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+          await sendReminderEmail({
+            templateId: "reminder_quote_pending",
+            recipientEmail: partnerEmail,
+            recipientName: partnerName,
+            subject: `Herinnering: logiesofferte gevraagd voor ${customerName}`,
+            variables: {
+              partner_name: partnerName,
+              customer_name: customerName,
+              arrival_date: arrivalFormatted,
+              departure_date: departureFormatted,
+              number_of_guests: String(req?.number_of_guests || ""),
+              days_since: String(daysSince),
+              portal_url: portalUrl,
+            },
+            fallbackHtml: `<p>Beste ${partnerName},</p>
+              <p>Wij hebben ${daysSince} dagen geleden een logiesofferte-aanvraag verstuurd voor ${customerName} (${arrivalFormatted} – ${departureFormatted}, ${req?.number_of_guests || "?"} gasten), maar we hebben nog geen reactie ontvangen.</p>
+              <p>Kunt u via uw partnerportaal een offerte indienen?</p>
+              <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Naar het portaal</a></p>
+              <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+            logExtra: {
+              email_type: "reminder_quote_pending",
+              related_partner_id: quote.partner_id,
+            },
+          });
+        }
       }
     }
 

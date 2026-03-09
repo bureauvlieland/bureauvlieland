@@ -1,40 +1,37 @@
 
 
-## Herinneringsmails voor Check 1 en Check 2
+## Plan: Mailjet Parse API — Inkomende e-mails koppelen aan projecten
 
-Twee herinneringsmails toevoegen aan `check-pending-items/index.ts`, zodat partners naast de admin-todo ook een e-mail ontvangen wanneer ze niet reageren.
+### Status: ✅ Geïmplementeerd
 
-### Wat verandert
+### Wat is gebouwd
 
-**Bestand:** `supabase/functions/check-pending-items/index.ts`
+1. **`buildReplyTo()` helper** in `_shared/email-templates.ts`: genereert dynamische Reply-To adressen zoals `reply+BV-2503-0012@bureauvlieland.nl`
 
-#### Check 1 — Partner activiteit niet beantwoord (na 3 dagen)
-Na het aanmaken van de admin-todo, een e-mail sturen naar de partner:
-- Partner ophalen met `contact_email` en `email` (contact_email heeft voorrang)
-- Deduplicatie via `email_log`: check of er al een `reminder_activity_pending` mail is gestuurd voor dit item — maximaal 1 herinnering per item
-- Respecteer de `reminder_email_enabled` app_setting (al bestaand)
-- Gebruik een DB-template `reminder_activity_pending` (met fallback-HTML)
-- Variabelen: `partner_name`, `block_name`, `customer_name`, `days_since`, `portal_url`
-- Log in `email_log` met type `reminder_activity_pending`
+2. **Consistente afzenderadressen**: Alle 7 `noreply@bureauvlieland.nl` referenties in `update-customer-program/index.ts` vervangen door `SENDER_EMAIL` (`hallo@bureauvlieland.nl`)
 
-#### Check 2 — Partner logiesofferte niet beantwoord (na 5 dagen)
-Zelfde patroon:
-- Partner ophalen met `contact_email` en `email`
-- Deduplicatie via `email_log`: check of er al een `reminder_quote_pending` mail is gestuurd voor deze quote — maximaal 1 herinnering per quote
-- DB-template `reminder_quote_pending` (met fallback-HTML)
-- Variabelen: `partner_name`, `customer_name`, `arrival_date`, `departure_date`, `number_of_guests`, `days_since`, `portal_url`
-- Log in `email_log` met type `reminder_quote_pending`
+3. **Reply-To headers** toegevoegd aan 12 edge functions:
+   - `send-project-email` (met reference_number lookup)
+   - `send-quote-offer`
+   - `approve-quote-item`
+   - `update-customer-program`
+   - `notify-accommodation-quote`
+   - `select-accommodation-quote`
+   - `cancel-program-request`
+   - `process-completed-items`
+   - `send-accommodation-quote-request` (import only, emails gaan naar partners)
 
-#### Gedeelde logica
-- `reminder_email_enabled` setting ophalen bij de bestaande settings-fetch (al aanwezig in `app_settings`)
-- Mailjet-verzending volgt exact hetzelfde patroon als Check 5 (expired quotes) — dat werkt al betrouwbaar
-- Partner query uitbreiden met `contact_email` veld voor juiste ontvanger
+4. **`inbound-email/index.ts`**: Nieuwe edge function die Mailjet Parse API POST's ontvangt:
+   - Parseert referentienummer uit To-adres
+   - Zoekt project op via `program_requests.reference_number` of `accommodation_requests.reference_number`
+   - Slaat bericht op in `project_communications` (type: `email_in`, direction: `inbound`)
+   - Maakt admin todo aan voor follow-up
+   - Retourneert altijd 200 OK (voorkomt Mailjet retries)
 
-### Samenvatting
+5. **Admin UI**: Inbound e-mails tonen "Inkomend" badge in `ProjectCommunicationsCard`
 
-| Wijziging | Bestand |
-|---|---|
-| Herinneringsmail Check 1 + Check 2 | `supabase/functions/check-pending-items/index.ts` |
+### Handmatige configuratie vereist
 
-Geen nieuwe bestanden, geen database-migraties. Twee nieuwe e-mailtemplate-ID's (`reminder_activity_pending`, `reminder_quote_pending`) die optioneel via de admin-omgeving aangemaakt kunnen worden — de code bevat fallback-HTML.
-
+1. **Mailjet Dashboard**: Parse API activeren
+2. **Webhook URL**: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
+3. **DNS/Route**: Configureren voor `reply+*@bureauvlieland.nl`
