@@ -789,31 +789,82 @@ const AdminPartnerDetail = () => {
                         </div>
                       </div>
 
-                      {/* Show initial password if partner hasn't logged in yet */}
-                      {partner.auth_user_id && !partner.password_set_at && (partner as any).initial_password && (
-                        <div className="space-y-2">
+                      {/* Password management for partners with accounts */}
+                      {partner.auth_user_id && (
+                        <div className="space-y-3">
                           <Label className="flex items-center gap-2">
                             <Key className="h-4 w-4" />
-                            Tijdelijk wachtwoord
+                            Wachtwoord beheer
                           </Label>
-                          <div className="flex items-center gap-2">
-                            <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono">
-                              {(partner as any).initial_password}
-                            </code>
+
+                          {/* Show current password if available */}
+                          {partner.initial_password && (
+                            <div className="flex items-center gap-2">
+                              <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono">
+                                {partner.initial_password}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(partner.initial_password!);
+                                  toast.success("Wachtwoord gekopieerd");
+                                }}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              {!partner.password_set_at && (
+                                <Badge variant="outline" className="text-xs">Tijdelijk</Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {partner.password_set_at && !partner.initial_password && (
+                            <p className="text-sm text-muted-foreground">
+                              Partner heeft een eigen wachtwoord ingesteld.
+                            </p>
+                          )}
+
+                          {/* Reset password button */}
+                          <div className="flex gap-2">
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                navigator.clipboard.writeText((partner as any).initial_password);
-                                toast.success("Wachtwoord gekopieerd");
+                              variant="outline"
+                              size="sm"
+                              disabled={isResettingPassword}
+                              onClick={async () => {
+                                setIsResettingPassword(true);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke(
+                                    "admin-reset-partner-password",
+                                    { body: { partnerId: partner.id } }
+                                  );
+                                  if (error) throw error;
+                                  if (data?.error) throw new Error(data.error);
+
+                                  toast.success("Nieuw wachtwoord gegenereerd", {
+                                    description: `Wachtwoord: ${data.password}`,
+                                  });
+                                  navigator.clipboard.writeText(data.password);
+                                  toast.info("Wachtwoord gekopieerd naar klembord");
+                                  fetchPartner();
+                                } catch (err) {
+                                  console.error("Error resetting password:", err);
+                                  toast.error("Fout bij resetten wachtwoord", {
+                                    description: err instanceof Error ? err.message : "Onbekende fout",
+                                  });
+                                } finally {
+                                  setIsResettingPassword(false);
+                                }
                               }}
                             >
-                              <Copy className="h-4 w-4" />
+                              <RefreshCw className={`h-4 w-4 mr-2 ${isResettingPassword ? "animate-spin" : ""}`} />
+                              {isResettingPassword ? "Bezig..." : "Nieuw wachtwoord genereren"}
                             </Button>
                           </div>
+
                           <p className="text-xs text-muted-foreground">
-                            Dit wachtwoord wordt automatisch gewist zodra de partner inlogt.
+                            Genereert een nieuw tijdelijk wachtwoord en kopieert het naar je klembord.
                           </p>
                         </div>
                       )}
