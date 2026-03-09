@@ -71,7 +71,6 @@ import {
   FileText,
   ClipboardList,
   CalendarOff,
-  Settings,
   RotateCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
