@@ -360,7 +360,7 @@ export const MobileProgramView = ({
           }
         defaultOpen
       >
-        {program.program_type?.startsWith("maatwerk_") && program.items.length === 0 ? (
+        {!program.program_published_at || (program.program_type?.startsWith("maatwerk_") && program.items.length === 0) ? (
           <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
             <Sparkles className="h-8 w-8 text-primary/50" />
             <p className="text-muted-foreground">
