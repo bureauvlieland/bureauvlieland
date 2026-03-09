@@ -151,6 +151,7 @@ const AdminProjectsContent = () => {
           terms_accepted_at, created_at, linked_accommodation_id,
           program_type, quote_status, completion_status
         `)
+        .neq("status", "deleted")
         .order("created_at", { ascending: false });
 
       if (progError) throw progError;
