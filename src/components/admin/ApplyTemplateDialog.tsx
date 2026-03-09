@@ -139,7 +139,7 @@ export const ApplyTemplateDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
           <div className="space-y-3 pr-4">
             {templatesLoading ? (
               Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20" />)

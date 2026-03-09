@@ -127,6 +127,8 @@ interface ProgramRequest {
   program_description: string | null;
   // Invoicing mode
   invoicing_mode: 'partner_direct' | 'bureau_central';
+  // Publish flow
+  program_published_at: string | null;
 }
 
 interface LinkedAccommodation {
@@ -210,6 +212,7 @@ const AdminRequestDetail = () => {
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -487,6 +490,33 @@ const AdminRequestDetail = () => {
       toast.error("Fout bij versturen naar partners");
     } finally {
       setIsSendingToPartners(false);
+    }
+  };
+
+  const handlePublishProgram = async () => {
+    if (!request) return;
+    setIsPublishing(true);
+    try {
+      const { error } = await supabase
+        .from("program_requests")
+        .update({ program_published_at: new Date().toISOString() })
+        .eq("id", request.id);
+      if (error) throw error;
+
+      await logAdminActivity({
+        action: "program_published",
+        entityType: EntityTypes.REQUEST,
+        entityId: request.id,
+        details: { items_count: items.length },
+      });
+
+      toast.success("Programma gepubliceerd naar de klant");
+      fetchRequestData();
+    } catch (error) {
+      console.error("Error publishing program:", error);
+      toast.error("Fout bij publiceren programma");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -898,6 +928,35 @@ const AdminRequestDetail = () => {
             </Card>
           )}
 
+          {/* Concept banner — program not yet published to customer */}
+          {!request.program_published_at && items.length > 0 && (
+            <Card className="border-blue-300 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-blue-900">
+                        Dit programma is nog niet gepubliceerd naar de klant
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        De klant ziet een placeholder totdat je het programma publiceert.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handlePublishProgram}
+                    disabled={isPublishing}
+                    className="shrink-0"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {isPublishing ? "Publiceren..." : "Publiceer naar klant"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs defaultValue="activiteiten" className="space-y-4">
             <TabsList>
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
@@ -996,6 +1055,7 @@ const AdminRequestDetail = () => {
                               <TableHead>Status</TableHead>
                               <TableHead>Prijs</TableHead>
                               <TableHead>Factuur</TableHead>
+                              <TableHead className="w-[80px]">Acties</TableHead>
                             </>
                           )}
                         </TableRow>
@@ -1107,6 +1167,37 @@ const AdminRequestDetail = () => {
                                     ) : (
                                       <span className="text-slate-400">-</span>
                                     )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setEditingItem(item)}
+                                        className="h-8 w-8"
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={async () => {
+                                          const { error } = await supabase
+                                            .from("program_request_items")
+                                            .delete()
+                                            .eq("id", item.id);
+                                          if (error) {
+                                            toast.error("Fout bij verwijderen");
+                                          } else {
+                                            toast.success("Activiteit verwijderd");
+                                            fetchRequestData();
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </>
                               )}

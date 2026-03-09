@@ -80,6 +80,7 @@ interface DesktopProgramViewProps {
     quote_valid_until?: string | null;
     // Program description
     program_description?: string | null;
+    program_published_at?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -338,7 +339,7 @@ export const DesktopProgramView = ({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {program.program_type?.startsWith("maatwerk_") && program.items.length === 0 ? (
+                  {!program.program_published_at || (program.program_type?.startsWith("maatwerk_") && program.items.length === 0) ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
                       <Sparkles className="h-8 w-8 text-primary/50" />
                       <p className="text-muted-foreground">

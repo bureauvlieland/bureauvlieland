@@ -1,85 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-## Drie verbeteringen: Template scroll, Activiteiten bewerken, en Publiceer-flow
+### Wat is gebouwd
 
-### 1. Template toepassen dialog — scroll fix
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-De `ApplyTemplateDialog` heeft al een `ScrollArea`, maar de `DialogContent` beperkt de hoogte niet correct waardoor de scroll niet werkt wanneer er veel templates zijn.
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-**Fix:** Geef de `ScrollArea` een expliciete `max-h` zodat de lijst scrollbaar wordt binnen het dialog.
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-| Bestand | Wijziging |
-|---|---|
-| `src/components/admin/ApplyTemplateDialog.tsx` | `ScrollArea` een vaste max-hoogte geven (bijv. `max-h-[50vh]`) |
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
 ---
 
-### 2. Activiteiten bewerken — edit-knop ook buiten quote-modus
+## Plan: CRM en Partners samenvoegen
 
-Momenteel verschijnt de edit-knop (potloodje) alleen in `isQuoteMode`. Bij standaard-projecten is er geen manier om een activiteit te bewerken na toevoegen.
+### Status: ✅ Geïmplementeerd
 
-**Fix:** De edit-knop (die `AdminEditActivitySheet` opent) tonen voor alle projecten, niet alleen quote-modus. Toevoegen als extra kolom "Acties" met pencil + delete knoppen.
-
-| Bestand | Wijziging |
-|---|---|
-| `src/pages/admin/AdminRequestDetail.tsx` | Edit-knop toevoegen in de niet-quote tabelrijen (naast Status/Prijs/Factuur kolommen) |
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
 ---
 
-### 3. Publiceer-flow: concept → publiceer naar klant → akkoord → verstuur naar partners
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-**Huidige situatie:** Alle items zijn direct zichtbaar in het klantportaal. Er is geen concept-fase.
+### Status: ✅ Geïmplementeerd
 
-**Gewenste flow:**
-```text
-Admin voegt activiteiten toe (concept, niet zichtbaar voor klant)
-  → Admin klikt "Publiceer naar klant" (items worden zichtbaar, klant krijgt melding)
-  → Klant beoordeelt en geeft akkoord
-  → Admin verstuurt naar partners
-```
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
-**Aanpak:**
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
 
-- **Nieuw veld op `program_requests`:** `program_published_at` (timestamp, nullable). Als dit `null` is, is het programma in concept-fase.
-- **Klantportaal:** In de Programma-tab: als `program_published_at` is null, toon een "Je programma wordt nog samengesteld" placeholder in plaats van de activiteitenlijst.
-- **Admin detail pagina:** Toon een "Publiceer programma" knop als `program_published_at` is null. Na klikken:
-  - Zet `program_published_at` op `now()`
-  - Optioneel: stuur notificatie-email naar klant dat het programma klaar staat ter beoordeling
-- **Visuele indicator:** In concept-fase een banner "Dit programma is nog niet gepubliceerd naar de klant" bovenaan de activiteiten-tab.
-
-**Bestaande flow na publicatie (ongewijzigd):**
-- Bij quote-modus: klant kan per item akkoord geven, of het hele voorstel accepteren
-- Na akkoord (status `akkoord_ontvangen`): admin kan "Verstuur naar partners" klikken — dit bestaat al via `handleSendToPartners` en de `accept-quote-proposal` edge function
-- Bij niet-quote modus: items gaan direct naar partners zodra de admin publiceert (of handmatig via de bestaande flow)
-
-**Database migratie:**
-```sql
-ALTER TABLE public.program_requests 
-ADD COLUMN program_published_at timestamptz DEFAULT NULL;
-
--- Bestaande projecten: direct als gepubliceerd markeren
-UPDATE public.program_requests 
-SET program_published_at = created_at 
-WHERE status != 'deleted';
-```
-
-| Bestand | Wijziging |
-|---|---|
-| Database migratie | `program_published_at` kolom toevoegen |
-| `src/pages/admin/AdminRequestDetail.tsx` | "Publiceer programma" knop + concept-banner |
-| `src/components/customer-portal/ProgramSection.tsx` | Check `program_published_at` — als null, toon placeholder |
-| `src/components/customer-portal/DesktopProgramView.tsx` | Idem |
-| `src/components/customer-portal/MobileProgramView.tsx` | Idem |
-| `src/hooks/useCustomerProgram.ts` | `program_published_at` meenemen in query |
-| `src/types/programRequest.ts` | Type updaten |
-
-### Samenvatting flow
-
-```text
-1. Admin maakt project + voegt activiteiten toe
-2. Admin bewerkt tijden, prijzen, partners (edit-knop nu altijd zichtbaar)
-3. Admin klikt "Publiceer naar klant" → klant ziet programma
-4. Klant beoordeelt → geeft akkoord
-5. Admin klikt "Verstuur naar partners" → partners ontvangen aanvragen
-```
-
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
