@@ -1109,6 +1109,37 @@ const AdminRequestDetail = () => {
                                       <span className="text-slate-400">-</span>
                                     )}
                                   </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setEditingItem(item)}
+                                        className="h-8 w-8"
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={async () => {
+                                          const { error } = await supabase
+                                            .from("program_request_items")
+                                            .delete()
+                                            .eq("id", item.id);
+                                          if (error) {
+                                            toast.error("Fout bij verwijderen");
+                                          } else {
+                                            toast.success("Activiteit verwijderd");
+                                            fetchRequestData();
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
                                 </>
                               )}
                             </TableRow>
