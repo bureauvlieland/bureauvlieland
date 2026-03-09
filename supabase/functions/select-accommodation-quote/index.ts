@@ -162,6 +162,15 @@ Deno.serve(async (req) => {
       throw new Error("Fout bij bijwerken aanvraag");
     }
 
+    // Auto-resolve quote_pending_customer todo
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("auto_type", "quote_pending_customer")
+      .eq("auto_entity_id", request.id)
+      .neq("status", "done");
+    console.log(`Resolved quote_pending_customer todo for request ${request.id}`);
+
     // Send email notifications
     const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
     const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");

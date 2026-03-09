@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +18,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
@@ -26,10 +28,8 @@ import {
   LogOut,
   Menu,
   Shield,
-  Activity,
   Euro,
   Blocks,
-  MailCheck,
   FolderKanban,
   ImageIcon,
   Settings,
@@ -52,53 +52,69 @@ interface AdminInfo {
 
 interface MenuSection {
   label: string;
-  items: { title: string; url: string; icon: React.ComponentType<{ className?: string }> }[];
+  items: { title: string; url: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[];
   collapsible?: boolean;
 }
 
-const menuSections: MenuSection[] = [
-  {
-    label: "Operationeel",
-    items: [
-      { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-      { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
-      { title: "CRM", url: "/admin/crm", icon: Users },
-      { title: "Partners", url: "/admin/partners", icon: Building2 },
-      { title: "Chat", url: "/admin/chat", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Content",
-    items: [
-      { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
-      { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
-      { title: "Media", url: "/admin/media", icon: ImageIcon },
-    ],
-  },
-  {
-    label: "Financiën",
-    collapsible: true,
-    items: [
-      { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
-      { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
-      { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
-    ],
-  },
-  {
-    label: "Systeem",
-    items: [
-      { title: "Todo's", url: "/admin/todos", icon: ClipboardList },
-      { title: "E-maillog", url: "/admin/berichten", icon: MailCheck },
-      { title: "Activiteitenlog", url: "/admin/logs", icon: Activity },
-      { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
-    ],
-  },
-];
+const useOpenTodoCount = () => {
+  return useQuery({
+    queryKey: ["admin-todo-count"],
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const { count, error } = await supabase
+        .from("admin_todos")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["todo", "in_progress"])
+        .or(`snoozed_until.is.null,snoozed_until.lte.${today}`);
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+};
 
 const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => void }) => {
   const location = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { data: todoCount = 0 } = useOpenTodoCount();
+
+  const menuSections: MenuSection[] = [
+    {
+      label: "Operationeel",
+      items: [
+        { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+        { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
+        { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
+        { title: "CRM", url: "/admin/crm", icon: Users },
+        { title: "Partners", url: "/admin/partners", icon: Building2 },
+        { title: "Chat", url: "/admin/chat", icon: MessageCircle },
+      ],
+    },
+    {
+      label: "Content",
+      items: [
+        { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+        { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
+        { title: "Media", url: "/admin/media", icon: ImageIcon },
+      ],
+    },
+    {
+      label: "Financiën",
+      collapsible: true,
+      items: [
+        { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
+        { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
+        { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
+      ],
+    },
+    {
+      label: "Systeem",
+      items: [
+        { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
+      ],
+    },
+  ];
 
   const isItemActive = (url: string) => location.pathname === url;
   const isSectionActive = (section: MenuSection) =>
@@ -120,7 +136,16 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
                 }`}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span>{item.title}</span>}
+                {!isCollapsed && (
+                  <span className="flex-1 flex items-center justify-between">
+                    <span>{item.title}</span>
+                    {item.badge && item.badge > 0 ? (
+                      <Badge className="bg-amber-500 text-white text-[10px] h-5 min-w-5 flex items-center justify-center px-1.5">
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </Badge>
+                    ) : null}
+                  </span>
+                )}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

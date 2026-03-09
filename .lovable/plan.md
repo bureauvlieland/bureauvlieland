@@ -1,102 +1,25 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-## Operationeel Commandocentrum — Todo's, Logs en Mails samenvoegen
+### Wat is gebouwd
 
-### Huidige situatie
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-Er zijn nu 4 losse plekken met overlappende informatie:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-```text
-Dashboard (LiveActivityFeed)     → realtime feed van klant/partner/admin acties
-Todo's (/admin/todos)            → takenlijst, alleen afvinken/bewerken/verwijderen
-E-maillog (/admin/berichten)     → alle verzonden mails
-Activiteitenlog (/admin/logs)    → admin_activity_log tabel
-```
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-De todo-pagina mist actionable knoppen, deep links, en auto-resolve. De logs en mails staan apart zonder context.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-### Wat we gaan bouwen
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-**1. Todo-pagina upgraden naar Operationeel Commandocentrum**
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-De todo-pagina wordt het centrale werkscherm. Verplaatsen van "Systeem" naar "Operationeel" in de sidebar (onder Dashboard).
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-Drie tabs op de pagina:
-- **Taken** (huidige todo's, maar verbeterd)
-- **E-maillog** (inhoud van huidige AdminMessages, inline)
-- **Activiteitenlog** (inhoud van huidige AdminLogs, inline)
-
-**2. Todo-lijst verrijken met deep links en snelacties**
-
-Per `auto_type` komen contextgebonden knoppen:
-
-| auto_type | Deep link | Snelactie |
-|---|---|---|
-| partner_reminder | `/admin/aanvragen/{request_id}` | "Bekijk aanvraag" |
-| quote_review | `/admin/logies/{request_id}` | "Bekijk offerte" |
-| quote_pending_partner | `/admin/partners/{partner_id}` | "Bekijk partner" |
-| quote_pending_customer | `/admin/aanvragen/{request_id}` | "Bekijk project" |
-| commission_pending | `/admin/commissies` | "Bekijk commissies" |
-| terms_reminder | `/admin/aanvragen/{request_id}` | "Bekijk project" |
-| invoicing_ready | `/admin/facturatie` | "Naar facturatie" |
-| availability_conflict | `/admin/partners/{partner_id}` | "Bekijk partner" |
-| request_no_response | `/admin/aanvragen/{request_id}` | "Bekijk aanvraag" |
-| quote_expired_partner | `/admin/logies/{request_id}` | "Bekijk logies" |
-
-Linked partners en requests worden clickable deep links naar de specifieke detail-pagina (niet meer generiek `/admin/partners`).
-
-**3. Auto-resolve implementeren**
-
-Wanneer een partner of klant de verwachte actie uitvoert, wordt de bijbehorende todo automatisch op "done" gezet:
-
-- Partner reageert op activiteit → resolve `partner_reminder`
-- Partner dient logiesofferte in → resolve `quote_pending_partner`
-- Klant kiest offerte → resolve `quote_pending_customer`
-- Voorwaarden geaccepteerd → resolve `terms_reminder`
-
-Dit wordt geïmplementeerd in de bestaande edge functions die deze statuswijzigingen verwerken (`update-partner-item-status`, `select-accommodation-quote`, `accept-quote-proposal`).
-
-**4. Groepering per auto_type + badge in sidebar**
-
-- Todo's gegroepeerd per type (met collapse), handmatige todo's apart
-- Sidebar-item "Taken" krijgt een badge met het aantal openstaande taken
-- Bulk-actie: meerdere todo's tegelijk afvinken
-
-**5. Snooze-functionaliteit**
-
-Een "Snooze" knop die een todo verbergt tot een gekozen datum. Vereist een nieuw `snoozed_until` kolom op `admin_todos`.
-
-### Technische wijzigingen
-
-**Database migratie:**
-- `ALTER TABLE admin_todos ADD COLUMN snoozed_until date;`
-
-**Bestanden:**
-
-| Bestand | Wijziging |
-|---|---|
-| `src/pages/admin/AdminTodos.tsx` | Volledige upgrade: tabs (Taken/E-maillog/Activiteitenlog), deep links, snelacties, groepering, bulk-acties, snooze |
-| `src/components/admin/AdminLayout.tsx` | Todo's verplaatsen naar "Operationeel", badge toevoegen |
-| `src/lib/autoTodoCreator.ts` | Geen wijzigingen nodig |
-| `supabase/functions/update-partner-item-status/index.ts` | `resolveAutoTodo("partner_reminder", itemId)` toevoegen |
-| `supabase/functions/select-accommodation-quote/index.ts` | `resolveAutoTodo("quote_pending_customer", requestId)` toevoegen |
-| `supabase/functions/accept-quote-proposal/index.ts` | `resolveAutoTodo("terms_reminder", requestId)` toevoegen |
-| Edge functions met quote-submit logica | `resolveAutoTodo("quote_pending_partner", requestId)` toevoegen |
-
-De aparte pagina's `/admin/berichten` en `/admin/logs` blijven bestaan als routes maar worden doorgestuurd of verwijderd uit de sidebar — alles zit nu onder de tabs op de todo-pagina.
-
-### Sidebar structuur na wijziging
-
-```text
-Operationeel
-  ├─ Dashboard
-  ├─ Taken (badge: 12)     ← was "Todo's" onder Systeem
-  ├─ Projecten
-  ├─ CRM
-  ├─ Partners
-  └─ Chat
-
-Systeem
-  └─ Instellingen          ← logs en mails nu als tabs onder Taken
-```
-
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
