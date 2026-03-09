@@ -1,22 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-## Fix: Intro-card toont lege tips bij 12 activiteiten + "Toevoegen" knop altijd beschikbaar
+### Wat is gebouwd
 
-### Probleem 1: "Aan de slag" tips zichtbaar bij 12 activiteiten
-`ProgramIntroCard` ontvangt geen `itemCount` prop vanuit Desktop- en MobileProgramView. Daardoor is `itemCount` undefined, en toont het altijd de "EmptyCartTips" in plaats van de tekst voor bestaande programma's.
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-### Probleem 2: "Toevoegen" knop verborgen voor maatwerk-projecten
-De conditie `!program.program_type?.startsWith("maatwerk_")` verbergt de knop voor maatwerk-programma's. De gebruiker wil dat klanten altijd activiteiten kunnen toevoegen/wijzigen/verwijderen (met bevestigingsdialog bij opslaan).
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-### Wijzigingen
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-| Bestand | Wijziging |
-|---|---|
-| `src/components/customer-portal/DesktopProgramView.tsx` | Pass `itemCount={program.items.filter(i => i.status !== "cancelled").length}` aan ProgramIntroCard. Verwijder maatwerk-check op "Toevoegen" knop (alleen `!termsAccepted` behouden). |
-| `src/components/customer-portal/MobileProgramView.tsx` | Idem: `itemCount` doorgeven + maatwerk-check verwijderen op "Toevoegen" knop. |
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-### Resultaat
-- Intro-card toont correcte tekst ("Wij hebben de aanvragen verstuurd...") bij bestaande activiteiten
-- "Toevoegen" knop is altijd zichtbaar zolang voorwaarden niet geaccepteerd zijn
-- Bestaande wijzigings-flow (floating bar → ChangeConfirmationDialog → edge function → notificatie) blijft ongewijzigd
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+
+---
+
+## Plan: CRM en Partners samenvoegen
+
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.

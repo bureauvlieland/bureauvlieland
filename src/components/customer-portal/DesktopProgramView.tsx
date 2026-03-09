@@ -223,6 +223,7 @@ export const DesktopProgramView = ({
               quoteStatus={program.quote_status}
               quoteValidUntil={program.quote_valid_until}
               termsAcceptedAt={program.terms_accepted_at}
+              itemCount={program.items.filter(i => i.status !== "cancelled").length}
               isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
               onAcceptQuoteProposal={onAcceptQuoteProposal}
               hasUnapprovedItems={hasUnapprovedItems}
@@ -321,7 +322,7 @@ export const DesktopProgramView = ({
                           Bekijk offerte
                         </Button>
                       )}
-                      {!termsAccepted && !program.program_type?.startsWith("maatwerk_") && (
+                      {!termsAccepted && (
                         <Button
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
