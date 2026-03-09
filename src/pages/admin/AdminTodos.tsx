@@ -475,7 +475,7 @@ const TakenTab = () => {
 
   const renderTodoItem = (todo: Todo) => {
     const priority = priorityConfig[todo.priority as keyof typeof priorityConfig] || priorityConfig.normal;
-    const status = statusConfig[todo.status as keyof typeof statusConfig] || statusConfig.todo;
+    const _status = statusConfig[todo.status as keyof typeof statusConfig] || statusConfig.todo;
     const PriorityIcon = priority.icon;
     const linkedPartner = getLinkedPartnerName(todo.related_partner_id);
     const linkedRequest = getLinkedRequestLabel(todo.related_request_id);
