@@ -279,6 +279,7 @@ export default function AdminAccommodation() {
                   <TableRow>
                     <TableHead>Ref.</TableHead>
                     <TableHead>Klant</TableHead>
+                    <TableHead>Facturatie</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead>Gasten</TableHead>
