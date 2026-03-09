@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { format, differenceInDays, addDays, startOfWeek, endOfWeek, isToday } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 interface Project {
   id: string;
