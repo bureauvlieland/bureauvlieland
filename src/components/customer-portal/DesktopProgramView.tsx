@@ -431,6 +431,25 @@ export const DesktopProgramView = ({
               </Card>
             </div>
 
+            {/* Floating changes bar */}
+            {hasChanges && (
+              <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium">
+                      {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Aanbieders worden op de hoogte gesteld
+                    </p>
+                  </div>
+                  <Button onClick={onSubmitChanges}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Doorvoeren
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         )}
 
