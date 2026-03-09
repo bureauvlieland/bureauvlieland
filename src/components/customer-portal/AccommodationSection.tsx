@@ -42,6 +42,7 @@ export const AccommodationSection = ({
   onEditAccommodation,
   customerToken,
   numberOfPeople,
+  invoicingMode,
 }: AccommodationSectionProps) => {
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
