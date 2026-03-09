@@ -73,12 +73,30 @@ export default function AdminAccommodation() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accommodation_requests")
-        .select("*")
+        .select("*, linked_program_id")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch linked program invoicing modes
+  const programIds = requests?.filter(r => r.linked_program_id).map(r => r.linked_program_id!) || [];
+  const { data: linkedPrograms } = useQuery({
+    queryKey: ["admin-accommodation-program-modes", programIds],
+    queryFn: async () => {
+      if (programIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("program_requests")
+        .select("id, invoicing_mode")
+        .in("id", programIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach(p => { map[p.id] = p.invoicing_mode; });
+      return map;
+    },
+    enabled: programIds.length > 0,
   });
 
   const { data: quoteCounts } = useQuery({
