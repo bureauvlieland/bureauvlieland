@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -41,7 +42,14 @@ import {
   Send,
   FileCheck,
   XCircle,
+  BarChart3,
+  CalendarDays,
+  List,
+  TableIcon,
 } from "lucide-react";
+import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
+import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
+import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
@@ -384,197 +392,232 @@ const AdminProjectsContent = () => {
         </Select>
       </div>
 
-      {/* Projects table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Referentie(s)</TableHead>
-                <TableHead>Klant</TableHead>
-                <TableHead>Logies</TableHead>
-                <TableHead>Activiteiten</TableHead>
-                <TableHead>Datum(s)</TableHead>
-                <TableHead>Personen</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProjects.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
-                    Geen projecten gevonden
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProjects.map((project) => {
-                  const derived = getDerivedStatus(project);
-                  const statusConfig = DERIVED_STATUS_CONFIG[derived];
+      {/* View tabs */}
+      <Tabs defaultValue="tabel" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="tabel" className="gap-1.5">
+            <TableIcon className="h-4 w-4" />
+            Tabel
+          </TabsTrigger>
+          <TabsTrigger value="gantt" className="gap-1.5">
+            <BarChart3 className="h-4 w-4" />
+            Gantt
+          </TabsTrigger>
+          <TabsTrigger value="kalender" className="gap-1.5">
+            <CalendarDays className="h-4 w-4" />
+            Kalender
+          </TabsTrigger>
+          <TabsTrigger value="datumlijst" className="gap-1.5">
+            <List className="h-4 w-4" />
+            Datumlijst
+          </TabsTrigger>
+        </TabsList>
 
-                  return (
-                    <TableRow key={project.id}>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${
-                              project.type === "combined"
-                                ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-                                : project.type === "accommodation_only"
-                                ? "border-amber-200 bg-amber-50 text-amber-700"
-                                : "border-green-200 bg-green-50 text-green-700"
-                            }`}
-                          >
-                            {PROJECT_TYPE_CONFIG[project.type].icon}
-                            <span className="ml-1 hidden lg:inline">
-                              {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
-                            </span>
-                          </Badge>
-                          {project.program_type === "quote" && (
-                            <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
-                              Maatwerk
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs ${statusConfig.className}`}>
-                          {statusConfig.icon}
-                          <span className="ml-1">{statusConfig.label}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {project.program_ref && (
-                            <code className="text-xs font-mono bg-green-50 text-green-700 px-2 py-0.5 rounded block w-fit">
-                              {project.program_ref}
-                            </code>
-                          )}
-                          {project.accommodation_ref && (
-                            <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded block w-fit">
-                              {project.accommodation_ref}
-                            </code>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{project.customer_name}</p>
-                          <p className="text-sm text-slate-500">
-                            {project.customer_company || project.customer_email}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {project.accommodation_id ? (
-                          <div className="space-y-1">
-                            <Link
-                              to={`/admin/logies/${project.accommodation_id}`}
-                              className="text-sm text-indigo-600 hover:underline"
-                            >
-                              Bekijk
-                            </Link>
-                            {project.accommodation_status && (
-                              <Badge
-                                className={`text-xs block w-fit ${
-                                  ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.color ||
-                                  "bg-slate-100 text-slate-800"
-                                }`}
-                              >
-                                {ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.label ||
-                                  project.accommodation_status}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {project.program_id ? (
-                          <div className="flex items-center gap-2">
-                            <Link
-                              to={`/admin/aanvragen/${project.program_id}`}
-                              className="text-sm text-indigo-600 hover:underline"
-                            >
-                              {project.item_count} items
-                            </Link>
-                            {project.items_pending > 0 && (
-                              <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {project.items_pending}
-                              </Badge>
-                            )}
-                            {project.items_confirmed > 0 && (
-                              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                {project.items_confirmed}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4 text-slate-400" />
-                          <span className="text-sm">
-                            {project.selected_dates.length > 0
-                              ? project.selected_dates
-                                  .slice(0, 2)
-                                  .map((d) => format(new Date(d), "d MMM", { locale: nl }))
-                                  .join(", ")
-                              : project.accommodation_arrival
-                              ? `${format(new Date(project.accommodation_arrival), "d MMM", { locale: nl })} - ${format(new Date(project.accommodation_departure!), "d MMM", { locale: nl })}`
-                              : "-"}
-                            {project.selected_dates.length > 2 && (
-                              <span className="text-slate-400"> +{project.selected_dates.length - 2}</span>
-                            )}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4 text-slate-400" />
-                          {project.number_of_people}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {project.program_id ? (
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link to={`/admin/aanvragen/${project.program_id}`}>
-                                <Eye className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          ) : project.accommodation_id ? (
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link to={`/admin/logies/${project.accommodation_id}`}>
-                                <Eye className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          ) : null}
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link
-                              to={`/mijn-programma/${project.customer_token}`}
-                              target="_blank"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </div>
+        <TabsContent value="tabel">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Referentie(s)</TableHead>
+                    <TableHead>Klant</TableHead>
+                    <TableHead>Logies</TableHead>
+                    <TableHead>Activiteiten</TableHead>
+                    <TableHead>Datum(s)</TableHead>
+                    <TableHead>Personen</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProjects.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        Geen projecten gevonden
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  ) : (
+                    filteredProjects.map((project) => {
+                      const derived = getDerivedStatus(project);
+                      const statusConfig = DERIVED_STATUS_CONFIG[derived];
+
+                      return (
+                        <TableRow key={project.id}>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  project.type === "combined"
+                                    ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                                    : project.type === "accommodation_only"
+                                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                                    : "border-green-200 bg-green-50 text-green-700"
+                                }`}
+                              >
+                                {PROJECT_TYPE_CONFIG[project.type].icon}
+                                <span className="ml-1 hidden lg:inline">
+                                  {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
+                                </span>
+                              </Badge>
+                              {project.program_type === "quote" && (
+                                <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                  Maatwerk
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`text-xs ${statusConfig.className}`}>
+                              {statusConfig.icon}
+                              <span className="ml-1">{statusConfig.label}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {project.program_ref && (
+                                <code className="text-xs font-mono bg-green-50 text-green-700 px-2 py-0.5 rounded block w-fit">
+                                  {project.program_ref}
+                                </code>
+                              )}
+                              {project.accommodation_ref && (
+                                <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded block w-fit">
+                                  {project.accommodation_ref}
+                                </code>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{project.customer_name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {project.customer_company || project.customer_email}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {project.accommodation_id ? (
+                              <div className="space-y-1">
+                                <Link
+                                  to={`/admin/logies/${project.accommodation_id}`}
+                                  className="text-sm text-indigo-600 hover:underline"
+                                >
+                                  Bekijk
+                                </Link>
+                                {project.accommodation_status && (
+                                  <Badge
+                                    className={`text-xs block w-fit ${
+                                      ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.color ||
+                                      "bg-slate-100 text-slate-800"
+                                    }`}
+                                  >
+                                    {ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.label ||
+                                      project.accommodation_status}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {project.program_id ? (
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  to={`/admin/aanvragen/${project.program_id}`}
+                                  className="text-sm text-indigo-600 hover:underline"
+                                >
+                                  {project.item_count} items
+                                </Link>
+                                {project.items_pending > 0 && (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {project.items_pending}
+                                  </Badge>
+                                )}
+                                {project.items_confirmed > 0 && (
+                                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    {project.items_confirmed}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">
+                                {project.selected_dates.length > 0
+                                  ? project.selected_dates
+                                      .slice(0, 2)
+                                      .map((d) => format(new Date(d), "d MMM", { locale: nl }))
+                                      .join(", ")
+                                  : project.accommodation_arrival
+                                  ? `${format(new Date(project.accommodation_arrival), "d MMM", { locale: nl })} - ${format(new Date(project.accommodation_departure!), "d MMM", { locale: nl })}`
+                                  : "-"}
+                                {project.selected_dates.length > 2 && (
+                                  <span className="text-muted-foreground"> +{project.selected_dates.length - 2}</span>
+                                )}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              {project.number_of_people}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {project.program_id ? (
+                                <Button variant="ghost" size="icon" asChild>
+                                  <Link to={`/admin/aanvragen/${project.program_id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              ) : project.accommodation_id ? (
+                                <Button variant="ghost" size="icon" asChild>
+                                  <Link to={`/admin/logies/${project.accommodation_id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              ) : null}
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link
+                                  to={`/mijn-programma/${project.customer_token}`}
+                                  target="_blank"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="gantt">
+          <ProjectGanttChart projects={filteredProjects} />
+        </TabsContent>
+
+        <TabsContent value="kalender">
+          <ProjectCalendarView projects={filteredProjects} />
+        </TabsContent>
+
+        <TabsContent value="datumlijst">
+          <ProjectDateListView projects={filteredProjects} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
