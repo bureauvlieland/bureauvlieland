@@ -281,6 +281,7 @@ export const AccommodationSection = ({
             accommodationName={contactQuote.accommodation_name}
             quoteId={contactQuote.id}
             customerToken={customerToken}
+            isBureauCentral={isBureauCentral}
           />
         )}
       </>
