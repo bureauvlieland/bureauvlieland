@@ -44,6 +44,7 @@ export const AccommodationSection = ({
   numberOfPeople,
   invoicingMode,
 }: AccommodationSectionProps) => {
+  const isBureauCentral = invoicingMode === "bureau_central";
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
