@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: recipientEmail, Name: partner.name }],
             Bcc: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
-            ReplyTo: { Email: programRequest.customer_email, Name: programRequest.customer_name },
+            ReplyTo: { Email: replyToEmail, Name: replyToName },
             Subject: `${subjectPrefix}${subject}`,
             HTMLPart: htmlBody,
           },
