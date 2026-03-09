@@ -365,12 +365,9 @@ export const AdminPartnersContent = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Partners</h1>
-          <p className="text-slate-600">Beheer partners en hun gegevens</p>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           {stats.connectedCount > 0 && (
             <Button

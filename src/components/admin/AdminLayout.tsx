@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   Users,
-  Building2,
+  
   ClipboardList,
   LogOut,
   Menu,
