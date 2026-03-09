@@ -212,6 +212,7 @@ const AdminRequestDetail = () => {
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
