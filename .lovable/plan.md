@@ -1,68 +1,45 @@
-## Projecten verwijderen, Logies in navigatie, en Communicatie-privacy
+## Plan: Operationeel Commandocentrum
 
-### Drie onderdelen
+### Status: ✅ Geïmplementeerd
 
-**1. Projecten verwijderen met loskoppeling logies**
+### Wat is gebouwd
 
-Momenteel kan een project niet verwijderd worden (geen DELETE policy). Bij verwijdering moet de vraag gesteld worden of de  koppeling met logiesaanvragen behouden moet blijven — de logiesaanvraag draait zelfstandig door of dat de logiesaanvraag ook verwijderd dient te worden..
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-Aanpak:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-- Bij verwijdering: `linked_accommodation_id` op het project op `null` zetten, en `linked_program_id` op de accommodation_request op `null` zetten — daarna het project soft-deleten (status → `deleted`) of hard-deleten inclusief cascade van `program_request_items`, `project_communications`, `admin_todos`, `bureau_invoices`, `accepted_terms_log`, `email_log` referenties.
-- Soft-delete (status = `deleted`) is veiliger — data blijft beschikbaar voor facturatie-historie. Projectoverzicht filtert `deleted` standaard uit.
-- Bevestigingsdialog met waarschuwing als er gekoppelde logiesaanvragen, facturen of commissies zijn.
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-**2. Logies als apart item in de sidebar**
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-`/admin/logies` bestaat al maar staat niet in de navigatie. Toevoegen aan de Operationeel sectie. Per logiesaanvraag tonen of het gekoppeld is aan een maatwerk-project (bureau_central) of direct aan de klant:
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-- Badge/kolom "Maatwerk" vs "Direct" op basis van het gekoppelde `program_requests.invoicing_mode`
-- Bij losgekoppelde aanvragen (geen `linked_program_id`): tonen als "Zelfstandig"
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-**3. Communicatie-privacy bij bureau_central logies**
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-Belangrijk probleem gevonden: de `send-customer-accommodation-message` functie stuurt momenteel bij bureau_central projecten wél klant-PII (email, telefoon) naar de partner. Dit schendt het privacy-first principe.
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-Aanpak:
+---
 
-- In `send-customer-accommodation-message`: check `invoicing_mode` van het gekoppelde project
-- Bij `bureau_central`: klant-contactgegevens verbergen in de email, Reply-To instellen op `hallo@bureauvlieland.nl` in plaats van het klant-emailadres, en bericht BCC'en naar Bureau Vlieland zodat zij als tussenpersoon fungeren
-- Bij `partner_direct`: bestaand gedrag behouden (Reply-To = klant)
-- In het klantportaal: bij `bureau_central` de "Stuur bericht" knop naar de partner verbergen of omzetten naar "Stuur bericht via Bureau Vlieland"
+## Plan: CRM en Partners samenvoegen
 
-### Technische wijzigingen
+### Status: ✅ Geïmplementeerd
 
-**Database:**
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-```sql
--- Soft-delete support
--- program_requests.status al bestaand, voegen 'deleted' toe als waarde
+---
 
--- RLS policy voor delete (of update naar deleted)
-CREATE POLICY "Admins can delete program requests"
-ON public.program_requests FOR DELETE TO authenticated
-USING (is_admin(auth.uid()));
-```
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-**Bestanden:**
+### Status: ✅ Geïmplementeerd
 
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
-| Bestand                                                           | Wijziging                                                                      |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `src/components/admin/AdminLayout.tsx`                            | "Logies" toevoegen aan Operationeel sectie (Hotel icon)                        |
-| `src/pages/admin/AdminProjects.tsx`                               | Verwijder-knop per project met bevestigingsdialog, loskoppeling logies         |
-| `src/pages/admin/AdminAccommodation.tsx`                          | Kolom "Type" toevoegen: Maatwerk/Direct/Zelfstandig                            |
-| `supabase/functions/send-customer-accommodation-message/index.ts` | Privacy-check: bij bureau_central PII verbergen, Reply-To naar Bureau Vlieland |
-| `src/components/customer-portal/ContactAccommodationDialog.tsx`   | Bij bureau_central uitleg tonen dat bericht via Bureau Vlieland gaat           |
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
 
-
-### Communicatieflow bij bureau_central (nieuw)
-
-```text
-Klant stuurt bericht → Bureau Vlieland ontvangt (als tussenpersoon)
-                     → Bureau Vlieland stuurt door naar partner (zonder klant-PII)
-                     → Partner antwoordt aan Bureau Vlieland
-                     → Bureau Vlieland stuurt door naar klant
-```
-
-Bij `partner_direct` blijft het huidige model: klant communiceert direct met partner.
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.

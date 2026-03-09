@@ -73,12 +73,30 @@ export default function AdminAccommodation() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accommodation_requests")
-        .select("*")
+        .select("*, linked_program_id")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch linked program invoicing modes
+  const programIds = requests?.filter(r => r.linked_program_id).map(r => r.linked_program_id!) || [];
+  const { data: linkedPrograms } = useQuery({
+    queryKey: ["admin-accommodation-program-modes", programIds],
+    queryFn: async () => {
+      if (programIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("program_requests")
+        .select("id, invoicing_mode")
+        .in("id", programIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach(p => { map[p.id] = p.invoicing_mode; });
+      return map;
+    },
+    enabled: programIds.length > 0,
   });
 
   const { data: quoteCounts } = useQuery({
@@ -261,6 +279,7 @@ export default function AdminAccommodation() {
                   <TableRow>
                     <TableHead>Ref.</TableHead>
                     <TableHead>Klant</TableHead>
+                    <TableHead>Facturatie</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Datum</TableHead>
                     <TableHead>Gasten</TableHead>
@@ -288,6 +307,18 @@ export default function AdminAccommodation() {
                               {request.customer_company || request.customer_email}
                             </p>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            if (!request.linked_program_id) {
+                              return <Badge variant="outline" className="text-xs">Zelfstandig</Badge>;
+                            }
+                            const mode = linkedPrograms?.[request.linked_program_id];
+                            if (mode === "bureau_central") {
+                              return <Badge className="text-xs bg-purple-100 text-purple-800">Maatwerk</Badge>;
+                            }
+                            return <Badge className="text-xs bg-blue-100 text-blue-800">Direct</Badge>;
+                          })()}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">

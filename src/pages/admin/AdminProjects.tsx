@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,17 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -46,10 +57,12 @@ import {
   CalendarDays,
   List,
   TableIcon,
+  Trash2,
 } from "lucide-react";
 import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
 import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
 import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
+import { toast } from "@/hooks/use-toast";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
@@ -122,6 +135,10 @@ const AdminProjectsContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deleteAccommodation, setDeleteAccommodation] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["admin-projects-unified"],
@@ -134,6 +151,7 @@ const AdminProjectsContent = () => {
           terms_accepted_at, created_at, linked_accommodation_id,
           program_type, quote_status, completion_status
         `)
+        .neq("status", "deleted")
         .order("created_at", { ascending: false });
 
       if (progError) throw progError;
@@ -594,6 +612,17 @@ const AdminProjectsContent = () => {
                                   <ExternalLink className="h-4 w-4" />
                                 </Link>
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => {
+                                  setDeleteAccommodation(false);
+                                  setDeleteTarget(project);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -618,6 +647,83 @@ const AdminProjectsContent = () => {
           <ProjectDateListView projects={filteredProjects} />
         </TabsContent>
       </Tabs>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Project verwijderen</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Weet je zeker dat je het project van <strong>{deleteTarget?.customer_name}</strong>
+                {deleteTarget?.program_ref ? ` (${deleteTarget.program_ref})` : ""} wilt verwijderen?
+              </p>
+              <p>Het project krijgt de status "verwijderd" en wordt verborgen uit het overzicht. Facturatiegegevens blijven bewaard.</p>
+              {deleteTarget?.accommodation_id && (
+                <div className="flex items-start gap-2 pt-2 border-t">
+                  <Checkbox
+                    id="delete-accommodation"
+                    checked={deleteAccommodation}
+                    onCheckedChange={(checked) => setDeleteAccommodation(checked === true)}
+                  />
+                  <label htmlFor="delete-accommodation" className="text-sm leading-tight cursor-pointer">
+                    Ook de gekoppelde logiesaanvraag ({deleteTarget.accommodation_ref}) verwijderen.
+                    <span className="text-muted-foreground block text-xs mt-0.5">
+                      Indien uitgeschakeld blijft de logiesaanvraag als zelfstandige aanvraag bestaan.
+                    </span>
+                  </label>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+              onClick={async () => {
+                if (!deleteTarget) return;
+                setIsDeleting(true);
+                try {
+                  // Decouple accommodation if not deleting it
+                  if (deleteTarget.accommodation_id && !deleteAccommodation) {
+                    await supabase
+                      .from("accommodation_requests")
+                      .update({ linked_program_id: null })
+                      .eq("id", deleteTarget.accommodation_id);
+                  }
+
+                  // Soft-delete the program request
+                  if (deleteTarget.program_id) {
+                    await supabase
+                      .from("program_requests")
+                      .update({ status: "deleted", linked_accommodation_id: null })
+                      .eq("id", deleteTarget.program_id);
+                  }
+
+                  // If deleting accommodation too
+                  if (deleteTarget.accommodation_id && deleteAccommodation) {
+                    await supabase
+                      .from("accommodation_requests")
+                      .update({ status: "cancelled", linked_program_id: null })
+                      .eq("id", deleteTarget.accommodation_id);
+                  }
+
+                  toast({ title: "Project verwijderd", description: "Het project is succesvol verwijderd." });
+                  queryClient.invalidateQueries({ queryKey: ["admin-projects-unified"] });
+                } catch {
+                  toast({ title: "Fout", description: "Kon het project niet verwijderen.", variant: "destructive" });
+                } finally {
+                  setIsDeleting(false);
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              {isDeleting ? "Verwijderen..." : "Verwijderen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

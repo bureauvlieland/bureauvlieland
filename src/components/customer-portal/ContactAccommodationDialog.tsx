@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Send, CheckCircle2 } from "lucide-react";
+import { Mail, Send, CheckCircle2, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ interface ContactAccommodationDialogProps {
   accommodationName: string;
   quoteId: string;
   customerToken: string;
+  isBureauCentral?: boolean;
 }
 
 export const ContactAccommodationDialog = ({
@@ -29,6 +30,7 @@ export const ContactAccommodationDialog = ({
   accommodationName,
   quoteId,
   customerToken,
+  isBureauCentral = false,
 }: ContactAccommodationDialogProps) => {
   const [subject, setSubject] = useState(
     `Vraag over mijn verblijf - ${accommodationName}`
@@ -74,7 +76,6 @@ export const ContactAccommodationDialog = ({
 
   const handleClose = () => {
     onOpenChange(false);
-    // Reset after animation
     setTimeout(() => {
       if (isSent) {
         setIsSent(false);
@@ -94,8 +95,9 @@ export const ContactAccommodationDialog = ({
             </div>
             <DialogTitle>Bericht verstuurd</DialogTitle>
             <DialogDescription>
-              Uw bericht is verzonden naar {accommodationName}. Zij zullen rechtstreeks per
-              e-mail reageren.
+              {isBureauCentral
+                ? "Uw bericht is verzonden naar Bureau Vlieland. Zij nemen contact op met de accommodatie en koppelen het antwoord aan u terug."
+                : `Uw bericht is verzonden naar ${accommodationName}. Zij zullen rechtstreeks per e-mail reageren.`}
             </DialogDescription>
             <Button onClick={handleClose} className="mt-2">Sluiten</Button>
           </div>
@@ -110,13 +112,23 @@ export const ContactAccommodationDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Contact opnemen met {accommodationName}
+            {isBureauCentral
+              ? "Bericht via Bureau Vlieland"
+              : `Contact opnemen met ${accommodationName}`}
           </DialogTitle>
           <DialogDescription>
-            Stuur een bericht naar de accommodatie, bijvoorbeeld over wijzigingen in uw
-            reservering. Zij antwoorden rechtstreeks per e-mail.
+            {isBureauCentral
+              ? "Uw bericht wordt via Bureau Vlieland doorgestuurd naar de accommodatie. Bureau Vlieland fungeert als tussenpersoon voor alle communicatie."
+              : "Stuur een bericht naar de accommodatie, bijvoorbeeld over wijzigingen in uw reservering. Zij antwoorden rechtstreeks per e-mail."}
           </DialogDescription>
         </DialogHeader>
+
+        {isBureauCentral && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <span>Alle communicatie met de accommodatie verloopt via Bureau Vlieland. Uw contactgegevens worden niet gedeeld met de accommodatie.</span>
+          </div>
+        )}
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">

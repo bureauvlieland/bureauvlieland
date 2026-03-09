@@ -275,6 +275,7 @@ export const MobileProgramView = ({
             onEditAccommodation={onOpenEdit}
             customerToken={program.customer_token}
             numberOfPeople={program.number_of_people}
+            invoicingMode={invoicingMode}
           />
         </ProgramSection>
       )}

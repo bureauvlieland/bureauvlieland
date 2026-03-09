@@ -29,9 +29,9 @@ interface AccommodationSectionProps {
   onSelectQuote: (quoteId: string) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;
-  // For linking purposes
   customerToken?: string;
   numberOfPeople?: number;
+  invoicingMode?: string | null;
 }
 
 export const AccommodationSection = ({
@@ -42,7 +42,9 @@ export const AccommodationSection = ({
   onEditAccommodation,
   customerToken,
   numberOfPeople,
+  invoicingMode,
 }: AccommodationSectionProps) => {
+  const isBureauCentral = invoicingMode === "bureau_central";
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -223,6 +225,7 @@ export const AccommodationSection = ({
           accommodationName={selectedQuote.accommodation_name}
           quoteId={selectedQuote.id}
           customerToken={customerToken}
+          isBureauCentral={isBureauCentral}
         />
       )}
     </>
@@ -278,6 +281,7 @@ export const AccommodationSection = ({
             accommodationName={contactQuote.accommodation_name}
             quoteId={contactQuote.id}
             customerToken={customerToken}
+            isBureauCentral={isBureauCentral}
           />
         )}
       </>
