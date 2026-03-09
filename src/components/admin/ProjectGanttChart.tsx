@@ -1,8 +1,8 @@
 import { useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { format, differenceInDays, addDays, startOfWeek, endOfWeek, isToday, isSameDay } from "date-fns";
+import { format, differenceInDays, addDays, startOfWeek, endOfWeek, isToday } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface Project {
