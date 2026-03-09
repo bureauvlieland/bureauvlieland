@@ -1,52 +1,37 @@
 
 
-## Introductiemail versturen naar partners
+## Plan: Mailjet Parse API — Inkomende e-mails koppelen aan projecten
 
-### Aanpak
+### Status: ✅ Geïmplementeerd
 
-Een nieuwe edge function `send-partner-intro-email` die:
-1. Bij aanroep met `test: true` alleen naar `hallo@bureauvlieland.nl` stuurt
-2. Bij aanroep zonder test naar alle unieke e-mailadressen van uitgenodigde partners stuurt (met deduplicatie op `COALESCE(contact_email, email)`)
+### Wat is gebouwd
 
-### E-mailtekst (tutoyerend)
+1. **`buildReplyTo()` helper** in `_shared/email-templates.ts`: genereert dynamische Reply-To adressen zoals `reply+BV-2503-0012@bureauvlieland.nl`
 
-**Onderwerp:** De partnerportal van Bureau Vlieland — even voorstellen
+2. **Consistente afzenderadressen**: Alle 7 `noreply@bureauvlieland.nl` referenties in `update-customer-program/index.ts` vervangen door `SENDER_EMAIL` (`hallo@bureauvlieland.nl`)
 
-**Body:**
+3. **Reply-To headers** toegevoegd aan 12 edge functions:
+   - `send-project-email` (met reference_number lookup)
+   - `send-quote-offer`
+   - `approve-quote-item`
+   - `update-customer-program`
+   - `notify-accommodation-quote`
+   - `select-accommodation-quote`
+   - `cancel-program-request`
+   - `process-completed-items`
+   - `send-accommodation-quote-request` (import only, emails gaan naar partners)
 
-Beste partner,
+4. **`inbound-email/index.ts`**: Nieuwe edge function die Mailjet Parse API POST's ontvangt:
+   - Parseert referentienummer uit To-adres
+   - Zoekt project op via `program_requests.reference_number` of `accommodation_requests.reference_number`
+   - Slaat bericht op in `project_communications` (type: `email_in`, direction: `inbound`)
+   - Maakt admin todo aan voor follow-up
+   - Retourneert altijd 200 OK (voorkomt Mailjet retries)
 
-De afgelopen weken heb je van ons een uitnodiging ontvangen om in te loggen op onze nieuwe partnerportal. Sommigen van jullie hebben er al mee gewerkt — fijn!
+5. **Admin UI**: Inbound e-mails tonen "Inkomend" badge in `ProjectCommunicationsCard`
 
-Ik snap dat je misschien dacht: "Wat is dit nu weer?" Daarom wil ik even kort uitleggen waarom we dit hebben opgezet.
+### Handmatige configuratie vereist
 
-We willen de samenwerking tussen Bureau Vlieland en onze partners zo soepel mogelijk maken. De portal is daar een belangrijk middel voor. Wat kun je er onder andere mee?
-
-- **Directe inzage** in aanvragen van Bureau Vlieland die voor jou relevant zijn
-- **Eenvoudig reageren** op aanvragen
-- **Overzicht** van je activiteiten, offertes en facturen op één plek
-- **Minder heen-en-weer mailen** — alles centraal bijgehouden
-
-Ik zou graag een keer langskomen of bellen om het idee erachter uit te leggen en de werkwijze samen door te nemen. Zou je mij twee momenten kunnen voorstellen waarop dat uitkomt?
-
-Je kunt reageren op deze mail of me bellen op 0562 700 208.
-
-Hartelijke groet,
-Erwin
-Bureau Vlieland
-
-### Technisch
-
-| Wat | Detail |
-|---|---|
-| Nieuwe edge function | `supabase/functions/send-partner-intro-email/index.ts` |
-| Config | Toevoegen aan `supabase/config.toml` met `verify_jwt = false` |
-| Verzending | Via Mailjet (bestaande keys) |
-| Auth check | Admin-rol verificatie |
-| Deduplicatie | `SELECT DISTINCT COALESCE(contact_email, email)` van actieve, uitgenodigde partners |
-| Reply-To | `hallo@bureauvlieland.nl` (geen project-gebonden reply) |
-| Logging | Elke verzonden mail wordt gelogd in `email_log` met type `partner_intro_portal` |
-| Test modus | Parameter `test: true` stuurt alleen naar `hallo@bureauvlieland.nl` |
-
-Na goedkeuring bouw ik de functie en roep ik hem direct aan in testmodus.
-
+1. **Mailjet Dashboard**: Parse API activeren
+2. **Webhook URL**: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
+3. **DNS/Route**: Configureren voor `reply+*@bureauvlieland.nl`
