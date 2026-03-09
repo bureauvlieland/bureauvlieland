@@ -164,6 +164,7 @@ const App = () => {
             <Route path="/admin/projecten" element={<AdminProjects />} />
             <Route path="/admin/programma-nieuw" element={<AdminProgramNew />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
+            <Route path="/admin/partners" element={<Navigate to="/admin/crm?tab=partners" replace />} />
             <Route path="/admin/aanvragen" element={<AdminRequests />} />
             <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
             <Route path="/admin/projecten/:id" element={<AdminRequestDetail />} />

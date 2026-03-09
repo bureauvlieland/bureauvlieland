@@ -111,7 +111,7 @@ function OnboardingBadge({ status }: { status: "not_invited" | "pending" | "acti
   }
 }
 
-const AdminPartnersContent = () => {
+export const AdminPartnersContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [partners, setPartners] = useState<Partner[]>([]);

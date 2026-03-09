@@ -47,6 +47,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity } from "@/lib/adminLogger";
+import { AdminPartnersContent } from "@/pages/admin/AdminPartners";
 
 interface Customer {
   id: string;
@@ -58,19 +59,6 @@ interface Customer {
   status: string;
   created_at: string;
   request_count: number;
-}
-
-interface Partner {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  is_active: boolean;
-  commission_percentage: number;
-  auth_user_id: string | null;
-  partner_token: string;
-  created_at: string;
-  item_count: number;
 }
 
 const AdminCRMContent = () => {
