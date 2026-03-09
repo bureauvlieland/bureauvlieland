@@ -355,6 +355,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // Auto-resolve terms_reminder todo
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("auto_type", "terms_reminder")
+      .eq("auto_entity_id", program.id)
+      .neq("status", "done");
+    console.log(`Resolved terms_reminder todo for program ${program.id}`);
+
     // 5. Fetch items with skip_partner_notification = true AND not already approved individually
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
