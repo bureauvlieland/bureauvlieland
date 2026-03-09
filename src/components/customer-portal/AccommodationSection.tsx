@@ -29,9 +29,9 @@ interface AccommodationSectionProps {
   onSelectQuote: (quoteId: string) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;
-  // For linking purposes
   customerToken?: string;
   numberOfPeople?: number;
+  invoicingMode?: string | null;
 }
 
 export const AccommodationSection = ({
