@@ -1074,16 +1074,15 @@ const EmailLogTab = () => {
         </Card>
       </div>
 
-      {selectedEmail && (
-        <ResendEmailDialog
-          open={resendDialogOpen}
-          onOpenChange={setResendDialogOpen}
-          emailId={selectedEmail.id}
-          subject={selectedEmail.subject}
-          recipientEmail={selectedEmail.recipient_email}
-          recipientName={selectedEmail.recipient_name}
-        />
-      )}
+      <ResendEmailDialog
+        open={resendDialogOpen}
+        onOpenChange={setResendDialogOpen}
+        email={selectedEmail}
+        onSuccess={() => {
+          setResendDialogOpen(false);
+          setSelectedEmail(null);
+        }}
+      />
     </>
   );
 };
