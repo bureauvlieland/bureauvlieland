@@ -31,17 +31,118 @@ Deno.serve(async (req) => {
         "reminder_days_partner_quote",
         "reminder_days_customer_quote",
         "reminder_days_customer_request",
+        "reminder_email_enabled",
       ]);
 
-    const settings: Record<string, number> = {};
+    const settings: Record<string, any> = {};
     for (const row of settingsRows || []) {
-      settings[row.id] = typeof row.value === "number" ? row.value : parseInt(String(row.value), 10) || 0;
+      settings[row.id] = row.value;
     }
 
-    const partnerQuoteDays = settings["reminder_days_partner_quote"] || DEFAULT_REMINDER_DAYS_PARTNER;
-    const customerQuoteDays = settings["reminder_days_customer_quote"] || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
-    const customerRequestDays = settings["reminder_days_customer_request"] || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
+    const partnerQuoteDays = Number(settings["reminder_days_partner_quote"]) || DEFAULT_REMINDER_DAYS_PARTNER;
+    const customerQuoteDays = Number(settings["reminder_days_customer_quote"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
+    const customerRequestDays = Number(settings["reminder_days_customer_request"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
     const partnerActivityDays = DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY;
+    const reminderEmailEnabled = settings["reminder_email_enabled"] !== false;
+
+    const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
+    const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
+    const canSendEmail = reminderEmailEnabled && !!mailjetApiKey && !!mailjetSecretKey;
+
+    // Helper: send a reminder email via Mailjet
+    async function sendReminderEmail(opts: {
+      templateId: string;
+      recipientEmail: string;
+      recipientName: string;
+      subject: string;
+      fallbackHtml: string;
+      variables: Record<string, string>;
+      logExtra: {
+        email_type: string;
+        related_partner_id?: string;
+        related_request_id?: string;
+        related_item_id?: string;
+      };
+    }) {
+      // Check deduplication
+      const dedupeFilter: Record<string, string> = {
+        email_type: opts.logExtra.email_type,
+        recipient_email: opts.recipientEmail,
+      };
+      if (opts.logExtra.related_item_id) {
+        dedupeFilter.related_item_id = opts.logExtra.related_item_id;
+      }
+      
+      const dedupeQuery = supabase
+        .from("email_log")
+        .select("id")
+        .eq("email_type", opts.logExtra.email_type)
+        .eq("recipient_email", opts.recipientEmail);
+      
+      if (opts.logExtra.related_item_id) {
+        dedupeQuery.eq("related_item_id", opts.logExtra.related_item_id);
+      }
+
+      const { data: alreadySent } = await dedupeQuery.maybeSingle();
+      if (alreadySent) {
+        console.log(`Skipping ${opts.logExtra.email_type} — already sent to ${opts.recipientEmail}`);
+        return;
+      }
+
+      // Try DB template
+      const { data: template } = await supabase
+        .from("email_templates")
+        .select("subject, body_html")
+        .eq("id", opts.templateId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      let subject = opts.subject;
+      let body = opts.fallbackHtml;
+
+      if (template) {
+        subject = template.subject;
+        body = template.body_html;
+        for (const [key, val] of Object.entries(opts.variables)) {
+          const re = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+          subject = subject.replace(re, val);
+          body = body.replace(re, val);
+        }
+      }
+
+      try {
+        const resp = await fetch("https://api.mailjet.com/v3.1/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
+          },
+          body: JSON.stringify({
+            Messages: [{
+              From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+              To: [{ Email: opts.recipientEmail, Name: opts.recipientName }],
+              Subject: subject,
+              HTMLPart: body,
+            }],
+          }),
+        });
+
+        const status = resp.ok ? "sent" : "failed";
+        if (!resp.ok) console.error(`Failed to send ${opts.logExtra.email_type}:`, await resp.text());
+        else console.log(`Sent ${opts.logExtra.email_type} to ${opts.recipientEmail}`);
+
+        await supabase.from("email_log").insert({
+          ...opts.logExtra,
+          subject,
+          recipient_email: opts.recipientEmail,
+          recipient_name: opts.recipientName,
+          status,
+          sent_at: status === "sent" ? new Date().toISOString() : null,
+        });
+      } catch (err) {
+        console.error(`Error sending ${opts.logExtra.email_type}:`, err);
+      }
+    }
 
     let totalCreated = 0;
     let totalSkipped = 0;
