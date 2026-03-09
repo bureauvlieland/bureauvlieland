@@ -23,3 +23,23 @@
    - `select-accommodation-quote`: resolve `quote_pending_customer`
    - `accept-quote-proposal`: resolve `terms_reminder`
    - `notify-accommodation-quote`: resolve `quote_pending_partner`
+
+---
+
+## Plan: CRM en Partners samenvoegen
+
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
