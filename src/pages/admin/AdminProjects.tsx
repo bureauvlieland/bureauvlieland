@@ -647,6 +647,83 @@ const AdminProjectsContent = () => {
           <ProjectDateListView projects={filteredProjects} />
         </TabsContent>
       </Tabs>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Project verwijderen</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Weet je zeker dat je het project van <strong>{deleteTarget?.customer_name}</strong>
+                {deleteTarget?.program_ref ? ` (${deleteTarget.program_ref})` : ""} wilt verwijderen?
+              </p>
+              <p>Het project krijgt de status "verwijderd" en wordt verborgen uit het overzicht. Facturatiegegevens blijven bewaard.</p>
+              {deleteTarget?.accommodation_id && (
+                <div className="flex items-start gap-2 pt-2 border-t">
+                  <Checkbox
+                    id="delete-accommodation"
+                    checked={deleteAccommodation}
+                    onCheckedChange={(checked) => setDeleteAccommodation(checked === true)}
+                  />
+                  <label htmlFor="delete-accommodation" className="text-sm leading-tight cursor-pointer">
+                    Ook de gekoppelde logiesaanvraag ({deleteTarget.accommodation_ref}) verwijderen.
+                    <span className="text-muted-foreground block text-xs mt-0.5">
+                      Indien uitgeschakeld blijft de logiesaanvraag als zelfstandige aanvraag bestaan.
+                    </span>
+                  </label>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+              onClick={async () => {
+                if (!deleteTarget) return;
+                setIsDeleting(true);
+                try {
+                  // Decouple accommodation if not deleting it
+                  if (deleteTarget.accommodation_id && !deleteAccommodation) {
+                    await supabase
+                      .from("accommodation_requests")
+                      .update({ linked_program_id: null })
+                      .eq("id", deleteTarget.accommodation_id);
+                  }
+
+                  // Soft-delete the program request
+                  if (deleteTarget.program_id) {
+                    await supabase
+                      .from("program_requests")
+                      .update({ status: "deleted", linked_accommodation_id: null })
+                      .eq("id", deleteTarget.program_id);
+                  }
+
+                  // If deleting accommodation too
+                  if (deleteTarget.accommodation_id && deleteAccommodation) {
+                    await supabase
+                      .from("accommodation_requests")
+                      .update({ status: "cancelled", linked_program_id: null })
+                      .eq("id", deleteTarget.accommodation_id);
+                  }
+
+                  toast({ title: "Project verwijderd", description: "Het project is succesvol verwijderd." });
+                  queryClient.invalidateQueries({ queryKey: ["admin-projects-unified"] });
+                } catch {
+                  toast({ title: "Fout", description: "Kon het project niet verwijderen.", variant: "destructive" });
+                } finally {
+                  setIsDeleting(false);
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              {isDeleting ? "Verwijderen..." : "Verwijderen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -309,6 +309,18 @@ export default function AdminAccommodation() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {(() => {
+                            if (!request.linked_program_id) {
+                              return <Badge variant="outline" className="text-xs">Zelfstandig</Badge>;
+                            }
+                            const mode = linkedPrograms?.[request.linked_program_id];
+                            if (mode === "bureau_central") {
+                              return <Badge className="text-xs bg-purple-100 text-purple-800">Maatwerk</Badge>;
+                            }
+                            return <Badge className="text-xs bg-blue-100 text-blue-800">Direct</Badge>;
+                          })()}
+                        </TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
                             {TYPE_ICONS[request.accommodation_type]}
                             <span className="text-sm">
