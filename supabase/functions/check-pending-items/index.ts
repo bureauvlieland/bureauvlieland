@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
 
         const { data: partner } = await supabase
           .from("partners")
-          .select("name")
+          .select("name, email, contact_email")
           .eq("id", item.provider_id)
           .maybeSingle();
 
@@ -232,6 +232,36 @@ Deno.serve(async (req) => {
           });
 
         if (!todoError) totalCreated++;
+
+        // Send reminder email to partner
+        if (canSendEmail && partner) {
+          const partnerEmail = partner.contact_email || partner.email;
+          const portalUrl = "https://bureauvlieland.nl/partner";
+          await sendReminderEmail({
+            templateId: "reminder_activity_pending",
+            recipientEmail: partnerEmail,
+            recipientName: partnerName,
+            subject: `Herinnering: reactie gevraagd op "${item.block_name}"`,
+            variables: {
+              partner_name: partnerName,
+              block_name: item.block_name,
+              customer_name: customerName,
+              days_since: String(daysSinceCreated),
+              portal_url: portalUrl,
+            },
+            fallbackHtml: `<p>Beste ${partnerName},</p>
+              <p>Wij hebben ${daysSinceCreated} dagen geleden een aanvraag verstuurd voor de activiteit '<strong>${item.block_name}</strong>' (klant: ${customerName}), maar we hebben nog geen reactie van u ontvangen.</p>
+              <p>Kunt u via uw partnerportaal aangeven of u beschikbaar bent?</p>
+              <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Naar het portaal</a></p>
+              <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+            logExtra: {
+              email_type: "reminder_activity_pending",
+              related_partner_id: item.provider_id,
+              related_request_id: request.id,
+              related_item_id: item.id,
+            },
+          });
+        }
       }
     }
 
