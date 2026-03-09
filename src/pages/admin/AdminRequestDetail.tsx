@@ -996,6 +996,7 @@ const AdminRequestDetail = () => {
                               <TableHead>Status</TableHead>
                               <TableHead>Prijs</TableHead>
                               <TableHead>Factuur</TableHead>
+                              <TableHead className="w-[80px]">Acties</TableHead>
                             </>
                           )}
                         </TableRow>
