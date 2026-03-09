@@ -406,6 +406,7 @@ export type Database = {
           priority: string
           related_partner_id: string | null
           related_request_id: string | null
+          snoozed_until: string | null
           status: string
           title: string
           updated_at: string
@@ -423,6 +424,7 @@ export type Database = {
           priority?: string
           related_partner_id?: string | null
           related_request_id?: string | null
+          snoozed_until?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -440,6 +442,7 @@ export type Database = {
           priority?: string
           related_partner_id?: string | null
           related_request_id?: string | null
+          snoozed_until?: string | null
           status?: string
           title?: string
           updated_at?: string

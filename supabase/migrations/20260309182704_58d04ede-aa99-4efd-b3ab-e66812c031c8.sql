@@ -1,0 +1,1 @@
+ALTER TABLE admin_todos ADD COLUMN snoozed_until date;
