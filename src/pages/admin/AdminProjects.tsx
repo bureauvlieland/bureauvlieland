@@ -612,6 +612,17 @@ const AdminProjectsContent = () => {
                                   <ExternalLink className="h-4 w-4" />
                                 </Link>
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => {
+                                  setDeleteAccommodation(false);
+                                  setDeleteTarget(project);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
