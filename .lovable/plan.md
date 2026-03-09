@@ -1,37 +1,25 @@
-
-
-## Plan: Mailjet Parse API — Inkomende e-mails koppelen aan projecten
+## Plan: Operationeel Commandocentrum
 
 ### Status: ✅ Geïmplementeerd
 
 ### Wat is gebouwd
 
-1. **`buildReplyTo()` helper** in `_shared/email-templates.ts`: genereert dynamische Reply-To adressen zoals `reply+BV-2503-0012@bureauvlieland.nl`
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-2. **Consistente afzenderadressen**: Alle 7 `noreply@bureauvlieland.nl` referenties in `update-customer-program/index.ts` vervangen door `SENDER_EMAIL` (`hallo@bureauvlieland.nl`)
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-3. **Reply-To headers** toegevoegd aan 12 edge functions:
-   - `send-project-email` (met reference_number lookup)
-   - `send-quote-offer`
-   - `approve-quote-item`
-   - `update-customer-program`
-   - `notify-accommodation-quote`
-   - `select-accommodation-quote`
-   - `cancel-program-request`
-   - `process-completed-items`
-   - `send-accommodation-quote-request` (import only, emails gaan naar partners)
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-4. **`inbound-email/index.ts`**: Nieuwe edge function die Mailjet Parse API POST's ontvangt:
-   - Parseert referentienummer uit To-adres
-   - Zoekt project op via `program_requests.reference_number` of `accommodation_requests.reference_number`
-   - Slaat bericht op in `project_communications` (type: `email_in`, direction: `inbound`)
-   - Maakt admin todo aan voor follow-up
-   - Retourneert altijd 200 OK (voorkomt Mailjet retries)
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-5. **Admin UI**: Inbound e-mails tonen "Inkomend" badge in `ProjectCommunicationsCard`
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### Handmatige configuratie vereist
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-1. **Mailjet Dashboard**: Parse API activeren
-2. **Webhook URL**: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
-3. **DNS/Route**: Configureren voor `reply+*@bureauvlieland.nl`
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
