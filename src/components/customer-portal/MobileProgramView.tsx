@@ -339,7 +339,7 @@ export const MobileProgramView = ({
                   Offerte
                 </Button>
               )}
-              {!termsAccepted && !program.program_type?.startsWith("maatwerk_") && (
+              {!termsAccepted && (
                 <Button
                   size="sm"
                   onClick={(e) => {

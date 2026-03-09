@@ -322,7 +322,7 @@ export const DesktopProgramView = ({
                           Bekijk offerte
                         </Button>
                       )}
-                      {!termsAccepted && !program.program_type?.startsWith("maatwerk_") && (
+                      {!termsAccepted && (
                         <Button
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
