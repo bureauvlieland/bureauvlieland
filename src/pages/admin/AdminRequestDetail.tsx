@@ -928,6 +928,35 @@ const AdminRequestDetail = () => {
             </Card>
           )}
 
+          {/* Concept banner — program not yet published to customer */}
+          {!request.program_published_at && items.length > 0 && (
+            <Card className="border-blue-300 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-blue-900">
+                        Dit programma is nog niet gepubliceerd naar de klant
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        De klant ziet een placeholder totdat je het programma publiceert.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handlePublishProgram}
+                    disabled={isPublishing}
+                    className="shrink-0"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {isPublishing ? "Publiceren..." : "Publiceer naar klant"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs defaultValue="activiteiten" className="space-y-4">
             <TabsList>
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
