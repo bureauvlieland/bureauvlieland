@@ -254,6 +254,15 @@ Deno.serve(async (req) => {
 
     console.log("Accommodation quote notification sent to", request.customer_email);
 
+    // Auto-resolve quote_pending_partner todo for this request
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("auto_type", "quote_pending_partner")
+      .eq("auto_entity_id", request.id)
+      .neq("status", "done");
+    console.log(`Resolved quote_pending_partner todo for request ${request.id}`);
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
