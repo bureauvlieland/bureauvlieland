@@ -127,6 +127,8 @@ interface ProgramRequest {
   program_description: string | null;
   // Invoicing mode
   invoicing_mode: 'partner_direct' | 'bureau_central';
+  // Publish flow
+  program_published_at: string | null;
 }
 
 interface LinkedAccommodation {
