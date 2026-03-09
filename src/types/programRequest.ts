@@ -219,6 +219,8 @@ export interface ProgramRequest {
   admin_created_by: string | null;
   // Program description
   program_description: string | null;
+  // Publish flow
+  program_published_at: string | null;
 }
 
 export interface ProgramRequestItem {

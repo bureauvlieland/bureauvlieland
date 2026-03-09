@@ -79,6 +79,7 @@ interface MobileProgramViewProps {
     quote_valid_until?: string | null;
     // Program description
     program_description?: string | null;
+    program_published_at?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
