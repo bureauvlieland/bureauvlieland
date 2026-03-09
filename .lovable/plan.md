@@ -1,33 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-## Bug Fix: Wijzigingen in klantportaal worden niet opgeslagen (Desktop)
+### Wat is gebouwd
 
-### Oorzaak gevonden
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-De **DesktopProgramView** mist de "floating changes bar" die de **MobileProgramView** wél heeft (regel 529-546). Wanneer een klant op desktop een activiteit verwijdert:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-1. Het item wordt lokaal als `cancelled` gemarkeerd (state) — visueel verdwijnt het
-2. Er is geen "Doorvoeren" knop zichtbaar om de wijzigingen te submiten
-3. Bij pagina-refresh wordt de originele state opnieuw geladen → item is terug
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-De edge function `update-customer-program` handelt "removed" changes correct af (regels 1252-1260), maar wordt simpelweg nooit aangeroepen op desktop.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-### Fix
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-Dezelfde floating changes bar uit MobileProgramView toevoegen aan DesktopProgramView, direct na de `</Card>` van het programma-blok (rond regel 431). Deze bar verschijnt alleen wanneer `hasChanges` true is en toont:
-- Aantal wijzigingen
-- "Doorvoeren" knop die `onSubmitChanges` aanroept → opent het bestaande `ChangeConfirmationDialog` met samenvatting
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-De bestaande flow daarna werkt al correct:
-- `ChangeConfirmationDialog` toont een samenvatting van alle wijzigingen
-- Bij bevestiging: edge function wordt aangeroepen
-- Edge function: update database + stuur notificatie-emails naar partners + log in history
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### Wijzigingen
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-| Bestand | Wijziging |
-|---|---|
-| `src/components/customer-portal/DesktopProgramView.tsx` | Floating changes bar toevoegen (copy van MobileProgramView, regels 529-546) na het programma-card |
+---
 
-Geen database- of edge function-wijzigingen nodig — alles werkt al, alleen de UI-trigger op desktop ontbreekt.
+## Plan: CRM en Partners samenvoegen
 
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
