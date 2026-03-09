@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   Users,
-  Building2,
+  
   ClipboardList,
   LogOut,
   Menu,
@@ -87,7 +87,6 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
         { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
         { title: "CRM", url: "/admin/crm", icon: Users },
-        { title: "Partners", url: "/admin/partners", icon: Building2 },
         { title: "Chat", url: "/admin/chat", icon: MessageCircle },
       ],
     },

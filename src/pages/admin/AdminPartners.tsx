@@ -111,7 +111,7 @@ function OnboardingBadge({ status }: { status: "not_invited" | "pending" | "acti
   }
 }
 
-const AdminPartnersContent = () => {
+export const AdminPartnersContent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -356,7 +356,7 @@ const AdminPartnersContent = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96" />
@@ -365,12 +365,9 @@ const AdminPartnersContent = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Partners</h1>
-          <p className="text-slate-600">Beheer partners en hun gegevens</p>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           {stats.connectedCount > 0 && (
             <Button
