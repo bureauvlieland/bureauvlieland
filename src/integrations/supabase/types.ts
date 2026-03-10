@@ -721,6 +721,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_email_notified_at: string | null
           last_message_at: string | null
           request_id: string | null
           source: string
@@ -734,6 +735,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_email_notified_at?: string | null
           last_message_at?: string | null
           request_id?: string | null
           source: string
@@ -747,6 +749,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_email_notified_at?: string | null
           last_message_at?: string | null
           request_id?: string | null
           source?: string
