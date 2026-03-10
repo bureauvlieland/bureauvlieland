@@ -5,8 +5,8 @@ import {
   getRenderedTemplate, 
   sanitizeHtml, 
   formatDateNL, 
-  isTestMode, 
   getSubjectPrefix,
+  getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 

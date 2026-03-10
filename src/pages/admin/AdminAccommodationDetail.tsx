@@ -277,21 +277,25 @@ export default function AdminAccommodationDetail() {
     },
   });
 
-  // Select a quote
+  // Select a quote — use edge function for full notification flow
   const selectQuoteMutation = useMutation({
     mutationFn: async (quoteId: string) => {
-      await supabase.from("accommodation_quotes").update({ status: "rejected" }).eq("request_id", id).neq("id", quoteId);
-      const { error } = await supabase.from("accommodation_quotes").update({ status: "selected", selected_at: new Date().toISOString() }).eq("id", quoteId);
-      if (error) throw error;
-      await supabase.from("accommodation_requests").update({ status: "accepted" }).eq("id", id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Niet ingelogd");
+
+      const response = await supabase.functions.invoke("select-accommodation-quote", {
+        body: { quoteId, adminOverride: true },
+      });
+      if (response.error) throw new Error(response.error.message || "Fout bij selecteren");
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
-      toast({ title: "Offerte geaccepteerd" });
+      toast({ title: "Offerte geaccepteerd", description: "Partner en afgewezen partners zijn genotificeerd." });
     },
-    onError: () => {
-      toast({ title: "Fout bij accepteren", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Fout bij accepteren", description: error.message, variant: "destructive" });
     },
   });
 

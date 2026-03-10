@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+
 import type { PartnerDashboardData, PartnerItem } from "@/types/partner";
 
 export const usePartnerDashboard = (token: string) => {
