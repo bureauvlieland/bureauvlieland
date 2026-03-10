@@ -56,6 +56,8 @@ interface SendProjectEmailSheetProps {
   accommodationId?: string;
   recipients: Recipient[];
   onEmailSent?: () => void;
+  defaultSubject?: string;
+  defaultBody?: string;
 }
 
 export function SendProjectEmailSheet({
