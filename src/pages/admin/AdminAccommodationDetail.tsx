@@ -78,6 +78,7 @@ interface LinkedProgram {
   customer_name: string;
   status: string;
   number_of_people: number;
+  invoicing_mode: string;
   item_count: number;
 }
 
