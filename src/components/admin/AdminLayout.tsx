@@ -101,7 +101,6 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     },
     {
       label: "Financiën",
-      collapsible: true,
       items: [
         { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
