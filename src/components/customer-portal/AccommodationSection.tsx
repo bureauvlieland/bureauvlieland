@@ -237,11 +237,21 @@ export const AccommodationSection = ({
     return (
       <>
         <div className="space-y-3">
-          {accommodation.quotes_requested_count > 0 && (
-            <p className="text-xs text-muted-foreground/80 mb-1">
-              {accommodation.quotes_requested_count} partners benaderd · {submittedQuotes.length} offerte{submittedQuotes.length !== 1 ? 's' : ''} ontvangen
-              {accommodation.quotes_requested_count - submittedQuotes.length > 0 && ` · ${accommodation.quotes_requested_count - submittedQuotes.length} wachtend`}
-            </p>
+          {accommodation.quotes_requested_count > 0 && (() => {
+            const requested = accommodation.quotes_requested_count;
+            const received = submittedQuotes.length;
+            const declined = (accommodation as any).quotes_declined_count || 0;
+            const waiting = Math.max(0, requested - received - declined);
+            return (
+              <p className="text-xs text-muted-foreground/80 mb-1">
+                {requested} logiespartner{requested !== 1 ? 's' : ''} benaderd
+                {received > 0 && `. Van ${received} partner${received !== 1 ? 's' : ''} hebben wij een offerte ontvangen`}
+                {declined > 0 && `. ${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} de aanvraag helaas afgewezen`}
+                {waiting > 0 && `. Wij wachten nog op een reactie van ${waiting} partner${waiting !== 1 ? 's' : ''}`}
+                .
+              </p>
+            );
+          })()}
           )}
           <p className="text-sm text-muted-foreground">
             Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
