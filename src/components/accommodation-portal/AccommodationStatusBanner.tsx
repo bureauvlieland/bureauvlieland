@@ -80,8 +80,9 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                 Wij verzamelen offertes voor u
               </h3>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                Wij hebben uw aanvraag doorgestuurd naar geschikte accommodaties. 
-                U ontvangt een email zodra er offertes binnenkomen.
+                {requested > 0
+                  ? `Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd. U ontvangt een email zodra er offertes binnenkomen.`
+                  : 'Wij hebben uw aanvraag doorgestuurd naar geschikte accommodaties. U ontvangt een email zodra er offertes binnenkomen.'}
               </p>
             {request.status === 'processing' && (
               <div className="mt-4">

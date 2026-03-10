@@ -237,6 +237,12 @@ export const AccommodationSection = ({
     return (
       <>
         <div className="space-y-3">
+          {accommodation.quotes_requested_count > 0 && (
+            <p className="text-xs text-muted-foreground/80 mb-1">
+              {accommodation.quotes_requested_count} partners benaderd · {submittedQuotes.length} offerte{submittedQuotes.length !== 1 ? 's' : ''} ontvangen
+              {accommodation.quotes_requested_count - submittedQuotes.length > 0 && ` · ${accommodation.quotes_requested_count - submittedQuotes.length} wachtend`}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
           </p>

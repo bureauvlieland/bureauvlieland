@@ -259,10 +259,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update request status to processing
+    // Count total quotes for this request and update status + count
+    const { count: totalQuotes } = await supabase
+      .from("accommodation_quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("request_id", request_id);
+
     await supabase
       .from("accommodation_requests")
-      .update({ status: "processing" })
+      .update({ 
+        status: "processing",
+        quotes_requested_count: totalQuotes ?? partner_ids.length,
+      })
       .eq("id", request_id);
 
     console.log(`Accommodation quote requests sent to ${partners.length} partners`);
