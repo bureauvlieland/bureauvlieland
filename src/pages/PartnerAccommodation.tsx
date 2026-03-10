@@ -343,6 +343,14 @@ const PartnerAccommodationContent = () => {
         }).then(() => {});
       }
 
+      // Resolve the quote_pending_partner todo for this quote
+      supabase.from("admin_todos")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("auto_type", "quote_pending_partner")
+        .eq("auto_entity_id", selectedRequest.quote.id)
+        .neq("status", "done")
+        .then(() => {});
+
       // Create admin todo + send notification email when alternative dates are proposed
       if (hasAlternativeDates) {
         const customerLabel = selectedRequest.customer_company || selectedRequest.customer_name;
