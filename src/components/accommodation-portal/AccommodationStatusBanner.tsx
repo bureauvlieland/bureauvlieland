@@ -15,7 +15,8 @@ interface AccommodationStatusBannerProps {
 export function AccommodationStatusBanner({ request, quotesSummary }: AccommodationStatusBannerProps) {
   const { received, selected } = quotesSummary;
   const requested = request.quotes_requested_count;
-  const waiting = Math.max(0, requested - received - (selected > 0 ? 1 : 0));
+  const declined = request.quotes_declined_count || 0;
+  const waiting = Math.max(0, requested - received - declined - (selected > 0 ? 1 : 0));
 
   // Determine the status display
   if (selected > 0) {
