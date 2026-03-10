@@ -199,6 +199,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
             wants_activities: accomData.wants_activities || false,
             linked_program_id: accomData.linked_program_id,
             quotes_requested_count: accomData.quotes_requested_count ?? 0,
+            quotes_declined_count: (accomData as any).quotes_declined_count ?? 0,
             status: accomData.status as AccommodationRequest["status"],
             admin_notes: accomData.admin_notes,
             created_at: accomData.created_at,
