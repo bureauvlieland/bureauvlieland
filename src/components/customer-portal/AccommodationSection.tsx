@@ -240,7 +240,7 @@ export const AccommodationSection = ({
           {accommodation.quotes_requested_count > 0 && (() => {
             const requested = accommodation.quotes_requested_count;
             const received = submittedQuotes.length;
-            const declined = (accommodation as any).quotes_declined_count || 0;
+            const declined = accommodation.quotes_declined_count || 0;
             const waiting = Math.max(0, requested - received - declined);
             return (
               <p className="text-xs text-muted-foreground/80 mb-1">
