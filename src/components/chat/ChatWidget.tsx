@@ -15,6 +15,7 @@ interface ChatWidgetProps {
   visitorName: string;
   visitorEmail: string;
   requestId?: string;
+  defaultOpen?: boolean;
 }
 
 export const ChatWidget = ({
