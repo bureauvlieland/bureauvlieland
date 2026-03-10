@@ -44,6 +44,7 @@ export interface AccommodationRequest {
   
   // Quotes tracking
   quotes_requested_count: number;
+  quotes_declined_count: number;
   
   // Timestamps
   created_at: string;

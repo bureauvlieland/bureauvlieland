@@ -15,7 +15,8 @@ interface AccommodationStatusBannerProps {
 export function AccommodationStatusBanner({ request, quotesSummary }: AccommodationStatusBannerProps) {
   const { received, selected } = quotesSummary;
   const requested = request.quotes_requested_count;
-  const waiting = Math.max(0, requested - received - (selected > 0 ? 1 : 0));
+  const declined = request.quotes_declined_count || 0;
+  const waiting = Math.max(0, requested - received - declined - (selected > 0 ? 1 : 0));
 
   // Determine the status display
   if (selected > 0) {
@@ -55,7 +56,10 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
               <p className="text-sm text-muted-foreground mt-1">
                 {requested > 0 && (
                   <span className="block text-xs text-muted-foreground/80 mb-1">
-                    {requested} partners benaderd · {received} offerte{received !== 1 ? 's' : ''} ontvangen{waiting > 0 ? ` · ${waiting} wachtend` : ''}
+                    {requested} logiespartner{requested !== 1 ? 's' : ''} benaderd
+                    {received > 0 && ` · ${received} offerte${received !== 1 ? 's' : ''} ontvangen`}
+                    {declined > 0 && ` · ${declined} afgewezen`}
+                    {waiting > 0 ? ` · ${waiting} wachtend` : ''}
                   </span>
                 )}
                 Bekijk en vergelijk de offertes hieronder. Kies de optie die het beste bij u past.

@@ -75,6 +75,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
         wants_activities: requestData.wants_activities || false,
         linked_program_id: requestData.linked_program_id,
         quotes_requested_count: requestData.quotes_requested_count ?? 0,
+        quotes_declined_count: (requestData as any).quotes_declined_count ?? 0,
         status: requestData.status as AccommodationRequest['status'],
         admin_notes: requestData.admin_notes,
         created_at: requestData.created_at,
