@@ -30,6 +30,7 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
