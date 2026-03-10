@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
@@ -467,6 +468,7 @@ const CustomerProgram = () => {
           visitorName={program.customer_name}
           visitorEmail={program.customer_email}
           requestId={program.id}
+          defaultOpen={searchParams.get("chat") === "open"}
         />
       )}
 

@@ -1,0 +1,1 @@
+ALTER TABLE chat_conversations ADD COLUMN last_email_notified_at timestamptz DEFAULT NULL;

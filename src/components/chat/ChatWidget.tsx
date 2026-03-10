@@ -15,6 +15,7 @@ interface ChatWidgetProps {
   visitorName: string;
   visitorEmail: string;
   requestId?: string;
+  defaultOpen?: boolean;
 }
 
 export const ChatWidget = ({
@@ -24,8 +25,9 @@ export const ChatWidget = ({
   visitorName,
   visitorEmail,
   requestId,
+  defaultOpen = false,
 }: ChatWidgetProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [message, setMessage] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

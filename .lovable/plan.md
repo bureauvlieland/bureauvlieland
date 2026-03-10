@@ -1,40 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Chatnotificatie naar klant bij admin-antwoord
+### Wat is gebouwd
 
-## Probleem
-De admin stuurt een chatbericht, maar de klant krijgt hier geen melding van. Alleen als de klant toevallig op het portaal is en de chatwidget opent, ziet ze het bericht. Dat is onvoldoende voor productiegebruik.
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-## Oplossing
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-### Optie A: E-mailnotificatie bij admin-antwoord (aanbevolen)
-Wanneer een admin een chatbericht stuurt, stuur een e-mail naar de klant met:
-- Een korte preview van het bericht
-- Een directe link naar het klantportaal (waar de chat automatisch opent)
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-**Implementatie:**
-1. **Nieuwe edge function `notify-new-chat-reply`** — Wordt aangeroepen vanuit `useAdminChat.ts` na het versturen van een admin-bericht. Haalt de conversation op, pakt `visitor_email` en `source_token`, en stuurt een notificatie-email via Mailjet.
-2. **Debounce/throttle** — Maximaal 1 e-mail per gesprek per 10 minuten, om spam te voorkomen bij snel heen-en-weer chatten. Tracked via een `last_email_notified_at` kolom op `chat_conversations`.
-3. **Chat auto-open via URL parameter** — Voeg `?chat=open` toe aan de portallink in de mail. `CustomerProgram.tsx` leest deze parameter en opent de widget automatisch.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-### Wijzigingen
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-| Wat | Bestand |
-|---|---|
-| Nieuwe edge function | `supabase/functions/notify-new-chat-reply/index.ts` |
-| DB migratie | `last_email_notified_at` kolom op `chat_conversations` |
-| Admin chat hook aanpassen | `src/hooks/useAdminChat.ts` — na sendMessage de edge function aanroepen |
-| Auto-open chat | `src/pages/CustomerProgram.tsx` — `?chat=open` query param uitlezen |
-| Auto-open chat | `src/components/chat/ChatWidget.tsx` — prop `defaultOpen` toevoegen |
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-### E-mailtemplate (kort)
-> **Onderwerp:** Nieuw bericht van Bureau Vlieland
->
-> Hallo [naam],
->
-> Je hebt een nieuw bericht ontvangen in je persoonlijke portaal.
->
-> [Bekijk bericht →]
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-Geen berichtinhoud in de e-mail zelf (privacy).
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
+---
+
+## Plan: CRM en Partners samenvoegen
+
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
