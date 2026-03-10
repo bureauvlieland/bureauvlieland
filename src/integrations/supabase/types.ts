@@ -286,6 +286,7 @@ export type Database = {
           linked_program_id: string | null
           location_preference: Json | null
           number_of_guests: number
+          quotes_declined_count: number
           quotes_requested_count: number
           reference_number: string | null
           room_count: number | null
@@ -314,6 +315,7 @@ export type Database = {
           linked_program_id?: string | null
           location_preference?: Json | null
           number_of_guests: number
+          quotes_declined_count?: number
           quotes_requested_count?: number
           reference_number?: string | null
           room_count?: number | null
@@ -342,6 +344,7 @@ export type Database = {
           linked_program_id?: string | null
           location_preference?: Json | null
           number_of_guests?: number
+          quotes_declined_count?: number
           quotes_requested_count?: number
           reference_number?: string | null
           room_count?: number | null
