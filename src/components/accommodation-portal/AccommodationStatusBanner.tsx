@@ -62,7 +62,6 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                     {waiting > 0 ? ` · ${waiting} wachtend` : ''}
                   </span>
                 )}
-                )}
                 Bekijk en vergelijk de offertes hieronder. Kies de optie die het beste bij u past.
               </p>
             </div>
