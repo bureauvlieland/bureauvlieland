@@ -92,16 +92,16 @@ export function SendProjectEmailSheet({
         recipientType: r.type,
         recipientEmail: r.email,
         recipientName: r.name,
-        subject: "",
-        body: "",
+        subject: defaultSubject || "",
+        body: defaultBody || "",
       });
     } else if (open) {
       form.reset({
         recipientType: "custom",
         recipientEmail: "",
         recipientName: "",
-        subject: "",
-        body: "",
+        subject: defaultSubject || "",
+        body: defaultBody || "",
       });
     }
   }, [open]);
