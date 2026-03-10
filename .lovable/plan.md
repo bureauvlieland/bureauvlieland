@@ -1,45 +1,35 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+## Verbetering admin logiesaanvraag detailpagina
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+### 1. Layout verbetering (desktop)
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+De huidige pagina is een 2/3 + 1/3 grid maar de main column is erg lang door de opeenvolging van grote cards. Verbeteringen:
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+| Wijziging | Detail |
+|---|---|
+| **Compactere aanvraagdetails** | Verplaats contactgegevens, status-beheer en tijdlijn naar een sticky sidebar. De aanvraagkaart wordt compacter met alle info inline. |
+| **Quotes als kaarten i.p.v. tabel** | Op desktop werkt een tabel met 8 kolommen krap. Vervang door compact quote-cards in een grid (2 kolommen) met status-badge, prijs, partner, en actieknoppen. |
+| **Samenvattingsstrip bovenaan** | Voeg een compacte stats-strip toe boven de content: "X partners benaderd · Y offertes ontvangen · Z afgewezen · status: In behandeling" — geeft direct overzicht. |
+| **Communicatielog** | Verplaats naar een tab of collapsible section onderaan zodat het niet de hele pagina domineert bij veel berichten. |
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+### 2. "Status-email naar klant" functionaliteit
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+Nieuwe feature: een knop "Mail klant" in de sidebar die een email genereert op basis van de huidige quote-statussen.
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+| Component | Detail |
+|---|---|
+| **Knop in sidebar** | "Mail klant over status" knop onder contactgegevens |
+| **Auto-gegenereerde tekst** | Op basis van quotes data: hoeveel partners benaderd, hoeveel offertes ontvangen, hoeveel afgewezen, hoeveel nog wachtend. Voorbeeld: "Beste [naam], hierbij een update over uw logiesaanvraag [REF]. Wij hebben [X] logiespartners benaderd. Van [Y] partner(s) hebben wij een offerte ontvangen, [Z] partner(s) heeft/hebben de aanvraag helaas afgewezen. Wij wachten nog op een reactie van [W] partner(s)..." |
+| **Bewerkbare tekst** | Admin kan de gegenereerde tekst aanpassen voordat deze wordt verstuurd |
+| **Versturen** | Via bestaande `send-project-email` edge function (al werkend met Mailjet, email logging, en project communications) |
+| **Logging** | Automatisch gelogd bij de aanvraag via `project_communications` tabel (bestaande functionaliteit in de edge function) + `email_log` |
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+### Bestanden
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+| Bestand | Wijziging |
+|---|---|
+| `src/pages/admin/AdminAccommodationDetail.tsx` | Herschrijven layout: compactere stats-strip, quote-cards i.p.v. tabel, sticky sidebar, "Mail klant" knop met auto-gegenereerde statustekst die `SendProjectEmailSheet` opent met pre-filled subject+body |
 
----
+Geen nieuwe edge functions of database wijzigingen nodig — `send-project-email` ondersteunt al `accommodationId` en logt automatisch in `email_log` en `project_communications`.
 
-## Plan: CRM en Partners samenvoegen
-
-### Status: ✅ Geïmplementeerd
-
-CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
-
----
-
-## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
-
-### Status: ✅ Geïmplementeerd
-
-1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
-
-2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
-
-3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
