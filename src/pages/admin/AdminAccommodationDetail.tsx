@@ -161,7 +161,8 @@ export default function AdminAccommodationDetail() {
   const [selectedQuoteForView, setSelectedQuoteForView] = useState<any>(null);
   const [showEditGuestsDialog, setShowEditGuestsDialog] = useState(false);
   const [showStatusEmailSheet, setShowStatusEmailSheet] = useState(false);
-  const [statusEmailDefaults, setStatusEmailDefaults] = useState<{ subject: string; body: string }>({ subject: "", body: "" });
+  const [statusEmailSubject, setStatusEmailSubject] = useState("");
+  const [statusEmailBody, setStatusEmailBody] = useState("");
   const [commLogOpen, setCommLogOpen] = useState(false);
 
   // Fetch accommodation request
