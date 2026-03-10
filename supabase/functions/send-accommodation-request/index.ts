@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
       budget_range: request.budget_range ? (budgetLabels[request.budget_range] || request.budget_range) : "",
       special_requests: sanitizeHtml(request.special_requests) || "",
       portal_link: portalUrl,
-      admin_link: `https://bureauvlieland.nl/admin/logies/${request.id}`,
+      admin_link: `${baseUrl}/admin/logies/${request.id}`,
     };
 
     // Try to get templates from database
