@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.send-partner-intro-email]
 verify_jwt = false
+
+[functions.notify-new-chat-reply]
+verify_jwt = false
