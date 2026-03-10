@@ -237,6 +237,12 @@ export const AccommodationSection = ({
     return (
       <>
         <div className="space-y-3">
+          {accommodation.quotes_requested_count > 0 && (
+            <p className="text-xs text-muted-foreground/80 mb-1">
+              {accommodation.quotes_requested_count} partners benaderd · {submittedQuotes.length} offerte{submittedQuotes.length !== 1 ? 's' : ''} ontvangen
+              {accommodation.quotes_requested_count - submittedQuotes.length > 0 && ` · ${accommodation.quotes_requested_count - submittedQuotes.length} wachtend`}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
           </p>
@@ -369,7 +375,9 @@ export const AccommodationSection = ({
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Wij verzamelen offertes voor u. U ontvangt een email zodra accommodaties reageren.
+              {accommodation.quotes_requested_count > 0
+                ? `Bureau Vlieland heeft ${accommodation.quotes_requested_count} logiespartner${accommodation.quotes_requested_count !== 1 ? 's' : ''} benaderd. U ontvangt een email zodra er offertes binnenkomen.`
+                : 'Wij verzamelen offertes voor u. U ontvangt een email zodra accommodaties reageren.'}
             </p>
             <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
           </div>

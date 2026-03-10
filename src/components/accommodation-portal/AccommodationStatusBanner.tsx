@@ -14,6 +14,8 @@ interface AccommodationStatusBannerProps {
 
 export function AccommodationStatusBanner({ request, quotesSummary }: AccommodationStatusBannerProps) {
   const { received, selected } = quotesSummary;
+  const requested = request.quotes_requested_count;
+  const waiting = Math.max(0, requested - received - (selected > 0 ? 1 : 0));
 
   // Determine the status display
   if (selected > 0) {
@@ -51,6 +53,11 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                 {received === 1 ? '1 offerte ontvangen' : `${received} offertes ontvangen`}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
+                {requested > 0 && (
+                  <span className="block text-xs text-muted-foreground/80 mb-1">
+                    {requested} partners benaderd · {received} offerte{received !== 1 ? 's' : ''} ontvangen{waiting > 0 ? ` · ${waiting} wachtend` : ''}
+                  </span>
+                )}
                 Bekijk en vergelijk de offertes hieronder. Kies de optie die het beste bij u past.
               </p>
             </div>
@@ -73,8 +80,9 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                 Wij verzamelen offertes voor u
               </h3>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                Wij hebben uw aanvraag doorgestuurd naar geschikte accommodaties. 
-                U ontvangt een email zodra er offertes binnenkomen.
+                {requested > 0
+                  ? `Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd. U ontvangt een email zodra er offertes binnenkomen.`
+                  : 'Wij hebben uw aanvraag doorgestuurd naar geschikte accommodaties. U ontvangt een email zodra er offertes binnenkomen.'}
               </p>
             {request.status === 'processing' && (
               <div className="mt-4">

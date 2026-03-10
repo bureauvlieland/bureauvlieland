@@ -42,6 +42,9 @@ export interface AccommodationRequest {
   status: AccommodationRequestStatus;
   admin_notes: string | null;
   
+  // Quotes tracking
+  quotes_requested_count: number;
+  
   // Timestamps
   created_at: string;
   updated_at: string;

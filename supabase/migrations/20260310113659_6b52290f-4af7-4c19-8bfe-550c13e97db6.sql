@@ -1,0 +1,1 @@
+ALTER TABLE public.accommodation_requests ADD COLUMN quotes_requested_count integer NOT NULL DEFAULT 0;
