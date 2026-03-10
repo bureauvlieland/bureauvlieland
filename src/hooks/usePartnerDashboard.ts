@@ -18,19 +18,6 @@ export const usePartnerDashboard = (token: string) => {
       setIsLoading(true);
       setError(null);
 
-      const { data: result, error: fetchError } = await supabase.functions.invoke(
-        "get-partner-dashboard",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: null,
-        }
-      );
-
-      // The function expects query params, but invoke doesn't support them directly
-      // So we'll call it differently
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
         {
