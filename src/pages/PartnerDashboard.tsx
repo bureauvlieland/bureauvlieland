@@ -321,17 +321,9 @@ const PartnerDashboardContent = () => {
 
       if (error) throw error;
 
-      try {
-        await supabase.functions.invoke("notify-accommodation-quote", {
-          body: { quoteId: selectedRequest.quote.id },
-        });
-      } catch (emailError) {
-        console.error("Failed to send quote notification:", emailError);
-      }
-
       toast({
         title: "Offerte ingediend",
-        description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland.",
+        description: "Uw offerte is succesvol ingediend bij Bureau Vlieland. Zij nemen contact op met de klant.",
       });
 
       await refetchDashboard();
