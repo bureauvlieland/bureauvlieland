@@ -188,9 +188,18 @@ export function ProjectCommunicationsCard({
                             {comm.contact_email && ` (${comm.contact_email})`}
                           </p>
                         )}
-                        <p className="text-sm mt-1 whitespace-pre-wrap line-clamp-3">
+                        <p className={cn("text-sm mt-1 whitespace-pre-wrap", !expandedIds.has(comm.id) && "line-clamp-3")}>
                           {comm.content}
                         </p>
+                        {comm.content && comm.content.length > 150 && (
+                          <button
+                            type="button"
+                            className="text-xs text-primary hover:underline mt-1"
+                            onClick={() => toggleExpanded(comm.id)}
+                          >
+                            {expandedIds.has(comm.id) ? "Minder tonen" : "Meer lezen"}
+                          </button>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
