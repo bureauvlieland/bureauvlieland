@@ -53,6 +53,11 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                 {received === 1 ? '1 offerte ontvangen' : `${received} offertes ontvangen`}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
+                {requested > 0 && (
+                  <span className="block text-xs text-muted-foreground/80 mb-1">
+                    {requested} partners benaderd · {received} offerte{received !== 1 ? 's' : ''} ontvangen{waiting > 0 ? ` · ${waiting} wachtend` : ''}
+                  </span>
+                )}
                 Bekijk en vergelijk de offertes hieronder. Kies de optie die het beste bij u past.
               </p>
             </div>
