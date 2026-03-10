@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       .from("accommodation_quotes")
       .select("id, accommodation_name, status, request_id, partner_id")
       .eq("id", quoteId)
-      .eq("status", "selected")
+      .in("status", ["submitted", "selected"])
       .maybeSingle();
 
     if (qError || !quote) {

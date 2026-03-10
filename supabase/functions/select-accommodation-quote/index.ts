@@ -1,14 +1,11 @@
-// Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { 
   getRenderedTemplate, 
   sanitizeHtml, 
   formatDateNL, 
   formatCurrencyNL,
-  isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
-  getPortalBaseUrl,
   buildReplyTo,
   TemplateIds 
 } from "../_shared/email-templates.ts";
@@ -22,10 +19,10 @@ const corsHeaders = {
 interface SelectQuoteRequest {
   token: string;
   quoteId: string;
+  adminOverride?: boolean;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -35,37 +32,98 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token, quoteId }: SelectQuoteRequest = await req.json();
+    const { token, quoteId, adminOverride }: SelectQuoteRequest = await req.json();
 
-    // Validate input
-    if (!token || !quoteId) {
+    // Admin override: validate auth
+    if (adminOverride) {
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: "Niet geautoriseerd" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await userClient.auth.getUser();
+      if (!user) {
+        return new Response(
+          JSON.stringify({ error: "Niet geautoriseerd" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // Check admin role
+      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: user.id });
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Geen admin rechten" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    if (!quoteId) {
       return new Response(
-        JSON.stringify({ error: "Token en quoteId zijn verplicht" }),
+        JSON.stringify({ error: "quoteId is verplicht" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Find the accommodation request by token
-    const { data: request, error: requestError } = await supabase
-      .from("accommodation_requests")
-      .select("*")
-      .eq("customer_token", token)
-      .maybeSingle();
+    // Find the accommodation request - by token for customer, by quote for admin
+    let request: any;
+    if (adminOverride) {
+      // Find request via quote
+      const { data: quote } = await supabase
+        .from("accommodation_quotes")
+        .select("request_id")
+        .eq("id", quoteId)
+        .maybeSingle();
+      if (!quote) {
+        return new Response(
+          JSON.stringify({ error: "Offerte niet gevonden" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data, error } = await supabase
+        .from("accommodation_requests")
+        .select("*")
+        .eq("id", quote.request_id)
+        .maybeSingle();
+      if (error || !data) {
+        return new Response(
+          JSON.stringify({ error: "Aanvraag niet gevonden" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      request = data;
+    } else {
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: "Token is verplicht" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data, error } = await supabase
+        .from("accommodation_requests")
+        .select("*")
+        .eq("customer_token", token)
+        .maybeSingle();
+      if (error || !data) {
+        return new Response(
+          JSON.stringify({ error: "Aanvraag niet gevonden" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      request = data;
 
-    if (requestError || !request) {
-      console.error("Request error:", requestError);
-      return new Response(
-        JSON.stringify({ error: "Aanvraag niet gevonden" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check if request is still valid
-    if (new Date(request.expires_at) < new Date()) {
-      return new Response(
-        JSON.stringify({ error: "Deze aanvraag is verlopen" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Check expiry only for customer flow
+      if (new Date(request.expires_at) < new Date()) {
+        return new Response(
+          JSON.stringify({ error: "Deze aanvraag is verlopen" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Check if already accepted
@@ -85,20 +143,33 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (quoteError || !quote) {
-      console.error("Quote error:", quoteError);
       return new Response(
         JSON.stringify({ error: "Offerte niet gevonden" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check if quote is expired
-    if (new Date(quote.valid_until) < new Date()) {
+    // Check if quote is expired (skip for admin)
+    if (!adminOverride && new Date(quote.valid_until) < new Date()) {
       return new Response(
         JSON.stringify({ error: "Deze offerte is verlopen" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get invoicing_mode from linked program
+    let invoicingMode = "partner_direct";
+    if (request.linked_program_id) {
+      const { data: linkedProg } = await supabase
+        .from("program_requests")
+        .select("invoicing_mode")
+        .eq("id", request.linked_program_id)
+        .maybeSingle();
+      if (linkedProg?.invoicing_mode) {
+        invoicingMode = linkedProg.invoicing_mode;
+      }
+    }
+    const isCentralBilling = invoicingMode === "bureau_central";
 
     // Get partner commission percentage
     const { data: partner } = await supabase
@@ -119,7 +190,7 @@ Deno.serve(async (req) => {
         selected_at: new Date().toISOString(),
         commission_percentage: commissionPercentage,
         commission_amount: commissionAmount,
-        commission_status: "pending", // Waiting for invoice registration
+        commission_status: "pending",
       })
       .eq("id", quoteId);
 
@@ -140,7 +211,6 @@ Deno.serve(async (req) => {
 
     if (rejectError) {
       console.error("Reject quotes error:", rejectError);
-      // Non-fatal, continue
     }
 
     // Fetch rejected quotes with partner info to notify them
@@ -171,6 +241,18 @@ Deno.serve(async (req) => {
       .neq("status", "done");
     console.log(`Resolved quote_pending_customer todo for request ${request.id}`);
 
+    // Create admin todo for manual confirmation
+    const todoTitle = isCentralBilling
+      ? `Logies bevestiging versturen: ${request.customer_name} → ${quote.accommodation_name}`
+      : `Logies geselecteerd: ${request.customer_name} → ${quote.accommodation_name}`;
+    await supabase.from("admin_todos").insert({
+      title: todoTitle,
+      description: `Klant heeft gekozen voor ${quote.accommodation_name}. ${isCentralBilling ? "Stuur bevestiging naar klant en partner (bureau_central)." : "Partner is genotificeerd met klantgegevens."}`,
+      priority: "high",
+      auto_type: "accommodation_selected",
+      auto_entity_id: request.id,
+    });
+
     // Send email notifications
     const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
     const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
@@ -178,60 +260,56 @@ Deno.serve(async (req) => {
     if (mailjetApiKey && mailjetSecretKey) {
       const auth = btoa(`${mailjetApiKey}:${mailjetSecretKey}`);
       const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
-      const testMode = isTestMode(origin);
       const subjectPrefix = getSubjectPrefix(origin);
-
-      const baseUrl = getPortalBaseUrl(origin);
-      const portalUrl = `${baseUrl}/mijn-logies/${token}`;
-
-      // Prepare template variables for partner email
-      const partnerTemplateVariables = {
-        partner_name: sanitizeHtml(quote.partner?.name),
-        customer_name: sanitizeHtml(request.customer_name),
-        company_name: sanitizeHtml(request.customer_company) || "",
-        customer_email: request.customer_email,
-        customer_phone: sanitizeHtml(request.customer_phone),
-        accommodation_name: sanitizeHtml(quote.accommodation_name),
-        arrival_date: formatDateNL(request.arrival_date),
-        departure_date: formatDateNL(request.departure_date),
-        number_of_guests: String(request.number_of_guests),
-        price_total: formatCurrencyNL(quote.price_total),
-      };
-
-      // Prepare template variables for customer email
-      const customerTemplateVariables = {
-        customer_name: sanitizeHtml(request.customer_name),
-        accommodation_name: sanitizeHtml(quote.accommodation_name),
-        arrival_date: formatDateNL(request.arrival_date),
-        departure_date: formatDateNL(request.departure_date),
-        number_of_guests: String(request.number_of_guests),
-        price_total: formatCurrencyNL(quote.price_total),
-        portal_link: portalUrl,
-      };
-
-      // Try to get templates from database
-      const [partnerTemplate, customerTemplate] = await Promise.all([
-        getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables),
-        getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables),
-      ]);
-
       const replyTo = buildReplyTo(request.reference_number);
 
-      // Partner email (prefer contact_email for notifications)
+      // Partner email — respect invoicing_mode for PII
+      const partnerTemplateVariables: Record<string, string> = {
+        partner_name: sanitizeHtml(quote.partner?.name),
+        accommodation_name: sanitizeHtml(quote.accommodation_name),
+        arrival_date: formatDateNL(request.arrival_date),
+        departure_date: formatDateNL(request.departure_date),
+        number_of_guests: String(request.number_of_guests),
+        price_total: formatCurrencyNL(quote.price_total),
+      };
+
+      // Only include customer PII if partner_direct
+      if (!isCentralBilling) {
+        partnerTemplateVariables.customer_name = sanitizeHtml(request.customer_name);
+        partnerTemplateVariables.company_name = sanitizeHtml(request.customer_company) || "";
+        partnerTemplateVariables.customer_email = request.customer_email;
+        partnerTemplateVariables.customer_phone = sanitizeHtml(request.customer_phone);
+      } else {
+        partnerTemplateVariables.customer_name = "Bureau Vlieland";
+        partnerTemplateVariables.company_name = "";
+        partnerTemplateVariables.customer_email = "hallo@bureauvlieland.nl";
+        partnerTemplateVariables.customer_phone = "0562 700 208";
+      }
+
+      const partnerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables);
+
       const partnerEmail = getRecipientEmail(quote.partner?.contact_email || quote.partner?.email || "", origin);
       if (partnerEmail) {
-        const partnerHtml = partnerTemplate?.body || `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #16a34a;">Goed nieuws!</h1>
-            <p>Uw offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd door ${sanitizeHtml(request.customer_name)}.</p>
-            
-            <h2>Klantgegevens</h2>
-            <ul>
+        const contactBlock = isCentralBilling
+          ? `<ul>
+              <li><strong>Contact:</strong> Bureau Vlieland</li>
+              <li><strong>Email:</strong> hallo@bureauvlieland.nl</li>
+              <li><strong>Telefoon:</strong> 0562 700 208</li>
+            </ul>`
+          : `<ul>
               <li><strong>Naam:</strong> ${sanitizeHtml(request.customer_name)}</li>
               <li><strong>Email:</strong> ${request.customer_email}</li>
               <li><strong>Telefoon:</strong> ${sanitizeHtml(request.customer_phone)}</li>
               ${request.customer_company ? `<li><strong>Bedrijf:</strong> ${sanitizeHtml(request.customer_company)}</li>` : ""}
-            </ul>
+            </ul>`;
+
+        const partnerHtml = partnerTemplate?.body || `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #16a34a;">Goed nieuws!</h1>
+            <p>Uw offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd.</p>
+            
+            <h2>${isCentralBilling ? "Contactgegevens" : "Klantgegevens"}</h2>
+            ${contactBlock}
             
             <h2>Reserveringsdetails</h2>
             <ul>
@@ -241,7 +319,10 @@ Deno.serve(async (req) => {
               <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
             </ul>
             
-            <p>Neem zo snel mogelijk contact op met de klant om de reservering te bevestigen.</p>
+            <p>${isCentralBilling
+              ? "Bureau Vlieland neemt contact met u op over de verdere afhandeling."
+              : "Neem zo snel mogelijk contact op met de klant om de reservering te bevestigen."
+            }</p>
             
             <p style="color: #666; font-size: 12px; margin-top: 40px;">
               Dit bericht is verzonden door Bureau Vlieland.
@@ -262,72 +343,51 @@ Deno.serve(async (req) => {
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: partnerEmail }],
                   ...(replyTo ? { ReplyTo: replyTo } : {}),
-                  Subject: partnerTemplate?.subject || `${subjectPrefix}Uw offerte voor ${request.customer_name} is geaccepteerd`,
+                  Subject: partnerTemplate?.subject || `${subjectPrefix}Uw offerte voor logies is geaccepteerd`,
                   HTMLPart: partnerHtml,
                 },
               ],
             }),
           });
+
+          await logEmail({
+            email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
+            subject: partnerTemplate?.subject || `Uw offerte voor logies is geaccepteerd`,
+            recipient_email: partnerEmail,
+            recipient_name: quote.partner?.name,
+            related_accommodation_id: request.id,
+            related_partner_id: quote.partner_id,
+            status: "sent",
+            sent_by: "system",
+          });
+
+          console.log(`Selection notification sent to partner ${quote.partner?.name}`);
         } catch (e) {
           console.error("Error sending partner email:", e);
+          await logEmail({
+            email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
+            subject: `Uw offerte voor logies is geaccepteerd`,
+            recipient_email: partnerEmail,
+            recipient_name: quote.partner?.name,
+            related_accommodation_id: request.id,
+            related_partner_id: quote.partner_id,
+            status: "failed",
+            error_message: String(e),
+            sent_by: "system",
+          });
         }
       }
 
-      // Customer email
-      const customerHtml = customerTemplate?.body || `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #0f766e;">Bedankt voor uw keuze!</h1>
-          <p>Beste ${sanitizeHtml(request.customer_name)},</p>
-          <p>U heeft gekozen voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> voor uw verblijf op Vlieland.</p>
-          
-          <h2>Uw reservering</h2>
-          <ul>
-            <li><strong>Accommodatie:</strong> ${sanitizeHtml(quote.accommodation_name)}</li>
-            <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
-            <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
-            <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
-            <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
-          </ul>
-          
-          <p>De accommodatie neemt binnenkort contact met u op om de reservering definitief te maken.</p>
-          
-          <p>U kunt de status van uw aanvraag altijd bekijken via:<br>
-          <a href="${portalUrl}">${portalUrl}</a></p>
-          
-          <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-        </div>
-      `;
+      // NO automatic customer email — admin handles this manually via todo
 
-      try {
-        await fetch("https://api.mailjet.com/v3.1/send", {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${auth}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            Messages: [
-              {
-                From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                To: [{ Email: request.customer_email }],
-                ...(replyTo ? { ReplyTo: replyTo } : {}),
-                Subject: customerTemplate?.subject || "Bevestiging van uw logies keuze",
-                HTMLPart: customerHtml,
-              },
-            ],
-          }),
-        });
-      } catch (e) {
-        console.error("Error sending customer email:", e);
-      }
       // Notify rejected partners
       if (rejectedQuotes && rejectedQuotes.length > 0) {
         for (const rq of rejectedQuotes) {
-          const partner = rq.partner as any;
-          if (!partner?.email) continue;
+          const rqPartner = rq.partner as any;
+          if (!rqPartner?.email) continue;
 
           const rejectedVars = {
-            partner_name: sanitizeHtml(partner.name),
+            partner_name: sanitizeHtml(rqPartner.name),
             customer_name: sanitizeHtml(request.customer_name),
             accommodation_name: sanitizeHtml(rq.accommodation_name),
             arrival_date: formatDateNL(request.arrival_date),
@@ -341,15 +401,15 @@ Deno.serve(async (req) => {
 
           const rejectedHtml = rejectedTemplate?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <p>Beste ${sanitizeHtml(partner.name)},</p>
-              <p>Wij laten u weten dat de klant <strong>${sanitizeHtml(request.customer_name)}</strong> voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie heeft gekozen.</p>
+              <p>Beste ${sanitizeHtml(rqPartner.name)},</p>
+              <p>Wij laten u weten dat voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie is gekozen.</p>
               <p>Uw offerte voor <strong>${sanitizeHtml(rq.accommodation_name)}</strong> wordt hiermee afgesloten.</p>
               <p>Bedankt voor het uitbrengen van uw offerte. Wij hopen u bij een volgende aanvraag weer te mogen benaderen.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
           `;
 
-          const rejectedEmail = getRecipientEmail(partner.contact_email || partner.email, origin);
+          const rejectedEmail = getRecipientEmail(rqPartner.contact_email || rqPartner.email, origin);
           try {
             await fetch("https://api.mailjet.com/v3.1/send", {
               method: "POST",
@@ -361,7 +421,7 @@ Deno.serve(async (req) => {
                 Messages: [{
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: rejectedEmail }],
-                  Subject: rejectedTemplate?.subject || `${subjectPrefix}Logiesaanvraag ${sanitizeHtml(request.customer_name)} - niet gekozen`,
+                  Subject: rejectedTemplate?.subject || `${subjectPrefix}Logiesaanvraag - niet gekozen`,
                   HTMLPart: rejectedHtml,
                 }],
               }),
@@ -369,25 +429,25 @@ Deno.serve(async (req) => {
 
             await logEmail({
               email_type: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
-              subject: rejectedTemplate?.subject || `Logiesaanvraag ${request.customer_name} - niet gekozen`,
+              subject: rejectedTemplate?.subject || `Logiesaanvraag - niet gekozen`,
               recipient_email: rejectedEmail,
-              recipient_name: partner.name,
+              recipient_name: rqPartner.name,
               related_accommodation_id: request.id,
-              related_partner_id: partner.id,
+              related_partner_id: rqPartner.id,
               status: "sent",
               sent_by: "system",
             });
 
-            console.log(`Rejection notification sent to partner ${partner.name}`);
+            console.log(`Rejection notification sent to partner ${rqPartner.name}`);
           } catch (e) {
-            console.error(`Error sending rejection email to ${partner.name}:`, e);
+            console.error(`Error sending rejection email to ${rqPartner.name}:`, e);
             await logEmail({
               email_type: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
-              subject: `Logiesaanvraag ${request.customer_name} - niet gekozen`,
+              subject: `Logiesaanvraag - niet gekozen`,
               recipient_email: rejectedEmail,
-              recipient_name: partner.name,
+              recipient_name: rqPartner.name,
               related_accommodation_id: request.id,
-              related_partner_id: partner.id,
+              related_partner_id: rqPartner.id,
               status: "failed",
               error_message: String(e),
               sent_by: "system",

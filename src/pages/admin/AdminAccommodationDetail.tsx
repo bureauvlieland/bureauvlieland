@@ -78,6 +78,7 @@ interface LinkedProgram {
   customer_name: string;
   status: string;
   number_of_people: number;
+  invoicing_mode: string;
   item_count: number;
 }
 
@@ -218,7 +219,7 @@ export default function AdminAccommodationDetail() {
     queryFn: async () => {
       const { data: program, error } = await supabase
         .from("program_requests")
-        .select("id, customer_token, customer_name, status, number_of_people")
+        .select("id, customer_token, customer_name, status, number_of_people, invoicing_mode")
         .eq("linked_accommodation_id", id)
         .maybeSingle();
 
@@ -277,21 +278,25 @@ export default function AdminAccommodationDetail() {
     },
   });
 
-  // Select a quote
+  // Select a quote — use edge function for full notification flow
   const selectQuoteMutation = useMutation({
     mutationFn: async (quoteId: string) => {
-      await supabase.from("accommodation_quotes").update({ status: "rejected" }).eq("request_id", id).neq("id", quoteId);
-      const { error } = await supabase.from("accommodation_quotes").update({ status: "selected", selected_at: new Date().toISOString() }).eq("id", quoteId);
-      if (error) throw error;
-      await supabase.from("accommodation_requests").update({ status: "accepted" }).eq("id", id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Niet ingelogd");
+
+      const response = await supabase.functions.invoke("select-accommodation-quote", {
+        body: { quoteId, adminOverride: true },
+      });
+      if (response.error) throw new Error(response.error.message || "Fout bij selecteren");
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
-      toast({ title: "Offerte geaccepteerd" });
+      toast({ title: "Offerte geaccepteerd", description: "Partner en afgewezen partners zijn genotificeerd." });
     },
-    onError: () => {
-      toast({ title: "Fout bij accepteren", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Fout bij accepteren", description: error.message, variant: "destructive" });
     },
   });
 
@@ -843,6 +848,36 @@ export default function AdminAccommodationDetail() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Invoicing Mode (read-only from linked program) */}
+            {linkedProgram && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Facturatiemodel</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    {linkedProgram.invoicing_mode === "bureau_central" ? (
+                      <>
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Bureau Vlieland factureert</p>
+                          <p className="text-xs text-muted-foreground">Partner stuurt factuur naar Bureau Vlieland</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Partner factureert direct</p>
+                          <p className="text-xs text-muted-foreground">Partner stuurt factuur naar klant</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Status Management */}
             <Card>

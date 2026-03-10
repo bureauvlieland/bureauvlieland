@@ -5,8 +5,8 @@ import {
   getRenderedTemplate, 
   sanitizeHtml, 
   formatDateNL, 
-  isTestMode, 
   getSubjectPrefix,
+  getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -84,7 +84,7 @@ function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>,
       ` : ''}
       
       <p style="margin-top: 30px;">
-        <a href="https://bureauvlieland.nl/admin/logies/${request.id}" 
+        <a href="${baseUrl}/admin/logies/${request.id}" 
            style="display: inline-block; background-color: #1a365d; color: white; 
                   padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
           Bekijk in admin →
@@ -188,9 +188,10 @@ Deno.serve(async (req) => {
 
     // Always use the program token for the portal URL (unified customer experience)
     const programToken = request.linked_program?.customer_token;
+    const baseUrl = getPortalBaseUrl(origin);
     const portalUrl = programToken 
-      ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
-      : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
+      ? `${baseUrl}/mijn-programma/${programToken}`
+      : `${baseUrl}/mijn-logies/${request.customer_token}`;
 
     // Format accommodation type
     const typeLabels: Record<string, string> = {
@@ -226,7 +227,7 @@ Deno.serve(async (req) => {
       budget_range: request.budget_range ? (budgetLabels[request.budget_range] || request.budget_range) : "",
       special_requests: sanitizeHtml(request.special_requests) || "",
       portal_link: portalUrl,
-      admin_link: `https://bureauvlieland.nl/admin/logies/${request.id}`,
+      admin_link: `${baseUrl}/admin/logies/${request.id}`,
     };
 
     // Try to get templates from database
