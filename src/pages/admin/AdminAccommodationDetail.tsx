@@ -849,6 +849,36 @@ export default function AdminAccommodationDetail() {
               </CardContent>
             </Card>
 
+            {/* Invoicing Mode (read-only from linked program) */}
+            {linkedProgram && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Facturatiemodel</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    {linkedProgram.invoicing_mode === "bureau_central" ? (
+                      <>
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Bureau Vlieland factureert</p>
+                          <p className="text-xs text-muted-foreground">Partner stuurt factuur naar Bureau Vlieland</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Partner factureert direct</p>
+                          <p className="text-xs text-muted-foreground">Partner stuurt factuur naar klant</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Status Management */}
             <Card>
               <CardHeader className="pb-2">
