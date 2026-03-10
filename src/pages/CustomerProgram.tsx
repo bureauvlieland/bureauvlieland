@@ -468,6 +468,7 @@ const CustomerProgram = () => {
           visitorName={program.customer_name}
           visitorEmail={program.customer_email}
           requestId={program.id}
+          defaultOpen={searchParams.get("chat") === "open"}
         />
       )}
 
