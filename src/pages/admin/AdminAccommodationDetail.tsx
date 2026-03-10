@@ -198,7 +198,7 @@ export default function AdminAccommodationDetail() {
   });
 
   // Fetch existing quotes for this request
-  const { data: quotes, isLoading: quotesLoading } = useQuery({
+  const { data: quotes } = useQuery({
     queryKey: ["admin-accommodation-quotes", id],
     queryFn: async () => {
       const { data, error } = await supabase
