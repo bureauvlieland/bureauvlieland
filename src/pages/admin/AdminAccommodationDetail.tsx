@@ -999,6 +999,8 @@ export default function AdminAccommodationDetail() {
           name: request.customer_name,
           type: "customer" as const,
         }]}
+        defaultSubject={statusEmailDefaults.subject}
+        defaultBody={statusEmailDefaults.body}
         onEmailSent={() => {
           queryClient.invalidateQueries({ queryKey: ["project-communications", undefined, id] });
           setCommLogOpen(true);
