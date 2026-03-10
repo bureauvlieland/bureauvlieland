@@ -218,7 +218,7 @@ export default function AdminAccommodationDetail() {
     queryFn: async () => {
       const { data: program, error } = await supabase
         .from("program_requests")
-        .select("id, customer_token, customer_name, status, number_of_people")
+        .select("id, customer_token, customer_name, status, number_of_people, invoicing_mode")
         .eq("linked_accommodation_id", id)
         .maybeSingle();
 
