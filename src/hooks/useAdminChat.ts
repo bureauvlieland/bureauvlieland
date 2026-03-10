@@ -183,6 +183,11 @@ export function useAdminChat() {
       .from("chat_conversations")
       .update({ last_message_at: new Date().toISOString(), status: "active" })
       .eq("id", activeConversationId);
+
+    // Send email notification to visitor (fire and forget)
+    supabase.functions.invoke("notify-new-chat-reply", {
+      body: { conversation_id: activeConversationId },
+    }).catch((err) => console.error("Failed to send chat reply notification:", err));
   }, [activeConversationId]);
 
   const closeConversation = useCallback(async (id: string) => {
