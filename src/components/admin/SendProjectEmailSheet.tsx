@@ -67,6 +67,8 @@ export function SendProjectEmailSheet({
   accommodationId,
   recipients,
   onEmailSent,
+  defaultSubject,
+  defaultBody,
 }: SendProjectEmailSheetProps) {
   const [isSending, setIsSending] = useState(false);
 
