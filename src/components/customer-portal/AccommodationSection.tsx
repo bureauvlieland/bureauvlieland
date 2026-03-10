@@ -252,7 +252,6 @@ export const AccommodationSection = ({
               </p>
             );
           })()}
-          )}
           <p className="text-sm text-muted-foreground">
             Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
           </p>
