@@ -1,0 +1,1 @@
+ALTER TABLE public.accommodation_quote_extras ALTER COLUMN commission_percentage SET DEFAULT 10;
