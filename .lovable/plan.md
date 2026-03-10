@@ -1,79 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-## Grondig onderzoek: Auto-todo's matchen niet met logies-statussen
+### Wat is gebouwd
 
-### Gevonden bugs
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-**Bug 1: Entity ID mismatch — todos worden nooit automatisch opgelost**
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-`check-pending-items` maakt todos aan met `auto_entity_id = quote.id` (de individuele offerte-ID).
-Maar `notify-accommodation-quote` probeert ze op te lossen met `auto_entity_id = request.id` (de aanvraag-ID).
-Dit zijn altijd verschillende ID's → resolution werkt **nooit**.
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-```text
-check-pending-items:        auto_entity_id = quote.id     (bijv. 1edd1a9e...)
-notify-accommodation-quote: auto_entity_id = request.id   (bijv. aaa2002a...)
-→ Nooit een match → todo blijft open
-```
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-**Bug 2: Geen todo-resolutie bij afwijzing (decline)**
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-Wanneer een partner een logiesaanvraag afwijst (`status = declined`), is er nergens code die de bijbehorende `quote_pending_partner` todo als "done" markeert. De partner heeft gereageerd, maar de todo zegt "heeft niet gereageerd".
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-Dit is precies wat je ziet bij Zeezicht: offerte-status is `declined`, maar todo staat nog op `todo`.
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-**Bug 3: PartnerDashboard decline-handler is incompleet**
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-`PartnerDashboard.tsx` → `handleQuoteDecline` mist:
-- History logging naar `program_request_history`
-- Project communication logging
-- Todo-resolutie
-- Ondersteuning voor alternatieve datums
+---
 
-Terwijl `PartnerAccommodation.tsx` dit wél doet. Inconsistentie in gedrag afhankelijk van welke pagina de partner gebruikt.
+## Plan: CRM en Partners samenvoegen
 
-### Fix-plan
+### Status: ✅ Geïmplementeerd
 
-| Bestand | Wijziging |
-|---|---|
-| `supabase/functions/check-pending-items/index.ts` | In CHECK 2: filter ook quotes met status `declined` uit (naast `pending`, ook niet `declined` meenemen). Maar belangrijker: |
-| `supabase/functions/notify-accommodation-quote/index.ts` | Fix entity ID: resolve todo met `quote.id` i.p.v. `request.id` |
-| `src/pages/PartnerAccommodation.tsx` | Na decline: resolve `quote_pending_partner` todo voor `quote.id` |
-| `src/pages/PartnerDashboard.tsx` | Decline handler uitbreiden: history logging, project communication, todo-resolutie, alternatieve datums — consistent met `PartnerAccommodation.tsx` |
-| Eenmalig: database cleanup | Bestaande foutieve todos (declined quotes die nog open staan) sluiten |
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-### Detail per fix
+---
 
-**1. `notify-accommodation-quote` — entity ID fix**
-Regel 262: wijzig `request.id` → `quoteId` zodat het matcht met hoe `check-pending-items` de todo aanmaakt.
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-**2. `PartnerAccommodation.tsx` — resolve todo na decline**
-Na succesvolle update naar `declined`, voeg toe:
-```typescript
-supabase.from("admin_todos")
-  .update({ status: "done", completed_at: new Date().toISOString() })
-  .eq("auto_type", "quote_pending_partner")
-  .eq("auto_entity_id", selectedRequest.quote.id)
-  .neq("status", "done");
-```
+### Status: ✅ Geïmplementeerd
 
-**3. `PartnerDashboard.tsx` — decline handler uitbreiden**
-Kopieer de volledige logica uit `PartnerAccommodation.tsx`:
-- History logging
-- Project communication
-- Todo-resolutie
-- Alternatieve datums ondersteuning
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
-**4. Database cleanup**
-Migratie om bestaande foutieve todos op te lossen: sluit alle `quote_pending_partner` todos waar de gekoppelde quote al `declined`, `submitted`, `selected`, `rejected`, of `expired` is.
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
 
-### Scope-afbakening: logies vs activiteiten
-
-De user vraagt of logies helemaal los moet van het activiteitenprogramma. Dit is een groot architectureel besluit dat buiten scope van deze bug-fix valt, maar de huidige architectuur is al grotendeels gescheiden:
-- Logies heeft eigen tabellen (`accommodation_requests`, `accommodation_quotes`)
-- Logies heeft eigen portaal-tab ("Logies")
-- Logies loopt altijd via Bureau Vlieland (nooit direct klant-partner)
-- Activiteiten kunnen optioneel direct via de configurator
-
-De koppeling via `linked_program_id` is functioneel correct — het zorgt voor een unified klantervaring. Volledig loskoppelen zou de UX verslechteren (twee losse portalen). De huidige bugs zitten in de **todo-resolutie logica**, niet in de architectuur.
-
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.

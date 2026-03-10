@@ -349,8 +349,10 @@ const PartnerDashboardContent = () => {
     }
   };
 
-  const handleQuoteDecline = async (declineReason: string) => {
+  const handleQuoteDecline = async (declineReason: string, proposedArrival?: string, proposedDeparture?: string) => {
     if (!selectedRequest?.quote) return false;
+
+    const hasAlternativeDates = proposedArrival && proposedDeparture;
 
     try {
       const { error } = await supabase
@@ -359,14 +361,68 @@ const PartnerDashboardContent = () => {
           status: "declined",
           partner_notes: declineReason || null,
           submitted_at: new Date().toISOString(),
+          proposed_arrival_date: proposedArrival || null,
+          proposed_departure_date: proposedDeparture || null,
         })
         .eq("id", selectedRequest.quote.id);
 
       if (error) throw error;
 
+      // Resolve the quote_pending_partner todo for this quote
+      supabase.from("admin_todos")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("auto_type", "quote_pending_partner")
+        .eq("auto_entity_id", selectedRequest.quote.id)
+        .neq("status", "done")
+        .then(() => {});
+
+      // Log to program_request_history
+      if (selectedRequest.linked_program_id) {
+        supabase.from("program_request_history").insert({
+          request_id: selectedRequest.linked_program_id,
+          action: hasAlternativeDates ? "accommodation_alternative_dates" : "accommodation_quote_declined",
+          actor: "partner",
+          actor_name: partnerName,
+          notes: hasAlternativeDates
+            ? `Alternatieve datums voorgesteld: ${proposedArrival} t/m ${proposedDeparture}${declineReason ? `. ${declineReason}` : ""}`
+            : declineReason || null,
+          new_value: {
+            quote_id: selectedRequest.quote.id,
+            ...(hasAlternativeDates ? { proposed_arrival_date: proposedArrival, proposed_departure_date: proposedDeparture } : {}),
+          },
+        }).then(() => {});
+      }
+
+      // Create admin todo + project communication for alternative dates
+      if (hasAlternativeDates) {
+        const customerLabel = selectedRequest.customer_company || selectedRequest.customer_name;
+        supabase.from("admin_todos").insert({
+          title: `Alternatieve datums: ${partnerName} voor ${customerLabel}`,
+          description: `${partnerName} is niet beschikbaar van ${selectedRequest.arrival_date} t/m ${selectedRequest.departure_date}, maar stelt voor: ${proposedArrival} t/m ${proposedDeparture}.${declineReason ? ` Toelichting: ${declineReason}` : ""}`,
+          priority: "high",
+          auto_type: "accommodation_alternative_dates",
+          auto_entity_id: selectedRequest.quote.id,
+          related_partner_id: partnerId,
+        }).then(() => {});
+
+        if (selectedRequest.linked_program_id) {
+          supabase.from("project_communications").insert({
+            request_id: selectedRequest.linked_program_id,
+            accommodation_id: selectedRequest.id,
+            communication_type: "note",
+            direction: "inbound",
+            subject: `Alternatieve datums voorgesteld door ${partnerName}`,
+            content: `${partnerName} is niet beschikbaar van ${selectedRequest.arrival_date} t/m ${selectedRequest.departure_date}, maar stelt voor: ${proposedArrival} t/m ${proposedDeparture}.${declineReason ? ` Toelichting: ${declineReason}` : ""}`,
+            contact_name: partnerName,
+          }).then(() => {});
+        }
+      }
+
       toast({
-        title: "Aanvraag afgewezen",
-        description: "De aanvraag is gemarkeerd als niet beschikbaar.",
+        title: hasAlternativeDates ? "Alternatieve datums voorgesteld" : "Aanvraag afgewezen",
+        description: hasAlternativeDates
+          ? "Bureau Vlieland ontvangt uw voorstel en neemt contact op met de klant."
+          : "De aanvraag is gemarkeerd als niet beschikbaar.",
       });
 
       await refetchDashboard();

@@ -254,14 +254,15 @@ Deno.serve(async (req) => {
 
     console.log("Accommodation quote notification sent to", request.customer_email);
 
-    // Auto-resolve quote_pending_partner todo for this request
+    // Auto-resolve quote_pending_partner todo for this quote
+    // Note: check-pending-items creates todos with auto_entity_id = quote.id
     await supabase
       .from("admin_todos")
       .update({ status: "done", completed_at: new Date().toISOString() })
       .eq("auto_type", "quote_pending_partner")
-      .eq("auto_entity_id", request.id)
+      .eq("auto_entity_id", quoteId)
       .neq("status", "done");
-    console.log(`Resolved quote_pending_partner todo for request ${request.id}`);
+    console.log(`Resolved quote_pending_partner todo for quote ${quoteId}`);
 
     return new Response(
       JSON.stringify({ success: true }),
