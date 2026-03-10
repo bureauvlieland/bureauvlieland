@@ -56,6 +56,8 @@ interface SendProjectEmailSheetProps {
   accommodationId?: string;
   recipients: Recipient[];
   onEmailSent?: () => void;
+  defaultSubject?: string;
+  defaultBody?: string;
 }
 
 export function SendProjectEmailSheet({
@@ -65,6 +67,8 @@ export function SendProjectEmailSheet({
   accommodationId,
   recipients,
   onEmailSent,
+  defaultSubject,
+  defaultBody,
 }: SendProjectEmailSheetProps) {
   const [isSending, setIsSending] = useState(false);
 
@@ -88,16 +92,16 @@ export function SendProjectEmailSheet({
         recipientType: r.type,
         recipientEmail: r.email,
         recipientName: r.name,
-        subject: "",
-        body: "",
+        subject: defaultSubject || "",
+        body: defaultBody || "",
       });
     } else if (open) {
       form.reset({
         recipientType: "custom",
         recipientEmail: "",
         recipientName: "",
-        subject: "",
-        body: "",
+        subject: defaultSubject || "",
+        body: defaultBody || "",
       });
     }
   }, [open]);

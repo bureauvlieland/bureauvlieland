@@ -11,20 +11,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +58,11 @@ import {
   Paperclip,
   Link as LinkIcon,
   Pencil,
+  ChevronDown,
+  Clock,
+  XCircle,
+  CheckCircle2,
+  MessageSquare,
 } from "lucide-react";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
@@ -68,6 +70,7 @@ import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToC
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 import { AdminAccommodationQuoteSheet } from "@/components/admin/AdminAccommodationQuoteSheet";
 import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodationGuestsDialog";
+import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 interface LinkedProgram {
   id: string;
@@ -112,6 +115,41 @@ const TYPE_LABELS: Record<string, string> = {
   no_preference: "Geen voorkeur",
 };
 
+function generateStatusEmailBody(
+  request: any,
+  quotes: any[],
+  referenceNumber: string | null
+) {
+  const total = quotes.length;
+  const received = quotes.filter((q) => q.status === "submitted").length;
+  const declined = quotes.filter((q) => q.status === "declined" || q.status === "rejected").length;
+  const pending = quotes.filter((q) => q.status === "pending").length;
+  const selected = quotes.filter((q) => q.status === "selected").length;
+
+  const ref = referenceNumber ? ` (${referenceNumber})` : "";
+  let body = `Beste ${request.customer_name},\n\nHierbij een update over uw logiesaanvraag${ref} voor ${request.number_of_guests} personen van ${format(new Date(request.arrival_date), "d MMMM", { locale: nl })} t/m ${format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl })}.\n\n`;
+
+  if (total === 0) {
+    body += "Wij zijn bezig uw aanvraag uit te zetten bij logiespartners op Vlieland. Zodra wij meer informatie hebben, ontvangt u bericht van ons.\n";
+  } else {
+    body += `Wij hebben ${total} logiespartner${total !== 1 ? "s" : ""} benaderd.\n`;
+    if (received > 0) body += `• Van ${received} partner${received !== 1 ? "s" : ""} hebben wij een offerte ontvangen.\n`;
+    if (declined > 0) body += `• ${declined} partner${declined !== 1 ? "s" : ""} ${declined !== 1 ? "hebben" : "heeft"} de aanvraag helaas afgewezen.\n`;
+    if (pending > 0) body += `• Wij wachten nog op een reactie van ${pending} partner${pending !== 1 ? "s" : ""}.\n`;
+    if (selected > 0) body += `• Er is een offerte geselecteerd.\n`;
+    body += "\n";
+
+    if (pending > 0) {
+      body += "Zodra wij alle reacties binnen hebben, informeren wij u over de mogelijkheden.\n";
+    } else if (received > 0) {
+      body += "Wij nemen binnenkort contact met u op om de offertes met u door te nemen.\n";
+    }
+  }
+
+  body += "\nMocht u vragen hebben, neem dan gerust contact met ons op.\n\nMet vriendelijke groet,\nBureau Vlieland";
+  return body;
+}
+
 export default function AdminAccommodationDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -122,6 +160,9 @@ export default function AdminAccommodationDetail() {
   const [forwardQuoteId, setForwardQuoteId] = useState<string | null>(null);
   const [selectedQuoteForView, setSelectedQuoteForView] = useState<any>(null);
   const [showEditGuestsDialog, setShowEditGuestsDialog] = useState(false);
+  const [showStatusEmailSheet, setShowStatusEmailSheet] = useState(false);
+  const [statusEmailDefaults, setStatusEmailDefaults] = useState({ subject: "", body: "" });
+  const [commLogOpen, setCommLogOpen] = useState(false);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -156,7 +197,7 @@ export default function AdminAccommodationDetail() {
   });
 
   // Fetch existing quotes for this request
-  const { data: quotes, isLoading: quotesLoading } = useQuery({
+  const { data: quotes } = useQuery({
     queryKey: ["admin-accommodation-quotes", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -184,16 +225,12 @@ export default function AdminAccommodationDetail() {
       if (error) throw error;
       if (!program) return null;
 
-      // Get item count
       const { count } = await supabase
         .from("program_request_items")
         .select("id", { count: "exact", head: true })
         .eq("request_id", program.id);
 
-      return {
-        ...program,
-        item_count: count || 0,
-      } as LinkedProgram;
+      return { ...program, item_count: count || 0 } as LinkedProgram;
     },
     enabled: !!id,
   });
@@ -205,7 +242,6 @@ export default function AdminAccommodationDetail() {
         .from("accommodation_requests")
         .update({ status: newStatus, admin_notes: adminNotes })
         .eq("id", id);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -217,25 +253,16 @@ export default function AdminAccommodationDetail() {
     },
   });
 
-  // Create quote requests for selected partners (via edge function with email)
+  // Create quote requests for selected partners
   const createQuotesMutation = useMutation({
     mutationFn: async ({ emailSubject, emailBody }: { emailSubject: string; emailBody: string }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
       const response = await supabase.functions.invoke("send-accommodation-quote-request", {
-        body: {
-          request_id: id,
-          partner_ids: selectedPartners,
-          email_subject: emailSubject,
-          email_body: emailBody,
-        },
+        body: { request_id: id, partner_ids: selectedPartners, email_subject: emailSubject, email_body: emailBody },
       });
-
-      if (response.error) {
-        throw new Error(response.error.message || "Fout bij versturen");
-      }
-
+      if (response.error) throw new Error(response.error.message || "Fout bij versturen");
       return response.data;
     },
     onSuccess: (data) => {
@@ -243,10 +270,7 @@ export default function AdminAccommodationDetail() {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
       setSelectedPartners([]);
       setShowEmailDialog(false);
-      toast({ 
-        title: "Offerteaanvragen verstuurd", 
-        description: `Email verstuurd naar ${data.sent_count} partner(s)` 
-      });
+      toast({ title: "Offerteaanvragen verstuurd", description: `Email verstuurd naar ${data.sent_count} partner(s)` });
     },
     onError: (error) => {
       toast({ title: "Fout bij versturen", description: error.message, variant: "destructive" });
@@ -256,26 +280,10 @@ export default function AdminAccommodationDetail() {
   // Select a quote
   const selectQuoteMutation = useMutation({
     mutationFn: async (quoteId: string) => {
-      // First, reject all other quotes
-      await supabase
-        .from("accommodation_quotes")
-        .update({ status: "rejected" })
-        .eq("request_id", id)
-        .neq("id", quoteId);
-
-      // Select this quote
-      const { error } = await supabase
-        .from("accommodation_quotes")
-        .update({ status: "selected", selected_at: new Date().toISOString() })
-        .eq("id", quoteId);
-
+      await supabase.from("accommodation_quotes").update({ status: "rejected" }).eq("request_id", id).neq("id", quoteId);
+      const { error } = await supabase.from("accommodation_quotes").update({ status: "selected", selected_at: new Date().toISOString() }).eq("id", quoteId);
       if (error) throw error;
-
-      // Update request status
-      await supabase
-        .from("accommodation_requests")
-        .update({ status: "accepted" })
-        .eq("id", id);
+      await supabase.from("accommodation_requests").update({ status: "accepted" }).eq("id", id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
@@ -290,43 +298,20 @@ export default function AdminAccommodationDetail() {
   // Forward quote to customer
   const forwardQuoteMutation = useMutation({
     mutationFn: async ({ quoteId, emailSubject, emailBody }: { quoteId: string; emailSubject: string; emailBody: string }) => {
-      // Send notification email via existing edge function
-      const { error: emailError } = await supabase.functions.invoke("notify-accommodation-quote", {
-        body: { quoteId },
-      });
-
+      const { error: emailError } = await supabase.functions.invoke("notify-accommodation-quote", { body: { quoteId } });
       if (emailError) throw emailError;
-
-      // Mark as forwarded
-      const { error: updateError } = await supabase
-        .from("accommodation_quotes")
-        .update({ forwarded_at: new Date().toISOString() })
-        .eq("id", quoteId);
-
+      const { error: updateError } = await supabase.from("accommodation_quotes").update({ forwarded_at: new Date().toISOString() }).eq("id", quoteId);
       if (updateError) throw updateError;
-
-      // Resolve the review todo
-      const { error: todoError } = await supabase
-        .from("admin_todos")
-        .update({ status: "done", completed_at: new Date().toISOString() })
-        .eq("auto_type", "quote_review")
-        .eq("auto_entity_id", quoteId)
-        .neq("status", "done");
-
-      if (todoError) console.error("Error resolving todo:", todoError);
-
-      // Log communication
-      await supabase
-        .from("project_communications")
-        .insert({
-          accommodation_id: id,
-          communication_type: "email",
-          direction: "outbound",
-          subject: emailSubject,
-          content: emailBody,
-          contact_name: request?.customer_name,
-          contact_email: request?.customer_email,
-        });
+      await supabase.from("admin_todos").update({ status: "done", completed_at: new Date().toISOString() }).eq("auto_type", "quote_review").eq("auto_entity_id", quoteId).neq("status", "done");
+      await supabase.from("project_communications").insert({
+        accommodation_id: id,
+        communication_type: "email",
+        direction: "outbound",
+        subject: emailSubject,
+        content: emailBody,
+        contact_name: request?.customer_name,
+        contact_email: request?.customer_email,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
@@ -338,41 +323,23 @@ export default function AdminAccommodationDetail() {
     },
   });
 
-  // Update guests mutation with quote reset
+  // Update guests mutation
   const updateGuestsMutation = useMutation({
     mutationFn: async (newGuests: number) => {
-      await supabase
-        .from("accommodation_requests")
-        .update({ number_of_guests: newGuests, status: "processing", updated_at: new Date().toISOString() })
-        .eq("id", id);
-
+      await supabase.from("accommodation_requests").update({ number_of_guests: newGuests, status: "processing", updated_at: new Date().toISOString() }).eq("id", id);
       if (linkedProgram) {
-        await supabase
-          .from("program_requests")
-          .update({ number_of_people: newGuests, updated_at: new Date().toISOString() })
-          .eq("id", linkedProgram.id);
+        await supabase.from("program_requests").update({ number_of_people: newGuests, updated_at: new Date().toISOString() }).eq("id", linkedProgram.id);
       }
-
       if (quotes && quotes.length > 0) {
-        const activeQuoteIds = quotes
-          .filter(q => ["pending", "submitted", "selected"].includes(q.status))
-          .map(q => q.id);
+        const activeQuoteIds = quotes.filter(q => ["pending", "submitted", "selected"].includes(q.status)).map(q => q.id);
         if (activeQuoteIds.length > 0) {
-          await supabase
-            .from("accommodation_quotes")
-            .update({ status: "pending", submitted_at: null, selected_at: null, updated_at: new Date().toISOString() })
-            .in("id", activeQuoteIds);
+          await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, updated_at: new Date().toISOString() }).in("id", activeQuoteIds);
         }
       }
-
       if (linkedProgram) {
         await supabase.from("program_request_history").insert({
-          request_id: linkedProgram.id,
-          action: "people_changed",
-          actor: "admin",
-          actor_name: "Bureau Vlieland",
-          old_value: { people: request?.number_of_guests },
-          new_value: { people: newGuests },
+          request_id: linkedProgram.id, action: "people_changed", actor: "admin", actor_name: "Bureau Vlieland",
+          old_value: { people: request?.number_of_guests }, new_value: { people: newGuests },
           notes: `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests} (admin). Logiesoffertes gereset.`,
         });
       }
@@ -390,30 +357,38 @@ export default function AdminAccommodationDetail() {
 
   const togglePartner = (partnerId: string) => {
     setSelectedPartners((prev) =>
-      prev.includes(partnerId)
-        ? prev.filter((id) => id !== partnerId)
-        : [...prev, partnerId]
+      prev.includes(partnerId) ? prev.filter((pid) => pid !== partnerId) : [...prev, partnerId]
     );
   };
 
-  // Build a lookup map: partner_id -> quote status
   const partnerQuoteStatusMap: Record<string, string> = {};
   quotes?.forEach((q) => {
-    // Keep the most relevant status if multiple quotes exist (shouldn't happen, but be safe)
-    if (!partnerQuoteStatusMap[q.partner_id] || 
-        ['submitted', 'selected'].includes(q.status)) {
+    if (!partnerQuoteStatusMap[q.partner_id] || ['submitted', 'selected'].includes(q.status)) {
       partnerQuoteStatusMap[q.partner_id] = q.status;
     }
   });
 
-  // Check if any selected partner already has a pending quote (for button text)
-  const hasPendingSelected = selectedPartners.some(
-    (pid) => partnerQuoteStatusMap[pid] === "pending"
-  );
+  const hasPendingSelected = selectedPartners.some((pid) => partnerQuoteStatusMap[pid] === "pending");
 
-  // Helper to get label from value
   const getLabel = (options: readonly { value: string; label: string }[], value: string) => {
     return options.find((o) => o.value === value)?.label || value;
+  };
+
+  // Stats
+  const quoteStats = {
+    total: quotes?.length || 0,
+    received: quotes?.filter((q) => q.status === "submitted").length || 0,
+    declined: quotes?.filter((q) => q.status === "declined" || q.status === "rejected").length || 0,
+    pending: quotes?.filter((q) => q.status === "pending").length || 0,
+    selected: quotes?.filter((q) => q.status === "selected").length || 0,
+  };
+
+  const handleOpenStatusEmail = () => {
+    if (!request) return;
+    const subject = `Update logiesaanvraag${request.reference_number ? ` ${request.reference_number}` : ""}`;
+    const body = generateStatusEmailBody(request, quotes || [], request.reference_number);
+    setStatusEmailDefaults({ subject, body });
+    setShowStatusEmailSheet(true);
   };
 
   if (requestLoading) {
@@ -421,9 +396,13 @@ export default function AdminAccommodationDetail() {
       <AdminLayout>
         <div className="p-6 space-y-6">
           <Skeleton className="h-8 w-64" />
-          <div className="grid md:grid-cols-2 gap-6">
-            <Skeleton className="h-64" />
-            <Skeleton className="h-64" />
+          <Skeleton className="h-16 w-full" />
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-64" />
+              <Skeleton className="h-48" />
+            </div>
+            <Skeleton className="h-96" />
           </div>
         </div>
       </AdminLayout>
@@ -444,10 +423,8 @@ export default function AdminAccommodationDetail() {
   }
 
   const nights = Math.ceil(
-    (new Date(request.departure_date).getTime() - new Date(request.arrival_date).getTime()) /
-      (1000 * 60 * 60 * 24)
+    (new Date(request.departure_date).getTime() - new Date(request.arrival_date).getTime()) / (1000 * 60 * 60 * 24)
   );
-
   const statusConfig = STATUS_CONFIG[request.status] || STATUS_CONFIG.submitted;
   const roomTypes = (request.room_types as string[]) || [];
   const locationPrefs = (request.location_preference as string[]) || [];
@@ -467,14 +444,13 @@ export default function AdminAccommodationDetail() {
             </Button>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-slate-900">{request.customer_name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{request.customer_name}</h1>
                 {request.reference_number && (
-                  <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                    {request.reference_number}
-                  </code>
+                  <code className="text-sm font-mono bg-muted px-2 py-1 rounded">{request.reference_number}</code>
                 )}
+                <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">{statusConfig.label}</Badge>
               </div>
-              <p className="text-slate-600">{request.customer_company || request.customer_email}</p>
+              <p className="text-muted-foreground">{request.customer_company || request.customer_email}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -486,161 +462,243 @@ export default function AdminAccommodationDetail() {
                 </Link>
               </Button>
             )}
-            <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">
-              {statusConfig.label}
-            </Badge>
           </div>
         </div>
+
+        {/* Stats Strip */}
+        {quoteStats.total > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+              <Send className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-2xl font-bold text-foreground">{quoteStats.total}</p>
+                <p className="text-xs text-muted-foreground">Benaderd</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <div>
+                <p className="text-2xl font-bold text-foreground">{quoteStats.received}</p>
+                <p className="text-xs text-muted-foreground">Offertes</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+              <XCircle className="h-4 w-4 text-destructive" />
+              <div>
+                <p className="text-2xl font-bold text-foreground">{quoteStats.declined}</p>
+                <p className="text-xs text-muted-foreground">Afgewezen</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+              <Clock className="h-4 w-4 text-amber-500" />
+              <div>
+                <p className="text-2xl font-bold text-foreground">{quoteStats.pending}</p>
+                <p className="text-xs text-muted-foreground">Wachtend</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Request Details */}
+            {/* Compact Request Details */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
                   {TYPE_ICONS[request.accommodation_type]}
-                  {TYPE_LABELS[request.accommodation_type]}
+                  {TYPE_LABELS[request.accommodation_type]} — Aanvraagdetails
                 </CardTitle>
-                <CardDescription>Aanvraagdetails</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Dates and guests */}
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <Calendar className="h-5 w-5 text-slate-500" />
-                    <div>
-                      <p className="text-sm text-slate-500">Periode</p>
-                      <p className="font-medium">
-                        {format(new Date(request.arrival_date), "d MMM", { locale: nl })} -{" "}
-                        {format(new Date(request.departure_date), "d MMM yyyy", { locale: nl })}
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Periode</p>
+                      <p className="font-medium text-sm">
+                        {format(new Date(request.arrival_date), "d MMM", { locale: nl })} – {format(new Date(request.departure_date), "d MMM yyyy", { locale: nl })}
                       </p>
-                      <p className="text-sm text-slate-500">{nights} nachten</p>
+                      <p className="text-xs text-muted-foreground">{nights} nachten</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <Users className="h-5 w-5 text-slate-500" />
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-500">Gasten</p>
-                      <p className="font-medium">{request.number_of_guests} personen</p>
+                  <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Gasten</p>
+                      <p className="font-medium text-sm">{request.number_of_guests} personen</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setShowEditGuestsDialog(true)}
-                      title="Aantal gasten wijzigen"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setShowEditGuestsDialog(true)}>
+                      <Pencil className="h-3 w-3" />
                     </Button>
                   </div>
                   {request.room_count && (
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                      <Building2 className="h-5 w-5 text-slate-500" />
-                      <div>
-                        <p className="text-sm text-slate-500">Kamers</p>
-                        <p className="font-medium">
-                          {request.room_count} ({request.room_occupancy || "?"} p.p.k.)
-                        </p>
+                    <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">Kamers</p>
+                        <p className="font-medium text-sm">{request.room_count} ({request.room_occupancy || "?"} p.p.k.)</p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <Separator />
-
-                {/* Preferences */}
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {roomTypes.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-2">Kamervoorkeur</p>
-                      <div className="flex flex-wrap gap-2">
-                        {roomTypes.map((type) => (
-                          <Badge key={type} variant="outline">
-                            {getLabel(ROOM_TYPES, type)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {locationPrefs.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-2">Locatievoorkeur</p>
-                      <div className="flex flex-wrap gap-2">
-                        {locationPrefs.map((pref) => (
-                          <Badge key={pref} variant="outline">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {getLabel(LOCATION_PREFERENCES, pref)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {facilities.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-2">Gevraagde faciliteiten</p>
-                      <div className="flex flex-wrap gap-2">
-                        {facilities.map((fac) => (
-                          <Badge key={fac} variant="outline">
-                            {getLabel(FACILITIES, fac)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
+                {/* Inline preferences */}
+                <div className="flex flex-wrap gap-1.5">
+                  {roomTypes.map((type) => (
+                    <Badge key={type} variant="outline" className="text-xs">{getLabel(ROOM_TYPES, type)}</Badge>
+                  ))}
+                  {locationPrefs.map((pref) => (
+                    <Badge key={pref} variant="outline" className="text-xs">
+                      <MapPin className="h-2.5 w-2.5 mr-0.5" />
+                      {getLabel(LOCATION_PREFERENCES, pref)}
+                    </Badge>
+                  ))}
+                  {facilities.map((fac) => (
+                    <Badge key={fac} variant="outline" className="text-xs">{getLabel(FACILITIES, fac)}</Badge>
+                  ))}
                   {request.budget_range && (
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-2">Budgetindicatie</p>
-                      <Badge variant="outline">
-                        <Euro className="h-3 w-3 mr-1" />
-                        {getLabel(BUDGET_RANGES, request.budget_range)}
-                      </Badge>
-                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      <Euro className="h-2.5 w-2.5 mr-0.5" />
+                      {getLabel(BUDGET_RANGES, request.budget_range)}
+                    </Badge>
+                  )}
+                  {request.wants_activities && (
+                    <Badge variant="outline" className="text-xs text-green-700 border-green-200 bg-green-50">
+                      <Check className="h-2.5 w-2.5 mr-0.5" />
+                      Wil activiteiten
+                    </Badge>
                   )}
                 </div>
 
                 {request.special_requests && (
-                  <>
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-2">Speciale wensen</p>
-                      <p className="text-slate-600 whitespace-pre-wrap">{request.special_requests}</p>
-                    </div>
-                  </>
-                )}
-
-                {request.wants_activities && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center gap-2 text-green-600">
-                      <Check className="h-5 w-5" />
-                      <span className="font-medium">Klant wil ook activiteiten boeken</span>
-                    </div>
-                  </>
+                  <p className="text-sm text-muted-foreground bg-muted/30 p-2.5 rounded-lg italic">
+                    "{request.special_requests}"
+                  </p>
                 )}
               </CardContent>
             </Card>
 
+            {/* Quote Cards */}
+            {quotes && quotes.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-foreground">Ontvangen offertes</h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {quotes.map((quote) => {
+                    const quoteStatus = QUOTE_STATUS_CONFIG[quote.status] || QUOTE_STATUS_CONFIG.pending;
+                    const partner = quote.partner as { id: string; name: string; email: string } | null;
+                    const hasAttachment = quote.quote_attachment_path || quote.quote_external_url;
+
+                    return (
+                      <Card key={quote.id} className={`relative ${quote.status === "selected" ? "ring-2 ring-green-500" : ""}`}>
+                        <CardContent className="p-4 space-y-3">
+                          {/* Header row */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm truncate">{partner?.name || "Onbekend"}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {quote.accommodation_name || "Wacht op reactie"}
+                              </p>
+                            </div>
+                            <Badge variant={quoteStatus.variant} className="text-xs shrink-0">{quoteStatus.label}</Badge>
+                          </div>
+
+                          {/* Price */}
+                          {quote.price_total > 0 && (
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-lg font-bold text-foreground">€{quote.price_total.toLocaleString()}</span>
+                              {quote.price_per_person_per_night && (
+                                <span className="text-xs text-muted-foreground">€{quote.price_per_person_per_night} p.p.p.n.</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Alternative dates for declined */}
+                          {quote.status === "declined" && (quote as any).proposed_arrival_date && (
+                            <p className="text-xs text-primary font-medium">
+                              Alt: {format(new Date((quote as any).proposed_arrival_date), "d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "d MMM", { locale: nl })}
+                            </p>
+                          )}
+
+                          {/* Meta row */}
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>Geldig tot {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}</span>
+                            {hasAttachment && (
+                              <span className="flex items-center gap-0.5">
+                                {quote.quote_external_url ? <LinkIcon className="h-3 w-3" /> : <Paperclip className="h-3 w-3" />}
+                                Bijlage
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1.5 pt-1 border-t">
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedQuoteForView(quote)}>
+                              <Eye className="h-3 w-3 mr-1" />
+                              Bekijken
+                            </Button>
+                            {quote.status === "submitted" && !(quote as any).forwarded_at && (
+                              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setForwardQuoteId(quote.id)}>
+                                <Send className="h-3 w-3 mr-1" />
+                                Doorsturen
+                              </Button>
+                            )}
+                            {quote.status === "submitted" && (quote as any).forwarded_at && (
+                              <Badge variant="outline" className="text-xs h-7 px-2">
+                                <Check className="h-3 w-3 mr-1" />
+                                Doorgestuurd
+                              </Badge>
+                            )}
+                            {quote.status === "submitted" && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-7 text-xs ml-auto">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Selecteren
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Offerte selecteren</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Weet je zeker dat je deze offerte wilt selecteren? Andere offertes worden automatisch afgewezen.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => selectQuoteMutation.mutate(quote.id)}>Bevestigen</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                            {quote.status === "selected" && (
+                              <Badge variant="default" className="bg-green-600 ml-auto text-xs h-7 px-2">
+                                <Check className="h-3 w-3 mr-1" />
+                                Geselecteerd
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Partner Selection */}
             <Card>
-              <CardHeader>
-                <CardTitle>Partners selecteren</CardTitle>
-                <CardDescription>
-                  Selecteer de logiesverstrekkers voor een offerteaanvraag
-                </CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Partners selecteren</CardTitle>
+                <CardDescription>Selecteer logiesverstrekkers voor een offerteaanvraag</CardDescription>
               </CardHeader>
               <CardContent>
                 {partnersLoading ? (
                   <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                   </div>
                 ) : partners?.length === 0 ? (
-                  <p className="text-slate-500 text-center py-4">
+                  <p className="text-muted-foreground text-center py-4">
                     Geen logiesverstrekkers gevonden. Voeg eerst partners toe met type "accommodation".
                   </p>
                 ) : (
@@ -650,22 +708,14 @@ export default function AdminAccommodationDetail() {
                       const isBlocked = quoteStatus === "submitted" || quoteStatus === "selected";
                       const isSelected = selectedPartners.includes(partner.id);
 
-                      // Dynamic badge based on quote status
                       const statusBadge = quoteStatus ? (() => {
                         switch (quoteStatus) {
-                          case "pending":
-                            return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Wacht op reactie</Badge>;
-                          case "submitted":
-                            return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Offerte ontvangen</Badge>;
-                          case "selected":
-                            return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Geselecteerd</Badge>;
-                          case "declined":
-                          case "rejected":
-                            return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Afgewezen</Badge>;
-                          case "expired":
-                            return <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">Verlopen</Badge>;
-                          default:
-                            return <Badge variant="secondary">Reeds aangevraagd</Badge>;
+                          case "pending": return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">Wacht op reactie</Badge>;
+                          case "submitted": return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Offerte ontvangen</Badge>;
+                          case "selected": return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">Geselecteerd</Badge>;
+                          case "declined": case "rejected": return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">Afgewezen</Badge>;
+                          case "expired": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Verlopen</Badge>;
+                          default: return <Badge variant="secondary" className="text-xs">Reeds aangevraagd</Badge>;
                         }
                       })() : null;
 
@@ -673,25 +723,17 @@ export default function AdminAccommodationDetail() {
                         <div
                           key={partner.id}
                           className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                            isBlocked
-                              ? "bg-slate-50 border-slate-200 opacity-60"
-                              : isSelected
-                              ? "bg-primary/5 border-primary"
-                              : "bg-white border-slate-200 hover:border-slate-300"
+                            isBlocked ? "bg-muted/50 opacity-60" : isSelected ? "bg-primary/5 border-primary" : "bg-background hover:border-muted-foreground/30"
                           }`}
                         >
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => togglePartner(partner.id)}
-                            disabled={isBlocked}
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium">{partner.name}</p>
-                            <p className="text-sm text-slate-500">{partner.email}</p>
+                          <Checkbox checked={isSelected} onCheckedChange={() => togglePartner(partner.id)} disabled={isBlocked} />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{partner.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{partner.email}</p>
                           </div>
                           {statusBadge}
-                          <span className="text-sm text-slate-500">
-                            {partner.accommodation_commission_percentage || 10}% commissie
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {partner.accommodation_commission_percentage || 10}%
                           </span>
                         </div>
                       );
@@ -701,9 +743,7 @@ export default function AdminAccommodationDetail() {
 
                 {selectedPartners.length > 0 && (
                   <div className="mt-4 flex items-center justify-between">
-                    <p className="text-sm text-slate-600">
-                      {selectedPartners.length} partner(s) geselecteerd
-                    </p>
+                    <p className="text-sm text-muted-foreground">{selectedPartners.length} partner(s) geselecteerd</p>
                     <Button onClick={() => setShowEmailDialog(true)} disabled={createQuotesMutation.isPending}>
                       <Send className="h-4 w-4 mr-2" />
                       {hasPendingSelected ? "Herinnering versturen" : "Offerteaanvraag versturen"}
@@ -713,267 +753,105 @@ export default function AdminAccommodationDetail() {
               </CardContent>
             </Card>
 
-            {/* Quotes Comparison */}
-            {quotes && quotes.length > 0 && (
+            {/* Linked Program */}
+            {linkedProgram && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Ontvangen offertes</CardTitle>
-                  <CardDescription>
-                    Vergelijk en selecteer de beste offerte
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Partner</TableHead>
-                        <TableHead>Accommodatie</TableHead>
-                        <TableHead>Prijs totaal</TableHead>
-                        <TableHead>P.p.p.n.</TableHead>
-                        <TableHead>Offerte</TableHead>
-                        <TableHead>Geldig tot</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actie</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {quotes.map((quote) => {
-                        const quoteStatus = QUOTE_STATUS_CONFIG[quote.status] || QUOTE_STATUS_CONFIG.pending;
-                        const partner = quote.partner as { id: string; name: string; email: string } | null;
-                        const hasAttachment = quote.quote_attachment_path || quote.quote_external_url;
-
-                        return (
-                          <TableRow key={quote.id}>
-                            <TableCell>
-                              <p className="font-medium">{partner?.name || "Onbekend"}</p>
-                            </TableCell>
-                            <TableCell>
-                              {quote.accommodation_name || (
-                                <span className="text-slate-400">Wacht op reactie</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {quote.price_total > 0 ? (
-                                <span className="font-medium">€{quote.price_total.toLocaleString()}</span>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {quote.price_per_person_per_night ? (
-                                <span>€{quote.price_per_person_per_night}</span>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {hasAttachment ? (
-                                <div className="flex items-center gap-1">
-                                  {quote.quote_external_url && (
-                                    <a
-                                      href={quote.quote_external_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                                    >
-                                      <LinkIcon className="h-3 w-3" />
-                                      Link
-                                    </a>
-                                  )}
-                                  {quote.quote_attachment_path && (
-                                    <a
-                                      href={quote.quote_attachment_path}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                                    >
-                                      <Paperclip className="h-3 w-3" />
-                                      {quote.quote_attachment_filename || "Bijlage"}
-                                    </a>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm">
-                                {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Badge variant={quoteStatus.variant}>{quoteStatus.label}</Badge>
-                                {quote.status === "declined" && (quote as any).proposed_arrival_date && (
-                                  <span className="text-xs text-primary font-medium">
-                                    Alt: {format(new Date((quote as any).proposed_arrival_date), "d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "d MMM", { locale: nl })}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setSelectedQuoteForView(quote)}
-                                  title="Bekijken"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                {quote.status === "submitted" && !(quote as any).forwarded_at && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setForwardQuoteId(quote.id)}
-                                  >
-                                    <Send className="h-4 w-4 mr-1" />
-                                    Doorsturen
-                                  </Button>
-                                )}
-                                {quote.status === "submitted" && (quote as any).forwarded_at && (
-                                  <Badge variant="outline" className="text-xs">
-                                    <Check className="h-3 w-3 mr-1" />
-                                    Doorgestuurd
-                                  </Badge>
-                                )}
-                                {quote.status === "submitted" && (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button variant="outline" size="sm">
-                                        <Check className="h-4 w-4 mr-1" />
-                                        Selecteren
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Offerte selecteren</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Weet je zeker dat je deze offerte wilt selecteren? Andere offertes worden automatisch afgewezen.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => selectQuoteMutation.mutate(quote.id)}>
-                                          Bevestigen
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                )}
-                                {quote.status === "selected" && (
-                                  <Badge variant="default" className="bg-green-600">
-                                    <Check className="h-3 w-3 mr-1" />
-                                    Geselecteerd
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">Gekoppeld programma</p>
+                        <p className="text-xs text-muted-foreground">
+                          {linkedProgram.number_of_people} personen · {linkedProgram.item_count} activiteiten
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={linkedProgram.status === "active" ? "default" : "secondary"} className="text-xs">
+                        {linkedProgram.status === "active" ? "Actief" : linkedProgram.status}
+                      </Badge>
+                      <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                        <Link to={`/admin/aanvragen/${linkedProgram.id}`}>
+                          <ChevronRight className="h-3 w-3 mr-1" />
+                          Bekijken
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Linked Program Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Gekoppeld programma
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {linkedProgram ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{linkedProgram.customer_name}</p>
-                        <p className="text-sm text-slate-500">
-                          {linkedProgram.number_of_people} personen • {linkedProgram.item_count} activiteiten
-                        </p>
-                      </div>
-                      <Badge variant={linkedProgram.status === "active" ? "default" : "secondary"}>
-                        {linkedProgram.status === "active" ? "Actief" : linkedProgram.status}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/admin/aanvragen/${linkedProgram.id}`}>
-                          <ChevronRight className="h-4 w-4 mr-1" />
-                          Aanvraag bekijken
-                        </Link>
-                      </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/mijn-programma/${linkedProgram.customer_token}`} target="_blank">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Bekijk als klant
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-slate-500 mb-3">Geen programma gekoppeld aan deze logiesaanvraag</p>
-                    <p className="text-sm text-slate-400">
-                      De klant kan activiteiten toevoegen via de klantpagina zodra logies is geregeld.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Communication log */}
-            <ProjectCommunicationsCard
-              accommodationId={id}
-              customerName={request.customer_name}
-              customerEmail={request.customer_email}
-            />
+            {/* Collapsible Communication Log */}
+            <Collapsible open={commLogOpen} onOpenChange={setCommLogOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Communicatielog
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${commLogOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <ProjectCommunicationsCard
+                  accommodationId={id}
+                  customerName={request.customer_name}
+                  customerEmail={request.customer_email}
+                />
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+          {/* Sticky Sidebar */}
+          <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             {/* Contact Info */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Contactgegevens</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Contact</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-slate-400" />
-                  <a href={`mailto:${request.customer_email}`} className="text-sm text-primary hover:underline">
+              <CardContent className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                  <a href={`mailto:${request.customer_email}`} className="text-sm text-primary hover:underline truncate">
                     {request.customer_email}
                   </a>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-slate-400" />
-                  <a href={`tel:${request.customer_phone}`} className="text-sm hover:underline">
-                    {request.customer_phone}
-                  </a>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  <a href={`tel:${request.customer_phone}`} className="text-sm hover:underline">{request.customer_phone}</a>
                 </div>
                 {request.customer_company && (
-                  <div className="flex items-center gap-3">
-                    <Building2 className="h-4 w-4 text-slate-400" />
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-sm">{request.customer_company}</span>
                   </div>
                 )}
+
+                <Separator className="my-2" />
+
+                {/* Status Email Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleOpenStatusEmail}
+                >
+                  <Mail className="h-3.5 w-3.5 mr-2" />
+                  Mail klant over status
+                </Button>
               </CardContent>
             </Card>
 
             {/* Status Management */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Status beheren</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Status</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Select
-                  value={request.status}
-                  onValueChange={(value) => updateStatusMutation.mutate(value)}
-                >
-                  <SelectTrigger>
+              <CardContent className="space-y-3">
+                <Select value={request.status} onValueChange={(value) => updateStatusMutation.mutate(value)}>
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -986,21 +864,22 @@ export default function AdminAccommodationDetail() {
                 </Select>
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Admin notities</p>
+                  <p className="text-xs font-medium mb-1 text-muted-foreground">Admin notities</p>
                   <Textarea
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
                     placeholder="Interne notities..."
-                    rows={4}
+                    rows={3}
+                    className="text-sm"
                   />
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-2"
+                    className="mt-2 h-7 text-xs"
                     onClick={() => updateStatusMutation.mutate(request.status)}
                     disabled={updateStatusMutation.isPending}
                   >
-                    Notities opslaan
+                    Opslaan
                   </Button>
                 </div>
               </CardContent>
@@ -1008,46 +887,36 @@ export default function AdminAccommodationDetail() {
 
             {/* Timeline */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Tijdlijn</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Tijdlijn</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                     <div>
                       <p className="font-medium">Aanvraag ontvangen</p>
-                      <p className="text-slate-500">
+                      <p className="text-muted-foreground">
                         {format(new Date(request.created_at), "d MMM yyyy HH:mm", { locale: nl })}
                       </p>
                     </div>
                   </div>
-                  {quotes && quotes.length > 0 && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      <div>
-                        <p className="font-medium">
-                          {quotes.length} partner(s) benaderd
-                        </p>
-                      </div>
+                  {quoteStats.total > 0 && (
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                      <p className="font-medium">{quoteStats.total} partner(s) benaderd</p>
                     </div>
                   )}
-                  {quotes?.filter((q) => q.status === "submitted").length > 0 && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      <div>
-                        <p className="font-medium">
-                          {quotes.filter((q) => q.status === "submitted").length} offerte(s) ontvangen
-                        </p>
-                      </div>
+                  {quoteStats.received > 0 && (
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                      <p className="font-medium">{quoteStats.received} offerte(s) ontvangen</p>
                     </div>
                   )}
                   {request.status === "accepted" && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="w-2 h-2 rounded-full bg-green-600" />
-                      <div>
-                        <p className="font-medium">Offerte geaccepteerd</p>
-                      </div>
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" />
+                      <p className="font-medium">Offerte geaccepteerd</p>
                     </div>
                   )}
                 </div>
@@ -1074,14 +943,8 @@ export default function AdminAccommodationDetail() {
             accommodation_type: request.accommodation_type,
             special_requests: request.special_requests || undefined,
           }}
-          selectedPartners={partners.filter(p => selectedPartners.includes(p.id)).map(p => ({
-            id: p.id,
-            name: p.name,
-            email: p.email,
-          }))}
-          onSend={(emailSubject, emailBody) => {
-            createQuotesMutation.mutate({ emailSubject, emailBody });
-          }}
+          selectedPartners={partners.filter(p => selectedPartners.includes(p.id)).map(p => ({ id: p.id, name: p.name, email: p.email }))}
+          onSend={(emailSubject, emailBody) => createQuotesMutation.mutate({ emailSubject, emailBody })}
           isSending={createQuotesMutation.isPending}
         />
       )}
@@ -1102,9 +965,7 @@ export default function AdminAccommodationDetail() {
             }}
             customerName={request.customer_name}
             customerEmail={request.customer_email}
-            onSend={(emailSubject, emailBody) => {
-              forwardQuoteMutation.mutate({ quoteId: forwardQuoteId, emailSubject, emailBody });
-            }}
+            onSend={(emailSubject, emailBody) => forwardQuoteMutation.mutate({ quoteId: forwardQuoteId, emailSubject, emailBody })}
             isSending={forwardQuoteMutation.isPending}
           />
         );
@@ -1125,6 +986,25 @@ export default function AdminAccommodationDetail() {
         onClose={() => setShowEditGuestsDialog(false)}
         currentGuests={request?.number_of_guests || 0}
         onSave={(newGuests) => updateGuestsMutation.mutateAsync(newGuests)}
+      />
+
+      {/* Status Email Sheet */}
+      <SendProjectEmailSheet
+        open={showStatusEmailSheet}
+        onOpenChange={setShowStatusEmailSheet}
+        accommodationId={id}
+        recipients={[{
+          label: `Klant: ${request.customer_name}`,
+          email: request.customer_email,
+          name: request.customer_name,
+          type: "customer" as const,
+        }]}
+        defaultSubject={statusEmailDefaults.subject}
+        defaultBody={statusEmailDefaults.body}
+        onEmailSent={() => {
+          queryClient.invalidateQueries({ queryKey: ["project-communications", undefined, id] });
+          setCommLogOpen(true);
+        }}
       />
     </AdminLayout>
   );
