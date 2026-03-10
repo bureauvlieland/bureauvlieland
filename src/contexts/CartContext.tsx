@@ -49,7 +49,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [hasPendingDraft, setHasPendingDraft] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [itemJustAdded, setItemJustAdded] = useState(false);
-  const addAnimationTimeoutRef = useRef<NodeJS.Timeout>();
+  const addAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Check for existing draft on mount
   useEffect(() => {
