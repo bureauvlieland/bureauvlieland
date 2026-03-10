@@ -84,7 +84,7 @@ function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>,
       ` : ''}
       
       <p style="margin-top: 30px;">
-        <a href="https://bureauvlieland.nl/admin/logies/${request.id}" 
+        <a href="${baseUrl}/admin/logies/${request.id}" 
            style="display: inline-block; background-color: #1a365d; color: white; 
                   padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
           Bekijk in admin →
