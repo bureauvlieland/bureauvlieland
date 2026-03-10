@@ -1,5 +1,5 @@
 // Using Deno.serve() instead of deprecated import
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { z } from "npm:zod@3.22.4";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");

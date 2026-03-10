@@ -1,5 +1,5 @@
 // Using Deno.serve() instead of deprecated import
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { z } from "npm:zod@3.22.4";
 import { getRenderedTemplate, sanitizeHtml, TemplateIds, SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
