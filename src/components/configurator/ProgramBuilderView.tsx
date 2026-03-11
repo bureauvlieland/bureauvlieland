@@ -6,10 +6,13 @@ import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil } from "lucide-react
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { DayTabs } from "./DayTabs";
+import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
+
+const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
 interface ProgramBuilderViewProps {
   cartItems: CartItemDetail[];
@@ -17,6 +20,7 @@ interface ProgramBuilderViewProps {
   selectedDates: Date[];
   onRemoveItem: (blockId: string) => void;
   onAddItem: (blockId: string, dayIndex: number) => void;
+  onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onSubmit: () => void;
   onEditBasics: () => void;
   eventType?: string;
@@ -29,6 +33,7 @@ export const ProgramBuilderView = ({
   selectedDates,
   onRemoveItem,
   onAddItem,
+  onUpdateItem,
   onSubmit,
   onEditBasics,
   eventType,
@@ -108,55 +113,75 @@ export const ProgramBuilderView = ({
               const image = getBlockImage(block);
               const hasImage = image !== "/placeholder.svg";
 
+              const isFerryBlock = FERRY_BLOCK_IDS.includes(item.blockId);
+              const ferryExtras = isFerryBlock ? (block.price_extras as { portFrom?: string; portTo?: string } | null) : null;
+
               return (
-                <Card
-                  key={item.blockId}
-                  className="flex gap-3 overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  {hasImage && (
-                    <div className="w-20 sm:w-28 shrink-0">
-                      <img
-                        src={image}
-                        alt={block.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
+                <div key={item.blockId} className="space-y-2">
+                  <Card className="flex gap-3 overflow-hidden hover:shadow-md transition-shadow">
+                    {hasImage && (
+                      <div className="w-20 sm:w-28 shrink-0">
+                        <img
+                          src={image}
+                          alt={block.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 py-3 px-3 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-semibold text-sm md:text-base leading-tight">
+                            {block.name}
+                          </h4>
+                          {item.preferredTime && (
+                            <p className="text-primary text-xs font-medium mt-0.5">
+                              Gekozen afvaart: {item.preferredTime}
+                            </p>
+                          )}
+                          {!item.preferredTime && block.short_description && (
+                            <p className="text-muted-foreground text-xs md:text-sm mt-0.5 line-clamp-2">
+                              {block.short_description}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2 mt-1.5">
+                            {block.duration && (
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {block.duration}
+                              </span>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {categoryLabels[block.category]}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => onRemoveItem(item.blockId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Ferry departure picker */}
+                  {isFerryBlock && ferryExtras?.portFrom && ferryExtras?.portTo && selectedDates[dayIndex] && (
+                    <div className="ml-4 pl-4 border-l-2 border-primary/20">
+                      <FerryDeparturePicker
+                        portFrom={ferryExtras.portFrom}
+                        portTo={ferryExtras.portTo}
+                        date={selectedDates[dayIndex]}
+                        selectedTime={item.preferredTime}
+                        onSelect={(time) => onUpdateItem(item.blockId, { preferredTime: time })}
                       />
                     </div>
                   )}
-                  <div className="flex-1 py-3 px-3 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-semibold text-sm md:text-base leading-tight">
-                          {block.name}
-                        </h4>
-                        {block.short_description && (
-                          <p className="text-muted-foreground text-xs md:text-sm mt-0.5 line-clamp-2">
-                            {block.short_description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-1.5">
-                          {block.duration && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {block.duration}
-                            </span>
-                          )}
-                          <Badge variant="outline" className="text-xs">
-                            {categoryLabels[block.category]}
-                          </Badge>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                        onClick={() => onRemoveItem(item.blockId)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                </div>
               );
             })}
 

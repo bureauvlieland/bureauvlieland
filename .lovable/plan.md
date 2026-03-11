@@ -1,50 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Enkele reizen + afvaarten kiezen in configurator
+### Wat is gebouwd
 
-## Huidige situatie
-- Er is alleen `boot-retour` (retour). De user wil **twee enkele reizen**: heenreis dag 1, terugreis laatste dag.
-- De `FerryScheduleCard` en `useFerryDepartures` hook bestaan al en tonen afvaarten via de Doeksen API.
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-## Plan
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-### 1. Twee nieuwe building blocks aanmaken (database migratie)
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-| ID | Naam | Richting |
-|---|---|---|
-| `boot-enkel-heen` | Overtocht Harlingen → Vlieland | H → V |
-| `boot-enkel-terug` | Overtocht Vlieland → Harlingen | V → H |
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-Kopieer gegevens van `boot-retour` (categorie `vervoer`, provider, etc). Voeg metadata toe: `price_extras: { portFrom: "H", portTo: "V" }` zodat de frontend weet welke route op te vragen.
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### 2. Default-logica aanpassen (`ProgrammaSamenstellen.tsx`)
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-Vervang `DEFAULT_BLOCK_IDS = ["boot-retour", "fiets-huur"]` door:
-- `boot-enkel-heen` op **dag 0**
-- `boot-enkel-terug` op **laatste dag** (`selectedDates.length - 1`)
-- `fiets-huur` op **dag 0**
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-Bij eendaagse programma's komen beide op dag 0.
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-### 3. Afvaarten-kiezer op ferry-kaarten (`ProgramBuilderView.tsx`)
+---
 
-Wanneer een cart-item een ferry-block is (`boot-enkel-heen` of `boot-enkel-terug`), toon onder de kaart een uitklapbaar paneel met:
-- De afvaarten voor die dag (via `useFerryDepartures` met de juiste route en datum)
-- Selecteerbare rijen — klik zet de `preferredTime` op het cart-item
-- Geselecteerde afvaart wordt getoond op de kaart
+## Plan: CRM en Partners samenvoegen
 
-Nieuw component: `FerryDeparturePicker` — een compacte versie van `FerryScheduleCard` met selectie-functionaliteit.
+### Status: ✅ Geïmplementeerd
 
-### 4. Cart context: `updateItem` wordt gebruikt
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-De bestaande `updateItem(blockId, { preferredTime })` methode in CartContext wordt gebruikt om de gekozen afvaart op te slaan. De `preferredTime` wordt meegestuurd bij de aanvraag.
+---
 
-## Bestanden
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-| Actie | Bestand |
-|---|---|
-| DB migratie | Twee nieuwe building blocks insert |
-| Wijzig | `src/pages/ProgrammaSamenstellen.tsx` — nieuwe default block IDs + dag-toewijzing |
-| Nieuw | `src/components/configurator/FerryDeparturePicker.tsx` — afvaarten met selectie |
-| Wijzig | `src/components/configurator/ProgramBuilderView.tsx` — toon picker bij ferry-items |
+### Status: ✅ Geïmplementeerd
 
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
