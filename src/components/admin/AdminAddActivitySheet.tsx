@@ -332,7 +332,7 @@ export const AdminAddActivitySheet = ({
                     <div key={index} className="flex items-center space-x-2">
                       <RadioGroupItem value={String(index)} id={`day-${index}`} />
                       <Label htmlFor={`day-${index}`} className="font-normal cursor-pointer">
-                        Dag {index + 1} - {format(new Date(date), "d MMMM yyyy", { locale: nl })}
+                        Dag {index + 1} - {format(new Date(date), "EEE d MMMM yyyy", { locale: nl })}
                       </Label>
                     </div>
                   ))}

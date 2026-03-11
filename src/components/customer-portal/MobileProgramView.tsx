@@ -583,7 +583,7 @@ export const MobileProgramView = ({
                           {selectedDates.map((d, i) => (
                             <span key={i}>
                               {i > 0 && ", "}
-                              {format(d, "d MMM yyyy", { locale: nl })}
+                              {format(d, "EEE d MMM yyyy", { locale: nl })}
                             </span>
                           ))}
                         </p>

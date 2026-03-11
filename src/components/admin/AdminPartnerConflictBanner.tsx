@@ -146,9 +146,9 @@ export function AdminPartnerConflictBanner({ items, selectedDates }: AdminPartne
               </div>
               <div className="text-right text-sm">
                 <div className="text-amber-800">
-                  Niet beschikbaar: {format(parseISO(conflict.unavailabilityStart), "d MMM", { locale: nl })} 
+                  Niet beschikbaar: {format(parseISO(conflict.unavailabilityStart), "EEE d MMM", { locale: nl })} 
                   {" – "}
-                  {format(parseISO(conflict.unavailabilityEnd), "d MMM", { locale: nl })}
+                  {format(parseISO(conflict.unavailabilityEnd), "EEE d MMM", { locale: nl })}
                 </div>
                 {conflict.unavailabilityReason && (
                   <div className="text-amber-600 text-xs">

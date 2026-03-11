@@ -229,7 +229,7 @@ Bureau Vlieland`;
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {validUntil
-                    ? format(validUntil, "d MMMM yyyy", { locale: nl })
+                    ? format(validUntil, "EEE d MMMM yyyy", { locale: nl })
                     : "Selecteer datum"}
                 </Button>
               </PopoverTrigger>
