@@ -58,8 +58,10 @@ export const ActionRequiredCard = ({
   onScrollToAccommodation,
   programType,
   quoteStatus,
+  programPublishedAt,
   className,
 }: ActionRequiredCardProps) => {
+  const isPublished = !!programPublishedAt;
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isQuotePreApproval = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming", "offerte_verstuurd"].includes(quoteStatus);
   const isQuoteBeingPrepared = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
