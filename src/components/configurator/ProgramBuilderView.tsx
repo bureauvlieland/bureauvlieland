@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil } from "lucide-react";
+import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { DayTabs } from "./DayTabs";
