@@ -720,6 +720,20 @@ export default function AdminAccommodationDetail() {
                                 Geselecteerd
                               </Badge>
                             )}
+                            {quote.status === "expired" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs ml-auto"
+                                onClick={() => {
+                                  setReactivateQuoteId(quote.id);
+                                  setReactivateDate(addDays(new Date(), 14));
+                                }}
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Heractiveren
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
