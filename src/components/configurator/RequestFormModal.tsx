@@ -199,7 +199,7 @@ export const RequestFormModal = ({
           selectedDate: formattedDates[0], // For backwards compatibility
           selectedDates: formattedDates,
           numberOfDays: effectiveDates.length,
-          bureauFee,
+          bureauFee: 0,
           blocks: blocksWithDetails,
           customerToken: token,
           origin: window.location.origin, // For test mode detection
