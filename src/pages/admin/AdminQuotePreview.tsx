@@ -670,7 +670,7 @@ const AdminQuotePreview = () => {
                             Dag {Number(dayIndex) + 1} -{" "}
                             {format(
                               new Date(request.selected_dates[Number(dayIndex)]),
-                              "d MMMM yyyy",
+                              "EEE d MMMM yyyy",
                               { locale: nl }
                             )}
                           </h3>
