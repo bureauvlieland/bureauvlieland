@@ -900,7 +900,7 @@ const AdminRequestDetail = () => {
           />
 
           {/* Pending partner notification banner */}
-          {isQuoteMode && request.quote_status === "akkoord_ontvangen" && pendingPartnerItems.length > 0 && (
+          {pendingPartnerItems.length > 0 && (
             <Card className="border-amber-300 bg-amber-50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
