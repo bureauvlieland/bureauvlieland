@@ -111,7 +111,7 @@ export const AiErwinDialog = ({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-6 py-6">
+        <div className="flex-1 space-y-6 py-6 overflow-y-auto">
           {/* Vibe picker */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Welke sfeer past bij uw groep?</Label>
