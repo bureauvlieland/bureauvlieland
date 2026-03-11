@@ -144,7 +144,7 @@ export const CustomerProgramItem = ({
           
           {/* Meta row */}
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-            {currentDate && selectedDates.length > 1 && (
+            {!hideDay && currentDate && selectedDates.length > 1 && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
