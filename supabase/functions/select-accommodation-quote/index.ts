@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     }
 
     // Get invoicing_mode from linked program
-    let invoicingMode = "partner_direct";
+    let invoicingMode = "bureau_central";
     if (request.linked_program_id) {
       const { data: linkedProg } = await supabase
         .from("program_requests")

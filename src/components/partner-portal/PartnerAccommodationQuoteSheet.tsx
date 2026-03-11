@@ -488,14 +488,7 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
                 <div className="text-sm text-muted-foreground space-y-1.5">
                   <p className="font-medium text-foreground">Wat nu?</p>
-                  {effectiveInvoicingMode === "partner_direct" ? (
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
-                      <li>Na afloop van het verblijf stuurt u uw factuur (geoffreerde prijs) direct naar de klant</li>
-                      <li>Registreer de factuur hieronder in het portaal</li>
-                      <li>Bureau Vlieland stuurt u vervolgens een commissiefactuur ({existingQuote?.commission_percentage ?? 10}%)</li>
-                    </ol>
-                  ) : effectiveInvoicingMode === "bureau_central" ? (
+                  {effectiveInvoicingMode === "bureau_central" ? (
                     <ol className="list-decimal list-inside space-y-1">
                       <li>Bureau Vlieland coördineert de reservering met de klant</li>
                       <li>Na afloop van het verblijf stuurt u uw factuur (geoffreerde prijs) naar <strong>Bureau Vlieland</strong></li>
@@ -503,64 +496,27 @@ export const PartnerAccommodationQuoteSheet = ({
                       <li>Bureau Vlieland stuurt u vervolgens een commissiefactuur ({existingQuote?.commission_percentage ?? 10}%)</li>
                     </ol>
                   ) : (
-                    <div className="text-muted-foreground italic">
-                      Facturatiemodus wordt geladen… Neem bij vragen contact op met Bureau Vlieland.
-                    </div>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Bureau Vlieland coördineert de reservering met de klant</li>
+                      <li>Na afloop van het verblijf stuurt u uw factuur naar <strong>Bureau Vlieland</strong></li>
+                      <li>Registreer de factuur hieronder in het portaal</li>
+                    </ol>
                   )}
                 </div>
               </div>
 
-              {/* Customer billing details - only shown for explicit partner_direct */}
-              {effectiveInvoicingMode === "partner_direct" && billingDetails?.billing_company_name ? (
-                <Card>
-                  <CardContent className="pt-4 space-y-2">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      Facturatiegegevens klant
-                    </p>
-                    <div className="text-sm space-y-1">
-                      <p className="font-medium">{billingDetails.billing_company_name}</p>
-                      {billingDetails.billing_address_street && (
-                        <p className="text-muted-foreground">
-                          {billingDetails.billing_address_street}
-                          {billingDetails.billing_address_postal || billingDetails.billing_address_city
-                            ? `, ${[billingDetails.billing_address_postal, billingDetails.billing_address_city].filter(Boolean).join(" ")}`
-                            : ""}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-muted-foreground">
-                        {billingDetails.billing_kvk_number && <span>KvK: {billingDetails.billing_kvk_number}</span>}
-                        {billingDetails.billing_vat_number && <span>BTW: {billingDetails.billing_vat_number}</span>}
-                      </div>
-                      {billingDetails.billing_contact_name && (
-                        <p className="text-muted-foreground">
-                          t.a.v. {billingDetails.billing_contact_name}
-                          {billingDetails.billing_contact_email && ` (${billingDetails.billing_contact_email})`}
-                        </p>
-                      )}
-                      {billingDetails.billing_reference && (
-                        <p className="text-muted-foreground">Referentie: {billingDetails.billing_reference}</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : effectiveInvoicingMode === "partner_direct" && billingDetails && !billingDetails.billing_company_name ? (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg text-sm text-amber-700 dark:text-amber-400">
-                  De klant heeft nog geen facturatiegegevens ingevuld. Neem contact op met Bureau Vlieland voor meer informatie.
+              {/* Always show Bureau Vlieland billing details */}
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm space-y-2">
+                <p className="font-medium text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Factureer aan Bureau Vlieland
+                </p>
+                <div className="text-amber-700 dark:text-amber-400 space-y-0.5">
+                  <p className="font-medium">Bureau Vlieland</p>
+                  <p>administratie@bureauvlieland.nl</p>
                 </div>
-              ) : effectiveInvoicingMode !== "partner_direct" ? (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm space-y-2">
-                  <p className="font-medium text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Factureer aan Bureau Vlieland
-                  </p>
-                  <div className="text-amber-700 dark:text-amber-400 space-y-0.5">
-                    <p className="font-medium">Bureau Vlieland</p>
-                    <p>administratie@bureauvlieland.nl</p>
-                  </div>
                   <p className="text-muted-foreground text-xs">U factureert dezelfde geoffreerde prijs als bij directe facturatie. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
                 </div>
-              ) : null}
               
               {/* Invoice registration section */}
               {existingQuote.invoiced_number ? (

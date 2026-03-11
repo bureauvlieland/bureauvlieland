@@ -1,95 +1,74 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal als standaard
+### Wat is gebouwd
 
-## Huidige situatie
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-De huidige flow werkt als volgt:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-1. **Klant dient programma in** via configurator → `send-program-request` edge function stuurt **direct e-mails naar alle partners** met klantgegevens, plus een bevestiging naar de klant en een kopie naar Bureau Vlieland.
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-2. **Klant keurt offerte goed** → `accept-quote-proposal` stuurt **direct partner-notificaties** met reserveringsverzoeken.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-3. **Facturatiemodel** staat standaard op `partner_direct` — partners factureren de eindklant rechtstreeks.
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-4. **Klant kan items individueel goedkeuren** via het portaal → `approve-quote-item` stuurt direct een partner-notificatie.
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-**Probleem**: Bureau Vlieland heeft geen controle over wat er naar partners gaat voordat het al verstuurd is. Het facturatiemodel laat klant-partner directe facturatie toe, terwijl Bureau Vlieland altijd tussenpersoon wil zijn.
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
----
-
-## Gewenste situatie
-
-1. **Klant dient aan** → Alleen Bureau Vlieland en klant krijgen e-mail. Partners worden **niet** automatisch benaderd.
-2. **Admin beoordeelt** → Via admin-interface per item of bulk "Verstuur naar partner(s)" actie.
-3. **Facturatie** → Altijd `bureau_central`: partners factureren Bureau Vlieland, Bureau Vlieland factureert de klant.
-
----
-
-## Wijzigingen
-
-### 1. `send-program-request` edge function — partner-mails verwijderen
-
-De functie stuurt nu drie soorten e-mails: bureau, klant, partners. Wijziging:
-- **Verwijder** het genereren en versturen van partner-e-mails (de hele `providerGroups` / `partnerEmails` logica).
-- **Pas klant-e-mail aan**: verwijder tekst over "aanbieders zullen contact opnemen" → vervangen door "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
-- Bureau-e-mail: verwijder tekst "email wordt automatisch verstuurd" bij partner-items.
-
-### 2. Database default wijzigen — `invoicing_mode` naar `bureau_central`
-
-SQL-migratie: `ALTER TABLE program_requests ALTER COLUMN invoicing_mode SET DEFAULT 'bureau_central'`.
-
-### 3. `InvoicingModeSelector` component en `partner_direct` optie verwijderen
-
-- Verwijder de `InvoicingModeSelector` component uit `AdminRequestDetail.tsx`.
-- Of: maak het read-only met alleen "Bureau Vlieland factureert klant" als informatief label.
-
-### 4. Admin "Verstuur naar partners" actie toevoegen
-
-In `AdminRequestDetail.tsx`, per item en als bulk-actie:
-- **Per item**: knop "Verstuur naar partner" naast elk `pending` item. Roept de bestaande `approve-quote-item`-achtige logica aan (stuurt partner-notificatie).
-- **Bulk**: "Verstuur alle onderdelen naar partners" knop die voor alle pending items tegelijk de partner-notificaties verstuurt.
-- Items krijgen een visuele status: "Nog niet verstuurd" → "Verstuurd naar partner" (bestaande statussen `pending` → `in_afstemming`).
-
-### 5. `accept-quote-proposal` edge function — review
-
-Deze functie wordt aangeroepen wanneer admin een offerte goedkeurt. De partner-notificaties hierin blijven behouden (dit is een bewuste admin-actie). Geen wijziging nodig.
-
-### 6. `approve-quote-item` edge function — blokkeren vanuit klantportaal
-
-De klant kan nu individueel items goedkeuren die direct naar partners gaan. Dit moet geblokkeerd worden vanuit het klantportaal — alleen admins mogen items naar partners sturen. De edge function krijgt een check: als er geen `admin_override` flag is, weiger de actie.
-
-### 7. Klantportaal en partner-portaal teksten bijwerken
-
-- **Klantportaal**: verwijder alle verwijzingen naar `partner_direct` facturatie. Alle tekst wordt `bureau_central` (factuur van Bureau Vlieland).
-- **Partner-portaal**: verwijder `partner_direct` logica — partners factureren altijd Bureau Vlieland. Klant-PII (e-mail, telefoon) wordt standaard verborgen.
-
-### 8. Code cleanup
-
-Verwijder `partner_direct` branches uit:
-- `InvoiceProvidersCard.tsx`
-- `CustomerPortalSplash.tsx`
-- `PartnerAccommodationQuoteSheet.tsx`
-- `PartnerAccommodationTable.tsx`
-- `CustomerProgram.tsx`
-- `src/types/purchaseInvoice.ts` (type kan vereenvoudigd)
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
 ---
 
-## Bestanden
+## Plan: CRM en Partners samenvoegen
 
-| Bestand | Actie |
-|---------|-------|
-| `supabase/functions/send-program-request/index.ts` | Partner-mails verwijderen, klant-tekst aanpassen |
-| `supabase/functions/approve-quote-item/index.ts` | Admin-only check toevoegen |
-| `src/pages/admin/AdminRequestDetail.tsx` | "Verstuur naar partners" knoppen, InvoicingModeSelector verwijderen |
-| `src/components/admin/InvoicingModeSelector.tsx` | Verwijderen of read-only maken |
-| DB migratie | `invoicing_mode` default → `bureau_central` |
-| Klant/partner-portaal componenten | `partner_direct` branches verwijderen |
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
 ---
 
-## Samenvatting
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-Drie kernwijzigingen: (1) Partners krijgen pas bericht wanneer de admin dit expliciet triggert, (2) facturatie loopt altijd via Bureau Vlieland, (3) alle `partner_direct` logica wordt verwijderd uit de codebase.
+### Status: ✅ Geïmplementeerd
 
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".

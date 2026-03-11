@@ -1,6 +1,6 @@
 // Purchase Invoice types for bureau_central invoicing mode
 
-export type InvoicingMode = 'partner_direct' | 'bureau_central';
+export type InvoicingMode = 'bureau_central';
 
 export type PurchaseInvoiceStatus = 'pending' | 'forwarded' | 'paid';
 

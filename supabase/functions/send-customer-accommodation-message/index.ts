@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     }
 
     // Check invoicing mode for privacy
-    let invoicingMode = "partner_direct";
+    let invoicingMode = "bureau_central";
     if (accRequest.linked_program_id) {
       const { data: linkedProg } = await supabase
         .from("program_requests")

@@ -105,130 +105,7 @@ function groupBlocksByType(blocks: BlockItem[]) {
   };
 }
 
-// Group blocks by provider for partner emails (excludes self_arranged)
-interface ProviderGroup {
-  providerId: string;
-  providerName: string;
-  providerEmail: string;
-  blocks: BlockItem[];
-}
 
-function groupBlocksByProvider(blocks: BlockItem[]): ProviderGroup[] {
-  // Filter out self_arranged blocks - they don't get emails
-  const billableBlocks = blocks.filter(b => b.blockType !== "self_arranged");
-  
-  const grouped = new Map<string, ProviderGroup>();
-  
-  for (const block of billableBlocks) {
-    if (!block.providerEmail) continue; // Skip if no email
-    
-    if (!grouped.has(block.providerId)) {
-      grouped.set(block.providerId, {
-        providerId: block.providerId,
-        providerName: block.provider,
-        providerEmail: block.providerEmail,
-        blocks: []
-      });
-    }
-    grouped.get(block.providerId)!.blocks.push(block);
-  }
-  
-  return Array.from(grouped.values());
-}
-
-// Generate partner email HTML
-function generatePartnerEmailHtml(
-  group: ProviderGroup,
-  customerData: {
-    name: string;
-    company: string;
-    email: string;
-    phone: string;
-    date: string;
-    numberOfPeople: number;
-    notes: string;
-  }
-): string {
-  const activitiesHtml = group.blocks.map(block => {
-    const timeInfo = block.preferredTime 
-      ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(block.preferredTime)}</span>` 
-      : '';
-    const notesInfo = block.itemNotes 
-      ? `<br><span style="color: #666; font-size: 13px;">💬 Opmerking: ${sanitizeHtml(block.itemNotes)}</span>` 
-      : '';
-    return `<li style="margin-bottom: 12px;">
-      <strong>${sanitizeHtml(block.name)}</strong> — ${sanitizeHtml(block.priceIndication)}${block.priceNote ? ` ${sanitizeHtml(block.priceNote)}` : ''}
-      ${timeInfo}
-      ${notesInfo}
-    </li>`;
-  }).join('');
-
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-        Nieuwe aanvraag via Bureau Vlieland
-      </h2>
-      
-      <p>Beste ${sanitizeHtml(group.providerName)},</p>
-      
-      <p>Er is een nieuwe <strong>vrijblijvende aanvraag</strong> binnengekomen via Bureau Vlieland.</p>
-      
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748;">📋 Klantgegevens</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Naam:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(customerData.name)}</strong></td></tr>
-          ${customerData.company ? `<tr><td style="padding: 5px 0; color: #666;">Bedrijf:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(customerData.company)}</strong></td></tr>` : ''}
-          <tr><td style="padding: 5px 0; color: #666;">Email:</td><td style="padding: 5px 0;"><a href="mailto:${sanitizeHtml(customerData.email)}" style="color: #0066cc;">${sanitizeHtml(customerData.email)}</a></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Telefoon:</td><td style="padding: 5px 0;"><a href="tel:${sanitizeHtml(customerData.phone)}" style="color: #0066cc;">${sanitizeHtml(customerData.phone)}</a></td></tr>
-        </table>
-      </div>
-      
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748;">📅 Aanvraag details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Datum:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(customerData.date) || 'Nog niet gekozen'}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${customerData.numberOfPeople}</strong></td></tr>
-        </table>
-      </div>
-      
-      <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
-        <h3 style="margin-top: 0; color: #276749;">🎯 Aangevraagde activiteiten bij jullie</h3>
-        <ul style="padding-left: 20px; margin-bottom: 0;">
-          ${activitiesHtml}
-        </ul>
-      </div>
-      
-      ${customerData.notes ? `
-      <div style="background: #fff8e6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f6ad55;">
-        <h3 style="margin-top: 0; color: #c05621;">💬 Algemene opmerkingen van de klant</h3>
-        <p style="margin-bottom: 0; white-space: pre-line;">${sanitizeHtml(customerData.notes)}</p>
-      </div>
-      ` : ''}
-      
-      <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
-        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partner Portal</h3>
-        <p>Je kunt al je aanvragen terugvinden en beheren in de Partner Portal.</p>
-        <p style="margin-bottom: 0; text-align: center;">
-          <a href="https://bureauvlieland.nl/partner/login" style="display: inline-block; background: #1a365d; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Ga naar Partner Portal</a>
-        </p>
-      </div>
-      
-      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-      
-      <p style="color: #666; font-size: 14px;">
-        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met de klant om 
-        beschikbaarheid te bevestigen en verdere details te bespreken.
-      </p>
-      
-      <p style="margin-top: 30px;">
-        Met vriendelijke groet,<br>
-        <strong>Bureau Vlieland</strong><br>
-        📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a><br>
-        📞 0562 700 208
-      </p>
-    </div>
-  `;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -331,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
       ` : ''}
       
       ${groupedBlocks.partner.length > 0 ? `
-      <h3>Door te zetten naar partners (email wordt automatisch verstuurd)</h3>
+      <h3>Door te zetten naar partners (handmatig via admin)</h3>
       <ul>${buildBlocksListHtml(groupedBlocks.partner)}</ul>
       ` : ''}
       
@@ -353,7 +230,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <p>Bedankt voor uw programma-aanvraag bij Bureau Vlieland!</p>
         
-        <p>Wij hebben uw aanvraag goed ontvangen. De betreffende aanbieders zullen uw aanvraag behandelen en eventueel contact opnemen om details te bespreken. <strong>U betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van de aanbieder.</p>
+        <p>Wij hebben uw aanvraag goed ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt contact met u op over de volgende stappen. <strong>U betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van Bureau Vlieland.</p>
         
         <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #2d3748;">Uw aanvraag</h3>
@@ -364,7 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
         ${groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0 ? `
         <div style="margin: 20px 0;">
           <h3 style="color: #2d3748;">Aangevraagde onderdelen</h3>
-          <p style="color: #718096; font-size: 14px;">Deze worden door de betreffende aanbieders bevestigd:</p>
+          <p style="color: #718096; font-size: 14px;">Bureau Vlieland coördineert deze onderdelen en houdt u op de hoogte:</p>
           <ul style="padding-left: 20px;">
             ${buildBlocksListHtml([...groupedBlocks.bureau, ...groupedBlocks.partner])}
           </ul>
@@ -425,58 +302,9 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Generate partner emails (redirected to test email in test mode)
-    const providerGroups = groupBlocksByProvider(requestData.blocks);
+    console.log(`Sending emails: 1 to bureau, 1 to customer (no partner emails — admin-first flow)`);
 
-    // Lookup contact_email overrides from the database
-    const providerIds = providerGroups.map(g => g.providerId).filter(Boolean);
-    if (providerIds.length > 0) {
-      try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        const { data: partners } = await supabase
-          .from("partners")
-          .select("id, contact_email")
-          .in("id", providerIds);
-
-        if (partners) {
-          const contactMap = new Map(partners.filter(p => p.contact_email).map(p => [p.id, p.contact_email]));
-          for (const group of providerGroups) {
-            const override = contactMap.get(group.providerId);
-            if (override) group.providerEmail = override;
-          }
-        }
-      } catch (lookupErr) {
-        console.warn("Could not lookup contact_email overrides:", lookupErr);
-      }
-    }
-
-    const partnerEmails = providerGroups.map(group => ({
-      From: {
-        Email: "hallo@bureauvlieland.nl",
-        Name: "Bureau Vlieland"
-      },
-      To: [{
-        Email: getRecipientEmail(group.providerEmail, origin),
-        Name: group.providerName
-      }],
-      Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland - ${group.blocks.map(b => b.name).join(', ')}`,
-      HTMLPart: generatePartnerEmailHtml(group, {
-        name: safeName,
-        company: safeCompany,
-        email: safeEmail,
-        phone: safePhone,
-        date: safeDate,
-        numberOfPeople: requestData.numberOfPeople,
-        notes: safeNotes,
-      }),
-    }));
-
-    console.log(`Sending emails: 1 to bureau, 1 to customer, ${partnerEmails.length} to partners ${testMode ? "(TEST MODE - partners redirected)" : ""}`);
-
-    // Send all emails in one batch
+    // Send bureau + customer emails only (no partner emails)
     const emailResponse = await sendEmailViaMailjet([
       {
         From: {
@@ -505,8 +333,7 @@ const handler = async (req: Request): Promise<Response> => {
         ],
         Subject: `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`,
         HTMLPart: customerEmailHtml,
-      },
-      ...partnerEmails
+      }
     ]);
 
     console.log("Program request emails sent successfully");
