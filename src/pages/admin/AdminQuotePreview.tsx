@@ -831,8 +831,8 @@ const AdminQuotePreview = () => {
                             <p className="font-semibold text-amber-800 mb-1">Logiesaanvraag in behandeling</p>
                             <p className="text-amber-700">
                               Er loopt een logiesaanvraag voor{" "}
-                              {format(new Date(accommodationRequest.arrival_date), "d MMMM", { locale: nl })} -{" "}
-                              {format(new Date(accommodationRequest.departure_date), "d MMMM yyyy", { locale: nl })}
+                              {format(new Date(accommodationRequest.arrival_date), "EEE d MMMM", { locale: nl })} -{" "}
+                              {format(new Date(accommodationRequest.departure_date), "EEE d MMMM yyyy", { locale: nl })}
                               {" "}voor {accommodationRequest.number_of_guests} gasten.
                               {" "}Wij verwachten binnenkort voorstellen van accommodatiepartners.
                             </p>
