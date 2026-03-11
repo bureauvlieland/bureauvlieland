@@ -194,18 +194,9 @@ export const ProgramIntroCard = ({
     );
   }
 
-  // Pre-publication: admin is still reviewing
+  // Pre-publication: admin is still reviewing — ActionRequiredCard already shows this message
   if (!isPublished) {
-    return (
-      <Card className="border-muted bg-muted/30">
-        <CardContent className="p-5">
-          <p className="text-sm text-foreground leading-relaxed">
-            Uw programma is ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt indien nodig contact op.
-            Hieronder vindt u een overzicht van de ingediende onderdelen.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (
