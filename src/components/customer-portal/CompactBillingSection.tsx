@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Pencil, CheckCircle, AlertCircle } from "lucide-react";
 import { BillingDetailsCard } from "./BillingDetailsCard";
-import { InvoiceProvidersCard } from "./InvoiceProvidersCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
@@ -68,15 +67,7 @@ export const CompactBillingSection = ({
       {/* Billing details card */}
       <BillingDetailsCard program={program as any} onEdit={onEditBilling} />
 
-      {/* Invoice providers */}
-      <InvoiceProvidersCard
-        items={items}
-        selectedAccommodationQuote={selectedAccommodationQuote}
-        numberOfPeople={numberOfPeople}
-        invoicingMode={invoicingMode}
-      />
-
-      {/* Price summary */}
+      {/* Price summary / cost specification */}
       <PriceSummaryCard
         items={items}
         numberOfPeople={numberOfPeople}
