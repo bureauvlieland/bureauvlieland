@@ -408,18 +408,6 @@ export const RequestFormModal = ({
               </div>
             )}
 
-            {/* Partners */}
-            {groupedBlocks.partner.length > 0 && (
-              <div className="flex items-start gap-2">
-                <Users2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-medium">Wordt aangevraagd bij aanbieders:</span>
-                  <ul className="text-muted-foreground mt-1">
-                    {groupedBlocks.partner.map((block) => renderBlockDetail(block))}
-                  </ul>
-                </div>
-              </div>
-            )}
 
             {/* Self-arranged */}
             {groupedBlocks.self_arranged.length > 0 && (

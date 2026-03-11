@@ -464,12 +464,11 @@ export const ProgramEditor = ({
       {/* Simplified pricing */}
       {hasBillableItems && (
         <div className="border-t pt-3">
-          <div className="flex justify-between font-semibold text-base">
-            <span>Indicatief totaal</span>
-            <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
-          </div>
+          <p className="text-sm font-medium text-foreground">
+            {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
+          </p>
           <p className="text-xs text-muted-foreground mt-1">
-            * Exacte prijzen na bevestiging door aanbieders
+            * Exacte prijzen ontvangt u in ons voorstel
           </p>
         </div>
       )}
