@@ -216,4 +216,9 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-red-700",
     bgColor: "bg-red-100",
   },
+  all_partners_responded: {
+    label: "Alle reacties binnen",
+    color: "text-green-700",
+    bgColor: "bg-green-100",
+  },
 };
