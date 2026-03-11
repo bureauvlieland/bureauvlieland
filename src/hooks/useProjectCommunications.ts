@@ -40,16 +40,28 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         commQuery = commQuery.eq("accommodation_id", accommodationId);
       }
 
-      // Fetch email log entries
-      let emailQuery = supabase
-        .from("email_log")
-        .select("*")
-        .order("sent_at", { ascending: false });
+      // Fetch email log entries — need to query both request_id and accommodation_id
+      // since some emails are linked to the accommodation, not the program request
+      const emailQueries = [];
 
       if (requestId) {
-        emailQuery = emailQuery.eq("related_request_id", requestId);
-      } else if (accommodationId) {
-        emailQuery = emailQuery.eq("related_accommodation_id", accommodationId);
+        emailQueries.push(
+          supabase
+            .from("email_log")
+            .select("*")
+            .eq("related_request_id", requestId)
+            .order("sent_at", { ascending: false })
+        );
+      }
+
+      if (accommodationId) {
+        emailQueries.push(
+          supabase
+            .from("email_log")
+            .select("*")
+            .eq("related_accommodation_id", accommodationId)
+            .order("sent_at", { ascending: false })
+        );
       }
 
       const [commResult, emailResult] = await Promise.all([
