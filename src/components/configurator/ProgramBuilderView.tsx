@@ -28,6 +28,7 @@ import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
