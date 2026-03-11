@@ -652,7 +652,7 @@ const AdminQuotePreview = () => {
                             </p>
                             <p>
                               {request.selected_dates
-                                .map((d) => format(new Date(d), "d MMM", { locale: nl }))
+                                .map((d) => format(new Date(d), "EEE d MMM", { locale: nl }))
                                 .join(" - ")}
                             </p>
                           </div>
