@@ -100,6 +100,21 @@ const ProgrammaSamenstellen = () => {
     }
   }, [addToCart, toast]);
 
+  const handleErwinSuggestion = useCallback((suggestions: CartItemDetail[]) => {
+    // Remove all non-essential items, keep ferry + fiets
+    cartItems.forEach((item) => {
+      if (!KEEP_BLOCK_IDS.has(item.blockId)) {
+        removeFromCart(item.blockId);
+      }
+    });
+    // Add suggested items
+    suggestions.forEach((s) => {
+      if (!isInCart(s.blockId)) {
+        addToCart(s.blockId, s.dayIndex ?? 0);
+      }
+    });
+  }, [cartItems, removeFromCart, addToCart, isInCart]);
+
   const handleSubmit = () => {
     if (cartItems.length === 0) {
       toast({
