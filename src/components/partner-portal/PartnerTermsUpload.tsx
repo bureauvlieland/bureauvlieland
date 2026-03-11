@@ -249,7 +249,7 @@ export const PartnerTermsUpload = ({
                           <p className="font-medium truncate">algemene-voorwaarden.pdf</p>
                           {termsUploadedAt && (
                             <p className="text-sm text-muted-foreground">
-                              Geüpload op {format(parseISO(termsUploadedAt), "d MMMM yyyy", { locale: nl })}
+                              Geüpload op {format(parseISO(termsUploadedAt), "EEE d MMMM yyyy", { locale: nl })}
                             </p>
                           )}
                         </div>

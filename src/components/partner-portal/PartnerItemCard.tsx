@@ -279,7 +279,7 @@ export const PartnerItemCard = ({
               <div>
                 <span className="text-muted-foreground">Datum:</span>{" "}
                 <span className="font-medium">
-                  {item.invoiced_date && format(parseISO(item.invoiced_date), "d MMM yyyy", { locale: nl })}
+                  {item.invoiced_date && format(parseISO(item.invoiced_date), "EEE d MMM yyyy", { locale: nl })}
                 </span>
               </div>
             </div>
