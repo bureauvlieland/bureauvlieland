@@ -359,16 +359,6 @@ export const ProgramEditor = ({
                 </>
               )}
 
-              {/* Bureau fee */}
-              {hasBillableItems && (
-                <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10 rounded-lg mt-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">Coördinatiefee</p>
-                    <p className="text-xs text-muted-foreground">Wij regelen de communicatie met alle aanbieders</p>
-                  </div>
-                  <span className="text-sm font-medium">€ {bureauFee}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
