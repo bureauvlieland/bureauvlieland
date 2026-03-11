@@ -28,7 +28,7 @@ export const PartnerTerms = () => {
               <h2 className="text-2xl font-bold text-foreground mb-4">Artikel 1 – Toepasselijkheid</h2>
               <ul className="list-disc pl-6 space-y-2 text-foreground">
                 <li>Deze voorwaarden zijn van toepassing op alle diensten die via het platform van Bureau Vlieland worden aangeboden en uitgevoerd door een Partner.</li>
-                <li>De overeenkomst voor het betreffende onderdeel komt rechtstreeks tot stand tussen de Partner en de Eindklant.</li>
+                <li>De overeenkomst voor het betreffende onderdeel komt tot stand via bemiddeling door Bureau Vlieland.</li>
                 <li>Bureau Vlieland treedt uitsluitend op als bemiddelaar en is geen partij bij de uitvoeringsovereenkomst tussen Partner en Eindklant.</li>
                 <li>Indien de Partner eigen algemene voorwaarden hanteert en deze via het platform beschikbaar stelt, prevaleren die boven deze standaardvoorwaarden.</li>
               </ul>
