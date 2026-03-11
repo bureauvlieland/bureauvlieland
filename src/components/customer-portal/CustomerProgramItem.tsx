@@ -41,6 +41,8 @@ interface CustomerProgramItemProps {
   vatRate?: number;
   isPreApproval?: boolean;
   isQuoteMode?: boolean;
+  readOnly?: boolean;
+  hideDay?: boolean;
 }
 
 export const CustomerProgramItem = ({
