@@ -29,28 +29,6 @@ export const MultiDatePicker = ({
 
   return (
     <div className="space-y-2">
-      {/* Selected dates as chips */}
-      {selectedDates.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedDates.map((date, index) => (
-            <div
-              key={date.toISOString()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium"
-            >
-              <span className="text-xs text-primary/70">Dag {index + 1}:</span>
-              <span>{format(date, "d MMM", { locale: nl })}</span>
-              <button
-                onClick={() => onRemoveDate(index)}
-                className="ml-1 p-0.5 hover:bg-primary/20 rounded-full transition-colors"
-                aria-label={`Verwijder ${format(date, "d MMMM", { locale: nl })}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Add date button/picker */}
       <Popover>
         <PopoverTrigger asChild>
@@ -87,6 +65,28 @@ export const MultiDatePicker = ({
           />
         </PopoverContent>
       </Popover>
+
+      {/* Selected dates as chips — shown below the button so calendar doesn't overlap */}
+      {selectedDates.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedDates.map((date, index) => (
+            <div
+              key={date.toISOString()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium"
+            >
+              <span className="text-xs text-primary/70">Dag {index + 1}:</span>
+              <span>{format(date, "d MMM", { locale: nl })}</span>
+              <button
+                onClick={() => onRemoveDate(index)}
+                className="ml-1 p-0.5 hover:bg-primary/20 rounded-full transition-colors"
+                aria-label={`Verwijder ${format(date, "d MMMM", { locale: nl })}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Max days info */}
       {!canAddMore && (
