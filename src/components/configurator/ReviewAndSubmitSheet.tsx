@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+import { sortCartItemsForDay } from "@/lib/cartSorting";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 
 const EVENT_TYPE_OPTIONS = [
@@ -115,15 +116,13 @@ export const ReviewAndSubmitSheet = ({
   }, [isSuccess, customerToken, countdown, navigate]);
 
   // Group items by day
+  const totalDays = effectiveDates.length || 1;
   const getItemsForDay = (dayIndex: number) =>
-    cartItems
-      .filter((item) => (item.dayIndex ?? 0) === dayIndex)
-      .sort((a, b) => {
-        if (!a.preferredTime && !b.preferredTime) return 0;
-        if (!a.preferredTime) return 1;
-        if (!b.preferredTime) return -1;
-        return a.preferredTime.localeCompare(b.preferredTime);
-      });
+    sortCartItemsForDay(
+      cartItems.filter((item) => (item.dayIndex ?? 0) === dayIndex),
+      dayIndex,
+      totalDays
+    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
