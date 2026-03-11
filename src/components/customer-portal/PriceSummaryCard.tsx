@@ -133,6 +133,8 @@ export const PriceSummaryCard = ({
       coordinationFee,
       centralSurcharge,
       standardVatRate,
+      touristTax,
+      natureContribution,
       accommodationTotal,
       accommodationVatRate,
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
@@ -144,7 +146,7 @@ export const PriceSummaryCard = ({
       grandTotalInclVat,
       hasConfirmedPrices: confirmedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
   // Don't show if there are no confirmed prices yet and no items at all
   if (!summary.hasConfirmedPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
