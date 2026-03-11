@@ -147,7 +147,7 @@ export const CustomerProgramItem = ({
             {!hideDay && currentDate && selectedDates.length > 1 && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
+                Dag {item.day_index + 1} • {format(currentDate, "EEE d MMM", { locale: nl })}
               </span>
             )}
             {/* Time - only on mobile (desktop shows it in timeline column) */}
@@ -489,7 +489,7 @@ export const CustomerProgramItem = ({
                   <Label className="text-sm">Dag</Label>
                   {readOnly ? (
                     <p className="text-sm mt-1.5">
-                      Dag {item.day_index + 1} • {format(selectedDates[item.day_index], "d MMM", { locale: nl })}
+                      Dag {item.day_index + 1} • {format(selectedDates[item.day_index], "EEE d MMM", { locale: nl })}
                     </p>
                   ) : (
                     <Select
@@ -502,7 +502,7 @@ export const CustomerProgramItem = ({
                       <SelectContent>
                         {selectedDates.map((date, idx) => (
                           <SelectItem key={idx} value={String(idx)}>
-                            Dag {idx + 1} • {format(date, "d MMM", { locale: nl })}
+                            Dag {idx + 1} • {format(date, "EEE d MMM", { locale: nl })}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -407,7 +407,7 @@ export const ProgramEditor = ({
   // (detailsOpen state moved to top of component)
 
   const dateSummary = effectiveDates.length > 0
-    ? effectiveDates.map(d => format(d, "d MMM", { locale: nl })).join(", ")
+    ? effectiveDates.map(d => format(d, "EEE d MMM", { locale: nl })).join(", ")
     : "Geen datum";
 
   return (

@@ -568,7 +568,7 @@ const AdminInvoicePreview = () => {
                               <span className="text-gray-500">Datum evenement:</span>
                               <span className="w-36 text-right">
                                 {request.selected_dates
-                                  .map((d) => format(new Date(d), "d MMM yyyy", { locale: nl }))
+                                  .map((d) => format(new Date(d), "EEE d MMM yyyy", { locale: nl }))
                                   .join(" – ")}
                               </span>
                             </div>

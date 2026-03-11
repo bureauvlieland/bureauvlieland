@@ -336,8 +336,8 @@ const ItemCard = ({
                 <Calendar className="h-3.5 w-3.5" />
                 {item.date
                   ? item.endDate
-                    ? `${format(parseISO(item.date), "d MMM", { locale: nl })} - ${format(parseISO(item.endDate), "d MMM", { locale: nl })}`
-                    : format(parseISO(item.date), "d MMM yyyy", { locale: nl })
+                    ? `${format(parseISO(item.date), "EEE d MMM", { locale: nl })} - ${format(parseISO(item.endDate), "EEE d MMM", { locale: nl })}`
+                    : format(parseISO(item.date), "EEE d MMM yyyy", { locale: nl })
                   : "Geen datum"}
               </span>
               <span className="hidden md:inline">•</span>

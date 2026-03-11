@@ -67,11 +67,11 @@ export const AdminSendQuoteDialog = ({
   const [emailBody, setEmailBody] = useState("");
 
   const formattedDates = programDates
-    .map((d) => format(new Date(d), "d MMMM yyyy", { locale: nl }))
+    .map((d) => format(new Date(d), "EEE d MMMM yyyy", { locale: nl }))
     .join(", ");
 
   const getDefaultIntro = () => {
-    const validUntilFormatted = format(validUntil, "d MMMM yyyy", { locale: nl });
+    const validUntilFormatted = format(validUntil, "EEE d MMMM yyyy", { locale: nl });
     const companyName = customerCompany || "u";
     
     // Default plain text intro that will be wrapped in HTML by the edge function
@@ -229,7 +229,7 @@ Bureau Vlieland`;
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {validUntil
-                    ? format(validUntil, "d MMMM yyyy", { locale: nl })
+                    ? format(validUntil, "EEE d MMMM yyyy", { locale: nl })
                     : "Selecteer datum"}
                 </Button>
               </PopoverTrigger>

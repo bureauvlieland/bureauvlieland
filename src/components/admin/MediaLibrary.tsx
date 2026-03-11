@@ -435,7 +435,7 @@ export const MediaLibrary = ({ onSelect, selectable = false }: MediaLibraryProps
                     <span>{formatFileSize(previewFile.size)}</span>
                     {previewFile.createdAt && (
                       <span>
-                        {format(new Date(previewFile.createdAt), "d MMMM yyyy, HH:mm", {
+                        {format(new Date(previewFile.createdAt), "EEE d MMMM yyyy, HH:mm", {
                           locale: nl,
                         })}
                       </span>

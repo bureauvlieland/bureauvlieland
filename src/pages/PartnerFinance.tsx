@@ -634,7 +634,7 @@ const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardPr
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {format(parseISO(request.arrival_date), "d MMM", { locale: nl })} - {format(parseISO(request.departure_date), "d MMM yyyy", { locale: nl })}
+                {format(parseISO(request.arrival_date), "EEE d MMM", { locale: nl })} - {format(parseISO(request.departure_date), "EEE d MMM yyyy", { locale: nl })}
               </div>
             </div>
           </div>

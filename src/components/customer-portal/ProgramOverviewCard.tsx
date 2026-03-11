@@ -109,11 +109,11 @@ export const ProgramOverviewCard = ({
   const formatDateRange = () => {
     if (selectedDates.length === 0) return "Geen datum geselecteerd";
     if (selectedDates.length === 1) {
-      return format(selectedDates[0], "d MMMM yyyy", { locale: nl });
+      return format(selectedDates[0], "EEE d MMMM yyyy", { locale: nl });
     }
     const firstDate = selectedDates[0];
     const lastDate = selectedDates[selectedDates.length - 1];
-    return `${format(firstDate, "d", { locale: nl })} – ${format(lastDate, "d MMMM yyyy", { locale: nl })}`;
+    return `${format(firstDate, "EEE d", { locale: nl })} – ${format(lastDate, "EEE d MMMM yyyy", { locale: nl })}`;
   };
 
   const getStatusBadgeVariant = (variant: "success" | "info" | "warning" | "muted" | "destructive") => {
@@ -209,13 +209,13 @@ export const ProgramOverviewCard = ({
               )}
               <p className={`text-sm ${isExpired ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}>
                 {isExpired ? (
-                  <>Dit voorstel is verlopen op {format(validUntilDate, "d MMMM yyyy", { locale: nl })}. Neem contact op voor een nieuw voorstel.</>
+                  <>Dit voorstel is verlopen op {format(validUntilDate, "EEE d MMMM yyyy", { locale: nl })}. Neem contact op voor een nieuw voorstel.</>
                 ) : daysUntilExpiry === 0 ? (
                   <>Dit voorstel is vandaag geldig. Geef vandaag nog akkoord om de beschikbaarheid te garanderen.</>
                 ) : daysUntilExpiry === 1 ? (
-                  <>Dit voorstel is nog 1 dag geldig (t/m {format(validUntilDate, "d MMMM", { locale: nl })}).</>
+                  <>Dit voorstel is nog 1 dag geldig (t/m {format(validUntilDate, "EEE d MMMM", { locale: nl })}).</>
                 ) : (
-                  <>Dit voorstel is geldig t/m {format(validUntilDate, "d MMMM yyyy", { locale: nl })} ({daysUntilExpiry} dagen).</>
+                  <>Dit voorstel is geldig t/m {format(validUntilDate, "EEE d MMMM yyyy", { locale: nl })} ({daysUntilExpiry} dagen).</>
                 )}
               </p>
             </div>

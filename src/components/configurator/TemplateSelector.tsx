@@ -117,7 +117,7 @@ export const TemplateSelector = ({
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9", !localDates.length && "text-muted-foreground")}>
                       {localDates.length > 0
-                        ? localDates.map(d => format(d, "d MMM", { locale: nl })).join(" – ")
+                        ? localDates.map(d => format(d, "EEE d MMM", { locale: nl })).join(" – ")
                         : "Kies datum(s)"}
                     </Button>
                   </PopoverTrigger>

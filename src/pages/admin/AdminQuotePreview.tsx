@@ -500,7 +500,7 @@ const AdminQuotePreview = () => {
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {validUntil
-                            ? format(validUntil, "d MMMM yyyy", { locale: nl })
+                            ? format(validUntil, "EEE d MMMM yyyy", { locale: nl })
                             : "Selecteer datum"}
                         </Button>
                       </PopoverTrigger>
@@ -541,10 +541,10 @@ const AdminQuotePreview = () => {
                             }
                             // Extract plain text intro from the HTML template
                             const dates = request.selected_dates?.length
-                              ? request.selected_dates.map(d => format(new Date(d), "d MMMM yyyy", { locale: nl })).join(" – ")
+                              ? request.selected_dates.map(d => format(new Date(d), "EEE d MMMM yyyy", { locale: nl })).join(" – ")
                               : "Nog niet bepaald";
                             const companyName = request.customer_company || "u";
-                            const validUntilStr = format(validUntil, "d MMMM yyyy", { locale: nl });
+                            const validUntilStr = format(validUntil, "EEE d MMMM yyyy", { locale: nl });
 
                             // Build a plain-text version from the template content
                             let plainText = `Beste ${request.customer_name},\n\nHierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${companyName} samengesteld.\n\nProgrammadetails:\n- Data: ${dates}\n- Aantal personen: ${request.number_of_people}\n- Geldig tot: ${validUntilStr}\n\nU kunt het voorstel bekijken en akkoord geven via de knop in de e-mail.\n\nHeeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.\n\nMet vriendelijke groet,\nErwin Soolsma\nBureau Vlieland`;
@@ -630,7 +630,7 @@ const AdminQuotePreview = () => {
                         <div className="text-right text-sm">
                           <p className="font-semibold">{request.reference_number}</p>
                           <p className="text-gray-500">
-                            {format(new Date(), "d MMMM yyyy", { locale: nl })}
+                            {format(new Date(), "EEE d MMMM yyyy", { locale: nl })}
                           </p>
                         </div>
                       </div>
@@ -652,7 +652,7 @@ const AdminQuotePreview = () => {
                             </p>
                             <p>
                               {request.selected_dates
-                                .map((d) => format(new Date(d), "d MMM", { locale: nl }))
+                                .map((d) => format(new Date(d), "EEE d MMM", { locale: nl }))
                                 .join(" - ")}
                             </p>
                           </div>
@@ -670,7 +670,7 @@ const AdminQuotePreview = () => {
                             Dag {Number(dayIndex) + 1} -{" "}
                             {format(
                               new Date(request.selected_dates[Number(dayIndex)]),
-                              "d MMMM yyyy",
+                              "EEE d MMMM yyyy",
                               { locale: nl }
                             )}
                           </h3>
@@ -759,8 +759,8 @@ const AdminQuotePreview = () => {
                                 <p className="font-semibold">{accommodationQuote.accommodation_name}</p>
                                 <p className="text-sm text-gray-500">{accommodationQuote.partner_name}</p>
                                 <p className="text-sm text-gray-500 mt-1">
-                                  {format(new Date(accommodationQuote.arrival_date), "d MMM", { locale: nl })} -{" "}
-                                  {format(new Date(accommodationQuote.departure_date), "d MMM yyyy", { locale: nl })}
+                                  {format(new Date(accommodationQuote.arrival_date), "EEE d MMM", { locale: nl })} -{" "}
+                                  {format(new Date(accommodationQuote.departure_date), "EEE d MMM yyyy", { locale: nl })}
                                   {" · "}{accommodationQuote.nights} {accommodationQuote.nights === 1 ? "nacht" : "nachten"}
                                 </p>
                                 {accommodationQuote.price_per_person_per_night && (
@@ -831,8 +831,8 @@ const AdminQuotePreview = () => {
                             <p className="font-semibold text-amber-800 mb-1">Logiesaanvraag in behandeling</p>
                             <p className="text-amber-700">
                               Er loopt een logiesaanvraag voor{" "}
-                              {format(new Date(accommodationRequest.arrival_date), "d MMMM", { locale: nl })} -{" "}
-                              {format(new Date(accommodationRequest.departure_date), "d MMMM yyyy", { locale: nl })}
+                              {format(new Date(accommodationRequest.arrival_date), "EEE d MMMM", { locale: nl })} -{" "}
+                              {format(new Date(accommodationRequest.departure_date), "EEE d MMMM yyyy", { locale: nl })}
                               {" "}voor {accommodationRequest.number_of_guests} gasten.
                               {" "}Wij verwachten binnenkort voorstellen van accommodatiepartners.
                             </p>
@@ -863,7 +863,7 @@ const AdminQuotePreview = () => {
                       <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                         <p className="font-semibold text-amber-800">
                           Dit voorstel is geldig tot{" "}
-                          {format(validUntil, "d MMMM yyyy", { locale: nl })}
+                          {format(validUntil, "EEE d MMMM yyyy", { locale: nl })}
                         </p>
                         <p className="text-amber-700 mt-1">
                           U kunt de status van deze aanvraag volgen in uw klantomgeving.

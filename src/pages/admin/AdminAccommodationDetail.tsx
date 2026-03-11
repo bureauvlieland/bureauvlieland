@@ -522,7 +522,7 @@ export default function AdminAccommodationDetail() {
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Periode</p>
                       <p className="font-medium text-sm">
-                        {format(new Date(request.arrival_date), "d MMM", { locale: nl })} – {format(new Date(request.departure_date), "d MMM yyyy", { locale: nl })}
+                        {format(new Date(request.arrival_date), "EEE d MMM", { locale: nl })} – {format(new Date(request.departure_date), "EEE d MMM yyyy", { locale: nl })}
                       </p>
                       <p className="text-xs text-muted-foreground">{nights} nachten</p>
                     </div>
@@ -621,13 +621,13 @@ export default function AdminAccommodationDetail() {
                           {/* Alternative dates for declined */}
                           {quote.status === "declined" && (quote as any).proposed_arrival_date && (
                             <p className="text-xs text-primary font-medium">
-                              Alt: {format(new Date((quote as any).proposed_arrival_date), "d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "d MMM", { locale: nl })}
+                              Alt: {format(new Date((quote as any).proposed_arrival_date), "EEE d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "EEE d MMM", { locale: nl })}
                             </p>
                           )}
 
                           {/* Meta row */}
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>Geldig tot {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}</span>
+                            <span>Geldig tot {format(new Date(quote.valid_until), "EEE d MMM yyyy", { locale: nl })}</span>
                             {hasAttachment && (
                               <span className="flex items-center gap-0.5">
                                 {quote.quote_external_url ? <LinkIcon className="h-3 w-3" /> : <Paperclip className="h-3 w-3" />}
@@ -932,7 +932,7 @@ export default function AdminAccommodationDetail() {
                     <div>
                       <p className="font-medium">Aanvraag ontvangen</p>
                       <p className="text-muted-foreground">
-                        {format(new Date(request.created_at), "d MMM yyyy HH:mm", { locale: nl })}
+                        {format(new Date(request.created_at), "EEE d MMM yyyy HH:mm", { locale: nl })}
                       </p>
                     </div>
                   </div>

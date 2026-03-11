@@ -126,7 +126,7 @@ export function ProjectDateListView({ projects }: ProjectDateListViewProps) {
                 "text-sm font-semibold capitalize",
                 today ? "text-primary" : "text-foreground"
               )}>
-                {format(date, "EEEE d MMMM yyyy", { locale: nl })}
+                {format(date, "EEE d MMMM yyyy", { locale: nl })}
                 {today && <span className="ml-2 text-xs font-normal text-primary">(vandaag)</span>}
               </h3>
             </div>

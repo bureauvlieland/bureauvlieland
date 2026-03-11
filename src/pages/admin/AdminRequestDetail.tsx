@@ -592,7 +592,7 @@ const AdminRequestDetail = () => {
                 </div>
                 <div className="flex items-center gap-3 mt-1">
                   <p className="text-slate-500">
-                    Aanvraag van {format(new Date(request.created_at), "d MMMM yyyy", { locale: nl })}
+                    Aanvraag van {format(new Date(request.created_at), "EEE d MMMM yyyy", { locale: nl })}
                   </p>
                   {isQuoteMode && request.quote_status && (
                     <AdminQuoteStatusBadge status={request.quote_status} />
@@ -697,7 +697,7 @@ const AdminRequestDetail = () => {
                     <p className="font-semibold text-red-900">Aanvraag geannuleerd</p>
                     <p className="text-sm text-red-700">
                       {request.cancelled_at && (
-                        <>Op {format(new Date(request.cancelled_at), "d MMMM yyyy 'om' HH:mm", { locale: nl })}</>
+                        <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>
                       )}
                       {request.cancellation_reason && (
                         <> - {request.cancellation_reason}</>
@@ -761,7 +761,7 @@ const AdminRequestDetail = () => {
                       <div>
                         {(request.selected_dates as string[]).map((date, idx) => (
                           <div key={idx}>
-                            Dag {idx + 1}: {format(new Date(date), "d MMMM yyyy", { locale: nl })}
+                            Dag {idx + 1}: {format(new Date(date), "EEE d MMMM yyyy", { locale: nl })}
                           </div>
                         ))}
                       </div>

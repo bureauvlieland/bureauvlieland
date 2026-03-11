@@ -98,7 +98,7 @@ export const PartnerAccommodationTable = ({
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" />
                     <span>
-                      {format(arrivalDate, "d MMM", { locale: nl })} - {format(departureDate, "d MMM", { locale: nl })}
+                      {format(arrivalDate, "EEE d MMM", { locale: nl })} - {format(departureDate, "EEE d MMM", { locale: nl })}
                     </span>
                   </div>
                 </TableCell>

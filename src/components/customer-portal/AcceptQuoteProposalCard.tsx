@@ -56,7 +56,7 @@ export const AcceptQuoteProposalCard = ({
               </h2>
               <p className="text-sm text-red-700 mt-1">
                 Dit voorstel is verlopen op{" "}
-                {format(validUntil, "d MMMM yyyy", { locale: nl })}. Neem contact
+                {format(validUntil, "EEE d MMMM yyyy", { locale: nl })}. Neem contact
                 op met Bureau Vlieland voor een nieuw voorstel.
               </p>
               <div className="mt-4">
@@ -99,7 +99,7 @@ export const AcceptQuoteProposalCard = ({
               {validUntil && (
                 <Badge variant="outline" className="text-sm flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Geldig tot {format(validUntil, "d MMM", { locale: nl })}
+                  Geldig tot {format(validUntil, "EEE d MMM", { locale: nl })}
                 </Badge>
               )}
             </div>

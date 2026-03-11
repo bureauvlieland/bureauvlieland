@@ -91,7 +91,7 @@ export const DashboardTodoWidget = () => {
               <p className="text-sm font-medium truncate">{todo.title}</p>
               {todo.due_date && (
                 <p className="text-xs text-slate-500">
-                  {new Date(todo.due_date).toLocaleDateString("nl-NL")}
+                  {new Date(todo.due_date).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}
                 </p>
               )}
             </div>

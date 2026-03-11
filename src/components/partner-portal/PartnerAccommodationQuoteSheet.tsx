@@ -430,7 +430,7 @@ export const PartnerAccommodationQuoteSheet = ({
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  {format(new Date(request.arrival_date), "d MMM", { locale: nl })} - {format(new Date(request.departure_date), "d MMM", { locale: nl })}
+                  {format(new Date(request.arrival_date), "EEE d MMM", { locale: nl })} - {format(new Date(request.departure_date), "EEE d MMM", { locale: nl })}
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />

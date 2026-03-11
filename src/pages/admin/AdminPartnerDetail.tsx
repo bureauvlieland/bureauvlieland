@@ -938,7 +938,7 @@ const AdminPartnerDetail = () => {
                                     <Calendar className="h-4 w-4 text-slate-400" />
                                     <span className="text-sm">
                                       {req.selected_dates.length > 0
-                                        ? format(new Date(req.selected_dates[0]), "d MMM yyyy", { locale: nl })
+                                        ? format(new Date(req.selected_dates[0]), "EEE d MMM yyyy", { locale: nl })
                                         : "-"}
                                     </span>
                                   </div>
@@ -1043,7 +1043,7 @@ const AdminPartnerDetail = () => {
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
-                                    {format(new Date(req.arrival_date), "d MMM", { locale: nl })} - {format(new Date(req.departure_date), "d MMM", { locale: nl })}
+                                    {format(new Date(req.arrival_date), "EEE d MMM", { locale: nl })} - {format(new Date(req.departure_date), "EEE d MMM", { locale: nl })}
                                   </span>
                                 </div>
                               </TableCell>

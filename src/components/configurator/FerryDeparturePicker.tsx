@@ -58,7 +58,7 @@ export const FerryDeparturePicker = ({
   if (departures.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-3 px-1">
-        Geen afvaarten gevonden op {format(date, "d MMMM", { locale: nl })}.
+        Geen afvaarten gevonden op {format(date, "EEE d MMMM", { locale: nl })}.
       </p>
     );
   }
@@ -66,7 +66,7 @@ export const FerryDeparturePicker = ({
   return (
     <div className="space-y-1.5">
       <p className="text-xs font-medium text-muted-foreground px-1">
-        {fromLabel} → {toLabel} · {format(date, "d MMMM", { locale: nl })}
+        {fromLabel} → {toLabel} · {format(date, "EEE d MMMM", { locale: nl })}
       </p>
       <div className="grid gap-1.5">
         {departures.map((dep) => {

@@ -265,7 +265,7 @@ export default function AdminSettings() {
                           </div>
                           {setting.updated_at && (
                             <p className="text-xs text-muted-foreground mt-2">
-                              Laatst gewijzigd: {format(new Date(setting.updated_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
+                              Laatst gewijzigd: {format(new Date(setting.updated_at), "EEE d MMM yyyy 'om' HH:mm", { locale: nl })}
                             </p>
                           )}
                         </div>

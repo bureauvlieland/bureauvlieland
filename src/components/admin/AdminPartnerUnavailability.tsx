@@ -367,9 +367,9 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">
-                          {format(new Date(period.start_date), "d MMM", { locale: nl })}
+                          {format(new Date(period.start_date), "EEE d MMM", { locale: nl })}
                           {" – "}
-                          {format(new Date(period.end_date), "d MMM yyyy", { locale: nl })}
+                          {format(new Date(period.end_date), "EEE d MMM yyyy", { locale: nl })}
                         </span>
                         <Badge
                           variant={isActive ? "destructive" : "secondary"}

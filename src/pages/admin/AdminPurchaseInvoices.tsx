@@ -125,14 +125,14 @@ export default function AdminPurchaseInvoices() {
         return (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
             <ArrowRight className="h-3 w-3 mr-1" />
-            Doorgestuurd {invoice.forwarded_to_accounting_at && format(new Date(invoice.forwarded_to_accounting_at), "d MMM", { locale: nl })}
+            Doorgestuurd {invoice.forwarded_to_accounting_at && format(new Date(invoice.forwarded_to_accounting_at), "EEE d MMM", { locale: nl })}
           </Badge>
         );
       case "paid":
         return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Betaald {invoice.paid_at && format(new Date(invoice.paid_at), "d MMM", { locale: nl })}
+            Betaald {invoice.paid_at && format(new Date(invoice.paid_at), "EEE d MMM", { locale: nl })}
           </Badge>
         );
     }
@@ -326,7 +326,7 @@ export default function AdminPurchaseInvoices() {
                         <div>
                           {invoice.invoice_number}
                           <div className="text-xs text-muted-foreground">
-                            {format(new Date(invoice.invoice_date), "d MMM yyyy", { locale: nl })}
+                            {format(new Date(invoice.invoice_date), "EEE d MMM yyyy", { locale: nl })}
                           </div>
                         </div>
                       </TableCell>

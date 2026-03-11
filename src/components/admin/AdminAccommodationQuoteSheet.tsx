@@ -284,24 +284,24 @@ export function AdminAccommodationQuoteSheet({
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
-              Geldig tot: {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}
+              Geldig tot: {format(new Date(quote.valid_until), "EEE d MMM yyyy", { locale: nl })}
             </div>
             {quote.submitted_at && (
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                Ontvangen: {format(new Date(quote.submitted_at), "d MMM yyyy", { locale: nl })}
+                Ontvangen: {format(new Date(quote.submitted_at), "EEE d MMM yyyy", { locale: nl })}
               </div>
             )}
             {quote.selected_at && (
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Check className="h-3.5 w-3.5" />
-                Geselecteerd: {format(new Date(quote.selected_at), "d MMM yyyy", { locale: nl })}
+                Geselecteerd: {format(new Date(quote.selected_at), "EEE d MMM yyyy", { locale: nl })}
               </div>
             )}
             {quote.forwarded_at && (
               <div className="flex items-center gap-1.5 text-green-600">
                 <Check className="h-3.5 w-3.5" />
-                Doorgestuurd: {format(new Date(quote.forwarded_at), "d MMM yyyy", { locale: nl })}
+                Doorgestuurd: {format(new Date(quote.forwarded_at), "EEE d MMM yyyy", { locale: nl })}
               </div>
             )}
           </div>
@@ -363,7 +363,7 @@ export function AdminAccommodationQuoteSheet({
                     <div>
                       <p className="text-muted-foreground">Datum</p>
                       <p className="font-medium">
-                        {format(new Date(quote.invoiced_date), "d MMM yyyy", { locale: nl })}
+                        {format(new Date(quote.invoiced_date), "EEE d MMM yyyy", { locale: nl })}
                       </p>
                     </div>
                   )}

@@ -110,7 +110,7 @@ export const ProgramHistoryTimeline = ({ history, className = "", variant = "def
           <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm text-muted-foreground">
             <span>{sortedHistory.length} gebeurtenissen</span>
             <span>
-              Aangemaakt op {format(new Date(sortedHistory[sortedHistory.length - 1].created_at), "d MMMM yyyy", { locale: nl })}
+              Aangemaakt op {format(new Date(sortedHistory[sortedHistory.length - 1].created_at), "EEE d MMMM yyyy", { locale: nl })}
             </span>
           </div>
         </Collapsible>
@@ -167,7 +167,7 @@ export const ProgramHistoryTimeline = ({ history, className = "", variant = "def
           <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm text-muted-foreground">
             <span>{sortedHistory.length} gebeurtenissen</span>
             <span>
-              Aangemaakt op {format(new Date(sortedHistory[sortedHistory.length - 1].created_at), "d MMMM yyyy", { locale: nl })}
+              Aangemaakt op {format(new Date(sortedHistory[sortedHistory.length - 1].created_at), "EEE d MMMM yyyy", { locale: nl })}
             </span>
           </div>
         </CardContent>
@@ -229,7 +229,7 @@ const TimelineItem = ({ item, isFirst = false }: TimelineItemProps) => {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="font-medium">{label}</span>
           <span className="text-muted-foreground">
-            {format(date, "d MMM yyyy, HH:mm", { locale: nl })}
+            {format(date, "EEE d MMM yyyy, HH:mm", { locale: nl })}
           </span>
           {isFirst && (
             <Badge variant="outline" className="text-xs">Nieuwste</Badge>

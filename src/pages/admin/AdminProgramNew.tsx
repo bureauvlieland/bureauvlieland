@@ -426,7 +426,7 @@ const AdminProgramNewContent = () => {
                         .sort((a, b) => a.getTime() - b.getTime())
                         .map((date) => (
                           <Badge key={date.toISOString()} variant="secondary" className="text-xs">
-                            {format(date, "d MMM", { locale: nl })}
+                            {format(date, "EEE d MMM", { locale: nl })}
                           </Badge>
                         ))}
                     </div>
@@ -473,7 +473,7 @@ const AdminProgramNewContent = () => {
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formData.quoteValidUntil
-                          ? format(formData.quoteValidUntil, "d MMMM yyyy", { locale: nl })
+                          ? format(formData.quoteValidUntil, "EEE d MMMM yyyy", { locale: nl })
                           : "Selecteer datum"}
                       </Button>
                     </PopoverTrigger>
@@ -527,14 +527,14 @@ const AdminProgramNewContent = () => {
                     <span>
                       {formData.selectedDates
                         .sort((a, b) => a.getTime() - b.getTime())
-                        .map((d) => format(d, "d MMM", { locale: nl }))
+                        .map((d) => format(d, "EEE d MMM", { locale: nl }))
                         .join(", ")}
                     </span>
                   </div>
                   {formData.programType === "quote" && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Geldig tot:</span>
-                      <span>{format(formData.quoteValidUntil, "d MMMM yyyy", { locale: nl })}</span>
+                      <span>{format(formData.quoteValidUntil, "EEE d MMMM yyyy", { locale: nl })}</span>
                     </div>
                   )}
                 </div>

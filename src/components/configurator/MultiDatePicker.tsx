@@ -75,7 +75,7 @@ export const MultiDatePicker = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium"
             >
               <span className="text-xs text-primary/70">Dag {index + 1}:</span>
-              <span>{format(date, "d MMM", { locale: nl })}</span>
+              <span>{format(date, "EEE d MMM", { locale: nl })}</span>
               <button
                 onClick={() => onRemoveDate(index)}
                 className="ml-1 p-0.5 hover:bg-primary/20 rounded-full transition-colors"

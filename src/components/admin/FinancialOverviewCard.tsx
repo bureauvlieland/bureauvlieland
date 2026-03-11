@@ -280,7 +280,7 @@ export const FinancialOverviewCard = ({
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{invoice.invoice_number}</span>
                       <span className="text-slate-500">
-                        ({format(new Date(invoice.invoice_date), "d MMM", { locale: nl })})
+                        ({format(new Date(invoice.invoice_date), "EEE d MMM", { locale: nl })})
                       </span>
                       <Badge variant="outline" className="text-xs">
                         {invoiceTypeLabelMap[invoice.invoice_type as InvoiceType] || invoice.invoice_type}

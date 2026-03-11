@@ -375,7 +375,7 @@ const AdminMessages = () => {
                                 <Calendar className="h-4 w-4 text-slate-400" />
                                 <div>
                                   <div className="font-medium">
-                                    {format(new Date(email.created_at), "d MMM yyyy", { locale: nl })}
+                                    {format(new Date(email.created_at), "EEE d MMM yyyy", { locale: nl })}
                                   </div>
                                   <div className="text-slate-500">
                                     {format(new Date(email.created_at), "HH:mm")}

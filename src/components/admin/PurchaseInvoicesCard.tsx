@@ -125,7 +125,7 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                         <span className="text-sm text-muted-foreground">{invoice.partner?.name}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{format(new Date(invoice.invoice_date), "d MMM yyyy", { locale: nl })}</span>
+                        <span>{format(new Date(invoice.invoice_date), "EEE d MMM yyyy", { locale: nl })}</span>
                         <span>•</span>
                         <span>€{Number(invoice.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })} excl.</span>
                         {invoice.description && (

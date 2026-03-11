@@ -519,7 +519,7 @@ const TakenTab = () => {
             {isSnoozed && (
               <Badge variant="outline" className="bg-purple-50 text-purple-700">
                 <AlarmClock className="h-3 w-3 mr-1" />
-                Snoozed tot {format(new Date(todo.snoozed_until!), "d MMM", { locale: nl })}
+                Snoozed tot {format(new Date(todo.snoozed_until!), "EEE d MMM", { locale: nl })}
               </Badge>
             )}
           </div>
@@ -532,7 +532,7 @@ const TakenTab = () => {
             {todo.due_date && (
               <span className={`flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
                 <Calendar className="h-3 w-3" />
-                {format(new Date(todo.due_date), "d MMM yyyy", { locale: nl })}
+                {format(new Date(todo.due_date), "EEE d MMM yyyy", { locale: nl })}
                 {isOverdue && " (verlopen)"}
               </span>
             )}
@@ -1031,7 +1031,7 @@ const EmailLogTab = () => {
                       return (
                         <TableRow key={email.id}>
                           <TableCell className="whitespace-nowrap text-sm">
-                            <div>{format(new Date(email.created_at), "d MMM yyyy", { locale: nl })}</div>
+                            <div>{format(new Date(email.created_at), "EEE d MMM yyyy", { locale: nl })}</div>
                             <div className="text-muted-foreground">{format(new Date(email.created_at), "HH:mm")}</div>
                           </TableCell>
                           <TableCell>
@@ -1198,7 +1198,7 @@ const ActivityLogTab = () => {
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          <div>{format(new Date(log.created_at), "d MMM yyyy", { locale: nl })}</div>
+                          <div>{format(new Date(log.created_at), "EEE d MMM yyyy", { locale: nl })}</div>
                           <div className="text-muted-foreground">{format(new Date(log.created_at), "HH:mm:ss")}</div>
                         </TableCell>
                         <TableCell><Badge className={actionInfo.color} variant="secondary">{actionInfo.label}</Badge></TableCell>

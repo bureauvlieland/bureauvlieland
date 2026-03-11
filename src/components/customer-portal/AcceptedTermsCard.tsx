@@ -67,7 +67,7 @@ export const AcceptedTermsCard = ({
               <span className="text-muted-foreground">Geaccepteerd op:</span>
             </div>
             <div className="font-medium">
-              {format(parseISO(termsAcceptedAt), "d MMMM yyyy 'om' HH:mm", { locale: nl })}
+              {format(parseISO(termsAcceptedAt), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}
             </div>
             {signatureName && (
               <>

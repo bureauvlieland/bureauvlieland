@@ -162,8 +162,8 @@ export const AccommodationSection = ({
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {format(new Date(accommodation.arrival_date), "d MMM", { locale: nl })} -{" "}
-                    {format(new Date(accommodation.departure_date), "d MMM", { locale: nl })}
+                    {format(new Date(accommodation.arrival_date), "EEE d MMM", { locale: nl })} -{" "}
+                    {format(new Date(accommodation.departure_date), "EEE d MMM", { locale: nl })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -323,7 +323,7 @@ export const AccommodationSection = ({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
                   <Clock className="h-3 w-3" />
                   <span>
-                    Geldig t/m {format(new Date(expiredQuotes[0].valid_until), "d MMMM yyyy", { locale: nl })}
+                    Geldig t/m {format(new Date(expiredQuotes[0].valid_until), "EEE d MMMM yyyy", { locale: nl })}
                   </span>
                 </div>
               </div>
@@ -357,8 +357,8 @@ export const AccommodationSection = ({
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>
-              {format(new Date(accommodation.arrival_date), "d MMM", { locale: nl })} -{" "}
-              {format(new Date(accommodation.departure_date), "d MMM", { locale: nl })}
+              {format(new Date(accommodation.arrival_date), "EEE d MMM", { locale: nl })} -{" "}
+              {format(new Date(accommodation.departure_date), "EEE d MMM", { locale: nl })}
             </span>
           </div>
           <div className="flex items-center gap-2">
