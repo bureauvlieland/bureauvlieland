@@ -697,7 +697,7 @@ const AdminRequestDetail = () => {
                     <p className="font-semibold text-red-900">Aanvraag geannuleerd</p>
                     <p className="text-sm text-red-700">
                       {request.cancelled_at && (
-                        <>Op {format(new Date(request.cancelled_at), "d MMMM yyyy 'om' HH:mm", { locale: nl })}</>
+                        <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>
                       )}
                       {request.cancellation_reason && (
                         <> - {request.cancellation_reason}</>
