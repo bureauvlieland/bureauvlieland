@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { addDays } from "date-fns";
 import { type CartItemDetail } from "@/types/buildingBlock";
 import { useProgramDraft, type DraftProgram } from "@/hooks/useProgramDraft";
 import { trackAddToCart, trackRemoveFromCart } from "@/lib/analytics";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { DEFAULT_GROUP_SIZE } from "@/lib/appSettings";
 import type { ProgramTemplate } from "@/types/programTemplate";
-import { loadTemplateToCart } from "@/lib/templateLoader";
 
 const MAX_DAYS = 7;
 
