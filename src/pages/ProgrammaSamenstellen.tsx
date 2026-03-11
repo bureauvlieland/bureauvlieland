@@ -10,8 +10,7 @@ import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDial
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import type { CartItemDetail } from "@/types/buildingBlock";
-import type { ProgramTemplate } from "@/types/programTemplate";
-import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
+import heroImage from "@/assets/beach-signs.jpg";
 import heroImage from "@/assets/beach-signs.jpg";
 
 type Phase = "basics" | "program";
