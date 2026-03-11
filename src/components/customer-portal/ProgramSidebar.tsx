@@ -114,10 +114,55 @@ export const ProgramSidebar = ({
       )}
 
 
-      {/* Fietsverhuur & Boottickets */}
+      {/* Horeca advertenties */}
       <div className="space-y-3">
-        <FietsverhuurBanner variant="sidebar" />
-        <BootticketBanner variant="sidebar" />
+        <a
+          href="https://olivavlieland.nl"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-xl overflow-hidden border group hover:shadow-md transition-shadow"
+        >
+          <div className="relative h-28 overflow-hidden">
+            <img src={outdoorDining} alt="Trattoria Oliva" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <span className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
+              <UtensilsCrossed className="h-4 w-4" />
+              Trattoria Oliva
+            </span>
+          </div>
+          <div className="p-3 bg-card">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Authentiek Italiaans dineren op Vlieland.
+            </p>
+            <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
+              Bekijk menu <ExternalLink className="h-3 w-3" />
+            </span>
+          </div>
+        </a>
+
+        <a
+          href="https://cafeboven.nl"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-xl overflow-hidden border group hover:shadow-md transition-shadow"
+        >
+          <div className="relative h-28 overflow-hidden">
+            <img src={outdoorDrinks} alt="Café Boven" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <span className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
+              <Coffee className="h-4 w-4" />
+              Café Boven
+            </span>
+          </div>
+          <div className="p-3 bg-card">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Gezellig borrelen met uitzicht over het dorp.
+            </p>
+            <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
+              Meer info <ExternalLink className="h-3 w-3" />
+            </span>
+          </div>
+        </a>
       </div>
 
       {/* Quick actions */}
