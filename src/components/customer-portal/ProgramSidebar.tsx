@@ -1,7 +1,6 @@
 import { StatusSummary } from "./StatusSummary";
-import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Ban } from "lucide-react";
+import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
 import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
