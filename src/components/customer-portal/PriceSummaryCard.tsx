@@ -265,6 +265,22 @@ export const PriceSummaryCard = ({
             );
           })}
 
+          {/* Tourist tax line */}
+          <div className="py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
+              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.touristTax)}</span>
+            </div>
+          </div>
+
+          {/* Nature contribution line */}
+          <div className="py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Natuurbijdrage Staatsbosbeheer ({numberOfPeople} pers.)</span>
+              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.natureContribution)}</span>
+            </div>
+          </div>
+
           {/* Coordination fee line */}
           <div className="py-2">
             <div className="flex items-center justify-between">
