@@ -100,7 +100,7 @@ export const AiErwinDialog = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col overflow-hidden">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -111,7 +111,7 @@ export const AiErwinDialog = ({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 space-y-6 py-6">
+        <div className="flex-1 space-y-6 py-6 overflow-y-auto">
           {/* Vibe picker */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Welke sfeer past bij uw groep?</Label>
