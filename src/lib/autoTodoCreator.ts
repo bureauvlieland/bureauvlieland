@@ -148,6 +148,9 @@ export const autoTodoTitles = {
 
   quote_expired_partner: (partnerName: string, customerName: string) =>
     `Logiesofferte ${partnerName} voor ${customerName} is verlopen`,
+
+  all_partners_responded: (referenceNumber: string, customerName: string) =>
+    `Alle partners hebben gereageerd op ${referenceNumber} (${customerName})`,
 };
 
 /**
