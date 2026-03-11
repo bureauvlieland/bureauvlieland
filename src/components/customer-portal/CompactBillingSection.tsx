@@ -73,6 +73,7 @@ export const CompactBillingSection = ({
       <PriceSummaryCard
         items={items}
         numberOfPeople={numberOfPeople}
+        numberOfDays={numberOfDays}
         termsAccepted={termsAccepted}
         selectedAccommodationQuote={selectedAccommodationQuote}
         invoicingMode={invoicingMode}
