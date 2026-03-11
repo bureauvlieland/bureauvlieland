@@ -110,14 +110,10 @@ export const ContactAccommodationDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            {isBureauCentral
-              ? "Bericht via Bureau Vlieland"
-              : `Contact opnemen met ${accommodationName}`}
+            Bericht via Bureau Vlieland
           </DialogTitle>
           <DialogDescription>
-            {isBureauCentral
-              ? "Uw bericht wordt via Bureau Vlieland doorgestuurd naar de accommodatie. Bureau Vlieland fungeert als tussenpersoon voor alle communicatie."
-              : "Stuur een bericht naar de accommodatie, bijvoorbeeld over wijzigingen in uw reservering. Zij antwoorden rechtstreeks per e-mail."}
+            Uw bericht wordt via Bureau Vlieland doorgestuurd naar de accommodatie. Bureau Vlieland fungeert als tussenpersoon voor alle communicatie.
           </DialogDescription>
         </DialogHeader>
 

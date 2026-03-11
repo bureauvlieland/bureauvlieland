@@ -115,6 +115,7 @@ export const CheckoutContactForm = ({
           preferred_time: block.preferredTime || null,
           customer_notes: block.itemNotes || null,
           status: "pending",
+          skip_partner_notification: true,
           price_type: fullBlock?.price_type || "per_person",
           external_url: block.externalUrl || null,
         };

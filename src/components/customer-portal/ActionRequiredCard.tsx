@@ -179,7 +179,7 @@ export const ActionRequiredCard = ({
       return {
         type: "complete",
         title: "Uw boeking is compleet!",
-        description: "U ontvangt de facturen van de verschillende aanbieders. Wij wensen u veel plezier op Vlieland!",
+        description: "U ontvangt de factuur van Bureau Vlieland. Wij wensen u veel plezier op Vlieland!",
         icon: <PartyPopper className="h-5 w-5" />,
         variant: "success",
       };

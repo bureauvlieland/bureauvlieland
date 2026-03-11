@@ -417,47 +417,6 @@ export const PriceSummaryCard = ({
             </div>
           )}
 
-          {/* Partner invoices section - only in partner_direct mode */}
-          {!isBureauCentral && summary.hasPartnerItems && (
-            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span>Facturen aanbieders</span>
-              </div>
-              
-              {/* Individual partner items */}
-              {items
-                .filter(i => i.block_type === "partner" && i.status === "confirmed" && i.quoted_price !== null)
-                .map(item => {
-                  const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
-                  return (
-                    <div key={item.id} className="pl-6 space-y-0.5">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{item.block_name}</span>
-                        <span className="whitespace-nowrap">€{formatPrice(item.quoted_price || 0)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
-                      </div>
-                      {item.admin_price_notes && (
-                        <p className="text-xs text-muted-foreground/70 break-words">{item.admin_price_notes}</p>
-                      )}
-                    </div>
-                  );
-                })}
-
-              {/* VAT breakdown for Partners */}
-              <div className="border-t pt-2 mt-2 space-y-1 pl-6">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Subtotaal excl. BTW</span>
-                  <span>€{formatPrice(summary.partnerExclVat)}</span>
-                </div>
-                {Object.entries(summary.partnerVatLines).sort(([a], [b]) => Number(a) - Number(b)).map(([rate, v]) => (
-                  <div key={rate} className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>BTW ({rate}%)</span>
-                    <span>€{formatPrice(v.vatAmount)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Grand total with VAT */}
           <div className="bg-muted/30 rounded-lg p-3 space-y-2">

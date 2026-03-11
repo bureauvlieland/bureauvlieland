@@ -209,8 +209,8 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
             </div>
           )}
 
-          {/* Partner items - only show individually in partner_direct mode */}
-          {!isBureauCentral && partnerProviders.map((provider) => {
+          {/* Partner items - removed: always bureau_central */}
+          {false && partnerProviders.map((provider) => {
             const providerItems = items.filter(i => i.provider_id === provider.id && i.status !== "cancelled" && i.block_type === "partner");
             const hasPreliminaryPrice = providerItems.some(i => !i.quoted_price && i.admin_price_override);
             

@@ -118,7 +118,7 @@ export const CustomerProgramItem = ({
                     Goedgekeurd
                   </Badge>
                 ) : (
-                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={(isPreApproval || invoicingMode === "bureau_central") && item.status === "pending" ? "In voorbereiding" : undefined} />
+                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : isPreApproval && item.status === "pending" ? "In voorbereiding" : undefined} />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
