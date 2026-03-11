@@ -2,6 +2,8 @@ import { addDays } from "date-fns";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import type { CartItemDetail } from "@/types/buildingBlock";
 
+const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
+
 interface CartContextForLoader {
   clearCart: () => void;
   setSelectedDate: (date: Date | undefined) => void;
