@@ -149,7 +149,7 @@ export const ActionRequiredCard = ({
       return {
         type: "billing",
         title: "Facturatiegegevens invullen",
-        description: "Vul uw bedrijfsgegevens in zodat de aanbieders u kunnen factureren.",
+        description: "Vul uw bedrijfsgegevens in zodat Bureau Vlieland kan factureren.",
         icon: <FileText className="h-5 w-5" />,
         variant: "warning",
         cta: {
