@@ -1,7 +1,7 @@
 import { StatusSummary } from "./StatusSummary";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Ban, ArrowRight } from "lucide-react";
+import { RefreshCw, Ban } from "lucide-react";
 import { FietsverhuurBanner } from "@/components/FietsverhuurBanner";
 import { BootticketBanner } from "@/components/BootticketBanner";
 import { cn } from "@/lib/utils";
