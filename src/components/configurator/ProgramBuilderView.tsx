@@ -231,10 +231,18 @@ export const ProgramBuilderView = ({
             )}
           </div>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
-          <Sparkles className="h-3.5 w-3.5" />
-          Erwin's voorstel
-        </Button>
+        <div className="flex items-center gap-2">
+          {templates.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsTemplatesOpen(true)}>
+              <BookOpen className="h-3.5 w-3.5" />
+              Voorbeeldprogramma's
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5" />
+            Erwin's voorstel
+          </Button>
+        </div>
       </div>
 
       {/* Day tabs + timeline */}
