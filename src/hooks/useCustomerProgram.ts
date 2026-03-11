@@ -213,7 +213,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
             .from("accommodation_quotes")
             .select(`*, partner:partners(id, name, email)`)
             .eq("request_id", accomData.id)
-            .in("status", ["submitted", "selected", "expired"])
+            .in("status", ["submitted", "selected", "expired", "declined"])
             .order("price_per_person_per_night", { ascending: true });
 
           if (quotesData) {

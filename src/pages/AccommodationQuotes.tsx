@@ -175,7 +175,7 @@ export default function AccommodationQuotes() {
 
         {/* Status banner */}
         <div className="mb-8">
-          <AccommodationStatusBanner request={request} quotesSummary={quotesSummary} />
+          <AccommodationStatusBanner request={request} quotesSummary={quotesSummary} quotes={quotes} />
         </div>
 
         {/* Quotes section */}

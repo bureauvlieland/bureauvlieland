@@ -93,7 +93,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
           partner:partners(id, name, email)
         `)
         .eq('request_id', requestData.id)
-        .in('status', ['submitted', 'selected', 'expired'])
+        .in('status', ['submitted', 'selected', 'expired', 'declined'])
         .order('price_per_person_per_night', { ascending: true });
 
       if (quotesError) {

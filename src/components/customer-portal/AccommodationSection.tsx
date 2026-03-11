@@ -12,6 +12,7 @@ import {
   Pencil,
   Mail,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,15 @@ export const AccommodationSection = ({
   const selectedQuote = quotes.find((q) => q.status === "selected");
   const submittedQuotes = quotes.filter((q) => q.status === "submitted");
   const expiredQuotes = quotes.filter((q) => q.status === "expired");
+  const declinedQuotes = quotes.filter((q) => q.status === "declined" || q.status === "rejected");
+
+  // Deduplicated decline reasons (anonymized - no partner names)
+  const declineReasons = useMemo(() => {
+    const reasons = declinedQuotes
+      .map((q) => q.partner_notes)
+      .filter((note): note is string => !!note && note.trim().length > 0);
+    return [...new Set(reasons)];
+  }, [declinedQuotes]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
@@ -336,18 +346,30 @@ export const AccommodationSection = ({
 
   // State 4: Waiting for quotes
   const accommodationType = ACCOMMODATION_TYPES.find((t) => t.value === accommodation.accommodation_type);
+  const requested = accommodation.quotes_requested_count || 0;
+  const declined = accommodation.quotes_declined_count || 0;
+  const allDeclined = requested > 0 && declined >= requested;
 
   return (
-    <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+    <Card className={allDeclined
+      ? "border-destructive/30 bg-destructive/5 dark:border-destructive/50 dark:bg-destructive/10"
+      : "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+    }>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <BedDouble className="h-5 w-5 text-amber-600" />
+            <BedDouble className={`h-5 w-5 ${allDeclined ? "text-destructive" : "text-amber-600"}`} />
             Uw Logiesaanvraag
           </CardTitle>
-          <Badge variant="outline" className="border-amber-500 text-amber-700">
-            <Clock className="h-3 w-3 mr-1" />
-            In behandeling
+          <Badge variant="outline" className={allDeclined
+            ? "border-destructive text-destructive"
+            : "border-amber-500 text-amber-700"
+          }>
+            {allDeclined ? (
+              <><AlertTriangle className="h-3 w-3 mr-1" /> Geen beschikbaarheid</>
+            ) : (
+              <><Clock className="h-3 w-3 mr-1" /> In behandeling</>
+            )}
           </Badge>
         </div>
       </CardHeader>
@@ -380,27 +402,62 @@ export const AccommodationSection = ({
         </div>
 
         {/* Status message */}
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-          <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              {(() => {
-                const requested = accommodation.quotes_requested_count || 0;
-                const declined = accommodation.quotes_declined_count || 0;
-                const parts: string[] = [];
-                if (requested > 0) {
-                  parts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd.`);
-                }
-                if (declined > 0) {
-                  parts.push(`${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} helaas afgewezen.`);
-                }
-                parts.push('U ontvangt een email zodra er offertes binnenkomen.');
-                return parts.join(' ');
-              })()}
-            </p>
-            <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
+        {allDeclined ? (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 dark:bg-destructive/20">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive">
+                Helaas hebben alle {requested} benaderde partner{requested !== 1 ? 's' : ''} de aanvraag afgewezen.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Bureau Vlieland zoekt naar alternatieven en neemt contact met u op.
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+            <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {(() => {
+                  const waiting = Math.max(0, requested - declined);
+                  const parts: string[] = [];
+                  if (requested > 0) {
+                    parts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd.`);
+                  }
+                  if (declined > 0) {
+                    parts.push(`${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} helaas afgewezen.`);
+                  }
+                  if (waiting > 0) {
+                    parts.push(`Wij wachten nog op ${waiting} partner${waiting !== 1 ? 's' : ''}.`);
+                  } else {
+                    parts.push('U ontvangt een email zodra er offertes binnenkomen.');
+                  }
+                  return parts.join(' ');
+                })()}
+              </p>
+              <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
+            </div>
+          </div>
+        )}
+
+        {/* Decline reasons (anonymized) */}
+        {declineReasons.length > 0 && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+            <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Opgegeven redenen van afwijzing:</p>
+              <ul className="text-xs text-muted-foreground space-y-0.5">
+                {declineReasons.map((reason, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground/50 shrink-0" />
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
 
         {/* Edit button */}
         {onEditAccommodation && (
