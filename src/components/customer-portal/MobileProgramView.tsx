@@ -106,7 +106,7 @@ interface MobileProgramViewProps {
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
-  onAddActivity: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
+  onAddActivity: (blockId: string) => void;
   // Accommodation
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
