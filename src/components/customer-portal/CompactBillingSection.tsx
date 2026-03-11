@@ -31,6 +31,7 @@ export const CompactBillingSection = ({
   program,
   items,
   numberOfPeople,
+  numberOfDays,
   termsAccepted,
   selectedAccommodationQuote,
   onEditBilling,
