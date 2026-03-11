@@ -168,16 +168,54 @@ export const ProgramBuilderView = ({
             {contactName ? `Programma van ${contactName}` : "Uw programma"}
           </h2>
           <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" />
-              {numberOfPeople} personen
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {selectedDates.length === 1
-                ? format(selectedDates[0], "d MMMM yyyy", { locale: nl })
-                : `${selectedDates.length} dagen`}
-            </span>
+            {/* Editable people count */}
+            <Popover open={editPeople} onOpenChange={(open) => { setEditPeople(open); if (open) setTempPeople(numberOfPeople); }}>
+              <PopoverTrigger asChild>
+                <button className="inline-flex items-center gap-1 hover:text-foreground transition-colors group">
+                  <Users className="h-3.5 w-3.5" />
+                  {numberOfPeople} personen
+                  <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3" align="start" side="bottom" sideOffset={8}>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Aantal personen</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={tempPeople}
+                    onChange={(e) => setTempPeople(Number(e.target.value))}
+                    className="h-9"
+                  />
+                  <Button size="sm" className="h-9" onClick={() => { onUpdatePeople(tempPeople); setEditPeople(false); }}>
+                    OK
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Editable dates */}
+            <Popover open={editDates} onOpenChange={setEditDates}>
+              <PopoverTrigger asChild>
+                <button className="inline-flex items-center gap-1 hover:text-foreground transition-colors group">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {selectedDates.length === 1
+                    ? format(selectedDates[0], "d MMMM yyyy", { locale: nl })
+                    : `${selectedDates.length} dagen`}
+                  <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3" align="start" side="bottom" sideOffset={8}>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Datum(s)</label>
+                <MultiDatePicker
+                  selectedDates={selectedDates}
+                  onAddDate={onAddDate}
+                  onRemoveDate={onRemoveDate}
+                />
+              </PopoverContent>
+            </Popover>
+
             {eventType && (
               <Badge variant="secondary" className="text-xs">
                 {eventType}
@@ -185,16 +223,10 @@ export const ProgramBuilderView = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
-            <Sparkles className="h-3.5 w-3.5" />
-            Erwin's voorstel
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={onEditBasics}>
-            <Pencil className="h-3.5 w-3.5" />
-            Wijzig gegevens
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
+          <Sparkles className="h-3.5 w-3.5" />
+          Erwin's voorstel
+        </Button>
       </div>
 
       {/* Day tabs + timeline */}
