@@ -11,7 +11,6 @@ import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import heroImage from "@/assets/beach-signs.jpg";
-import heroImage from "@/assets/beach-signs.jpg";
 
 type Phase = "basics" | "program";
 
