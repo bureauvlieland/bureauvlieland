@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen } from "lucide-react";
+import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {

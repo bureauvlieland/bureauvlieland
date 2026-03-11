@@ -206,7 +206,7 @@ const ProgrammaSamenstellen = () => {
         />
       )}
 
-      <RequestFormModal
+      <ReviewAndSubmitSheet
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         cartItems={cartItems}
