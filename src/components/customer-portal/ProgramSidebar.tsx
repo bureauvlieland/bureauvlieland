@@ -45,7 +45,7 @@ export const ProgramSidebar = ({
   onCancel,
   items,
   numberOfPeople,
-  selectedAccommodationQuote,
+  numberOfDays,
   accommodation,
   isMultiDay = false,
   isPreApproval = false,
