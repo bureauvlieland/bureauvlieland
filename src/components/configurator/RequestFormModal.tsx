@@ -208,10 +208,8 @@ export const RequestFormModal = ({
 
       if (error) throw error;
 
-      // Track conversion event with event type and entry page
-      const indicativeValue = calculateIndicativeTotal(blocks, numberOfPeople);
       trackProgramRequestSubmitted({
-        value: indicativeValue,
+        value: 0,
         numberOfPeople,
         numberOfDays: effectiveDates.length,
         eventType: finalEventType,

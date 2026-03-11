@@ -134,6 +134,14 @@ export const ProgramEditor = ({
 
   const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
 
+  const getCartItem = (blockId: string): CartItemDetail | undefined => {
+    return cartItems.find((item) => item.blockId === blockId);
+  };
+
+  const getBlock = (blockId: string): BuildingBlock | undefined => {
+    return blocks.find((block) => block.id === blockId);
+  };
+
   const itemCountPerDay = useMemo(() => {
     const counts: number[] = effectiveDates.map(() => 0);
     cartItems.forEach(item => {
