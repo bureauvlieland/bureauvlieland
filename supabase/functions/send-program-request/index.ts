@@ -241,7 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
         ${groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0 ? `
         <div style="margin: 20px 0;">
           <h3 style="color: #2d3748;">Aangevraagde onderdelen</h3>
-          <p style="color: #718096; font-size: 14px;">Deze worden door de betreffende aanbieders bevestigd:</p>
+          <p style="color: #718096; font-size: 14px;">Bureau Vlieland coördineert deze onderdelen en houdt u op de hoogte:</p>
           <ul style="padding-left: 20px;">
             ${buildBlocksListHtml([...groupedBlocks.bureau, ...groupedBlocks.partner])}
           </ul>
