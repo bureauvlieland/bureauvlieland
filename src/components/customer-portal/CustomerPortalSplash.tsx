@@ -320,12 +320,7 @@ export const CustomerPortalSplash = ({
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
                   <Receipt className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="text-xs text-muted-foreground">
-                    {effectiveInvoicingMode === "partner_direct" ? (
-                      <>
-                        <strong>Factuur van:</strong> de accommodatieaanbieder rechtstreeks aan u.
-                        Bureau Vlieland is geen partij in de financiële afhandeling van het logies.
-                      </>
-                    ) : effectiveInvoicingMode === "bureau_central" ? (
+                    {effectiveInvoicingMode === "bureau_central" ? (
                       <>
                         <strong>Factuur van:</strong> Bureau Vlieland.
                         De accommodatieaanbieder factureert Bureau Vlieland (inkoop).
@@ -333,7 +328,6 @@ export const CustomerPortalSplash = ({
                     ) : (
                       <>
                         <strong>Factuur van:</strong> Bureau Vlieland.
-                        Facturatiemodel wordt geladen.
                       </>
                     )}
                   </div>
