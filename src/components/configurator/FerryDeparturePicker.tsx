@@ -58,7 +58,7 @@ export const FerryDeparturePicker = ({
   if (departures.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-3 px-1">
-        Geen afvaarten gevonden op {format(date, "d MMMM", { locale: nl })}.
+        Geen afvaarten gevonden op {format(date, "EEE d MMMM", { locale: nl })}.
       </p>
     );
   }
