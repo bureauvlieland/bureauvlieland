@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, ChevronLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
+import fallbackImage from "@/assets/vlieland-beach.jpg";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
@@ -70,15 +71,13 @@ export const TemplateSelector = ({
             className="overflow-hidden hover:border-primary/50 transition-all duration-200 group cursor-pointer"
             onClick={() => setPreviewTemplate(template.id)}
           >
-            {template.image_url && (
-              <div className="aspect-[16/9] overflow-hidden bg-muted">
-                <img
-                  src={template.image_url}
-                  alt={template.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            )}
+            <div className="aspect-[16/9] overflow-hidden bg-muted">
+              <img
+                src={template.image_url || fallbackImage}
+                alt={template.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
             <CardContent className="p-4">
               <div className="mb-2">
                 <h3 className="font-semibold text-lg text-foreground">
