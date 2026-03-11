@@ -231,13 +231,6 @@ export const PriceSummaryCard = ({
             </div>
           )}
           
-          {/* Partner activiteiten - muted - only in partner_direct */}
-          {!isBureauCentral && summary.hasPartnerItems && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Aanbieders</span>
-              <span className="text-muted-foreground">€{formatPrice(summary.partnerTotal)}</span>
-            </div>
-          )}
           
           {/* Totaal */}
           <div className="flex items-center justify-between pt-1.5 border-t">
