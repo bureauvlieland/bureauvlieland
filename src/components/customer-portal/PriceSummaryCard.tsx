@@ -174,6 +174,14 @@ export const PriceSummaryCard = ({
             </div>
           )}
           <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Toeristenbelasting</span>
+            <span>€{formatPrice(summary.touristTax)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Natuurbijdrage</span>
+            <span>€{formatPrice(summary.natureContribution)}</span>
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Coördinatiefee</span>
             <span>€{formatPrice(summary.coordinationFee)}</span>
           </div>
