@@ -39,6 +39,7 @@ const ProgrammaSamenstellen = () => {
     restoreDraft,
     dismissDraft,
     clearCart,
+    reorderItems,
   } = useCart();
 
   const [phase, setPhase] = useState<Phase>(
@@ -177,6 +178,7 @@ const ProgrammaSamenstellen = () => {
                 onRemoveItem={removeFromCart}
                 onAddItem={handleAddItem}
                 onUpdateItem={updateItem}
+                onReorderItems={reorderItems}
                 onSubmit={handleSubmit}
                 onEditBasics={() => setPhase("basics")}
                 onReplaceWithSuggestion={handleErwinSuggestion}
