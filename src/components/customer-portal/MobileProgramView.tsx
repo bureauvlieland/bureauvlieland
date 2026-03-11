@@ -451,6 +451,7 @@ export const MobileProgramView = ({
                       isPreApproval={isPreApproval}
                       isQuoteMode={isQuoteMode}
                       vatRate={getItemVatRate(item)}
+                      readOnly={!isPublished}
                     />
                   )}
                 </CustomerTimeline>
