@@ -339,14 +339,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 4. Update quote_status to akkoord_ontvangen (skip if already set for admin re-runs)
-    if (!(isAdmin && program.quote_status === "akkoord_ontvangen")) {
+    // 4. Update quote_status and program_published_at
+    // For self_service programs, skip quote_status update (they don't use quotes)
+    const isSelfService = program.program_type === "self_service";
+    const updateFields: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+    
+    if (!isSelfService && !(isAdmin && program.quote_status === "akkoord_ontvangen")) {
+      updateFields.quote_status = "akkoord_ontvangen";
+    }
+    
+    // Always set program_published_at if not yet set (admin sending to partners = publishing)
+    if (!program.program_published_at) {
+      updateFields.program_published_at = new Date().toISOString();
+    }
+    
+    if (Object.keys(updateFields).length > 1) { // more than just updated_at
       const { error: updateProgramError } = await supabase
         .from("program_requests")
-        .update({
-          quote_status: "akkoord_ontvangen",
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateFields)
         .eq("id", program.id);
 
       if (updateProgramError) {
