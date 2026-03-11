@@ -54,6 +54,13 @@ interface RequestFormModalProps {
   numberOfPeople: number;
   selectedDate: Date | undefined;
   selectedDates?: Date[];
+  prefillData?: {
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+    eventType: string;
+  };
 }
 
 export const RequestFormModal = ({
@@ -63,6 +70,7 @@ export const RequestFormModal = ({
   numberOfPeople,
   selectedDate,
   selectedDates = [],
+  prefillData,
 }: RequestFormModalProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,12 +78,12 @@ export const RequestFormModal = ({
   const [successBlocks, setSuccessBlocks] = useState<BuildingBlock[]>([]);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
+    name: prefillData?.name || "",
+    email: prefillData?.email || "",
+    phone: prefillData?.phone || "",
+    company: prefillData?.company || "",
     notes: "",
-    eventType: "",
+    eventType: prefillData?.eventType || "",
   });
 
   // Pre-fill event type based on entry page
@@ -258,12 +266,12 @@ export const RequestFormModal = ({
       setSuccessBlocks([]);
       setCustomerToken(null);
       setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
+        name: prefillData?.name || "",
+        email: prefillData?.email || "",
+        phone: prefillData?.phone || "",
+        company: prefillData?.company || "",
         notes: "",
-        eventType: "",
+        eventType: prefillData?.eventType || "",
       });
     }
     onClose();
