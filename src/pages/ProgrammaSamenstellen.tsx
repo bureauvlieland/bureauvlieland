@@ -88,6 +88,16 @@ const ProgrammaSamenstellen = () => {
     }
   }, [cartItems.length, phase]);
 
+  // Auto-add default blocks (ferry + bike rental) when entering build phase
+  const DEFAULT_BLOCK_IDS = ["boot-retour", "fiets-huur"];
+  useEffect(() => {
+    if (phase === "manual") {
+      DEFAULT_BLOCK_IDS.forEach(id => {
+        if (!isInCart(id)) addToCart(id, 0);
+      });
+    }
+  }, [phase]);
+
   const handleRestoreDraft = () => {
     restoreDraft();
     toast({ title: "Concept hersteld", description: "Uw eerder opgeslagen programma is geladen." });
