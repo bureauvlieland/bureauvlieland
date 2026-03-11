@@ -24,6 +24,7 @@ const ApproveItemSchema = z.object({
   token: z.string().min(1),
   item_id: z.string().uuid(),
   origin: z.string().optional(),
+  admin_override: z.boolean().optional(),
 });
 
 const sendEmailViaMailjet = async (messages: any[]) => {
