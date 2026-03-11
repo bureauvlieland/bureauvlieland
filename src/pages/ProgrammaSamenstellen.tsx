@@ -42,6 +42,7 @@ const ProgrammaSamenstellen = () => {
     dismissDraft,
     clearCart,
     reorderItems,
+    loadFromTemplate,
   } = useCart();
 
   const [phase, setPhase] = useState<Phase>(
