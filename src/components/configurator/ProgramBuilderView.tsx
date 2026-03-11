@@ -98,7 +98,9 @@ export const ProgramBuilderView = ({
   onUpdateItem,
   onReorderItems,
   onSubmit,
-  onEditBasics,
+  onUpdatePeople,
+  onAddDate,
+  onRemoveDate,
   onReplaceWithSuggestion,
   eventType,
   contactName,
@@ -107,6 +109,9 @@ export const ProgramBuilderView = ({
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [activeDay, setActiveDay] = useState(0);
+  const [editPeople, setEditPeople] = useState(false);
+  const [editDates, setEditDates] = useState(false);
+  const [tempPeople, setTempPeople] = useState(numberOfPeople);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
