@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.notify-new-chat-reply]
 verify_jwt = false
+
+[functions.generate-program-suggestion]
+verify_jwt = false
