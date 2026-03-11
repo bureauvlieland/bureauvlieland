@@ -4,6 +4,10 @@ import type { CartItemDetail } from "@/types/buildingBlock";
 
 const SKIP_BLOCK_IDS = new Set(["boot-enkel-heen", "boot-enkel-terug", "fiets-huur"]);
 
+const FERRY_HEEN_ID = "boot-enkel-heen";
+const FERRY_TERUG_ID = "boot-enkel-terug";
+const FIETS_ID = "fiets-huur";
+
 interface CartContextForLoader {
   clearCart: () => void;
   setSelectedDate: (date: Date | undefined) => void;
@@ -42,16 +46,21 @@ export const loadTemplateToCart = (
     }
   }
 
-  // 4. Add all template items to cart with correct day and time
+  // 4. Add mandatory items (ferry + bike) — without preset times so the user picks via Doeksen API
+  const lastDay = Math.max(0, template.duration_days - 1);
+  cart.addToCart(FERRY_HEEN_ID, 0);
+  cart.addToCart(FERRY_TERUG_ID, lastDay);
+  cart.addToCart(FIETS_ID, 0);
+
+  // 5. Add all non-mandatory template items to cart with correct day and time
   if (template.items) {
-    // Sort by day_index and sort_order to maintain proper order
     const sortedItems = [...template.items].sort((a, b) => {
       if (a.day_index !== b.day_index) return a.day_index - b.day_index;
       return a.sort_order - b.sort_order;
     });
 
     for (const item of sortedItems) {
-      // Skip mandatory blocks — they are auto-added by the builder
+      // Skip mandatory blocks — already added above
       if (SKIP_BLOCK_IDS.has(item.block_id)) continue;
 
       const added = cart.addToCart(item.block_id, item.day_index);
@@ -68,30 +77,4 @@ export const loadTemplateToCart = (
       }
     }
   }
-};
-
-/**
- * Calculate indicative total price for a template
- */
-export const calculateTemplatePrice = (
-  template: ProgramTemplate,
-  numberOfPeople: number
-): number | null => {
-  if (!template.items || template.items.length === 0) {
-    return template.indicative_price_pp 
-      ? template.indicative_price_pp * numberOfPeople 
-      : null;
-  }
-
-  let total = 0;
-  let hasAnyPrice = false;
-
-  for (const item of template.items) {
-    if (item.block?.price_adult) {
-      hasAnyPrice = true;
-      total += item.block.price_adult * numberOfPeople;
-    }
-  }
-
-  return hasAnyPrice ? total : null;
 };
