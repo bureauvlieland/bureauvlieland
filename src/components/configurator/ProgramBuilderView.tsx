@@ -24,6 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
