@@ -72,3 +72,40 @@ CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab
    - `InvoicingMode` type vereenvoudigd
 
 8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
+
+---
+
+## Plan: Bureau Vlieland als centrale regie — Volledige alignment
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+#### A. Kritieke flow-fixes
+1. **`skip_partner_notification: true`** toegevoegd aan `CheckoutContactForm.tsx` en `RequestFormModal.tsx` — items worden nu gestaged voor admin review.
+2. **"Verstuur naar partners" banner** werkt nu voor alle programmatypes (niet meer beperkt tot quote-modus).
+3. **`accept-quote-proposal`** slaat `quote_status` update over voor `self_service` programma's; zet altijd `program_published_at` als die null is.
+4. **Admin banner tekst** gecorrigeerd: "De klant ziet het programma als 'In behandeling'". Publiceer-banner beperkt tot admin-aangemaakte programma's.
+
+#### B. `partner_direct` relikten verwijderd
+5. **`InvoicingModeSelector.tsx`** omgezet naar read-only "Bureau Vlieland factureert de klant".
+6. **`CustomerProgram.tsx`** fallback gewijzigd naar `"bureau_central"`.
+7. **`ContactAccommodationDialog.tsx`** — altijd bureau_central teksten, geen directe partner-communicatie branches.
+8. **`PriceSummaryCard.tsx`** — partner_direct secties verwijderd.
+9. **`InvoiceProvidersCard.tsx`** — individuele partner-listings uitgeschakeld, altijd bureau-facturatie.
+10. **`select-accommodation-quote`** — PII altijd verborgen voor partners.
+
+#### C. Klantportaal teksten
+11. **`ProgramIntroCard.tsx`** — "Bureau Vlieland coördineert de aanvragen bij de aanbieders."
+12. **`ActionRequiredCard.tsx`** — billing: "zodat Bureau Vlieland kan factureren"; complete: "U ontvangt de factuur van Bureau Vlieland."
+13. **`NextStepsCard.tsx`** — "U ontvangt de factuur van Bureau Vlieland."
+
+#### D. Publieke pagina's & juridisch
+14. **`LogiesVlieland.tsx`** en **`LogiesAanvragen.tsx`** — stap 4: "Bureau Vlieland begeleidt het boekingsproces".
+15. **`PartnerTerms.tsx`** — Artikel 1 en 5 aangepast: facturatie altijd via Bureau Vlieland.
+
+#### E. Statuslabels
+16. **`CustomerProgramItem.tsx`** — readOnly + pending → "In behandeling"; isPreApproval + pending → "In voorbereiding".
+
+#### F. Data
+17. Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` geüpdatet naar `true`.
