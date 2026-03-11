@@ -29,7 +29,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
+import { groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { SortableCartItem } from "./SortableCartItem";
 
