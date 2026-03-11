@@ -302,58 +302,9 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    // Generate partner emails (redirected to test email in test mode)
-    const providerGroups = groupBlocksByProvider(requestData.blocks);
+    console.log(`Sending emails: 1 to bureau, 1 to customer (no partner emails — admin-first flow)`);
 
-    // Lookup contact_email overrides from the database
-    const providerIds = providerGroups.map(g => g.providerId).filter(Boolean);
-    if (providerIds.length > 0) {
-      try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        const { data: partners } = await supabase
-          .from("partners")
-          .select("id, contact_email")
-          .in("id", providerIds);
-
-        if (partners) {
-          const contactMap = new Map(partners.filter(p => p.contact_email).map(p => [p.id, p.contact_email]));
-          for (const group of providerGroups) {
-            const override = contactMap.get(group.providerId);
-            if (override) group.providerEmail = override;
-          }
-        }
-      } catch (lookupErr) {
-        console.warn("Could not lookup contact_email overrides:", lookupErr);
-      }
-    }
-
-    const partnerEmails = providerGroups.map(group => ({
-      From: {
-        Email: "hallo@bureauvlieland.nl",
-        Name: "Bureau Vlieland"
-      },
-      To: [{
-        Email: getRecipientEmail(group.providerEmail, origin),
-        Name: group.providerName
-      }],
-      Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland - ${group.blocks.map(b => b.name).join(', ')}`,
-      HTMLPart: generatePartnerEmailHtml(group, {
-        name: safeName,
-        company: safeCompany,
-        email: safeEmail,
-        phone: safePhone,
-        date: safeDate,
-        numberOfPeople: requestData.numberOfPeople,
-        notes: safeNotes,
-      }),
-    }));
-
-    console.log(`Sending emails: 1 to bureau, 1 to customer, ${partnerEmails.length} to partners ${testMode ? "(TEST MODE - partners redirected)" : ""}`);
-
-    // Send all emails in one batch
+    // Send bureau + customer emails only (no partner emails)
     const emailResponse = await sendEmailViaMailjet([
       {
         From: {
@@ -382,8 +333,7 @@ const handler = async (req: Request): Promise<Response> => {
         ],
         Subject: `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`,
         HTMLPart: customerEmailHtml,
-      },
-      ...partnerEmails
+      }
     ]);
 
     console.log("Program request emails sent successfully");
