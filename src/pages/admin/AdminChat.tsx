@@ -192,7 +192,7 @@ const AdminChat = () => {
                   </div>
                   {activeConversation.request_id && projectRefs[activeConversation.request_id] && (
                     <button
-                      onClick={() => navigate(`/admin/requests/${activeConversation.request_id}`)}
+                      onClick={() => navigate(`/admin/aanvragen/${activeConversation.request_id}`)}
                       className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full flex items-center gap-1 hover:bg-primary/20 transition-colors"
                     >
                       <FileText className="h-3 w-3" />
