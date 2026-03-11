@@ -247,6 +247,7 @@ export const MobileProgramView = ({
             onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
             programType={program.program_type}
             quoteStatus={program.quote_status}
+            programPublishedAt={program.program_published_at}
           />
 
           <ProgramIntroCard
