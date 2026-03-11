@@ -40,25 +40,48 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         commQuery = commQuery.eq("accommodation_id", accommodationId);
       }
 
-      // Fetch email log entries
-      let emailQuery = supabase
-        .from("email_log")
-        .select("*")
-        .order("sent_at", { ascending: false });
+      // Fetch email log entries — need to query both request_id and accommodation_id
+      // since some emails are linked to the accommodation, not the program request
+      const emailQueries = [];
 
       if (requestId) {
-        emailQuery = emailQuery.eq("related_request_id", requestId);
-      } else if (accommodationId) {
-        emailQuery = emailQuery.eq("related_accommodation_id", accommodationId);
+        emailQueries.push(
+          supabase
+            .from("email_log")
+            .select("*")
+            .eq("related_request_id", requestId)
+            .order("sent_at", { ascending: false })
+        );
       }
 
-      const [commResult, emailResult] = await Promise.all([
+      if (accommodationId) {
+        emailQueries.push(
+          supabase
+            .from("email_log")
+            .select("*")
+            .eq("related_accommodation_id", accommodationId)
+            .order("sent_at", { ascending: false })
+        );
+      }
+
+      const [commResult, ...emailResults] = await Promise.all([
         commQuery,
-        emailQuery,
+        ...emailQueries,
       ]);
 
       if (commResult.error) throw commResult.error;
-      if (emailResult.error) throw emailResult.error;
+      for (const r of emailResults) {
+        if (r.error) throw r.error;
+      }
+
+      // Deduplicate email results by id (in case both queries return the same row)
+      const emailLogMap = new Map<string, any>();
+      for (const r of emailResults) {
+        for (const log of (r.data || [])) {
+          emailLogMap.set(log.id, log);
+        }
+      }
+      const allEmailLogs = Array.from(emailLogMap.values());
 
       const manualItems = (commResult.data || []).map((c) => ({
         ...c,
@@ -68,7 +91,7 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         source: 'manual' as const,
       })) as ProjectCommunication[];
 
-      const emailItems: ProjectCommunication[] = (emailResult.data || []).map((log) => ({
+      const emailItems: ProjectCommunication[] = allEmailLogs.map((log) => ({
         id: `email_log_${log.id}`,
         request_id: log.related_request_id,
         accommodation_id: log.related_accommodation_id,

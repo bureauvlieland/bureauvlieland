@@ -1317,6 +1317,7 @@ const AdminRequestDetail = () => {
             <TabsContent value="communicatie">
               <ProjectCommunicationsCard
                 requestId={request.id}
+                accommodationId={request.linked_accommodation_id || undefined}
                 customerName={request.customer_name}
                 customerEmail={request.customer_email}
                 partnerRecipients={
