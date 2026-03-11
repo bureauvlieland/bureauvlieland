@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
