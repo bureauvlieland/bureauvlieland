@@ -106,12 +106,16 @@ export const ProgramBuilderView = ({
   onAddDate,
   onRemoveDate,
   onReplaceWithSuggestion,
+  onLoadTemplate,
   eventType,
   contactName,
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+  const { data: templates = [] } = usePublishedTemplates();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState(0);
   const [editPeople, setEditPeople] = useState(false);
   const [editDates, setEditDates] = useState(false);
