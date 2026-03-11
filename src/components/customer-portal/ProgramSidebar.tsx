@@ -112,7 +112,7 @@ export const ProgramSidebar = ({
           <div>
             <p className="text-sm font-medium">Toeristenbelasting</p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              De gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft. Dit bedrag wordt per persoon per dag berekend.
+              €{appSettings.tourist_tax_pp_per_day.toFixed(2).replace('.', ',')} p.p. per dag — de gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft.
             </p>
           </div>
         </div>
