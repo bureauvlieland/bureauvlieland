@@ -217,6 +217,7 @@ export const DesktopProgramView = ({
               onScrollToAccommodation={scrollToAccommodation}
               programType={program.program_type}
               quoteStatus={program.quote_status}
+              programPublishedAt={program.program_published_at}
             />
 
             <ProgramIntroCard
