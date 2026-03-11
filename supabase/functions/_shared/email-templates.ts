@@ -215,6 +215,7 @@ export const TemplateIds = {
   // Cancellation emails
   CANCELLATION_CUSTOMER: "cancellation_customer",
   CANCELLATION_PARTNER: "cancellation_partner",
+  CANCELLATION_ACCOMMODATION_PARTNER: "cancellation_accommodation_partner",
   
   // Quote request emails
   QUOTE_REQUEST_BUREAU: "quote_request_bureau",
@@ -245,6 +246,29 @@ export const TemplateIds = {
 
   // Quote expired notification for partner
   QUOTE_EXPIRED_PARTNER: "quote_expired_partner",
+
+  // Chat notifications
+  CHAT_NOTIFICATION_BUREAU: "chat_notification_bureau",
+  CHAT_REPLY_VISITOR: "chat_reply_visitor",
+
+  // Partner management
+  PARTNER_PASSWORD_RESET: "partner_password_reset",
+  PARTNER_INTRO_PORTAL: "partner_intro_portal",
+
+  // Customer accommodation message
+  CUSTOMER_ACCOMMODATION_MESSAGE: "customer_accommodation_message",
+
+  // Update-customer-program templates
+  PEOPLE_CHANGE_ACCOMMODATION: "people_change_accommodation",
+  DATE_CHANGE_PARTNER: "date_change_partner",
+  DATE_CHANGE_ACCOMMODATION: "date_change_accommodation",
+  DATE_CHANGE_CUSTOMER: "date_change_customer",
+  ITEM_CANCELLED_PARTNER: "item_cancelled_partner",
+  BOOKING_CONFIRMED_PARTNER: "booking_confirmed_partner",
+  BOOKING_CONFIRMED_CUSTOMER: "booking_confirmed_customer",
+  ITEM_ADDED_PARTNER: "item_added_partner",
+  ITEM_CHANGES_PARTNER: "item_changes_partner",
+  ITEM_CHANGES_CUSTOMER: "item_changes_customer",
 } as const;
 
 /**

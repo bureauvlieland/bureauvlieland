@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,6 +71,25 @@ Deno.serve(async (req) => {
     const visitorEmail = conv.visitor_email || "onbekend";
     const messagePreview = latestMsg?.content?.substring(0, 200) || "";
 
+    // Try DB template
+    const template = await getRenderedTemplate(TemplateIds.CHAT_NOTIFICATION_BUREAU, {
+      visitor_name: visitorName,
+      visitor_email: visitorEmail,
+      source_label: sourceLabel,
+      message_preview: messagePreview,
+      chat_url: "https://bureauvlieland.lovable.app/admin/chat",
+    });
+
+    const emailSubject = template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`;
+    const emailBody = template?.body || `
+      <h3>Nieuw chatbericht</h3>
+      <p><strong>Van:</strong> ${visitorName} (${visitorEmail})</p>
+      <p><strong>Bron:</strong> ${sourceLabel}</p>
+      <p><strong>Bericht:</strong></p>
+      <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#555;">${messagePreview}</blockquote>
+      <p><a href="https://bureauvlieland.lovable.app/admin/chat">Ga naar chat →</a></p>
+    `;
+
     // Send via Mailjet
     const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
     const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -86,15 +106,8 @@ Deno.serve(async (req) => {
             {
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
               To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
-              Subject: `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`,
-              HTMLPart: `
-                <h3>Nieuw chatbericht</h3>
-                <p><strong>Van:</strong> ${visitorName} (${visitorEmail})</p>
-                <p><strong>Bron:</strong> ${sourceLabel}</p>
-                <p><strong>Bericht:</strong></p>
-                <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#555;">${messagePreview}</blockquote>
-                <p><a href="https://bureauvlieland.lovable.app/admin/chat">Ga naar chat →</a></p>
-              `,
+              Subject: emailSubject,
+              HTMLPart: emailBody,
             },
           ],
         }),
@@ -107,7 +120,7 @@ Deno.serve(async (req) => {
     // Log the notification
     await supabase.from("email_log").insert({
       email_type: "chat_notification",
-      subject: `Nieuw chatbericht van ${visitorName}`,
+      subject: emailSubject,
       recipient_email: "hallo@bureauvlieland.nl",
       recipient_name: "Bureau Vlieland",
       status: "sent",

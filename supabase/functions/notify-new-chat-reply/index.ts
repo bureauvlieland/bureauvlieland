@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +73,38 @@ Deno.serve(async (req) => {
 
     const visitorName = conv.visitor_name || "Bezoeker";
 
+    // Try DB template
+    const template = await getRenderedTemplate(TemplateIds.CHAT_REPLY_VISITOR, {
+      visitor_name: visitorName,
+      portal_link: portalLink,
+    });
+
+    const emailSubject = template?.subject || "Nieuw bericht van Bureau Vlieland";
+    const htmlBody = template?.body || `
+      <!DOCTYPE html>
+      <html>
+      <body style="margin:0;padding:0;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+          <tr><td align="center" style="padding:40px 20px;">
+            <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;">
+              <tr><td style="font-size:16px;line-height:24px;color:#333333;">
+                <p style="margin:0 0 16px 0;">Hallo ${visitorName},</p>
+                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen in je persoonlijke portaal van Bureau Vlieland.</p>
+                <p style="margin:0 0 24px 0;">Klik op de knop hieronder om het bericht te bekijken en te reageren.</p>
+              </td></tr>
+              <tr><td style="padding-bottom:32px;">
+                <a href="${portalLink}" style="display:inline-block;background-color:#1a5276;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Bekijk bericht →</a>
+              </td></tr>
+              <tr><td style="font-size:13px;color:#999999;border-top:1px solid #eeeeee;padding-top:16px;">
+                <p style="margin:0;">Dit is een automatisch bericht van Bureau Vlieland.</p>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `;
+
     // Send via Mailjet
     const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
     const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -84,44 +117,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const htmlBody = `
-      <!DOCTYPE html>
-      <html>
-      <body style="margin:0;padding:0;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
-          <tr>
-            <td align="center" style="padding:40px 20px;">
-              <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;">
-                <tr>
-                  <td style="padding-bottom:24px;">
-                    <img src="https://bureauvlieland.lovable.app/og-image.png" alt="Bureau Vlieland" width="180" style="display:block;" />
-                  </td>
-                </tr>
-                <tr>
-                  <td style="font-size:16px;line-height:24px;color:#333333;">
-                    <p style="margin:0 0 16px 0;">Hallo ${visitorName},</p>
-                    <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen in je persoonlijke portaal van Bureau Vlieland.</p>
-                    <p style="margin:0 0 24px 0;">Klik op de knop hieronder om het bericht te bekijken en te reageren.</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-bottom:32px;">
-                    <a href="${portalLink}" style="display:inline-block;background-color:#1a5276;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Bekijk bericht →</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="font-size:13px;color:#999999;border-top:1px solid #eeeeee;padding-top:16px;">
-                    <p style="margin:0;">Dit is een automatisch bericht van Bureau Vlieland. Je ontvangt deze e-mail omdat je een gesprek hebt gestart via het portaal.</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
-
     const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
@@ -133,7 +128,7 @@ Deno.serve(async (req) => {
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: conv.visitor_email, Name: visitorName }],
-            Subject: "Nieuw bericht van Bureau Vlieland",
+            Subject: emailSubject,
             HTMLPart: htmlBody,
           },
         ],
@@ -153,7 +148,7 @@ Deno.serve(async (req) => {
     // Log email
     await logEmail({
       email_type: "chat_reply_notification",
-      subject: "Nieuw bericht van Bureau Vlieland",
+      subject: emailSubject,
       recipient_email: conv.visitor_email,
       recipient_name: visitorName,
       related_request_id: conv.request_id || undefined,

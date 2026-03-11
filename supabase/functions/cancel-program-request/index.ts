@@ -1,4 +1,3 @@
-// Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { 
   getRenderedTemplate, 
@@ -70,7 +69,6 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -80,10 +78,6 @@ Deno.serve(async (req) => {
     
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
-    
-    if (testMode) {
-      console.log(`[TEST MODE] All partner emails will be redirected to test email`);
-    }
 
     if (!token) {
       return new Response(
@@ -92,7 +86,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -126,7 +119,6 @@ Deno.serve(async (req) => {
       .eq("request_id", program.id)
       .neq("status", "cancelled");
 
-    // Enrich items that lack provider_email with a fallback lookup
     await enrichProviderEmails(supabase, items || []);
 
     // Get unique providers with emails
@@ -166,22 +158,15 @@ Deno.serve(async (req) => {
       })
       .eq("request_id", program.id);
 
-    // Cancel linked accommodation request and its quotes, collect partner info for emails
+    // Cancel linked accommodation request and its quotes
     const accommodationPartners = new Map<string, { name: string; email: string; accommodationName: string }>();
 
     const cancelAccommodationRequest = async (accommodationId: string) => {
-      console.log(`Cancelling accommodation request: ${accommodationId}`);
-
-      // Cancel accommodation request
       await supabase
         .from("accommodation_requests")
-        .update({
-          status: "cancelled",
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
         .eq("id", accommodationId);
 
-      // Fetch quotes with partner info BEFORE cancelling them
       const { data: quotesToCancel } = await supabase
         .from("accommodation_quotes")
         .select("id, partner_id, accommodation_name, partner:partners(id, name, email, contact_email)")
@@ -201,20 +186,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Cancel all pending/submitted quotes
       await supabase
         .from("accommodation_quotes")
-        .update({
-          status: "rejected",
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: "rejected", updated_at: new Date().toISOString() })
         .eq("request_id", accommodationId)
         .in("status", ["pending", "submitted"]);
     };
 
-    // Only cancel accommodation if requested (default: true for backwards compatibility)
     if (shouldCancelAccommodation) {
-      // Track which accommodation IDs we already cancelled to avoid duplicates
       const cancelledAccommodationIds = new Set<string>();
 
       if (program.linked_accommodation_id) {
@@ -222,14 +201,13 @@ Deno.serve(async (req) => {
         cancelledAccommodationIds.add(program.linked_accommodation_id);
       }
 
-      // Also check reverse: if an accommodation_request links to this program
       const { data: linkedAccommodations } = await supabase
         .from("accommodation_requests")
         .select("id")
         .eq("linked_program_id", program.id)
         .neq("status", "cancelled");
 
-      if (linkedAccommodations && linkedAccommodations.length > 0) {
+      if (linkedAccommodations) {
         for (const acc of linkedAccommodations) {
           if (!cancelledAccommodationIds.has(acc.id)) {
             await cancelAccommodationRequest(acc.id);
@@ -238,7 +216,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Fallback: find unlinked accommodation requests by customer email + overlapping dates
       const programDates = program.selected_dates as string[];
       if (programDates && programDates.length >= 2) {
         const earliestDate = programDates[0];
@@ -252,18 +229,15 @@ Deno.serve(async (req) => {
           .lte("arrival_date", latestDate)
           .gte("departure_date", earliestDate);
 
-        if (unlinkedAccommodations && unlinkedAccommodations.length > 0) {
+        if (unlinkedAccommodations) {
           for (const acc of unlinkedAccommodations) {
             if (!cancelledAccommodationIds.has(acc.id)) {
-              console.log(`Fallback: cancelling unlinked accommodation ${acc.id} matched by email+dates`);
               await cancelAccommodationRequest(acc.id);
               cancelledAccommodationIds.add(acc.id);
             }
           }
         }
       }
-    } else {
-      console.log("Skipping accommodation cancellation (cancelAccommodation=false)");
     }
 
     // Log to history
@@ -285,7 +259,7 @@ Deno.serve(async (req) => {
     const replyTo = buildReplyTo(program.reference_number);
     const emails: any[] = [];
 
-    // Partner emails using template
+    // Partner cancellation emails
     for (const [, provider] of providers) {
       const templateVariables = {
         partner_name: sanitizeHtml(provider.name),
@@ -301,27 +275,17 @@ Deno.serve(async (req) => {
       const htmlContent = partnerTemplate?.body || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
-          
           <p>Beste ${sanitizeHtml(provider.name)},</p>
-          
           <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd.</p>
-          
           <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
-            ${program.customer_company ? `<p style="margin: 0 0 10px 0;"><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
-            <p style="margin: 0 0 10px 0;"><strong>Jouw activiteit(en):</strong></p>
-            <ul style="margin: 0; padding-left: 20px;">
-              ${provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join("")}
-            </ul>
-            ${reason ? `<p style="margin: 15px 0 0 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
+            <p><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
+            ${program.customer_company ? `<p><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
+            <p><strong>Activiteit(en):</strong></p>
+            <ul>${provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join("")}</ul>
+            ${reason ? `<p><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
           </div>
-          
           <p>Je hoeft verder geen actie te ondernemen.</p>
-          
-          <p style="color: #718096; font-size: 14px; margin-top: 30px;">
-            Met vriendelijke groet,<br>
-            Bureau Vlieland
-          </p>
+          <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
         </div>
       `;
 
@@ -336,86 +300,60 @@ Deno.serve(async (req) => {
 
     // Accommodation partner cancellation emails
     for (const [partnerId, accPartner] of accommodationPartners) {
-      // Skip if this partner already got an activity cancellation email
       if (providers.has(partnerId)) continue;
 
-      const accHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>
-          
-          <p>Beste ${sanitizeHtml(accPartner.name)},</p>
-          
-          <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd. Hierdoor vervalt ook de logiesaanvraag.</p>
-          
-          <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
-            ${program.customer_company ? `<p style="margin: 0 0 10px 0;"><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
-            <p style="margin: 0 0 10px 0;"><strong>Accommodatie:</strong> ${sanitizeHtml(accPartner.accommodationName)}</p>
-            ${reason ? `<p style="margin: 15px 0 0 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
-          </div>
-          
-          <p>Je hoeft verder geen actie te ondernemen. Je offerte is automatisch ingetrokken.</p>
-          
-          <p style="color: #718096; font-size: 14px; margin-top: 30px;">
-            Met vriendelijke groet,<br>
-            Bureau Vlieland
-          </p>
-        </div>
-      `;
+      const accTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER, {
+        partner_name: sanitizeHtml(accPartner.name),
+        customer_name: sanitizeHtml(program.customer_name),
+        customer_company: sanitizeHtml(program.customer_company) || "",
+        accommodation_name: sanitizeHtml(accPartner.accommodationName),
+        dates: dates,
+        cancellation_reason: reason ? sanitizeHtml(reason) : "",
+      });
 
       emails.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: `${subjectPrefix}Logiesaanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-        HTMLPart: accHtml,
+        Subject: accTemplate?.subject || `${subjectPrefix}Logiesaanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+        HTMLPart: accTemplate?.body || `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>
+            <p>Beste ${sanitizeHtml(accPartner.name)},</p>
+            <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd.</p>
+            <p>Je hoeft verder geen actie te ondernemen.</p>
+            <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
+          </div>
+        `,
       });
     }
 
-    // Customer confirmation email using template
-    const customerTemplateVariables = {
+    // Customer confirmation email
+    const customerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_CUSTOMER, {
       customer_name: sanitizeHtml(program.customer_name),
       dates: dates,
       cancellation_reason: reason ? sanitizeHtml(reason) : "",
-      providers_count: String(providers.size),
-    };
-
-    const customerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_CUSTOMER, customerTemplateVariables);
-
-    const customerHtml = customerTemplate?.body || `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
-        
-        <p>Beste ${sanitizeHtml(program.customer_name)},</p>
-        
-        <p>Uw aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
-        
-        ${reason ? `
-        <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>
-        </div>
-        ` : ""}
-        
-        <p>Alle ${providers.size + accommodationPartners.size} betrokken aanbieder(s) zijn automatisch op de hoogte gesteld.</p>
-        
-        <p>Wilt u toch een programma samenstellen? U kunt altijd een nieuwe aanvraag indienen via onze website.</p>
-        
-        <p style="color: #718096; font-size: 14px; margin-top: 30px;">
-          Met vriendelijke groet,<br>
-          Erwin & Team Bureau Vlieland
-        </p>
-      </div>
-    `;
+      providers_count: String(providers.size + accommodationPartners.size),
+    });
 
     emails.push({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: program.customer_email, Name: program.customer_name }],
       ...(replyTo ? { ReplyTo: replyTo } : {}),
       Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Uw aanvraag is geannuleerd`,
-      HTMLPart: customerHtml,
+      HTMLPart: customerTemplate?.body || `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
+          <p>Beste ${sanitizeHtml(program.customer_name)},</p>
+          <p>Uw aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
+          ${reason ? `<div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;"><p><strong>Reden:</strong> ${sanitizeHtml(reason)}</p></div>` : ""}
+          <p>Alle betrokken aanbieder(s) zijn op de hoogte gesteld.</p>
+          <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Erwin & Team Bureau Vlieland</p>
+        </div>
+      `,
     });
 
-    // Send emails (don't fail the request if emails fail)
+    // Send emails
     try {
       if (emails.length > 0) {
         await sendEmailViaMailjet(emails);

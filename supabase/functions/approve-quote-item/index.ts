@@ -7,7 +7,9 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  getRenderedTemplate,
   buildReplyTo,
+  TemplateIds,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -45,7 +47,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   return await response.json();
 };
 
-function generatePartnerNotificationEmail(
+function generatePartnerNotificationEmailFallback(
   partnerName: string,
   item: any,
   program: any,
@@ -61,64 +63,32 @@ function generatePartnerNotificationEmail(
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-        Nieuwe aanvraag via Bureau Vlieland
-      </h2>
-      
+      <h2 style="color: #1a365d;">Nieuwe aanvraag via Bureau Vlieland</h2>
       <p>Beste ${sanitizeHtml(partnerName)},</p>
-      
-      <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland. De klant heeft akkoord gegeven op dit onderdeel.</p>
-      
+      <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland.</p>
       <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748;">📋 Klantgegevens</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Naam:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(program.customer_name)}</strong></td></tr>
-          ${program.customer_company ? `<tr><td style="padding: 5px 0; color: #666;">Bedrijf:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(program.customer_company)}</strong></td></tr>` : ""}
-          <tr><td style="padding: 5px 0; color: #666;">Email:</td><td style="padding: 5px 0;"><a href="mailto:${sanitizeHtml(program.customer_email)}" style="color: #0066cc;">${sanitizeHtml(program.customer_email)}</a></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Telefoon:</td><td style="padding: 5px 0;"><a href="tel:${sanitizeHtml(program.customer_phone)}" style="color: #0066cc;">${sanitizeHtml(program.customer_phone)}</a></td></tr>
-        </table>
+        <h3 style="margin-top: 0;">📋 Klantgegevens</h3>
+        <p><strong>Naam:</strong> ${sanitizeHtml(program.customer_name)}</p>
+        ${program.customer_company ? `<p><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
+        <p><strong>Email:</strong> ${sanitizeHtml(program.customer_email)}</p>
+        <p><strong>Telefoon:</strong> ${sanitizeHtml(program.customer_phone)}</p>
       </div>
-      
       <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748;">📅 Programma details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Datum(s):</td><td style="padding: 5px 0;"><strong>${formattedDates}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${program.number_of_people}</strong></td></tr>
-        </table>
+        <h3 style="margin-top: 0;">📅 Programma details</h3>
+        <p><strong>Datum(s):</strong> ${formattedDates}</p>
+        <p><strong>Aantal personen:</strong> ${program.number_of_people}</p>
       </div>
-      
       <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
-        <h3 style="margin-top: 0; color: #276749;">🎯 Aangevraagde activiteit</h3>
-        <p style="margin-bottom: 0;">
-          <strong>${sanitizeHtml(item.block_name)}</strong>
-          ${timeInfo}
-        </p>
+        <h3 style="margin-top: 0;">🎯 Aangevraagde activiteit</h3>
+        <p><strong>${sanitizeHtml(item.block_name)}</strong>${timeInfo}</p>
       </div>
-      
       <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
-        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partner Portal</h3>
-        <p style="margin-bottom: 12px;">
-          Bekijk en beheer deze aanvraag in uw Partner Portal. 
-          Bevestig beschikbaarheid of geef een alternatief door.
-        </p>
-        <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
-          Open Partner Portal
-        </a>
+        <h3 style="margin-top: 0;">📋 Partner Portal</h3>
+        <p>Bekijk en beheer deze aanvraag in uw Partner Portal.</p>
+        <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">Open Partner Portal</a>
       </div>
-      
-      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-      
-      <p style="color: #666; font-size: 14px;">
-        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met de klant om 
-        beschikbaarheid te bevestigen en verdere details te bespreken.
-      </p>
-      
-      <p style="margin-top: 30px;">
-        Met vriendelijke groet,<br>
-        <strong>Bureau Vlieland</strong><br>
-        📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a><br>
-        📞 0562 700 208
-      </p>
+      <p style="color: #666; font-size: 14px;">Dit is een vrijblijvende aanvraag.</p>
+      <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
     </div>
   `;
 }
@@ -252,12 +222,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (partnerEmail && item.provider_id !== "bureau") {
       const partnerPortalUrl = `${baseUrl}/partner/login`;
 
-      const emailHtml = generatePartnerNotificationEmail(
+      const formattedDates = (program.selected_dates as string[])
+        .map((d: string) => formatDateNL(d))
+        .join(", ");
+
+      // Try DB template
+      const template = await getRenderedTemplate(TemplateIds.PROGRAM_REQUEST_PARTNER, {
+        partner_name: sanitizeHtml(item.provider_name),
+        customer_name: sanitizeHtml(program.customer_name),
+        customer_company: sanitizeHtml(program.customer_company) || "",
+        customer_email: sanitizeHtml(program.customer_email),
+        customer_phone: sanitizeHtml(program.customer_phone),
+        dates: formattedDates,
+        number_of_people: String(program.number_of_people),
+        block_name: sanitizeHtml(item.block_name),
+        preferred_time: item.preferred_time ? sanitizeHtml(item.preferred_time) : "",
+        portal_url: partnerPortalUrl,
+      });
+
+      const emailHtml = template?.body || generatePartnerNotificationEmailFallback(
         item.provider_name,
         item,
         program,
         partnerPortalUrl
       );
+
+      const emailSubject = template?.subject || `Nieuwe aanvraag: ${program.customer_name} - ${program.reference_number || ""}`;
 
       const recipientEmail = getRecipientEmail(partnerEmail, origin);
 
@@ -268,14 +258,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: item.provider_name }],
             ...(replyTo ? { ReplyTo: replyTo } : {}),
-            Subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name} - ${program.reference_number || ""}`,
+            Subject: `${subjectPrefix}${emailSubject}`,
             HTMLPart: emailHtml,
           },
         ]);
 
         await logEmail({
           email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-          subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name}`,
+          subject: `${subjectPrefix}${emailSubject}`,
           recipient_email: recipientEmail,
           recipient_name: item.provider_name,
           related_request_id: program.id,
@@ -292,7 +282,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         console.error("Error sending partner email:", emailError);
         await logEmail({
           email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-          subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name}`,
+          subject: `${subjectPrefix}${emailSubject}`,
           recipient_email: recipientEmail,
           recipient_name: item.provider_name,
           related_request_id: program.id,
