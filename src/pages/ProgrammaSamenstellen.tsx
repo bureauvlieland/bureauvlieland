@@ -5,7 +5,7 @@ import { Helmet } from "react-helmet";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { BasicsForm, type BasicsFormData } from "@/components/configurator/BasicsForm";
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
-import { RequestFormModal } from "@/components/configurator/RequestFormModal";
+import { ReviewAndSubmitSheet } from "@/components/configurator/ReviewAndSubmitSheet";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -206,7 +206,7 @@ const ProgrammaSamenstellen = () => {
         />
       )}
 
-      <RequestFormModal
+      <ReviewAndSubmitSheet
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         cartItems={cartItems}
