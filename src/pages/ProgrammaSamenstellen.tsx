@@ -3,7 +3,6 @@ import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { type BuildingBlockCategory, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
@@ -20,18 +19,16 @@ import { HowItWorksBlock } from "@/components/configurator/HowItWorksBlock";
 import { LogiesSuggestionBanner } from "@/components/configurator/LogiesSuggestionBanner";
 import { EntryChoice } from "@/components/configurator/EntryChoice";
 import { AiErwinChat } from "@/components/configurator/AiErwinChat";
-
-import { ConfiguratorWizard, type ProgramType } from "@/components/configurator/ConfiguratorWizard";
 import { TemplateSelector } from "@/components/configurator/TemplateSelector";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Loader2, Settings2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import heroImage from "@/assets/beach-signs.jpg";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
-type ConfiguratorPhase = "basics" | "entry_choice" | "ai_erwin" | "template" | "manual";
+type ConfiguratorPhase = "entry_choice" | "ai_erwin" | "template" | "manual";
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
@@ -64,13 +61,10 @@ const ProgrammaSamenstellen = () => {
     loadFromTemplate,
   } = useCart();
 
-  // Phase-based state
   const [phase, setPhase] = useState<ConfiguratorPhase>(
-    skipWizard || cartItems.length > 0 ? "manual" : "basics"
+    skipWizard || cartItems.length > 0 ? "manual" : "entry_choice"
   );
-  const [programType, setProgramType] = useState<ProgramType | null>(null);
 
-  // State
   const [selectedCategory, setSelectedCategory] = useState<BuildingBlockCategory | "all">("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     return (localStorage.getItem("bv-view-mode") as "grid" | "list") || "grid";
@@ -89,7 +83,7 @@ const ProgrammaSamenstellen = () => {
 
   // If cart already has items, go to manual
   useEffect(() => {
-    if (cartItems.length > 0 && phase === "basics") {
+    if (cartItems.length > 0 && phase === "entry_choice") {
       setPhase("manual");
     }
   }, [cartItems.length, phase]);
@@ -104,55 +98,7 @@ const ProgrammaSamenstellen = () => {
   const handleDiscardDraft = () => {
     dismissDraft();
     setShowDraftDialog(false);
-    setPhase("basics");
-  };
-
-  // Wizard completion (basics step)
-  const handleWizardComplete = (data: {
-    programType: ProgramType | null;
-    numberOfPeople: number;
-    selectedDates: Date[];
-    wantsAccommodation: boolean | null;
-  }) => {
-    setNumberOfPeople(data.numberOfPeople);
-    data.selectedDates.forEach((date, index) => {
-      if (index === 0) setSelectedDate(date);
-      else addDate(date);
-    });
-    setProgramType(data.programType);
-
-    if (data.wantsAccommodation) {
-      const arrivalDate = data.selectedDates[0];
-      const departureDate = data.selectedDates[data.selectedDates.length - 1];
-      const params = new URLSearchParams({
-        arrival: arrivalDate.toISOString().split('T')[0],
-        departure: departureDate.toISOString().split('T')[0],
-        guests: data.numberOfPeople.toString(),
-        from: 'configurator'
-      });
-      window.location.href = `/logies-aanvragen?${params.toString()}`;
-      return;
-    }
-
-    // Go to entry choice instead of directly to manual
     setPhase("entry_choice");
-  };
-
-  // Template selection from wizard
-  const handleTemplateSelected = (
-    template: ProgramTemplate,
-    wizardData: {
-      programType: ProgramType | null;
-      numberOfPeople: number;
-      selectedDates: Date[];
-      wantsAccommodation: boolean | null;
-    }
-  ) => {
-    const startDate = wizardData.selectedDates[0] || new Date();
-    loadFromTemplate(template, startDate, wizardData.numberOfPeople);
-    setProgramType(wizardData.programType);
-    setPhase("manual");
-    toast({ title: `"${template.name}" geladen`, description: "U kunt het programma nu naar wens aanpassen.", duration: 4000 });
   };
 
   // Entry choice handler
@@ -212,7 +158,6 @@ const ProgrammaSamenstellen = () => {
 
   const showLogiesBanner = selectedDates.length > 1;
   const isInBuildPhase = phase === "manual";
-  const isInWizardPhase = phase === "basics";
 
   return (
     <div className="min-h-screen bg-background">
@@ -267,19 +212,6 @@ const ProgrammaSamenstellen = () => {
           </div>
         </section>
 
-        {/* Phase: Basics (wizard) */}
-        {isInWizardPhase && (
-          <section className="py-12 md:py-16">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-              <ConfiguratorWizard 
-                onComplete={handleWizardComplete}
-                onTemplateSelected={handleTemplateSelected}
-                initialData={{ numberOfPeople, selectedDates }}
-              />
-            </div>
-          </section>
-        )}
-
         {/* Phase: Entry Choice */}
         {phase === "entry_choice" && (
           <section className="py-12 md:py-16">
@@ -312,6 +244,13 @@ const ProgrammaSamenstellen = () => {
                 onSelectTemplate={handleEntryTemplateSelected}
                 onStartEmpty={() => setPhase("manual")}
                 onBack={() => setPhase("entry_choice")}
+                onPeopleChange={setNumberOfPeople}
+                onDatesChange={(dates) => {
+                  dates.forEach((date, i) => {
+                    if (i === 0) setSelectedDate(date);
+                    else addDate(date);
+                  });
+                }}
               />
             </div>
           </section>

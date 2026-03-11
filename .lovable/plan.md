@@ -1,61 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Klantreis vereenvoudigen: van 4 stappen naar 1 keuze
+### Wat is gebouwd
 
-## Probleem
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-De huidige flow heeft **vier schermen** voordat een klant iets nuttigs doet:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-```text
-Huidige flow (te veel stappen):
-Hero → "Laten/Zelf regelen" → Personen + datums → "Erwin/Template/Handmatig" → inhoud
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-Dat zijn twee keuzeschermen die overlap hebben.
-```
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-## Nieuwe flow
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-```text
-Nieuwe flow (direct naar actie):
-Hero → 3 visuele kaarten direct zichtbaar → klant kiest → track verzamelt basics zelf → inhoud
-```
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-De `ConfiguratorWizard` (met "Laten regelen / Zelf regelen" track-keuze en aparte personen/datums stap) wordt **volledig overgeslagen**. De `EntryChoice` wordt het eerste en enige keuzescherm, direct onder de hero, met visueel rijke foto-kaarten (zoals de huidige "Laten/Zelf regelen" kaarten).
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### Wat elke track doet met basisgegevens
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-| Track | Basisgegevens |
-|---|---|
-| **Erwin (AI)** | Verzamelt al personen + datums in eigen stappen — geen wijziging nodig |
-| **Voorbeeldprogramma** | Inline personen + datums picker boven de template-lijst |
-| **Zelf kiezen** | Inline personen + datums in de cart-sidebar (bestaand) |
+---
 
-## Technische wijzigingen
+## Plan: CRM en Partners samenvoegen
 
-### 1. `EntryChoice.tsx` — visueel upgrade
-- Vervang de huidige list-style kaarten door grote foto-kaarten (2 + 1 grid) met gradient overlay, vergelijkbaar met de huidige "Laten/Zelf regelen" kaarten
-- Gebruik bestaande assets (erwin-profile, team-beach, dunes-group)
+### Status: ✅ Geïmplementeerd
 
-### 2. `ProgrammaSamenstellen.tsx` — wizard verwijderen
-- Verwijder de `"basics"` fase volledig
-- Start direct in `"entry_choice"` fase (tenzij cart items aanwezig → `"manual"`)
-- Verwijder `ConfiguratorWizard` import en alle wizard-gerelateerde handlers
-- De hero tekst wordt altijd de welkomst-variant
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-### 3. `TemplateSelector.tsx` — inline basics
-- Voeg een compacte personen + datums picker toe bovenaan de template-lijst
-- Zodat de klant niet eerst een apart formulier hoeft in te vullen
+---
 
-### 4. Cart sidebar — al bestaand
-- De handmatige track heeft al personen/datums in de `ConfiguratorCart` sidebar — geen wijziging nodig
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-## Bestanden
+### Status: ✅ Geïmplementeerd
 
-| Actie | Bestand |
-|---|---|
-| Wijzig | `src/components/configurator/EntryChoice.tsx` — foto-kaarten layout |
-| Wijzig | `src/pages/ProgrammaSamenstellen.tsx` — wizard verwijderen, direct entry_choice |
-| Wijzig | `src/components/configurator/TemplateSelector.tsx` — inline basics picker |
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
-`ConfiguratorWizard.tsx` blijft bestaan (wordt nog gebruikt door admin tooling / MaatwerkIntakeForm flow) maar wordt niet meer geïmporteerd op de klantpagina.
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
 
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
