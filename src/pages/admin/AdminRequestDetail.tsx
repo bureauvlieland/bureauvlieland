@@ -1050,6 +1050,12 @@ const AdminRequestDetail = () => {
                       <Euro className="h-4 w-4 mr-2" />
                       Kosten toevoegen
                     </Button>
+                    <Button variant="outline" onClick={() => {
+                      setStatusEmailOpen(true);
+                    }}>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Status update e-mail
+                    </Button>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
