@@ -384,9 +384,19 @@ export const AccommodationSection = ({
           <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              {accommodation.quotes_requested_count > 0
-                ? `Bureau Vlieland heeft ${accommodation.quotes_requested_count} logiespartner${accommodation.quotes_requested_count !== 1 ? 's' : ''} benaderd. U ontvangt een email zodra er offertes binnenkomen.`
-                : 'Wij verzamelen offertes voor u. U ontvangt een email zodra accommodaties reageren.'}
+              {(() => {
+                const requested = accommodation.quotes_requested_count || 0;
+                const declined = accommodation.quotes_declined_count || 0;
+                const parts: string[] = [];
+                if (requested > 0) {
+                  parts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd.`);
+                }
+                if (declined > 0) {
+                  parts.push(`${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} helaas afgewezen.`);
+                }
+                parts.push('U ontvangt een email zodra er offertes binnenkomen.');
+                return parts.join(' ');
+              })()}
             </p>
             <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
           </div>
