@@ -627,7 +627,7 @@ export default function AdminAccommodationDetail() {
 
                           {/* Meta row */}
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>Geldig tot {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}</span>
+                            <span>Geldig tot {format(new Date(quote.valid_until), "EEE d MMM yyyy", { locale: nl })}</span>
                             {hasAttachment && (
                               <span className="flex items-center gap-0.5">
                                 {quote.quote_external_url ? <LinkIcon className="h-3 w-3" /> : <Paperclip className="h-3 w-3" />}
