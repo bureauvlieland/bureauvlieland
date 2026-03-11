@@ -272,7 +272,7 @@ export const CustomerProgramItem = ({
           )}
 
           {/* Always-visible action row */}
-          {item.status !== "cancelled" && item.status !== "counter_proposed" && (
+          {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
             <div className="mt-3 flex flex-wrap gap-2 justify-end">
               {/* Per-item akkoord for quote mode items with status bevestigd */}
               {isQuoteMode && item.item_quote_status === "bevestigd" && !item.customer_approved_at && onApproveQuoteItem && (

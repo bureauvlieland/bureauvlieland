@@ -110,6 +110,16 @@ export const ActionRequiredCard = ({
     // Priority 4: Pending items waiting for partner confirmation
     // Skip when quote is awaiting approval - requests haven't been sent yet
     if (statusSummary.pending > 0 && !isQuotePreApproval) {
+      // If not yet published by admin, show "being reviewed" instead of "sent to partners"
+      if (!isPublished) {
+        return {
+          type: "pending",
+          title: "Uw aanvraag wordt beoordeeld",
+          description: "Bureau Vlieland bekijkt uw programma en bereidt de aanvragen voor. U ontvangt bericht zodra de aanvragen zijn verstuurd naar de aanbieders.",
+          icon: <Clock className="h-5 w-5" />,
+          variant: "neutral",
+        };
+      }
       return {
         type: "pending",
         title: "Aanvragen verstuurd naar aanbieders",
