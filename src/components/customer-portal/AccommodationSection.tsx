@@ -96,6 +96,15 @@ export const AccommodationSection = ({
   const selectedQuote = quotes.find((q) => q.status === "selected");
   const submittedQuotes = quotes.filter((q) => q.status === "submitted");
   const expiredQuotes = quotes.filter((q) => q.status === "expired");
+  const declinedQuotes = quotes.filter((q) => q.status === "declined" || q.status === "rejected");
+
+  // Deduplicated decline reasons (anonymized - no partner names)
+  const declineReasons = useMemo(() => {
+    const reasons = declinedQuotes
+      .map((q) => q.partner_notes)
+      .filter((note): note is string => !!note && note.trim().length > 0);
+    return [...new Set(reasons)];
+  }, [declinedQuotes]);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
