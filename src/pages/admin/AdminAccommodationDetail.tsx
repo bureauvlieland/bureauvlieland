@@ -621,7 +621,7 @@ export default function AdminAccommodationDetail() {
                           {/* Alternative dates for declined */}
                           {quote.status === "declined" && (quote as any).proposed_arrival_date && (
                             <p className="text-xs text-primary font-medium">
-                              Alt: {format(new Date((quote as any).proposed_arrival_date), "d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "d MMM", { locale: nl })}
+                              Alt: {format(new Date((quote as any).proposed_arrival_date), "EEE d MMM", { locale: nl })} – {format(new Date((quote as any).proposed_departure_date), "EEE d MMM", { locale: nl })}
                             </p>
                           )}
 
