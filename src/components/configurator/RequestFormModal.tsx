@@ -266,12 +266,12 @@ export const RequestFormModal = ({
       setSuccessBlocks([]);
       setCustomerToken(null);
       setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
+        name: prefillData?.name || "",
+        email: prefillData?.email || "",
+        phone: prefillData?.phone || "",
+        company: prefillData?.company || "",
         notes: "",
-        eventType: "",
+        eventType: prefillData?.eventType || "",
       });
     }
     onClose();
