@@ -5,6 +5,7 @@ import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
 import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
 import { cn } from "@/lib/utils";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
 
@@ -57,6 +58,7 @@ export const ProgramSidebar = ({
   // Determine accommodation status
   const hasAccommodation = !!selectedAccommodationQuote;
   const accommodationStatus: "none" | "requested" | "selected" = selectedAccommodationQuote ? "selected" : accommodation ? "requested" : "none";
+  const { settings: appSettings } = useAppSettings();
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -110,7 +112,7 @@ export const ProgramSidebar = ({
           <div>
             <p className="text-sm font-medium">Toeristenbelasting</p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              De gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft. Dit bedrag wordt per persoon per dag berekend.
+              €{appSettings.tourist_tax_pp_per_day.toFixed(2).replace('.', ',')} p.p. per dag — de gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft.
             </p>
           </div>
         </div>
@@ -119,7 +121,7 @@ export const ProgramSidebar = ({
           <div>
             <p className="text-sm font-medium">Natuurbijdrage</p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              Per deelnemer wordt een bijdrage afgedragen aan Staatsbosbeheer voor het behoud van de natuur op Vlieland.
+              €{appSettings.nature_contribution_pp.toFixed(2).replace('.', ',')} p.p. — per deelnemer wordt een bijdrage afgedragen aan Staatsbosbeheer voor het behoud van de natuur op Vlieland.
             </p>
           </div>
         </div>
