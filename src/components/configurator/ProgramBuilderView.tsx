@@ -138,15 +138,13 @@ export const ProgramBuilderView = ({
     );
   }, [cartItems, selectedDates]);
 
+  const totalDays = selectedDates.length || 1;
   const getItemsForDay = (dayIndex: number) =>
-    cartItems
-      .filter((item) => (item.dayIndex ?? 0) === dayIndex)
-      .sort((a, b) => {
-        if (!a.preferredTime && !b.preferredTime) return 0;
-        if (!a.preferredTime) return 1;
-        if (!b.preferredTime) return -1;
-        return a.preferredTime.localeCompare(b.preferredTime);
-      });
+    sortCartItemsForDay(
+      cartItems.filter((item) => (item.dayIndex ?? 0) === dayIndex),
+      dayIndex,
+      totalDays
+    );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

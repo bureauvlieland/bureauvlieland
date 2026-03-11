@@ -156,14 +156,12 @@ export const ProgramEditor = ({
   }, [cartItems, effectiveDates]);
 
   const getItemsForDay = (dayIndex: number) => {
-    return cartItems
-      .filter(item => (item.dayIndex ?? 0) === dayIndex)
-      .sort((a, b) => {
-        if (!a.preferredTime && !b.preferredTime) return 0;
-        if (!a.preferredTime) return 1;
-        if (!b.preferredTime) return -1;
-        return a.preferredTime.localeCompare(b.preferredTime);
-      });
+    const totalDays = effectiveDates.length || 1;
+    return sortCartItemsForDay(
+      cartItems.filter(item => (item.dayIndex ?? 0) === dayIndex),
+      dayIndex,
+      totalDays
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
