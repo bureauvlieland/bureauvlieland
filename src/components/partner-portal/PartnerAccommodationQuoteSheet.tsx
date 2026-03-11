@@ -517,7 +517,6 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
                   <p className="text-muted-foreground text-xs">U factureert dezelfde geoffreerde prijs als bij directe facturatie. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
                 </div>
-              ) : null}
               
               {/* Invoice registration section */}
               {existingQuote.invoiced_number ? (
