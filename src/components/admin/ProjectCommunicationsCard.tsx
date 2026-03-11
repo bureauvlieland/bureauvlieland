@@ -26,11 +26,16 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Zap,
 } from "lucide-react";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
 import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
-import { COMMUNICATION_TYPE_CONFIG, type CommunicationType } from "@/types/projectCommunication";
+import {
+  COMMUNICATION_TYPE_CONFIG,
+  EMAIL_TYPE_LABELS,
+  type CommunicationType,
+} from "@/types/projectCommunication";
 import { cn } from "@/lib/utils";
 
 interface PartnerRecipient {
@@ -103,8 +108,13 @@ export function ProjectCommunicationsCard({
     }
   };
 
-  const isInbound = (comm: any) => 
+  const isInbound = (comm: any) =>
     comm.communication_type === "email_in" || comm.direction === "inbound";
+
+  const getEmailTypeLabel = (emailType?: string) => {
+    if (!emailType) return null;
+    return EMAIL_TYPE_LABELS[emailType] || emailType;
+  };
 
   const displayCount = expanded ? communications.length : 5;
   const visibleCommunications = communications.slice(0, displayCount);
@@ -152,6 +162,9 @@ export function ProjectCommunicationsCard({
             <div className="space-y-3">
               {visibleCommunications.map((comm) => {
                 const config = COMMUNICATION_TYPE_CONFIG[comm.communication_type as CommunicationType];
+                const isFromEmailLog = comm.source === "email_log";
+                const emailTypeLabel = isFromEmailLog ? getEmailTypeLabel(comm.email_type) : null;
+
                 return (
                   <div
                     key={comm.id}
@@ -164,8 +177,14 @@ export function ProjectCommunicationsCard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium">
-                            {config?.label || comm.communication_type}
+                            {emailTypeLabel || config?.label || comm.communication_type}
                           </span>
+                          {isFromEmailLog && (
+                            <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-border">
+                              <Zap className="h-3 w-3 mr-0.5" />
+                              Automatisch
+                            </Badge>
+                          )}
                           {isInbound(comm) && (
                             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                               Inkomend
@@ -188,27 +207,38 @@ export function ProjectCommunicationsCard({
                             {comm.contact_email && ` (${comm.contact_email})`}
                           </p>
                         )}
-                        <p className={cn("text-sm mt-1 whitespace-pre-wrap", !expandedIds.has(comm.id) && "line-clamp-3")}>
-                          {comm.content}
-                        </p>
-                        {comm.content && comm.content.length > 150 && (
-                          <button
-                            type="button"
-                            className="text-xs text-primary hover:underline mt-1"
-                            onClick={() => toggleExpanded(comm.id)}
-                          >
-                            {expandedIds.has(comm.id) ? "Minder tonen" : "Meer lezen"}
-                          </button>
+                        {!comm.contact_name && comm.contact_email && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {comm.contact_email}
+                          </p>
+                        )}
+                        {comm.content && (
+                          <>
+                            <p className={cn("text-sm mt-1 whitespace-pre-wrap", !expandedIds.has(comm.id) && "line-clamp-3")}>
+                              {comm.content}
+                            </p>
+                            {comm.content.length > 150 && (
+                              <button
+                                type="button"
+                                className="text-xs text-primary hover:underline mt-1"
+                                onClick={() => toggleExpanded(comm.id)}
+                              >
+                                {expandedIds.has(comm.id) ? "Minder tonen" : "Meer lezen"}
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteId(comm.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!isFromEmailLog && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteId(comm.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
