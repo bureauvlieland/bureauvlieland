@@ -9,6 +9,7 @@ import { RequestFormModal } from "@/components/configurator/RequestFormModal";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import type { CartItemDetail } from "@/types/buildingBlock";
 import heroImage from "@/assets/beach-signs.jpg";
 
 type Phase = "basics" | "program";
@@ -16,6 +17,7 @@ type Phase = "basics" | "program";
 const FERRY_HEEN_ID = "boot-enkel-heen";
 const FERRY_TERUG_ID = "boot-enkel-terug";
 const FIETS_ID = "fiets-huur";
+const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_ID]);
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
