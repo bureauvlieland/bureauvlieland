@@ -2,8 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Clock, Users, Info, MapPin } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
-import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
-import { getBlockImage, getProviderName, isSelfArranged } from "@/lib/buildingBlockUtils";
+import { getBlockImage, isSelfArranged } from "@/lib/buildingBlockUtils";
 
 interface BuildingBlockListItemProps {
   block: BuildingBlock;
@@ -54,9 +53,6 @@ export const BuildingBlockListItem = ({ block, onAdd, isInCart }: BuildingBlockL
               {block.min_people}-{block.max_people} pers.
             </span>
           )}
-          <span className="text-xs text-muted-foreground">
-            Door: {getProviderName(block)}
-          </span>
           {block.location_address && (
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
@@ -66,14 +62,8 @@ export const BuildingBlockListItem = ({ block, onAdd, isInCart }: BuildingBlockL
         </div>
       </div>
 
-      {/* Price + action */}
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="text-right">
-          <span className="font-semibold text-foreground">{formatBlockPrice(block)}</span>
-          {formatPriceNote(block) && (
-            <span className="text-muted-foreground text-xs block">{formatPriceNote(block)}</span>
-          )}
-        </div>
+      {/* Action */}
+      <div className="flex items-center flex-shrink-0">
         <Button
           onClick={() => onAdd(block.id)}
           variant={isInCart ? "secondary" : "default"}

@@ -2,8 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Clock, Users, Info, MapPin } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
-import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
-import { getBlockImage, getProviderName, isSelfArranged } from "@/lib/buildingBlockUtils";
+import { getBlockImage, isSelfArranged } from "@/lib/buildingBlockUtils";
 
 interface BuildingBlockCardProps {
   block: BuildingBlock;
@@ -69,16 +68,6 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
             </div>
           )}
         </div>
-
-        {/* Subtle price */}
-        <p className="text-xs text-muted-foreground mb-4">
-          {block.is_from_price ? "Vanaf" : ""} {formatBlockPrice(block)} {formatPriceNote(block)}
-        </p>
-
-        {/* Provider */}
-        <p className="text-xs text-muted-foreground mb-4">
-          Door: <span className="font-medium">{getProviderName(block)}</span>
-        </p>
 
         {/* Action button */}
         <Button

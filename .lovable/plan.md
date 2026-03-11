@@ -1,70 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Configurator vereenvoudigen — Fase 1: Prijzen verwijderen + vereenvoudiging
+### Wat is gebouwd
 
-Dit plan combineert de eerder goedgekeurde richting (3-track entry met AI Erwin, templates, zelf kiezen) met het verwijderen van alle prijsinformatie uit de klantgerichte configurator.
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-## Overzicht wijzigingen
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-### A. Prijzen verwijderen uit klant-configurator
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-Alle prijsinformatie wordt verwijderd van de klantgerichte pagina's. Prijzen komen pas in beeld in het klantportaal nadat partners hebben gereageerd.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-| Component | Wat wordt verwijderd |
-|---|---|
-| `BuildingBlockCard.tsx` | Prijsregel (regels 73-76): `formatBlockPrice` + `formatPriceNote` |
-| `BuildingBlockListItem.tsx` | Prijskolom (regels 70-76): hele price+note blok |
-| `CartItemDetails.tsx` | Prijsregel (regel 44): `price_display_override` / `€ price_adult` |
-| `ProgramEditor.tsx` | "Indicatief totaal" blok (regels 529-539), "Coördinatiefee" blok (regels 417-426), BTW-uitsplitsing in expanded mode (regels 328-350) |
-| `RequestFormModal.tsx` | Handling fee regel (regel 417), `renderBlockDetail` prijsinfo, indicatieve totalen |
-| `TemplatePreviewSheet.tsx` | Eventuele indicatieve prijs p.p. |
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-De "provider" naam (`Door: Partner X`) wordt ook verwijderd uit de kaarten — klanten hoeven niet te weten welke partner het uitvoert.
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-### B. Nieuwe 3-track entry
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-Nieuw component `EntryChoice.tsx` met drie kaarten:
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-1. **Laat Erwin helpen** — AI-assistent (guided flow, niet vrije chat)
-2. **Start met voorbeeldprogramma** — bestaande `TemplateSelector`
-3. **Kies zelf onderdelen** — building blocks grid
+---
 
-### C. AI-assistent Erwin
+## Plan: CRM en Partners samenvoegen
 
-**Nieuw component**: `AiErwinChat.tsx` — guided flow met keuze-chips:
-- Stap 1: Gelegenheid (zakelijk/privé + subtype)
-- Stap 2: Aantal personen + datum(s)
-- Stap 3: Sfeer (actief/ontspannen/mix) + bijzondere wensen
-- Resultaat: AI genereert programmasuggestie uit beschikbare bouwstenen
+### Status: ✅ Geïmplementeerd
 
-**Nieuwe edge function**: `generate-program-suggestion` — haalt gepubliceerde blocks op, stuurt naar Gemini Flash via Lovable AI, retourneert `{ block_id, day_index }[]`
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-### D. Vereenvoudig AddToCartDialog
+---
 
-- Verwijder tijdslot-selectie (hele time picker + conflict detection)
-- Behoud alleen dag-keuze bij meerdaags
-- Klanten kiezen geen tijden meer — dat doet Bureau Vlieland
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-### E. Refactor ProgrammaSamenstellen.tsx
+### Status: ✅ Geïmplementeerd
 
-- Nieuwe flow: Basisgegevens → EntryChoice → (Erwin / Template / Zelf kiezen) → Overzicht
-- Cart-sidebar en GlobalCartDrawer blijven functioneel maar zonder prijzen
-- Boot/fiets/logies als eenvoudige toggles in het overzicht
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
-## Bestanden
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
 
-| Actie | Bestand |
-|---|---|
-| Nieuw | `src/components/configurator/EntryChoice.tsx` |
-| Nieuw | `src/components/configurator/AiErwinChat.tsx` |
-| Nieuw | `supabase/functions/generate-program-suggestion/index.ts` |
-| Wijzig | `src/components/configurator/BuildingBlockCard.tsx` — prijs + provider verwijderen |
-| Wijzig | `src/components/configurator/BuildingBlockListItem.tsx` — prijs + provider verwijderen |
-| Wijzig | `src/components/configurator/CartItemDetails.tsx` — prijs verwijderen |
-| Wijzig | `src/components/configurator/ProgramEditor.tsx` — totalen, bureau fee, BTW verwijderen |
-| Wijzig | `src/components/configurator/RequestFormModal.tsx` — prijsinfo uit samenvatting |
-| Wijzig | `src/components/configurator/AddToCartDialog.tsx` — tijdselectie verwijderen |
-| Wijzig | `src/pages/ProgrammaSamenstellen.tsx` — nieuwe flow met EntryChoice |
-
-Admin-tooling (AdminProgramNew, admin ProgramEditor) blijft volledig intact met alle prijzen en tijdslots.
-
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.

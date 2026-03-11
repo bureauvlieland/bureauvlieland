@@ -22,16 +22,12 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { 
-  calculateBureauFee, 
   groupBlocksByType, 
-  formatBlockPrice, 
-  formatPriceNote,
-  calculateIndicativeTotal,
   type BuildingBlock, 
   type CartItemDetail 
 } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
-import { CheckCircle, Loader2, Building2, Users2, Info, AlertCircle, ExternalLink, Clock, MessageSquare, ArrowRight } from "lucide-react";
+import { CheckCircle, Loader2, Building2, Info, AlertCircle, ExternalLink, MessageSquare, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
@@ -92,7 +88,6 @@ export const RequestFormModal = ({
   const blocks = cartItems
     .map((item) => getBlockById(allBlocks, item.blockId))
     .filter(Boolean) as BuildingBlock[];
-  const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
 
   // Helper to get cart item detail by blockId
@@ -117,8 +112,6 @@ export const RequestFormModal = ({
           provider: block?.provider?.name || "Bureau Vlieland",
           providerId: block?.provider_id || "",
           providerEmail: block?.provider?.email || "",
-          priceIndication: block ? formatBlockPrice(block) : "",
-          priceNote: block ? formatPriceNote(block) : "",
           blockType: block?.block_type || "partner",
           externalUrl: block?.external_url,
           preferredTime: item.preferredTime,
@@ -167,7 +160,7 @@ export const RequestFormModal = ({
           provider_id: block.providerId,
           provider_email: block.providerEmail || null,
           block_type: block.blockType,
-          price_indication: block.priceIndication || null,
+          price_indication: null,
           day_index: block.dayIndex,
           preferred_time: block.preferredTime || null,
           customer_notes: block.itemNotes || null,
@@ -204,7 +197,7 @@ export const RequestFormModal = ({
           selectedDate: formattedDates[0], // For backwards compatibility
           selectedDates: formattedDates,
           numberOfDays: effectiveDates.length,
-          bureauFee,
+          bureauFee: 0,
           blocks: blocksWithDetails,
           customerToken: token,
           origin: window.location.origin, // For test mode detection
@@ -213,10 +206,8 @@ export const RequestFormModal = ({
 
       if (error) throw error;
 
-      // Track conversion event with event type and entry page
-      const indicativeValue = calculateIndicativeTotal(blocks, numberOfPeople);
       trackProgramRequestSubmitted({
-        value: indicativeValue,
+        value: 0,
         numberOfPeople,
         numberOfDays: effectiveDates.length,
         eventType: finalEventType,
@@ -284,13 +275,6 @@ export const RequestFormModal = ({
     return (
       <li key={block.id} className="py-1">
         <span className="font-medium">{block.name}</span>
-        <span className="text-muted-foreground"> → {block.provider?.name || "Bureau Vlieland"}</span>
-        {cartItem?.preferredTime && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <Clock className="h-3 w-3" />
-            Gewenste tijd: {cartItem.preferredTime}
-          </span>
-        )}
         {cartItem?.notes && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
             <MessageSquare className="h-3 w-3" />
@@ -393,9 +377,9 @@ export const RequestFormModal = ({
             <div className="text-sm">
               <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Dit is een vrijblijvende aanvraag</p>
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• U betaalt nu nog niets – facturatie volgt pas na bevestiging van een activiteit</li>
-                <li>• Prijzen zijn indicatief (per persoon of per activiteit, afhankelijk van de aanbieder)</li>
-                <li>• Elke aanbieder bevestigt apart – u ontvangt dus mogelijk meerdere facturen</li>
+                <li>• U betaalt nu nog niets</li>
+                <li>• Wij controleren beschikbaarheid bij de aanbieders</li>
+                <li>• U ontvangt een voorstel met definitieve prijzen</li>
               </ul>
             </div>
           </div>
@@ -403,7 +387,7 @@ export const RequestFormModal = ({
 
         {/* Summary grouped by invoice type */}
         <div className="bg-muted/50 rounded-lg p-4 mb-4">
-          <h4 className="font-medium mb-3">Uw aanvraag wordt verstuurd naar:</h4>
+          <h4 className="font-medium mb-3">Uw geselecteerde onderdelen:</h4>
           
           <div className="space-y-3 text-sm">
             {/* Bureau Vlieland */}
@@ -411,27 +395,15 @@ export const RequestFormModal = ({
               <div className="flex items-start gap-2">
                 <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-medium">Bureau Vlieland factureert:</span>
+                  <span className="font-medium">Activiteiten & catering:</span>
                   <ul className="text-muted-foreground mt-1">
                     {groupedBlocks.bureau.map((block) => renderBlockDetail(block))}
-                    <li>• Handling fee + coördinatie (€ {bureauFee})</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Partners */}
-            {groupedBlocks.partner.length > 0 && (
-              <div className="flex items-start gap-2">
-                <Users2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-medium">Wordt aangevraagd bij aanbieders:</span>
-                  <ul className="text-muted-foreground mt-1">
                     {groupedBlocks.partner.map((block) => renderBlockDetail(block))}
                   </ul>
                 </div>
               </div>
             )}
+
 
             {/* Self-arranged */}
             {groupedBlocks.self_arranged.length > 0 && (

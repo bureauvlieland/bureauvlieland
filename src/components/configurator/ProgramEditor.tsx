@@ -29,7 +29,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { calculateBureauFee, groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
+import { groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { SortableCartItem } from "./SortableCartItem";
 
@@ -130,8 +130,9 @@ export const ProgramEditor = ({
   const blocks = cartItems
     .map((item) => getBlockById(allBlocks, item.blockId))
     .filter(Boolean) as BuildingBlock[];
-  const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
+
+  const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
 
   const getCartItem = (blockId: string): CartItemDetail | undefined => {
     return cartItems.find((item) => item.blockId === blockId);
@@ -140,27 +141,6 @@ export const ProgramEditor = ({
   const getBlock = (blockId: string): BuildingBlock | undefined => {
     return blocks.find((block) => block.id === blockId);
   };
-
-  const calculateTotal = () => {
-    let total = 0;
-    blocks.forEach((block) => {
-      if (block.block_type === "self_arranged") return;
-      
-      // Use the new price fields
-      if (block.price_adult !== null) {
-        const price = block.price_adult;
-        if (block.price_type === "per_person") {
-          total += price * numberOfPeople;
-        } else {
-          total += price;
-        }
-      }
-    });
-    return total;
-  };
-
-  const indicativeTotal = calculateTotal();
-  const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
 
   const itemCountPerDay = useMemo(() => {
     const counts: number[] = effectiveDates.map(() => 0);
@@ -292,7 +272,7 @@ export const ProgramEditor = ({
                     Aantal personen
                   </Label>
                   <p className="text-xs text-muted-foreground mb-1.5">
-                    Dit bepaalt de indicatieve prijs per activiteit
+                    Wijzig het aantal personen voor uw groep
                   </p>
                   <Input
                     id="numberOfPeople-expanded"
@@ -322,34 +302,7 @@ export const ProgramEditor = ({
               </div>
             </div>
 
-            {/* Pricing summary */}
-            {hasBillableItems && (
-              <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-                <h4 className="font-medium text-sm mb-2">Indicatief prijsoverzicht</h4>
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Subtotaal excl. BTW</span>
-                    <span>€ {Math.round(indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>BTW (21%)</span>
-                    <span>€ {Math.round(indicativeTotal - indicativeTotal / 1.21).toLocaleString("nl-NL")}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Coördinatiefee ({numberOfPeople} pers.)</span>
-                    <span>€ {bureauFee}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-foreground pt-2 border-t">
-                    <span>Indicatief totaal incl. BTW</span>
-                    <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  * Prijzen zijn indicatief incl. 21% BTW. Exacte prijzen na bevestiging door aanbieders.
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
 
           {/* Right column: Activities by day */}
           <div className="md:col-span-3 flex flex-col overflow-hidden">
@@ -414,16 +367,6 @@ export const ProgramEditor = ({
                 </>
               )}
 
-              {/* Bureau fee */}
-              {hasBillableItems && (
-                <div className="flex items-center justify-between py-2.5 px-3 bg-primary/10 rounded-lg mt-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">Coördinatiefee</p>
-                    <p className="text-xs text-muted-foreground">Wij regelen de communicatie met alle aanbieders</p>
-                  </div>
-                  <span className="text-sm font-medium">€ {bureauFee}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -529,12 +472,11 @@ export const ProgramEditor = ({
       {/* Simplified pricing */}
       {hasBillableItems && (
         <div className="border-t pt-3">
-          <div className="flex justify-between font-semibold text-base">
-            <span>Indicatief totaal</span>
-            <span>€ {(indicativeTotal + bureauFee).toLocaleString("nl-NL")}</span>
-          </div>
+          <p className="text-sm font-medium text-foreground">
+            {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
+          </p>
           <p className="text-xs text-muted-foreground mt-1">
-            * Exacte prijzen na bevestiging door aanbieders
+            * Exacte prijzen ontvangt u in ons voorstel
           </p>
         </div>
       )}
