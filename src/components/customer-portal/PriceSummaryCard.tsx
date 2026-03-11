@@ -27,6 +27,7 @@ const calcVatBreakdown = (amountInclVat: number, vatRate: number = 21) => ({
 export const PriceSummaryCard = ({
   items,
   numberOfPeople,
+  numberOfDays = 1,
   className,
   variant = "default",
   termsAccepted = false,
