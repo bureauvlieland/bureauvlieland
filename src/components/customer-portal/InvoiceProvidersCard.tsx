@@ -97,9 +97,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          {isBureauCentral
-            ? "Bureau Vlieland verzorgt de volledige facturatie voor uw programma."
-            : "Voor dit programma ontvang je afzonderlijke facturen van de onderstaande partijen."}
+          Bureau Vlieland verzorgt de volledige facturatie voor uw programma.
         </p>
 
         <div className="space-y-3">
