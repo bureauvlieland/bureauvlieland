@@ -264,12 +264,13 @@ export const ProgramBuilderView = ({
                     const image = getBlockImage(block);
                     const hasImage = image !== "/placeholder.svg";
                     const isFerryBlock = FERRY_BLOCK_IDS.includes(item.blockId);
+                    const isBikeBlock = item.blockId === "fiets-huur";
                     const ferryExtras = isFerryBlock ? (block.price_extras as { portFrom?: string; portTo?: string } | null) : null;
 
                     return (
                       <SortableItemCard key={item.blockId} item={item}>
                         <div className="space-y-2">
-                          <Card className="flex gap-3 overflow-hidden hover:shadow-md transition-shadow">
+                          <Card className={`flex gap-3 overflow-hidden transition-shadow ${isBikeBlock ? 'border-dashed border-primary/30 bg-primary/[0.03] hover:shadow-md' : 'hover:shadow-md'}`}>
                             {hasImage && (
                               <div className="w-20 sm:w-28 shrink-0">
                                 <img src={image} alt={block.name} className="w-full h-full object-cover" loading="lazy" />
@@ -289,7 +290,12 @@ export const ProgramBuilderView = ({
                                       Gewenste tijd: {item.preferredTime}
                                     </p>
                                   )}
-                                  {!item.preferredTime && block.short_description && (
+                                  {!item.preferredTime && isBikeBlock && (
+                                    <p className="text-primary/70 text-xs mt-0.5 italic">
+                                      Voor de duur van het verblijf
+                                    </p>
+                                  )}
+                                  {!item.preferredTime && !isBikeBlock && block.short_description && (
                                     <p className="text-muted-foreground text-xs md:text-sm mt-0.5 line-clamp-2">
                                       {block.short_description}
                                     </p>
