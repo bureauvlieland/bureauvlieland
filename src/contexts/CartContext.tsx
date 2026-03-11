@@ -229,30 +229,50 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return cartItems.some(item => item.blockId === blockId);
   }, [cartItems]);
 
-  // Load a template into the cart
   const loadFromTemplate = useCallback((
     template: ProgramTemplate,
     startDate: Date,
-    numberOfPeople: number
+    numberOfPeopleParam: number
   ) => {
-    loadTemplateToCart(template, {
-      clearCart,
-      setSelectedDate: (date) => {
-        if (date) {
-          setSelectedDates([date]);
-        } else {
-          setSelectedDates([]);
-        }
-      },
-      addDate: (date) => {
-        setSelectedDates(prev => [...prev, date].sort((a, b) => a.getTime() - b.getTime()));
-        return true;
-      },
-      addToCart,
-      updateItem,
-      setNumberOfPeople,
-    }, startDate, numberOfPeople);
-  }, [clearCart, addToCart, updateItem, setNumberOfPeople]);
+    // 1. Build dates array
+    const dates: Date[] = [];
+    for (let i = 0; i < template.duration_days; i++) {
+      dates.push(addDays(startDate, i));
+    }
+
+    // 2. Build cart items - start with mandatory blocks (no preferredTime)
+    const lastDay = Math.max(0, template.duration_days - 1);
+    const newItems: CartItemDetail[] = [
+      { blockId: "boot-enkel-heen", preferredTime: null, notes: "", dayIndex: 0 },
+      { blockId: "boot-enkel-terug", preferredTime: null, notes: "", dayIndex: lastDay },
+      { blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 },
+    ];
+
+    // 3. Add template items (skip mandatory block IDs)
+    if (template.items) {
+      const sorted = [...template.items].sort((a, b) => {
+        if (a.day_index !== b.day_index) return a.day_index - b.day_index;
+        return a.sort_order - b.sort_order;
+      });
+
+      for (const item of sorted) {
+        if (SKIP_BLOCK_IDS.has(item.block_id)) continue;
+        if (newItems.some(i => i.blockId === item.block_id)) continue;
+        newItems.push({
+          blockId: item.block_id,
+          preferredTime: item.preferred_time || null,
+          notes: item.notes || "",
+          dayIndex: item.day_index,
+        });
+      }
+    }
+
+    // 4. Set all state at once — no stale closures
+    setCartItems(newItems);
+    setSelectedDates(dates);
+    setNumberOfPeople(numberOfPeopleParam);
+    setManualOrder(false);
+  }, [setNumberOfPeople]);
 
   // Legacy compatibility: first date as selectedDate
   const selectedDate = selectedDates.length > 0 ? selectedDates[0] : undefined;
