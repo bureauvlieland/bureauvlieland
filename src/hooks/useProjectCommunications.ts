@@ -64,13 +64,24 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         );
       }
 
-      const [commResult, emailResult] = await Promise.all([
+      const [commResult, ...emailResults] = await Promise.all([
         commQuery,
-        emailQuery,
+        ...emailQueries,
       ]);
 
       if (commResult.error) throw commResult.error;
-      if (emailResult.error) throw emailResult.error;
+      for (const r of emailResults) {
+        if (r.error) throw r.error;
+      }
+
+      // Deduplicate email results by id (in case both queries return the same row)
+      const emailLogMap = new Map<string, any>();
+      for (const r of emailResults) {
+        for (const log of (r.data || [])) {
+          emailLogMap.set(log.id, log);
+        }
+      }
+      const allEmailLogs = Array.from(emailLogMap.values());
 
       const manualItems = (commResult.data || []).map((c) => ({
         ...c,
