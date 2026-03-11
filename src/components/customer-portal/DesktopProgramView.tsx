@@ -372,7 +372,7 @@ export const DesktopProgramView = ({
                           <>
                             <CustomerTimeline items={dayItems} showTimeColumn>
                               {(item) => (
-                                <CustomerProgramItem
+                              <CustomerProgramItem
                                   item={item}
                                   selectedDates={selectedDates}
                                   onUpdate={(updates) => onUpdateItem(item.id, updates)}
@@ -386,6 +386,8 @@ export const DesktopProgramView = ({
                                   isPreApproval={isPreApproval}
                                   isQuoteMode={isQuoteMode}
                                   vatRate={getItemVatRate(item)}
+                                  readOnly={!isPublished}
+                                  hideDay
                                 />
                               )}
                             </CustomerTimeline>
