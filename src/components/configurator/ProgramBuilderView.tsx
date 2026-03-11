@@ -270,7 +270,7 @@ export const ProgramBuilderView = ({
                     return (
                       <SortableItemCard key={item.blockId} item={item}>
                         <div className="space-y-2">
-                          <Card className="flex gap-3 overflow-hidden hover:shadow-md transition-shadow">
+                          <Card className={`flex gap-3 overflow-hidden transition-shadow ${isBikeBlock ? 'border-dashed border-primary/30 bg-primary/[0.03] hover:shadow-md' : 'hover:shadow-md'}`}>
                             {hasImage && (
                               <div className="w-20 sm:w-28 shrink-0">
                                 <img src={image} alt={block.name} className="w-full h-full object-cover" loading="lazy" />
