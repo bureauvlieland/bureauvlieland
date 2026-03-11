@@ -78,3 +78,29 @@ export const loadTemplateToCart = (
     }
   }
 };
+
+/**
+ * Calculate indicative total price for a template
+ */
+export const calculateTemplatePrice = (
+  template: ProgramTemplate,
+  numberOfPeople: number
+): number | null => {
+  if (!template.items || template.items.length === 0) {
+    return template.indicative_price_pp 
+      ? template.indicative_price_pp * numberOfPeople 
+      : null;
+  }
+
+  let total = 0;
+  let hasAnyPrice = false;
+
+  for (const item of template.items) {
+    if (item.block?.price_adult) {
+      hasAnyPrice = true;
+      total += item.block.price_adult * numberOfPeople;
+    }
+  }
+
+  return hasAnyPrice ? total : null;
+};
