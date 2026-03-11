@@ -60,6 +60,8 @@ export const CustomerProgramItem = ({
   vatRate,
   isPreApproval = false,
   isQuoteMode = false,
+  readOnly = false,
+  hideDay = false,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
