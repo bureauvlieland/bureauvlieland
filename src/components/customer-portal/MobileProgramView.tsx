@@ -147,6 +147,7 @@ export const MobileProgramView = ({
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
+  const isPublished = !!program.program_published_at;
   const isQuoteMode = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
   const hasUnapprovedItems = isQuoteMode && program.items.some(
     (i) => i.item_quote_status === "bevestigd" && !i.customer_approved_at && i.status !== "cancelled"
