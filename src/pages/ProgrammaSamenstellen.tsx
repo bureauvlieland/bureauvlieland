@@ -159,6 +159,7 @@ const ProgrammaSamenstellen = () => {
                 selectedDates={selectedDates}
                 onRemoveItem={removeFromCart}
                 onAddItem={handleAddItem}
+                onUpdateItem={updateItem}
                 onSubmit={handleSubmit}
                 onEditBasics={() => setPhase("basics")}
                 eventType={contactData?.eventType}
