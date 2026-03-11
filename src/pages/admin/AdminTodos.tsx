@@ -532,7 +532,7 @@ const TakenTab = () => {
             {todo.due_date && (
               <span className={`flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
                 <Calendar className="h-3 w-3" />
-                {format(new Date(todo.due_date), "d MMM yyyy", { locale: nl })}
+                {format(new Date(todo.due_date), "EEE d MMM yyyy", { locale: nl })}
                 {isOverdue && " (verlopen)"}
               </span>
             )}
