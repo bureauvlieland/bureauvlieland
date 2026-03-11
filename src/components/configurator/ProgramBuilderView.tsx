@@ -38,11 +38,13 @@ export const ProgramBuilderView = ({
   onUpdateItem,
   onSubmit,
   onEditBasics,
+  onReplaceWithSuggestion,
   eventType,
   contactName,
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [activeDay, setActiveDay] = useState(0);
 
   const existingBlockIds = useMemo(
