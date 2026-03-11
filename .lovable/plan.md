@@ -1,45 +1,68 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+# Fix: Template laden met stale closure probleem
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+## Probleem
+De `loadFromTemplate` functie in CartContext geeft `addToCart` door aan de template loader, maar `addToCart` heeft een stale closure over `cartItems`. Na `clearCart()` (die `setCartItems([])` doet) bevat de closure van `addToCart` nog de **oude** cart items. Hierdoor:
+- Als de oude cart al een ferry bevat, denkt `addToCart` dat het een duplicaat is en retourneert `false`
+- De ferry en fiets worden niet toegevoegd
+- De `useEffect` in ProgrammaSamenstellen probeert ze later alsnog toe te voegen, maar met mogelijke timing-issues
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+## Oplossing
+Bypass `addToCart` in `loadFromTemplate`. Bouw de volledige cart items array direct op in de `loadFromTemplate` callback en zet alles in één keer via `setCartItems`.
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+### `src/contexts/CartContext.tsx` — `loadFromTemplate` herschrijven
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+In plaats van `loadTemplateToCart` met cart-functies aan te roepen, direct de state opbouwen:
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+```typescript
+const loadFromTemplate = useCallback((
+  template: ProgramTemplate,
+  startDate: Date,
+  numberOfPeople: number
+) => {
+  // 1. Build dates array
+  const dates: Date[] = [];
+  for (let i = 0; i < template.duration_days; i++) {
+    dates.push(addDays(startDate, i));
+  }
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+  // 2. Build cart items - start with mandatory blocks (no preferredTime)
+  const lastDay = Math.max(0, template.duration_days - 1);
+  const newItems: CartItemDetail[] = [
+    { blockId: "boot-enkel-heen", preferredTime: null, notes: "", dayIndex: 0 },
+    { blockId: "boot-enkel-terug", preferredTime: null, notes: "", dayIndex: lastDay },
+    { blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 },
+  ];
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+  // 3. Add template items (skip mandatory block IDs)
+  if (template.items) {
+    const sorted = [...template.items].sort(...);
+    for (const item of sorted) {
+      if (SKIP_SET.has(item.block_id)) continue;
+      if (newItems.some(i => i.blockId === item.block_id)) continue;
+      newItems.push({
+        blockId: item.block_id,
+        preferredTime: item.preferred_time || null,
+        notes: item.notes || "",
+        dayIndex: item.day_index,
+      });
+    }
+  }
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+  // 4. Set all state at once — no stale closures
+  setCartItems(newItems);
+  setSelectedDates(dates);
+  setNumberOfPeople(numberOfPeople);
+  setManualOrder(false);
+}, [setNumberOfPeople]);  // minimal deps, no stale closure risk
+```
 
----
+### `src/lib/templateLoader.ts`
+Geen wijzigingen nodig — de functie `loadTemplateToCart` blijft beschikbaar voor eventueel ander gebruik, maar wordt niet meer aangeroepen vanuit `loadFromTemplate`.
 
-## Plan: CRM en Partners samenvoegen
+### Samenvatting
+- **1 bestand**: `src/contexts/CartContext.tsx`
+- **Kern**: Direct state opbouwen i.p.v. stapsgewijze `addToCart` calls met stale closures
+- Ferry + fiets altijd aanwezig, zonder vooringestelde tijd
 
-### Status: ✅ Geïmplementeerd
-
-CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
-
----
-
-## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
-
-### Status: ✅ Geïmplementeerd
-
-1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
-
-2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
-
-3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
