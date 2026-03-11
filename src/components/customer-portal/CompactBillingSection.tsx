@@ -20,6 +20,7 @@ interface CompactBillingSectionProps {
   };
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  numberOfDays?: number;
   termsAccepted: boolean;
   selectedAccommodationQuote?: AccommodationQuote;
   onEditBilling: () => void;
