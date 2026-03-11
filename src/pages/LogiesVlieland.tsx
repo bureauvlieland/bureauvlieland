@@ -61,8 +61,8 @@ const LogiesVlieland = () => {
     },
     {
       step: 4,
-      title: "Boek direct",
-      description: "Kies uw favoriet en boek rechtstreeks bij de accommodatie",
+      title: "Boek via Bureau Vlieland",
+      description: "Bureau Vlieland begeleidt het boekingsproces voor u",
     },
   ];
 
@@ -165,8 +165,8 @@ const LogiesVlieland = () => {
               </p>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 U vult één keer uw wensen in. Wij doen het zoekwerk en vragen offertes aan bij 
-                geschikte accommodaties. U ontvangt een overzicht om te vergelijken en boekt 
-                rechtstreeks bij de accommodatie van uw keuze.
+                geschikte accommodaties. U ontvangt een overzicht om te vergelijken en Bureau Vlieland 
+                begeleidt het verdere boekingsproces.
               </p>
             </div>
           </div>

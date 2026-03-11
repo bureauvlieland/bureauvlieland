@@ -296,7 +296,7 @@ const CustomerProgram = () => {
     : "";
 
   // Shared props for both views
-  const invoicingMode = (program as any).invoicing_mode || "partner_direct";
+  const invoicingMode = (program as any).invoicing_mode || "bureau_central";
   const isMultiDay = selectedDates.length > 1;
 
   const viewProps = {

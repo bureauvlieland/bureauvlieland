@@ -140,7 +140,7 @@ export const NextStepsCard = ({
                 Uw boeking is compleet!
               </h3>
               <p className="text-sm text-green-700 dark:text-green-300">
-                U ontvangt de facturen van de verschillende aanbieders. Veel plezier op Vlieland!
+                U ontvangt de factuur van Bureau Vlieland. Veel plezier op Vlieland!
               </p>
             </div>
           </div>

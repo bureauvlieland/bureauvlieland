@@ -1,104 +1,111 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Volledige Review: Bureau Vlieland als centrale regie
+### Wat is gebouwd
 
-Na grondige analyse van de codebase zijn er 14 issues gevonden — variërend van onjuiste teksten tot ontbrekende logica en dode code.
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
----
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-## Gevonden Issues
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-### A. Kritieke flow-problemen
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-**A1. Items worden ZONDER `skip_partner_notification: true` aangemaakt bij klant-submit**
-Zowel `CheckoutContactForm.tsx` (r117) als `RequestFormModal.tsx` (r175) maken items aan zonder `skip_partner_notification: true`. Hierdoor kan de admin ze niet "versturen naar partners" via `accept-quote-proposal`, want die filtert op `skip_partner_notification === true`.
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-**A2. "Verstuur naar partners" banner alleen bij quote-modus**
-`AdminRequestDetail.tsx` (r903) toont de banner alleen als `isQuoteMode && quote_status === "akkoord_ontvangen"`. Self-service programma's hebben geen quote-modus, dus de admin kan nooit naar partners versturen.
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-**A3. `accept-quote-proposal` zet altijd `quote_status: "akkoord_ontvangen"`**
-Bij self-service programma's (geen offerte) overschrijft dit onterecht de quote_status. De functie moet `program_published_at` ook zetten bij admin_override.
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-**A4. Admin banner tekst onjuist**
-`AdminRequestDetail.tsx` (r943): "De klant ziet een placeholder" — klant ziet nu het programma read-only.
-
-### B. Invoicing mode relikten (`partner_direct`)
-
-**B1. `InvoicingModeSelector.tsx` bestaat nog volledig**
-RadioGroup met `partner_direct` optie. Volgens het plan is dit verwijderd/vervangen door read-only info, maar het bestand bestaat nog.
-
-**B2. Fallback `partner_direct` in `CustomerProgram.tsx`**
-Regel 299: `invoicing_mode || "partner_direct"` — moet `"bureau_central"` zijn.
-
-**B3. `ContactAccommodationDialog.tsx` toont `partner_direct` branches**
-Regels 98-101, 115-122: Teksten voor directe klant-partner communicatie ("Zij zullen rechtstreeks per e-mail reageren") worden nog getoond als `isBureauCentral` false is.
-
-**B4. `PriceSummaryCard.tsx` toont partner-facturen apart**
-Regels 234-240, 427-428: "Partner invoices section - only in partner_direct mode" — dode code die nooit zou moeten tonen, maar de conditionele check `!isBureauCentral` kan triggeren bij fallback.
-
-**B5. `InvoiceProvidersCard.tsx` toont partner-items individueel**
-Regel 100-101 en 214-215: Tekst "afzonderlijke facturen van de onderstaande partijen" en individuele partner-listings.
-
-**B6. `select-accommodation-quote` edge function bevat PII-branch**
-Regel 276-278: "Only include customer PII if partner_direct" — impliceert dat klant-PII soms naar partners gaat.
-
-### C. Tekst-inconsistenties in klantportaal
-
-**C1. ProgramIntroCard na publicatie (r215-217)**
-"Wij hebben de aanvragen verstuurd naar de aanbieders. U kunt in de tussentijd onderdelen wijzigen, verwijderen of toevoegen." — Klant mag geen wijzigingen doen. Tekst moet aangepast.
-
-**C2. ActionRequiredCard billing beschrijving (r152)**
-"zodat de aanbieders u kunnen factureren" — Bureau Vlieland factureert, niet de aanbieders.
-
-**C3. ActionRequiredCard complete beschrijving (r182)**
-"U ontvangt de facturen van de verschillende aanbieders" — idem, Bureau Vlieland factureert.
-
-**C4. NextStepsCard complete (r143)**
-"U ontvangt de facturen van de verschillende aanbieders" — zelfde tekst.
-
-### D. Publieke pagina's
-
-**D1. LogiesVlieland.tsx en LogiesAanvragen.tsx stap 4**
-"Boek direct / boek rechtstreeks bij de accommodatie" — Bureau Vlieland regelt dit.
-
-**D2. PartnerTerms.tsx Artikel 1 en 5**
-"De overeenkomst komt rechtstreeks tot stand tussen Partner en Eindklant" en "factureert de Partner rechtstreeks aan de Eindklant" — verwijzen naar partner_direct model.
-
-### E. Overig
-
-**E1. `CustomerProgramItem.tsx` statuslabel logica (r121)**
-`(isPreApproval || invoicingMode === "bureau_central") && item.status === "pending"` toont "In voorbereiding" voor alle bureau_central items. Zou alleen vóór publicatie "In behandeling" moeten tonen, en na publicatie "Aangevraagd".
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
 ---
 
-## Wijzigingsplan
+## Plan: CRM en Partners samenvoegen
 
-| # | Bestand | Actie |
-|---|---------|-------|
-| A1 | `CheckoutContactForm.tsx` | `skip_partner_notification: true` toevoegen aan itemsToInsert |
-| A1 | `RequestFormModal.tsx` | Idem |
-| A2 | `AdminRequestDetail.tsx` r903 | Banner conditie wijzigen: `pendingPartnerItems.length > 0` (zonder quote-mode check) |
-| A3 | `accept-quote-proposal/index.ts` | Bij `isAdmin`: skip `quote_status` update voor `self_service` programma's; altijd `program_published_at` zetten als die null is |
-| A4 | `AdminRequestDetail.tsx` r943 | Tekst: "De klant ziet het programma als 'In behandeling'" |
-| B1 | `InvoicingModeSelector.tsx` | Verwijderen of omzetten naar read-only "Bureau Vlieland factureert" |
-| B2 | `CustomerProgram.tsx` r299 | Fallback `"bureau_central"` |
-| B3 | `ContactAccommodationDialog.tsx` | Verwijder `partner_direct` branches, altijd bureau_central gedrag |
-| B4 | `PriceSummaryCard.tsx` | Verwijder `!isBureauCentral` secties |
-| B5 | `InvoiceProvidersCard.tsx` | Verwijder individuele partner-listings, altijd bureau-facturatie tonen |
-| B6 | `select-accommodation-quote/index.ts` | Altijd PII verbergen voor partners |
-| C1 | `ProgramIntroCard.tsx` r215-217 | Tekst: "Bureau Vlieland coördineert de aanvragen bij de aanbieders. U ontvangt bericht zodra er reacties zijn." |
-| C2 | `ActionRequiredCard.tsx` r152 | "zodat Bureau Vlieland kan factureren" |
-| C3 | `ActionRequiredCard.tsx` r182 | "U ontvangt de factuur van Bureau Vlieland" |
-| C4 | `NextStepsCard.tsx` r143 | Idem |
-| D1 | `LogiesVlieland.tsx` + `LogiesAanvragen.tsx` | Stap 4: "Bureau Vlieland begeleidt het boekingsproces" |
-| D2 | `PartnerTerms.tsx` | Artikelen aanpassen: facturatie altijd via Bureau Vlieland |
-| E1 | `CustomerProgramItem.tsx` r121 | Label logica: readOnly → "In behandeling", published+pending → "Aangevraagd", rest ongewijzigd |
-| DB | Migratie | Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` → update naar `true` |
+### Status: ✅ Geïmplementeerd
 
-### Samenvatting impact
-- **6 bestanden** met `partner_direct` relikten opschonen
-- **4 klantportaal teksten** corrigeren naar bureau_central realiteit
-- **2 publieke pagina's** + **1 juridische pagina** aanpassen
-- **2 checkout forms** + **1 edge function** + **1 admin pagina** voor correcte flow
-- **1 database migratie** voor bestaande data
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
+
+---
+
+## Plan: Bureau Vlieland als centrale regie — Volledige alignment
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+#### A. Kritieke flow-fixes
+1. **`skip_partner_notification: true`** toegevoegd aan `CheckoutContactForm.tsx` en `RequestFormModal.tsx` — items worden nu gestaged voor admin review.
+2. **"Verstuur naar partners" banner** werkt nu voor alle programmatypes (niet meer beperkt tot quote-modus).
+3. **`accept-quote-proposal`** slaat `quote_status` update over voor `self_service` programma's; zet altijd `program_published_at` als die null is.
+4. **Admin banner tekst** gecorrigeerd: "De klant ziet het programma als 'In behandeling'". Publiceer-banner beperkt tot admin-aangemaakte programma's.
+
+#### B. `partner_direct` relikten verwijderd
+5. **`InvoicingModeSelector.tsx`** omgezet naar read-only "Bureau Vlieland factureert de klant".
+6. **`CustomerProgram.tsx`** fallback gewijzigd naar `"bureau_central"`.
+7. **`ContactAccommodationDialog.tsx`** — altijd bureau_central teksten, geen directe partner-communicatie branches.
+8. **`PriceSummaryCard.tsx`** — partner_direct secties verwijderd.
+9. **`InvoiceProvidersCard.tsx`** — individuele partner-listings uitgeschakeld, altijd bureau-facturatie.
+10. **`select-accommodation-quote`** — PII altijd verborgen voor partners.
+
+#### C. Klantportaal teksten
+11. **`ProgramIntroCard.tsx`** — "Bureau Vlieland coördineert de aanvragen bij de aanbieders."
+12. **`ActionRequiredCard.tsx`** — billing: "zodat Bureau Vlieland kan factureren"; complete: "U ontvangt de factuur van Bureau Vlieland."
+13. **`NextStepsCard.tsx`** — "U ontvangt de factuur van Bureau Vlieland."
+
+#### D. Publieke pagina's & juridisch
+14. **`LogiesVlieland.tsx`** en **`LogiesAanvragen.tsx`** — stap 4: "Bureau Vlieland begeleidt het boekingsproces".
+15. **`PartnerTerms.tsx`** — Artikel 1 en 5 aangepast: facturatie altijd via Bureau Vlieland.
+
+#### E. Statuslabels
+16. **`CustomerProgramItem.tsx`** — readOnly + pending → "In behandeling"; isPreApproval + pending → "In voorbereiding".
+
+#### F. Data
+17. Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` geüpdatet naar `true`.

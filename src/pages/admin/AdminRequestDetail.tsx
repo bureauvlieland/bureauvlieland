@@ -900,7 +900,7 @@ const AdminRequestDetail = () => {
           />
 
           {/* Pending partner notification banner */}
-          {isQuoteMode && request.quote_status === "akkoord_ontvangen" && pendingPartnerItems.length > 0 && (
+          {pendingPartnerItems.length > 0 && (
             <Card className="border-amber-300 bg-amber-50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -929,7 +929,7 @@ const AdminRequestDetail = () => {
           )}
 
           {/* Concept banner — program not yet published to customer */}
-          {!request.program_published_at && items.length > 0 && (
+          {!request.program_published_at && request.program_type !== "self_service" && items.length > 0 && (
             <Card className="border-blue-300 bg-blue-50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -940,7 +940,7 @@ const AdminRequestDetail = () => {
                         Dit programma is nog niet gepubliceerd naar de klant
                       </p>
                       <p className="text-sm text-blue-700">
-                        De klant ziet een placeholder totdat je het programma publiceert.
+                        De klant ziet het programma als 'In behandeling'. Na publicatie worden items zichtbaar.
                       </p>
                     </div>
                   </div>

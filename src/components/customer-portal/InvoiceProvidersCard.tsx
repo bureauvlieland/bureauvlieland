@@ -97,9 +97,7 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          {isBureauCentral
-            ? "Bureau Vlieland verzorgt de volledige facturatie voor uw programma."
-            : "Voor dit programma ontvang je afzonderlijke facturen van de onderstaande partijen."}
+          Bureau Vlieland verzorgt de volledige facturatie voor uw programma.
         </p>
 
         <div className="space-y-3">
@@ -211,8 +209,8 @@ export const InvoiceProvidersCard = ({ items, selectedAccommodationQuote, number
             </div>
           )}
 
-          {/* Partner items - only show individually in partner_direct mode */}
-          {!isBureauCentral && partnerProviders.map((provider) => {
+          {/* Partner items - removed: always bureau_central */}
+          {false && partnerProviders.map((provider) => {
             const providerItems = items.filter(i => i.provider_id === provider.id && i.status !== "cancelled" && i.block_type === "partner");
             const hasPreliminaryPrice = providerItems.some(i => !i.quoted_price && i.admin_price_override);
             

@@ -173,10 +173,10 @@ const LogiesAanvragen = () => {
                     title: "Vergelijk offertes",
                     description: "U ontvangt een overzicht van alle opties",
                   },
-                  {
+                   {
                     step: 4,
-                    title: "Boek direct",
-                    description: "Kies uw favoriet en boek rechtstreeks bij de accommodatie",
+                    title: "Boek via Bureau Vlieland",
+                    description: "Bureau Vlieland begeleidt het boekingsproces voor u",
                   },
                 ].map((item) => (
                   <div key={item.step} className="text-center">

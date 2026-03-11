@@ -28,7 +28,7 @@ export const PartnerTerms = () => {
               <h2 className="text-2xl font-bold text-foreground mb-4">Artikel 1 – Toepasselijkheid</h2>
               <ul className="list-disc pl-6 space-y-2 text-foreground">
                 <li>Deze voorwaarden zijn van toepassing op alle diensten die via het platform van Bureau Vlieland worden aangeboden en uitgevoerd door een Partner.</li>
-                <li>De overeenkomst voor het betreffende onderdeel komt rechtstreeks tot stand tussen de Partner en de Eindklant.</li>
+                <li>De overeenkomst voor het betreffende onderdeel komt tot stand via bemiddeling door Bureau Vlieland.</li>
                 <li>Bureau Vlieland treedt uitsluitend op als bemiddelaar en is geen partij bij de uitvoeringsovereenkomst tussen Partner en Eindklant.</li>
                 <li>Indien de Partner eigen algemene voorwaarden hanteert en deze via het platform beschikbaar stelt, prevaleren die boven deze standaardvoorwaarden.</li>
               </ul>
@@ -66,9 +66,7 @@ export const PartnerTerms = () => {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-4">Artikel 5 – Prijs en facturatie</h2>
               <ul className="list-disc pl-6 space-y-2 text-foreground">
-                <li>Tenzij anders overeengekomen factureert de Partner rechtstreeks aan de Eindklant.</li>
-                <li>Indien Bureau Vlieland optreedt als centrale facturerende partij (het zogenoemde 'bureau_central'-model), factureert de Partner aan Bureau Vlieland. Bureau Vlieland draagt in dat geval zorg voor de facturatie aan de Eindklant.</li>
-                <li>Het toepasselijke facturatiemodel wordt per project vastgesteld en is zichtbaar in het partnerportaal.</li>
+                <li>De Partner factureert aan Bureau Vlieland. Bureau Vlieland draagt zorg voor de facturatie aan de Eindklant.</li>
                 <li>Betaling vindt plaats volgens de betalingsvoorwaarden van de Partner zoals vermeld op de factuur.</li>
                 <li>Tenzij anders vermeld zijn prijzen inclusief btw.</li>
                 <li>Extra kosten die voortvloeien uit wijzigingen op verzoek van de Eindklant kunnen aanvullend in rekening worden gebracht.</li>

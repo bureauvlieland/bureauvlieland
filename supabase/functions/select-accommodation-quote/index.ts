@@ -273,18 +273,11 @@ Deno.serve(async (req) => {
         price_total: formatCurrencyNL(quote.price_total),
       };
 
-      // Only include customer PII if partner_direct
-      if (!isCentralBilling) {
-        partnerTemplateVariables.customer_name = sanitizeHtml(request.customer_name);
-        partnerTemplateVariables.company_name = sanitizeHtml(request.customer_company) || "";
-        partnerTemplateVariables.customer_email = request.customer_email;
-        partnerTemplateVariables.customer_phone = sanitizeHtml(request.customer_phone);
-      } else {
-        partnerTemplateVariables.customer_name = "Bureau Vlieland";
-        partnerTemplateVariables.company_name = "";
-        partnerTemplateVariables.customer_email = "hallo@bureauvlieland.nl";
-        partnerTemplateVariables.customer_phone = "0562 700 208";
-      }
+      // Always hide customer PII from partners — Bureau Vlieland is the central contact
+      partnerTemplateVariables.customer_name = "Bureau Vlieland";
+      partnerTemplateVariables.company_name = "";
+      partnerTemplateVariables.customer_email = "hallo@bureauvlieland.nl";
+      partnerTemplateVariables.customer_phone = "0562 700 208";
 
       const partnerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables);
 

@@ -212,9 +212,7 @@ export const ProgramIntroCard = ({
     <Card className="border-muted bg-muted/30">
       <CardContent className="p-5">
         <p className="text-sm text-foreground leading-relaxed">
-          Hieronder vindt u uw programma. Wij hebben de aanvragen verstuurd naar de aanbieders.
-          Zodra zij reageren ontvangt u een e-mail. U kunt in de tussentijd onderdelen wijzigen,
-          verwijderen of toevoegen.
+          Bureau Vlieland coördineert de aanvragen bij de aanbieders. U ontvangt bericht zodra er reacties zijn.
         </p>
       </CardContent>
     </Card>
