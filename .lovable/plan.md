@@ -1,45 +1,69 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+# Configurator radicaal vereenvoudigen: formulier → programmaweergave
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+## Probleem
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+De huidige flow heeft nog steeds een keuzescherm (EntryChoice) dat een extra klik vereist voordat de klant iets kan doen. De grid+sidebar+cart layout is complex. De klantpagina (AddActivitySheet) heeft een veel intuïtievere UX voor het toevoegen van activiteiten.
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+## Nieuwe flow
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+```text
+Hero → Inline formulier (naam, e-mail, telefoon, bedrijf, type, personen, datums)
+     → "Start" knop
+     → Programmaweergave (klantportaal-stijl) met "Activiteit toevoegen" sheet
+     → "Verstuur aanvraag" knop
+```
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+Geen keuzeschermen, geen grid, geen sidebar cart. Eén formulier, dan direct bouwen.
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+## Technische aanpak
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+### 1. Nieuwe fase-structuur in `ProgrammaSamenstellen.tsx`
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+Twee fasen: `"basics"` en `"program"`.
 
----
+**Basics fase**: Inline formulier met alle contactgegevens + groepsinfo (velden uit huidige `RequestFormModal`):
+- Naam, e-mail, telefoon, bedrijf (optioneel)
+- Type evenement (dropdown)
+- Aantal personen
+- Datum(s) kiezen (multi-date picker)
+- Grote "Start uw programma" knop
 
-## Plan: CRM en Partners samenvoegen
+**Program fase**: Klantportaal-stijl overzicht:
+- Header met samenvatting (personen, datums, type)
+- Dag-tabs bij meerdaags (hergebruik `DayTabs`)
+- Timeline van toegevoegde activiteiten (hergebruik `CustomerTimeline` patronen)
+- Prominente "Activiteit toevoegen" knop → opent `AddActivitySheet`
+- Zwevende "Verstuur aanvraag" balk onderaan
 
-### Status: ✅ Geïmplementeerd
+### 2. Hergebruik `AddActivitySheet` patronen
 
-CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+De bestaande `AddActivitySheet` is bijna 1-op-1 geschikt. Aanpassing: tijdslot-selectie verwijderen (conform eerdere beslissing), alleen dag-keuze bij meerdaags behouden.
 
----
+### 3. `RequestFormModal` wordt submit-bevestiging
 
-## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+De modal bevat geen contactgegevens meer (die zijn al ingevuld). Het wordt een korte bevestigingsstap met:
+- Samenvatting van programma + contactgegevens
+- Eventuele opmerkingen (textarea)
+- "Verstuur" knop
 
-### Status: ✅ Geïmplementeerd
+### 4. EntryChoice, AiErwinChat, TemplateSelector
 
-1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+- `EntryChoice.tsx` wordt niet meer gebruikt op de configuratorpagina
+- `AiErwinChat.tsx` en `TemplateSelector.tsx` blijven bestaan maar worden niet meer direct gekoppeld — ze kunnen later als optionele routes terugkomen
+- Geen bestanden verwijderd (kunnen elders gebruikt worden)
 
-2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+### 5. Cart context blijft functioneel
 
-3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+De `CartContext` blijft werken voor het bijhouden van items. De UI presentatie verandert van cart-sidebar naar een programma-tijdlijn.
+
+## Bestanden
+
+| Actie | Bestand |
+|---|---|
+| Herschrijf | `src/pages/ProgrammaSamenstellen.tsx` — twee fasen: basics form → programmaweergave |
+| Nieuw | `src/components/configurator/ProgramBuilderView.tsx` — klantportaal-stijl programmaweergave met add-activiteit knop |
+| Nieuw | `src/components/configurator/BasicsForm.tsx` — inline formulier voor contactgegevens + groepsinfo |
+| Wijzig | `src/components/configurator/RequestFormModal.tsx` — vereenvoudigen naar bevestiging + opmerkingen |
+
