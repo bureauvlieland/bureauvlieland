@@ -451,7 +451,6 @@ export const ProgramBuilderView = ({
       <AddActivitySheet
         open={isAddSheetOpen}
         onOpenChange={setIsAddSheetOpen}
-        selectedDates={selectedDates}
         existingBlockIds={existingBlockIds}
         onAddActivity={handleAddActivity}
       />
