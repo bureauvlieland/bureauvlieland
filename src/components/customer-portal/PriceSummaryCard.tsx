@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  numberOfDays?: number;
   className?: string;
   variant?: "default" | "compact";
   termsAccepted?: boolean;
