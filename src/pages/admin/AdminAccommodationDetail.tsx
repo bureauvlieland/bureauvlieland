@@ -34,13 +34,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   ArrowLeft,
   Eye,
   Building2,
-  Calendar,
+  Calendar as CalendarIcon,
   Users,
   Mail,
   Phone,
@@ -63,7 +63,12 @@ import {
   XCircle,
   CheckCircle2,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
 import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToCustomerDialog";
@@ -164,6 +169,8 @@ export default function AdminAccommodationDetail() {
   const [showStatusEmailSheet, setShowStatusEmailSheet] = useState(false);
   const [statusEmailDefaults, setStatusEmailDefaults] = useState({ subject: "", body: "" });
   const [commLogOpen, setCommLogOpen] = useState(false);
+  const [reactivateQuoteId, setReactivateQuoteId] = useState<string | null>(null);
+  const [reactivateDate, setReactivateDate] = useState<Date | undefined>(addDays(new Date(), 14));
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -325,6 +332,37 @@ export default function AdminAccommodationDetail() {
     },
     onError: (error) => {
       toast({ title: "Fout bij doorsturen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Reactivate expired quote
+  const reactivateQuoteMutation = useMutation({
+    mutationFn: async ({ quoteId, newValidUntil }: { quoteId: string; newValidUntil: string }) => {
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({ status: "submitted", valid_until: newValidUntil })
+        .eq("id", quoteId);
+      if (error) throw error;
+
+      // Log in communications timeline
+      const quoteName = quotes?.find((q) => q.id === quoteId)?.accommodation_name || "Offerte";
+      await supabase.from("project_communications").insert({
+        accommodation_id: id,
+        request_id: request?.linked_program_id || null,
+        communication_type: "note",
+        direction: "internal",
+        subject: `Offerte heractiveerd: ${quoteName}`,
+        content: `De verlopen offerte van ${quoteName} is heractiveerd met nieuwe geldigheidsdatum ${format(new Date(newValidUntil), "d MMMM yyyy", { locale: nl })}.`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      setReactivateQuoteId(null);
+      setReactivateDate(addDays(new Date(), 14));
+      toast({ title: "Offerte heractiveerd", description: "De offerte is weer zichtbaar voor de klant." });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij heractiveren", description: error.message, variant: "destructive" });
     },
   });
 
@@ -518,7 +556,7 @@ export default function AdminAccommodationDetail() {
               <CardContent className="space-y-4">
                 <div className="grid sm:grid-cols-3 gap-3">
                   <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Periode</p>
                       <p className="font-medium text-sm">
@@ -681,6 +719,20 @@ export default function AdminAccommodationDetail() {
                                 <Check className="h-3 w-3 mr-1" />
                                 Geselecteerd
                               </Badge>
+                            )}
+                            {quote.status === "expired" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs ml-auto"
+                                onClick={() => {
+                                  setReactivateQuoteId(quote.id);
+                                  setReactivateDate(addDays(new Date(), 14));
+                                }}
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Heractiveren
+                              </Button>
                             )}
                           </div>
                         </CardContent>
@@ -1041,6 +1093,58 @@ export default function AdminAccommodationDetail() {
           setCommLogOpen(true);
         }}
       />
+
+      {/* Reactivate expired quote dialog */}
+      <Dialog open={!!reactivateQuoteId} onOpenChange={(open) => { if (!open) setReactivateQuoteId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Offerte heractiveren</DialogTitle>
+            <DialogDescription>
+              Kies een nieuwe geldigheidsdatum. De offerte wordt weer zichtbaar voor de klant.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">Geldig tot</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !reactivateDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {reactivateDate ? format(reactivateDate, "d MMMM yyyy", { locale: nl }) : "Kies een datum"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={reactivateDate}
+                  onSelect={setReactivateDate}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateQuoteId(null)}>Annuleren</Button>
+            <Button
+              disabled={!reactivateDate || reactivateQuoteMutation.isPending}
+              onClick={() => {
+                if (reactivateQuoteId && reactivateDate) {
+                  reactivateQuoteMutation.mutate({
+                    quoteId: reactivateQuoteId,
+                    newValidUntil: format(reactivateDate, "yyyy-MM-dd"),
+                  });
+                }
+              }}
+            >
+              {reactivateQuoteMutation.isPending ? "Bezig..." : "Heractiveren"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
