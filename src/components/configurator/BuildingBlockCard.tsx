@@ -2,8 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Clock, Users, Info, MapPin } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
-import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
-import { getBlockImage, getProviderName, isSelfArranged } from "@/lib/buildingBlockUtils";
+import { getBlockImage, isSelfArranged } from "@/lib/buildingBlockUtils";
 
 interface BuildingBlockCardProps {
   block: BuildingBlock;
