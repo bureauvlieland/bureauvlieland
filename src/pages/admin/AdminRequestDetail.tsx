@@ -592,7 +592,7 @@ const AdminRequestDetail = () => {
                 </div>
                 <div className="flex items-center gap-3 mt-1">
                   <p className="text-slate-500">
-                    Aanvraag van {format(new Date(request.created_at), "d MMMM yyyy", { locale: nl })}
+                    Aanvraag van {format(new Date(request.created_at), "EEE d MMMM yyyy", { locale: nl })}
                   </p>
                   {isQuoteMode && request.quote_status && (
                     <AdminQuoteStatusBadge status={request.quote_status} />
