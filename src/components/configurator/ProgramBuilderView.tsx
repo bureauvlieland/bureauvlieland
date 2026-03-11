@@ -357,8 +357,8 @@ export const ProgramBuilderView = ({
             {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
           </p>
           <Button size="lg" className="gap-2" onClick={onSubmit} disabled={cartItems.length === 0}>
-            <Send className="h-4 w-4" />
-            Verstuur aanvraag
+            <ArrowRight className="h-4 w-4" />
+            Overzicht en versturen
           </Button>
         </div>
       </div>
