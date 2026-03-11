@@ -1093,6 +1093,58 @@ export default function AdminAccommodationDetail() {
           setCommLogOpen(true);
         }}
       />
+
+      {/* Reactivate expired quote dialog */}
+      <Dialog open={!!reactivateQuoteId} onOpenChange={(open) => { if (!open) setReactivateQuoteId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Offerte heractiveren</DialogTitle>
+            <DialogDescription>
+              Kies een nieuwe geldigheidsdatum. De offerte wordt weer zichtbaar voor de klant.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">Geldig tot</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !reactivateDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {reactivateDate ? format(reactivateDate, "d MMMM yyyy", { locale: nl }) : "Kies een datum"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={reactivateDate}
+                  onSelect={setReactivateDate}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateQuoteId(null)}>Annuleren</Button>
+            <Button
+              disabled={!reactivateDate || reactivateQuoteMutation.isPending}
+              onClick={() => {
+                if (reactivateQuoteId && reactivateDate) {
+                  reactivateQuoteMutation.mutate({
+                    quoteId: reactivateQuoteId,
+                    newValidUntil: format(reactivateDate, "yyyy-MM-dd"),
+                  });
+                }
+              }}
+            >
+              {reactivateQuoteMutation.isPending ? "Bezig..." : "Heractiveren"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
