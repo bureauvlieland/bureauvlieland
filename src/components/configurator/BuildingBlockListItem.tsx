@@ -53,9 +53,6 @@ export const BuildingBlockListItem = ({ block, onAdd, isInCart }: BuildingBlockL
               {block.min_people}-{block.max_people} pers.
             </span>
           )}
-          <span className="text-xs text-muted-foreground">
-            Door: {getProviderName(block)}
-          </span>
           {block.location_address && (
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
