@@ -165,9 +165,7 @@ export const ProgramOverviewCard = ({
                   ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
                   : isQuoteMode 
                   ? "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
-                  : hasPendingItems
-                    ? "Uw aanvragen zijn verstuurd naar de aanbieders. Wij stemmen alles op elkaar af."
-                    : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
+                  : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
                 }
               </p>
               
