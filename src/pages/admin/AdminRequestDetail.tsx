@@ -126,7 +126,7 @@ interface ProgramRequest {
   // Program description
   program_description: string | null;
   // Invoicing mode
-  invoicing_mode: 'partner_direct' | 'bureau_central';
+  invoicing_mode: 'bureau_central';
   // Publish flow
   program_published_at: string | null;
 }
