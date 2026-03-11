@@ -112,7 +112,7 @@ export const ProgramBuilderView = ({
   contactName,
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
-  const { data: templates = [] } = usePublishedTemplates();
+  const { data: templates = [] } = useTemplatesByDuration(selectedDates.length);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
