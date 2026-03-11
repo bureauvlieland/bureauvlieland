@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const invoicingMode = item.program_requests.invoicing_mode || "partner_direct";
+    const invoicingMode = item.program_requests.invoicing_mode || "bureau_central";
 
     // Calculate commission
     const commissionPercentage = partner.commission_percentage;
