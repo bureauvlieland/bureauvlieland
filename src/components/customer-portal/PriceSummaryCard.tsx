@@ -91,6 +91,10 @@ export const PriceSummaryCard = ({
     const centralSurcharge = isBureauCentral ? appSettings.bureau_central_surcharge_pp * numberOfPeople : 0;
     const standardVatRate = getVatRate("standard");
 
+    // Tourist tax & nature contribution (0% VAT — levies, not services)
+    const touristTax = appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
+    const natureContribution = appSettings.nature_contribution_pp * numberOfPeople;
+
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
     const accommodationVatRate = selectedAccommodationQuote?.vat_rate || 9;
@@ -105,14 +109,21 @@ export const PriceSummaryCard = ({
       allVatLines[rate].vatAmount += bd.vatAmount;
     };
 
+    // 0% VAT items (levies) — add directly as excl amounts
+    const addZeroVat = (amount: number) => {
+      if (!allVatLines[0]) allVatLines[0] = { exclVat: 0, vatAmount: 0 };
+      allVatLines[0].exclVat += amount;
+    };
+
     confirmedLines.forEach(l => addVat(l.price!, getItemVatRate(l.item)));
     addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
+    addZeroVat(touristTax + natureContribution);
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
     const confirmedItemsTotal = confirmedLines.reduce((s, l) => s + (l.price || 0), 0);
-    const grandTotalInclVat = confirmedItemsTotal + coordinationFee + centralSurcharge + accommodationTotal;
+    const grandTotalInclVat = confirmedItemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
 
     return {
       orderLines,
