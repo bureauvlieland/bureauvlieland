@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen } from "lucide-react";
+import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -33,12 +33,82 @@ import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { sortCartItemsForDay } from "@/lib/cartSorting";
-import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
+import { categoryLabels, timeSlots, type CartItemDetail } from "@/types/buildingBlock";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
+
+/* ── Inline time + notes controls ── */
+const InlineItemControls = ({
+  item,
+  onUpdate,
+}: {
+  item: CartItemDetail;
+  onUpdate: (updates: Partial<CartItemDetail>) => void;
+}) => {
+  const [showNotes, setShowNotes] = useState(item.notes.length > 0);
+
+  return (
+    <div className="mt-2 pt-2 border-t border-border/50 space-y-2">
+      {/* Time selector */}
+      <div className="flex items-center gap-2">
+        <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <Select
+          value={item.preferredTime || "flexibel"}
+          onValueChange={(value) => onUpdate({ preferredTime: value === "flexibel" ? null : value })}
+        >
+          <SelectTrigger className="h-7 text-xs flex-1 max-w-[180px]">
+            <SelectValue placeholder="Gewenste tijd" />
+          </SelectTrigger>
+          <SelectContent className="bg-background z-50">
+            {timeSlots.map((slot) => (
+              <SelectItem key={slot.value} value={slot.value} className="text-xs">
+                {slot.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Notes */}
+      {!showNotes ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1 px-1.5"
+          onClick={() => setShowNotes(true)}
+        >
+          <Plus className="h-3 w-3" />
+          <MessageSquare className="h-3 w-3" />
+          Opmerking toevoegen
+        </Button>
+      ) : (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              Opmerking
+            </span>
+          </div>
+          <Textarea
+            value={item.notes}
+            onChange={(e) => onUpdate({ notes: e.target.value })}
+            placeholder="Bijv. Engelstalige gids gewenst..."
+            className="text-xs min-h-[50px] resize-none"
+            maxLength={500}
+          />
+          <p className="text-[10px] text-muted-foreground text-right">
+            {item.notes.length}/500
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface ProgramBuilderViewProps {
   cartItems: CartItemDetail[];
@@ -266,6 +336,7 @@ export const ProgramBuilderView = ({
                     const isFerryBlock = FERRY_BLOCK_IDS.includes(item.blockId);
                     const isBikeBlock = item.blockId === "fiets-huur";
                     const ferryExtras = isFerryBlock ? (block.price_extras as { portFrom?: string; portTo?: string } | null) : null;
+                    const isRegularBlock = !isFerryBlock && !isBikeBlock;
 
                     return (
                       <SortableItemCard key={item.blockId} item={item}>
@@ -278,16 +349,11 @@ export const ProgramBuilderView = ({
                             )}
                             <div className="flex-1 py-3 px-3 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                   <h4 className="font-semibold text-sm md:text-base leading-tight">{block.name}</h4>
                                   {item.preferredTime && isFerryBlock && (
                                     <p className="text-primary text-xs font-medium mt-0.5">
                                       Gekozen afvaart: {item.preferredTime}
-                                    </p>
-                                  )}
-                                  {item.preferredTime && !isFerryBlock && (
-                                    <p className="text-muted-foreground text-xs mt-0.5">
-                                      Gewenste tijd: {item.preferredTime}
                                     </p>
                                   )}
                                   {!item.preferredTime && isBikeBlock && (
@@ -295,7 +361,12 @@ export const ProgramBuilderView = ({
                                       Voor de duur van het verblijf
                                     </p>
                                   )}
-                                  {!item.preferredTime && !isBikeBlock && block.short_description && (
+                                  {!isRegularBlock && !isBikeBlock && !item.preferredTime && block.short_description && (
+                                    <p className="text-muted-foreground text-xs md:text-sm mt-0.5 line-clamp-2">
+                                      {block.short_description}
+                                    </p>
+                                  )}
+                                  {isRegularBlock && block.short_description && (
                                     <p className="text-muted-foreground text-xs md:text-sm mt-0.5 line-clamp-2">
                                       {block.short_description}
                                     </p>
@@ -311,6 +382,14 @@ export const ProgramBuilderView = ({
                                       {categoryLabels[block.category]}
                                     </Badge>
                                   </div>
+
+                                  {/* Inline time & notes for regular blocks */}
+                                  {isRegularBlock && (
+                                    <InlineItemControls
+                                      item={item}
+                                      onUpdate={(updates) => onUpdateItem(item.blockId, updates)}
+                                    />
+                                  )}
                                 </div>
                                 <Button
                                   variant="ghost"
