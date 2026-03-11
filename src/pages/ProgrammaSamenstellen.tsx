@@ -41,6 +41,7 @@ const ProgrammaSamenstellen = () => {
     dismissDraft,
     clearCart,
     reorderItems,
+    loadFromTemplate,
   } = useCart();
 
   const [phase, setPhase] = useState<Phase>(
@@ -182,6 +183,11 @@ const ProgrammaSamenstellen = () => {
                 onAddDate={addDate}
                 onRemoveDate={removeDate}
                 onReplaceWithSuggestion={handleErwinSuggestion}
+                onLoadTemplate={(template) => {
+                  if (selectedDates.length > 0) {
+                    loadFromTemplate(template, selectedDates[0], numberOfPeople);
+                  }
+                }}
               />
             )}
           </div>

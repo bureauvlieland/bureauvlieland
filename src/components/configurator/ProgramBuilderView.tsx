@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical } from "lucide-react";
+import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -28,10 +28,14 @@ import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
+import type { ProgramTemplate } from "@/types/programTemplate";
+import { usePublishedTemplates } from "@/hooks/useProgramTemplates";
+import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
@@ -48,6 +52,7 @@ interface ProgramBuilderViewProps {
   onAddDate: (date: Date) => boolean;
   onRemoveDate: (dateIndex: number) => void;
   onReplaceWithSuggestion: (items: CartItemDetail[]) => void;
+  onLoadTemplate: (template: ProgramTemplate) => void;
   eventType?: string;
   contactName?: string;
 }
@@ -102,12 +107,16 @@ export const ProgramBuilderView = ({
   onAddDate,
   onRemoveDate,
   onReplaceWithSuggestion,
+  onLoadTemplate,
   eventType,
   contactName,
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+  const { data: templates = [] } = usePublishedTemplates();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState(0);
   const [editPeople, setEditPeople] = useState(false);
   const [editDates, setEditDates] = useState(false);
@@ -223,10 +232,18 @@ export const ProgramBuilderView = ({
             )}
           </div>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
-          <Sparkles className="h-3.5 w-3.5" />
-          Erwin's voorstel
-        </Button>
+        <div className="flex items-center gap-2">
+          {templates.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsTemplatesOpen(true)}>
+              <BookOpen className="h-3.5 w-3.5" />
+              Voorbeeldprogramma's
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5" />
+            Erwin's voorstel
+          </Button>
+        </div>
       </div>
 
       {/* Day tabs + timeline */}
@@ -363,6 +380,52 @@ export const ProgramBuilderView = ({
         selectedDates={selectedDates}
         eventType={eventType}
         onSuggestionReady={onReplaceWithSuggestion}
+      />
+
+      {/* Template Picker Sheet */}
+      <Sheet open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen}>
+        <SheetContent side="right" className="sm:max-w-md flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>Voorbeeldprogramma's</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-4 space-y-3">
+            {templates.map((template) => (
+              <Card
+                key={template.id}
+                className="overflow-hidden hover:border-primary/50 transition-all cursor-pointer"
+                onClick={() => setPreviewTemplateId(template.id)}
+              >
+                {template.image_url && (
+                  <div className="aspect-[16/7] overflow-hidden bg-muted">
+                    <img src={template.image_url} alt={template.name} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                )}
+                <div className="p-3">
+                  <h4 className="font-semibold text-sm">{template.name}</h4>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{template.duration_days === 1 ? "1 dag" : `${template.duration_days} dagen`}</span>
+                  </div>
+                  {template.short_description && (
+                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{template.short_description}</p>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Template Preview */}
+      <TemplatePreviewSheet
+        templateId={previewTemplateId}
+        numberOfPeople={numberOfPeople}
+        open={!!previewTemplateId}
+        onOpenChange={(open) => !open && setPreviewTemplateId(null)}
+        onUseTemplate={(template) => {
+          setPreviewTemplateId(null);
+          setIsTemplatesOpen(false);
+          onLoadTemplate(template);
+        }}
       />
     </div>
   );
