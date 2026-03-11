@@ -342,7 +342,7 @@ export const MobileProgramView = ({
                   Offerte
                 </Button>
               )}
-              {!termsAccepted && (
+              {!termsAccepted && isPublished && (
                 <Button
                   size="sm"
                   onClick={(e) => {
