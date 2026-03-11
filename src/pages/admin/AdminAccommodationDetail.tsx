@@ -124,7 +124,8 @@ const TYPE_LABELS: Record<string, string> = {
 function generateStatusEmailBody(
   request: any,
   quotes: any[],
-  referenceNumber: string | null
+  referenceNumber: string | null,
+  portalUrl?: string
 ) {
   const total = quotes.length;
   const received = quotes.filter((q) => q.status === "submitted").length;
@@ -150,6 +151,10 @@ function generateStatusEmailBody(
     } else if (received > 0) {
       body += "Wij nemen binnenkort contact met u op om de offertes met u door te nemen.\n";
     }
+  }
+
+  if (portalUrl) {
+    body += `\nU kunt de details teruglezen op uw eigen pagina: ${portalUrl}\n`;
   }
 
   body += "\nMocht u vragen hebben, neem dan gerust contact met ons op.\n\nMet vriendelijke groet,\nBureau Vlieland";
