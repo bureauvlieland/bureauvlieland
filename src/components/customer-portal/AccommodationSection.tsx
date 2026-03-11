@@ -323,7 +323,7 @@ export const AccommodationSection = ({
                 <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
                   <Clock className="h-3 w-3" />
                   <span>
-                    Geldig t/m {format(new Date(expiredQuotes[0].valid_until), "d MMMM yyyy", { locale: nl })}
+                    Geldig t/m {format(new Date(expiredQuotes[0].valid_until), "EEE d MMMM yyyy", { locale: nl })}
                   </span>
                 </div>
               </div>
