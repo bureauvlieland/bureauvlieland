@@ -33,6 +33,7 @@ const ProgrammaSamenstellen = () => {
     setNumberOfPeople,
     setSelectedDate,
     addDate,
+    removeDate,
     isInCart,
     hasPendingDraft,
     pendingDraft,
@@ -177,7 +178,9 @@ const ProgrammaSamenstellen = () => {
                 onUpdateItem={updateItem}
                 onReorderItems={reorderItems}
                 onSubmit={handleSubmit}
-                onEditBasics={() => setPhase("basics")}
+                onUpdatePeople={setNumberOfPeople}
+                onAddDate={addDate}
+                onRemoveDate={removeDate}
                 onReplaceWithSuggestion={handleErwinSuggestion}
               />
             )}
