@@ -25,6 +25,7 @@ interface ProgramSidebarProps {
   onCancel: () => void;
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  numberOfDays?: number;
   selectedAccommodationQuote?: AccommodationQuote | null;
   accommodation?: AccommodationRequest | null;
   isMultiDay?: boolean;
