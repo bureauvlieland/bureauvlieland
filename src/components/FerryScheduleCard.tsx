@@ -88,8 +88,8 @@ function RouteSection({
 
 export function FerryScheduleCard({ date, className }: FerryScheduleCardProps) {
   const displayDate = date
-    ? format(parseISO(date), "EEEE d MMMM", { locale: nl })
-    : format(new Date(), "EEEE d MMMM", { locale: nl });
+    ? format(parseISO(date), "EEE d MMMM", { locale: nl })
+    : format(new Date(), "EEE d MMMM", { locale: nl });
 
   return (
     <Card className={className}>

@@ -90,7 +90,7 @@ export const CartItemDetails = ({
             <SelectContent className="bg-background z-50">
               {selectedDates.map((date, index) => (
                 <SelectItem key={index} value={String(index)} className="text-xs">
-                  Dag {index + 1} - {format(date, "d MMM", { locale: nl })}
+                  Dag {index + 1} - {format(date, "EEE d MMM", { locale: nl })}
                 </SelectItem>
               ))}
             </SelectContent>

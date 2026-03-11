@@ -191,7 +191,7 @@ export const RegisterBureauInvoiceDialog = ({
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "d MMMM yyyy", { locale: nl })
+                            format(field.value, "EEE d MMMM yyyy", { locale: nl })
                           ) : (
                             <span>Selecteer datum</span>
                           )}

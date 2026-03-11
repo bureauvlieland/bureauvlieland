@@ -83,7 +83,7 @@ export const MaatwerkIntakeForm = ({
     try {
       const token = generateCustomerToken();
       const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
-      const formattedDates = selectedDates.map((d) => format(d, "d MMMM yyyy", { locale: nl }));
+      const formattedDates = selectedDates.map((d) => format(d, "EEE d MMMM yyyy", { locale: nl }));
 
       // Build description with template inspiration + wishes
       const descriptionParts: string[] = [];
