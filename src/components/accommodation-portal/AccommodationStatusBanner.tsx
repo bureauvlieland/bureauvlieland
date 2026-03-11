@@ -84,9 +84,17 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                 Wij verzamelen offertes voor u
               </h3>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                {requested > 0
-                  ? `Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd. U ontvangt een email zodra er offertes binnenkomen.`
-                  : 'Wij hebben uw aanvraag doorgestuurd naar geschikte accommodaties. U ontvangt een email zodra er offertes binnenkomen.'}
+                {(() => {
+                  const parts: string[] = [];
+                  if (requested > 0) {
+                    parts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd.`);
+                  }
+                  if (declined > 0) {
+                    parts.push(`${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} helaas afgewezen.`);
+                  }
+                  parts.push('U ontvangt een email zodra er offertes binnenkomen.');
+                  return parts.join(' ');
+                })()}
               </p>
             {request.status === 'processing' && (
               <div className="mt-4">
