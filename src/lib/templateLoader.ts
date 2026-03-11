@@ -2,7 +2,7 @@ import { addDays } from "date-fns";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import type { CartItemDetail } from "@/types/buildingBlock";
 
-const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
+const SKIP_BLOCK_IDS = new Set(["boot-enkel-heen", "boot-enkel-terug", "fiets-huur"]);
 
 interface CartContextForLoader {
   clearCart: () => void;
@@ -51,12 +51,13 @@ export const loadTemplateToCart = (
     });
 
     for (const item of sortedItems) {
+      // Skip mandatory blocks — they are auto-added by the builder
+      if (SKIP_BLOCK_IDS.has(item.block_id)) continue;
+
       const added = cart.addToCart(item.block_id, item.day_index);
       
       if (added) {
-        // Don't set preferredTime for ferry blocks — customer must pick via Doeksen API
-        const isFerry = FERRY_BLOCK_IDS.includes(item.block_id);
-        if (item.preferred_time && !isFerry) {
+        if (item.preferred_time) {
           cart.updateItem(item.block_id, {
             preferredTime: item.preferred_time,
             notes: item.notes || "",
