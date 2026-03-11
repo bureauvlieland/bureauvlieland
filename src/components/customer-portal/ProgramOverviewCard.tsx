@@ -109,7 +109,7 @@ export const ProgramOverviewCard = ({
   const formatDateRange = () => {
     if (selectedDates.length === 0) return "Geen datum geselecteerd";
     if (selectedDates.length === 1) {
-      return format(selectedDates[0], "d MMMM yyyy", { locale: nl });
+      return format(selectedDates[0], "EEE d MMMM yyyy", { locale: nl });
     }
     const firstDate = selectedDates[0];
     const lastDate = selectedDates[selectedDates.length - 1];
