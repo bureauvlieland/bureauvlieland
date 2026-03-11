@@ -1279,16 +1279,20 @@ const AdminRequestDetail = () => {
               )}
 
               <div className="grid md:grid-cols-3 gap-6">
-                <InvoicingModeSelector
-                  requestId={request.id}
-                  currentMode={request.invoicing_mode || 'partner_direct'}
-                  onModeChange={fetchRequestData}
-                />
-                {request.invoicing_mode === 'bureau_central' && (
-                  <div className="md:col-span-2">
-                    <PurchaseInvoicesCard requestId={request.id} />
-                  </div>
-                )}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <h4 className="font-medium text-sm">Facturatiemodel</h4>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Bureau Vlieland factureert de klant. Partners factureren Bureau Vlieland (inkoop).
+                    </p>
+                  </CardContent>
+                </Card>
+                <div className="md:col-span-2">
+                  <PurchaseInvoicesCard requestId={request.id} />
+                </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <RequestCompletionStatus
