@@ -71,7 +71,7 @@ export const AdminSendQuoteDialog = ({
     .join(", ");
 
   const getDefaultIntro = () => {
-    const validUntilFormatted = format(validUntil, "d MMMM yyyy", { locale: nl });
+    const validUntilFormatted = format(validUntil, "EEE d MMMM yyyy", { locale: nl });
     const companyName = customerCompany || "u";
     
     // Default plain text intro that will be wrapped in HTML by the edge function
