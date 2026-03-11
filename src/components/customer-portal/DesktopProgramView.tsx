@@ -229,6 +229,7 @@ export const DesktopProgramView = ({
               isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
               onAcceptQuoteProposal={onAcceptQuoteProposal}
               hasUnapprovedItems={hasUnapprovedItems}
+              programPublishedAt={program.program_published_at}
             />
           </>
         )}
