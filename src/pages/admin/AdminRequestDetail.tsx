@@ -86,7 +86,7 @@ import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
-import { InvoicingModeSelector } from "@/components/admin/InvoicingModeSelector";
+import type { InvoicingMode } from "@/types/purchaseInvoice";
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
