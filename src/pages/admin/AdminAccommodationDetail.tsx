@@ -335,6 +335,37 @@ export default function AdminAccommodationDetail() {
     },
   });
 
+  // Reactivate expired quote
+  const reactivateQuoteMutation = useMutation({
+    mutationFn: async ({ quoteId, newValidUntil }: { quoteId: string; newValidUntil: string }) => {
+      const { error } = await supabase
+        .from("accommodation_quotes")
+        .update({ status: "submitted", valid_until: newValidUntil })
+        .eq("id", quoteId);
+      if (error) throw error;
+
+      // Log in communications timeline
+      const quoteName = quotes?.find((q) => q.id === quoteId)?.accommodation_name || "Offerte";
+      await supabase.from("project_communications").insert({
+        accommodation_id: id,
+        request_id: request?.linked_program_id || null,
+        communication_type: "note",
+        direction: "internal",
+        subject: `Offerte heractiveerd: ${quoteName}`,
+        content: `De verlopen offerte van ${quoteName} is heractiveerd met nieuwe geldigheidsdatum ${format(new Date(newValidUntil), "d MMMM yyyy", { locale: nl })}.`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      setReactivateQuoteId(null);
+      setReactivateDate(addDays(new Date(), 14));
+      toast({ title: "Offerte heractiveerd", description: "De offerte is weer zichtbaar voor de klant." });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij heractiveren", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Update guests mutation
   const updateGuestsMutation = useMutation({
     mutationFn: async (newGuests: number) => {
