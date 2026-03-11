@@ -34,13 +34,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   ArrowLeft,
   Eye,
   Building2,
-  Calendar,
+  Calendar as CalendarIcon,
   Users,
   Mail,
   Phone,
@@ -63,7 +63,12 @@ import {
   XCircle,
   CheckCircle2,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { FACILITIES, LOCATION_PREFERENCES, ROOM_TYPES, BUDGET_RANGES } from "@/types/accommodation";
 import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAccommodationQuoteRequestDialog";
 import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToCustomerDialog";
