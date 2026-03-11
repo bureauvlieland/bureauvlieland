@@ -1,7 +1,6 @@
 import { StatusSummary } from "./StatusSummary";
-import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Ban } from "lucide-react";
+import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
 import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
@@ -104,17 +103,27 @@ export const ProgramSidebar = ({
         </div>
       )}
 
-      {/* Price summary - compact (only if no totalCost provided) */}
-      {totalCost === 0 && (
-        <PriceSummaryCard
-          items={items}
-          numberOfPeople={numberOfPeople}
-          numberOfDays={numberOfDays}
-          variant="compact"
-          termsAccepted={termsAccepted}
-          selectedAccommodationQuote={selectedAccommodationQuote}
-        />
-      )}
+      {/* Levies info */}
+      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+        <div className="flex items-start gap-2.5">
+          <Landmark className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium">Toeristenbelasting</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+              De gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft. Dit bedrag wordt per persoon per dag berekend.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <TreePine className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium">Natuurbijdrage</p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+              Per deelnemer wordt een bijdrage afgedragen aan Staatsbosbeheer voor het behoud van de natuur op Vlieland.
+            </p>
+          </div>
+        </div>
+      </div>
 
 
       {/* Horeca advertenties */}
