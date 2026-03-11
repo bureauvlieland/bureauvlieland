@@ -1,56 +1,74 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Multi-step checkout op eigen pagina
+### Wat is gebouwd
 
-## Wat verandert
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-De huidige side-sheet (`ReviewAndSubmitSheet`) wordt vervangen door een volledige checkout-flow op een eigen pagina (`/programma-samenstellen/checkout`). Bovenin de pagina staat een stappenbalk die zichtbaar is tijdens het hele configuratieproces (builder + checkout).
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-## Stappen
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-```text
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ① Basisgegevens    ② Programma    ③ Gegevens    ④ Versturen
-      (done)           (active)       (todo)        (todo)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-- **Stap 1 — Basisgegevens**: Bestaande `BasicsForm` (groepsgrootte + datums). Al afgerond wanneer je in de builder zit.
-- **Stap 2 — Programma**: Bestaande `ProgramBuilderView`. "Verder" knop gaat naar stap 3.
-- **Stap 3 — Gegevens**: Contactformulier (naam, email, telefoon, bedrijf, opmerkingen). Geen "type uitje" meer. Plus het "Zo werkt het" blok dat uitlegt wat er na versturen gebeurt.
-- **Stap 4 — Bevestiging**: Succesbericht met countdown + redirect naar klantportaal.
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-## Wat verdwijnt
-- `ReviewAndSubmitSheet` component (side-sheet)
-- Programma-overzicht in de checkout (dubbel met de builder)
-- "Type uitje" selector
-- `ProgramEditorSheet` (de uitklap-sheet, niet meer nodig)
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-## Technisch
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### Nieuw component: `CheckoutStepIndicator`
-Compact horizontale stappenbalk. Props: `currentStep`, `steps[]`. Getoond bovenaan de pagina-content op alle stappen.
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-### Nieuw component: `CheckoutContactForm`  
-Contactformulier (naam, email, telefoon, bedrijf, opmerkingen) + "Zo werkt het" blok + submit knop. Bevat de submit-logica die nu in `ReviewAndSubmitSheet` zit.
+---
 
-### Nieuw component: `CheckoutSuccess`
-Succesbericht met countdown, redirect, en self-arranged blokken info.
+## Plan: CRM en Partners samenvoegen
 
-### `ProgrammaSamenstellen.tsx` aanpassen
-- `phase` wordt uitgebreid: `"basics" | "program" | "contact" | "success"`
-- Stappenbalk bovenaan (na hero of in plaats van hero voor latere stappen)
-- "Verder" knop in builder navigeert naar `"contact"` phase
-- Submit in contact form navigeert naar `"success"` phase
-- Geen sheet meer nodig
+### Status: ✅ Geïmplementeerd
 
-### Bestanden
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-| Bestand | Actie |
-|---------|-------|
-| `src/components/configurator/CheckoutStepIndicator.tsx` | Nieuw — stappenbalk |
-| `src/components/configurator/CheckoutContactForm.tsx` | Nieuw — formulier + how-it-works |
-| `src/components/configurator/CheckoutSuccess.tsx` | Nieuw — bevestigingspagina |
-| `src/pages/ProgrammaSamenstellen.tsx` | Aanpassen — multi-step flow, sheet verwijderen |
-| `src/components/configurator/ReviewAndSubmitSheet.tsx` | Verwijderen |
+---
 
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
