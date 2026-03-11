@@ -66,27 +66,6 @@ export const ProgramSidebar = ({
     }).format(amount);
   };
 
-  // Determine next action for CTA
-  const getNextAction = () => {
-    if (statusSummary.alternative > 0) {
-      return { label: "Bekijk alternatieven", section: "program" };
-    }
-    if (statusSummary.pending > 0) {
-      return null; // No action needed, waiting for providers
-    }
-    if (isMultiDay && !hasAccommodation) {
-      return { label: "Logies bekijken", section: "accommodation" };
-    }
-    if (!billingComplete && allConfirmed) {
-      return { label: "Gegevens invullen", action: onOpenBilling };
-    }
-    if (allConfirmed && billingComplete && !termsAccepted) {
-      return { label: "Ondertekenen", action: onScrollToTerms };
-    }
-    return null;
-  };
-
-  const nextAction = getNextAction();
 
   return (
     <aside
