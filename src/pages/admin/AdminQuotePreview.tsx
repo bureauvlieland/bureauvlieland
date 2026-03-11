@@ -630,7 +630,7 @@ const AdminQuotePreview = () => {
                         <div className="text-right text-sm">
                           <p className="font-semibold">{request.reference_number}</p>
                           <p className="text-gray-500">
-                            {format(new Date(), "d MMMM yyyy", { locale: nl })}
+                            {format(new Date(), "EEE d MMMM yyyy", { locale: nl })}
                           </p>
                         </div>
                       </div>
