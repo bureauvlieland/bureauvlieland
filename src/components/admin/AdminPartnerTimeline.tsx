@@ -161,7 +161,7 @@ export function AdminPartnerTimeline({ partnerId }: Props) {
         date: period.created_at,
         type: "unavailability",
         title: "Beschikbaarheidsblokkering toegevoegd",
-        description: `${format(new Date(period.start_date), "d MMM", { locale: nl })} - ${format(new Date(period.end_date), "d MMM yyyy", { locale: nl })}${period.reason ? `: ${period.reason}` : ""}`,
+        description: `${format(new Date(period.start_date), "EEE d MMM", { locale: nl })} - ${format(new Date(period.end_date), "EEE d MMM yyyy", { locale: nl })}${period.reason ? `: ${period.reason}` : ""}`,
       });
     });
 
