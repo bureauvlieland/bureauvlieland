@@ -1,47 +1,74 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Klantportaal: flow en statussen corrigeren
+### Wat is gebouwd
 
-## Analyse van de problemen
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-Er zijn 5 samenhangende issues:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-### 1. Onjuiste melding "Aanvragen verstuurd naar aanbieders"
-De `ActionRequiredCard` en `ProgramIntroCard` tonen altijd "aanvragen verstuurd" als er pending items zijn. Maar bij een nieuw ingediend programma heeft de admin nog niets naar partners gestuurd. Het veld `program_published_at` bestaat al in de database en wordt gezet wanneer de admin het programma publiceert — dit is het juiste signaal.
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-**Oplossing**: `program_published_at` doorgeven aan `ActionRequiredCard` en `ProgramIntroCard`. Als `program_published_at` null is:
-- ActionRequiredCard: "Uw aanvraag wordt beoordeeld" / "Bureau Vlieland bekijkt uw programma en bereidt de aanvragen voor."
-- ProgramIntroCard: "Uw programma is ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt indien nodig contact op."
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-Als `program_published_at` gezet is → huidige tekst "Aanvragen verstuurd naar aanbieders" is dan correct.
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### 2. Klant kan programma niet meer wijzigen na indienen
-Na het indienen van een aanvraag moet de klant het programma alleen kunnen bekijken, niet bewerken. Momenteel ziet de klant knoppen: "Toevoegen", "Tijd wijzigen", "Verwijderen".
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-**Oplossing**: Een `readOnly` prop toevoegen aan `CustomerProgramItem`. Als `program_published_at` null is (admin nog niet gepubliceerd = klant heeft net ingediend), is het programma read-only. De "Toevoegen" knop in `DesktopProgramView`/`MobileProgramView` wordt ook verborgen. Pas na publicatie (wanneer admin items naar partners stuurt) kan de klant eventueel wijzigingen doen.
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### 3. Leeg programma-onderdeel
-Een item zonder naam (Bureau Vlieland) verschijnt in de lijst. Dit is waarschijnlijk een item met `block_name` leeg in de database. De code filtert al op `status !== "cancelled"` maar niet op ontbrekende naam.
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-**Oplossing**: Items zonder `block_name` uitfilteren in de weergave, of als fallback "Nog te bepalen" tonen.
+---
 
-### 4. "Dag X - Datum" per item is overbodig
-In `CustomerProgramItem` (regel 143-148) wordt per item "Dag 1 • 24 mrt" getoond, terwijl de `DayTabs` component al de dag en datum toont als tab-header.
+## Plan: CRM en Partners samenvoegen
 
-**Oplossing**: De dag/datum-indicator per item verbergen wanneer `DayTabs` actief is (multi-day view). Alleen tonen op single-day view als er meerdere dagen zijn (wat niet voorkomt).
+### Status: ✅ Geïmplementeerd
 
-### 5. Status-labels heroverwegen
-Huidige status "Aangevraagd" bij pending items impliceert dat er een aanvraag naar de partner is gegaan. Vóór publicatie moet dit "In behandeling" zijn.
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-**Oplossing**: De `overrideLabel` logica in `CustomerProgramItem` (regel 117) aanpassen. Als `program_published_at` null is → label "In behandeling". Als gepubliceerd → "Aangevraagd" (huidige label).
+---
 
-## Wijzigingen
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-| Bestand | Actie |
-|---------|-------|
-| `ActionRequiredCard.tsx` | Nieuwe prop `programPublishedAt`. Pre-publication: "Uw aanvraag wordt beoordeeld" (neutral variant) |
-| `ProgramIntroCard.tsx` | Nieuwe prop `programPublishedAt`. Pre-publication: aangepaste tekst, geen bewerkopties |
-| `CustomerProgramItem.tsx` | Nieuwe prop `readOnly`. Verbergt "Tijd wijzigen", "Verwijderen". Prop `hideDay` om dag/datum meta te verbergen in multi-day tabs |
-| `DesktopProgramView.tsx` | Prop `programPublishedAt` doorgeven; "Toevoegen" knop verbergen pre-publicatie; `hideDay={true}` bij multi-day DayTabs; items zonder `block_name` filteren |
-| `MobileProgramView.tsx` | Zelfde aanpassingen als desktop |
+### Status: ✅ Geïmplementeerd
 
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".

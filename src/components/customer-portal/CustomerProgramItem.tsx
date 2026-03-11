@@ -41,6 +41,8 @@ interface CustomerProgramItemProps {
   vatRate?: number;
   isPreApproval?: boolean;
   isQuoteMode?: boolean;
+  readOnly?: boolean;
+  hideDay?: boolean;
 }
 
 export const CustomerProgramItem = ({
@@ -58,6 +60,8 @@ export const CustomerProgramItem = ({
   vatRate,
   isPreApproval = false,
   isQuoteMode = false,
+  readOnly = false,
+  hideDay = false,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -140,7 +144,7 @@ export const CustomerProgramItem = ({
           
           {/* Meta row */}
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-            {currentDate && selectedDates.length > 1 && (
+            {!hideDay && currentDate && selectedDates.length > 1 && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
@@ -268,7 +272,7 @@ export const CustomerProgramItem = ({
           )}
 
           {/* Always-visible action row */}
-          {item.status !== "cancelled" && item.status !== "counter_proposed" && (
+          {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
             <div className="mt-3 flex flex-wrap gap-2 justify-end">
               {/* Per-item akkoord for quote mode items with status bevestigd */}
               {isQuoteMode && item.item_quote_status === "bevestigd" && !item.customer_approved_at && onApproveQuoteItem && (

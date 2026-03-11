@@ -147,6 +147,7 @@ export const MobileProgramView = ({
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
+  const isPublished = !!program.program_published_at;
   const isQuoteMode = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
   const hasUnapprovedItems = isQuoteMode && program.items.some(
     (i) => i.item_quote_status === "bevestigd" && !i.customer_approved_at && i.status !== "cancelled"
@@ -246,6 +247,7 @@ export const MobileProgramView = ({
             onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
             programType={program.program_type}
             quoteStatus={program.quote_status}
+            programPublishedAt={program.program_published_at}
           />
 
           <ProgramIntroCard
@@ -257,6 +259,7 @@ export const MobileProgramView = ({
             isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
             onAcceptQuoteProposal={onAcceptQuoteProposal}
             hasUnapprovedItems={hasUnapprovedItems}
+            programPublishedAt={program.program_published_at}
           />
         </>
       )}
@@ -339,7 +342,7 @@ export const MobileProgramView = ({
                   Offerte
                 </Button>
               )}
-              {!termsAccepted && (
+              {!termsAccepted && isPublished && (
                 <Button
                   size="sm"
                   onClick={(e) => {
@@ -405,6 +408,8 @@ export const MobileProgramView = ({
                         isPreApproval={isPreApproval}
                         isQuoteMode={isQuoteMode}
                         vatRate={getItemVatRate(item)}
+                        readOnly={!isPublished}
+                        hideDay
                       />
                     )}
                   </CustomerTimeline>
@@ -446,6 +451,7 @@ export const MobileProgramView = ({
                       isPreApproval={isPreApproval}
                       isQuoteMode={isQuoteMode}
                       vatRate={getItemVatRate(item)}
+                      readOnly={!isPublished}
                     />
                   )}
                 </CustomerTimeline>

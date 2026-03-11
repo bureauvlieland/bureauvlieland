@@ -17,6 +17,7 @@ interface ProgramIntroCardProps {
   isMaatwerkEmpty?: boolean;
   onAcceptQuoteProposal?: () => Promise<boolean>;
   hasUnapprovedItems?: boolean;
+  programPublishedAt?: string | null;
 }
 
 export const ProgramIntroCard = ({
@@ -28,7 +29,9 @@ export const ProgramIntroCard = ({
   isMaatwerkEmpty,
   onAcceptQuoteProposal,
   hasUnapprovedItems,
+  programPublishedAt,
 }: ProgramIntroCardProps) => {
+  const isPublished = !!programPublishedAt;
   const [isLoading, setIsLoading] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
@@ -186,6 +189,20 @@ export const ProgramIntroCard = ({
             Hieronder vindt u uw programma. U kunt activiteiten toevoegen om uw programma samen te stellen.
           </p>
           <EmptyCartTips />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pre-publication: admin is still reviewing
+  if (!isPublished) {
+    return (
+      <Card className="border-muted bg-muted/30">
+        <CardContent className="p-5">
+          <p className="text-sm text-foreground leading-relaxed">
+            Uw programma is ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt indien nodig contact op.
+            Hieronder vindt u een overzicht van de ingediende onderdelen.
+          </p>
         </CardContent>
       </Card>
     );

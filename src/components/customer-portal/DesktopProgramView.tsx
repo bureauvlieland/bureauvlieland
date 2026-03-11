@@ -151,6 +151,7 @@ export const DesktopProgramView = ({
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  const isPublished = !!program.program_published_at;
   const isQuoteMode = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
   const hasUnapprovedItems = isQuoteMode && program.items.some(
     (i) => i.item_quote_status === "bevestigd" && !i.customer_approved_at && i.status !== "cancelled"
@@ -216,6 +217,7 @@ export const DesktopProgramView = ({
               onScrollToAccommodation={scrollToAccommodation}
               programType={program.program_type}
               quoteStatus={program.quote_status}
+              programPublishedAt={program.program_published_at}
             />
 
             <ProgramIntroCard
@@ -227,6 +229,7 @@ export const DesktopProgramView = ({
               isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
               onAcceptQuoteProposal={onAcceptQuoteProposal}
               hasUnapprovedItems={hasUnapprovedItems}
+              programPublishedAt={program.program_published_at}
             />
           </>
         )}
@@ -322,7 +325,7 @@ export const DesktopProgramView = ({
                           Bekijk offerte
                         </Button>
                       )}
-                      {!termsAccepted && (
+                      {!termsAccepted && isPublished && (
                         <Button
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
@@ -369,7 +372,7 @@ export const DesktopProgramView = ({
                           <>
                             <CustomerTimeline items={dayItems} showTimeColumn>
                               {(item) => (
-                                <CustomerProgramItem
+                              <CustomerProgramItem
                                   item={item}
                                   selectedDates={selectedDates}
                                   onUpdate={(updates) => onUpdateItem(item.id, updates)}
@@ -383,6 +386,8 @@ export const DesktopProgramView = ({
                                   isPreApproval={isPreApproval}
                                   isQuoteMode={isQuoteMode}
                                   vatRate={getItemVatRate(item)}
+                                  readOnly={!isPublished}
+                                  hideDay
                                 />
                               )}
                             </CustomerTimeline>
@@ -424,6 +429,7 @@ export const DesktopProgramView = ({
                           isPreApproval={isPreApproval}
                           isQuoteMode={isQuoteMode}
                           vatRate={getItemVatRate(item)}
+                          readOnly={!isPublished}
                         />
                       )}
                     </CustomerTimeline>

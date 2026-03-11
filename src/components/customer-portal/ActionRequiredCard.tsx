@@ -29,6 +29,7 @@ interface ActionRequiredCardProps {
   onScrollToAccommodation?: () => void;
   programType?: string;
   quoteStatus?: string | null;
+  programPublishedAt?: string | null;
   className?: string;
 }
 
@@ -57,8 +58,10 @@ export const ActionRequiredCard = ({
   onScrollToAccommodation,
   programType,
   quoteStatus,
+  programPublishedAt,
   className,
 }: ActionRequiredCardProps) => {
+  const isPublished = !!programPublishedAt;
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isQuotePreApproval = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming", "offerte_verstuurd"].includes(quoteStatus);
   const isQuoteBeingPrepared = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
@@ -107,6 +110,16 @@ export const ActionRequiredCard = ({
     // Priority 4: Pending items waiting for partner confirmation
     // Skip when quote is awaiting approval - requests haven't been sent yet
     if (statusSummary.pending > 0 && !isQuotePreApproval) {
+      // If not yet published by admin, show "being reviewed" instead of "sent to partners"
+      if (!isPublished) {
+        return {
+          type: "pending",
+          title: "Uw aanvraag wordt beoordeeld",
+          description: "Bureau Vlieland bekijkt uw programma en bereidt de aanvragen voor. U ontvangt bericht zodra de aanvragen zijn verstuurd naar de aanbieders.",
+          icon: <Clock className="h-5 w-5" />,
+          variant: "neutral",
+        };
+      }
       return {
         type: "pending",
         title: "Aanvragen verstuurd naar aanbieders",
