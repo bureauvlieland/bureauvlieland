@@ -68,7 +68,10 @@ import {
   isTestMode, 
   getRecipientEmail, 
   getSubjectPrefix,
+  getRenderedTemplate,
+  replaceVariables,
   buildReplyTo,
+  TemplateIds,
 } from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -104,8 +107,6 @@ function groupBlocksByType(blocks: BlockItem[]) {
     self_arranged: blocks.filter((b) => b.blockType === "self_arranged"),
   };
 }
-
-
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -150,9 +151,6 @@ const handler = async (req: Request): Promise<Response> => {
     const subjectPrefix = getSubjectPrefix(origin);
     
     console.log(`Program request received for: ${requestData.email} [Test mode: ${testMode}]`);
-    if (testMode) {
-      console.log(`[TEST MODE] All partner emails will be redirected to ${TEST_EMAIL}`);
-    }
 
     // Sanitize all string fields
     const safeName = sanitizeHtml(requestData.name);
@@ -187,151 +185,91 @@ const handler = async (req: Request): Promise<Response> => {
       }).join('');
     };
 
-    // Email to Bureau Vlieland
-    const bureauEmailHtml = `
+    // Build template variables
+    const bureauItemsHtml = buildBlocksListHtml(groupedBlocks.bureau);
+    const partnerItemsHtml = buildBlocksListHtml(groupedBlocks.partner);
+    const selfArrangedItemsHtml = buildBlocksListHtml(groupedBlocks.self_arranged, true);
+    const coordinatedItemsHtml = buildBlocksListHtml([...groupedBlocks.bureau, ...groupedBlocks.partner]);
+
+    // Self-arranged items for customer email (with booking links)
+    const selfArrangedCustomerHtml = groupedBlocks.self_arranged.map(block => `
+      <li style="margin-bottom: 10px;">
+        <strong>${sanitizeHtml(block.name)}</strong><br>
+        <span style="color: #78350f;">${sanitizeHtml(block.priceIndication)}${block.priceNote ? ` ${sanitizeHtml(block.priceNote)}` : ''}</span><br>
+        ${block.externalUrl ? `<a href="${sanitizeHtml(block.externalUrl)}" style="color: #0066cc; font-weight: bold;">→ Boek bij ${sanitizeHtml(block.provider)}</a>` : ''}
+      </li>
+    `).join('');
+
+    // Try to get templates from database
+    const bureauTemplate = await getRenderedTemplate(TemplateIds.PROGRAM_REQUEST_BUREAU, {
+      customer_name: safeName,
+      customer_company: safeCompany,
+      customer_email: safeEmail,
+      customer_phone: safePhone,
+      number_of_people: String(requestData.numberOfPeople),
+      selected_date: safeDate || 'Nog niet gekozen',
+      bureau_fee: String(requestData.bureauFee),
+      bureau_items: bureauItemsHtml,
+      partner_items: partnerItemsHtml,
+      self_arranged_items: selfArrangedItemsHtml,
+      notes: safeNotes ? safeNotes.replace(/\n/g, '<br>') : '',
+    });
+
+    const customerTemplate = await getRenderedTemplate(TemplateIds.PROGRAM_REQUEST_CUSTOMER, {
+      customer_name: safeName,
+      selected_date: safeDate || 'Nog niet gekozen',
+      number_of_people: String(requestData.numberOfPeople),
+      coordinated_items: coordinatedItemsHtml,
+      self_arranged_items: selfArrangedCustomerHtml,
+      notes: safeNotes ? safeNotes.replace(/\n/g, '<br>') : '',
+      portal_url: portalUrl || '',
+      bureau_fee: hasBillableItems ? String(requestData.bureauFee) : '',
+    });
+
+    // Fallback bureau email
+    const bureauEmailHtml = bureauTemplate?.body || `
       <h2>Nieuwe Programma Aanvraag</h2>
-      
       <h3>Contactgegevens</h3>
       <p><strong>Naam:</strong> ${safeName}</p>
       ${safeCompany ? `<p><strong>Bedrijf:</strong> ${safeCompany}</p>` : ''}
       <p><strong>Email:</strong> ${safeEmail}</p>
       <p><strong>Telefoon:</strong> ${safePhone}</p>
-      
       <h3>Programma Details</h3>
       <p><strong>Aantal personen:</strong> ${requestData.numberOfPeople}</p>
       <p><strong>Gewenste datum:</strong> ${safeDate || 'Nog niet gekozen'}</p>
       <p><strong>Handling fee:</strong> € ${requestData.bureauFee}</p>
-      
-      ${groupedBlocks.bureau.length > 0 ? `
-      <h3>Bureau Vlieland factureert</h3>
-      <ul>${buildBlocksListHtml(groupedBlocks.bureau)}</ul>
-      ` : ''}
-      
-      ${groupedBlocks.partner.length > 0 ? `
-      <h3>Door te zetten naar partners (handmatig via admin)</h3>
-      <ul>${buildBlocksListHtml(groupedBlocks.partner)}</ul>
-      ` : ''}
-      
-      ${groupedBlocks.self_arranged.length > 0 ? `
-      <h3>Zelf te regelen door klant</h3>
-      <ul>${buildBlocksListHtml(groupedBlocks.self_arranged, true)}</ul>
-      ` : ''}
-      
-      ${safeNotes ? `
-      <h3>Algemene opmerkingen / Wensen</h3>
-      <p>${safeNotes.replace(/\n/g, '<br>')}</p>
-      ` : ''}
+      ${groupedBlocks.bureau.length > 0 ? `<h3>Bureau Vlieland factureert</h3><ul>${bureauItemsHtml}</ul>` : ''}
+      ${groupedBlocks.partner.length > 0 ? `<h3>Door te zetten naar partners</h3><ul>${partnerItemsHtml}</ul>` : ''}
+      ${groupedBlocks.self_arranged.length > 0 ? `<h3>Zelf te regelen door klant</h3><ul>${selfArrangedItemsHtml}</ul>` : ''}
+      ${safeNotes ? `<h3>Opmerkingen</h3><p>${safeNotes.replace(/\n/g, '<br>')}</p>` : ''}
     `;
 
-    // Confirmation email to customer (includes external links for self-arranged items)
-    const customerEmailHtml = `
+    // Fallback customer email
+    const customerEmailHtml = customerTemplate?.body || `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a365d;">Beste ${safeName},</h2>
-        
         <p>Bedankt voor uw programma-aanvraag bij Bureau Vlieland!</p>
-        
-        <p>Wij hebben uw aanvraag goed ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt contact met u op over de volgende stappen. <strong>U betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van Bureau Vlieland.</p>
-        
-        <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #2d3748;">Uw aanvraag</h3>
-          <p><strong>Datum:</strong> ${safeDate || 'Nog niet gekozen'}</p>
-          <p><strong>Aantal personen:</strong> ${requestData.numberOfPeople}</p>
-        </div>
-        
-        ${groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0 ? `
-        <div style="margin: 20px 0;">
-          <h3 style="color: #2d3748;">Aangevraagde onderdelen</h3>
-          <p style="color: #718096; font-size: 14px;">Bureau Vlieland coördineert deze onderdelen en houdt u op de hoogte:</p>
-          <ul style="padding-left: 20px;">
-            ${buildBlocksListHtml([...groupedBlocks.bureau, ...groupedBlocks.partner])}
-          </ul>
-          ${hasBillableItems ? `<p style="color: #718096; font-size: 14px;">Handling fee: € ${requestData.bureauFee}</p>` : ''}
-        </div>
-        ` : ''}
-        
-        ${groupedBlocks.self_arranged.length > 0 ? `
-        <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="margin-top: 0; color: #92400e;">🔗 Zelf te regelen</h3>
-          <p style="color: #78350f; font-size: 14px;">Onderstaande onderdelen regelt u zelf. Klik op de links om te boeken:</p>
-          <ul style="padding-left: 20px;">
-            ${groupedBlocks.self_arranged.map(block => `
-              <li style="margin-bottom: 10px;">
-                <strong>${sanitizeHtml(block.name)}</strong><br>
-                <span style="color: #78350f;">${sanitizeHtml(block.priceIndication)}${block.priceNote ? ` ${sanitizeHtml(block.priceNote)}` : ''}</span><br>
-                ${block.externalUrl ? `<a href="${sanitizeHtml(block.externalUrl)}" style="color: #0066cc; font-weight: bold;">→ Boek bij ${sanitizeHtml(block.provider)}</a>` : ''}
-              </li>
-            `).join('')}
-          </ul>
-        </div>
-        ` : ''}
-        
-        ${safeNotes ? `
-        <div style="margin: 20px 0;">
-          <h3 style="color: #2d3748;">Uw opmerkingen</h3>
-          <p style="color: #4a5568; background: #f7fafc; padding: 15px; border-radius: 8px;">${safeNotes.replace(/\n/g, '<br>')}</p>
-        </div>
-        ` : ''}
-        
-        ${portalUrl ? `
-        <div style="background-color: #edf2f7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-          <h3 style="margin-top: 0; color: #2d3748;">📊 Volg uw programma</h3>
-          <p style="color: #4a5568;">
-            Bekijk de status van uw aanvraag en voer eventuele wijzigingen door in uw persoonlijke klantomgeving:
-          </p>
-          <a href="${portalUrl}" 
-             style="display: inline-block; background-color: #1a365d; color: white; 
-                    padding: 12px 24px; border-radius: 6px; text-decoration: none; 
-                    font-weight: bold; margin-top: 10px;">
-            Bekijk uw programma →
-          </a>
-          <p style="color: #718096; font-size: 12px; margin-top: 15px;">
-            Deze link is persoonlijk en 90 dagen geldig.
-          </p>
-        </div>
-        ` : ''}
-        
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-        
-        <p>Heeft u nog vragen? Neem gerust contact met ons op:</p>
-        <ul style="list-style: none; padding: 0;">
-          <li>📧 Email: <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></li>
-          <li>📞 Telefoon: 0562 700 208</li>
-        </ul>
-        
-        <p style="margin-top: 30px;">Met vriendelijke groet,<br><strong>Erwin & Team Bureau Vlieland</strong></p>
+        <p>Wij hebben uw aanvraag goed ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt contact met u op over de volgende stappen.</p>
+        <p>Met vriendelijke groet,<br><strong>Erwin & Team Bureau Vlieland</strong></p>
       </div>
     `;
 
-    console.log(`Sending emails: 1 to bureau, 1 to customer (no partner emails — admin-first flow)`);
+    const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`;
+    const customerSubject = customerTemplate?.subject || `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`;
 
-    // Send bureau + customer emails only (no partner emails)
+    console.log(`Sending emails: 1 to bureau, 1 to customer`);
+
     const emailResponse = await sendEmailViaMailjet([
       {
-        From: {
-          Email: "hallo@bureauvlieland.nl",
-          Name: "Bureau Vlieland Website"
-        },
-        To: [
-          {
-            Email: "erwin@bureauvlieland.nl",
-            Name: "Erwin van der Most"
-          }
-        ],
-        Subject: `${subjectPrefix}Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`,
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
+        To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin van der Most" }],
+        Subject: `${subjectPrefix}${bureauSubject}`,
         HTMLPart: bureauEmailHtml,
       },
       {
-        From: {
-          Email: "hallo@bureauvlieland.nl",
-          Name: "Bureau Vlieland"
-        },
-        To: [
-          {
-            Email: requestData.email,
-            Name: requestData.name
-          }
-        ],
-        Subject: `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`,
+        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+        To: [{ Email: requestData.email, Name: requestData.name }],
+        Subject: `${subjectPrefix}${customerSubject}`,
         HTMLPart: customerEmailHtml,
       }
     ]);
@@ -345,10 +283,7 @@ const handler = async (req: Request): Promise<Response> => {
       }), 
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   } catch (error: any) {

@@ -7,6 +7,8 @@ import {
   formatDateNL,
   getRecipientEmail,
   getSubjectPrefix,
+  getRenderedTemplate,
+  TemplateIds,
 } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -131,15 +133,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build email HTML
+    // Build email content
     const sanitizedMessage = sanitizeHtml(message).replace(/\n/g, "<br>");
     const arrivalFormatted = formatDateNL(accRequest.arrival_date);
     const departureFormatted = formatDateNL(accRequest.departure_date);
 
-    // For bureau_central: hide customer PII, route via Bureau Vlieland
     const senderLabel = isCentralBilling ? "Bureau Vlieland" : sanitizeHtml(programRequest.customer_name);
     const replyToEmail = isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email;
     const replyToName = isCentralBilling ? "Bureau Vlieland" : programRequest.customer_name;
+    const replyInfo = isCentralBilling ? "Bureau Vlieland" : "de klant";
 
     const contactInfoBlock = isCentralBilling
       ? `<p style="margin: 0;">Bureau Vlieland<br>📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></p>`
@@ -149,7 +151,20 @@ Deno.serve(async (req) => {
             📞 ${sanitizeHtml(programRequest.customer_phone)}
           </p>`;
 
-    const htmlBody = `
+    // Try DB template
+    const template = await getRenderedTemplate(TemplateIds.CUSTOMER_ACCOMMODATION_MESSAGE, {
+      partner_name: sanitizeHtml(partner.booking_contact_name || partner.name),
+      sender_label: senderLabel,
+      accommodation_name: sanitizeHtml(quote.accommodation_name),
+      dates: `${arrivalFormatted} t/m ${departureFormatted}`,
+      subject: sanitizeHtml(subject),
+      message: sanitizedMessage,
+      contact_info: contactInfoBlock,
+      reply_info: replyInfo,
+    });
+
+    const emailSubject = template?.subject || subject;
+    const htmlBody = template?.body || `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
           <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
@@ -161,15 +176,12 @@ Deno.serve(async (req) => {
             <p style="margin: 0 0 8px; font-weight: 600; color: #1e3a5f;">${sanitizeHtml(subject)}</p>
             <p style="margin: 0;">${sanitizedMessage}</p>
           </div>
-          <p style="font-size: 14px; color: #666;">U kunt direct antwoorden op deze e-mail — uw reactie gaat naar ${isCentralBilling ? "Bureau Vlieland" : "de klant"}.</p>
+          <p style="font-size: 14px; color: #666;">U kunt direct antwoorden op deze e-mail.</p>
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;">
         <div style="padding: 16px 24px; color: #666; font-size: 13px; background: #f8fafc;">
-          <p style="margin: 0 0 4px;"><strong>${isCentralBilling ? "Contactgegevens:" : "Contactgegevens klant:"}</strong></p>
+          <p style="margin: 0 0 4px;"><strong>Contactgegevens:</strong></p>
           ${contactInfoBlock}
-        </div>
-        <div style="padding: 16px 24px; color: #999; font-size: 12px;">
-          <p style="margin: 0;">Verstuurd via Bureau Vlieland &nbsp;|&nbsp; <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a></p>
         </div>
       </div>
     `;
@@ -192,7 +204,7 @@ Deno.serve(async (req) => {
             To: [{ Email: recipientEmail, Name: partner.name }],
             Bcc: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
             ReplyTo: { Email: replyToEmail, Name: replyToName },
-            Subject: `${subjectPrefix}${subject}`,
+            Subject: `${subjectPrefix}${emailSubject}`,
             HTMLPart: htmlBody,
           },
         ],

@@ -1,89 +1,111 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Alle hardcoded mails omzetten naar database-templates
+### Wat is gebouwd
 
-## Inventarisatie
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-Na analyse van alle edge functions zijn er **19 hardcoded e-mails** verspreid over 8 edge functions die als template in de database moeten komen:
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-### `send-program-request` (2 templates)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `program_request_bureau` | Notificatie naar bureau bij nieuwe aanvraag | customer_name, customer_company, customer_email, customer_phone, number_of_people, selected_date, bureau_fee, bureau_items, partner_items, self_arranged_items, notes |
-| `program_request_customer` | Bevestiging naar klant | customer_name, selected_date, number_of_people, coordinated_items, self_arranged_items, notes, portal_url, bureau_fee |
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-### `approve-quote-item` (1 template)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `program_request_partner` | Partner notificatie bij goedkeuring item | partner_name, customer_name, customer_company, customer_email, customer_phone, dates, number_of_people, block_name, preferred_time, portal_url |
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-### `notify-new-chat` (1 template)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `chat_notification_bureau` | Bureau notificatie bij nieuw chatbericht | visitor_name, visitor_email, source_label, message_preview, chat_url |
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### `notify-new-chat-reply` (1 template)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `chat_reply_visitor` | Bezoeker notificatie bij nieuw antwoord | visitor_name, portal_link |
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-### `send-partner-reset-email` (1 template)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `partner_password_reset` | Wachtwoord reset link | partner_name, reset_link |
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### `send-partner-intro-email` (1 template)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `partner_intro_portal` | Introductie-email partnerportaal | (geen dynamische variabelen, vaste tekst) |
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-### `send-customer-accommodation-message` (1 template)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `customer_accommodation_message` | Klantbericht naar logiespartner | partner_name, sender_label, accommodation_name, dates, subject, message, contact_info, reply_info |
+---
 
-### `cancel-program-request` (1 template — logiespartner)
-| Template ID | Beschrijving | Variabelen |
-|---|---|---|
-| `cancellation_accommodation_partner` | Annulering naar logiespartner | partner_name, customer_name, customer_company, accommodation_name, dates, cancellation_reason |
+## Plan: CRM en Partners samenvoegen
 
-### `update-customer-program` (10 templates)
-| Template ID | Beschrijving |
-|---|---|
-| `people_change_accommodation` | Gewijzigd aantal gasten → logiespartner |
-| `date_change_partner` | Datumwijziging → activiteitenpartner |
-| `date_change_accommodation` | Datumwijziging → logiespartner |
-| `date_change_customer` | Datumwijziging bevestiging → klant |
-| `item_cancelled_partner` | Losse activiteit geannuleerd → partner |
-| `booking_confirmed_partner` | Definitieve boeking → partner |
-| `booking_confirmed_customer` | Definitieve boeking → klant |
-| `item_added_partner` | Nieuwe activiteit toegevoegd → partner |
-| `item_changes_partner` | Programmawijzigingen → partner |
-| `item_changes_customer` | Programmawijzigingen bevestiging → klant |
+### Status: ✅ Geïmplementeerd
 
-## Aanpak
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-### Stap 1: Database migratie
-Eén INSERT met alle 19 templates. Elke template bevat de huidige hardcoded HTML als `body_html`, het juiste onderwerp als `subject`, en de lijst van beschikbare variabelen.
+---
 
-### Stap 2: TemplateIds uitbreiden
-Nieuwe constanten toevoegen in `_shared/email-templates.ts`.
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-### Stap 3: Edge functions updaten
-Elke functie wordt aangepast om `getRenderedTemplate()` te gebruiken met de bestaande hardcoded HTML als fallback (voor het geval de template niet in de DB staat).
+### Status: ✅ Geïmplementeerd
 
-### Bestanden
-- Database migratie (19 template-rijen INSERT)
-- `supabase/functions/_shared/email-templates.ts` — TemplateIds uitbreiden
-- `supabase/functions/send-program-request/index.ts`
-- `supabase/functions/approve-quote-item/index.ts`
-- `supabase/functions/notify-new-chat/index.ts`
-- `supabase/functions/notify-new-chat-reply/index.ts`
-- `supabase/functions/send-partner-reset-email/index.ts`
-- `supabase/functions/send-partner-intro-email/index.ts`
-- `supabase/functions/send-customer-accommodation-message/index.ts`
-- `supabase/functions/cancel-program-request/index.ts`
-- `supabase/functions/update-customer-program/index.ts`
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
-Geen UI-wijzigingen nodig — de bestaande Email Templates admin-pagina toont automatisch de nieuwe templates.
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
 
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
+
+---
+
+## Plan: Bureau Vlieland als centrale regie — Volledige alignment
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+#### A. Kritieke flow-fixes
+1. **`skip_partner_notification: true`** toegevoegd aan `CheckoutContactForm.tsx` en `RequestFormModal.tsx` — items worden nu gestaged voor admin review.
+2. **"Verstuur naar partners" banner** werkt nu voor alle programmatypes (niet meer beperkt tot quote-modus).
+3. **`accept-quote-proposal`** slaat `quote_status` update over voor `self_service` programma's; zet altijd `program_published_at` als die null is.
+4. **Admin banner tekst** gecorrigeerd: "De klant ziet het programma als 'In behandeling'". Publiceer-banner beperkt tot admin-aangemaakte programma's.
+
+#### B. `partner_direct` relikten verwijderd
+5. **`InvoicingModeSelector.tsx`** omgezet naar read-only "Bureau Vlieland factureert de klant".
+6. **`CustomerProgram.tsx`** fallback gewijzigd naar `"bureau_central"`.
+7. **`ContactAccommodationDialog.tsx`** — altijd bureau_central teksten, geen directe partner-communicatie branches.
+8. **`PriceSummaryCard.tsx`** — partner_direct secties verwijderd.
+9. **`InvoiceProvidersCard.tsx`** — individuele partner-listings uitgeschakeld, altijd bureau-facturatie.
+10. **`select-accommodation-quote`** — PII altijd verborgen voor partners.
+
+#### C. Klantportaal teksten
+11. **`ProgramIntroCard.tsx`** — "Bureau Vlieland coördineert de aanvragen bij de aanbieders."
+12. **`ActionRequiredCard.tsx`** — billing: "zodat Bureau Vlieland kan factureren"; complete: "U ontvangt de factuur van Bureau Vlieland."
+13. **`NextStepsCard.tsx`** — "U ontvangt de factuur van Bureau Vlieland."
+
+#### D. Publieke pagina's & juridisch
+14. **`LogiesVlieland.tsx`** en **`LogiesAanvragen.tsx`** — stap 4: "Bureau Vlieland begeleidt het boekingsproces".
+15. **`PartnerTerms.tsx`** — Artikel 1 en 5 aangepast: facturatie altijd via Bureau Vlieland.
+
+#### E. Statuslabels
+16. **`CustomerProgramItem.tsx`** — readOnly + pending → "In behandeling"; isPreApproval + pending → "In voorbereiding".
+
+#### F. Data
+17. Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` geüpdatet naar `true`.

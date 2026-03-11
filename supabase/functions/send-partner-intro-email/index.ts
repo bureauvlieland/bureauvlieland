@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -10,39 +11,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const EMAIL_SUBJECT = "De partnerportal van Bureau Vlieland — even voorstellen";
+const FALLBACK_SUBJECT = "De partnerportal van Bureau Vlieland — even voorstellen";
 
-const EMAIL_BODY = `
+const FALLBACK_BODY = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
     <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
   </div>
   <div style="padding: 24px; line-height: 1.8; color: #333;">
     <p>Beste partner,</p>
-
-    <p>De afgelopen weken heb je van ons een uitnodiging ontvangen om in te loggen op onze nieuwe partnerportal. Sommigen van jullie hebben er al mee gewerkt — fijn!</p>
-
-    <p>Ik snap dat je misschien dacht: <em>"Wat is dit nu weer?"</em> Daarom wil ik even kort uitleggen waarom we dit hebben opgezet.</p>
-
-    <p>We willen de samenwerking tussen Bureau Vlieland en onze partners zo soepel mogelijk maken. De portal is daar een belangrijk middel voor. Wat kun je er onder andere mee?</p>
-
+    <p>De afgelopen weken heb je van ons een uitnodiging ontvangen om in te loggen op onze nieuwe partnerportal.</p>
+    <p>We willen de samenwerking tussen Bureau Vlieland en onze partners zo soepel mogelijk maken.</p>
     <ul style="padding-left: 20px;">
-      <li><strong>Directe inzage</strong> in aanvragen van Bureau Vlieland die voor jou relevant zijn</li>
+      <li><strong>Directe inzage</strong> in aanvragen</li>
       <li><strong>Eenvoudig reageren</strong> op aanvragen</li>
-      <li><strong>Overzicht</strong> van je activiteiten, offertes en facturen op één plek</li>
-      <li><strong>Minder heen-en-weer mailen</strong> — alles centraal bijgehouden</li>
+      <li><strong>Overzicht</strong> van je activiteiten, offertes en facturen</li>
+      <li><strong>Minder heen-en-weer mailen</strong></li>
     </ul>
-
-    <p>Ik zou graag een keer langskomen of bellen om het idee erachter uit te leggen en de werkwijze samen door te nemen. Zou je mij twee momenten kunnen voorstellen waarop dat uitkomt?</p>
-
     <p>Je kunt reageren op deze mail of me bellen op <strong>0562 700 208</strong>.</p>
   </div>
   <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0 24px;">
   <div style="padding: 24px; color: #666; font-size: 14px;">
     <p style="margin: 0;">Hartelijke groet,<br><strong>Erwin</strong><br>Bureau Vlieland</p>
-    <p style="font-size: 12px; margin-top: 12px;">
-      📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a> &nbsp;|&nbsp; 📞 0562 700 208
-    </p>
   </div>
 </div>
 `;
@@ -93,13 +83,17 @@ Deno.serve(async (req) => {
 
     const { test } = await req.json();
 
+    // Try DB template
+    const template = await getRenderedTemplate(TemplateIds.PARTNER_INTRO_PORTAL, {});
+    const emailSubject = template?.subject || FALLBACK_SUBJECT;
+    const emailBody = template?.body || FALLBACK_BODY;
+
     // Build recipient list
     let recipients: { email: string; name: string }[] = [];
 
     if (test) {
       recipients = [{ email: "hallo@bureauvlieland.nl", name: "Bureau Vlieland (TEST)" }];
     } else {
-      // Get all active, invited partners with deduplicated emails
       const { data: partners, error: pError } = await supabase
         .from("partners")
         .select("name, email, contact_email")
@@ -108,7 +102,6 @@ Deno.serve(async (req) => {
 
       if (pError) throw pError;
 
-      // Deduplicate on COALESCE(contact_email, email)
       const seen = new Set<string>();
       for (const p of partners || []) {
         const targetEmail = (p.contact_email || p.email).toLowerCase().trim();
@@ -137,8 +130,8 @@ Deno.serve(async (req) => {
                 From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                 To: [{ Email: recipient.email, Name: recipient.name }],
                 ReplyTo: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                Subject: test ? `[TEST] ${EMAIL_SUBJECT}` : EMAIL_SUBJECT,
-                HTMLPart: EMAIL_BODY,
+                Subject: test ? `[TEST] ${emailSubject}` : emailSubject,
+                HTMLPart: emailBody,
               },
             ],
           }),
@@ -151,7 +144,7 @@ Deno.serve(async (req) => {
 
           await logEmail({
             email_type: "partner_intro_portal",
-            subject: EMAIL_SUBJECT,
+            subject: emailSubject,
             recipient_email: recipient.email,
             recipient_name: recipient.name,
             status: "failed",
@@ -162,7 +155,7 @@ Deno.serve(async (req) => {
           sentCount++;
           await logEmail({
             email_type: "partner_intro_portal",
-            subject: EMAIL_SUBJECT,
+            subject: emailSubject,
             recipient_email: recipient.email,
             recipient_name: recipient.name,
             status: "sent",

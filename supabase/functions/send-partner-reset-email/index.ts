@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
+import { SENDER_EMAIL, SENDER_NAME, getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -41,7 +41,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!partner || !partner.auth_user_id) {
-      // Don't reveal whether the email exists - always return success
       console.log("No active partner found for email:", trimmedEmail);
       return new Response(
         JSON.stringify({ success: true }),
@@ -60,7 +59,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (recentEmail) {
-      // Silently succeed to prevent enumeration
       console.log("Rate limited password reset for:", trimmedEmail);
       return new Response(
         JSON.stringify({ success: true }),
@@ -82,12 +80,16 @@ Deno.serve(async (req) => {
       throw new Error("LINK_GENERATION_FAILED");
     }
 
-    // The action_link from generateLink contains the token - we need to
-    // transform it to go through our app's reset-password page
     const actionLink = linkData.properties.action_link;
 
-    // Build email HTML
-    const htmlBody = `
+    // Try DB template
+    const template = await getRenderedTemplate(TemplateIds.PARTNER_PASSWORD_RESET, {
+      partner_name: partner.name,
+      reset_link: actionLink,
+    });
+
+    const emailSubject = template?.subject || "Wachtwoord resetten — Bureau Vlieland Partner Portal";
+    const htmlBody = template?.body || `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
           <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
@@ -97,26 +99,13 @@ Deno.serve(async (req) => {
           <p>We hebben een verzoek ontvangen om je wachtwoord te resetten voor de Partner Portal.</p>
           <p>Klik op de onderstaande knop om een nieuw wachtwoord in te stellen:</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${actionLink}" 
-               style="background-color: #1e3a5f; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-              Wachtwoord resetten
-            </a>
+            <a href="${actionLink}" style="background-color: #1e3a5f; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Wachtwoord resetten</a>
           </div>
-          <p style="font-size: 14px; color: #666;">
-            Deze link is 1 uur geldig. Als je geen wachtwoord reset hebt aangevraagd, 
-            kun je deze e-mail negeren.
-          </p>
-          <p style="font-size: 12px; color: #999; word-break: break-all;">
-            Werkt de knop niet? Kopieer dan deze link:<br>
-            <a href="${actionLink}" style="color: #0066cc;">${actionLink}</a>
-          </p>
+          <p style="font-size: 14px; color: #666;">Deze link is 1 uur geldig.</p>
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <div style="padding: 0 24px 24px; color: #666; font-size: 14px;">
           <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
-          <p style="font-size: 12px;">
-            📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a> &nbsp;|&nbsp; 📞 0562 700 208
-          </p>
         </div>
       </div>
     `;
@@ -134,7 +123,7 @@ Deno.serve(async (req) => {
           {
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: trimmedEmail, Name: partner.name }],
-            Subject: "Wachtwoord resetten — Bureau Vlieland Partner Portal",
+            Subject: emailSubject,
             HTMLPart: htmlBody,
           },
         ],
@@ -150,7 +139,7 @@ Deno.serve(async (req) => {
     // Log the email
     await logEmail({
       email_type: "partner_password_reset",
-      subject: "Wachtwoord resetten — Bureau Vlieland Partner Portal",
+      subject: emailSubject,
       recipient_email: trimmedEmail,
       recipient_name: partner.name,
       related_partner_id: partner.id,
