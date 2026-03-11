@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -36,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   Search,
@@ -58,15 +59,30 @@ import {
   List,
   TableIcon,
   Trash2,
+  ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
 import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
 import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
 type DerivedStatus = "concept" | "offerte_verstuurd" | "av_getekend" | "afgerond" | "geannuleerd" | "actief";
+
+interface AccommodationQuoteSummary {
+  partner_name: string;
+  status: string;
+  valid_until: string | null;
+}
+
+interface ItemDetail {
+  provider_name: string;
+  status: string;
+  skip_partner_notification: boolean;
+}
 
 interface Project {
   id: string;
@@ -97,6 +113,10 @@ interface Project {
   item_count: number;
   items_pending: number;
   items_confirmed: number;
+  items_not_sent: number;
+
+  accommodation_quotes: AccommodationQuoteSummary[];
+  item_details: ItemDetail[];
 }
 
 const DERIVED_STATUS_CONFIG: Record<DerivedStatus, { label: string; className: string; icon: React.ReactNode }> = {
@@ -122,6 +142,15 @@ const PROJECT_TYPE_CONFIG: Record<ProjectType, { label: string; icon: React.Reac
   combined: { label: "Logies + Activiteiten", icon: <FolderKanban className="h-4 w-4" /> },
 };
 
+const QUOTE_STATUS_ICON: Record<string, string> = {
+  pending: "⏳",
+  submitted: "📩",
+  selected: "✅",
+  declined: "❌",
+  rejected: "❌",
+  expired: "⏰",
+};
+
 function getDerivedStatus(project: Project): DerivedStatus {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled") return "geannuleerd";
   if (project.completion_status === "completed") return "afgerond";
@@ -131,6 +160,14 @@ function getDerivedStatus(project: Project): DerivedStatus {
   return "actief";
 }
 
+function getEarliestDeadline(quotes: AccommodationQuoteSummary[]): Date | null {
+  const pendingDeadlines = quotes
+    .filter(q => q.status === "pending" && q.valid_until)
+    .map(q => new Date(q.valid_until!));
+  if (pendingDeadlines.length === 0) return null;
+  return pendingDeadlines.reduce((min, d) => d < min ? d : min);
+}
+
 const AdminProjectsContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -138,47 +175,92 @@ const AdminProjectsContent = () => {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteAccommodation, setDeleteAccommodation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
+
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["admin-projects-unified"],
     queryFn: async () => {
-      const { data: programs, error: progError } = await supabase
-        .from("program_requests")
-        .select(`
-          id, reference_number, customer_name, customer_email, customer_company,
-          customer_token, number_of_people, selected_dates, status,
-          terms_accepted_at, created_at, linked_accommodation_id,
-          program_type, quote_status, completion_status
-        `)
-        .neq("status", "deleted")
-        .order("created_at", { ascending: false });
+      const [
+        { data: programs, error: progError },
+        { data: accommodations, error: accError },
+        { data: items },
+        { data: accQuotes },
+        { data: partners },
+      ] = await Promise.all([
+        supabase
+          .from("program_requests")
+          .select(`
+            id, reference_number, customer_name, customer_email, customer_company,
+            customer_token, number_of_people, selected_dates, status,
+            terms_accepted_at, created_at, linked_accommodation_id,
+            program_type, quote_status, completion_status
+          `)
+          .neq("status", "deleted")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("accommodation_requests")
+          .select(`
+            id, reference_number, customer_name, customer_email, customer_company,
+            customer_token, number_of_guests, arrival_date, departure_date,
+            status, created_at, linked_program_id
+          `)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("program_request_items")
+          .select("request_id, status, skip_partner_notification, provider_name"),
+        supabase
+          .from("accommodation_quotes")
+          .select("request_id, status, valid_until, accommodation_name, partner_id"),
+        supabase
+          .from("partners")
+          .select("id, name"),
+      ]);
 
       if (progError) throw progError;
-
-      const { data: accommodations, error: accError } = await supabase
-        .from("accommodation_requests")
-        .select(`
-          id, reference_number, customer_name, customer_email, customer_company,
-          customer_token, number_of_guests, arrival_date, departure_date,
-          status, created_at, linked_program_id
-        `)
-        .order("created_at", { ascending: false });
-
       if (accError) throw accError;
 
-      const { data: items } = await supabase
-        .from("program_request_items")
-        .select("request_id, status");
+      // Build partner name map
+      const partnerMap: Record<string, string> = {};
+      partners?.forEach(p => { partnerMap[p.id] = p.name; });
 
-      const itemStats: Record<string, { total: number; pending: number; confirmed: number }> = {};
+      // Build accommodation quotes by request_id (accommodation request id)
+      const quotesByAccRequest: Record<string, AccommodationQuoteSummary[]> = {};
+      accQuotes?.forEach(q => {
+        if (!quotesByAccRequest[q.request_id]) quotesByAccRequest[q.request_id] = [];
+        quotesByAccRequest[q.request_id].push({
+          partner_name: partnerMap[q.partner_id] || q.accommodation_name,
+          status: q.status,
+          valid_until: q.valid_until,
+        });
+      });
+
+      // Build item stats and details per program
+      const itemStats: Record<string, { total: number; pending: number; confirmed: number; notSent: number }> = {};
+      const itemDetailsByRequest: Record<string, ItemDetail[]> = {};
       items?.forEach((item) => {
         if (!itemStats[item.request_id]) {
-          itemStats[item.request_id] = { total: 0, pending: 0, confirmed: 0 };
+          itemStats[item.request_id] = { total: 0, pending: 0, confirmed: 0, notSent: 0 };
+          itemDetailsByRequest[item.request_id] = [];
         }
         itemStats[item.request_id].total++;
         if (item.status === "pending") itemStats[item.request_id].pending++;
         if (item.status === "confirmed") itemStats[item.request_id].confirmed++;
+        if (item.skip_partner_notification) itemStats[item.request_id].notSent++;
+        itemDetailsByRequest[item.request_id].push({
+          provider_name: item.provider_name,
+          status: item.status,
+          skip_partner_notification: item.skip_partner_notification ?? false,
+        });
       });
 
       const accommodationMap: Record<string, typeof accommodations[0]> = {};
@@ -192,7 +274,7 @@ const AdminProjectsContent = () => {
 
       programs?.forEach((prog) => {
         const linkedAcc = prog.linked_accommodation_id ? accommodationMap[prog.linked_accommodation_id] : null;
-        const stats = itemStats[prog.id] || { total: 0, pending: 0, confirmed: 0 };
+        const stats = itemStats[prog.id] || { total: 0, pending: 0, confirmed: 0, notSent: 0 };
 
         projectList.push({
           id: prog.id,
@@ -219,6 +301,9 @@ const AdminProjectsContent = () => {
           item_count: stats.total,
           items_pending: stats.pending,
           items_confirmed: stats.confirmed,
+          items_not_sent: stats.notSent,
+          accommodation_quotes: linkedAcc ? (quotesByAccRequest[linkedAcc.id] || []) : [],
+          item_details: itemDetailsByRequest[prog.id] || [],
         });
       });
 
@@ -249,6 +334,9 @@ const AdminProjectsContent = () => {
           item_count: 0,
           items_pending: 0,
           items_confirmed: 0,
+          items_not_sent: 0,
+          accommodation_quotes: quotesByAccRequest[acc.id] || [],
+          item_details: [],
         });
       });
 
@@ -437,6 +525,7 @@ const AdminProjectsContent = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Referentie(s)</TableHead>
@@ -451,7 +540,7 @@ const AdminProjectsContent = () => {
                 <TableBody>
                   {filteredProjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         Geen projecten gevonden
                       </TableCell>
                     </TableRow>
@@ -459,173 +548,316 @@ const AdminProjectsContent = () => {
                     filteredProjects.map((project) => {
                       const derived = getDerivedStatus(project);
                       const statusConfig = DERIVED_STATUS_CONFIG[derived];
+                      const isExpanded = expandedRows.has(project.id);
+                      const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
+                      const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
+                      const daysUntilDeadline = earliestDeadline ? differenceInDays(earliestDeadline, new Date()) : null;
 
                       return (
-                        <TableRow key={project.id}>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <Badge
-                                variant="outline"
-                                className={`text-xs ${
-                                  project.type === "combined"
-                                    ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-                                    : project.type === "accommodation_only"
-                                    ? "border-amber-200 bg-amber-50 text-amber-700"
-                                    : "border-green-200 bg-green-50 text-green-700"
-                                }`}
-                              >
-                                {PROJECT_TYPE_CONFIG[project.type].icon}
-                                <span className="ml-1 hidden lg:inline">
-                                  {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
-                                </span>
-                              </Badge>
-                              {project.program_type === "quote" && (
-                                <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
-                                  Maatwerk
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`text-xs ${statusConfig.className}`}>
-                              {statusConfig.icon}
-                              <span className="ml-1">{statusConfig.label}</span>
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              {project.program_ref && (
-                                <code className="text-xs font-mono bg-green-50 text-green-700 px-2 py-0.5 rounded block w-fit">
-                                  {project.program_ref}
-                                </code>
-                              )}
-                              {project.accommodation_ref && (
-                                <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded block w-fit">
-                                  {project.accommodation_ref}
-                                </code>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{project.customer_name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {project.customer_company || project.customer_email}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {project.accommodation_id ? (
-                              <div className="space-y-1">
-                                <Link
-                                  to={`/admin/logies/${project.accommodation_id}`}
-                                  className="text-sm text-indigo-600 hover:underline"
-                                >
-                                  Bekijk
-                                </Link>
-                                {project.accommodation_status && (
-                                  <Badge
-                                    className={`text-xs block w-fit ${
-                                      ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.color ||
-                                      "bg-slate-100 text-slate-800"
-                                    }`}
-                                  >
-                                    {ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.label ||
-                                      project.accommodation_status}
+                        <Collapsible key={project.id} open={isExpanded} onOpenChange={() => toggleRow(project.id)} asChild>
+                          <>
+                            <CollapsibleTrigger asChild>
+                              <TableRow className={cn("cursor-pointer", hasDetails && "hover:bg-muted/50")}>
+                                <TableCell className="px-2">
+                                  {hasDetails && (
+                                    <ChevronDown className={cn(
+                                      "h-4 w-4 text-muted-foreground transition-transform",
+                                      isExpanded && "rotate-180"
+                                    )} />
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col gap-1">
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs ${
+                                        project.type === "combined"
+                                          ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                                          : project.type === "accommodation_only"
+                                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                                          : "border-green-200 bg-green-50 text-green-700"
+                                      }`}
+                                    >
+                                      {PROJECT_TYPE_CONFIG[project.type].icon}
+                                      <span className="ml-1 hidden lg:inline">
+                                        {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
+                                      </span>
+                                    </Badge>
+                                    {project.program_type === "quote" && (
+                                      <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
+                                        Maatwerk
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={`text-xs ${statusConfig.className}`}>
+                                    {statusConfig.icon}
+                                    <span className="ml-1">{statusConfig.label}</span>
                                   </Badge>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {project.program_id ? (
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  to={`/admin/aanvragen/${project.program_id}`}
-                                  className="text-sm text-indigo-600 hover:underline"
-                                >
-                                  {project.item_count} items
-                                </Link>
-                                {project.items_pending > 0 && (
-                                  <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {project.items_pending}
-                                  </Badge>
-                                )}
-                                {project.items_confirmed > 0 && (
-                                  <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    {project.items_confirmed}
-                                  </Badge>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">
-                                {project.selected_dates.length > 0
-                                  ? project.selected_dates
-                                      .slice(0, 2)
-                                      .map((d) => format(new Date(d), "d MMM", { locale: nl }))
-                                      .join(", ")
-                                  : project.accommodation_arrival
-                                  ? `${format(new Date(project.accommodation_arrival), "d MMM", { locale: nl })} - ${format(new Date(project.accommodation_departure!), "d MMM", { locale: nl })}`
-                                  : "-"}
-                                {project.selected_dates.length > 2 && (
-                                  <span className="text-muted-foreground"> +{project.selected_dates.length - 2}</span>
-                                )}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-muted-foreground" />
-                              {project.number_of_people}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {project.program_id ? (
-                                <Button variant="ghost" size="icon" asChild>
-                                  <Link to={`/admin/aanvragen/${project.program_id}`}>
-                                    <Eye className="h-4 w-4" />
-                                  </Link>
-                                </Button>
-                              ) : project.accommodation_id ? (
-                                <Button variant="ghost" size="icon" asChild>
-                                  <Link to={`/admin/logies/${project.accommodation_id}`}>
-                                    <Eye className="h-4 w-4" />
-                                  </Link>
-                                </Button>
-                              ) : null}
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link
-                                  to={`/mijn-programma/${project.customer_token}`}
-                                  target="_blank"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                  setDeleteAccommodation(false);
-                                  setDeleteTarget(project);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    {project.program_ref && (
+                                      <code className="text-xs font-mono bg-green-50 text-green-700 px-2 py-0.5 rounded block w-fit">
+                                        {project.program_ref}
+                                      </code>
+                                    )}
+                                    {project.accommodation_ref && (
+                                      <code className="text-xs font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded block w-fit">
+                                        {project.accommodation_ref}
+                                      </code>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{project.customer_name}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {project.customer_company || project.customer_email}
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {project.accommodation_id ? (
+                                    <div className="space-y-1">
+                                      <Link
+                                        to={`/admin/logies/${project.accommodation_id}`}
+                                        className="text-sm text-indigo-600 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        Bekijk
+                                      </Link>
+                                      {project.accommodation_status && (
+                                        <Badge
+                                          className={`text-xs block w-fit ${
+                                            ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.color ||
+                                            "bg-slate-100 text-slate-800"
+                                          }`}
+                                        >
+                                          {ACCOMMODATION_STATUS_CONFIG[project.accommodation_status]?.label ||
+                                            project.accommodation_status}
+                                        </Badge>
+                                      )}
+                                      {earliestDeadline && (
+                                        <span className={cn(
+                                          "text-xs flex items-center gap-1",
+                                          daysUntilDeadline !== null && daysUntilDeadline < 3
+                                            ? "text-red-600 font-medium"
+                                            : daysUntilDeadline !== null && daysUntilDeadline < 7
+                                            ? "text-amber-600"
+                                            : "text-muted-foreground"
+                                        )}>
+                                          {daysUntilDeadline !== null && daysUntilDeadline < 3 && (
+                                            <AlertCircle className="h-3 w-3" />
+                                          )}
+                                          ⏰ {format(earliestDeadline, "d MMM", { locale: nl })}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {project.program_id ? (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Link
+                                        to={`/admin/aanvragen/${project.program_id}`}
+                                        className="text-sm text-indigo-600 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {project.item_count} items
+                                      </Link>
+                                      {project.items_not_sent > 0 && (
+                                        <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50 text-xs">
+                                          <Send className="h-3 w-3 mr-1" />
+                                          {project.items_not_sent}
+                                        </Badge>
+                                      )}
+                                      {project.items_pending > 0 && (
+                                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
+                                          <Clock className="h-3 w-3 mr-1" />
+                                          {project.items_pending}
+                                        </Badge>
+                                      )}
+                                      {project.items_confirmed > 0 && (
+                                        <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                                          {project.items_confirmed}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">
+                                      {project.selected_dates.length > 0
+                                        ? project.selected_dates
+                                            .slice(0, 2)
+                                            .map((d) => format(new Date(d), "d MMM", { locale: nl }))
+                                            .join(", ")
+                                        : project.accommodation_arrival
+                                        ? `${format(new Date(project.accommodation_arrival), "d MMM", { locale: nl })} - ${format(new Date(project.accommodation_departure!), "d MMM", { locale: nl })}`
+                                        : "-"}
+                                      {project.selected_dates.length > 2 && (
+                                        <span className="text-muted-foreground"> +{project.selected_dates.length - 2}</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                    {project.number_of_people}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                    {project.program_id ? (
+                                      <Button variant="ghost" size="icon" asChild>
+                                        <Link to={`/admin/aanvragen/${project.program_id}`}>
+                                          <Eye className="h-4 w-4" />
+                                        </Link>
+                                      </Button>
+                                    ) : project.accommodation_id ? (
+                                      <Button variant="ghost" size="icon" asChild>
+                                        <Link to={`/admin/logies/${project.accommodation_id}`}>
+                                          <Eye className="h-4 w-4" />
+                                        </Link>
+                                      </Button>
+                                    ) : null}
+                                    <Button variant="ghost" size="icon" asChild>
+                                      <Link
+                                        to={`/mijn-programma/${project.customer_token}`}
+                                        target="_blank"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Link>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      onClick={() => {
+                                        setDeleteAccommodation(false);
+                                        setDeleteTarget(project);
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent asChild>
+                              <tr>
+                                <td colSpan={10} className="p-0">
+                                  <div className="bg-muted/30 border-t px-6 py-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      {/* Logies section */}
+                                      {project.accommodation_quotes.length > 0 && (
+                                        <div>
+                                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                            <Hotel className="h-3.5 w-3.5" />
+                                            Logies {project.accommodation_ref && <span className="font-mono text-[10px] normal-case">({project.accommodation_ref})</span>}
+                                          </h4>
+                                          <div className="space-y-1">
+                                            {project.accommodation_quotes.map((q, i) => {
+                                              const deadlineDays = q.valid_until ? differenceInDays(new Date(q.valid_until), new Date()) : null;
+                                              return (
+                                                <div key={i} className="flex items-center justify-between text-sm py-0.5">
+                                                  <span className="flex items-center gap-1.5">
+                                                    <span>{QUOTE_STATUS_ICON[q.status] || "❓"}</span>
+                                                    <span className={cn(
+                                                      q.status === "declined" || q.status === "rejected" ? "text-muted-foreground line-through" : ""
+                                                    )}>
+                                                      {q.partner_name}
+                                                    </span>
+                                                  </span>
+                                                  {q.status === "pending" && q.valid_until && (
+                                                    <span className={cn(
+                                                      "text-xs",
+                                                      deadlineDays !== null && deadlineDays < 3
+                                                        ? "text-red-600 font-medium"
+                                                        : deadlineDays !== null && deadlineDays < 7
+                                                        ? "text-amber-600"
+                                                        : "text-muted-foreground"
+                                                    )}>
+                                                      deadline {format(new Date(q.valid_until), "d MMM", { locale: nl })}
+                                                    </span>
+                                                  )}
+                                                  {q.status === "submitted" && (
+                                                    <span className="text-xs text-blue-600">offerte ingediend</span>
+                                                  )}
+                                                  {q.status === "selected" && (
+                                                    <span className="text-xs text-green-600">geselecteerd</span>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Activiteiten section */}
+                                      {project.item_details.length > 0 && (
+                                        <div>
+                                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                            <Activity className="h-3.5 w-3.5" />
+                                            Activiteiten
+                                          </h4>
+                                          {/* Summary counts */}
+                                          <div className="flex flex-wrap gap-2 mb-2">
+                                            {project.items_confirmed > 0 && (
+                                              <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                                                ✅ {project.items_confirmed} bevestigd
+                                              </span>
+                                            )}
+                                            {project.items_pending > 0 && (
+                                              <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                                                ⏳ {project.items_pending} in afwachting
+                                              </span>
+                                            )}
+                                            {project.items_not_sent > 0 && (
+                                              <span className="text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                                                📤 {project.items_not_sent} nog niet verstuurd
+                                              </span>
+                                            )}
+                                            {(() => {
+                                              const other = project.item_count - project.items_confirmed - project.items_pending - project.items_not_sent;
+                                              return other > 0 ? (
+                                                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                                                  {other} overig
+                                                </span>
+                                              ) : null;
+                                            })()}
+                                          </div>
+                                          {/* Unique partner list */}
+                                          <div className="space-y-0.5">
+                                            <p className="text-xs text-muted-foreground font-medium">Partners:</p>
+                                            {[...new Set(project.item_details.map(d => d.provider_name))].map((name, i) => (
+                                              <p key={i} className="text-sm text-foreground">{name}</p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* If only accommodation_only with no quotes */}
+                                      {project.accommodation_quotes.length === 0 && project.item_details.length === 0 && (
+                                        <p className="text-sm text-muted-foreground col-span-2">Geen details beschikbaar.</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </CollapsibleContent>
+                          </>
+                        </Collapsible>
                       );
                     })
                   )}
@@ -685,7 +917,6 @@ const AdminProjectsContent = () => {
                 if (!deleteTarget) return;
                 setIsDeleting(true);
                 try {
-                  // Decouple accommodation if not deleting it
                   if (deleteTarget.accommodation_id && !deleteAccommodation) {
                     await supabase
                       .from("accommodation_requests")
@@ -693,7 +924,6 @@ const AdminProjectsContent = () => {
                       .eq("id", deleteTarget.accommodation_id);
                   }
 
-                  // Soft-delete the program request
                   if (deleteTarget.program_id) {
                     await supabase
                       .from("program_requests")
@@ -701,7 +931,6 @@ const AdminProjectsContent = () => {
                       .eq("id", deleteTarget.program_id);
                   }
 
-                  // If deleting accommodation too
                   if (deleteTarget.accommodation_id && deleteAccommodation) {
                     await supabase
                       .from("accommodation_requests")
