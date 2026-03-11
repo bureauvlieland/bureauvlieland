@@ -489,7 +489,7 @@ export const CustomerProgramItem = ({
                   <Label className="text-sm">Dag</Label>
                   {readOnly ? (
                     <p className="text-sm mt-1.5">
-                      Dag {item.day_index + 1} • {format(selectedDates[item.day_index], "d MMM", { locale: nl })}
+                      Dag {item.day_index + 1} • {format(selectedDates[item.day_index], "EEE d MMM", { locale: nl })}
                     </p>
                   ) : (
                     <Select
