@@ -105,36 +105,6 @@ function groupBlocksByType(blocks: BlockItem[]) {
   };
 }
 
-// Group blocks by provider for partner emails (excludes self_arranged)
-interface ProviderGroup {
-  providerId: string;
-  providerName: string;
-  providerEmail: string;
-  blocks: BlockItem[];
-}
-
-function groupBlocksByProvider(blocks: BlockItem[]): ProviderGroup[] {
-  // Filter out self_arranged blocks - they don't get emails
-  const billableBlocks = blocks.filter(b => b.blockType !== "self_arranged");
-  
-  const grouped = new Map<string, ProviderGroup>();
-  
-  for (const block of billableBlocks) {
-    if (!block.providerEmail) continue; // Skip if no email
-    
-    if (!grouped.has(block.providerId)) {
-      grouped.set(block.providerId, {
-        providerId: block.providerId,
-        providerName: block.provider,
-        providerEmail: block.providerEmail,
-        blocks: []
-      });
-    }
-    grouped.get(block.providerId)!.blocks.push(block);
-  }
-  
-  return Array.from(grouped.values());
-}
 
 // Generate partner email HTML
 function generatePartnerEmailHtml(
