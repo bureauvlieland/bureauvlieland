@@ -648,7 +648,7 @@ const AdminRequestDetail = () => {
                     <div>
                       <p className="font-medium text-primary">Maatwerkofferte</p>
                       <p className="text-sm text-muted-foreground">
-                        Bureau Vlieland beheert de offerte en factureert centraal. Partners ontvangen wel automatische aanvraag- en statusmeldingen.
+                        Bureau Vlieland beheert de offerte en factureert centraal.
                       </p>
                     </div>
                   </div>

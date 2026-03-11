@@ -144,9 +144,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { token, item_id, origin } = validationResult.data;
+    const { token, item_id, origin, admin_override } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
+
+    // Block customer-triggered partner notifications — only admins can send to partners
+    if (!admin_override) {
+      return new Response(
+        JSON.stringify({ error: "Alleen beheerders kunnen aanvragen naar partners versturen" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 1. Fetch program by token
     const { data: program, error: programError } = await supabase
