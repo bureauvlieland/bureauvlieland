@@ -1,7 +1,8 @@
-import { Clock, CheckCircle2, Mail } from 'lucide-react';
+import { Clock, CheckCircle2, Mail, AlertTriangle, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import type { AccommodationRequest } from '@/types/accommodation';
+import type { AccommodationRequest, AccommodationQuote } from '@/types/accommodation';
+import { useMemo } from 'react';
 
 interface AccommodationStatusBannerProps {
   request: AccommodationRequest;
@@ -10,13 +11,24 @@ interface AccommodationStatusBannerProps {
     received: number;
     selected: number;
   };
+  quotes?: AccommodationQuote[];
 }
 
-export function AccommodationStatusBanner({ request, quotesSummary }: AccommodationStatusBannerProps) {
+export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] }: AccommodationStatusBannerProps) {
   const { received, selected } = quotesSummary;
   const requested = request.quotes_requested_count;
   const declined = request.quotes_declined_count || 0;
   const waiting = Math.max(0, requested - received - declined - (selected > 0 ? 1 : 0));
+  const allDeclined = requested > 0 && declined >= requested && received === 0 && selected === 0;
+
+  // Deduplicated decline reasons (anonymized)
+  const declineReasons = useMemo(() => {
+    const declinedQuotes = quotes.filter((q) => q.status === 'declined' || q.status === 'rejected');
+    const reasons = declinedQuotes
+      .map((q) => q.partner_notes)
+      .filter((note): note is string => !!note && note.trim().length > 0);
+    return [...new Set(reasons)];
+  }, [quotes]);
 
   // Determine the status display
   if (selected > 0) {
@@ -71,6 +83,46 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
     );
   }
 
+  // All declined - no quotes coming
+  if (allDeclined) {
+    return (
+      <Card className="border-destructive/30 bg-destructive/5 dark:border-destructive/50 dark:bg-destructive/10">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full bg-destructive/10 p-2 dark:bg-destructive/20">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-destructive">
+                Alle benaderde partners hebben afgewezen
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Helaas hebben alle {requested} benaderde partner{requested !== 1 ? 's' : ''} de aanvraag afgewezen.
+                Bureau Vlieland zoekt naar alternatieven en neemt contact met u op.
+              </p>
+              {declineReasons.length > 0 && (
+                <div className="flex items-start gap-2 mt-3 p-2 rounded bg-muted/50">
+                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Opgegeven redenen:</p>
+                    <ul className="text-xs text-muted-foreground space-y-0.5">
+                      {declineReasons.map((reason, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground/50 shrink-0" />
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Waiting for quotes
   return (
     <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
@@ -92,7 +144,12 @@ export function AccommodationStatusBanner({ request, quotesSummary }: Accommodat
                   if (declined > 0) {
                     parts.push(`${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} helaas afgewezen.`);
                   }
-                  parts.push('U ontvangt een email zodra er offertes binnenkomen.');
+                  const stillWaiting = Math.max(0, requested - declined);
+                  if (stillWaiting > 0) {
+                    parts.push(`Wij wachten nog op ${stillWaiting} partner${stillWaiting !== 1 ? 's' : ''}.`);
+                  } else {
+                    parts.push('U ontvangt een email zodra er offertes binnenkomen.');
+                  }
                   return parts.join(' ');
                 })()}
               </p>
