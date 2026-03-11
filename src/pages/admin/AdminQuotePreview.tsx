@@ -759,8 +759,8 @@ const AdminQuotePreview = () => {
                                 <p className="font-semibold">{accommodationQuote.accommodation_name}</p>
                                 <p className="text-sm text-gray-500">{accommodationQuote.partner_name}</p>
                                 <p className="text-sm text-gray-500 mt-1">
-                                  {format(new Date(accommodationQuote.arrival_date), "d MMM", { locale: nl })} -{" "}
-                                  {format(new Date(accommodationQuote.departure_date), "d MMM yyyy", { locale: nl })}
+                                  {format(new Date(accommodationQuote.arrival_date), "EEE d MMM", { locale: nl })} -{" "}
+                                  {format(new Date(accommodationQuote.departure_date), "EEE d MMM yyyy", { locale: nl })}
                                   {" · "}{accommodationQuote.nights} {accommodationQuote.nights === 1 ? "nacht" : "nachten"}
                                 </p>
                                 {accommodationQuote.price_per_person_per_night && (
