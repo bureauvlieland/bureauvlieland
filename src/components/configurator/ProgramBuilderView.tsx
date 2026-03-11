@@ -290,7 +290,12 @@ export const ProgramBuilderView = ({
                                       Gewenste tijd: {item.preferredTime}
                                     </p>
                                   )}
-                                  {!item.preferredTime && block.short_description && (
+                                  {!item.preferredTime && isBikeBlock && (
+                                    <p className="text-primary/70 text-xs mt-0.5 italic">
+                                      Voor de duur van het verblijf
+                                    </p>
+                                  )}
+                                  {!item.preferredTime && !isBikeBlock && block.short_description && (
                                     <p className="text-muted-foreground text-xs md:text-sm mt-0.5 line-clamp-2">
                                       {block.short_description}
                                     </p>
