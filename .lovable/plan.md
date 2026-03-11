@@ -1,111 +1,42 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+# Slimme statusberichten en afwijsredenen bij logiesaanvragen
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+## Probleem
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+Wanneer alle benaderde partners hebben afgewezen (bv. 5 van 5), toont het systeem nog steeds "U ontvangt een email zodra er offertes binnenkomen." Dat is misleidend — er komen geen offertes meer. Daarnaast worden de redenen van afwijzing niet getoond aan de klant.
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+## Aanpak
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+### 1. Intelligente statusberichten op basis van situatie
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+Drie scenario's in de "wachtend" state:
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+| Situatie | Bericht |
+|---|---|
+| Alle afgewezen (`declined >= requested`) | Rode/oranje waarschuwing: "Helaas hebben alle benaderde partners afgewezen. Bureau Vlieland zoekt naar alternatieven en neemt contact met u op." |
+| Deels afgewezen, nog wachtend | Huidige tekst behouden + "Wij wachten nog op X partner(s)." |
+| Nog niemand gereageerd | Huidige tekst behouden |
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+De progress bar wordt aangepast: bij alle afgewezen geen progress bar meer, maar een duidelijke call-to-action of informatief blok.
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+### 2. Afwijsredenen tonen
 
----
+- **Data**: De `partner_notes` van declined quotes bevatten de afwijsreden. Deze worden nu niet opgehaald in het klantportaal.
+- **Query aanpassen**: In `useCustomerProgram.ts` ook `declined` quotes ophalen (naast submitted/selected/expired).
+- **UI**: Onder het statusbericht een beknopt overzicht tonen van afwijsredenen (geanonimiseerd — alleen de reden, niet de partnernaam), bv:
+  - "Geen beschikbaarheid op de gevraagde data"
+  - "Groep te groot voor de accommodatie"
+- Gegroepeerd als een compact lijstje met een `Info` icoon.
 
-## Plan: CRM en Partners samenvoegen
+### 3. Bestanden die worden aangepast
 
-### Status: ✅ Geïmplementeerd
+- **`src/hooks/useCustomerProgram.ts`** — Query uitbreiden om declined quotes op te halen
+- **`src/components/customer-portal/AccommodationSection.tsx`** — State 4 (wachtend) opsplitsen in sub-states; afwijsredenen tonen
+- **`src/components/accommodation-portal/AccommodationStatusBanner.tsx`** — Zelfde logica doorvoeren voor het logiesportaal
+- **`src/types/accommodation.ts`** — Eventueel type uitbreiden als nodig
 
-CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+### Technische details
 
----
+De declined quotes worden gefilterd en alleen hun `partner_notes` wordt gebruikt voor weergave. Partnernamen worden niet getoond aan de klant om de relatie neutraal te houden. Dubbele redenen worden gededupliceerd.
 
-## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
-
-### Status: ✅ Geïmplementeerd
-
-1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
-
-2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
-
-3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
-
----
-
-## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
-
-### Status: ✅ Geïmplementeerd
-
-### Wat is gewijzigd
-
-1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
-
-2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
-
-3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
-
-4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
-
-5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
-
-6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
-
-7. **`partner_direct` branches verwijderd** uit:
-   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
-   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
-   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
-   - Edge functions: fallback defaults naar `bureau_central`
-   - `InvoicingMode` type vereenvoudigd
-
-8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
-
----
-
-## Plan: Bureau Vlieland als centrale regie — Volledige alignment
-
-### Status: ✅ Geïmplementeerd
-
-### Wat is gewijzigd
-
-#### A. Kritieke flow-fixes
-1. **`skip_partner_notification: true`** toegevoegd aan `CheckoutContactForm.tsx` en `RequestFormModal.tsx` — items worden nu gestaged voor admin review.
-2. **"Verstuur naar partners" banner** werkt nu voor alle programmatypes (niet meer beperkt tot quote-modus).
-3. **`accept-quote-proposal`** slaat `quote_status` update over voor `self_service` programma's; zet altijd `program_published_at` als die null is.
-4. **Admin banner tekst** gecorrigeerd: "De klant ziet het programma als 'In behandeling'". Publiceer-banner beperkt tot admin-aangemaakte programma's.
-
-#### B. `partner_direct` relikten verwijderd
-5. **`InvoicingModeSelector.tsx`** omgezet naar read-only "Bureau Vlieland factureert de klant".
-6. **`CustomerProgram.tsx`** fallback gewijzigd naar `"bureau_central"`.
-7. **`ContactAccommodationDialog.tsx`** — altijd bureau_central teksten, geen directe partner-communicatie branches.
-8. **`PriceSummaryCard.tsx`** — partner_direct secties verwijderd.
-9. **`InvoiceProvidersCard.tsx`** — individuele partner-listings uitgeschakeld, altijd bureau-facturatie.
-10. **`select-accommodation-quote`** — PII altijd verborgen voor partners.
-
-#### C. Klantportaal teksten
-11. **`ProgramIntroCard.tsx`** — "Bureau Vlieland coördineert de aanvragen bij de aanbieders."
-12. **`ActionRequiredCard.tsx`** — billing: "zodat Bureau Vlieland kan factureren"; complete: "U ontvangt de factuur van Bureau Vlieland."
-13. **`NextStepsCard.tsx`** — "U ontvangt de factuur van Bureau Vlieland."
-
-#### D. Publieke pagina's & juridisch
-14. **`LogiesVlieland.tsx`** en **`LogiesAanvragen.tsx`** — stap 4: "Bureau Vlieland begeleidt het boekingsproces".
-15. **`PartnerTerms.tsx`** — Artikel 1 en 5 aangepast: facturatie altijd via Bureau Vlieland.
-
-#### E. Statuslabels
-16. **`CustomerProgramItem.tsx`** — readOnly + pending → "In behandeling"; isPreApproval + pending → "In voorbereiding".
-
-#### F. Data
-17. Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` geüpdatet naar `true`.
