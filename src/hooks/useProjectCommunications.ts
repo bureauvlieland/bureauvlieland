@@ -26,22 +26,87 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
   const { data: communications = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
-      let query = supabase
+      if (!requestId && !accommodationId) return [];
+
+      // Fetch manual communications
+      let commQuery = supabase
         .from("project_communications")
         .select("*")
         .order("communication_date", { ascending: false });
 
       if (requestId) {
-        query = query.eq("request_id", requestId);
+        commQuery = commQuery.eq("request_id", requestId);
       } else if (accommodationId) {
-        query = query.eq("accommodation_id", accommodationId);
-      } else {
-        return [];
+        commQuery = commQuery.eq("accommodation_id", accommodationId);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as ProjectCommunication[];
+      // Fetch email log entries
+      let emailQuery = supabase
+        .from("email_log")
+        .select("*")
+        .order("sent_at", { ascending: false });
+
+      if (requestId) {
+        emailQuery = emailQuery.eq("related_request_id", requestId);
+      } else if (accommodationId) {
+        emailQuery = emailQuery.eq("related_accommodation_id", accommodationId);
+      }
+
+      const [commResult, emailResult] = await Promise.all([
+        commQuery,
+        emailQuery,
+      ]);
+
+      if (commResult.error) throw commResult.error;
+      if (emailResult.error) throw emailResult.error;
+
+      const manualItems: ProjectCommunication[] = (commResult.data || []).map((c) => ({
+        ...c,
+        source: 'manual' as const,
+      }));
+
+      const emailItems: ProjectCommunication[] = (emailResult.data || []).map((log) => ({
+        id: `email_log_${log.id}`,
+        request_id: log.related_request_id,
+        accommodation_id: log.related_accommodation_id,
+        communication_type: 'email_out' as CommunicationType,
+        direction: 'outbound' as CommunicationDirection,
+        subject: log.subject,
+        content: '', // email_log doesn't store body
+        contact_name: log.recipient_name,
+        contact_email: log.recipient_email,
+        logged_by: null,
+        logged_at: log.created_at,
+        communication_date: log.sent_at || log.created_at,
+        metadata: {
+          email_type: log.email_type,
+          status: log.status,
+          ...(log.metadata as Record<string, unknown> || {}),
+        },
+        created_at: log.created_at,
+        updated_at: log.created_at,
+        source: 'email_log' as const,
+        email_type: log.email_type,
+      }));
+
+      // Deduplicate: skip email_log items that match a manual entry
+      // (same subject + contact_email + within 1 minute)
+      const dedupedEmailItems = emailItems.filter((emailItem) => {
+        return !manualItems.some((manual) => {
+          if (manual.subject !== emailItem.subject) return false;
+          if (manual.contact_email !== emailItem.contact_email) return false;
+          const manualDate = new Date(manual.communication_date).getTime();
+          const emailDate = new Date(emailItem.communication_date).getTime();
+          return Math.abs(manualDate - emailDate) < 60000; // 1 minute
+        });
+      });
+
+      // Merge and sort by date descending
+      const merged = [...manualItems, ...dedupedEmailItems].sort(
+        (a, b) => new Date(b.communication_date).getTime() - new Date(a.communication_date).getTime()
+      );
+
+      return merged;
     },
     enabled: !!(requestId || accommodationId),
   });

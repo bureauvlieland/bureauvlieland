@@ -1,5 +1,6 @@
 export type CommunicationType = 'email_in' | 'email_out' | 'phone' | 'note';
 export type CommunicationDirection = 'inbound' | 'outbound' | 'internal';
+export type CommunicationSource = 'manual' | 'email_log';
 
 export interface ProjectCommunication {
   id: string;
@@ -17,6 +18,8 @@ export interface ProjectCommunication {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  source?: CommunicationSource;
+  email_type?: string;
 }
 
 export const COMMUNICATION_TYPE_OPTIONS = [
@@ -35,4 +38,22 @@ export const COMMUNICATION_TYPE_CONFIG: Record<CommunicationType, {
   email_out: { label: 'Uitgaande email', icon: 'send', color: 'text-green-600' },
   phone: { label: 'Telefoongesprek', icon: 'phone', color: 'text-amber-600' },
   note: { label: 'Notitie', icon: 'file-text', color: 'text-slate-600' },
+};
+
+export const EMAIL_TYPE_LABELS: Record<string, string> = {
+  partner_quote_request: 'Offerteaanvraag partner',
+  partner_reminder: 'Herinnering partner',
+  customer_confirmation: 'Bevestiging klant',
+  customer_quote: 'Offerte klant',
+  customer_program: 'Programma klant',
+  partner_notification: 'Melding partner',
+  accommodation_quote_request: 'Logies offerteaanvraag',
+  accommodation_selected: 'Logies geselecteerd',
+  customer_accommodation_message: 'Bericht aan klant (logies)',
+  partner_accommodation_message: 'Bericht aan partner (logies)',
+  admin_notification: 'Admin melding',
+  terms_request: 'Voorwaarden verzoek',
+  partner_invite: 'Partner uitnodiging',
+  proforma_invoice: 'Proforma factuur',
+  project_email: 'Project e-mail',
 };
