@@ -1,42 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# BasicsForm vereenvoudigen: alleen pax + datums, contactgegevens naar indienen
+### Wat is gebouwd
 
-## Wat verandert er
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-Het startscherm wordt veel compacter: alleen **aantal personen** en **datum(s)**. Contactgegevens (naam, email, telefoon, bedrijf) en type uitje verhuizen naar het moment van indienen — de `RequestFormModal` heeft deze velden al, inclusief prefill-logica.
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-## Wijzigingen
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-### 1. `BasicsForm.tsx` — Strip naar kern
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-- Verwijder: naam, email, telefoon, bedrijf, eventType velden
-- Houd over: aantal personen + MultiDatePicker + submit-knop
-- `BasicsFormData` interface wordt simpeler: alleen `numberOfPeople` en `selectedDates`
-- Validatie: `selectedDates.length > 0 && numberOfPeople >= 1`
-- Tekst aanpassen: "Hoeveel personen en welke datum(s)?"
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### 2. `MultiDatePicker.tsx` — Fix datepicker overlap
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-- De `PopoverContent` krijgt `side="bottom"` en `sideOffset={8}` zodat de kalender altijd **onder** de chips opent, niet eroverheen
-- Eventueel `forceMount` verwijderen als dat z-index problemen geeft
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### 3. `ProgrammaSamenstellen.tsx` — Pas `handleBasicsSubmit` aan
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-- `contactData` state wordt niet meer gezet bij basics (die info bestaat nog niet)
-- `BasicsFormData` bevat geen contactvelden meer
-- `prefillData` voor `RequestFormModal` wordt niet meer vanuit basics meegegeven (de modal vraagt het zelf)
+---
 
-### 4. `RequestFormModal.tsx` — Contactvelden worden nu altijd ingevuld
+## Plan: CRM en Partners samenvoegen
 
-- `prefillData` prop wordt optioneel (was het al) — als er geen prefill is, start de modal gewoon met lege velden
-- Geen codewijziging nodig hier, want de modal heeft al alle contactvelden + eventType
+### Status: ✅ Geïmplementeerd
 
-## Resultaat
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-```text
-Stap 1 (basics):     Aantal personen + Datum(s) → "Start uw programma"
-Stap 2 (builder):    Activiteiten kiezen, Erwin-voorstel, drag & drop
-Stap 3 (indienen):   Modal met contactgegevens + type uitje + opmerkingen
-```
+---
 
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.

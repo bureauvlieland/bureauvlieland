@@ -48,8 +48,7 @@ const ProgrammaSamenstellen = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
 
-  // Contact info collected in basics phase
-  const [contactData, setContactData] = useState<BasicsFormData | null>(null);
+  // Contact info is now collected in RequestFormModal at submission time
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -83,8 +82,6 @@ const ProgrammaSamenstellen = () => {
   };
 
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
-    setContactData(data);
-    // Apply to cart context
     clearCart();
     setNumberOfPeople(data.numberOfPeople);
     data.selectedDates.forEach((date, i) => {
@@ -182,8 +179,6 @@ const ProgrammaSamenstellen = () => {
                 onSubmit={handleSubmit}
                 onEditBasics={() => setPhase("basics")}
                 onReplaceWithSuggestion={handleErwinSuggestion}
-                eventType={contactData?.eventType}
-                contactName={contactData?.name}
               />
             )}
           </div>
@@ -209,13 +204,7 @@ const ProgrammaSamenstellen = () => {
         numberOfPeople={numberOfPeople}
         selectedDate={selectedDates[0]}
         selectedDates={selectedDates}
-        prefillData={contactData ? {
-          name: contactData.name,
-          email: contactData.email,
-          phone: contactData.phone,
-          company: contactData.company,
-          eventType: contactData.eventType,
-        } : undefined}
+        prefillData={undefined}
       />
     </div>
   );
