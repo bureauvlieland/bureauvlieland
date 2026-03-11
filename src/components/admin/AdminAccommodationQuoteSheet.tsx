@@ -289,7 +289,7 @@ export function AdminAccommodationQuoteSheet({
             {quote.submitted_at && (
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                Ontvangen: {format(new Date(quote.submitted_at), "d MMM yyyy", { locale: nl })}
+                Ontvangen: {format(new Date(quote.submitted_at), "EEE d MMM yyyy", { locale: nl })}
               </div>
             )}
             {quote.selected_at && (
