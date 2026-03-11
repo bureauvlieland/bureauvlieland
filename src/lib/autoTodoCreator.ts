@@ -207,4 +207,9 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-red-700",
     bgColor: "bg-red-100",
   },
+  accommodation_quote_declined: {
+    label: "Logies afgewezen",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
+  },
 };
