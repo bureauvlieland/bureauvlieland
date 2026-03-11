@@ -1,31 +1,74 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Klantportaal: programma zichtbaar maken + sidebar banners vervangen
+### Wat is gebouwd
 
-## Twee problemen
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-### 1. Programma-items niet zichtbaar
-In `DesktopProgramView.tsx` (regel 343) staat een check `!program.program_published_at` — als admin het programma nog niet heeft "gepubliceerd", toont het een lege state ("Bureau Vlieland is uw programma aan het samenstellen"). De 13 items bestaan wel, maar worden verborgen.
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-**Oplossing**: Verwijder de `program_published_at` check als er daadwerkelijk items zijn. Als er items bestaan, toon ze gewoon — ze hebben al de juiste status (pending). De lege-state alleen tonen als er ook echt geen items zijn.
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-Dezelfde check zit in `MobileProgramView.tsx` — daar ook aanpassen.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-### 2. Sidebar banners vervangen
-`FietsverhuurBanner` en `BootticketBanner` worden verwijderd uit `ProgramSidebar`. In de plaats komen twee horeca-advertenties:
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-- **Trattoria Oliva** — `https://olivavlieland.nl` — met `outdoor-dining.jpg`
-- **Café Boven** — `https://cafeboven.nl` — met `outdoor-drinks.jpg`
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-Zelfde sidebar-stijl als de bestaande banners (afbeelding + tekst + link).
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-## Wijzigingen
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-| Bestand | Actie |
-|---------|-------|
-| `DesktopProgramView.tsx` | Regel 343: check wijzigen naar `items.length === 0` i.p.v. `!program_published_at` |
-| `MobileProgramView.tsx` | Zelfde check aanpassen |
-| `ProgramSidebar.tsx` | FietsverhuurBanner/BootticketBanner vervangen door twee horeca-links |
+---
 
-Geen nieuw component nodig — de banners zijn simpel genoeg om inline in `ProgramSidebar` te zetten met dezelfde stijl als de bestaande sidebar-variant.
+## Plan: CRM en Partners samenvoegen
 
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
