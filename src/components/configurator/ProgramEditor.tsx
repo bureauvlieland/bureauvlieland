@@ -264,7 +264,7 @@ export const ProgramEditor = ({
                     Aantal personen
                   </Label>
                   <p className="text-xs text-muted-foreground mb-1.5">
-                    Dit bepaalt de indicatieve prijs per activiteit
+                    Wijzig het aantal personen voor uw groep
                   </p>
                   <Input
                     id="numberOfPeople-expanded"
