@@ -33,6 +33,7 @@ const ProgrammaSamenstellen = () => {
     setNumberOfPeople,
     setSelectedDate,
     addDate,
+    removeDate,
     isInCart,
     hasPendingDraft,
     pendingDraft,
