@@ -423,7 +423,11 @@ export const CustomerProgramItem = ({
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm">Gewenste tijd</Label>
-                {isEditingTime ? (
+                {readOnly ? (
+                  <p className="text-sm mt-1.5">
+                    {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                  </p>
+                ) : isEditingTime ? (
                   // For accepted items, use counter-proposal dialog instead of direct edit
                   item.customer_accepted_at && onCounterProposal ? (
                     <div className="mt-1.5 flex items-center gap-2">
@@ -483,21 +487,27 @@ export const CustomerProgramItem = ({
               {selectedDates.length > 1 && (
                 <div>
                   <Label className="text-sm">Dag</Label>
-                  <Select
-                    value={String(item.day_index)}
-                    onValueChange={(value) => onUpdate({ day_index: parseInt(value) })}
-                  >
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedDates.map((date, idx) => (
-                        <SelectItem key={idx} value={String(idx)}>
-                          Dag {idx + 1} • {format(date, "d MMM", { locale: nl })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {readOnly ? (
+                    <p className="text-sm mt-1.5">
+                      Dag {item.day_index + 1} • {format(selectedDates[item.day_index], "d MMM", { locale: nl })}
+                    </p>
+                  ) : (
+                    <Select
+                      value={String(item.day_index)}
+                      onValueChange={(value) => onUpdate({ day_index: parseInt(value) })}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedDates.map((date, idx) => (
+                          <SelectItem key={idx} value={String(idx)}>
+                            Dag {idx + 1} • {format(date, "d MMM", { locale: nl })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               )}
             </div>
@@ -505,13 +515,21 @@ export const CustomerProgramItem = ({
             {/* Notes */}
             <div>
               <Label className="text-sm">Opmerking</Label>
-              <Textarea
-                value={item.customer_notes || ""}
-                onChange={(e) => onUpdate({ customer_notes: e.target.value })}
-                placeholder="Bijzonderheden voor deze activiteit..."
-                className="mt-1.5"
-                rows={2}
-              />
+              {readOnly ? (
+                item.customer_notes ? (
+                  <p className="text-sm mt-1.5 text-muted-foreground">{item.customer_notes}</p>
+                ) : (
+                  <p className="text-sm mt-1.5 text-muted-foreground italic">Geen opmerking</p>
+                )
+              ) : (
+                <Textarea
+                  value={item.customer_notes || ""}
+                  onChange={(e) => onUpdate({ customer_notes: e.target.value })}
+                  placeholder="Bijzonderheden voor deze activiteit..."
+                  className="mt-1.5"
+                  rows={2}
+                />
+              )}
             </div>
           </CollapsibleContent>
       </Collapsible>

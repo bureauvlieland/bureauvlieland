@@ -534,7 +534,7 @@ export const MobileProgramView = ({
           )}
 
           {/* Floating changes bar — only in program view */}
-          {initialSection === "program" && hasChanges && (
+          {initialSection === "program" && hasChanges && isPublished && (
             <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
               <div className="flex items-center justify-between gap-4">
                 <div>
