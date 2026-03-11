@@ -32,6 +32,7 @@ import {
 import { groupBlocksByType, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { SortableCartItem } from "./SortableCartItem";
+import { sortCartItemsForDay } from "@/lib/cartSorting";
 
 export interface ProgramEditorProps {
   cartItems: CartItemDetail[];

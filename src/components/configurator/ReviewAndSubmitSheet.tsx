@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+import { sortCartItemsForDay } from "@/lib/cartSorting";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 
 const EVENT_TYPE_OPTIONS = [
