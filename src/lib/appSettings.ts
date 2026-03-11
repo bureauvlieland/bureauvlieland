@@ -27,6 +27,8 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   reminder_email_enabled: true,
   portal_beta_banner_enabled: false,
   bureau_central_surcharge_pp: 2.50,
+  tourist_tax_pp_per_day: 2.58,
+  nature_contribution_pp: 1.00,
 };
 
 // ============================================
