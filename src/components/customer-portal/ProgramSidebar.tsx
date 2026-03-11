@@ -126,7 +126,7 @@ export const ProgramSidebar = ({
           className="block rounded-xl overflow-hidden border group hover:shadow-md transition-shadow"
         >
           <div className="relative h-28 overflow-hidden">
-            <img src={outdoorDining} alt="Trattoria Oliva" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img src={olivaImg} alt="Trattoria Oliva" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <span className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
               <UtensilsCrossed className="h-4 w-4" />
