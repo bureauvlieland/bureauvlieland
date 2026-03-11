@@ -147,7 +147,7 @@ export const CustomerProgramItem = ({
             {!hideDay && currentDate && selectedDates.length > 1 && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
-                Dag {item.day_index + 1} • {format(currentDate, "d MMM", { locale: nl })}
+                Dag {item.day_index + 1} • {format(currentDate, "EEE d MMM", { locale: nl })}
               </span>
             )}
             {/* Time - only on mobile (desktop shows it in timeline column) */}
