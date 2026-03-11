@@ -381,9 +381,9 @@ export const RequestFormModal = ({
             <div className="text-sm">
               <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Dit is een vrijblijvende aanvraag</p>
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• U betaalt nu nog niets – facturatie volgt pas na bevestiging van een activiteit</li>
-                <li>• Prijzen zijn indicatief (per persoon of per activiteit, afhankelijk van de aanbieder)</li>
-                <li>• Elke aanbieder bevestigt apart – u ontvangt dus mogelijk meerdere facturen</li>
+                <li>• U betaalt nu nog niets</li>
+                <li>• Wij controleren beschikbaarheid bij de aanbieders</li>
+                <li>• U ontvangt een voorstel met definitieve prijzen</li>
               </ul>
             </div>
           </div>
