@@ -67,7 +67,7 @@ export const AdminSendQuoteDialog = ({
   const [emailBody, setEmailBody] = useState("");
 
   const formattedDates = programDates
-    .map((d) => format(new Date(d), "d MMMM yyyy", { locale: nl }))
+    .map((d) => format(new Date(d), "EEE d MMMM yyyy", { locale: nl }))
     .join(", ");
 
   const getDefaultIntro = () => {
