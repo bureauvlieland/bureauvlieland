@@ -29,7 +29,9 @@ export const ProgramIntroCard = ({
   isMaatwerkEmpty,
   onAcceptQuoteProposal,
   hasUnapprovedItems,
+  programPublishedAt,
 }: ProgramIntroCardProps) => {
+  const isPublished = !!programPublishedAt;
   const [isLoading, setIsLoading] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
