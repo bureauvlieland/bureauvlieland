@@ -91,7 +91,7 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         source: 'manual' as const,
       })) as ProjectCommunication[];
 
-      const emailItems: ProjectCommunication[] = (emailResult.data || []).map((log) => ({
+      const emailItems: ProjectCommunication[] = allEmailLogs.map((log) => ({
         id: `email_log_${log.id}`,
         request_id: log.related_request_id,
         accommodation_id: log.related_accommodation_id,
