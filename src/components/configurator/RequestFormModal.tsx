@@ -114,8 +114,6 @@ export const RequestFormModal = ({
           providerEmail: block?.provider?.email || "",
           blockType: block?.block_type || "partner",
           externalUrl: block?.external_url,
-          blockType: block?.block_type || "partner",
-          externalUrl: block?.external_url,
           preferredTime: item.preferredTime,
           itemNotes: item.notes,
           dayIndex: item.dayIndex ?? 0,
