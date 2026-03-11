@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Check } from "lucide-react";
 import { Helmet } from "react-helmet";
 import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
-import beachEventImage from "@/assets/beach-event.jpg";
+import strandBbqImage from "@/assets/strand-bbq.jpg";
 import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
 import foodPlattersImage from "@/assets/food-platters.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
