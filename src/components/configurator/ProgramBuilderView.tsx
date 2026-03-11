@@ -34,6 +34,7 @@ export const ProgramBuilderView = ({
   selectedDates,
   onRemoveItem,
   onAddItem,
+  onUpdateItem,
   onSubmit,
   onEditBasics,
   eventType,
