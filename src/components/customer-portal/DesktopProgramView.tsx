@@ -439,7 +439,7 @@ export const DesktopProgramView = ({
             </div>
 
             {/* Floating changes bar */}
-            {hasChanges && (
+            {hasChanges && isPublished && (
               <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg">
                 <div className="flex items-center justify-between gap-4">
                   <div>
