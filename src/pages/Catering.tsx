@@ -244,7 +244,7 @@ const Catering = () => {
               </div>
               <div className="relative h-[400px] rounded-lg overflow-hidden shadow-lg">
                 <img 
-                  src={beachEventImage} 
+                  src={strandBbqImage} 
                   alt="Beach BBQ op Vlieland" 
                   className="w-full h-full object-cover"
                   loading="lazy"
