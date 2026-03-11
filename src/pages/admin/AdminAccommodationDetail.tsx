@@ -169,6 +169,8 @@ export default function AdminAccommodationDetail() {
   const [showStatusEmailSheet, setShowStatusEmailSheet] = useState(false);
   const [statusEmailDefaults, setStatusEmailDefaults] = useState({ subject: "", body: "" });
   const [commLogOpen, setCommLogOpen] = useState(false);
+  const [reactivateQuoteId, setReactivateQuoteId] = useState<string | null>(null);
+  const [reactivateDate, setReactivateDate] = useState<Date | undefined>(addDays(new Date(), 14));
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
