@@ -22,11 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { 
-  calculateBureauFee, 
   groupBlocksByType, 
-  formatBlockPrice, 
-  formatPriceNote,
-  calculateIndicativeTotal,
   type BuildingBlock, 
   type CartItemDetail 
 } from "@/types/buildingBlock";
