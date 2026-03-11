@@ -163,7 +163,7 @@ export const ProgramSidebar = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <span className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
               <Coffee className="h-4 w-4" />
-              Café Boven
+              Vlielands Biercafé
             </span>
           </div>
           <div className="p-3 bg-card">
