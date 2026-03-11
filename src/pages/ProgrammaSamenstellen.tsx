@@ -13,7 +13,9 @@ import heroImage from "@/assets/beach-signs.jpg";
 
 type Phase = "basics" | "program";
 
-const DEFAULT_BLOCK_IDS = ["boot-retour", "fiets-huur"];
+const FERRY_HEEN_ID = "boot-enkel-heen";
+const FERRY_TERUG_ID = "boot-enkel-terug";
+const FIETS_ID = "fiets-huur";
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
