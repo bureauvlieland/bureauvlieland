@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, ChevronLeft, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sparkles, ChevronLeft, Clock, Users, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import fallbackImage from "@/assets/vlieland-beach.jpg";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
 interface TemplateSelectorProps {
@@ -15,6 +20,8 @@ interface TemplateSelectorProps {
   onStartEmpty: () => void;
   onBack: () => void;
   inspirationMode?: boolean;
+  onPeopleChange?: (n: number) => void;
+  onDatesChange?: (dates: Date[]) => void;
 }
 
 export const TemplateSelector = ({
@@ -24,15 +31,34 @@ export const TemplateSelector = ({
   onStartEmpty,
   onBack,
   inspirationMode = false,
+  onPeopleChange,
+  onDatesChange,
 }: TemplateSelectorProps) => {
-  const { data: templates = [], isLoading } = useTemplatesByDuration(durationDays);
+  const [localPeople, setLocalPeople] = useState(numberOfPeople || 20);
+  const [localDates, setLocalDates] = useState<Date[]>([]);
   const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
+
+  const effectiveDuration = localDates.length > 1 ? localDates.length : durationDays;
+  const { data: templates = [], isLoading } = useTemplatesByDuration(effectiveDuration);
+
+  const showInlineBasics = !inspirationMode && !!onPeopleChange;
+
+  const handlePeopleChange = (val: string) => {
+    const n = parseInt(val) || 0;
+    setLocalPeople(n);
+    onPeopleChange?.(n);
+  };
+
+  const handleDateSelect = (dates: Date[] | undefined) => {
+    const selected = dates || [];
+    setLocalDates(selected);
+    onDatesChange?.(selected);
+  };
 
   const getDurationLabel = (days: number) => {
     if (days === 1) return "1 dag";
     return `${days} dagen`;
   };
-
 
   if (isLoading) {
     return (
@@ -51,18 +77,71 @@ export const TemplateSelector = ({
 
   return (
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
         <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
           {inspirationMode
             ? "Ter inspiratie: bekijk een voorbeeldprogramma"
-            : "Wilt u een idee hoe een dag op Vlieland eruit kan zien?"}
+            : "Kies een voorbeeldprogramma"}
         </h2>
         <p className="text-muted-foreground">
           {inspirationMode
             ? "Kies een programma dat u aanspreekt, of ga direct verder"
-            : "Bekijk een van onze voorbeeldprogramma's, of stel zelf iets samen"}
+            : "Pas het naar wens aan, of start leeg"}
         </p>
       </div>
+
+      {/* Inline basics picker */}
+      {showInlineBasics && (
+        <Card className="mb-6 border-primary/20 bg-primary/[0.02]">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[140px]">
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  <Users className="inline h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                  Aantal personen
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={localPeople}
+                  onChange={(e) => handlePeopleChange(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  <CalendarIcon className="inline h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                  Datum(s)
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9", !localDates.length && "text-muted-foreground")}>
+                      {localDates.length > 0
+                        ? localDates.map(d => format(d, "d MMM", { locale: nl })).join(" – ")
+                        : "Kies datum(s)"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="multiple"
+                      selected={localDates}
+                      onSelect={handleDateSelect}
+                      disabled={(date) => date < new Date()}
+                      className={cn("p-3 pointer-events-auto")}
+                      locale={nl}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {localDates.length > 1 && (
+                <p className="text-xs text-muted-foreground w-full">
+                  {localDates.length} dagen geselecteerd — templates worden gefilterd
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
         {templates.map((template) => (
@@ -159,7 +238,7 @@ export const TemplateSelector = ({
       {/* Template Preview Sheet */}
       <TemplatePreviewSheet
         templateId={previewTemplate}
-        numberOfPeople={numberOfPeople}
+        numberOfPeople={localPeople || numberOfPeople}
         open={!!previewTemplate}
         onOpenChange={(open) => !open && setPreviewTemplate(null)}
         onUseTemplate={(template) => {
