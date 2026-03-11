@@ -160,7 +160,7 @@ export const RequestFormModal = ({
           provider_id: block.providerId,
           provider_email: block.providerEmail || null,
           block_type: block.blockType,
-          price_indication: block.priceIndication || null,
+          price_indication: null,
           day_index: block.dayIndex,
           preferred_time: block.preferredTime || null,
           customer_notes: block.itemNotes || null,
