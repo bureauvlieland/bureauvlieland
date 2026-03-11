@@ -10,7 +10,6 @@ import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet"
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
-import { cn } from "@/lib/utils";
 
 interface ProgramBuilderViewProps {
   cartItems: CartItemDetail[];
