@@ -231,6 +231,16 @@ export const ProgramBuilderView = ({
         existingBlockIds={existingBlockIds}
         onAddActivity={handleAddActivity}
       />
+
+      {/* AI Erwin Dialog */}
+      <AiErwinDialog
+        open={isErwinOpen}
+        onOpenChange={setIsErwinOpen}
+        numberOfPeople={numberOfPeople}
+        selectedDates={selectedDates}
+        eventType={eventType}
+        onSuggestionReady={onReplaceWithSuggestion}
+      />
     </div>
   );
 };
