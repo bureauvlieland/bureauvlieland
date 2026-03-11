@@ -298,7 +298,7 @@ export const CheckoutContactForm = ({
             <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
               <p>
                 Door deze aanvraag te versturen gaat u akkoord met onze{" "}
-                <a href="/algemene-voorwaarden" className="underline hover:text-foreground">
+                <a href="/algemene-voorwaarden" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
                   algemene voorwaarden
                 </a>
                 . Uw gegevens worden alleen gebruikt voor het verwerken van deze aanvraag.

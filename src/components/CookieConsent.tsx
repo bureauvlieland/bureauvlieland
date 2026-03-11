@@ -203,7 +203,7 @@ export const CookieConsent = () => {
 
               <p className="text-xs text-muted-foreground">
                 Meer informatie over ons cookiebeleid vindt u in onze{" "}
-                <a href="/algemene-voorwaarden" className="underline hover:text-foreground">
+                <a href="/algemene-voorwaarden" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
                   algemene voorwaarden
                 </a>
                 .
