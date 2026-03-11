@@ -50,7 +50,7 @@ export function ChatConversationItem({ conversation: conv, isActive, projectRef,
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/admin/requests/${conv.request_id}`);
+              navigate(`/admin/aanvragen/${conv.request_id}`);
             }}
             className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex items-center gap-0.5 hover:bg-primary/20 transition-colors"
           >
