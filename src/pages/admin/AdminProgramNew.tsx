@@ -527,7 +527,7 @@ const AdminProgramNewContent = () => {
                     <span>
                       {formData.selectedDates
                         .sort((a, b) => a.getTime() - b.getTime())
-                        .map((d) => format(d, "d MMM", { locale: nl }))
+                        .map((d) => format(d, "EEE d MMM", { locale: nl }))
                         .join(", ")}
                     </span>
                   </div>
