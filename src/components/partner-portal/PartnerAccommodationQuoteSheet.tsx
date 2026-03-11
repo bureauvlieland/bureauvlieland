@@ -488,14 +488,7 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
                 <div className="text-sm text-muted-foreground space-y-1.5">
                   <p className="font-medium text-foreground">Wat nu?</p>
-                  {effectiveInvoicingMode === "partner_direct" ? (
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Bevestig de reservering rechtstreeks met de klant ({request.customer_name}, {request.customer_email})</li>
-                      <li>Na afloop van het verblijf stuurt u uw factuur (geoffreerde prijs) direct naar de klant</li>
-                      <li>Registreer de factuur hieronder in het portaal</li>
-                      <li>Bureau Vlieland stuurt u vervolgens een commissiefactuur ({existingQuote?.commission_percentage ?? 10}%)</li>
-                    </ol>
-                  ) : effectiveInvoicingMode === "bureau_central" ? (
+                  {effectiveInvoicingMode === "bureau_central" ? (
                     <ol className="list-decimal list-inside space-y-1">
                       <li>Bureau Vlieland coördineert de reservering met de klant</li>
                       <li>Na afloop van het verblijf stuurt u uw factuur (geoffreerde prijs) naar <strong>Bureau Vlieland</strong></li>
@@ -503,9 +496,11 @@ export const PartnerAccommodationQuoteSheet = ({
                       <li>Bureau Vlieland stuurt u vervolgens een commissiefactuur ({existingQuote?.commission_percentage ?? 10}%)</li>
                     </ol>
                   ) : (
-                    <div className="text-muted-foreground italic">
-                      Facturatiemodus wordt geladen… Neem bij vragen contact op met Bureau Vlieland.
-                    </div>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Bureau Vlieland coördineert de reservering met de klant</li>
+                      <li>Na afloop van het verblijf stuurt u uw factuur naar <strong>Bureau Vlieland</strong></li>
+                      <li>Registreer de factuur hieronder in het portaal</li>
+                    </ol>
                   )}
                 </div>
               </div>
