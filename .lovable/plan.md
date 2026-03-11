@@ -1,45 +1,32 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+# "Wijzig gegevens" vervangen door inline bewerking
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+## Wat verandert er
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+De "Wijzig gegevens"-knop verdwijnt. In plaats daarvan komen er kleine **edit-icoontjes** naast "20 personen" en de datumweergave in de header. Bij klikken opent een compact **Popover** (geen modal, geen navigatie) waarin je direct de waarde aanpast.
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+## Wijzigingen
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+### `ProgramBuilderView.tsx`
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+- Verwijder de "Wijzig gegevens" knop en de `onEditBasics` prop
+- Voeg twee nieuwe props toe: `onUpdatePeople(count: number)` en `onAddDate` / `onRemoveDate`
+- Bij "20 personen": een `Pencil`-icoontje dat een `Popover` opent met een number input + bevestig-knop
+- Bij de datumweergave: een `Pencil`-icoontje dat een `Popover` opent met de bestaande `MultiDatePicker` component
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+Voorbeeld header na wijziging:
+```text
+Uw programma
+👤 20 personen ✏️   📅 2 dagen ✏️        ✨ Erwin's voorstel
+```
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+### `ProgrammaSamenstellen.tsx`
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+- Verwijder `onEditBasics={() => setPhase("basics")}` prop
+- Voeg `onUpdatePeople`, `onAddDate`, `onRemoveDate` props toe, gekoppeld aan de CartContext functies
 
----
+### Geen nieuwe bestanden nodig
 
-## Plan: CRM en Partners samenvoegen
+De Popovers worden inline in `ProgramBuilderView` gebouwd met bestaande `Popover`, `Input` en `MultiDatePicker` componenten.
 
-### Status: ✅ Geïmplementeerd
-
-CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
-
----
-
-## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
-
-### Status: ✅ Geïmplementeerd
-
-1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
-
-2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
-
-3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
