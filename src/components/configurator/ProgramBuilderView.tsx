@@ -44,7 +44,9 @@ interface ProgramBuilderViewProps {
   onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onReorderItems: (items: CartItemDetail[]) => void;
   onSubmit: () => void;
-  onEditBasics: () => void;
+  onUpdatePeople: (count: number) => void;
+  onAddDate: (date: Date) => boolean;
+  onRemoveDate: (dateIndex: number) => void;
   onReplaceWithSuggestion: (items: CartItemDetail[]) => void;
   eventType?: string;
   contactName?: string;
