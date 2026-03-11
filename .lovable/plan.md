@@ -1,28 +1,74 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Activiteit direct toevoegen zonder tussenstap
+### Wat is gebouwd
 
-## Probleem
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-De `AddActivitySheet` heeft een twee-stappen flow: eerst bladeren, dan dag/tijd/opmerkingen kiezen. Maar de tijd en opmerkingen worden niet opgeslagen (`handleAddActivity` negeert ze). Bovendien zijn er al inline controls voor tijd en opmerkingen op de kaarten zelf.
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-## Oplossing
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-De `AddActivitySheet` wordt vereenvoudigd: klik op een activiteit → direct toegevoegd aan de actieve dag. De sheet sluit. Tijd en opmerkingen pas je aan via de bestaande inline controls op de kaart.
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-## Wijzigingen
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### `AddActivitySheet.tsx`
-- Verwijder de hele "selectedBlock" tweede stap (dag/tijd/notes formulier)
-- `onAddActivity` signature vereenvoudigen naar `(blockId: string) => void`
-- Bij klikken op een kaart: direct `onAddActivity(block.id)` aanroepen en sheet sluiten
-- Verwijder alle form state (`selectedDayIndex`, `preferredTime`, `notes`, `isSubmitting`)
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-### `ProgramBuilderView.tsx`
-- `handleAddActivity` vereenvoudigen: roept `onAddItem(blockId, activeDay)` aan met de huidige actieve dag
-- Props van `AddActivitySheet` aanpassen naar de nieuwe signature
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-### Klantportaal (`AddActivitySheet` wordt ook daar gebruikt)
-- De klantportaal-versie van `onAddActivity` in `DesktopProgramView` en `MobileProgramView` aanpassen naar de vereenvoudigde signature
-- `CustomerProgram.tsx`: `addItem` handler aanpassen
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
+---
+
+## Plan: CRM en Partners samenvoegen
+
+### Status: ✅ Geïmplementeerd
+
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+
+---
+
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+
+### Status: ✅ Geïmplementeerd
+
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+
+---
+
+## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gewijzigd
+
+1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
+
+2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
+
+3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
+
+4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
+
+5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
+
+6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
+
+7. **`partner_direct` branches verwijderd** uit:
+   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
+   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
+   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
+   - Edge functions: fallback defaults naar `bureau_central`
+   - `InvoicingMode` type vereenvoudigd
+
+8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".

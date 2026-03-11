@@ -228,13 +228,8 @@ export const ProgramBuilderView = ({
     }
   };
 
-  const handleAddActivity = (
-    blockId: string,
-    dayIndex: number,
-    _preferredTime: string | null,
-    _notes: string
-  ) => {
-    onAddItem(blockId, dayIndex);
+  const handleAddActivity = (blockId: string) => {
+    onAddItem(blockId, activeDay);
   };
 
   return (
@@ -456,7 +451,6 @@ export const ProgramBuilderView = ({
       <AddActivitySheet
         open={isAddSheetOpen}
         onOpenChange={setIsAddSheetOpen}
-        selectedDates={selectedDates}
         existingBlockIds={existingBlockIds}
         onAddActivity={handleAddActivity}
       />
