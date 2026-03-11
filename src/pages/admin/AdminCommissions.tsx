@@ -308,7 +308,7 @@ export default function AdminCommissions() {
   };
 
   const formatDate = (dateStr: string) => {
-    return format(new Date(dateStr), "d MMM yyyy", { locale: nl });
+    return format(new Date(dateStr), "EEE d MMM yyyy", { locale: nl });
   };
 
   const formatDateRange = (startDate: string, endDate: string) => {
