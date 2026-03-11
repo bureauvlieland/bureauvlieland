@@ -125,7 +125,7 @@ export default function AdminPurchaseInvoices() {
         return (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
             <ArrowRight className="h-3 w-3 mr-1" />
-            Doorgestuurd {invoice.forwarded_to_accounting_at && format(new Date(invoice.forwarded_to_accounting_at), "d MMM", { locale: nl })}
+            Doorgestuurd {invoice.forwarded_to_accounting_at && format(new Date(invoice.forwarded_to_accounting_at), "EEE d MMM", { locale: nl })}
           </Badge>
         );
       case "paid":
