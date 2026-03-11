@@ -13,12 +13,15 @@ import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlo
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
 
+const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
+
 interface ProgramBuilderViewProps {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
   selectedDates: Date[];
   onRemoveItem: (blockId: string) => void;
   onAddItem: (blockId: string, dayIndex: number) => void;
+  onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onSubmit: () => void;
   onEditBasics: () => void;
   eventType?: string;
