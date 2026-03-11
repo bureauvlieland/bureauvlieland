@@ -88,7 +88,6 @@ export const RequestFormModal = ({
   const blocks = cartItems
     .map((item) => getBlockById(allBlocks, item.blockId))
     .filter(Boolean) as BuildingBlock[];
-  const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
 
   // Helper to get cart item detail by blockId
