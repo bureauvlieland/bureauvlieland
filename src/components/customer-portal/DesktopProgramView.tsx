@@ -534,6 +534,7 @@ export const DesktopProgramView = ({
         onCancel={onOpenCancel}
         items={program.items}
         numberOfPeople={program.number_of_people}
+        numberOfDays={selectedDates.length || 1}
         selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
         accommodation={accommodation}
         isMultiDay={isMultiDay}
