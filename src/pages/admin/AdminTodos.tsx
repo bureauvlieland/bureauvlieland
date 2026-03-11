@@ -519,7 +519,7 @@ const TakenTab = () => {
             {isSnoozed && (
               <Badge variant="outline" className="bg-purple-50 text-purple-700">
                 <AlarmClock className="h-3 w-3 mr-1" />
-                Snoozed tot {format(new Date(todo.snoozed_until!), "d MMM", { locale: nl })}
+                Snoozed tot {format(new Date(todo.snoozed_until!), "EEE d MMM", { locale: nl })}
               </Badge>
             )}
           </div>
