@@ -108,7 +108,7 @@ interface DesktopProgramViewProps {
   onSubmitChanges: () => void;
   onRefresh: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
-  onAddActivity: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
+  onAddActivity: (blockId: string) => void;
   // Accommodation
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
