@@ -27,6 +27,7 @@ const ProgrammaSamenstellen = () => {
     selectedDates,
     addToCart,
     removeFromCart,
+    updateItem,
     setNumberOfPeople,
     setSelectedDate,
     addDate,
