@@ -90,26 +90,6 @@ export const ProgramSidebar = ({
         isPreApproval={isPreApproval}
       />
 
-      {/* Next action CTA */}
-      {nextAction && !termsAccepted && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm font-medium mb-2">Volgende stap</p>
-          <Button 
-            className="w-full" 
-            onClick={() => {
-              if (nextAction.action) {
-                nextAction.action();
-              } else if (nextAction.section) {
-                const el = document.getElementById(nextAction.section);
-                el?.scrollIntoView({ behavior: "smooth" });
-              }
-            }}
-          >
-            {nextAction.label}
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      )}
 
       {/* Total cost display */}
       {totalCost > 0 && (
