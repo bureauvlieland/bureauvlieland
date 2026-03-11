@@ -177,6 +177,7 @@ const ProgrammaSamenstellen = () => {
                 onRemoveItem={removeFromCart}
                 onAddItem={handleAddItem}
                 onUpdateItem={updateItem}
+                onReorderItems={reorderItems}
                 onSubmit={handleSubmit}
                 onEditBasics={() => setPhase("basics")}
                 onReplaceWithSuggestion={handleErwinSuggestion}
