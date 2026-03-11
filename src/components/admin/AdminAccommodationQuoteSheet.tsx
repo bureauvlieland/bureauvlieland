@@ -295,7 +295,7 @@ export function AdminAccommodationQuoteSheet({
             {quote.selected_at && (
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Check className="h-3.5 w-3.5" />
-                Geselecteerd: {format(new Date(quote.selected_at), "d MMM yyyy", { locale: nl })}
+                Geselecteerd: {format(new Date(quote.selected_at), "EEE d MMM yyyy", { locale: nl })}
               </div>
             )}
             {quote.forwarded_at && (
