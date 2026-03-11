@@ -60,12 +60,13 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
       if (commResult.error) throw commResult.error;
       if (emailResult.error) throw emailResult.error;
 
-      const manualItems: ProjectCommunication[] = (commResult.data || []).map((c) => ({
+      const manualItems = (commResult.data || []).map((c) => ({
         ...c,
         communication_type: c.communication_type as CommunicationType,
         direction: c.direction as CommunicationDirection,
+        metadata: (c.metadata || {}) as Record<string, unknown>,
         source: 'manual' as const,
-      }));
+      })) as ProjectCommunication[];
 
       const emailItems: ProjectCommunication[] = (emailResult.data || []).map((log) => ({
         id: `email_log_${log.id}`,
