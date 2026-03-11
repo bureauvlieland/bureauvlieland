@@ -82,8 +82,6 @@ const ProgrammaSamenstellen = () => {
   };
 
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
-    setContactData(data);
-    // Apply to cart context
     clearCart();
     setNumberOfPeople(data.numberOfPeople);
     data.selectedDates.forEach((date, i) => {
