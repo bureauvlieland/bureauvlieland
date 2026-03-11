@@ -522,7 +522,56 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send notification email to customer for confirmed/unavailable/alternative status changes
+    // Check if ALL partners have responded (no pending items left)
+    const validResponseStatuses = ["confirmed", "unavailable", "alternative"];
+    if (validResponseStatuses.includes(status)) {
+      const { data: allSentItems } = await supabase
+        .from("program_request_items")
+        .select("id, status, block_type, skip_partner_notification")
+        .eq("request_id", item.request_id);
+      
+      const sentRelevantItems = (allSentItems || []).filter(
+        i => i.block_type !== "self_arranged" && 
+             (i.skip_partner_notification === false || i.skip_partner_notification === null)
+      );
+      
+      const allAnswered = sentRelevantItems.length > 0 && sentRelevantItems.every(i => i.status !== "pending");
+      
+      if (allAnswered) {
+        const { data: existingAllTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "all_partners_responded")
+          .eq("auto_entity_id", item.request_id)
+          .neq("status", "done")
+          .maybeSingle();
+        
+        if (!existingAllTodo) {
+          const { data: reqInfo } = await supabase
+            .from("program_requests")
+            .select("reference_number, customer_name, customer_company")
+            .eq("id", item.request_id)
+            .single();
+          
+          if (reqInfo) {
+            const custName = reqInfo.customer_company || reqInfo.customer_name;
+            const refNum = reqInfo.reference_number || "onbekend";
+            await supabase.from("admin_todos").insert({
+              title: `Alle partners hebben gereageerd op ${refNum} (${custName})`,
+              description: `Alle verstuurde programmaonderdelen zijn beantwoord. Beoordeel de reacties en stuur een status update naar de klant.`,
+              priority: "high",
+              status: "todo",
+              related_request_id: item.request_id,
+              auto_type: "all_partners_responded",
+              auto_entity_id: item.request_id,
+            });
+            console.log(`Created all_partners_responded todo for request ${item.request_id}`);
+          }
+        }
+      }
+    }
+
+
     const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
     if (validEmailStatuses.includes(status)) {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
