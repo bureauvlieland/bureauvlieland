@@ -62,6 +62,8 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
 
       const manualItems: ProjectCommunication[] = (commResult.data || []).map((c) => ({
         ...c,
+        communication_type: c.communication_type as CommunicationType,
+        direction: c.direction as CommunicationDirection,
         source: 'manual' as const,
       }));
 
