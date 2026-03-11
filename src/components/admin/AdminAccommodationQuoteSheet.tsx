@@ -284,7 +284,7 @@ export function AdminAccommodationQuoteSheet({
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
-              Geldig tot: {format(new Date(quote.valid_until), "d MMM yyyy", { locale: nl })}
+              Geldig tot: {format(new Date(quote.valid_until), "EEE d MMM yyyy", { locale: nl })}
             </div>
             {quote.submitted_at && (
               <div className="flex items-center gap-1.5 text-muted-foreground">
