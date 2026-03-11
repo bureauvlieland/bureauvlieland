@@ -230,7 +230,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <p>Bedankt voor uw programma-aanvraag bij Bureau Vlieland!</p>
         
-        <p>Wij hebben uw aanvraag goed ontvangen. De betreffende aanbieders zullen uw aanvraag behandelen en eventueel contact opnemen om details te bespreken. <strong>U betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van de aanbieder.</p>
+        <p>Wij hebben uw aanvraag goed ontvangen. Bureau Vlieland beoordeelt uw aanvraag en neemt contact met u op over de volgende stappen. <strong>U betaalt pas na bevestiging</strong> en ontvangt hiervan een factuur van Bureau Vlieland.</p>
         
         <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0; color: #2d3748;">Uw aanvraag</h3>
