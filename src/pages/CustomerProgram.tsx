@@ -321,7 +321,7 @@ const CustomerProgram = () => {
     onSubmitChanges: () => setShowConfirmDialog(true),
     onRefresh: refetch,
     onAcceptTerms: handleAcceptTerms,
-    onAddActivity: (blockId: string) => addItem(blockId, 0, null, ""),
+    onAddActivity: (blockId: string) => addItem(blockId, activeDay, null, ""),
     // Accommodation
     accommodation,
     accommodationQuotes,
