@@ -1563,6 +1563,23 @@ const AdminRequestDetail = () => {
           onCreated={fetchRequestData}
         />
       )}
+      {/* Status update email sheet */}
+      {request && (
+        <SendProjectEmailSheet
+          open={statusEmailOpen}
+          onOpenChange={setStatusEmailOpen}
+          requestId={request.id}
+          recipients={[{
+            label: `Klant: ${request.customer_name}`,
+            email: request.customer_email,
+            name: request.customer_name,
+            type: "customer" as const,
+          }]}
+          defaultSubject={generateProgramStatusEmailBody().subject}
+          defaultBody={generateProgramStatusEmailBody().body}
+          onEmailSent={fetchRequestData}
+        />
+      )}
     </>
   );
 };
