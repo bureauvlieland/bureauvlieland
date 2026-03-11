@@ -25,6 +25,7 @@ import {
   Users,
   ClipboardList,
   LogOut,
+  Mail,
   Menu,
   Shield,
   Euro,
@@ -111,6 +112,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       label: "Systeem",
       items: [
         { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
+        { title: "Email Templates", url: "/admin/berichten/templates", icon: Mail },
       ],
     },
   ];
