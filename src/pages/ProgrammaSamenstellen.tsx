@@ -204,13 +204,7 @@ const ProgrammaSamenstellen = () => {
         numberOfPeople={numberOfPeople}
         selectedDate={selectedDates[0]}
         selectedDates={selectedDates}
-        prefillData={contactData ? {
-          name: contactData.name,
-          email: contactData.email,
-          phone: contactData.phone,
-          company: contactData.company,
-          eventType: contactData.eventType,
-        } : undefined}
+        prefillData={undefined}
       />
     </div>
   );

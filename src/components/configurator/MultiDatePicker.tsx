@@ -76,7 +76,7 @@ export const MultiDatePicker = ({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 bg-background z-50" align="start">
+        <PopoverContent className="w-auto p-0 bg-background z-50" align="start" side="bottom" sideOffset={8}>
           <Calendar
             mode="single"
             selected={undefined}
