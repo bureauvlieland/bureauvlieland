@@ -5,6 +5,7 @@ import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
 import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
 import { cn } from "@/lib/utils";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
 
