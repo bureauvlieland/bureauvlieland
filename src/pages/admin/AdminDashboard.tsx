@@ -284,7 +284,7 @@ const AdminDashboardContent = () => {
                           : request.status}
                       </span>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(request.created_at).toLocaleDateString("nl-NL")}
+                        {new Date(request.created_at).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}
                       </p>
                     </div>
                   </Link>

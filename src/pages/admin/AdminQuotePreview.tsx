@@ -863,7 +863,7 @@ const AdminQuotePreview = () => {
                       <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                         <p className="font-semibold text-amber-800">
                           Dit voorstel is geldig tot{" "}
-                          {format(validUntil, "d MMMM yyyy", { locale: nl })}
+                          {format(validUntil, "EEE d MMMM yyyy", { locale: nl })}
                         </p>
                         <p className="text-amber-700 mt-1">
                           U kunt de status van deze aanvraag volgen in uw klantomgeving.

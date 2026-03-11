@@ -94,7 +94,7 @@ export const AcceptProposalCard = ({
               {currentDate && (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{format(currentDate, "EEEE d MMMM yyyy", { locale: nl })}</span>
+                  <span>{format(currentDate, "EEE d MMMM yyyy", { locale: nl })}</span>
                   {item.preferred_time && (
                     <span className="text-muted-foreground">om {item.preferred_time}</span>
                   )}

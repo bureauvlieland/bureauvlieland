@@ -56,7 +56,7 @@ export const AcceptQuoteProposalCard = ({
               </h2>
               <p className="text-sm text-red-700 mt-1">
                 Dit voorstel is verlopen op{" "}
-                {format(validUntil, "d MMMM yyyy", { locale: nl })}. Neem contact
+                {format(validUntil, "EEE d MMMM yyyy", { locale: nl })}. Neem contact
                 op met Bureau Vlieland voor een nieuw voorstel.
               </p>
               <div className="mt-4">

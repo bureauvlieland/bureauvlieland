@@ -326,7 +326,7 @@ export default function AdminPurchaseInvoices() {
                         <div>
                           {invoice.invoice_number}
                           <div className="text-xs text-muted-foreground">
-                            {format(new Date(invoice.invoice_date), "d MMM yyyy", { locale: nl })}
+                            {format(new Date(invoice.invoice_date), "EEE d MMM yyyy", { locale: nl })}
                           </div>
                         </div>
                       </TableCell>

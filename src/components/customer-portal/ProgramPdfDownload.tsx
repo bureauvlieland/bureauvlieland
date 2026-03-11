@@ -133,7 +133,7 @@ export const ProgramPdfDownload = ({
         doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
         const dayLabel = dayDate
-          ? `Dag ${dayIndex + 1} – ${format(dayDate, "EEEE d MMMM", { locale: nl })}`
+          ? `Dag ${dayIndex + 1} – ${format(dayDate, "EEE d MMMM", { locale: nl })}`
           : `Dag ${dayIndex + 1}`;
         doc.text(dayLabel, margin, y);
         y += 8;
