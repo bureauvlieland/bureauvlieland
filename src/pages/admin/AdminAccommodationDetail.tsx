@@ -522,7 +522,7 @@ export default function AdminAccommodationDetail() {
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Periode</p>
                       <p className="font-medium text-sm">
-                        {format(new Date(request.arrival_date), "d MMM", { locale: nl })} – {format(new Date(request.departure_date), "d MMM yyyy", { locale: nl })}
+                        {format(new Date(request.arrival_date), "EEE d MMM", { locale: nl })} – {format(new Date(request.departure_date), "EEE d MMM yyyy", { locale: nl })}
                       </p>
                       <p className="text-xs text-muted-foreground">{nights} nachten</p>
                     </div>
