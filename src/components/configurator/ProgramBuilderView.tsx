@@ -8,6 +8,7 @@ import { nl } from "date-fns/locale";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
+import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
