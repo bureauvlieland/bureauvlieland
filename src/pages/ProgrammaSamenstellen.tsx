@@ -184,6 +184,11 @@ const ProgrammaSamenstellen = () => {
                 onAddDate={addDate}
                 onRemoveDate={removeDate}
                 onReplaceWithSuggestion={handleErwinSuggestion}
+                onLoadTemplate={(template) => {
+                  if (selectedDates.length > 0) {
+                    loadFromTemplate(template, selectedDates[0], numberOfPeople);
+                  }
+                }}
               />
             )}
           </div>
