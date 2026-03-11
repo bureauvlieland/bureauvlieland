@@ -429,6 +429,7 @@ export const DesktopProgramView = ({
                           isPreApproval={isPreApproval}
                           isQuoteMode={isQuoteMode}
                           vatRate={getItemVatRate(item)}
+                          readOnly={!isPublished}
                         />
                       )}
                     </CustomerTimeline>
