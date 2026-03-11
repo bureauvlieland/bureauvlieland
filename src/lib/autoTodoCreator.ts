@@ -10,7 +10,8 @@ export type AutoTodoType =
   | "quote_pending_partner"
   | "quote_pending_customer"
   | "request_no_response"
-  | "quote_expired_partner";
+  | "quote_expired_partner"
+  | "accommodation_quote_declined";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -203,6 +204,11 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
   },
   quote_expired_partner: {
     label: "Offerte verlopen",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
+  },
+  accommodation_quote_declined: {
+    label: "Logies afgewezen",
     color: "text-red-700",
     bgColor: "bg-red-100",
   },

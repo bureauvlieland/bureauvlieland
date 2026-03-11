@@ -375,6 +375,29 @@ const PartnerAccommodationContent = () => {
             contact_name: partnerName,
           }).then(() => {});
         }
+      } else {
+        // Plain decline — also create admin todo + communication log
+        const customerLabel = selectedRequest.customer_company || selectedRequest.customer_name;
+        supabase.from("admin_todos").insert({
+          title: `Logies afgewezen: ${partnerName} voor ${customerLabel}`,
+          description: `${partnerName} heeft de logiesaanvraag voor ${customerLabel} afgewezen.${declineReason ? ` Reden: ${declineReason}` : ""}`,
+          priority: "high",
+          auto_type: "accommodation_quote_declined",
+          auto_entity_id: selectedRequest.quote.id,
+          related_partner_id: partnerId,
+        }).then(() => {});
+
+        if (selectedRequest.linked_program_id) {
+          supabase.from("project_communications").insert({
+            request_id: selectedRequest.linked_program_id,
+            accommodation_id: selectedRequest.id,
+            communication_type: "note",
+            direction: "inbound",
+            subject: `Logiesaanvraag afgewezen door ${partnerName}`,
+            content: `${partnerName} heeft de logiesaanvraag afgewezen.${declineReason ? ` Reden: ${declineReason}` : ""}`,
+            contact_name: partnerName,
+          }).then(() => {});
+        }
       }
 
       toast({
