@@ -29,6 +29,7 @@ interface ActionRequiredCardProps {
   onScrollToAccommodation?: () => void;
   programType?: string;
   quoteStatus?: string | null;
+  programPublishedAt?: string | null;
   className?: string;
 }
 
