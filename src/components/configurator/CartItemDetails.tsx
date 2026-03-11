@@ -40,9 +40,11 @@ export const CartItemDetails = ({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm leading-tight truncate">{block.name}</p>
-          <p className="text-xs text-muted-foreground leading-tight">
-            {block.price_display_override || (block.price_adult !== null ? `€ ${block.price_adult}` : "Op aanvraag")} {block.price_adult_note || ""}
-          </p>
+          {block.duration && (
+            <p className="text-xs text-muted-foreground leading-tight">
+              {block.duration}
+            </p>
+          )}
         </div>
         <Button
           variant="ghost"

@@ -69,16 +69,6 @@ export const BuildingBlockCard = ({ block, onAdd, isInCart }: BuildingBlockCardP
           )}
         </div>
 
-        {/* Subtle price */}
-        <p className="text-xs text-muted-foreground mb-4">
-          {block.is_from_price ? "Vanaf" : ""} {formatBlockPrice(block)} {formatPriceNote(block)}
-        </p>
-
-        {/* Provider */}
-        <p className="text-xs text-muted-foreground mb-4">
-          Door: <span className="font-medium">{getProviderName(block)}</span>
-        </p>
-
         {/* Action button */}
         <Button
           onClick={() => onAdd(block.id)}

@@ -62,14 +62,8 @@ export const BuildingBlockListItem = ({ block, onAdd, isInCart }: BuildingBlockL
         </div>
       </div>
 
-      {/* Price + action */}
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="text-right">
-          <span className="font-semibold text-foreground">{formatBlockPrice(block)}</span>
-          {formatPriceNote(block) && (
-            <span className="text-muted-foreground text-xs block">{formatPriceNote(block)}</span>
-          )}
-        </div>
+      {/* Action */}
+      <div className="flex items-center flex-shrink-0">
         <Button
           onClick={() => onAdd(block.id)}
           variant={isInCart ? "secondary" : "default"}
