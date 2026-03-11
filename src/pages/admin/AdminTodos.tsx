@@ -1031,7 +1031,7 @@ const EmailLogTab = () => {
                       return (
                         <TableRow key={email.id}>
                           <TableCell className="whitespace-nowrap text-sm">
-                            <div>{format(new Date(email.created_at), "d MMM yyyy", { locale: nl })}</div>
+                            <div>{format(new Date(email.created_at), "EEE d MMM yyyy", { locale: nl })}</div>
                             <div className="text-muted-foreground">{format(new Date(email.created_at), "HH:mm")}</div>
                           </TableCell>
                           <TableCell>
