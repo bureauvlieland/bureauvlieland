@@ -25,6 +25,7 @@ import {
   Users,
   ClipboardList,
   LogOut,
+  Mail,
   Menu,
   Shield,
   Euro,
