@@ -1,30 +1,20 @@
-import { CheckCircle2, Search, FileCheck, ThumbsUp, Heart } from "lucide-react";
+import { Search, FileCheck, ThumbsUp } from "lucide-react";
 
 const steps = [
   {
-    icon: CheckCircle2,
-    title: "Stel uw programma samen",
-    description: "Kies activiteiten die passen bij uw groep",
-  },
-  {
     icon: Search,
     title: "Wij checken beschikbaarheid",
-    description: "Onze lokale partners bekijken of alles kan",
+    description: "Onze lokale partners bekijken of alles kan op uw gewenste datum",
   },
   {
     icon: FileCheck,
     title: "U ontvangt een voorstel",
-    description: "Met definitieve tijden en prijzen",
+    description: "Met definitieve tijden, prijzen en eventuele alternatieven",
   },
   {
     icon: ThumbsUp,
-    title: "Bevestig wat u wilt",
-    description: "U bepaalt per onderdeel wat doorgaat",
-  },
-  {
-    icon: Heart,
-    title: "Wij coördineren alles",
-    description: "Zodat u zich nergens zorgen over hoeft te maken",
+    title: "U bepaalt wat doorgaat",
+    description: "Bevestig per onderdeel en wij coördineren de rest",
   },
 ];
 
@@ -39,7 +29,7 @@ export const HowItWorksBlock = ({ compact = false }: HowItWorksBlockProps) => {
         Zo werkt het
       </h2>
       
-      <div className={`grid grid-cols-1 ${compact ? "sm:grid-cols-2 gap-2" : "sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"}`}>
+      <div className={`grid grid-cols-1 ${compact ? "sm:grid-cols-3 gap-2" : "sm:grid-cols-3 gap-4 md:gap-6"}`}>
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
