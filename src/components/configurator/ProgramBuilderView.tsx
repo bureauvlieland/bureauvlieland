@@ -380,6 +380,52 @@ export const ProgramBuilderView = ({
         eventType={eventType}
         onSuggestionReady={onReplaceWithSuggestion}
       />
+
+      {/* Template Picker Sheet */}
+      <Sheet open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen}>
+        <SheetContent side="right" className="sm:max-w-md flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>Voorbeeldprogramma's</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-4 space-y-3">
+            {templates.map((template) => (
+              <Card
+                key={template.id}
+                className="overflow-hidden hover:border-primary/50 transition-all cursor-pointer"
+                onClick={() => setPreviewTemplateId(template.id)}
+              >
+                {template.image_url && (
+                  <div className="aspect-[16/7] overflow-hidden bg-muted">
+                    <img src={template.image_url} alt={template.name} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                )}
+                <div className="p-3">
+                  <h4 className="font-semibold text-sm">{template.name}</h4>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{template.duration_days === 1 ? "1 dag" : `${template.duration_days} dagen`}</span>
+                  </div>
+                  {template.short_description && (
+                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{template.short_description}</p>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Template Preview */}
+      <TemplatePreviewSheet
+        templateId={previewTemplateId}
+        numberOfPeople={numberOfPeople}
+        open={!!previewTemplateId}
+        onOpenChange={(open) => !open && setPreviewTemplateId(null)}
+        onUseTemplate={(template) => {
+          setPreviewTemplateId(null);
+          setIsTemplatesOpen(false);
+          onLoadTemplate(template);
+        }}
+      />
     </div>
   );
 };
