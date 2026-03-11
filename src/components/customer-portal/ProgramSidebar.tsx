@@ -1,7 +1,7 @@
 import { StatusSummary } from "./StatusSummary";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Ban, ArrowRight } from "lucide-react";
+import { RefreshCw, Ban } from "lucide-react";
 import { FietsverhuurBanner } from "@/components/FietsverhuurBanner";
 import { BootticketBanner } from "@/components/BootticketBanner";
 import { cn } from "@/lib/utils";
@@ -66,27 +66,6 @@ export const ProgramSidebar = ({
     }).format(amount);
   };
 
-  // Determine next action for CTA
-  const getNextAction = () => {
-    if (statusSummary.alternative > 0) {
-      return { label: "Bekijk alternatieven", section: "program" };
-    }
-    if (statusSummary.pending > 0) {
-      return null; // No action needed, waiting for providers
-    }
-    if (isMultiDay && !hasAccommodation) {
-      return { label: "Logies bekijken", section: "accommodation" };
-    }
-    if (!billingComplete && allConfirmed) {
-      return { label: "Gegevens invullen", action: onOpenBilling };
-    }
-    if (allConfirmed && billingComplete && !termsAccepted) {
-      return { label: "Ondertekenen", action: onScrollToTerms };
-    }
-    return null;
-  };
-
-  const nextAction = getNextAction();
 
   return (
     <aside
@@ -111,26 +90,6 @@ export const ProgramSidebar = ({
         isPreApproval={isPreApproval}
       />
 
-      {/* Next action CTA */}
-      {nextAction && !termsAccepted && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm font-medium mb-2">Volgende stap</p>
-          <Button 
-            className="w-full" 
-            onClick={() => {
-              if (nextAction.action) {
-                nextAction.action();
-              } else if (nextAction.section) {
-                const el = document.getElementById(nextAction.section);
-                el?.scrollIntoView({ behavior: "smooth" });
-              }
-            }}
-          >
-            {nextAction.label}
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      )}
 
       {/* Total cost display */}
       {totalCost > 0 && (
