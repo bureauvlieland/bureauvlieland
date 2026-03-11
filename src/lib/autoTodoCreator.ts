@@ -10,7 +10,8 @@ export type AutoTodoType =
   | "quote_pending_partner"
   | "quote_pending_customer"
   | "request_no_response"
-  | "quote_expired_partner";
+  | "quote_expired_partner"
+  | "accommodation_quote_declined";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
