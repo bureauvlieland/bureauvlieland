@@ -1,6 +1,16 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SENDER_EMAIL, SENDER_NAME, buildReplyTo } from "../_shared/email-templates.ts";
+import { 
+  SENDER_EMAIL, 
+  SENDER_NAME, 
+  buildReplyTo, 
+  getRenderedTemplate, 
+  TemplateIds,
+  sanitizeHtml,
+  getRecipientEmail as sharedGetRecipientEmail,
+  getSubjectPrefix as sharedGetSubjectPrefix,
+  isTestMode as sharedIsTestMode,
+} from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +25,6 @@ interface PendingChange {
   providerEmail?: string;
   oldValue?: string;
   newValue?: string;
-  // For added items
   blockId?: string;
   dayIndex?: number;
   preferredTime?: string | null;
@@ -89,16 +98,6 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   }
 
   return response.json();
-};
-
-const sanitizeHtml = (str: string | undefined | null): string => {
-  if (!str) return "";
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 };
 
 async function enrichProviderEmails(
@@ -279,11 +278,19 @@ Deno.serve(async (req) => {
               const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string; contact_email: string | null } | null;
               if (partner?.email) {
                 const notifyEmail = partner.contact_email || partner.email;
-                emailMessages.push({
-                  From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
-                  Subject: `${subjectPrefix}Gewijzigd aantal gasten - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-                  HTMLPart: `
+                const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+
+                // Try template
+                const template = await getRenderedTemplate(TemplateIds.PEOPLE_CHANGE_ACCOMMODATION, {
+                  partner_name: sanitizeHtml(partner.name),
+                  customer_name: customerLabel,
+                  old_people: String(program.number_of_people),
+                  new_people: String(programDetails.numberOfPeople),
+                  accommodation_name: sanitizeHtml(quote.accommodation_name),
+                });
+
+                const emailSubject = template?.subject || `Gewijzigd aantal gasten - ${customerLabel}`;
+                const emailBody = template?.body || `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                       <div style="background: #0d9488; padding: 24px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
@@ -291,7 +298,7 @@ Deno.serve(async (req) => {
                       <div style="padding: 32px;">
                         <h2 style="color: #0d9488; margin-bottom: 16px;">Gewijzigd aantal gasten</h2>
                         <p>Beste ${sanitizeHtml(partner.name)},</p>
-                        <p>Het aantal gasten voor de aanvraag van <strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> is gewijzigd.</p>
+                        <p>Het aantal gasten voor de aanvraag van <strong>${customerLabel}</strong> is gewijzigd.</p>
                         <div style="background: #f0fdfa; border: 1px solid #99f6e4; padding: 16px; border-radius: 8px; margin: 16px 0;">
                           <p style="margin: 0 0 8px;"><strong>Wijziging:</strong></p>
                           <p style="margin: 0; font-size: 18px; color: #0d9488;">
@@ -308,12 +315,18 @@ Deno.serve(async (req) => {
                         <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
                       </div>
                     </div>
-                  `,
+                `;
+
+                emailMessages.push({
+                  From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
+                  Subject: `${subjectPrefix}${emailSubject}`,
+                  HTMLPart: emailBody,
                 });
 
                 await supabase.from("email_log").insert({
                   email_type: "accommodation_people_change",
-                  subject: `${subjectPrefix}Gewijzigd aantal gasten - ${program.customer_company || program.customer_name}`,
+                  subject: `${subjectPrefix}${emailSubject}`,
                   recipient_email: getRecipientEmail(partner.email, origin),
                   recipient_name: partner.name,
                   related_request_id: program.id,
@@ -390,13 +403,21 @@ Deno.serve(async (req) => {
           .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
           .join(", ");
         
-        // Email providers about date change (redirected in test mode)
+        const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+
+        // Email providers about date change
         for (const [, provider] of providerItems) {
-          emailMessages.push({
-            From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-            To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
-            Subject: `${subjectPrefix}Datumwijziging aanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-            HTMLPart: `
+          const itemsListHtml = provider.items.map(i => `<li>${sanitizeHtml(i)}</li>`).join("");
+          
+          const template = await getRenderedTemplate(TemplateIds.DATE_CHANGE_PARTNER, {
+            partner_name: sanitizeHtml(provider.name),
+            customer_name: customerLabel,
+            new_dates: newDates,
+            items_list: itemsListHtml,
+          });
+
+          const emailSubject = template?.subject || `Datumwijziging aanvraag - ${customerLabel}`;
+          const emailBody = template?.body || `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Datumwijziging</h2>
                 <p>Beste ${sanitizeHtml(provider.name)},</p>
@@ -404,11 +425,17 @@ Deno.serve(async (req) => {
                 <p>Graag uw beschikbaarheid opnieuw bevestigen.</p>
                 <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
                   <p><strong>Activiteit(en):</strong></p>
-                  <ul>${provider.items.map(i => `<li>${sanitizeHtml(i)}</li>`).join("")}</ul>
+                  <ul>${itemsListHtml}</ul>
                 </div>
                 <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
               </div>
-            `,
+          `;
+
+          emailMessages.push({
+            From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+            To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+            Subject: `${subjectPrefix}${emailSubject}`,
+            HTMLPart: emailBody,
           });
         }
 
@@ -464,11 +491,17 @@ Deno.serve(async (req) => {
                 const formattedArrival = new Date(newArrivalDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
                 const formattedDeparture = new Date(newDepartureDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 
-                emailMessages.push({
-                  From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
-                  Subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-                  HTMLPart: `
+                const template = await getRenderedTemplate(TemplateIds.DATE_CHANGE_ACCOMMODATION, {
+                  partner_name: sanitizeHtml(partner.name),
+                  customer_name: customerLabel,
+                  arrival_date: formattedArrival,
+                  departure_date: formattedDeparture,
+                  accommodation_name: sanitizeHtml(quote.accommodation_name),
+                  number_of_people: String(program.number_of_people),
+                });
+
+                const emailSubject = template?.subject || `Datumwijziging logiesaanvraag - ${customerLabel}`;
+                const emailBody = template?.body || `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                       <div style="background: #0d9488; padding: 24px; text-align: center;">
                         <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
@@ -476,7 +509,7 @@ Deno.serve(async (req) => {
                       <div style="padding: 32px;">
                         <h2 style="color: #0d9488; margin-bottom: 16px;">Datumwijziging logiesaanvraag</h2>
                         <p>Beste ${sanitizeHtml(partner.name)},</p>
-                        <p>De klant <strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> heeft de datums van hun verblijf gewijzigd.</p>
+                        <p>De klant <strong>${customerLabel}</strong> heeft de datums van hun verblijf gewijzigd.</p>
                         <div style="background: #f0fdfa; border: 1px solid #99f6e4; padding: 16px; border-radius: 8px; margin: 16px 0;">
                           <p style="margin: 0 0 8px;"><strong>Nieuwe periode:</strong></p>
                           <p style="margin: 0; font-size: 18px; color: #0d9488;">
@@ -494,13 +527,19 @@ Deno.serve(async (req) => {
                         <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
                       </div>
                     </div>
-                  `,
+                `;
+
+                emailMessages.push({
+                  From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
+                  Subject: `${subjectPrefix}${emailSubject}`,
+                  HTMLPart: emailBody,
                 });
 
                 // Log the accommodation date change email
                 await supabase.from("email_log").insert({
                   email_type: "accommodation_date_change",
-                  subject: `${subjectPrefix}Datumwijziging logiesaanvraag - ${program.customer_company || program.customer_name}`,
+                  subject: `${subjectPrefix}${emailSubject}`,
                   recipient_email: getRecipientEmail(notifyEmail, origin),
                   recipient_name: partner.name,
                   related_request_id: program.id,
@@ -522,20 +561,25 @@ Deno.serve(async (req) => {
         }
         
         // Customer confirmation for date change
-        // Count both activity providers and accommodation partners for the message
         let totalNotifiedProviders = providerItems.size;
         
-        // Customer confirmation (always to real customer email)
-        emailMessages.push({
-          From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-          To: [{ Email: program.customer_email, Name: program.customer_name }],
-          Subject: `${subjectPrefix}Datumwijziging bevestigd`,
-          HTMLPart: `
+        const providersNote = totalNotifiedProviders > 0 ? `${totalNotifiedProviders} ` : "";
+        const accommodationNote = program.linked_accommodation_id ? " en logiespartner(s)" : "";
+        
+        const dateChangeCustomerTemplate = await getRenderedTemplate(TemplateIds.DATE_CHANGE_CUSTOMER, {
+          customer_name: sanitizeHtml(program.customer_name),
+          new_dates: newDates,
+          providers_note: `${providersNote}betrokken aanbieder(s)${accommodationNote}`,
+          portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
+        });
+
+        const dateChangeCustomerSubject = dateChangeCustomerTemplate?.subject || "Datumwijziging bevestigd";
+        const dateChangeCustomerBody = dateChangeCustomerTemplate?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Datumwijziging bevestigd</h2>
               <p>Beste ${sanitizeHtml(program.customer_name)},</p>
               <p>U heeft de datum(s) gewijzigd naar: <strong>${newDates}</strong></p>
-              <p>Alle ${totalNotifiedProviders > 0 ? totalNotifiedProviders + " " : ""}betrokken aanbieder(s)${program.linked_accommodation_id ? " en logiespartner(s)" : ""} zijn op de hoogte gesteld en wij wachten op hun bevestiging.</p>
+              <p>Alle ${providersNote}betrokken aanbieder(s)${accommodationNote} zijn op de hoogte gesteld en wij wachten op hun bevestiging.</p>
               <p>
                 <a href="https://bureauvlieland.nl/mijn-programma/${token}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
                   Bekijk uw programma
@@ -543,7 +587,13 @@ Deno.serve(async (req) => {
               </p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
-          `,
+        `;
+
+        emailMessages.push({
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          To: [{ Email: program.customer_email, Name: program.customer_name }],
+          Subject: `${subjectPrefix}${dateChangeCustomerSubject}`,
+          HTMLPart: dateChangeCustomerBody,
         });
       }
     }
@@ -662,22 +712,33 @@ Deno.serve(async (req) => {
       // Notify partner if they have an email
       await enrichProviderEmails(supabase, [item]);
       if (item.provider_email && item.block_type !== "self_arranged") {
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
-          Subject: `${subjectPrefix}Annulering - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-          HTMLPart: `
+        const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+
+        const template = await getRenderedTemplate(TemplateIds.ITEM_CANCELLED_PARTNER, {
+          partner_name: sanitizeHtml(item.provider_name),
+          customer_name: customerLabel,
+          block_name: sanitizeHtml(item.block_name),
+        });
+
+        const emailSubject = template?.subject || `Annulering - ${customerLabel}`;
+        const emailBody = template?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Activiteit geannuleerd</h2>
               <p>Beste ${sanitizeHtml(item.provider_name)},</p>
               <p>De klant heeft de volgende activiteit geannuleerd:</p>
               <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0;">
                 <p><strong>${sanitizeHtml(item.block_name)}</strong></p>
-                <p>Klant: ${sanitizeHtml(program.customer_company || program.customer_name)}</p>
+                <p>Klant: ${customerLabel}</p>
               </div>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
-          `,
+        `;
+
+        emailMessages.push({
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
+          Subject: `${subjectPrefix}${emailSubject}`,
+          HTMLPart: emailBody,
         });
       }
 
@@ -731,14 +792,6 @@ Deno.serve(async (req) => {
       if (item.provider_email && item.block_type !== "self_arranged") {
         const counterProposalRecipient = getRecipientEmail(item.provider_email, origin);
         
-        // Fetch email template
-        const { data: template } = await supabase
-          .from("email_templates")
-          .select("subject, body_html")
-          .eq("id", "counter_proposal_partner")
-          .eq("is_active", true)
-          .maybeSingle();
-
         const originalTime = item.proposed_time || item.confirmed_time || "niet opgegeven";
         const counterNoteSection = counterNote 
           ? `<p style="margin: 8px 0 0; font-style: italic;">"${sanitizeHtml(counterNote)}"</p>` 
@@ -748,27 +801,20 @@ Deno.serve(async (req) => {
           : "";
         const partnerPortalLink = "https://bureauvlieland.nl/partner/login";
 
-        let emailSubject: string;
-        let emailBody: string;
+        // Fetch email template
+        const template = await getRenderedTemplate(TemplateIds.COUNTER_PROPOSAL_PARTNER, {
+          provider_name: sanitizeHtml(item.provider_name),
+          customer_name: sanitizeHtml(program.customer_company || program.customer_name),
+          block_name: sanitizeHtml(item.block_name),
+          original_time: originalTime,
+          counter_time: counterTime,
+          counter_note_section: counterNoteSection,
+          price_section: priceSection,
+          partner_portal_link: partnerPortalLink,
+        });
 
-        if (template) {
-          // Use template with variable replacement
-          emailSubject = template.subject
-            .replace(/\{\{block_name\}\}/g, item.block_name);
-          
-          emailBody = template.body_html
-            .replace(/\{\{provider_name\}\}/g, sanitizeHtml(item.provider_name))
-            .replace(/\{\{customer_name\}\}/g, sanitizeHtml(program.customer_company || program.customer_name))
-            .replace(/\{\{block_name\}\}/g, sanitizeHtml(item.block_name))
-            .replace(/\{\{original_time\}\}/g, originalTime)
-            .replace(/\{\{counter_time\}\}/g, counterTime)
-            .replace(/\{\{counter_note_section\}\}/g, counterNoteSection)
-            .replace(/\{\{price_section\}\}/g, priceSection)
-            .replace(/\{\{partner_portal_link\}\}/g, partnerPortalLink);
-        } else {
-          // Fallback to hardcoded template
-          emailSubject = `Tegenvoorstel van klant - ${item.block_name}`;
-          emailBody = `
+        const emailSubject = template?.subject || `Tegenvoorstel van klant - ${item.block_name}`;
+        const emailBody = template?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #1a365d; padding: 24px; text-align: center;">
                 <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
@@ -791,8 +837,7 @@ Deno.serve(async (req) => {
                 <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
               </div>
             </div>
-          `;
-        }
+        `;
         
         emailMessages.push({
           From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
@@ -825,44 +870,55 @@ Deno.serve(async (req) => {
     }
 
     if (acceptTerms) {
-      const termsVersion = "2026-01"; // Version identifier for tracking
+      const signatureId = crypto.randomUUID();
+      const acceptedAt = new Date().toISOString();
+      const termsVersion = "2024-v1";
       
-      // Generate unique signature ID
-      const signatureId = `SIG-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, "0")}`;
-
+      // Update program with signature info
       await supabase
         .from("program_requests")
         .update({
-          terms_accepted_at: new Date().toISOString(),
+          terms_accepted_at: acceptedAt,
           terms_version: termsVersion,
-          signature_name: signatureName || null,
+          signature_name: signatureName || program.customer_name,
           signature_ip: clientIp,
           signature_user_agent: userAgent,
           signature_id: signatureId,
-          updated_at: new Date().toISOString(),
+          updated_at: acceptedAt,
         })
         .eq("id", program.id);
 
-      // Log to history with signature details
+      // Log to history
       await supabase.from("program_request_history").insert({
         request_id: program.id,
         action: "terms_accepted",
         actor: "customer",
         actor_name: signatureName || program.customer_name,
-        notes: `Digitaal ondertekend (${signatureId}) - Voorwaarden versie ${termsVersion}`,
-        new_value: {
+        notes: `Voorwaarden geaccepteerd (versie ${termsVersion}). Handtekening-ID: ${signatureId}`,
+        new_value: { 
+          terms_version: termsVersion, 
           signature_id: signatureId,
-          signature_name: signatureName,
-          signature_ip: clientIp,
-          terms_version: termsVersion,
+          signature_name: signatureName || program.customer_name,
+          client_ip: clientIp,
         },
       });
 
-      // === LOG ACCEPTED TERMS TO accepted_terms_log ===
-      const acceptedAt = new Date().toISOString();
-      const termsLogEntries: any[] = [];
+      // --- Accepted terms log ---
+      const { data: programItems } = await supabase
+        .from("program_request_items")
+        .select("provider_id, provider_name, block_type, block_category")
+        .eq("request_id", program.id)
+        .neq("status", "cancelled");
 
-      // 1. Bureau Vlieland terms - always included
+      const uniquePartnerIds = [...new Set(
+        (programItems || [])
+          .filter(i => i.block_type !== "self_arranged" && i.provider_id !== "bureau")
+          .map(i => i.provider_id)
+      )];
+
+      const termsLogEntries: any[] = [];
+      
+      // Bureau Vlieland terms
       termsLogEntries.push({
         request_id: program.id,
         partner_id: "bureau",
@@ -873,82 +929,64 @@ Deno.serve(async (req) => {
         accepted_at: acceptedAt,
       });
 
-      // 2. Get all partner items to log their terms
-      const { data: programItems } = await supabase
-        .from("program_request_items")
-        .select("provider_id, provider_name, block_type, block_category")
-        .eq("request_id", program.id)
-        .neq("status", "cancelled")
-        .eq("block_type", "partner");
-
-      if (programItems && programItems.length > 0) {
-        // Get unique partner IDs
-        const uniquePartnerIds = [...new Set(programItems.map(i => i.provider_id))];
-        
-        // Fetch partner details including terms info
+      // Partner terms
+      if (uniquePartnerIds.length > 0) {
         const { data: partners } = await supabase
           .from("partners")
           .select("id, name, terms_pdf_path, uses_default_terms")
           .in("id", uniquePartnerIds);
 
-        if (partners) {
-          for (const partner of partners) {
-            const termsType = partner.terms_pdf_path && !partner.uses_default_terms 
-              ? "partner_custom" 
-              : "partner_default";
+        for (const partner of (partners || [])) {
+          const hasCustomTerms = partner.terms_pdf_path && !partner.uses_default_terms;
+          const termsType = hasCustomTerms ? "partner_custom" : "partner_default";
 
-            termsLogEntries.push({
-              request_id: program.id,
-              partner_id: partner.id,
-              partner_name: partner.name,
-              terms_type: termsType,
-              terms_version: termsVersion,
-              terms_pdf_path: termsType === "partner_custom" ? partner.terms_pdf_path : "default/standaard-partnervoorwaarden.pdf",
-              accepted_at: acceptedAt,
-            });
-          }
-        }
-
-        // 3. Check if UVH terms should be added:
-        // - If there are catering items
-        // - If there's a selected accommodation where partner has no custom terms
-        const hasCatering = programItems.some(i => i.block_category === "catering");
-        
-        // Check for accommodation without custom terms
-        let addUvhForAccommodation = false;
-        if (program.linked_accommodation_id) {
-          const { data: selectedQuote } = await supabase
-            .from("accommodation_quotes")
-            .select("partner_id")
-            .eq("request_id", program.linked_accommodation_id)
-            .eq("status", "selected")
-            .maybeSingle();
-          
-          if (selectedQuote) {
-            const { data: accPartner } = await supabase
-              .from("partners")
-              .select("terms_pdf_path, uses_default_terms")
-              .eq("id", selectedQuote.partner_id)
-              .single();
-            
-            // Add UVH if partner has no custom terms
-            if (!accPartner?.terms_pdf_path || accPartner?.uses_default_terms) {
-              addUvhForAccommodation = true;
-            }
-          }
-        }
-
-        if (hasCatering || addUvhForAccommodation) {
           termsLogEntries.push({
             request_id: program.id,
-            partner_id: "uvh",
-            partner_name: "Koninklijke Horeca Nederland",
-            terms_type: "uvh_2024",
-            terms_version: "2024",
-            terms_pdf_path: null,
+            partner_id: partner.id,
+            partner_name: partner.name,
+            terms_type: termsType,
+            terms_version: termsVersion,
+            terms_pdf_path: termsType === "partner_custom" ? partner.terms_pdf_path : "default/standaard-partnervoorwaarden.pdf",
             accepted_at: acceptedAt,
           });
         }
+      }
+
+      // 3. Check if UVH terms should be added
+      const hasCatering = programItems.some(i => i.block_category === "catering");
+      
+      let addUvhForAccommodation = false;
+      if (program.linked_accommodation_id) {
+        const { data: selectedQuote } = await supabase
+          .from("accommodation_quotes")
+          .select("partner_id")
+          .eq("request_id", program.linked_accommodation_id)
+          .eq("status", "selected")
+          .maybeSingle();
+        
+        if (selectedQuote) {
+          const { data: accPartner } = await supabase
+            .from("partners")
+            .select("terms_pdf_path, uses_default_terms")
+            .eq("id", selectedQuote.partner_id)
+            .single();
+          
+          if (!accPartner?.terms_pdf_path || accPartner?.uses_default_terms) {
+            addUvhForAccommodation = true;
+          }
+        }
+      }
+
+      if (hasCatering || addUvhForAccommodation) {
+        termsLogEntries.push({
+          request_id: program.id,
+          partner_id: "uvh",
+          partner_name: "Koninklijke Horeca Nederland",
+          terms_type: "uvh_2024",
+          terms_version: "2024",
+          terms_pdf_path: null,
+          accepted_at: acceptedAt,
+        });
       }
 
       // Insert all terms log entries
@@ -1035,12 +1073,29 @@ Deno.serve(async (req) => {
           `<li>${sanitizeHtml(i.block_name)}${i.preferred_time ? ` (${i.preferred_time})` : ""}</li>`
         ).join("");
 
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
-          Subject: `${subjectPrefix}Definitieve boeking - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-          HTMLPart: `
+        const billingTableHtml = `
+          <table style="width: 100%;">
+            <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_company_name || "-")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>KvK:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_kvk_number || "-")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>BTW:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_vat_number || "-")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Contactpersoon:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_name || "-")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_email || program.customer_email)}</td></tr>
+            ${updatedProgram?.billing_reference ? `<tr><td style="padding: 4px 0;"><strong>Referentie:</strong></td><td>${sanitizeHtml(updatedProgram.billing_reference)}</td></tr>` : ""}
+          </table>
+        `;
+
+        const template = await getRenderedTemplate(TemplateIds.BOOKING_CONFIRMED_PARTNER, {
+          partner_name: sanitizeHtml(provider.name),
+          customer_name: sanitizeHtml(program.customer_company || program.customer_name),
+          billing_details: billingTableHtml,
+          items_list: itemsList,
+          selected_dates: selectedDates,
+          number_of_people: String(program.number_of_people),
+        });
+
+        const emailSubject = template?.subject || `Definitieve boeking - ${sanitizeHtml(program.customer_company || program.customer_name)}`;
+        const emailBody = template?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Definitieve boeking bevestigd</h2>
               <p>Beste ${sanitizeHtml(provider.name)},</p>
@@ -1048,15 +1103,7 @@ Deno.serve(async (req) => {
               
               <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
                 <h3 style="margin-top: 0;">Facturatiegegevens</h3>
-                <table style="width: 100%;">
-                  <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_company_name || "-")}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>KvK:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_kvk_number || "-")}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>BTW:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_vat_number || "-")}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>Contactpersoon:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_name || "-")}</td></tr>
-                  <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_email || program.customer_email)}</td></tr>
-                  ${updatedProgram?.billing_reference ? `<tr><td style="padding: 4px 0;"><strong>Referentie:</strong></td><td>${sanitizeHtml(updatedProgram.billing_reference)}</td></tr>` : ""}
-                </table>
+                ${billingTableHtml}
               </div>
               
               <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
@@ -1073,7 +1120,14 @@ Deno.serve(async (req) => {
               
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
-          `,
+        `;
+
+        emailMessages.push({
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
+          Subject: `${subjectPrefix}${emailSubject}`,
+          HTMLPart: emailBody,
         });
       }
 
@@ -1086,12 +1140,31 @@ Deno.serve(async (req) => {
         minute: "2-digit"
       });
 
-      emailMessages.push({
-        From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-        To: [{ Email: program.customer_email, Name: program.customer_name }],
-        Subject: `${subjectPrefix}Boeking definitief bevestigd`,
-        HTMLPart: `
+      const signatureTableHtml = `
+        <table style="width: 100%; font-size: 14px;">
+          <tr><td style="padding: 4px 0;"><strong>Handtekening-ID:</strong></td><td>${signatureId}</td></tr>
+          <tr><td style="padding: 4px 0;"><strong>Ondertekend door:</strong></td><td>${sanitizeHtml(signatureName || program.customer_name)}</td></tr>
+          <tr><td style="padding: 4px 0;"><strong>Datum/tijd:</strong></td><td>${signatureDate}</td></tr>
+          <tr><td style="padding: 4px 0;"><strong>Voorwaarden versie:</strong></td><td>${termsVersion}</td></tr>
+        </table>
+      `;
+
+      const partnerTermsNote = providerItems.size > 0 
+        ? ` en de voorwaarden van ${providerItems.size} betrokken partner(s)` 
+        : "";
+
+      const bookingCustomerTemplate = await getRenderedTemplate(TemplateIds.BOOKING_CONFIRMED_CUSTOMER, {
+        customer_name: sanitizeHtml(program.customer_name),
+        selected_dates: selectedDates,
+        number_of_people: String(program.number_of_people),
+        confirmed_count: String(confirmedItems?.length || 0),
+        signature_details: signatureTableHtml,
+        partner_terms_note: partnerTermsNote,
+        portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
+      });
+
+      const bookingCustomerSubject = bookingCustomerTemplate?.subject || "Boeking definitief bevestigd";
+      const bookingCustomerBody = bookingCustomerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Je boeking is definitief!</h2>
             <p>Beste ${sanitizeHtml(program.customer_name)},</p>
@@ -1106,15 +1179,9 @@ Deno.serve(async (req) => {
 
             <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #2563eb;">
               <h3 style="margin-top: 0;">Digitale handtekening</h3>
-              <table style="width: 100%; font-size: 14px;">
-                <tr><td style="padding: 4px 0;"><strong>Handtekening-ID:</strong></td><td>${signatureId}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Ondertekend door:</strong></td><td>${sanitizeHtml(signatureName || program.customer_name)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Datum/tijd:</strong></td><td>${signatureDate}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Voorwaarden versie:</strong></td><td>${termsVersion}</td></tr>
-              </table>
+              ${signatureTableHtml}
               <p style="font-size: 12px; color: #666; margin-top: 12px; margin-bottom: 0;">
-                Dit document dient als bewijs van je digitale akkoord op de algemene voorwaarden van Bureau Vlieland
-                ${providerItems.size > 0 ? ` en de voorwaarden van ${providerItems.size} betrokken partner(s)` : ""}.
+                Dit document dient als bewijs van je digitale akkoord op de algemene voorwaarden van Bureau Vlieland${partnerTermsNote}.
               </p>
             </div>
             
@@ -1132,7 +1199,14 @@ Deno.serve(async (req) => {
             <p>Heb je vragen? Neem gerust contact met ons op.</p>
             <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
           </div>
-        `,
+      `;
+
+      emailMessages.push({
+        From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+        To: [{ Email: program.customer_email, Name: program.customer_name }],
+        Subject: `${subjectPrefix}${bookingCustomerSubject}`,
+        HTMLPart: bookingCustomerBody,
       });
     }
 
@@ -1205,12 +1279,26 @@ Deno.serve(async (req) => {
               .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
               .join(", ");
             
-            emailMessages.push({
-              From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-              ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-              To: [{ Email: getRecipientEmail(block.provider.email, origin), Name: block.provider.name }],
-              Subject: `${subjectPrefix}Nieuwe activiteit toegevoegd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
-              HTMLPart: `
+            const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+            const timeInfo = change.preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${change.preferredTime}</p>` : "";
+            const notesInfo = change.notes ? `<p><strong>Opmerking:</strong> ${sanitizeHtml(change.notes)}</p>` : "";
+
+            const template = await getRenderedTemplate(TemplateIds.ITEM_ADDED_PARTNER, {
+              partner_name: sanitizeHtml(block.provider.name),
+              customer_name: customerLabel,
+              block_name: sanitizeHtml(block.name),
+              selected_dates: selectedDates,
+              number_of_people: String(program.number_of_people),
+              preferred_time: timeInfo,
+              notes: notesInfo,
+              customer_full_name: sanitizeHtml(program.customer_name),
+              customer_company: sanitizeHtml(program.customer_company || "-"),
+              customer_email: sanitizeHtml(program.customer_email),
+              customer_phone: sanitizeHtml(program.customer_phone),
+            });
+
+            const emailSubject = template?.subject || `Nieuwe activiteit toegevoegd - ${customerLabel}`;
+            const emailBody = template?.body || `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                   <h2>Nieuwe activiteit toegevoegd</h2>
                   <p>Beste ${sanitizeHtml(block.provider.name)},</p>
@@ -1220,8 +1308,8 @@ Deno.serve(async (req) => {
                     <h3 style="margin-top: 0;">${sanitizeHtml(block.name)}</h3>
                     <p><strong>Datum:</strong> ${selectedDates}</p>
                     <p><strong>Personen:</strong> ${program.number_of_people}</p>
-                    ${change.preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${change.preferredTime}</p>` : ""}
-                    ${change.notes ? `<p><strong>Opmerking:</strong> ${sanitizeHtml(change.notes)}</p>` : ""}
+                    ${timeInfo}
+                    ${notesInfo}
                   </div>
                   
                   <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
@@ -1240,7 +1328,14 @@ Deno.serve(async (req) => {
                   
                   <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
                 </div>
-              `,
+            `;
+
+            emailMessages.push({
+              From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+              ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+              To: [{ Email: getRecipientEmail(block.provider.email, origin), Name: block.provider.name }],
+              Subject: `${subjectPrefix}${emailSubject}`,
+              HTMLPart: emailBody,
             });
           }
           
@@ -1301,7 +1396,7 @@ Deno.serve(async (req) => {
       }, {} as Record<string, { providerName: string; email: string; changes: PendingChange[] }>);
 
       // Send emails to affected providers
-      Object.values(changesByProvider).forEach((provider) => {
+      for (const provider of Object.values(changesByProvider)) {
         const changesHtml = provider.changes
           .map((change) => {
             let detail = `<strong>${sanitizeHtml(change.itemName)}</strong>: ${changeTypeLabels[change.type]}`;
@@ -1316,16 +1411,22 @@ Deno.serve(async (req) => {
           .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
           .join(", ");
 
-        // Provider emails (redirected in test mode)
-        emailMessages.push({
-          From: {
-            Email: SENDER_EMAIL,
-            Name: SENDER_NAME,
-          },
-          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.providerName }],
-          Subject: `${subjectPrefix}Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`,
-          HTMLPart: `
+        const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+
+        const template = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, {
+          partner_name: sanitizeHtml(provider.providerName),
+          customer_name: customerLabel,
+          changes_list: changesHtml,
+          customer_full_name: sanitizeHtml(program.customer_name),
+          customer_company: sanitizeHtml(program.customer_company || "-"),
+          customer_email: sanitizeHtml(program.customer_email),
+          customer_phone: sanitizeHtml(program.customer_phone),
+          selected_dates: selectedDates,
+          number_of_people: String(program.number_of_people),
+        });
+
+        const emailSubject = template?.subject || `Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`;
+        const emailBody = template?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Wijziging in programma-aanvraag</h2>
               <p>Beste ${sanitizeHtml(provider.providerName)},</p>
@@ -1354,9 +1455,16 @@ Deno.serve(async (req) => {
               
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
-          `,
+        `;
+
+        emailMessages.push({
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.providerName }],
+          Subject: `${subjectPrefix}${emailSubject}`,
+          HTMLPart: emailBody,
         });
-      });
+      }
 
       // Send customer confirmation email for item changes
       const customerChangesHtml = changes
@@ -1369,16 +1477,14 @@ Deno.serve(async (req) => {
         })
         .join("");
 
-      // Customer confirmation (always to real customer email)
-      emailMessages.push({
-        From: {
-          Email: SENDER_EMAIL,
-          Name: SENDER_NAME,
-        },
-        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-        To: [{ Email: program.customer_email, Name: program.customer_name }],
-        Subject: `${subjectPrefix}Wijzigingen in je programma bevestigd`,
-        HTMLPart: `
+      const itemChangesCustomerTemplate = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
+        customer_name: sanitizeHtml(program.customer_name),
+        changes_list: customerChangesHtml,
+        portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
+      });
+
+      const itemChangesCustomerSubject = itemChangesCustomerTemplate?.subject || "Wijzigingen in je programma bevestigd";
+      const itemChangesCustomerBody = itemChangesCustomerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Wijzigingen bevestigd</h2>
             <p>Beste ${sanitizeHtml(program.customer_name)},</p>
@@ -1398,7 +1504,14 @@ Deno.serve(async (req) => {
             
             <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
           </div>
-        `,
+      `;
+
+      emailMessages.push({
+        From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+        To: [{ Email: program.customer_email, Name: program.customer_name }],
+        Subject: `${subjectPrefix}${itemChangesCustomerSubject}`,
+        HTMLPart: itemChangesCustomerBody,
       });
     }
 
