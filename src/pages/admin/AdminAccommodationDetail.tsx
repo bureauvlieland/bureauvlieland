@@ -124,7 +124,8 @@ const TYPE_LABELS: Record<string, string> = {
 function generateStatusEmailBody(
   request: any,
   quotes: any[],
-  referenceNumber: string | null
+  referenceNumber: string | null,
+  portalUrl?: string
 ) {
   const total = quotes.length;
   const received = quotes.filter((q) => q.status === "submitted").length;
@@ -150,6 +151,10 @@ function generateStatusEmailBody(
     } else if (received > 0) {
       body += "Wij nemen binnenkort contact met u op om de offertes met u door te nemen.\n";
     }
+  }
+
+  if (portalUrl) {
+    body += `\nU kunt de details teruglezen op uw eigen pagina: ${portalUrl}\n`;
   }
 
   body += "\nMocht u vragen hebben, neem dan gerust contact met ons op.\n\nMet vriendelijke groet,\nBureau Vlieland";
@@ -178,7 +183,7 @@ export default function AdminAccommodationDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accommodation_requests")
-        .select("*")
+        .select("*, linked_program:program_requests!accommodation_requests_linked_program_id_fkey(customer_token)")
         .eq("id", id)
         .single();
 
@@ -428,8 +433,12 @@ export default function AdminAccommodationDetail() {
 
   const handleOpenStatusEmail = () => {
     if (!request) return;
+    const baseUrl = "https://bureauvlieland.nl";
+    const portalUrl = (request as any).linked_program?.customer_token
+      ? `${baseUrl}/mijn-programma/${(request as any).linked_program.customer_token}`
+      : `${baseUrl}/mijn-logies/${request.customer_token}`;
     const subject = `Update logiesaanvraag${request.reference_number ? ` ${request.reference_number}` : ""}`;
-    const body = generateStatusEmailBody(request, quotes || [], request.reference_number);
+    const body = generateStatusEmailBody(request, quotes || [], request.reference_number, portalUrl);
     setStatusEmailDefaults({ subject, body });
     setShowStatusEmailSheet(true);
   };
