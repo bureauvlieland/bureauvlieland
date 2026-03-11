@@ -208,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
       ` : ''}
       
       ${groupedBlocks.partner.length > 0 ? `
-      <h3>Door te zetten naar partners (email wordt automatisch verstuurd)</h3>
+      <h3>Door te zetten naar partners (handmatig via admin)</h3>
       <ul>${buildBlocksListHtml(groupedBlocks.partner)}</ul>
       ` : ''}
       
