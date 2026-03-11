@@ -433,8 +433,12 @@ export default function AdminAccommodationDetail() {
 
   const handleOpenStatusEmail = () => {
     if (!request) return;
+    const baseUrl = "https://bureauvlieland.nl";
+    const portalUrl = (request as any).linked_program?.customer_token
+      ? `${baseUrl}/mijn-programma/${(request as any).linked_program.customer_token}`
+      : `${baseUrl}/mijn-logies/${request.customer_token}`;
     const subject = `Update logiesaanvraag${request.reference_number ? ` ${request.reference_number}` : ""}`;
-    const body = generateStatusEmailBody(request, quotes || [], request.reference_number);
+    const body = generateStatusEmailBody(request, quotes || [], request.reference_number, portalUrl);
     setStatusEmailDefaults({ subject, body });
     setShowStatusEmailSheet(true);
   };
