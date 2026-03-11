@@ -2,7 +2,12 @@ import { addDays } from "date-fns";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import type { CartItemDetail } from "@/types/buildingBlock";
 
-const SKIP_BLOCK_IDS = new Set(["boot-enkel-heen", "boot-enkel-terug", "fiets-huur"]);
+const SKIP_BLOCK_IDS = new Set([
+  "boot-enkel-heen",
+  "boot-enkel-terug",
+  "boot-retour",
+  "fiets-huur",
+]);
 
 const FERRY_HEEN_ID = "boot-enkel-heen";
 const FERRY_TERUG_ID = "boot-enkel-terug";
