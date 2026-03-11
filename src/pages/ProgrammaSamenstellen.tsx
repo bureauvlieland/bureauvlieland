@@ -58,9 +58,10 @@ const ProgrammaSamenstellen = () => {
   // Auto-add default blocks when entering program phase
   useEffect(() => {
     if (phase === "program") {
-      DEFAULT_BLOCK_IDS.forEach((id) => {
-        if (!isInCart(id)) addToCart(id, 0);
-      });
+      const lastDay = Math.max(0, selectedDates.length - 1);
+      if (!isInCart(FERRY_HEEN_ID)) addToCart(FERRY_HEEN_ID, 0);
+      if (!isInCart(FERRY_TERUG_ID)) addToCart(FERRY_TERUG_ID, lastDay);
+      if (!isInCart(FIETS_ID)) addToCart(FIETS_ID, 0);
     }
   }, [phase]);
 
