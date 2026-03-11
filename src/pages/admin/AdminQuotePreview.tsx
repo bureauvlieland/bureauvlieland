@@ -541,7 +541,7 @@ const AdminQuotePreview = () => {
                             }
                             // Extract plain text intro from the HTML template
                             const dates = request.selected_dates?.length
-                              ? request.selected_dates.map(d => format(new Date(d), "d MMMM yyyy", { locale: nl })).join(" – ")
+                              ? request.selected_dates.map(d => format(new Date(d), "EEE d MMMM yyyy", { locale: nl })).join(" – ")
                               : "Nog niet bepaald";
                             const companyName = request.customer_company || "u";
                             const validUntilStr = format(validUntil, "d MMMM yyyy", { locale: nl });
