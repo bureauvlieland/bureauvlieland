@@ -165,6 +165,10 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
     linkLabel: "Bekijk logies",
   },
+  all_partners_responded: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/aanvragen",
+    linkLabel: "Bekijk project",
+  },
 };
 
 // ─── Email Log Config ─────────────────────────────────────────

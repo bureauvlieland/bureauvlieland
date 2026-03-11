@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.get-ferry-departures]
 verify_jwt = false
+
+[functions.backfill-all-responded-todos]
+verify_jwt = false

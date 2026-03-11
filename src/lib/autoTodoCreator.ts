@@ -11,7 +11,8 @@ export type AutoTodoType =
   | "quote_pending_customer"
   | "request_no_response"
   | "quote_expired_partner"
-  | "accommodation_quote_declined";
+  | "accommodation_quote_declined"
+  | "all_partners_responded";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -147,6 +148,9 @@ export const autoTodoTitles = {
 
   quote_expired_partner: (partnerName: string, customerName: string) =>
     `Logiesofferte ${partnerName} voor ${customerName} is verlopen`,
+
+  all_partners_responded: (referenceNumber: string, customerName: string) =>
+    `Alle partners hebben gereageerd op ${referenceNumber} (${customerName})`,
 };
 
 /**
@@ -211,5 +215,10 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Logies afgewezen",
     color: "text-red-700",
     bgColor: "bg-red-100",
+  },
+  all_partners_responded: {
+    label: "Alle reacties binnen",
+    color: "text-green-700",
+    bgColor: "bg-green-100",
   },
 };
