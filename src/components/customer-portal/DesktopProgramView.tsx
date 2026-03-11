@@ -468,6 +468,7 @@ export const DesktopProgramView = ({
                 program={program}
                 items={program.items}
                 numberOfPeople={program.number_of_people}
+                numberOfDays={selectedDates.length || 1}
                 termsAccepted={termsAccepted}
                 selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
                 onEditBilling={onOpenBilling}
