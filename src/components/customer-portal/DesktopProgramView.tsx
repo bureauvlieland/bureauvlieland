@@ -325,7 +325,7 @@ export const DesktopProgramView = ({
                           Bekijk offerte
                         </Button>
                       )}
-                      {!termsAccepted && (
+                      {!termsAccepted && isPublished && (
                         <Button
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
