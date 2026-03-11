@@ -48,6 +48,7 @@ interface ProgramBuilderViewProps {
   onAddDate: (date: Date) => boolean;
   onRemoveDate: (dateIndex: number) => void;
   onReplaceWithSuggestion: (items: CartItemDetail[]) => void;
+  onLoadTemplate: (template: ProgramTemplate) => void;
   eventType?: string;
   contactName?: string;
 }
