@@ -67,15 +67,7 @@ export const CompactBillingSection = ({
       {/* Billing details card */}
       <BillingDetailsCard program={program as any} onEdit={onEditBilling} />
 
-      {/* Invoice providers */}
-      <InvoiceProvidersCard
-        items={items}
-        selectedAccommodationQuote={selectedAccommodationQuote}
-        numberOfPeople={numberOfPeople}
-        invoicingMode={invoicingMode}
-      />
-
-      {/* Price summary */}
+      {/* Price summary / cost specification */}
       <PriceSummaryCard
         items={items}
         numberOfPeople={numberOfPeople}
