@@ -399,10 +399,10 @@ export const RequestFormModal = ({
               <div className="flex items-start gap-2">
                 <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-medium">Bureau Vlieland factureert:</span>
+                  <span className="font-medium">Activiteiten & catering:</span>
                   <ul className="text-muted-foreground mt-1">
                     {groupedBlocks.bureau.map((block) => renderBlockDetail(block))}
-                    <li>• Handling fee + coördinatie (€ {bureauFee})</li>
+                    {groupedBlocks.partner.map((block) => renderBlockDetail(block))}
                   </ul>
                 </div>
               </div>
