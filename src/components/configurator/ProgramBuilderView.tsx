@@ -32,6 +32,9 @@ import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
+import type { ProgramTemplate } from "@/types/programTemplate";
+import { usePublishedTemplates } from "@/hooks/useProgramTemplates";
+import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
