@@ -9,6 +9,7 @@ import { RequestFormModal } from "@/components/configurator/RequestFormModal";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import type { CartItemDetail } from "@/types/buildingBlock";
 import heroImage from "@/assets/beach-signs.jpg";
 
 type Phase = "basics" | "program";
@@ -16,6 +17,7 @@ type Phase = "basics" | "program";
 const FERRY_HEEN_ID = "boot-enkel-heen";
 const FERRY_TERUG_ID = "boot-enkel-terug";
 const FIETS_ID = "fiets-huur";
+const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_ID]);
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
@@ -98,6 +100,21 @@ const ProgrammaSamenstellen = () => {
     }
   }, [addToCart, toast]);
 
+  const handleErwinSuggestion = useCallback((suggestions: CartItemDetail[]) => {
+    // Remove all non-essential items, keep ferry + fiets
+    cartItems.forEach((item) => {
+      if (!KEEP_BLOCK_IDS.has(item.blockId)) {
+        removeFromCart(item.blockId);
+      }
+    });
+    // Add suggested items
+    suggestions.forEach((s) => {
+      if (!isInCart(s.blockId)) {
+        addToCart(s.blockId, s.dayIndex ?? 0);
+      }
+    });
+  }, [cartItems, removeFromCart, addToCart, isInCart]);
+
   const handleSubmit = () => {
     if (cartItems.length === 0) {
       toast({
@@ -162,6 +179,7 @@ const ProgrammaSamenstellen = () => {
                 onUpdateItem={updateItem}
                 onSubmit={handleSubmit}
                 onEditBasics={() => setPhase("basics")}
+                onReplaceWithSuggestion={handleErwinSuggestion}
                 eventType={contactData?.eventType}
                 contactName={contactData?.name}
               />

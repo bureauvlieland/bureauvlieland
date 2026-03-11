@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil } from "lucide-react";
+import { Plus, Send, Trash2, Users, Calendar, Clock, Pencil, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
+import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
@@ -23,6 +24,7 @@ interface ProgramBuilderViewProps {
   onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onSubmit: () => void;
   onEditBasics: () => void;
+  onReplaceWithSuggestion: (items: CartItemDetail[]) => void;
   eventType?: string;
   contactName?: string;
 }
@@ -36,11 +38,13 @@ export const ProgramBuilderView = ({
   onUpdateItem,
   onSubmit,
   onEditBasics,
+  onReplaceWithSuggestion,
   eventType,
   contactName,
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [activeDay, setActiveDay] = useState(0);
 
   const existingBlockIds = useMemo(
@@ -92,10 +96,16 @@ export const ProgramBuilderView = ({
             )}
           </div>
         </div>
-        <Button variant="ghost" size="sm" className="gap-1.5" onClick={onEditBasics}>
-          <Pencil className="h-3.5 w-3.5" />
-          Wijzig gegevens
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsErwinOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5" />
+            Erwin's voorstel
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={onEditBasics}>
+            <Pencil className="h-3.5 w-3.5" />
+            Wijzig gegevens
+          </Button>
+        </div>
       </div>
 
       {/* Day tabs + timeline */}
@@ -226,6 +236,16 @@ export const ProgramBuilderView = ({
         selectedDates={selectedDates}
         existingBlockIds={existingBlockIds}
         onAddActivity={handleAddActivity}
+      />
+
+      {/* AI Erwin Dialog */}
+      <AiErwinDialog
+        open={isErwinOpen}
+        onOpenChange={setIsErwinOpen}
+        numberOfPeople={numberOfPeople}
+        selectedDates={selectedDates}
+        eventType={eventType}
+        onSuggestionReady={onReplaceWithSuggestion}
       />
     </div>
   );
