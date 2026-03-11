@@ -544,7 +544,7 @@ const AdminQuotePreview = () => {
                               ? request.selected_dates.map(d => format(new Date(d), "EEE d MMMM yyyy", { locale: nl })).join(" – ")
                               : "Nog niet bepaald";
                             const companyName = request.customer_company || "u";
-                            const validUntilStr = format(validUntil, "d MMMM yyyy", { locale: nl });
+                            const validUntilStr = format(validUntil, "EEE d MMMM yyyy", { locale: nl });
 
                             // Build a plain-text version from the template content
                             let plainText = `Beste ${request.customer_name},\n\nHierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland. Wij hebben dit programma speciaal voor ${companyName} samengesteld.\n\nProgrammadetails:\n- Data: ${dates}\n- Aantal personen: ${request.number_of_people}\n- Geldig tot: ${validUntilStr}\n\nU kunt het voorstel bekijken en akkoord geven via de knop in de e-mail.\n\nHeeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.\n\nMet vriendelijke groet,\nErwin Soolsma\nBureau Vlieland`;
