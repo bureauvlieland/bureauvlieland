@@ -48,8 +48,7 @@ const ProgrammaSamenstellen = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDraftDialog, setShowDraftDialog] = useState(false);
 
-  // Contact info collected in basics phase
-  const [contactData, setContactData] = useState<BasicsFormData | null>(null);
+  // Contact info is now collected in RequestFormModal at submission time
 
   // Check for existing draft on mount
   useEffect(() => {
