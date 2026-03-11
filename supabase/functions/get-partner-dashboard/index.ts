@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
       `)
       .eq("provider_id", partner.id)
       .neq("block_type", "self_arranged")
+      .or("skip_partner_notification.is.null,skip_partner_notification.eq.false")
       .order("created_at", { ascending: false });
 
     if (itemsError) {
