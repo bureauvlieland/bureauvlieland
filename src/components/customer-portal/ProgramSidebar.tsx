@@ -25,6 +25,7 @@ interface ProgramSidebarProps {
   onCancel: () => void;
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  numberOfDays?: number;
   selectedAccommodationQuote?: AccommodationQuote | null;
   accommodation?: AccommodationRequest | null;
   isMultiDay?: boolean;
@@ -44,6 +45,7 @@ export const ProgramSidebar = ({
   onCancel,
   items,
   numberOfPeople,
+  numberOfDays,
   selectedAccommodationQuote,
   accommodation,
   isMultiDay = false,
@@ -107,6 +109,7 @@ export const ProgramSidebar = ({
         <PriceSummaryCard
           items={items}
           numberOfPeople={numberOfPeople}
+          numberOfDays={numberOfDays}
           variant="compact"
           termsAccepted={termsAccepted}
           selectedAccommodationQuote={selectedAccommodationQuote}

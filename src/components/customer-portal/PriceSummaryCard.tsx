@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  numberOfDays?: number;
   className?: string;
   variant?: "default" | "compact";
   termsAccepted?: boolean;
@@ -26,6 +27,7 @@ const calcVatBreakdown = (amountInclVat: number, vatRate: number = 21) => ({
 export const PriceSummaryCard = ({
   items,
   numberOfPeople,
+  numberOfDays = 1,
   className,
   variant = "default",
   termsAccepted = false,
@@ -89,6 +91,10 @@ export const PriceSummaryCard = ({
     const centralSurcharge = isBureauCentral ? appSettings.bureau_central_surcharge_pp * numberOfPeople : 0;
     const standardVatRate = getVatRate("standard");
 
+    // Tourist tax & nature contribution (0% VAT — levies, not services)
+    const touristTax = appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
+    const natureContribution = appSettings.nature_contribution_pp * numberOfPeople;
+
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
     const accommodationVatRate = selectedAccommodationQuote?.vat_rate || 9;
@@ -103,14 +109,21 @@ export const PriceSummaryCard = ({
       allVatLines[rate].vatAmount += bd.vatAmount;
     };
 
+    // 0% VAT items (levies) — add directly as excl amounts
+    const addZeroVat = (amount: number) => {
+      if (!allVatLines[0]) allVatLines[0] = { exclVat: 0, vatAmount: 0 };
+      allVatLines[0].exclVat += amount;
+    };
+
     confirmedLines.forEach(l => addVat(l.price!, getItemVatRate(l.item)));
     addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
+    addZeroVat(touristTax + natureContribution);
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
     const confirmedItemsTotal = confirmedLines.reduce((s, l) => s + (l.price || 0), 0);
-    const grandTotalInclVat = confirmedItemsTotal + coordinationFee + centralSurcharge + accommodationTotal;
+    const grandTotalInclVat = confirmedItemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
 
     return {
       orderLines,
@@ -120,6 +133,8 @@ export const PriceSummaryCard = ({
       coordinationFee,
       centralSurcharge,
       standardVatRate,
+      touristTax,
+      natureContribution,
       accommodationTotal,
       accommodationVatRate,
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
@@ -131,7 +146,7 @@ export const PriceSummaryCard = ({
       grandTotalInclVat,
       hasConfirmedPrices: confirmedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
   // Don't show if there are no confirmed prices yet and no items at all
   if (!summary.hasConfirmedPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
@@ -158,6 +173,14 @@ export const PriceSummaryCard = ({
               <span>€{formatPrice(summary.orderLines.filter(l => l.hasPrice).reduce((s, l) => s + (l.price || 0), 0))}</span>
             </div>
           )}
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Toeristenbelasting</span>
+            <span>€{formatPrice(summary.touristTax)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Natuurbijdrage</span>
+            <span>€{formatPrice(summary.natureContribution)}</span>
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Coördinatiefee</span>
             <span>€{formatPrice(summary.coordinationFee)}</span>
@@ -241,6 +264,22 @@ export const PriceSummaryCard = ({
               </div>
             );
           })}
+
+          {/* Tourist tax line */}
+          <div className="py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
+              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.touristTax)}</span>
+            </div>
+          </div>
+
+          {/* Nature contribution line */}
+          <div className="py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Natuurbijdrage Staatsbosbeheer ({numberOfPeople} pers.)</span>
+              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.natureContribution)}</span>
+            </div>
+          </div>
 
           {/* Coordination fee line */}
           <div className="py-2">

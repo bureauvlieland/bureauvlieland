@@ -20,6 +20,7 @@ interface CompactBillingSectionProps {
   };
   items: ProgramRequestItem[];
   numberOfPeople: number;
+  numberOfDays?: number;
   termsAccepted: boolean;
   selectedAccommodationQuote?: AccommodationQuote;
   onEditBilling: () => void;
@@ -30,6 +31,7 @@ export const CompactBillingSection = ({
   program,
   items,
   numberOfPeople,
+  numberOfDays,
   termsAccepted,
   selectedAccommodationQuote,
   onEditBilling,
@@ -71,6 +73,7 @@ export const CompactBillingSection = ({
       <PriceSummaryCard
         items={items}
         numberOfPeople={numberOfPeople}
+        numberOfDays={numberOfDays}
         termsAccepted={termsAccepted}
         selectedAccommodationQuote={selectedAccommodationQuote}
         invoicingMode={invoicingMode}

@@ -32,6 +32,8 @@ export interface AppSettingsMap {
   reminder_email_enabled: boolean;
   portal_beta_banner_enabled: boolean;
   bureau_central_surcharge_pp: number;
+  tourist_tax_pp_per_day: number;
+  nature_contribution_pp: number;
 }
 
 // Setting categories for grouping in admin UI
