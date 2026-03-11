@@ -556,7 +556,7 @@ export default function AdminAccommodationDetail() {
               <CardContent className="space-y-4">
                 <div className="grid sm:grid-cols-3 gap-3">
                   <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Periode</p>
                       <p className="font-medium text-sm">
