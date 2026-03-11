@@ -34,7 +34,7 @@ import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlo
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { categoryLabels, type CartItemDetail } from "@/types/buildingBlock";
 import type { ProgramTemplate } from "@/types/programTemplate";
-import { usePublishedTemplates } from "@/hooks/useProgramTemplates";
+import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
@@ -112,7 +112,7 @@ export const ProgramBuilderView = ({
   contactName,
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
-  const { data: templates = [] } = usePublishedTemplates();
+  const { data: templates = [] } = useTemplatesByDuration(selectedDates.length);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
