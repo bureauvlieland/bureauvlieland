@@ -108,6 +108,7 @@ export const ProgramSidebar = ({
         <PriceSummaryCard
           items={items}
           numberOfPeople={numberOfPeople}
+          numberOfDays={numberOfDays}
           variant="compact"
           termsAccepted={termsAccepted}
           selectedAccommodationQuote={selectedAccommodationQuote}

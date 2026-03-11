@@ -469,7 +469,8 @@ export const MobileProgramView = ({
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
           <PriceSummaryCard 
             items={program.items} 
-            numberOfPeople={program.number_of_people} 
+            numberOfPeople={program.number_of_people}
+            numberOfDays={Array.isArray(program.selected_dates) ? program.selected_dates.length : 1}
             termsAccepted={termsAccepted}
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
             invoicingMode={invoicingMode}
