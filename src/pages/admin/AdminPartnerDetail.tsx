@@ -1043,7 +1043,7 @@ const AdminPartnerDetail = () => {
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
-                                    {format(new Date(req.arrival_date), "d MMM", { locale: nl })} - {format(new Date(req.departure_date), "d MMM", { locale: nl })}
+                                    {format(new Date(req.arrival_date), "EEE d MMM", { locale: nl })} - {format(new Date(req.departure_date), "EEE d MMM", { locale: nl })}
                                   </span>
                                 </div>
                               </TableCell>

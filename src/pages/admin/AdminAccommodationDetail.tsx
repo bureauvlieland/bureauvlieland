@@ -932,7 +932,7 @@ export default function AdminAccommodationDetail() {
                     <div>
                       <p className="font-medium">Aanvraag ontvangen</p>
                       <p className="text-muted-foreground">
-                        {format(new Date(request.created_at), "d MMM yyyy HH:mm", { locale: nl })}
+                        {format(new Date(request.created_at), "EEE d MMM yyyy HH:mm", { locale: nl })}
                       </p>
                     </div>
                   </div>

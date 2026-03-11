@@ -534,7 +534,7 @@ const AdminProgramNewContent = () => {
                   {formData.programType === "quote" && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Geldig tot:</span>
-                      <span>{format(formData.quoteValidUntil, "d MMMM yyyy", { locale: nl })}</span>
+                      <span>{format(formData.quoteValidUntil, "EEE d MMMM yyyy", { locale: nl })}</span>
                     </div>
                   )}
                 </div>

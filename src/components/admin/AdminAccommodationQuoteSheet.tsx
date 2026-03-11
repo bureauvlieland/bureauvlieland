@@ -363,7 +363,7 @@ export function AdminAccommodationQuoteSheet({
                     <div>
                       <p className="text-muted-foreground">Datum</p>
                       <p className="font-medium">
-                        {format(new Date(quote.invoiced_date), "d MMM yyyy", { locale: nl })}
+                        {format(new Date(quote.invoiced_date), "EEE d MMM yyyy", { locale: nl })}
                       </p>
                     </div>
                   )}

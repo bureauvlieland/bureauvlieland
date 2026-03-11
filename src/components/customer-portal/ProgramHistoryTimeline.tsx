@@ -229,7 +229,7 @@ const TimelineItem = ({ item, isFirst = false }: TimelineItemProps) => {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="font-medium">{label}</span>
           <span className="text-muted-foreground">
-            {format(date, "d MMM yyyy, HH:mm", { locale: nl })}
+            {format(date, "EEE d MMM yyyy, HH:mm", { locale: nl })}
           </span>
           {isFirst && (
             <Badge variant="outline" className="text-xs">Nieuwste</Badge>
