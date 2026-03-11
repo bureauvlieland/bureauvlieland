@@ -1138,7 +1138,7 @@ const AdminRequestDetail = () => {
                                     <div className="flex items-center gap-2">
                                       {statusIcons[item.status]}
                                       <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                        {request?.invoicing_mode === "bureau_central" && item.status === "pending"
+                                        {request?.invoicing_mode === "bureau_central" && item.status === "pending" && item.skip_partner_notification
                                           ? "Nog niet verstuurd"
                                           : statusInfo.label}
                                       </Badge>
