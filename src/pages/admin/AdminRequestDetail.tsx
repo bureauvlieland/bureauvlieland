@@ -210,10 +210,62 @@ const AdminRequestDetail = () => {
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
+  const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+
+  const generateProgramStatusEmailBody = (): { subject: string; body: string } => {
+    if (!request || !items) return { subject: "", body: "" };
+    
+    const sentItems = items.filter(i => 
+      i.block_type !== "self_arranged" && 
+      (i.skip_partner_notification === false || i.skip_partner_notification === null)
+    );
+    
+    const confirmed = sentItems.filter(i => i.status === "confirmed");
+    const unavailable = sentItems.filter(i => i.status === "unavailable");
+    const alternative = sentItems.filter(i => i.status === "alternative");
+    const pending = sentItems.filter(i => i.status === "pending");
+    
+    const dates = (request.selected_dates as string[]) || [];
+    const dateStr = dates.length > 0 
+      ? dates.map(d => format(new Date(d), "d MMMM yyyy", { locale: nl })).join(" t/m ")
+      : "nog niet bepaald";
+    
+    let body = `Beste ${request.customer_name},\n\n`;
+    body += `Hierbij een update over de stand van zaken van uw programma${request.reference_number ? ` (${request.reference_number})` : ""}.\n\n`;
+    body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
+    body += `Samenvatting:\n`;
+    body += `✅ ${confirmed.length} bevestigd\n`;
+    if (alternative.length > 0) body += `🔄 ${alternative.length} alternatief voorgesteld\n`;
+    if (unavailable.length > 0) body += `❌ ${unavailable.length} niet beschikbaar\n`;
+    if (pending.length > 0) body += `⏳ ${pending.length} in afwachting\n`;
+    body += `\n`;
+    
+    // Group by category
+    const categories = [...new Set(sentItems.map(i => i.block_category))];
+    for (const cat of categories) {
+      const catItems = sentItems.filter(i => i.block_category === cat);
+      body += `── ${cat} ──\n`;
+      for (const item of catItems) {
+        const statusLabel = item.status === "confirmed" ? "✅ Bevestigd" 
+          : item.status === "unavailable" ? "❌ Niet beschikbaar"
+          : item.status === "alternative" ? "🔄 Alternatief"
+          : "⏳ In afwachting";
+        body += `• ${item.block_name} (${item.provider_name}) — ${statusLabel}\n`;
+      }
+      body += `\n`;
+    }
+    
+    body += `Bekijk uw volledige programma via: https://bureauvlieland.nl/mijn-programma/${request.customer_token}\n\n`;
+    body += `Heeft u vragen? Neem gerust contact met ons op.\n`;
+    
+    const subject = `Status update programma${request.reference_number ? ` ${request.reference_number}` : ""} — Bureau Vlieland`;
+    
+    return { subject, body };
+  };
 
   useEffect(() => {
     if (!id) return;
