@@ -179,6 +179,7 @@ const ProgrammaSamenstellen = () => {
                 onUpdateItem={updateItem}
                 onSubmit={handleSubmit}
                 onEditBasics={() => setPhase("basics")}
+                onReplaceWithSuggestion={handleErwinSuggestion}
                 eventType={contactData?.eventType}
                 contactName={contactData?.name}
               />
