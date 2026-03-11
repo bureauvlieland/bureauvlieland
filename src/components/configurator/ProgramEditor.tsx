@@ -130,36 +130,8 @@ export const ProgramEditor = ({
   const blocks = cartItems
     .map((item) => getBlockById(allBlocks, item.blockId))
     .filter(Boolean) as BuildingBlock[];
-  const bureauFee = calculateBureauFee(numberOfPeople);
   const groupedBlocks = groupBlocksByType(blocks);
 
-  const getCartItem = (blockId: string): CartItemDetail | undefined => {
-    return cartItems.find((item) => item.blockId === blockId);
-  };
-
-  const getBlock = (blockId: string): BuildingBlock | undefined => {
-    return blocks.find((block) => block.id === blockId);
-  };
-
-  const calculateTotal = () => {
-    let total = 0;
-    blocks.forEach((block) => {
-      if (block.block_type === "self_arranged") return;
-      
-      // Use the new price fields
-      if (block.price_adult !== null) {
-        const price = block.price_adult;
-        if (block.price_type === "per_person") {
-          total += price * numberOfPeople;
-        } else {
-          total += price;
-        }
-      }
-    });
-    return total;
-  };
-
-  const indicativeTotal = calculateTotal();
   const hasBillableItems = groupedBlocks.bureau.length > 0 || groupedBlocks.partner.length > 0;
 
   const itemCountPerDay = useMemo(() => {
