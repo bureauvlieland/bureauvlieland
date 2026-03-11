@@ -280,9 +280,14 @@ export const ProgramBuilderView = ({
                               <div className="flex items-start justify-between gap-2">
                                 <div>
                                   <h4 className="font-semibold text-sm md:text-base leading-tight">{block.name}</h4>
-                                  {item.preferredTime && (
+                                  {item.preferredTime && isFerryBlock && (
                                     <p className="text-primary text-xs font-medium mt-0.5">
                                       Gekozen afvaart: {item.preferredTime}
+                                    </p>
+                                  )}
+                                  {item.preferredTime && !isFerryBlock && (
+                                    <p className="text-muted-foreground text-xs mt-0.5">
+                                      Gewenste tijd: {item.preferredTime}
                                     </p>
                                   )}
                                   {!item.preferredTime && block.short_description && (
