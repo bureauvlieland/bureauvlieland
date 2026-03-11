@@ -279,13 +279,6 @@ export const RequestFormModal = ({
     return (
       <li key={block.id} className="py-1">
         <span className="font-medium">{block.name}</span>
-        <span className="text-muted-foreground"> → {block.provider?.name || "Bureau Vlieland"}</span>
-        {cartItem?.preferredTime && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <Clock className="h-3 w-3" />
-            Gewenste tijd: {cartItem.preferredTime}
-          </span>
-        )}
         {cartItem?.notes && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
             <MessageSquare className="h-3 w-3" />
