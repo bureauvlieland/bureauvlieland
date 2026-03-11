@@ -86,6 +86,7 @@ import { calculateBureauFee } from "@/types/buildingBlock";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
+import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
