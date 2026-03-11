@@ -470,7 +470,7 @@ export const MobileProgramView = ({
           <PriceSummaryCard 
             items={program.items} 
             numberOfPeople={program.number_of_people}
-            numberOfDays={Array.isArray(program.selected_dates) ? program.selected_dates.length : 1}
+            numberOfDays={selectedDates.length || 1}
             termsAccepted={termsAccepted}
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
             invoicingMode={invoicingMode}
