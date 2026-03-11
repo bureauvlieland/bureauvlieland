@@ -264,6 +264,7 @@ export const ProgramBuilderView = ({
                     const image = getBlockImage(block);
                     const hasImage = image !== "/placeholder.svg";
                     const isFerryBlock = FERRY_BLOCK_IDS.includes(item.blockId);
+                    const isBikeBlock = item.blockId === "fiets-huur";
                     const ferryExtras = isFerryBlock ? (block.price_extras as { portFrom?: string; portTo?: string } | null) : null;
 
                     return (
