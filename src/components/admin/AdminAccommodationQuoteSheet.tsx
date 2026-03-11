@@ -301,7 +301,7 @@ export function AdminAccommodationQuoteSheet({
             {quote.forwarded_at && (
               <div className="flex items-center gap-1.5 text-green-600">
                 <Check className="h-3.5 w-3.5" />
-                Doorgestuurd: {format(new Date(quote.forwarded_at), "d MMM yyyy", { locale: nl })}
+                Doorgestuurd: {format(new Date(quote.forwarded_at), "EEE d MMM yyyy", { locale: nl })}
               </div>
             )}
           </div>
