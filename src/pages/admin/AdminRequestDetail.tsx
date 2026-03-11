@@ -761,7 +761,7 @@ const AdminRequestDetail = () => {
                       <div>
                         {(request.selected_dates as string[]).map((date, idx) => (
                           <div key={idx}>
-                            Dag {idx + 1}: {format(new Date(date), "d MMMM yyyy", { locale: nl })}
+                            Dag {idx + 1}: {format(new Date(date), "EEE d MMMM yyyy", { locale: nl })}
                           </div>
                         ))}
                       </div>

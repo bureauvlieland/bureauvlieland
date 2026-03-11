@@ -502,7 +502,7 @@ export const CustomerProgramItem = ({
                       <SelectContent>
                         {selectedDates.map((date, idx) => (
                           <SelectItem key={idx} value={String(idx)}>
-                            Dag {idx + 1} • {format(date, "d MMM", { locale: nl })}
+                            Dag {idx + 1} • {format(date, "EEE d MMM", { locale: nl })}
                           </SelectItem>
                         ))}
                       </SelectContent>

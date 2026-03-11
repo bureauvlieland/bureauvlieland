@@ -215,7 +215,7 @@ export const ProgramOverviewCard = ({
                 ) : daysUntilExpiry === 1 ? (
                   <>Dit voorstel is nog 1 dag geldig (t/m {format(validUntilDate, "EEE d MMMM", { locale: nl })}).</>
                 ) : (
-                  <>Dit voorstel is geldig t/m {format(validUntilDate, "d MMMM yyyy", { locale: nl })} ({daysUntilExpiry} dagen).</>
+                  <>Dit voorstel is geldig t/m {format(validUntilDate, "EEE d MMMM yyyy", { locale: nl })} ({daysUntilExpiry} dagen).</>
                 )}
               </p>
             </div>

@@ -99,7 +99,7 @@ export const AcceptQuoteProposalCard = ({
               {validUntil && (
                 <Badge variant="outline" className="text-sm flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Geldig tot {format(validUntil, "d MMM", { locale: nl })}
+                  Geldig tot {format(validUntil, "EEE d MMM", { locale: nl })}
                 </Badge>
               )}
             </div>

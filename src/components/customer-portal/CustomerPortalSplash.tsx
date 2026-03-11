@@ -125,10 +125,10 @@ export const CustomerPortalSplash = ({
   const dateRange =
     selectedDates.length > 0
       ? selectedDates.length === 1
-        ? format(selectedDates[0], "d MMMM yyyy", { locale: nl })
-        : `${format(selectedDates[0], "d MMM", { locale: nl })} – ${format(
+        ? format(selectedDates[0], "EEE d MMMM yyyy", { locale: nl })
+        : `${format(selectedDates[0], "EEE d MMM", { locale: nl })} – ${format(
             selectedDates[selectedDates.length - 1],
-            "d MMM yyyy",
+            "EEE d MMM yyyy",
             { locale: nl }
           )}`
       : null;
