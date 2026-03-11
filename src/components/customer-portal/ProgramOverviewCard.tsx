@@ -113,7 +113,7 @@ export const ProgramOverviewCard = ({
     }
     const firstDate = selectedDates[0];
     const lastDate = selectedDates[selectedDates.length - 1];
-    return `${format(firstDate, "d", { locale: nl })} – ${format(lastDate, "d MMMM yyyy", { locale: nl })}`;
+    return `${format(firstDate, "EEE d", { locale: nl })} – ${format(lastDate, "EEE d MMMM yyyy", { locale: nl })}`;
   };
 
   const getStatusBadgeVariant = (variant: "success" | "info" | "warning" | "muted" | "destructive") => {
