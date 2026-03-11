@@ -426,7 +426,7 @@ const AdminProgramNewContent = () => {
                         .sort((a, b) => a.getTime() - b.getTime())
                         .map((date) => (
                           <Badge key={date.toISOString()} variant="secondary" className="text-xs">
-                            {format(date, "d MMM", { locale: nl })}
+                            {format(date, "EEE d MMM", { locale: nl })}
                           </Badge>
                         ))}
                     </div>
