@@ -2,8 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Clock, Users, Info, MapPin } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
-import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
-import { getBlockImage, getProviderName, isSelfArranged } from "@/lib/buildingBlockUtils";
+import { getBlockImage, isSelfArranged } from "@/lib/buildingBlockUtils";
 
 interface BuildingBlockListItemProps {
   block: BuildingBlock;
