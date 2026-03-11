@@ -9,6 +9,13 @@ import type { ProgramTemplate } from "@/types/programTemplate";
 
 const MAX_DAYS = 7;
 
+const SKIP_BLOCK_IDS = new Set([
+  "boot-enkel-heen",
+  "boot-enkel-terug",
+  "boot-retour",
+  "fiets-huur",
+]);
+
 interface CartContextType {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
