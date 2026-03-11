@@ -1,63 +1,45 @@
+## Plan: Operationeel Commandocentrum
 
+### Status: ✅ Geïmplementeerd
 
-# Rederij Doeksen dienstregeling API integreren
+### Wat is gebouwd
 
-## Wat we hebben
+1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
 
-- **API URL**: `https://api.rederij-doeksen.nl/`
-- **Auth**: `Authorization: ApiKey {key}` header
-- **API key**: `48-GeprakteGiraffeLiflaf-met-KriebelendeKipSchijven`
-- **Relevante endpoints**:
-  - `GET /departures/port/{from}/{to}` — afvaarten vandaag
-  - `GET /departures/{from}/{to}/availability?date=` — afvaarten + beschikbaarheid op datum
-  - Port codes: **H** = Harlingen, **V** = Vlieland, **T** = Terschelling
-- **Response schema** (`TimetableDepartureWithAvailability`): departureTime, arrivalTime, vehicleName, portNameFrom, portNameTo, remainingPersonCapacity, isBookable, via (overstap)
+2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
 
-## Plan
+3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
 
-### Stap 1: API key opslaan als secret
+4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
 
-De Doeksen API key moet veilig worden opgeslagen als backend secret (`DOEKSEN_API_KEY`), niet in de codebase.
+5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
 
-### Stap 2: Edge function `get-ferry-departures`
+6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
 
-Proxy-functie die de Doeksen API aanroept zodat de API key niet in de browser terechtkomt.
+7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
 
-- **Input**: `portFrom`, `portTo`, `date` (optioneel, default vandaag)
-- **Output**: array van afvaarten met vertrektijd, aankomsttijd, schip, beschikbaarheid
-- Endpoint: `GET /departures/{from}/{to}/availability?date={date}`
-- CORS headers voor browser-aanroep
-- `verify_jwt = false` (publieke data)
+8. **Auto-resolve in edge functions**:
+   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
+   - `select-accommodation-quote`: resolve `quote_pending_customer`
+   - `accept-quote-proposal`: resolve `terms_reminder`
+   - `notify-accommodation-quote`: resolve `quote_pending_partner`
 
-### Stap 3: React hook `useFerryDepartures`
+---
 
-Hook die de edge function aanroept via `supabase.functions.invoke()`.
+## Plan: CRM en Partners samenvoegen
 
-```typescript
-useFerryDepartures({ from: "H", to: "V", date: "2025-09-15" })
-// Returns: { data: Departure[], isLoading, error }
-```
+### Status: ✅ Geïmplementeerd
 
-### Stap 4: `FerryScheduleCard` component
+CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
 
-Een kaart die de eerstvolgende afvaarten toont voor Harlingen → Vlieland en Vlieland → Harlingen. Toont:
-- Vertrektijd en aankomsttijd
-- Scheepsnaam
-- Beschikbare plekken (als de availability endpoint werkt)
-- Link naar Rederij Doeksen voor boeken
+---
 
-Wordt getoond op:
-- Klantportaal (programma pagina)
-- Configurator (programma builder)
-- Eventueel als vervanging/aanvulling van de huidige `BootticketBanner`
+## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
 
-### Bestanden
+### Status: ✅ Geïmplementeerd
 
-| Actie | Bestand |
-|---|---|
-| Secret | `DOEKSEN_API_KEY` opslaan |
-| Nieuw | `supabase/functions/get-ferry-departures/index.ts` |
-| Nieuw | `src/hooks/useFerryDepartures.ts` |
-| Nieuw | `src/components/FerryScheduleCard.tsx` |
-| Wijzig | `supabase/config.toml` — verify_jwt = false voor nieuwe functie |
+1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
 
+2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+
+3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
