@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, ChevronLeft, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
+import fallbackImage from "@/assets/vlieland-beach.jpg";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 import type { ProgramTemplate } from "@/types/programTemplate";
 
