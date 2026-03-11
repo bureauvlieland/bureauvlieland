@@ -58,6 +58,7 @@ export const ProgramSidebar = ({
   // Determine accommodation status
   const hasAccommodation = !!selectedAccommodationQuote;
   const accommodationStatus: "none" | "requested" | "selected" = selectedAccommodationQuote ? "selected" : accommodation ? "requested" : "none";
+  const { settings: appSettings } = useAppSettings();
 
   // Format currency
   const formatCurrency = (amount: number) => {
