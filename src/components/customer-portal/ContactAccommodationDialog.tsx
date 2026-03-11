@@ -95,9 +95,7 @@ export const ContactAccommodationDialog = ({
             </div>
             <DialogTitle>Bericht verstuurd</DialogTitle>
             <DialogDescription>
-              {isBureauCentral
-                ? "Uw bericht is verzonden naar Bureau Vlieland. Zij nemen contact op met de accommodatie en koppelen het antwoord aan u terug."
-                : `Uw bericht is verzonden naar ${accommodationName}. Zij zullen rechtstreeks per e-mail reageren.`}
+              Uw bericht is verzonden naar Bureau Vlieland. Zij nemen contact op met de accommodatie en koppelen het antwoord aan u terug.
             </DialogDescription>
             <Button onClick={handleClose} className="mt-2">Sluiten</Button>
           </div>
