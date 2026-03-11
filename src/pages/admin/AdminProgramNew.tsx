@@ -473,7 +473,7 @@ const AdminProgramNewContent = () => {
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formData.quoteValidUntil
-                          ? format(formData.quoteValidUntil, "d MMMM yyyy", { locale: nl })
+                          ? format(formData.quoteValidUntil, "EEE d MMMM yyyy", { locale: nl })
                           : "Selecteer datum"}
                       </Button>
                     </PopoverTrigger>

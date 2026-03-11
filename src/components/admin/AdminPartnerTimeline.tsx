@@ -298,7 +298,7 @@ export function AdminPartnerTimeline({ partnerId }: Props) {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-slate-400">
-                            {format(new Date(event.date), "d MMM HH:mm", { locale: nl })}
+                            {format(new Date(event.date), "EEE d MMM HH:mm", { locale: nl })}
                           </span>
                           {event.link && (
                             <Button variant="ghost" size="icon" className="h-6 w-6" asChild>

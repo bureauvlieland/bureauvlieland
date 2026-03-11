@@ -176,7 +176,7 @@ const AdminInvoicing = () => {
   const RequestCard = ({ request }: { request: ProgramRequestWithItems }) => {
     const totals = calculateInvoiceTotals(request);
     const dates = request.selected_dates
-      .map((d) => format(new Date(d), "d MMM", { locale: nl }))
+      .map((d) => format(new Date(d), "EEE d MMM", { locale: nl }))
       .join(", ");
 
     return (

@@ -162,9 +162,9 @@ export function AdminUnavailabilityWidget() {
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{period.partner_name}</p>
                         <p className="text-xs text-slate-500">
-                          {format(new Date(period.start_date), "d MMM", { locale: nl })}
+                          {format(new Date(period.start_date), "EEE d MMM", { locale: nl })}
                           {" – "}
-                          {format(new Date(period.end_date), "d MMM", { locale: nl })}
+                          {format(new Date(period.end_date), "EEE d MMM", { locale: nl })}
                         </p>
                       </div>
                     </div>

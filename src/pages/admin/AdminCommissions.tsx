@@ -314,7 +314,7 @@ export default function AdminCommissions() {
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    return `${format(start, "d", { locale: nl })}-${format(end, "d MMM yyyy", { locale: nl })}`;
+    return `${format(start, "EEE d", { locale: nl })}-${format(end, "EEE d MMM yyyy", { locale: nl })}`;
   };
 
   const getProjectDate = (item: CommissionItem): string => {

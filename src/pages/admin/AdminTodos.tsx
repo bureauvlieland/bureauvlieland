@@ -1198,7 +1198,7 @@ const ActivityLogTab = () => {
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          <div>{format(new Date(log.created_at), "d MMM yyyy", { locale: nl })}</div>
+                          <div>{format(new Date(log.created_at), "EEE d MMM yyyy", { locale: nl })}</div>
                           <div className="text-muted-foreground">{format(new Date(log.created_at), "HH:mm:ss")}</div>
                         </TableCell>
                         <TableCell><Badge className={actionInfo.color} variant="secondary">{actionInfo.label}</Badge></TableCell>
