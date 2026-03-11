@@ -391,7 +391,7 @@ export const RequestFormModal = ({
 
         {/* Summary grouped by invoice type */}
         <div className="bg-muted/50 rounded-lg p-4 mb-4">
-          <h4 className="font-medium mb-3">Uw aanvraag wordt verstuurd naar:</h4>
+          <h4 className="font-medium mb-3">Uw geselecteerde onderdelen:</h4>
           
           <div className="space-y-3 text-sm">
             {/* Bureau Vlieland */}
