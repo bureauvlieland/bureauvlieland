@@ -174,7 +174,7 @@ export const PartnerItemCard = ({
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>
               {activityDate
-                ? format(parseISO(activityDate), "EEEE d MMMM yyyy", { locale: nl })
+                ? format(parseISO(activityDate), "EEE d MMMM yyyy", { locale: nl })
                 : `Dag ${item.day_index + 1}`}
             </span>
           </div>
