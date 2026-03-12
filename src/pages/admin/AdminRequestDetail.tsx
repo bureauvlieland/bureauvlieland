@@ -604,6 +604,13 @@ const AdminRequestDetail = () => {
         .eq("id", itemId);
 
       if (error) throw error;
+
+      // Resolve bureau_item_pricing todo if a price was set
+      if (price !== null) {
+        const { resolveAutoTodo } = await import("@/lib/autoTodoCreator");
+        await resolveAutoTodo("bureau_item_pricing", itemId);
+      }
+
       toast.success("Prijs bijgewerkt");
       fetchRequestData();
     } catch (error) {
