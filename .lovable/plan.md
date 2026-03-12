@@ -1,111 +1,68 @@
-## Plan: Operationeel Commandocentrum
 
-### Status: ✅ Geïmplementeerd
 
-### Wat is gebouwd
+# Plan: Vier nieuwe features voor operationeel overzicht
 
-1. **Sidebar herstructurering**: "Taken" verplaatst naar "Operationeel" sectie (met badge), E-maillog en Activiteitenlog verwijderd uit sidebar (nu tabs onder Taken). "Systeem" bevat alleen nog "Instellingen".
+## 1. Financieel Dashboard (`/admin/financieel`)
 
-2. **Tabbed Operationeel Centrum** (`AdminTodos.tsx`): Drie tabs — Taken, E-maillog, Activiteitenlog — alles op één pagina.
+Nieuwe pagina met overzicht van alle financiële stromen:
 
-3. **Deep links & snelacties**: Per `auto_type` een contextknop (bijv. "Bekijk aanvraag", "Bekijk partner") die direct naar de juiste detail-pagina navigeert. Partner- en request-links zijn nu deep links naar `/admin/partners/{id}` en `/admin/aanvragen/{id}`.
+- **KPI-rij bovenaan**: Totaal gefactureerd (klant), totaal inkoopfacturen, openstaande commissies, netto marge
+- **Maandgrafiek** (Recharts): omzet vs inkoop per maand op basis van `bureau_invoices` en `partner_purchase_invoices`
+- **Openstaande posten tabel**: projecten met `completion_status = ready_for_invoice` of items met `commission_status = pending_confirmation`
+- **Commissie-samenvatting**: totalen per status (pending, confirmed, invoiced)
 
-4. **Groepering per auto_type**: Taken gegroepeerd in collapsible secties per type, handmatige taken apart.
+Voegt een nieuw menu-item toe onder "Financiën" in de sidebar.
 
-5. **Bulk-acties**: Meerdere taken selecteren en tegelijk afvinken.
+## 2. Operationele Weekplanning (`/admin/planning`)
 
-6. **Snooze-functionaliteit**: `snoozed_until` kolom op `admin_todos`. Snooze-dialog met presets (morgen, 3 dagen, 7 dagen). Gesnoozede taken verborgen in actief-weergave.
+Nieuwe pagina met een week-/dagweergave:
 
-7. **Badge in sidebar**: Realtime telling van openstaande taken (excl. gesnoozede) in het sidebar-menu-item "Taken".
+- Query `program_request_items` met `proposed_date` of berekende datum (op basis van `selected_dates` + `day_index`)
+- Query `accommodation_requests` voor aankomst/vertrekdagen
+- **Dagindeling**: per dag tonen welke activiteiten plaatsvinden, welke groepen er zijn, welke partners betrokken zijn
+- **Weeknavigatie**: vorige/volgende week knoppen
+- Klikbare items die linken naar projectdetail
 
-8. **Auto-resolve in edge functions**:
-   - `update-partner-item-status`: resolve `partner_reminder` (was al aanwezig)
-   - `select-accommodation-quote`: resolve `quote_pending_customer`
-   - `accept-quote-proposal`: resolve `terms_reminder`
-   - `notify-accommodation-quote`: resolve `quote_pending_partner`
+Voegt een nieuw menu-item "Planning" toe onder "Operationeel".
 
----
+## 3. Post-uitvoering Auto-Todos
 
-## Plan: CRM en Partners samenvoegen
+Twee nieuwe auto-todo types in `autoTodoCreator.ts`:
 
-### Status: ✅ Geïmplementeerd
+- **`post_execution_feedback`**: Na `executed_at` datum van een item (+ 1 dag), maak een taak "Feedback vragen aan [klant] voor [activiteit]"
+- **`post_execution_invoice_check`**: Na `executed_at` (+ 7 dagen), controleer of er een `partner_purchase_invoice` is geregistreerd. Zo niet, maak taak "Factuur partner [naam] nog niet ontvangen voor [activiteit]"
 
-CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab bevat het volledige partneroverzicht met onboarding stats, bulk invite, unavailability, filters. Redirect van `/admin/partners` naar `/admin/crm?tab=partners`.
+Implementatie via de bestaande `daily-reminders` edge function (of een nieuwe scheduled function). Auto-resolve wanneer de factuur binnenkomt.
 
----
+## 4. Pipeline-Funnel Overzicht
 
-## Plan: Projecten verwijderen, Logies in navigatie, Communicatie-privacy
+Nieuwe component op het dashboard OF als tab op de projectenpagina:
 
-### Status: ✅ Geïmplementeerd
+- Visuele funnel met fasen: **Nieuw** → **Offerte verstuurd** → **AV getekend** → **Uitgevoerd** → **Gefactureerd**
+- Per fase: aantal projecten + totale waarde
+- Gebaseerd op bestaande `getDerivedStatus()` logica uit `AdminProjects.tsx`
+- Klikbare fasen die filteren op de projectenpagina
 
-1. **Projecten verwijderen**: Soft-delete (status → `deleted`) met bevestigingsdialog. Optie om gekoppelde logiesaanvraag mee te verwijderen of los te koppelen. Verwijderde projecten worden uitgefilterd in het overzicht.
+## Technische details
 
-2. **Logies in sidebar**: `/admin/logies` toegevoegd aan de Operationeel sectie in de sidebar navigatie. Per logiesaanvraag wordt het facturatietype getoond: Maatwerk (bureau_central), Direct (partner_direct), of Zelfstandig (geen gekoppeld project).
+### Database migraties
+- Geen nieuwe tabellen nodig — alles werkt met bestaande data
+- Eventueel een index op `program_request_items.proposed_date` voor de weekplanning
 
-3. **Communicatie-privacy bij bureau_central**: Edge function `send-customer-accommodation-message` checkt nu `invoicing_mode`. Bij `bureau_central` worden klant-PII (email, telefoon) verborgen, Reply-To gaat naar `hallo@bureauvlieland.nl`, en Bureau Vlieland fungeert als tussenpersoon. Klantportaal toont bij `bureau_central` uitleg dat communicatie via Bureau Vlieland verloopt.
+### Nieuwe bestanden
+- `src/pages/admin/AdminFinancialDashboard.tsx`
+- `src/pages/admin/AdminPlanning.tsx`
+- `src/components/admin/PipelineFunnel.tsx`
+- `src/components/admin/WeekPlanningView.tsx`
 
----
+### Bestaande aanpassingen
+- `AdminLayout.tsx`: twee nieuwe menu-items (Planning, Financieel Dashboard)
+- `autoTodoCreator.ts`: twee nieuwe auto-todo types + UI config
+- `daily-reminders` edge function: post-uitvoering checks toevoegen
+- `AdminDashboard.tsx`: PipelineFunnel component toevoegen
+- Router: twee nieuwe routes registreren
 
-## Plan: Aanvraagflow herstructureren — Admin-first & Bureau Centraal
+### Edge function updates
+- `daily-reminders/index.ts`: query items waar `executed_at` is gezet, controleer of feedback-todo of invoice-check-todo al bestaat, zo niet aanmaken
+- Auto-resolve `post_execution_invoice_check` wanneer een `partner_purchase_invoice` wordt geregistreerd
 
-### Status: ✅ Geïmplementeerd
-
-### Wat is gewijzigd
-
-1. **Partner-e-mails verwijderd uit `send-program-request`**: Bij indiening ontvangt alleen Bureau Vlieland en de klant een e-mail. Partners worden niet meer automatisch benaderd.
-
-2. **Klant-e-mail tekst aangepast**: "Aanbieders zullen contact opnemen" → "Bureau Vlieland beoordeelt uw aanvraag en neemt contact op".
-
-3. **Database default gewijzigd**: `invoicing_mode` default is nu `bureau_central`. Alle bestaande `partner_direct` records zijn geconverteerd.
-
-4. **`approve-quote-item` geblokkeerd voor klanten**: Zonder `admin_override` flag wordt de actie geweigerd (403). Alleen admins kunnen items naar partners versturen.
-
-5. **Admin "Verstuur naar partners"**: De bestaande bulk-actie via `accept-quote-proposal` met `admin_override` blijft intact voor handmatig doorsturen.
-
-6. **InvoicingModeSelector verwijderd**: Vervangen door read-only informatiekaart "Bureau Vlieland factureert de klant". PurchaseInvoicesCard wordt altijd getoond.
-
-7. **`partner_direct` branches verwijderd** uit:
-   - `CustomerPortalSplash.tsx` — facturatieteksten altijd bureau_central
-   - `PartnerAccommodationQuoteSheet.tsx` — altijd "Factureer aan Bureau Vlieland"
-   - `PartnerAccommodationTable.tsx` — klant-e-mail niet meer getoond
-   - Edge functions: fallback defaults naar `bureau_central`
-   - `InvoicingMode` type vereenvoudigd
-
-8. **Bureau e-mail bijgewerkt**: Partner-items sectie zegt nu "handmatig via admin" i.p.v. "automatisch verstuurd".
-
----
-
-## Plan: Bureau Vlieland als centrale regie — Volledige alignment
-
-### Status: ✅ Geïmplementeerd
-
-### Wat is gewijzigd
-
-#### A. Kritieke flow-fixes
-1. **`skip_partner_notification: true`** toegevoegd aan `CheckoutContactForm.tsx` en `RequestFormModal.tsx` — items worden nu gestaged voor admin review.
-2. **"Verstuur naar partners" banner** werkt nu voor alle programmatypes (niet meer beperkt tot quote-modus).
-3. **`accept-quote-proposal`** slaat `quote_status` update over voor `self_service` programma's; zet altijd `program_published_at` als die null is.
-4. **Admin banner tekst** gecorrigeerd: "De klant ziet het programma als 'In behandeling'". Publiceer-banner beperkt tot admin-aangemaakte programma's.
-
-#### B. `partner_direct` relikten verwijderd
-5. **`InvoicingModeSelector.tsx`** omgezet naar read-only "Bureau Vlieland factureert de klant".
-6. **`CustomerProgram.tsx`** fallback gewijzigd naar `"bureau_central"`.
-7. **`ContactAccommodationDialog.tsx`** — altijd bureau_central teksten, geen directe partner-communicatie branches.
-8. **`PriceSummaryCard.tsx`** — partner_direct secties verwijderd.
-9. **`InvoiceProvidersCard.tsx`** — individuele partner-listings uitgeschakeld, altijd bureau-facturatie.
-10. **`select-accommodation-quote`** — PII altijd verborgen voor partners.
-
-#### C. Klantportaal teksten
-11. **`ProgramIntroCard.tsx`** — "Bureau Vlieland coördineert de aanvragen bij de aanbieders."
-12. **`ActionRequiredCard.tsx`** — billing: "zodat Bureau Vlieland kan factureren"; complete: "U ontvangt de factuur van Bureau Vlieland."
-13. **`NextStepsCard.tsx`** — "U ontvangt de factuur van Bureau Vlieland."
-
-#### D. Publieke pagina's & juridisch
-14. **`LogiesVlieland.tsx`** en **`LogiesAanvragen.tsx`** — stap 4: "Bureau Vlieland begeleidt het boekingsproces".
-15. **`PartnerTerms.tsx`** — Artikel 1 en 5 aangepast: facturatie altijd via Bureau Vlieland.
-
-#### E. Statuslabels
-16. **`CustomerProgramItem.tsx`** — readOnly + pending → "In behandeling"; isPreApproval + pending → "In voorbereiding".
-
-#### F. Data
-17. Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` geüpdatet naar `true`.
