@@ -238,4 +238,14 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-cyan-700",
     bgColor: "bg-cyan-100",
   },
+  post_execution_feedback: {
+    label: "Feedback",
+    color: "text-violet-700",
+    bgColor: "bg-violet-100",
+  },
+  post_execution_invoice_check: {
+    label: "Factuur check",
+    color: "text-rose-700",
+    bgColor: "bg-rose-100",
+  },
 };
