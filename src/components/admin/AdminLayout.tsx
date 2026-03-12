@@ -88,6 +88,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
         { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
+        { title: "Planning", url: "/admin/planning", icon: CalendarDays },
         { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
         { title: "Logies", url: "/admin/logies", icon: Hotel },
         { title: "CRM", url: "/admin/crm", icon: Users },
