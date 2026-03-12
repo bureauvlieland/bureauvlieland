@@ -225,4 +225,9 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-green-700",
     bgColor: "bg-green-100",
   },
+  bureau_item_pricing: {
+    label: "Bureau prijs",
+    color: "text-cyan-700",
+    bgColor: "bg-cyan-100",
+  },
 };
