@@ -66,20 +66,57 @@ Deno.serve(async (req) => {
     let created = 0;
 
     for (const req of requests) {
-      // Get all sent items (not self_arranged, not skipped)
+      // Get all items
       const { data: items } = await supabase
         .from("program_request_items")
-        .select("id, status, block_type, skip_partner_notification")
+        .select("id, status, block_type, skip_partner_notification, admin_price_override, quoted_price, block_name")
         .eq("request_id", req.id);
 
+      const custName = req.customer_company || req.customer_name;
+      const refNum = req.reference_number || "onbekend";
+
+      // Create bureau_item_pricing todos for bureau items without pricing
+      const bureauItems = (items || []).filter(i => i.block_type === "bureau");
+      const bureauNeedPricing = bureauItems.filter(
+        i => i.admin_price_override === null && i.quoted_price === null
+      );
+
+      for (const bi of bureauNeedPricing) {
+        const { data: existingBureau } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "bureau_item_pricing")
+          .eq("auto_entity_id", bi.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (!existingBureau) {
+          await supabase.from("admin_todos").insert({
+            title: `Prijs invullen: "${bi.block_name}" voor ${custName}`,
+            description: `Bureau-item "${bi.block_name}" in project ${refNum} heeft nog geen prijs. Vul een admin prijs in.`,
+            priority: "normal",
+            status: "todo",
+            related_request_id: req.id,
+            auto_type: "bureau_item_pricing",
+            auto_entity_id: bi.id,
+          });
+          created++;
+          console.log(`Created bureau_item_pricing todo for ${bi.block_name} in ${refNum}`);
+        }
+      }
+
+      // Partner items (not self_arranged, not bureau, not skipped)
       const sentItems = (items || []).filter(
         i => i.block_type !== "self_arranged" &&
+             i.block_type !== "bureau" &&
              (i.skip_partner_notification === false || i.skip_partner_notification === null)
       );
 
       // Skip if no sent items or any still pending
       if (sentItems.length === 0) continue;
       if (sentItems.some(i => i.status === "pending")) continue;
+      // Also skip if bureau items still need pricing
+      if (bureauNeedPricing.length > 0) continue;
 
       // Check if todo already exists
       const { data: existing } = await supabase
@@ -91,12 +128,9 @@ Deno.serve(async (req) => {
 
       if (existing) continue;
 
-      const custName = req.customer_company || req.customer_name;
-      const refNum = req.reference_number || "onbekend";
-
       await supabase.from("admin_todos").insert({
         title: `Alle partners hebben gereageerd op ${refNum} (${custName})`,
-        description: `Alle verstuurde programmaonderdelen zijn beantwoord. Beoordeel de reacties en stuur een status update naar de klant.`,
+        description: `Alle verstuurde programmaonderdelen zijn beantwoord${bureauItems.length > 0 ? ' en alle bureau-items hebben een prijs' : ''}. Beoordeel de reacties en stuur een status update naar de klant.`,
         priority: "high",
         status: "todo",
         related_request_id: req.id,

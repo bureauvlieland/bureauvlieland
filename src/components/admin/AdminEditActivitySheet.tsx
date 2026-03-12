@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { timeSlots } from "@/types/buildingBlock";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
+import { resolveAutoTodo } from "@/lib/autoTodoCreator";
 
 interface PartnerOption {
   id: string;
@@ -165,6 +166,11 @@ export const AdminEditActivitySheet = ({
         .eq("id", item.id);
 
       if (error) throw error;
+
+      // Resolve bureau_item_pricing todo if price was set on a bureau item
+      if (isBureauInvoiced && price !== null) {
+        await resolveAutoTodo("bureau_item_pricing", item.id);
+      }
 
       // Log admin activity
       await logAdminActivity({

@@ -12,7 +12,8 @@ export type AutoTodoType =
   | "request_no_response"
   | "quote_expired_partner"
   | "accommodation_quote_declined"
-  | "all_partners_responded";
+  | "all_partners_responded"
+  | "bureau_item_pricing";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -151,6 +152,9 @@ export const autoTodoTitles = {
 
   all_partners_responded: (referenceNumber: string, customerName: string) =>
     `Alle partners hebben gereageerd op ${referenceNumber} (${customerName})`,
+
+  bureau_item_pricing: (itemName: string, customerName: string) =>
+    `Prijs invullen: "${itemName}" voor ${customerName}`,
 };
 
 /**
@@ -220,5 +224,10 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Alle reacties binnen",
     color: "text-green-700",
     bgColor: "bg-green-100",
+  },
+  bureau_item_pricing: {
+    label: "Bureau prijs",
+    color: "text-cyan-700",
+    bgColor: "bg-cyan-100",
   },
 };

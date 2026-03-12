@@ -523,21 +523,33 @@ Deno.serve(async (req) => {
     }
 
     // Check if ALL partners have responded (no pending items left)
+    // Also check that bureau items have pricing set
     const validResponseStatuses = ["confirmed", "unavailable", "alternative"];
     if (validResponseStatuses.includes(status)) {
       const { data: allSentItems } = await supabase
         .from("program_request_items")
-        .select("id, status, block_type, skip_partner_notification")
+        .select("id, status, block_type, skip_partner_notification, admin_price_override, quoted_price")
         .eq("request_id", item.request_id);
       
+      // Partner items that were sent to partners
       const sentRelevantItems = (allSentItems || []).filter(
         i => i.block_type !== "self_arranged" && 
+             i.block_type !== "bureau" &&
              (i.skip_partner_notification === false || i.skip_partner_notification === null)
       );
       
-      const allAnswered = sentRelevantItems.length > 0 && sentRelevantItems.every(i => i.status !== "pending");
+      // Bureau items that need pricing
+      const bureauItems = (allSentItems || []).filter(
+        i => i.block_type === "bureau"
+      );
+      const bureauItemsNeedPricing = bureauItems.filter(
+        i => i.admin_price_override === null && i.quoted_price === null
+      );
       
-      if (allAnswered) {
+      const allPartnersAnswered = sentRelevantItems.length > 0 && sentRelevantItems.every(i => i.status !== "pending");
+      const allBureauPriced = bureauItemsNeedPricing.length === 0;
+      
+      if (allPartnersAnswered && allBureauPriced) {
         const { data: existingAllTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -558,7 +570,7 @@ Deno.serve(async (req) => {
             const refNum = reqInfo.reference_number || "onbekend";
             await supabase.from("admin_todos").insert({
               title: `Alle partners hebben gereageerd op ${refNum} (${custName})`,
-              description: `Alle verstuurde programmaonderdelen zijn beantwoord. Beoordeel de reacties en stuur een status update naar de klant.`,
+              description: `Alle verstuurde programmaonderdelen zijn beantwoord${bureauItems.length > 0 ? ' en alle bureau-items hebben een prijs' : ''}. Beoordeel de reacties en stuur een status update naar de klant.`,
               priority: "high",
               status: "todo",
               related_request_id: item.request_id,
