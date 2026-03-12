@@ -39,6 +39,8 @@ import {
   ChevronDown,
   MessageCircle,
   Hotel,
+  CalendarDays,
+  BarChart3,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -86,6 +88,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
         { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
+        { title: "Planning", url: "/admin/planning", icon: CalendarDays },
         { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
         { title: "Logies", url: "/admin/logies", icon: Hotel },
         { title: "CRM", url: "/admin/crm", icon: Users },
@@ -103,6 +106,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     {
       label: "Financiën",
       items: [
+        { title: "Financieel", url: "/admin/financieel", icon: BarChart3 },
         { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },

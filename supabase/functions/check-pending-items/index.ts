@@ -658,6 +658,120 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ============================================================
+    // POST-EXECUTION CHECKS: feedback + invoice verification
+    // ============================================================
+    console.log("Checking post-execution items...");
+
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Get executed items
+    const { data: executedItems } = await supabase
+      .from("program_request_items")
+      .select("id, block_name, provider_name, provider_id, request_id, executed_at")
+      .not("executed_at", "is", null)
+      .neq("status", "cancelled");
+
+    if (executedItems && executedItems.length > 0) {
+      // Get request info for customer names
+      const execRequestIds = [...new Set(executedItems.map(i => i.request_id))];
+      const { data: execRequests } = await supabase
+        .from("program_requests")
+        .select("id, customer_name")
+        .in("id", execRequestIds);
+      const execReqMap = new Map((execRequests || []).map(r => [r.id, r]));
+
+      // Get existing purchase invoices for these items
+      const execItemIds = executedItems.map(i => i.id);
+      const { data: existingInvoices } = await supabase
+        .from("partner_purchase_invoices")
+        .select("item_id")
+        .in("item_id", execItemIds);
+      const invoicedItemIds = new Set((existingInvoices || []).map(i => i.item_id));
+
+      for (const item of executedItems) {
+        const req = execReqMap.get(item.request_id);
+        const customerName = req?.customer_name || "Onbekend";
+
+        // Post-execution feedback: 1 day after executed_at
+        if (item.executed_at && item.executed_at <= oneDayAgo) {
+          const { data: existingFeedback } = await supabase
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "post_execution_feedback")
+            .eq("auto_entity_id", item.id)
+            .neq("status", "done")
+            .maybeSingle();
+
+          if (!existingFeedback) {
+            // Check if already created and done (don't recreate)
+            const { data: doneFeedback } = await supabase
+              .from("admin_todos")
+              .select("id")
+              .eq("auto_type", "post_execution_feedback")
+              .eq("auto_entity_id", item.id)
+              .eq("status", "done")
+              .maybeSingle();
+
+            if (!doneFeedback) {
+              const { error: fbError } = await supabase
+                .from("admin_todos")
+                .insert({
+                  title: `Feedback vragen aan ${customerName} voor "${item.block_name}"`,
+                  description: `De activiteit "${item.block_name}" (${item.provider_name}) is uitgevoerd. Overweeg feedback te vragen aan de klant.`,
+                  priority: "low",
+                  status: "todo",
+                  related_request_id: item.request_id,
+                  related_partner_id: item.provider_id,
+                  auto_type: "post_execution_feedback",
+                  auto_entity_id: item.id,
+                });
+              if (!fbError) totalCreated++;
+            }
+          }
+        }
+
+        // Post-execution invoice check: 7 days after executed_at, no purchase invoice
+        if (item.executed_at && item.executed_at <= sevenDaysAgo && !invoicedItemIds.has(item.id)) {
+          const { data: existingCheck } = await supabase
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "post_execution_invoice_check")
+            .eq("auto_entity_id", item.id)
+            .neq("status", "done")
+            .maybeSingle();
+
+          if (!existingCheck) {
+            const { data: doneCheck } = await supabase
+              .from("admin_todos")
+              .select("id")
+              .eq("auto_type", "post_execution_invoice_check")
+              .eq("auto_entity_id", item.id)
+              .eq("status", "done")
+              .maybeSingle();
+
+            if (!doneCheck) {
+              const { error: icError } = await supabase
+                .from("admin_todos")
+                .insert({
+                  title: `Factuur partner ${item.provider_name} nog niet ontvangen voor "${item.block_name}"`,
+                  description: `De activiteit is meer dan 7 dagen geleden uitgevoerd maar er is nog geen inkoopfactuur geregistreerd.`,
+                  priority: "normal",
+                  status: "todo",
+                  related_request_id: item.request_id,
+                  related_partner_id: item.provider_id,
+                  auto_type: "post_execution_invoice_check",
+                  auto_entity_id: item.id,
+                });
+              if (!icError) totalCreated++;
+            }
+          }
+        }
+      }
+    }
+
     console.log(`Job completed: ${totalCreated} reminders created, ${totalSkipped} skipped`);
 
     return new Response(

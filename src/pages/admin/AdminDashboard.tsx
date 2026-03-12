@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
+import { PipelineFunnel } from "@/components/admin/PipelineFunnel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -173,6 +174,7 @@ const AdminDashboardContent = () => {
 
         {/* Sidebar — 1/3 */}
         <div className="space-y-4">
+          <PipelineFunnel />
           <DailyActivitySummary />
           <DashboardTodoWidget />
           <PendingCommissionsCard />
