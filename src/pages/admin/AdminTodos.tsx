@@ -495,11 +495,6 @@ const TakenTab = () => {
         } ${isSnoozed ? "opacity-50" : ""}`}
       >
         <Checkbox
-          checked={selectedIds.has(todo.id)}
-          onCheckedChange={() => toggleSelect(todo.id)}
-          className="mt-1"
-        />
-        <Checkbox
           checked={todo.status === "done"}
           onCheckedChange={(checked) => {
             toggleStatusMutation.mutate({ id: todo.id, newStatus: checked ? "done" : "todo" });
