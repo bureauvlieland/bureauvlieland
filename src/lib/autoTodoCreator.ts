@@ -13,7 +13,9 @@ export type AutoTodoType =
   | "quote_expired_partner"
   | "accommodation_quote_declined"
   | "all_partners_responded"
-  | "bureau_item_pricing";
+  | "bureau_item_pricing"
+  | "post_execution_feedback"
+  | "post_execution_invoice_check";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
