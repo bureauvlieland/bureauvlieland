@@ -484,7 +484,42 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 9. Log history entry
+    // 9. Create bureau_item_pricing todos for bureau items without pricing
+    const customerName = program.customer_company || program.customer_name;
+    const { data: allProgramItems } = await supabase
+      .from("program_request_items")
+      .select("id, block_name, block_type, admin_price_override, quoted_price")
+      .eq("request_id", program.id)
+      .neq("status", "cancelled");
+
+    const bureauNeedPricing = (allProgramItems || []).filter(
+      (i: any) => i.block_type === "bureau" && i.admin_price_override === null && i.quoted_price === null
+    );
+
+    for (const bi of bureauNeedPricing) {
+      const { data: existingTodo } = await supabase
+        .from("admin_todos")
+        .select("id")
+        .eq("auto_type", "bureau_item_pricing")
+        .eq("auto_entity_id", bi.id)
+        .neq("status", "done")
+        .maybeSingle();
+
+      if (!existingTodo) {
+        await supabase.from("admin_todos").insert({
+          title: `Prijs invullen: "${bi.block_name}" voor ${customerName}`,
+          description: `Bureau-item "${bi.block_name}" heeft nog geen prijs. Vul een admin prijs in.`,
+          priority: "normal",
+          status: "todo",
+          related_request_id: program.id,
+          auto_type: "bureau_item_pricing",
+          auto_entity_id: bi.id,
+        });
+        console.log(`Created bureau_item_pricing todo for ${bi.block_name}`);
+      }
+    }
+
+    // 10. Log history entry
     await supabase.from("program_request_history").insert({
       request_id: program.id,
       action: isAdmin ? "admin_sent_to_partners" : "quote_accepted",

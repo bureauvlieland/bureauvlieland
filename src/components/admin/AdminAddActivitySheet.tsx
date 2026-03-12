@@ -190,6 +190,24 @@ export const AdminAddActivitySheet = ({
           item_id: newItem.id,
         },
       });
+
+      // Create bureau_item_pricing todo if bureau item without price
+      if (blockType === "bureau" && !price) {
+        const { createAutoTodo, autoTodoTitles } = await import("@/lib/autoTodoCreator");
+        // Fetch customer name for the todo title
+        const { data: reqData } = await supabase
+          .from("program_requests")
+          .select("customer_name, customer_company")
+          .eq("id", requestId)
+          .single();
+        const custName = reqData?.customer_company || reqData?.customer_name || "Onbekend";
+        await createAutoTodo({
+          type: "bureau_item_pricing",
+          requestId,
+          itemId: newItem.id,
+          title: autoTodoTitles.bureau_item_pricing(customName || selectedBlock.name, custName),
+        });
+      }
       
       toast.success(`${selectedBlock.name} toegevoegd aan de offerte`);
       
