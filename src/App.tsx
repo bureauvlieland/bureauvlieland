@@ -73,6 +73,8 @@ import AdminMedia from "./pages/admin/AdminMedia";
 import AdminTemplates from "./pages/admin/AdminTemplates";
 import AdminPurchaseInvoices from "./pages/admin/AdminPurchaseInvoices";
 import AdminChat from "./pages/admin/AdminChat";
+import AdminFinancialDashboard from "./pages/admin/AdminFinancialDashboard";
+import AdminPlanning from "./pages/admin/AdminPlanning";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
