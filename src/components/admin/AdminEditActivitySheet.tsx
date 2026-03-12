@@ -166,6 +166,11 @@ export const AdminEditActivitySheet = ({
 
       if (error) throw error;
 
+      // Resolve bureau_item_pricing todo if price was set on a bureau item
+      if (isBureauInvoiced && price !== null) {
+        await resolveAutoTodo("bureau_item_pricing", item.id);
+      }
+
       // Log admin activity
       await logAdminActivity({
         action: AdminActions.ITEM_STATUS_CHANGED,
