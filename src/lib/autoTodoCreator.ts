@@ -157,6 +157,12 @@ export const autoTodoTitles = {
 
   bureau_item_pricing: (itemName: string, customerName: string) =>
     `Prijs invullen: "${itemName}" voor ${customerName}`,
+
+  post_execution_feedback: (customerName: string, activityName: string) =>
+    `Feedback vragen aan ${customerName} voor "${activityName}"`,
+
+  post_execution_invoice_check: (partnerName: string, activityName: string) =>
+    `Factuur partner ${partnerName} nog niet ontvangen voor "${activityName}"`,
 };
 
 /**
