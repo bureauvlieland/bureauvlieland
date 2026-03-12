@@ -106,6 +106,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     {
       label: "Financiën",
       items: [
+        { title: "Financieel", url: "/admin/financieel", icon: BarChart3 },
         { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
