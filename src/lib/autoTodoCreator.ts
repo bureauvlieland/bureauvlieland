@@ -152,6 +152,9 @@ export const autoTodoTitles = {
 
   all_partners_responded: (referenceNumber: string, customerName: string) =>
     `Alle partners hebben gereageerd op ${referenceNumber} (${customerName})`,
+
+  bureau_item_pricing: (itemName: string, customerName: string) =>
+    `Prijs invullen: "${itemName}" voor ${customerName}`,
 };
 
 /**
