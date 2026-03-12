@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { timeSlots } from "@/types/buildingBlock";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
+import { resolveAutoTodo } from "@/lib/autoTodoCreator";
 
 interface PartnerOption {
   id: string;
