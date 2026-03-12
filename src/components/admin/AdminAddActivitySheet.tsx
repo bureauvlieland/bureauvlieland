@@ -191,8 +191,8 @@ export const AdminAddActivitySheet = ({
         },
       });
 
-      // Create bureau_item_pricing todo if bureau item without price
-      if (blockType === "bureau" && !price) {
+      // Create bureau_item_pricing todo if bureau item without price (null = no price, 0 = free)
+      if (blockType === "bureau" && price === null) {
         const { createAutoTodo, autoTodoTitles } = await import("@/lib/autoTodoCreator");
         // Fetch customer name for the todo title
         const { data: reqData } = await supabase
