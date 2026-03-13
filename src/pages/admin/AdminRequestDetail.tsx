@@ -1041,6 +1041,10 @@ const AdminRequestDetail = () => {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" onClick={() => setAiProgramOpen(true)}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      AI Programma
+                    </Button>
                     <Button variant="outline" onClick={() => setApplyTemplateOpen(true)}>
                       <Layers className="h-4 w-4 mr-2" />
                       Template toepassen
