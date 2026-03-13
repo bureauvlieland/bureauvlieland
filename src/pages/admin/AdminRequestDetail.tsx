@@ -1593,6 +1593,18 @@ const AdminRequestDetail = () => {
           onEmailSent={fetchRequestData}
         />
       )}
+      {/* AI Program dialog */}
+      {request && (
+        <AdminAiProgramDialog
+          open={aiProgramOpen}
+          onOpenChange={setAiProgramOpen}
+          requestId={request.id}
+          numberOfPeople={request.number_of_people}
+          selectedDates={request.selected_dates as string[]}
+          customerDescription={request.general_notes}
+          onSuccess={fetchRequestData}
+        />
+      )}
     </>
   );
 };
