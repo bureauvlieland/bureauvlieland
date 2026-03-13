@@ -91,6 +91,7 @@ import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet"
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
+import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
@@ -211,6 +212,7 @@ const AdminRequestDetail = () => {
   const [addCostOpen, setAddCostOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
+  const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
@@ -1039,6 +1041,10 @@ const AdminRequestDetail = () => {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" onClick={() => setAiProgramOpen(true)}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      AI Programma
+                    </Button>
                     <Button variant="outline" onClick={() => setApplyTemplateOpen(true)}>
                       <Layers className="h-4 w-4 mr-2" />
                       Template toepassen
@@ -1585,6 +1591,18 @@ const AdminRequestDetail = () => {
           defaultSubject={generateProgramStatusEmailBody().subject}
           defaultBody={generateProgramStatusEmailBody().body}
           onEmailSent={fetchRequestData}
+        />
+      )}
+      {/* AI Program dialog */}
+      {request && (
+        <AdminAiProgramDialog
+          open={aiProgramOpen}
+          onOpenChange={setAiProgramOpen}
+          requestId={request.id}
+          numberOfPeople={request.number_of_people}
+          selectedDates={request.selected_dates as string[]}
+          customerDescription={request.general_notes}
+          onSuccess={fetchRequestData}
         />
       )}
     </>
