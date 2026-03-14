@@ -774,6 +774,22 @@ const AdminPartnerDetail = () => {
                     </p>
                   </div>
 
+                  {formData.map_tenant_slug && (
+                    <div className="space-y-2">
+                      <Label htmlFor="map_api_key">MAP API Key</Label>
+                      <Input
+                        id="map_api_key"
+                        type="password"
+                        value={formData.map_api_key}
+                        onChange={(e) => handleChange("map_api_key", e.target.value)}
+                        placeholder="API key voor deze tenant"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        De API key voor deze tenant op MijnActiviteitenPlanner. Wordt veilig opgeslagen.
+                      </p>
+                    </div>
+                  )}
+
                   <Separator />
 
                   <div className="flex items-center justify-between">
