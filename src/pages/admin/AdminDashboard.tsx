@@ -296,6 +296,8 @@ const AdminDashboardContent = () => {
             )}
           </CardContent>
         </Card>
+
+        <MapBookingsWidget />
       </div>
     </div>
   );
