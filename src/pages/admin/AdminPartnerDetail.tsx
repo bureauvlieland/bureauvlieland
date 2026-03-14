@@ -351,6 +351,7 @@ const AdminPartnerDetail = () => {
             formData.partner_type === "accommodation" || formData.partner_type === "both"
               ? formData.accommodation_commission_percentage
               : null,
+          map_tenant_slug: formData.map_tenant_slug || null,
         });
 
         if (error) throw error;
