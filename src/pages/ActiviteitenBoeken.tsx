@@ -11,7 +11,7 @@ import { MapActivityCard } from "@/components/map/MapActivityCard";
 import { MapBookingDialog } from "@/components/map/MapBookingDialog";
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
 import { Search, CalendarDays, Ticket } from "lucide-react";
-import { Navbar } from "@/components/Navbar";
+import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 
 const ActiviteitenBoeken = () => {
