@@ -8,6 +8,7 @@ import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
 import { PipelineFunnel } from "@/components/admin/PipelineFunnel";
+import { MapBookingsWidget } from "@/components/admin/MapBookingsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import {
