@@ -128,6 +128,7 @@ const App = () => {
               </FeatureGate>
             } />
             <Route path="/logies-vlieland" element={<LogiesVlieland />} />
+            <Route path="/activiteiten-boeken" element={<ActiviteitenBoeken />} />
             <Route path="/logies-aanvragen" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <LogiesAanvragen />

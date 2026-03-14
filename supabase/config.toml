@@ -122,3 +122,9 @@ verify_jwt = false
 
 [functions.backfill-all-responded-todos]
 verify_jwt = false
+
+[functions.map-proxy]
+verify_jwt = false
+
+[functions.map-create-booking]
+verify_jwt = false
