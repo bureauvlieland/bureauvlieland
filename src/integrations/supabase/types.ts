@@ -923,6 +923,80 @@ export type Database = {
         }
         Relationships: []
       }
+      map_bookings: {
+        Row: {
+          activity_name: string
+          booking_status: string
+          commission_amount: number
+          commission_percentage: number
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          departure: string
+          id: string
+          map_activity_id: string
+          map_booking_id: string | null
+          map_tenant_slug: string
+          notes: string | null
+          number_of_adults: number
+          number_of_children: number
+          partner_id: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          activity_name: string
+          booking_status?: string
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          departure: string
+          id?: string
+          map_activity_id: string
+          map_booking_id?: string | null
+          map_tenant_slug: string
+          notes?: string | null
+          number_of_adults?: number
+          number_of_children?: number
+          partner_id: string
+          total_price?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_name?: string
+          booking_status?: string
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          departure?: string
+          id?: string
+          map_activity_id?: string
+          map_booking_id?: string | null
+          map_tenant_slug?: string
+          notes?: string | null
+          number_of_adults?: number
+          number_of_children?: number
+          partner_id?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_bookings_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_extra_presets: {
         Row: {
           category: string | null
@@ -1198,6 +1272,7 @@ export type Database = {
           is_active: boolean
           kvk_number: string | null
           last_login_at: string | null
+          map_tenant_slug: string | null
           name: string
           partner_token: string
           partner_type: string | null
@@ -1233,6 +1308,7 @@ export type Database = {
           is_active?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
+          map_tenant_slug?: string | null
           name: string
           partner_token?: string
           partner_type?: string | null
@@ -1268,6 +1344,7 @@ export type Database = {
           is_active?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
+          map_tenant_slug?: string | null
           name?: string
           partner_token?: string
           partner_type?: string | null
