@@ -1,29 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Matches actual MAP API v1 response fields for GET /activities
 export interface MapActivity {
   Id: number;
-  Name: string;
-  Description: string;
   ActivityTypeName: string;
-  ImageUrl: string | null;
+  ActivityTypeId: number;
   Departure: string;
-  StartTime: string;
-  EndTime: string;
-  Duration: string;
-  Price: number;
-  ChildPrice: number | null;
+  PricePerPerson: number;
+  PricePerChild: number | null;
+  MaxPersons: number;
+  MaxBookings: number;
+  NumberOfPersonsBooked: number;
+  BookingCount: number;
   RemainingSlots: number;
-  MaxParticipants: number;
-  Location: string | null;
-  ProviderName: string;
+  IsActive: boolean;
+  IsCancelled: boolean;
+  Duration: number | null; // hours
+  Notes: string | null;
+  Description: string | null;
 }
 
 export interface MapActivityType {
   Id: number;
   Name: string;
   Description: string;
-  ImageUrl: string | null;
+  Duration: number | null;
+  IsAvailableOnline: boolean;
+  Image: string | null;
+  OnlinePaymentsDisabled: boolean;
+  BookingTimeBuffer: number | null;
 }
 
 // Fetch activities from MAP via proxy

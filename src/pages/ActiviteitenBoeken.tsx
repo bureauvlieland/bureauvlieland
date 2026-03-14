@@ -35,9 +35,9 @@ const ActiviteitenBoeken = () => {
     const q = search.toLowerCase();
     return activities.filter(
       (a: any) =>
-        a.Name?.toLowerCase().includes(q) ||
+        a.ActivityTypeName?.toLowerCase().includes(q) ||
         a._partnerName?.toLowerCase().includes(q) ||
-        a.ActivityTypeName?.toLowerCase().includes(q)
+        a.Description?.toLowerCase().includes(q)
     );
   }, [activities, search]);
 
