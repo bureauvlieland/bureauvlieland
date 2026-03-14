@@ -14,9 +14,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const MAP_API_KEY = Deno.env.get("MAP_API_KEY");
-    if (!MAP_API_KEY) throw new Error("MAP_API_KEY is not configured");
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -44,6 +41,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Get partner-specific API key
+    const { data: partner } = await supabase
+      .from("partners")
+      .select("map_api_key")
+      .eq("id", partnerId)
+      .single();
+
+    const apiKey = partner?.map_api_key || Deno.env.get("MAP_API_KEY");
+    if (!apiKey) throw new Error("No MAP API key found for this partner");
+
     // Create booking on MAP
     const bookingPayload = {
       ActivityId: activityId,
@@ -61,7 +68,7 @@ Deno.serve(async (req) => {
     const mapResponse = await fetch(`${MAP_BASE_URL}/bookings?slug=${slug}`, {
       method: "POST",
       headers: {
-        "X-Api-Key": MAP_API_KEY,
+        "X-Api-Key": apiKey,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
@@ -78,7 +85,6 @@ Deno.serve(async (req) => {
     } else {
       const errorText = await mapResponse.text();
       console.error(`MAP booking failed [${mapResponse.status}]: ${errorText}`);
-      // Still log in our system but mark as failed
     }
 
     // Calculate commission (10%)

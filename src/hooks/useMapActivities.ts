@@ -31,7 +31,8 @@ export const useMapActivities = (
   slug: string | null,
   dateStart?: string,
   dateEnd?: string,
-  enabled = true
+  enabled = true,
+  partnerId?: string
 ) => {
   return useQuery({
     queryKey: ["map-activities", slug, dateStart, dateEnd],
@@ -42,25 +43,25 @@ export const useMapActivities = (
       if (dateEnd) params.dateEnd = dateEnd;
 
       const { data, error } = await supabase.functions.invoke("map-proxy", {
-        body: { endpoint: "activities", slug, params },
+        body: { endpoint: "activities", slug, partnerId, params },
       });
 
       if (error) throw error;
       return (data || []) as MapActivity[];
     },
     enabled: enabled && !!slug,
-    staleTime: 2 * 60 * 1000, // 2 min cache
+    staleTime: 2 * 60 * 1000,
   });
 };
 
 // Fetch activity types
-export const useMapActivityTypes = (slug: string | null, enabled = true) => {
+export const useMapActivityTypes = (slug: string | null, enabled = true, partnerId?: string) => {
   return useQuery({
     queryKey: ["map-activity-types", slug],
     queryFn: async () => {
       if (!slug) return [];
       const { data, error } = await supabase.functions.invoke("map-proxy", {
-        body: { endpoint: "activitytypes", slug },
+        body: { endpoint: "activitytypes", slug, partnerId },
       });
       if (error) throw error;
       return (data || []) as MapActivityType[];
@@ -79,7 +80,6 @@ export const useAllMapActivities = (
   return useQuery({
     queryKey: ["map-activities-all", dateStart, dateEnd],
     queryFn: async () => {
-      // First get all partners with MAP slug
       const { data: partners, error: pError } = await supabase
         .from("partners")
         .select("id, name, map_tenant_slug, image_url")
@@ -89,7 +89,6 @@ export const useAllMapActivities = (
       if (pError) throw pError;
       if (!partners || partners.length === 0) return [];
 
-      // Fetch activities for each partner in parallel
       const results = await Promise.allSettled(
         partners.map(async (partner) => {
           const params: Record<string, string> = {};
@@ -100,6 +99,7 @@ export const useAllMapActivities = (
             body: {
               endpoint: "activities",
               slug: partner.map_tenant_slug,
+              partnerId: partner.id,
               params,
             },
           });
