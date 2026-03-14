@@ -117,7 +117,7 @@ export const MapBookingDialog = ({
 
         {isSuccess ? (
           <div className="flex flex-col items-center gap-4 py-6">
-            <CheckCircle2 className="h-12 w-12 text-green-600" />
+            <CheckCircle2 className="h-12 w-12 text-primary" />
             <p className="text-center text-sm text-muted-foreground">
               De boeking is geplaatst. De klant ontvangt een bevestiging op{" "}
               <strong>{form.customerEmail}</strong>.

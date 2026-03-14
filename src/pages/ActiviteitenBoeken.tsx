@@ -61,7 +61,7 @@ const ActiviteitenBoeken = () => {
           content="Boek direct activiteiten op Vlieland via Bureau Vlieland. Beschikbaarheid in real-time, eenvoudig reserveren."
         />
       </Helmet>
-      <Navbar />
+      <Navigation />
 
       <main className="min-h-screen bg-background">
         {/* Hero */}

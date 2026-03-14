@@ -19,10 +19,6 @@ Deno.serve(async (req) => {
       throw new Error("MAP_API_KEY is not configured");
     }
 
-    // Verify admin
-    const authHeader = req.headers.get("Authorization");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const body = await req.json();
     const { endpoint, slug, params } = body as {
