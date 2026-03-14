@@ -73,6 +73,7 @@ interface Partner {
   created_at: string;
   partner_type: string | null;
   accommodation_commission_percentage: number | null;
+  map_tenant_slug: string | null;
 }
 
 interface RelatedRequest {
@@ -145,6 +146,7 @@ const AdminPartnerDetail = () => {
     is_active: true,
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
+    map_tenant_slug: "",
   });
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
@@ -196,6 +198,7 @@ const AdminPartnerDetail = () => {
         is_active: data.is_active,
         partner_type: data.partner_type || "activity_provider",
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
+        map_tenant_slug: (data as any).map_tenant_slug || "",
       });
     } catch (error) {
       console.error("Error fetching partner:", error);
@@ -348,6 +351,7 @@ const AdminPartnerDetail = () => {
             formData.partner_type === "accommodation" || formData.partner_type === "both"
               ? formData.accommodation_commission_percentage
               : null,
+          map_tenant_slug: formData.map_tenant_slug || null,
         });
 
         if (error) throw error;
@@ -397,6 +401,7 @@ const AdminPartnerDetail = () => {
               formData.partner_type === "accommodation" || formData.partner_type === "both"
                 ? formData.accommodation_commission_percentage
                 : null,
+            map_tenant_slug: formData.map_tenant_slug || null,
           } as any)
           .eq("id", id);
 
@@ -749,6 +754,20 @@ const AdminPartnerDetail = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* MAP Koppeling */}
+                  <div className="space-y-2">
+                    <Label htmlFor="map_tenant_slug">MijnActiviteitenPlanner slug</Label>
+                    <Input
+                      id="map_tenant_slug"
+                      value={formData.map_tenant_slug}
+                      onChange={(e) => handleChange("map_tenant_slug", e.target.value)}
+                      placeholder="bijv. activiteiten-vlieland"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      De tenant-slug op MijnActiviteitenPlanner. Laat leeg als deze partner geen MAP-koppeling heeft.
+                    </p>
+                  </div>
 
                   <Separator />
 

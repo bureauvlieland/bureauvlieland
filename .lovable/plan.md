@@ -109,3 +109,24 @@ CRM is nu het gecombineerde overzicht met tabs Klanten en Partners. Partners-tab
 
 #### F. Data
 17. Bestaande self_service items met `skip_partner_notification = false` en `program_published_at IS NULL` geüpdatet naar `true`.
+## Plan: MijnActiviteitenPlanner (MAP) Integratie
+
+### Status: ✅ Geïmplementeerd
+
+### Wat is gebouwd
+
+1. **Database**: `map_tenant_slug` kolom op `partners` tabel + `map_bookings` tabel met RLS (alleen admins).
+
+2. **Edge Function `map-proxy`**: Centrale proxy voor MAP API v1 calls. Routeert via `X-Api-Key`, ondersteunt activities, activitytypes, en detail endpoints.
+
+3. **Edge Function `map-create-booking`**: Boekt activiteiten via MAP API, slaat boeking op in `map_bookings` met 10% commissie-berekening.
+
+4. **Admin Partner Detail**: `map_tenant_slug` veld toegevoegd aan partner formulier voor MAP-koppeling.
+
+5. **Publieke pagina `/activiteiten-boeken`**: Kalender + zoek/filter, activiteitenkaarten met live data, directe boekflow met boekingsdialog, prijzen +10% commissie markup.
+
+6. **Componenten**: `MapActivityCard` (kaart met badge "Direct boekbaar"), `MapBookingDialog` (boekingsformulier met prijsberekening).
+
+7. **Admin Dashboard**: `MapBookingsWidget` met recente boekingen en commissie-tracking.
+
+8. **Hook `useMapActivities`**: Fetcht MAP data voor individuele partner of alle gekoppelde partners.

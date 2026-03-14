@@ -78,6 +78,7 @@ import AdminPlanning from "./pages/admin/AdminPlanning";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
+import ActiviteitenBoeken from "./pages/ActiviteitenBoeken";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,7 @@ const App = () => {
               </FeatureGate>
             } />
             <Route path="/logies-vlieland" element={<LogiesVlieland />} />
+            <Route path="/activiteiten-boeken" element={<ActiviteitenBoeken />} />
             <Route path="/logies-aanvragen" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <LogiesAanvragen />
