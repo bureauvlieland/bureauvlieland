@@ -406,6 +406,7 @@ const AdminPartnerDetail = () => {
                 ? formData.accommodation_commission_percentage
                 : null,
             map_tenant_slug: formData.map_tenant_slug || null,
+            map_api_key: formData.map_api_key || null,
           } as any)
           .eq("id", id);
 
