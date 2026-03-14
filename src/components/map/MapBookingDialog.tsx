@@ -45,12 +45,14 @@ export const MapBookingDialog = ({
 
   if (!activity) return null;
 
-  const unitPrice = Math.ceil(activity.Price * commissionMarkup * 100) / 100;
-  const childUnitPrice = activity.ChildPrice
-    ? Math.ceil(activity.ChildPrice * commissionMarkup * 100) / 100
+  const unitPrice = Math.ceil(activity.PricePerPerson * commissionMarkup * 100) / 100;
+  const childUnitPrice = activity.PricePerChild
+    ? Math.ceil(activity.PricePerChild * commissionMarkup * 100) / 100
     : 0;
   const totalPrice =
     unitPrice * form.numberOfAdults + childUnitPrice * form.numberOfChildren;
+
+  const activityName = activity.ActivityTypeName;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +67,7 @@ export const MapBookingDialog = ({
         body: {
           slug: activity._partnerSlug,
           activityId: activity.Id,
-          activityName: activity.Name,
+          activityName: activityName,
           departure: activity.Departure,
           partnerId: activity._partnerId,
           customerName: form.customerName,
@@ -110,8 +112,7 @@ export const MapBookingDialog = ({
         <DialogHeader>
           <DialogTitle>{isSuccess ? "Boeking bevestigd!" : "Activiteit boeken"}</DialogTitle>
           <DialogDescription>
-            {activity.Name} — {format(new Date(activity.Departure), "EEEE d MMMM yyyy", { locale: nl })}
-            {activity.StartTime && ` om ${activity.StartTime}`}
+            {activityName} — {format(new Date(activity.Departure), "EEEE d MMMM yyyy 'om' HH:mm", { locale: nl })}
           </DialogDescription>
         </DialogHeader>
 

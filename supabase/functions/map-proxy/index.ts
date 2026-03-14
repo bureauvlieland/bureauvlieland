@@ -13,7 +13,6 @@ async function getApiKeyForPartner(partnerId: string | null, slug: string): Prom
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Try partner-specific key first
   const query = partnerId
     ? supabase.from("partners").select("map_api_key").eq("id", partnerId).single()
     : supabase.from("partners").select("map_api_key").eq("map_tenant_slug", slug).single();
@@ -21,7 +20,6 @@ async function getApiKeyForPartner(partnerId: string | null, slug: string): Prom
   const { data } = await query;
   if (data?.map_api_key) return data.map_api_key;
 
-  // Fallback to central key
   const centralKey = Deno.env.get("MAP_API_KEY");
   if (centralKey) return centralKey;
 
@@ -51,8 +49,8 @@ Deno.serve(async (req) => {
 
     const apiKey = await getApiKeyForPartner(partnerId || null, slug);
 
+    // Build URL without slug param — API auth is via X-Api-Key header per tenant
     const url = new URL(`${MAP_BASE_URL}/${endpoint}`);
-    url.searchParams.set("slug", slug);
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value);

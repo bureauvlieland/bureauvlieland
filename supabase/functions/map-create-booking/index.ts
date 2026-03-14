@@ -51,21 +51,19 @@ Deno.serve(async (req) => {
     const apiKey = partner?.map_api_key || Deno.env.get("MAP_API_KEY");
     if (!apiKey) throw new Error("No MAP API key found for this partner");
 
-    // Create booking on MAP
+    // Create booking on MAP — field names per API docs
     const bookingPayload = {
       ActivityId: activityId,
-      CustomerName: customerName,
-      CustomerEmail: customerEmail,
-      CustomerPhone: customerPhone || "",
+      Name: customerName,
+      EmailAddress: customerEmail,
+      PhoneNumber: customerPhone || "",
       NumberOfAdults: numberOfAdults || 1,
       NumberOfChildren: numberOfChildren || 0,
-      Notes: notes || `Boeking via Bureau Vlieland`,
-      Source: "Bureau Vlieland",
     };
 
     console.log("Creating MAP booking:", JSON.stringify(bookingPayload));
 
-    const mapResponse = await fetch(`${MAP_BASE_URL}/bookings?slug=${slug}`, {
+    const mapResponse = await fetch(`${MAP_BASE_URL}/bookings`, {
       method: "POST",
       headers: {
         "X-Api-Key": apiKey,
