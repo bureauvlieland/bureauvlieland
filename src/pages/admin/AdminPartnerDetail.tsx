@@ -148,6 +148,7 @@ const AdminPartnerDetail = () => {
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
     map_tenant_slug: "",
+    map_api_key: "",
   });
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
