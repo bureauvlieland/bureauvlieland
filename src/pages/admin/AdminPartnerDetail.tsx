@@ -73,6 +73,7 @@ interface Partner {
   created_at: string;
   partner_type: string | null;
   accommodation_commission_percentage: number | null;
+  map_tenant_slug: string | null;
 }
 
 interface RelatedRequest {
