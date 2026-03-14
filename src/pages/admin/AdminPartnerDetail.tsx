@@ -755,6 +755,20 @@ const AdminPartnerDetail = () => {
                     </div>
                   )}
 
+                  {/* MAP Koppeling */}
+                  <div className="space-y-2">
+                    <Label htmlFor="map_tenant_slug">MijnActiviteitenPlanner slug</Label>
+                    <Input
+                      id="map_tenant_slug"
+                      value={formData.map_tenant_slug}
+                      onChange={(e) => handleChange("map_tenant_slug", e.target.value)}
+                      placeholder="bijv. activiteiten-vlieland"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      De tenant-slug op MijnActiviteitenPlanner. Laat leeg als deze partner geen MAP-koppeling heeft.
+                    </p>
+                  </div>
+
                   <Separator />
 
                   <div className="flex items-center justify-between">
