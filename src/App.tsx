@@ -78,6 +78,7 @@ import AdminPlanning from "./pages/admin/AdminPlanning";
 import LogiesAanvragen from "./pages/LogiesAanvragen";
 import LogiesVlieland from "./pages/LogiesVlieland";
 import AccommodationQuotes from "./pages/AccommodationQuotes";
+import ActiviteitenBoeken from "./pages/ActiviteitenBoeken";
 
 const queryClient = new QueryClient();
 
