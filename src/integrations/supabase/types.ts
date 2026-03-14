@@ -1272,6 +1272,7 @@ export type Database = {
           is_active: boolean
           kvk_number: string | null
           last_login_at: string | null
+          map_api_key: string | null
           map_tenant_slug: string | null
           name: string
           partner_token: string
@@ -1308,6 +1309,7 @@ export type Database = {
           is_active?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
+          map_api_key?: string | null
           map_tenant_slug?: string | null
           name: string
           partner_token?: string
@@ -1344,6 +1346,7 @@ export type Database = {
           is_active?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
+          map_api_key?: string | null
           map_tenant_slug?: string | null
           name?: string
           partner_token?: string

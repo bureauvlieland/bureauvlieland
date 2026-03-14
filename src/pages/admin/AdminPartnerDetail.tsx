@@ -74,6 +74,7 @@ interface Partner {
   partner_type: string | null;
   accommodation_commission_percentage: number | null;
   map_tenant_slug: string | null;
+  map_api_key: string | null;
 }
 
 interface RelatedRequest {
@@ -147,6 +148,7 @@ const AdminPartnerDetail = () => {
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
     map_tenant_slug: "",
+    map_api_key: "",
   });
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
@@ -199,6 +201,7 @@ const AdminPartnerDetail = () => {
         partner_type: data.partner_type || "activity_provider",
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
         map_tenant_slug: (data as any).map_tenant_slug || "",
+        map_api_key: (data as any).map_api_key || "",
       });
     } catch (error) {
       console.error("Error fetching partner:", error);
@@ -351,7 +354,8 @@ const AdminPartnerDetail = () => {
             formData.partner_type === "accommodation" || formData.partner_type === "both"
               ? formData.accommodation_commission_percentage
               : null,
-          map_tenant_slug: formData.map_tenant_slug || null,
+           map_tenant_slug: formData.map_tenant_slug || null,
+           map_api_key: formData.map_api_key || null,
         });
 
         if (error) throw error;
@@ -402,6 +406,7 @@ const AdminPartnerDetail = () => {
                 ? formData.accommodation_commission_percentage
                 : null,
             map_tenant_slug: formData.map_tenant_slug || null,
+            map_api_key: formData.map_api_key || null,
           } as any)
           .eq("id", id);
 
@@ -768,6 +773,22 @@ const AdminPartnerDetail = () => {
                       De tenant-slug op MijnActiviteitenPlanner. Laat leeg als deze partner geen MAP-koppeling heeft.
                     </p>
                   </div>
+
+                  {formData.map_tenant_slug && (
+                    <div className="space-y-2">
+                      <Label htmlFor="map_api_key">MAP API Key</Label>
+                      <Input
+                        id="map_api_key"
+                        type="password"
+                        value={formData.map_api_key}
+                        onChange={(e) => handleChange("map_api_key", e.target.value)}
+                        placeholder="API key voor deze tenant"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        De API key voor deze tenant op MijnActiviteitenPlanner. Wordt veilig opgeslagen.
+                      </p>
+                    </div>
+                  )}
 
                   <Separator />
 

@@ -1,4 +1,4 @@
-
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,22 +8,37 @@ const corsHeaders = {
 
 const MAP_BASE_URL = "https://portal.mijnactiviteitenplanner.nl/api/v1";
 
+async function getApiKeyForPartner(partnerId: string | null, slug: string): Promise<string> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Try partner-specific key first
+  const query = partnerId
+    ? supabase.from("partners").select("map_api_key").eq("id", partnerId).single()
+    : supabase.from("partners").select("map_api_key").eq("map_tenant_slug", slug).single();
+
+  const { data } = await query;
+  if (data?.map_api_key) return data.map_api_key;
+
+  // Fallback to central key
+  const centralKey = Deno.env.get("MAP_API_KEY");
+  if (centralKey) return centralKey;
+
+  throw new Error("No MAP API key found for this partner");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const MAP_API_KEY = Deno.env.get("MAP_API_KEY");
-    if (!MAP_API_KEY) {
-      throw new Error("MAP_API_KEY is not configured");
-    }
-
-
     const body = await req.json();
-    const { endpoint, slug, params } = body as {
+    const { endpoint, slug, partnerId, params } = body as {
       endpoint: string;
       slug: string;
+      partnerId?: string;
       params?: Record<string, string>;
     };
 
@@ -34,7 +49,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build URL with query params
+    const apiKey = await getApiKeyForPartner(partnerId || null, slug);
+
     const url = new URL(`${MAP_BASE_URL}/${endpoint}`);
     url.searchParams.set("slug", slug);
     if (params) {
@@ -48,7 +64,7 @@ Deno.serve(async (req) => {
     const mapResponse = await fetch(url.toString(), {
       method: "GET",
       headers: {
-        "X-Api-Key": MAP_API_KEY,
+        "X-Api-Key": apiKey,
         Accept: "application/json",
       },
     });
