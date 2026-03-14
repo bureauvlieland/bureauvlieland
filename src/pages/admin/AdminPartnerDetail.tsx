@@ -198,6 +198,7 @@ const AdminPartnerDetail = () => {
         is_active: data.is_active,
         partner_type: data.partner_type || "activity_provider",
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
+        map_tenant_slug: (data as any).map_tenant_slug || "",
       });
     } catch (error) {
       console.error("Error fetching partner:", error);
