@@ -251,11 +251,19 @@ export const PriceSummaryCard = ({
               <div key={item.id} className="py-2">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm">{item.block_name}</span>
-                  <span className="text-sm whitespace-nowrap shrink-0">
+                  <span className="text-sm whitespace-nowrap shrink-0 text-right">
                     {hasPrice ? (
-                      <>€{formatPrice(price!)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</>
+                      item.price_type === "per_person" ? (
+                        <span>€{formatPrice(rawPrice!)} p.p. = €{formatPrice(price!)}</span>
+                      ) : (
+                        <span>€{formatPrice(price!)}</span>
+                      )
                     ) : isPreliminary ? (
-                      <span className="text-muted-foreground">ca. €{formatPrice(preliminaryPrice!)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
+                      item.price_type === "per_person" ? (
+                        <span className="text-muted-foreground">ca. €{formatPrice(rawPreliminaryPrice!)} p.p. = €{formatPrice(preliminaryPrice!)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">ca. €{formatPrice(preliminaryPrice!)}</span>
+                      )
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
