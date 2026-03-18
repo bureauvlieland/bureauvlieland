@@ -161,9 +161,7 @@ export const MobileProgramView = ({
     allConfirmed,
     isMultiDay,
     hasSelectedAccommodation,
-    isQuoteAwaitingApproval,
     isPreApproval,
-    totalCost,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
