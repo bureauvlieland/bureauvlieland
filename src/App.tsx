@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,76 +9,84 @@ import { CartProvider } from "@/contexts/CartContext";
 import { GlobalCartDrawer } from "@/components/configurator/GlobalCartDrawer";
 import { FeatureGate } from "@/components/FeatureGate";
 import { recordEntryPage } from "@/lib/entryPageTracker";
+
+// Eagerly loaded public pages (landing & SEO critical)
 import Index from "./pages/Index";
 import { Terms } from "./pages/Terms";
 import { PartnerTerms } from "./pages/PartnerTerms";
 import NotFound from "./pages/NotFound";
 import ComingSoon from "./pages/ComingSoon";
-import Catering from "./pages/Catering";
-import Voorbeeldprogrammas from "./pages/Voorbeeldprogrammas";
-import VoorbeeldprogrammaOverzicht from "./pages/VoorbeeldprogrammaOverzicht";
-import Programmas from "./pages/Programmas";
 import Diensten from "./pages/Diensten";
 import VoorWie from "./pages/VoorWie";
 import OverOns from "./pages/OverOns";
 import Contact from "./pages/Contact";
-import Evenementen from "./pages/Evenementen";
-import Offerte from "./pages/Offerte";
-import BedrijfsuitjeVlieland from "./pages/BedrijfsuitjeVlieland";
-import TeamuitjeVlieland from "./pages/TeamuitjeVlieland";
-import MeerdaagsBedrijfsuitjeVlieland from "./pages/MeerdaagsBedrijfsuitjeVlieland";
-import HeisessieVlieland from "./pages/HeisessieVlieland";
-import BedrijfsuitjeIdeeenVlieland from "./pages/BedrijfsuitjeIdeeenVlieland";
-import IncentiveReisVlieland from "./pages/IncentiveReisVlieland";
-import ZakelijkEvenementVlieland from "./pages/ZakelijkEvenementVlieland";
-import TrouwenOpVlieland from "./pages/TrouwenOpVlieland";
-import GroepsweekendVlieland from "./pages/GroepsweekendVlieland";
-import JubileumVlieland from "./pages/JubileumVlieland";
-import FamilieweekendVlieland from "./pages/FamilieweekendVlieland";
-import ProgrammaSamenstellen from "./pages/ProgrammaSamenstellen";
-import SharedProgram from "./pages/SharedProgram";
-import CustomerProgram from "./pages/CustomerProgram";
-import PartnerPortal from "./pages/PartnerPortal";
-import PartnerLogin from "./pages/PartnerLogin";
-import PartnerDashboard from "./pages/PartnerDashboard";
-import PartnerFinance from "./pages/PartnerFinance";
-import PartnerBlocks from "./pages/PartnerBlocks";
-import PartnerSettings from "./pages/PartnerSettings";
-import PartnerAccommodation from "./pages/PartnerAccommodation";
-import PartnerExtras from "./pages/PartnerExtras";
-import PartnerRoomTypes from "./pages/PartnerRoomTypes";
-import PartnerGuides from "./pages/PartnerGuides";
-import PartnerResetPassword from "./pages/PartnerResetPassword";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminCRM from "./pages/admin/AdminCRM";
-import AdminRequests from "./pages/admin/AdminRequests";
-import AdminRequestDetail from "./pages/admin/AdminRequestDetail";
-import AdminPartners from "./pages/admin/AdminPartners";
-import AdminPartnerDetail from "./pages/admin/AdminPartnerDetail";
-import AdminTodos from "./pages/admin/AdminTodos";
-import AdminLogs from "./pages/admin/AdminLogs";
-import AdminMessages from "./pages/admin/AdminMessages";
-import AdminEmailTemplates from "./pages/admin/AdminEmailTemplates";
-import AdminCommissions from "./pages/admin/AdminCommissions";
-import AdminBuildingBlocks from "./pages/admin/AdminBuildingBlocks";
-import AdminInvoicing from "./pages/admin/AdminInvoicing";
-import AdminAccommodation from "./pages/admin/AdminAccommodation";
-import AdminAccommodationDetail from "./pages/admin/AdminAccommodationDetail";
-import AdminProjects from "./pages/admin/AdminProjects";
-import AdminProgramNew from "./pages/admin/AdminProgramNew";
-import AdminQuotePreview from "./pages/admin/AdminQuotePreview";
-import AdminInvoicePreview from "./pages/admin/AdminInvoicePreview";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminMedia from "./pages/admin/AdminMedia";
-import AdminTemplates from "./pages/admin/AdminTemplates";
-import AdminPurchaseInvoices from "./pages/admin/AdminPurchaseInvoices";
-import AdminChat from "./pages/admin/AdminChat";
-import AdminFinancialDashboard from "./pages/admin/AdminFinancialDashboard";
-import AdminPlanning from "./pages/admin/AdminPlanning";
-import LogiesAanvragen from "./pages/LogiesAanvragen";
-import LogiesVlieland from "./pages/LogiesVlieland";
-import AccommodationQuotes from "./pages/AccommodationQuotes";
-import ActiviteitenBoeken from "./pages/ActiviteitenBoeken";
+
+// Lazy-loaded public pages
+const Catering = lazy(() => import("./pages/Catering"));
+const Voorbeeldprogrammas = lazy(() => import("./pages/Voorbeeldprogrammas"));
+const VoorbeeldprogrammaOverzicht = lazy(() => import("./pages/VoorbeeldprogrammaOverzicht"));
+const Programmas = lazy(() => import("./pages/Programmas"));
+const Evenementen = lazy(() => import("./pages/Evenementen"));
+const Offerte = lazy(() => import("./pages/Offerte"));
+const BedrijfsuitjeVlieland = lazy(() => import("./pages/BedrijfsuitjeVlieland"));
+const TeamuitjeVlieland = lazy(() => import("./pages/TeamuitjeVlieland"));
+const MeerdaagsBedrijfsuitjeVlieland = lazy(() => import("./pages/MeerdaagsBedrijfsuitjeVlieland"));
+const HeisessieVlieland = lazy(() => import("./pages/HeisessieVlieland"));
+const BedrijfsuitjeIdeeenVlieland = lazy(() => import("./pages/BedrijfsuitjeIdeeenVlieland"));
+const IncentiveReisVlieland = lazy(() => import("./pages/IncentiveReisVlieland"));
+const ZakelijkEvenementVlieland = lazy(() => import("./pages/ZakelijkEvenementVlieland"));
+const TrouwenOpVlieland = lazy(() => import("./pages/TrouwenOpVlieland"));
+const GroepsweekendVlieland = lazy(() => import("./pages/GroepsweekendVlieland"));
+const JubileumVlieland = lazy(() => import("./pages/JubileumVlieland"));
+const FamilieweekendVlieland = lazy(() => import("./pages/FamilieweekendVlieland"));
+const ProgrammaSamenstellen = lazy(() => import("./pages/ProgrammaSamenstellen"));
+const SharedProgram = lazy(() => import("./pages/SharedProgram"));
+const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
+const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
+const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
+const AccommodationQuotes = lazy(() => import("./pages/AccommodationQuotes"));
+const ActiviteitenBoeken = lazy(() => import("./pages/ActiviteitenBoeken"));
+
+// Lazy-loaded partner pages
+const PartnerPortal = lazy(() => import("./pages/PartnerPortal"));
+const PartnerLogin = lazy(() => import("./pages/PartnerLogin"));
+const PartnerDashboard = lazy(() => import("./pages/PartnerDashboard"));
+const PartnerFinance = lazy(() => import("./pages/PartnerFinance"));
+const PartnerBlocks = lazy(() => import("./pages/PartnerBlocks"));
+const PartnerSettings = lazy(() => import("./pages/PartnerSettings"));
+const PartnerAccommodation = lazy(() => import("./pages/PartnerAccommodation"));
+const PartnerExtras = lazy(() => import("./pages/PartnerExtras"));
+const PartnerRoomTypes = lazy(() => import("./pages/PartnerRoomTypes"));
+const PartnerGuides = lazy(() => import("./pages/PartnerGuides"));
+const PartnerResetPassword = lazy(() => import("./pages/PartnerResetPassword"));
+
+// Lazy-loaded admin pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminCRM = lazy(() => import("./pages/admin/AdminCRM"));
+const AdminRequests = lazy(() => import("./pages/admin/AdminRequests"));
+const AdminRequestDetail = lazy(() => import("./pages/admin/AdminRequestDetail"));
+const AdminPartners = lazy(() => import("./pages/admin/AdminPartners"));
+const AdminPartnerDetail = lazy(() => import("./pages/admin/AdminPartnerDetail"));
+const AdminTodos = lazy(() => import("./pages/admin/AdminTodos"));
+const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
+const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
+const AdminEmailTemplates = lazy(() => import("./pages/admin/AdminEmailTemplates"));
+const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
+const AdminBuildingBlocks = lazy(() => import("./pages/admin/AdminBuildingBlocks"));
+const AdminInvoicing = lazy(() => import("./pages/admin/AdminInvoicing"));
+const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation"));
+const AdminAccommodationDetail = lazy(() => import("./pages/admin/AdminAccommodationDetail"));
+const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
+const AdminProgramNew = lazy(() => import("./pages/admin/AdminProgramNew"));
+const AdminQuotePreview = lazy(() => import("./pages/admin/AdminQuotePreview"));
+const AdminInvoicePreview = lazy(() => import("./pages/admin/AdminInvoicePreview"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminMedia = lazy(() => import("./pages/admin/AdminMedia"));
+const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
+const AdminPurchaseInvoices = lazy(() => import("./pages/admin/AdminPurchaseInvoices"));
+const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
+const AdminFinancialDashboard = lazy(() => import("./pages/admin/AdminFinancialDashboard"));
+const AdminPlanning = lazy(() => import("./pages/admin/AdminPlanning"));
 
 const queryClient = new QueryClient();
 
@@ -97,6 +105,7 @@ const App = () => {
         <CartProvider>
           <ScrollToTop />
           <GlobalCartDrawer />
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/diensten" element={<Diensten />} />
@@ -196,6 +205,7 @@ const App = () => {
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </CartProvider>
       </BrowserRouter>
     </TooltipProvider>
