@@ -77,10 +77,13 @@ export const PriceSummaryCard = ({
     // All order lines: bureau + partner items (non-cancelled, non-self_arranged)
     const orderLines = relevantItems.map(item => {
       const hasPrice = item.status === "confirmed" && item.quoted_price !== null;
-      const price = hasPrice ? (item.quoted_price || 0) : null;
+      const rawPrice = hasPrice ? (item.quoted_price || 0) : null;
       const isPreliminary = !item.quoted_price && item.admin_price_override;
-      const preliminaryPrice = isPreliminary ? item.admin_price_override : null;
-      return { item, hasPrice, price, isPreliminary: !!isPreliminary, preliminaryPrice };
+      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override : null;
+      const multiplier = item.price_type === "per_person" ? numberOfPeople : 1;
+      const price = rawPrice !== null ? rawPrice * multiplier : null;
+      const preliminaryPrice = rawPreliminaryPrice ? rawPreliminaryPrice * multiplier : null;
+      return { item, hasPrice, price, rawPrice, isPreliminary: !!isPreliminary, preliminaryPrice, rawPreliminaryPrice };
     });
 
     const confirmedLines = orderLines.filter(l => l.hasPrice);
