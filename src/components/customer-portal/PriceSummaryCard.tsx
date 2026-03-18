@@ -77,10 +77,13 @@ export const PriceSummaryCard = ({
     // All order lines: bureau + partner items (non-cancelled, non-self_arranged)
     const orderLines = relevantItems.map(item => {
       const hasPrice = item.status === "confirmed" && item.quoted_price !== null;
-      const price = hasPrice ? (item.quoted_price || 0) : null;
+      const rawPrice = hasPrice ? (item.quoted_price || 0) : null;
       const isPreliminary = !item.quoted_price && item.admin_price_override;
-      const preliminaryPrice = isPreliminary ? item.admin_price_override : null;
-      return { item, hasPrice, price, isPreliminary: !!isPreliminary, preliminaryPrice };
+      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override : null;
+      const multiplier = item.price_type === "per_person" ? numberOfPeople : 1;
+      const price = rawPrice !== null ? rawPrice * multiplier : null;
+      const preliminaryPrice = rawPreliminaryPrice ? rawPreliminaryPrice * multiplier : null;
+      return { item, hasPrice, price, rawPrice, isPreliminary: !!isPreliminary, preliminaryPrice, rawPreliminaryPrice };
     });
 
     const confirmedLines = orderLines.filter(l => l.hasPrice);
@@ -242,17 +245,24 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, hasPrice, price, isPreliminary, preliminaryPrice }) => {
-            const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+          {summary.orderLines.map(({ item, hasPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice }) => {
             return (
               <div key={item.id} className="py-2">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm">{item.block_name}</span>
-                  <span className="text-sm whitespace-nowrap shrink-0">
+                  <span className="text-sm whitespace-nowrap shrink-0 text-right">
                     {hasPrice ? (
-                      <>€{formatPrice(price!)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</>
+                      item.price_type === "per_person" ? (
+                        <span>€{formatPrice(rawPrice!)} p.p. = €{formatPrice(price!)}</span>
+                      ) : (
+                        <span>€{formatPrice(price!)}</span>
+                      )
                     ) : isPreliminary ? (
-                      <span className="text-muted-foreground">ca. €{formatPrice(preliminaryPrice!)}{priceTypeLabel ? ` ${priceTypeLabel}` : ""}</span>
+                      item.price_type === "per_person" ? (
+                        <span className="text-muted-foreground">ca. €{formatPrice(rawPreliminaryPrice!)} p.p. = €{formatPrice(preliminaryPrice!)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">ca. €{formatPrice(preliminaryPrice!)}</span>
+                      )
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
