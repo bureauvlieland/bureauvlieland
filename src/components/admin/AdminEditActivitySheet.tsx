@@ -34,7 +34,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { timeSlots } from "@/types/buildingBlock";
+import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { resolveAutoTodo } from "@/lib/autoTodoCreator";

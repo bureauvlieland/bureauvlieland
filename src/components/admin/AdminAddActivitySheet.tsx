@@ -26,7 +26,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { timeSlots, type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
+import { type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
+import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 
