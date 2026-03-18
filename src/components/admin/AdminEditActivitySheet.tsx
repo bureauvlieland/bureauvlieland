@@ -345,19 +345,24 @@ export const AdminEditActivitySheet = ({
 
           {/* Time preference */}
           <div className="space-y-2">
-            <Label htmlFor="editTime">Voorkeurstijd</Label>
-            <Select value={preferredTime} onValueChange={setPreferredTime}>
-              <SelectTrigger id="editTime">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map((slot) => (
-                  <SelectItem key={slot.value} value={slot.value}>
-                    {slot.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Voorkeurstijd</Label>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="editFlexibel"
+                checked={preferredTime === "flexibel"}
+                onCheckedChange={(checked) => {
+                  setPreferredTime(checked ? "flexibel" : "10:00");
+                }}
+              />
+              <Label htmlFor="editFlexibel" className="font-normal cursor-pointer">Flexibel</Label>
+            </div>
+            {preferredTime !== "flexibel" && (
+              <Input
+                type="time"
+                value={preferredTime}
+                onChange={(e) => setPreferredTime(e.target.value)}
+              />
+            )}
           </div>
 
           {/* Price override */}
