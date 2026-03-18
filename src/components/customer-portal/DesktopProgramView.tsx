@@ -363,10 +363,10 @@ export const DesktopProgramView = ({
                       {(dayIndex) => {
                         const dayItems = getItemsForDay(dayIndex);
                         const dayPricedItems = dayItems.filter(i => i.status !== "cancelled" && i.quoted_price);
-                        const dayTotalIncl = dayPricedItems.reduce((s, i) => s + (i.quoted_price || 0), 0);
+                        const dayTotalIncl = dayPricedItems.reduce((s, i) => s + getItemEffectivePrice(i, program.number_of_people), 0);
                         const dayTotalExcl = dayPricedItems.reduce((s, i) => {
                           const rate = getItemVatRate(i);
-                          return s + calculateExclVat(i.quoted_price || 0, rate);
+                          return s + calculateExclVat(getItemEffectivePrice(i, program.number_of_people), rate);
                         }, 0);
                         return (
                           <>
