@@ -244,6 +244,13 @@ export const PartnerItemSheet = ({
     } else {
       // Default: pre-fill proposedTime with preferred_time for alternative
       if (item.preferred_time) setProposedTime(item.preferred_time);
+      // Pre-fill price from admin override if available
+      if (item.admin_price_override && !quotedPrice) {
+        const priceValue = item.price_type === "per_person" 
+          ? item.admin_price_override * request.number_of_people 
+          : item.admin_price_override;
+        setQuotedPrice(priceValue.toFixed(2).replace(".", ","));
+      }
     }
     setShowResponseForm(true);
   };
