@@ -371,7 +371,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const { error: updateQuoteStatusError } = await supabase
       .from("program_request_items")
       .update({
-        item_quote_status: "bevestigd",
+        item_quote_status: "in_afstemming",
         updated_at: new Date().toISOString(),
       })
       .eq("request_id", program.id)
