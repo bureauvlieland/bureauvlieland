@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Euro, Clock, HelpCircle, FileText, AlertCircle, BedDouble } from "lucide-react";
+import { Euro, Clock, FileText, AlertCircle, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
