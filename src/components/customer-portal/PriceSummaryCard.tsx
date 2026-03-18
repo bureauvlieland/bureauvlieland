@@ -349,10 +349,16 @@ export const PriceSummaryCard = ({
               ))}
             <div className="flex items-center justify-between pt-2 border-t">
               <span className="font-medium">
-                {summary.pendingCount > 0 ? "Bevestigd totaal incl. BTW" : "Totaal incl. BTW"}
+                {(summary.pendingCount > 0 || summary.preliminaryCount > 0) ? "Bevestigd totaal incl. BTW" : "Totaal incl. BTW"}
               </span>
               <span className="font-bold text-lg text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
             </div>
+            {summary.preliminaryCount > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Indicatief totaal incl. BTW</span>
+                <span className="font-medium text-muted-foreground">ca. €{formatPrice(summary.indicativeTotalInclVat)}</span>
+              </div>
+            )}
             {numberOfPeople > 0 && (
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Per persoon incl. BTW</span>
