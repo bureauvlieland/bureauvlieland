@@ -106,7 +106,7 @@ export const PriceSummaryCard = ({
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
     const accommodationVatRate = selectedAccommodationQuote?.vat_rate || 9;
-    const accommodationVat = calcVatBreakdown(accommodationTotal, accommodationVatRate);
+    
 
     // VAT calculation across all confirmed items
     const allVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
