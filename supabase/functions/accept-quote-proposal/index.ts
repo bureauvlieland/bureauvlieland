@@ -381,7 +381,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (updateQuoteStatusError) {
       console.error("Error updating item quote statuses:", updateQuoteStatusError);
     } else {
-      console.log(`Updated item_quote_status to 'bevestigd' for concept/in_afstemming items`);
+      console.log(`Updated item_quote_status to 'in_afstemming' for concept/in_afstemming items`);
     }
 
     // Auto-resolve terms_reminder todo
