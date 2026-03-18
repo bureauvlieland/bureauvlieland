@@ -172,7 +172,7 @@ export const CustomerProgramItem = ({
               item.quoted_price ? (
                 <span className="font-semibold text-green-700 dark:text-green-500">
                   €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  {item.price_type === "per_person" ? (
+                  {!item.price_type || item.price_type === "per_person" ? (
                     <span className="font-normal text-xs ml-1">p.p.</span>
                   ) : item.price_type === "total" ? (
                     <span className="font-normal text-xs ml-1">totaal</span>

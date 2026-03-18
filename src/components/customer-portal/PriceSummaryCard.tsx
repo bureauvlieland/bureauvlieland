@@ -269,7 +269,7 @@ export const PriceSummaryCard = ({
                   </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">
                     {showPrice ? (
-                      item.price_type === "per_person" ? (
+                      !item.price_type || item.price_type === "per_person" ? (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
                           €{formatPrice(unitPrice!)} p.p. = €{formatPrice(totalPrice!)}
                         </span>
