@@ -46,6 +46,7 @@ import {
 import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { calculateExclVat } from "@/lib/appSettings";
+import { getItemEffectivePrice } from "@/lib/portalPricing";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
 import { downloadAllEvents } from "@/lib/calendarExport";
 
