@@ -373,22 +373,23 @@ export default function AdminAccommodationDetail() {
 
   // Update guests mutation
   const updateGuestsMutation = useMutation({
-    mutationFn: async (newGuests: number) => {
+    mutationFn: async ({ newGuests, selectedQuoteIds }: { newGuests: number; selectedQuoteIds: string[] }) => {
       await supabase.from("accommodation_requests").update({ number_of_guests: newGuests, status: "processing", updated_at: new Date().toISOString() }).eq("id", id);
       if (linkedProgram) {
         await supabase.from("program_requests").update({ number_of_people: newGuests, updated_at: new Date().toISOString() }).eq("id", linkedProgram.id);
       }
-      if (quotes && quotes.length > 0) {
-        const activeQuoteIds = quotes.filter(q => ["pending", "submitted", "selected"].includes(q.status)).map(q => q.id);
-        if (activeQuoteIds.length > 0) {
-          await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, updated_at: new Date().toISOString() }).in("id", activeQuoteIds);
-        }
+      if (selectedQuoteIds.length > 0) {
+        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, updated_at: new Date().toISOString() }).in("id", selectedQuoteIds);
       }
       if (linkedProgram) {
+        const resetPartnerNames = quotes
+          ?.filter((q) => selectedQuoteIds.includes(q.id))
+          .map((q) => q.partner?.name || "Onbekend")
+          .join(", ") || "";
         await supabase.from("program_request_history").insert({
           request_id: linkedProgram.id, action: "people_changed", actor: "admin", actor_name: "Bureau Vlieland",
           old_value: { people: request?.number_of_guests }, new_value: { people: newGuests },
-          notes: `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests} (admin). Logiesoffertes gereset.`,
+          notes: `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests} (admin).${selectedQuoteIds.length > 0 ? ` Offertes gereset voor: ${resetPartnerNames}.` : " Geen offertes gereset."}`,
         });
       }
     },
@@ -396,7 +397,7 @@ export default function AdminAccommodationDetail() {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-linked-program", id] });
-      toast({ title: "Aantal gasten bijgewerkt", description: "Offertes zijn gereset." });
+      toast({ title: "Aantal gasten bijgewerkt", description: "Wijzigingen opgeslagen." });
     },
     onError: () => {
       toast({ title: "Fout bij bijwerken", variant: "destructive" });
