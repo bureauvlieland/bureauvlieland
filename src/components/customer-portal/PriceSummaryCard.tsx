@@ -123,10 +123,12 @@ export const PriceSummaryCard = ({
       allVatLines[0].exclVat += amount;
     };
 
-    // Add confirmed items to VAT breakdown
-    confirmedLines.forEach(l => addVat(l.price!, getItemVatRate(l.item)));
-    // Add preliminary items to a separate indicative VAT breakdown
-    const preliminaryLines = orderLines.filter(l => l.isPreliminary && l.preliminaryPrice);
+    // Add ALL priced items (confirmed + preliminary) to VAT breakdown
+    orderLines.forEach(l => {
+      if (l.effectivePrice !== null && l.effectivePrice !== undefined) {
+        addVat(l.effectivePrice, getItemVatRate(l.item));
+      }
+    });
     
     addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
@@ -134,17 +136,15 @@ export const PriceSummaryCard = ({
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
-    const confirmedItemsTotal = confirmedLines.reduce((s, l) => s + (l.price || 0), 0);
-    const preliminaryItemsTotal = preliminaryLines.reduce((s, l) => s + (l.preliminaryPrice || 0), 0);
-    const grandTotalInclVat = confirmedItemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
-    const indicativeTotalInclVat = grandTotalInclVat + preliminaryItemsTotal;
+    const itemsTotal = pricedLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
+    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
+    const hasPreliminaryItems = orderLines.some(l => l.isPreliminary);
 
     return {
       orderLines,
       selfArrangedItems,
-      confirmedCount: confirmedLines.length,
       pendingCount: pendingLines.length,
-      preliminaryCount: preliminaryLines.length,
+      hasPreliminaryItems,
       coordinationFee,
       centralSurcharge,
       standardVatRate,
@@ -159,9 +159,7 @@ export const PriceSummaryCard = ({
       totalExclVat,
       totalVatAmount,
       grandTotalInclVat,
-      indicativeTotalInclVat,
-      preliminaryItemsTotal,
-      hasConfirmedPrices: confirmedLines.length > 0 || !!selectedAccommodationQuote,
+      hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
   }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
