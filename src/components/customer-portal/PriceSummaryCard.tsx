@@ -76,18 +76,23 @@ export const PriceSummaryCard = ({
 
     // All order lines: bureau + partner items (non-cancelled, non-self_arranged)
     const orderLines = relevantItems.map(item => {
-      const hasPrice = item.status === "confirmed" && item.quoted_price !== null;
-      const rawPrice = hasPrice ? (item.quoted_price || 0) : null;
-      const isPreliminary = !item.quoted_price && item.admin_price_override;
-      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override : null;
       const multiplier = item.price_type === "per_person" ? numberOfPeople : 1;
+      // An item has a confirmed price when quoted_price is set
+      const hasQuotedPrice = item.quoted_price !== null && item.quoted_price !== undefined;
+      const rawPrice = hasQuotedPrice ? (item.quoted_price || 0) : null;
       const price = rawPrice !== null ? rawPrice * multiplier : null;
-      const preliminaryPrice = rawPreliminaryPrice ? rawPreliminaryPrice * multiplier : null;
-      return { item, hasPrice, price, rawPrice, isPreliminary: !!isPreliminary, preliminaryPrice, rawPreliminaryPrice };
+      // Preliminary: no quoted_price but admin set an override estimate
+      const isPreliminary = !hasQuotedPrice && !!item.admin_price_override;
+      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override! : null;
+      const preliminaryPrice = rawPreliminaryPrice !== null ? rawPreliminaryPrice * multiplier : null;
+      // effectivePrice is the best available price for totalling
+      const effectivePrice = price ?? preliminaryPrice;
+      const effectiveRaw = rawPrice ?? rawPreliminaryPrice;
+      return { item, hasQuotedPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice, effectivePrice, effectiveRaw };
     });
 
-    const confirmedLines = orderLines.filter(l => l.hasPrice);
-    const pendingLines = orderLines.filter(l => !l.hasPrice);
+    const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
+    const pendingLines = orderLines.filter(l => l.effectivePrice === null);
 
     // Coordination fee
     const coordinationFee = getCoordinationFee(numberOfPeople);
