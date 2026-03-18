@@ -40,6 +40,9 @@ export interface PartnerItem {
   proposed_time: string | null;
   proposed_date: string | null;
   confirmed_time: string | null; // Final confirmed time after customer acceptance
+  // Admin price override (set by admin, visible to partner as expected price)
+  admin_price_override: number | null;
+  price_type: string | null; // "per_person" | "total"
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;

@@ -424,8 +424,35 @@ export const PartnerItemSheet = ({
             </>
           )}
 
-          {/* Price indication */}
-          {item.price_indication && (
+          {/* Admin price override - expected price */}
+          {item.admin_price_override !== null && item.admin_price_override !== undefined && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Verwachte prijs</h3>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Euro className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-lg">
+                      €{item.price_type === "per_person"
+                        ? (item.admin_price_override * request.number_of_people).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {item.price_type === "per_person" 
+                      ? `€${item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p. × ${request.number_of_people} personen`
+                      : "Totaalprijs"
+                    } · Bevestig of pas aan bij uw reactie.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Price indication (from configurator) */}
+          {item.price_indication && !item.admin_price_override && (
             <>
               <Separator />
               <div className="space-y-3">
