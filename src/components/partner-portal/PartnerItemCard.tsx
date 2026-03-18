@@ -161,7 +161,24 @@ export const PartnerItemCard = ({
         {request.invoicing_mode === "bureau_central" && (
           <BureauCentralBadge variant="compact" />
         )}
-        {item.price_indication && (
+        {/* Admin price override - expected price */}
+        {item.admin_price_override !== null && item.admin_price_override !== undefined && !item.quoted_price && (
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+            <span className="text-muted-foreground">Verwachte prijs:</span>{" "}
+            <span className="font-medium">
+              €{item.price_type === "per_person"
+                ? (item.admin_price_override * request.number_of_people).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              }
+            </span>
+            {item.price_type === "per_person" && (
+              <span className="text-xs text-muted-foreground ml-1">
+                (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.)
+              </span>
+            )}
+          </div>
+        )}
+        {item.price_indication && !item.admin_price_override && !item.quoted_price && (
           <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 text-sm">
             <span className="text-muted-foreground">Indicatieve prijs (klant zag):</span>{" "}
             <span className="font-medium text-blue-700 dark:text-blue-400">{item.price_indication}</span>
