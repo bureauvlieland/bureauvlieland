@@ -256,7 +256,7 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, hasQuotedPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice, effectivePrice, effectiveRaw }) => {
+          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, effectiveRaw }) => {
             const showPrice = effectivePrice !== null;
             const unitPrice = effectiveRaw;
             const totalPrice = effectivePrice;
