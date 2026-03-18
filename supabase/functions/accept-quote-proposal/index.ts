@@ -367,6 +367,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // Ensure all active items have at least "bevestigd" quote status
+    const { error: updateQuoteStatusError } = await supabase
+      .from("program_request_items")
+      .update({
+        item_quote_status: "bevestigd",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("request_id", program.id)
+      .neq("status", "cancelled")
+      .in("item_quote_status", ["concept", "in_afstemming"]);
+
+    if (updateQuoteStatusError) {
+      console.error("Error updating item quote statuses:", updateQuoteStatusError);
+    } else {
+      console.log(`Updated item_quote_status to 'bevestigd' for concept/in_afstemming items`);
+    }
+
     // Auto-resolve terms_reminder todo
     await supabase
       .from("admin_todos")
