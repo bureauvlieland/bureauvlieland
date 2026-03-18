@@ -282,7 +282,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // Auto-set active items to "bevestigd" so customer can approve them
       const { error: itemsUpdateError } = await supabase
         .from("program_request_items")
-        .update({ item_quote_status: "bevestigd" })
+        .update({ item_quote_status: "in_afstemming" })
         .eq("request_id", requestId)
         .neq("status", "cancelled")
         .in("item_quote_status", ["concept", "in_afstemming"]);
