@@ -526,7 +526,7 @@ export const AdminAddActivitySheet = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium truncate">{block.name}</h4>
-                          {!block.is_published && (
+                          {(block as any).status === "concept" && (
                             <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
                               Concept
                             </span>
