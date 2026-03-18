@@ -1082,7 +1082,15 @@ export default function AdminAccommodationDetail() {
         isOpen={showEditGuestsDialog}
         onClose={() => setShowEditGuestsDialog(false)}
         currentGuests={request?.number_of_guests || 0}
-        onSave={(newGuests) => updateGuestsMutation.mutateAsync(newGuests)}
+        quotes={(quotes || []).map((q) => ({
+          quoteId: q.id,
+          partnerId: q.partner_id,
+          partnerName: q.partner?.name || "Onbekend",
+          status: q.status,
+        }))}
+        onSave={(newGuests, selectedQuoteIds) =>
+          updateGuestsMutation.mutateAsync({ newGuests, selectedQuoteIds })
+        }
       />
 
       {/* Status Email Sheet */}
