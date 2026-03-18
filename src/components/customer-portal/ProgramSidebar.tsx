@@ -95,15 +95,6 @@ export const ProgramSidebar = ({
       />
 
 
-      {/* Total cost display */}
-      {totalCost > 0 && (
-        <div className="bg-muted/50 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Totaal (incl. BTW)</span>
-            <span className="text-lg font-semibold">{formatCurrency(totalCost)}</span>
-          </div>
-        </div>
-      )}
 
       {/* Levies info */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-3">

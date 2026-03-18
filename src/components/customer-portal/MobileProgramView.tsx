@@ -45,6 +45,7 @@ import { nl } from "date-fns/locale";
 import type { ProgramRequestItem, ProgramRequestHistory, ProgramRequestWithItems } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { calculateExclVat } from "@/lib/appSettings";
+import { getItemEffectivePrice } from "@/lib/portalPricing";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
 import { downloadAllEvents } from "@/lib/calendarExport";
 
@@ -160,9 +161,7 @@ export const MobileProgramView = ({
     allConfirmed,
     isMultiDay,
     hasSelectedAccommodation,
-    isQuoteAwaitingApproval,
     isPreApproval,
-    totalCost,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -211,7 +210,6 @@ export const MobileProgramView = ({
       <MobileStickyStatus
         completedSteps={completedSteps}
         totalSteps={totalSteps}
-        totalCost={totalCost}
         nextAction={getNextAction()}
       />
 
@@ -384,10 +382,10 @@ export const MobileProgramView = ({
             {(dayIndex) => {
               const dayItems = getItemsForDay(dayIndex);
               const dayPricedItems = dayItems.filter(i => i.status !== "cancelled" && i.quoted_price);
-              const dayTotalIncl = dayPricedItems.reduce((s, i) => s + (i.quoted_price || 0), 0);
+              const dayTotalIncl = dayPricedItems.reduce((s, i) => s + getItemEffectivePrice(i, program.number_of_people), 0);
               const dayTotalExcl = dayPricedItems.reduce((s, i) => {
                 const rate = getItemVatRate(i);
-                return s + calculateExclVat(i.quoted_price || 0, rate);
+                return s + calculateExclVat(getItemEffectivePrice(i, program.number_of_people), rate);
               }, 0);
               return (
                 <>
