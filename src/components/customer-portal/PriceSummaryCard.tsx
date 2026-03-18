@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Euro, Clock, HelpCircle, FileText, AlertCircle, BedDouble } from "lucide-react";
+import { Euro, Clock, FileText, AlertCircle, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
@@ -74,36 +74,40 @@ export const PriceSummaryCard = ({
       (item) => item.block_type === "self_arranged" && item.status !== "cancelled"
     );
 
-    // All order lines: bureau + partner items (non-cancelled, non-self_arranged)
+    // Build order lines with unified pricing
     const orderLines = relevantItems.map(item => {
-      const hasPrice = item.status === "confirmed" && item.quoted_price !== null;
-      const rawPrice = hasPrice ? (item.quoted_price || 0) : null;
-      const isPreliminary = !item.quoted_price && item.admin_price_override;
-      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override : null;
       const multiplier = item.price_type === "per_person" ? numberOfPeople : 1;
+      // Confirmed price from partner quote
+      const hasQuotedPrice = item.quoted_price !== null && item.quoted_price !== undefined;
+      const rawPrice = hasQuotedPrice ? (item.quoted_price || 0) : null;
       const price = rawPrice !== null ? rawPrice * multiplier : null;
-      const preliminaryPrice = rawPreliminaryPrice ? rawPreliminaryPrice * multiplier : null;
-      return { item, hasPrice, price, rawPrice, isPreliminary: !!isPreliminary, preliminaryPrice, rawPreliminaryPrice };
+      // Preliminary: admin set an override estimate but no partner quote yet
+      const isPreliminary = !hasQuotedPrice && !!item.admin_price_override;
+      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override! : null;
+      const preliminaryPrice = rawPreliminaryPrice !== null ? rawPreliminaryPrice * multiplier : null;
+      // Best available price for totalling
+      const effectivePrice = price ?? preliminaryPrice;
+      const effectiveRaw = rawPrice ?? rawPreliminaryPrice;
+      return { item, hasQuotedPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice, effectivePrice, effectiveRaw };
     });
 
-    const confirmedLines = orderLines.filter(l => l.hasPrice);
-    const pendingLines = orderLines.filter(l => !l.hasPrice);
+    const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
+    const pendingLines = orderLines.filter(l => l.effectivePrice === null);
 
     // Coordination fee
     const coordinationFee = getCoordinationFee(numberOfPeople);
     const centralSurcharge = isBureauCentral ? appSettings.bureau_central_surcharge_pp * numberOfPeople : 0;
     const standardVatRate = getVatRate("standard");
 
-    // Tourist tax & nature contribution (0% VAT — levies, not services)
+    // Tourist tax & nature contribution (0% VAT — levies)
     const touristTax = appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
     const natureContribution = appSettings.nature_contribution_pp * numberOfPeople;
 
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
     const accommodationVatRate = selectedAccommodationQuote?.vat_rate || 9;
-    const accommodationVat = calcVatBreakdown(accommodationTotal, accommodationVatRate);
 
-    // VAT calculation across all confirmed items
+    // VAT breakdown — includes ALL priced items (confirmed + preliminary)
     const allVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
     const addVat = (amount: number, rate: number) => {
       const bd = calcVatBreakdown(amount, rate);
@@ -111,35 +115,32 @@ export const PriceSummaryCard = ({
       allVatLines[rate].exclVat += bd.exclVat;
       allVatLines[rate].vatAmount += bd.vatAmount;
     };
-
-    // 0% VAT items (levies) — add directly as excl amounts
     const addZeroVat = (amount: number) => {
       if (!allVatLines[0]) allVatLines[0] = { exclVat: 0, vatAmount: 0 };
       allVatLines[0].exclVat += amount;
     };
 
-    // Add confirmed items to VAT breakdown
-    confirmedLines.forEach(l => addVat(l.price!, getItemVatRate(l.item)));
-    // Add preliminary items to a separate indicative VAT breakdown
-    const preliminaryLines = orderLines.filter(l => l.isPreliminary && l.preliminaryPrice);
-    
+    // Add all priced items to VAT breakdown
+    orderLines.forEach(l => {
+      if (l.effectivePrice !== null && l.effectivePrice !== undefined) {
+        addVat(l.effectivePrice, getItemVatRate(l.item));
+      }
+    });
     addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
     addZeroVat(touristTax + natureContribution);
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
-    const confirmedItemsTotal = confirmedLines.reduce((s, l) => s + (l.price || 0), 0);
-    const preliminaryItemsTotal = preliminaryLines.reduce((s, l) => s + (l.preliminaryPrice || 0), 0);
-    const grandTotalInclVat = confirmedItemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
-    const indicativeTotalInclVat = grandTotalInclVat + preliminaryItemsTotal;
+    const itemsTotal = pricedLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
+    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
+    const hasPreliminaryItems = orderLines.some(l => l.isPreliminary);
 
     return {
       orderLines,
       selfArrangedItems,
-      confirmedCount: confirmedLines.length,
       pendingCount: pendingLines.length,
-      preliminaryCount: preliminaryLines.length,
+      hasPreliminaryItems,
       coordinationFee,
       centralSurcharge,
       standardVatRate,
@@ -154,19 +155,20 @@ export const PriceSummaryCard = ({
       totalExclVat,
       totalVatAmount,
       grandTotalInclVat,
-      indicativeTotalInclVat,
-      preliminaryItemsTotal,
-      hasConfirmedPrices: confirmedLines.length > 0 || !!selectedAccommodationQuote,
+      hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
   }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
-  // Don't show if there are no confirmed prices yet and no items at all
-  if (!summary.hasConfirmedPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
+  // Don't show if there are no prices yet and no items at all
+  if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
     return null;
   }
 
   // Compact variant for sidebar
   if (variant === "compact") {
+    const pricedActivityLines = summary.orderLines.filter(l => l.effectivePrice !== null);
+    const activitiesTotal = pricedActivityLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
+
     return (
       <div className={cn("bg-muted/50 rounded-lg p-3", className)}>
         <div className="flex items-center justify-between mb-2">
@@ -179,10 +181,10 @@ export const PriceSummaryCard = ({
               <span>€{formatPrice(summary.accommodationTotal)}</span>
             </div>
           )}
-          {summary.confirmedCount > 0 && (
+          {pricedActivityLines.length > 0 && (
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Activiteiten ({summary.confirmedCount})</span>
-              <span>€{formatPrice(summary.orderLines.filter(l => l.hasPrice).reduce((s, l) => s + (l.price || 0), 0))}</span>
+              <span className="text-muted-foreground">Activiteiten ({pricedActivityLines.length})</span>
+              <span>€{formatPrice(activitiesTotal)}</span>
             </div>
           )}
           <div className="flex items-center justify-between">
@@ -201,7 +203,7 @@ export const PriceSummaryCard = ({
             <span className="font-medium">Totaal incl. BTW</span>
             <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
           </div>
-          {numberOfPeople > 0 && summary.hasConfirmedPrices && (
+          {numberOfPeople > 0 && summary.hasPrices && (
             <p className="text-xs text-muted-foreground">
               ca. €{formatPrice(summary.grandTotalInclVat / numberOfPeople)} p.p.
             </p>
@@ -254,23 +256,27 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, hasPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice }) => {
+          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, effectiveRaw }) => {
+            const showPrice = effectivePrice !== null;
+            const unitPrice = effectiveRaw;
+            const totalPrice = effectivePrice;
             return (
               <div key={item.id} className="py-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm">{item.block_name}</span>
+                  <span className="text-sm">
+                    {item.block_name}
+                    {isPreliminary && <span className="text-muted-foreground text-xs ml-1">(voorlopig)</span>}
+                  </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">
-                    {hasPrice ? (
+                    {showPrice ? (
                       item.price_type === "per_person" ? (
-                        <span>€{formatPrice(rawPrice!)} p.p. = €{formatPrice(price!)}</span>
+                        <span className={isPreliminary ? "text-muted-foreground" : ""}>
+                          €{formatPrice(unitPrice!)} p.p. = €{formatPrice(totalPrice!)}
+                        </span>
                       ) : (
-                        <span>€{formatPrice(price!)}</span>
-                      )
-                    ) : isPreliminary ? (
-                      item.price_type === "per_person" ? (
-                        <span className="text-muted-foreground">ca. €{formatPrice(rawPreliminaryPrice!)} p.p. = €{formatPrice(preliminaryPrice!)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">ca. €{formatPrice(preliminaryPrice!)}</span>
+                        <span className={isPreliminary ? "text-muted-foreground" : ""}>
+                          €{formatPrice(totalPrice!)}
+                        </span>
                       )
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -332,8 +338,8 @@ export const PriceSummaryCard = ({
           )}
         </div>
 
-        {/* VAT breakdown + totals */}
-        {summary.hasConfirmedPrices && (
+        {/* VAT breakdown + single total */}
+        {summary.hasPrices && (
           <div className="bg-muted/30 rounded-lg p-3 mt-4 space-y-1.5">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Subtotaal excl. BTW</span>
@@ -348,17 +354,9 @@ export const PriceSummaryCard = ({
                 </div>
               ))}
             <div className="flex items-center justify-between pt-2 border-t">
-              <span className="font-medium">
-                {(summary.pendingCount > 0 || summary.preliminaryCount > 0) ? "Bevestigd totaal incl. BTW" : "Totaal incl. BTW"}
-              </span>
+              <span className="font-medium">Totaal incl. BTW</span>
               <span className="font-bold text-lg text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
             </div>
-            {summary.preliminaryCount > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Indicatief totaal incl. BTW</span>
-                <span className="font-medium text-muted-foreground">ca. €{formatPrice(summary.indicativeTotalInclVat)}</span>
-              </div>
-            )}
             {numberOfPeople > 0 && (
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Per persoon incl. BTW</span>
@@ -369,11 +367,17 @@ export const PriceSummaryCard = ({
         )}
 
         {/* Pending notice */}
-        {summary.pendingCount > 0 && (
+        {(summary.pendingCount > 0 || summary.hasPreliminaryItems) && (
           <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 mt-3">
             <Clock className="h-4 w-4 shrink-0 mt-0.5" />
             <p>
-              {summary.pendingCount} onderde{summary.pendingCount > 1 ? "len" : "el"} nog te bevestigen — het definitieve totaal wordt bekend zodra alle prijzen zijn bevestigd.
+              {summary.pendingCount > 0
+                ? `${summary.pendingCount} onderde${summary.pendingCount > 1 ? "len" : "el"} nog te bevestigen — `
+                : ""}
+              {summary.hasPreliminaryItems
+                ? "Onderdelen gemarkeerd als (voorlopig) zijn nog niet definitief. "
+                : ""}
+              Het definitieve totaal wordt bekend zodra alle prijzen zijn bevestigd.
             </p>
           </div>
         )}
