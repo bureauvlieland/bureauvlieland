@@ -245,8 +245,7 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, hasPrice, price, isPreliminary, preliminaryPrice }) => {
-            const priceTypeLabel = item.price_type === "per_person" ? "p.p." : item.price_type === "total" ? "totaal" : null;
+          {summary.orderLines.map(({ item, hasPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice }) => {
             return (
               <div key={item.id} className="py-2">
                 <div className="flex items-center justify-between gap-4">
