@@ -212,7 +212,6 @@ export const MobileProgramView = ({
       <MobileStickyStatus
         completedSteps={completedSteps}
         totalSteps={totalSteps}
-        totalCost={totalCost}
         nextAction={getNextAction()}
       />
 
