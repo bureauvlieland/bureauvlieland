@@ -305,12 +305,23 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     if (!block) return;
     
     try {
+      // If there are template usages and a replacement is selected, replace first
+      if (templateUsage && templateUsage.length > 0 && replacementBlockId) {
+        await replaceBlock.mutateAsync({ 
+          oldBlockId: block.id, 
+          newBlockId: replacementBlockId 
+        });
+      }
+      
       await deleteBlock.mutateAsync(block.id);
       toast({
         title: "Bouwsteen verwijderd",
-        description: `${block.name} is verwijderd.`,
+        description: replacementBlockId 
+          ? `${block.name} is verwijderd en vervangen in ${templateUsage?.length} template(s).`
+          : `${block.name} is verwijderd.`,
       });
       setDeleteDialogOpen(false);
+      setReplacementBlockId("");
       onOpenChange(false);
     } catch (error: any) {
       toast({
