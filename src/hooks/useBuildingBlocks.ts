@@ -39,6 +39,7 @@ export const useAdminBuildingBlocks = () => {
           *,
           provider:partners!building_blocks_provider_id_fkey(id, name, email)
         `)
+        .eq("is_active", true)
         .order("category")
         .order("sort_order");
       
