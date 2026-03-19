@@ -43,7 +43,7 @@ import {
   useReplaceBlockInTemplates,
   useAdminBuildingBlocks,
 } from "@/hooks/useBuildingBlocks";
-import { Loader2, Trash2, ImageIcon } from "lucide-react";
+import { Loader2, Trash2, ImageIcon, AlertTriangle } from "lucide-react";
 import type { BuildingBlock, BuildingBlockStatus } from "@/types/buildingBlock";
 import { statusLabels } from "@/types/buildingBlock";
 import { LocationPicker } from "./LocationPicker";
