@@ -25,11 +25,13 @@ import {
   Edit,
   Blocks,
   Filter,
+  Copy,
 } from "lucide-react";
-import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { useAdminBuildingBlocks, useDuplicateBuildingBlock } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockSheet } from "@/components/admin/BuildingBlockSheet";
 import { categoryLabels, blockTypeLabels, statusLabels } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
+import { useToast } from "@/hooks/use-toast";
 import type { BuildingBlock, BuildingBlockCategory, BuildingBlockType, BuildingBlockStatus } from "@/types/buildingBlock";
 
 const statusBadgeStyles: Record<BuildingBlockStatus, string> = {
@@ -40,6 +42,8 @@ const statusBadgeStyles: Record<BuildingBlockStatus, string> = {
 
 const AdminBuildingBlocks = () => {
   const { data: blocks, isLoading } = useAdminBuildingBlocks();
+  const duplicateBlock = useDuplicateBuildingBlock();
+  const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<BuildingBlockCategory | "all">("all");
@@ -68,6 +72,22 @@ const AdminBuildingBlocks = () => {
   const handleCreate = () => {
     setSelectedBlock(null);
     setSheetOpen(true);
+  };
+  
+  const handleDuplicate = async (block: BuildingBlock) => {
+    try {
+      await duplicateBlock.mutateAsync(block);
+      toast({
+        title: "Bouwsteen gedupliceerd",
+        description: `${block.name} is gekopieerd als concept.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fout",
+        description: error.message || "Er ging iets mis bij het dupliceren.",
+        variant: "destructive",
+      });
+    }
   };
   
   const formatPrice = (block: BuildingBlock) => {
@@ -242,13 +262,24 @@ const AdminBuildingBlocks = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(block)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDuplicate(block)}
+                          title="Dupliceren"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(block)}
+                          title="Bewerken"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
