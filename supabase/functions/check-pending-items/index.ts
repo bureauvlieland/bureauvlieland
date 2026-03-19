@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
         partner_id,
         request_id,
         created_at,
+        updated_at,
         partner:partners(name, email, contact_email),
         request:accommodation_requests(
           customer_name,
@@ -290,7 +291,7 @@ Deno.serve(async (req) => {
         )
       `)
       .eq("status", "pending")
-      .lt("created_at", partnerQuoteCutoff.toISOString());
+      .lt("updated_at", partnerQuoteCutoff.toISOString());
 
     if (pendingQuotesError) {
       console.error("Error fetching pending quotes:", pendingQuotesError);
@@ -321,7 +322,7 @@ Deno.serve(async (req) => {
         const req = quote.request as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const daysSince = Math.floor(
-          (Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)
+          (Date.now() - new Date(quote.updated_at).getTime()) / (1000 * 60 * 60 * 24)
         );
 
         const { error: todoError } = await supabase
@@ -367,6 +368,7 @@ Deno.serve(async (req) => {
             logExtra: {
               email_type: "reminder_quote_pending",
               related_partner_id: quote.partner_id,
+              related_item_id: quote.id,
             },
           });
         }
