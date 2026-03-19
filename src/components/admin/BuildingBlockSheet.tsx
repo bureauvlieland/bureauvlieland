@@ -110,12 +110,22 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [replacementBlockId, setReplacementBlockId] = useState<string>("");
   const isEditing = !!block;
   
   const createBlock = useCreateBuildingBlock();
   const updateBlock = useUpdateBuildingBlock();
   const deleteBlock = useDeleteBuildingBlock();
   const uploadImage = useUploadBlockImage();
+  const replaceBlock = useReplaceBlockInTemplates();
+  
+  // Check template usage when delete dialog opens
+  const { data: templateUsage, isLoading: isLoadingUsage } = useBlockTemplateUsage(
+    deleteDialogOpen ? block?.id : undefined
+  );
+  
+  // Get all blocks for replacement dropdown
+  const { data: allBlocks } = useAdminBuildingBlocks();
   
   // Fetch partners for dropdown
   const { data: partners } = useQuery({
