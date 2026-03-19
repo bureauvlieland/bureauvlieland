@@ -317,7 +317,7 @@ export const CustomerProgramItem = ({
               )}
 
               {/* Andere tijd - for confirmed/alternative not yet accepted */}
-              {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onCounterProposal && (
+              {!isQuoteMode && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onCounterProposal && (
                 <Button
                   variant="outline"
                   size="sm"
