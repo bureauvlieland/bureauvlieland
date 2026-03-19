@@ -87,4 +87,8 @@ export const EmailTypes = {
   
   // Accommodation rejection
   ACCOMMODATION_REJECTED_PARTNER: "accommodation_rejected_partner",
+  
+  // Reminder emails
+  REMINDER_ITEM_PENDING: "reminder_item_pending",
+  REMINDER_QUOTE_PENDING: "reminder_quote_pending",
 } as const;
