@@ -1100,6 +1100,28 @@ const AdminRequestDetail = () => {
                         <TooltipContent>Exporteer naar agenda</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    {items.filter(i => i.day_index >= 0).length > 0 && (
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        onClick={async () => {
+                          const activeItems = items.filter(i => i.day_index >= 0);
+                          const { error } = await supabase
+                            .from("program_request_items")
+                            .delete()
+                            .in("id", activeItems.map(i => i.id));
+                          if (!error) {
+                            toast({ title: `${activeItems.length} activiteiten verwijderd` });
+                            fetchRequestData();
+                          } else {
+                            toast({ title: "Fout bij leegmaken", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Alles verwijderen
+                      </Button>
+                    )}
                     <Button onClick={() => setAddActivityOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Activiteit toevoegen
