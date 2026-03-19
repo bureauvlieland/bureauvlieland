@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
         partner_id,
         request_id,
         created_at,
+        updated_at,
         partner:partners(name, email, contact_email),
         request:accommodation_requests(
           customer_name,
@@ -290,7 +291,7 @@ Deno.serve(async (req) => {
         )
       `)
       .eq("status", "pending")
-      .lt("created_at", partnerQuoteCutoff.toISOString());
+      .lt("updated_at", partnerQuoteCutoff.toISOString());
 
     if (pendingQuotesError) {
       console.error("Error fetching pending quotes:", pendingQuotesError);
