@@ -368,6 +368,7 @@ Deno.serve(async (req) => {
             logExtra: {
               email_type: "reminder_quote_pending",
               related_partner_id: quote.partner_id,
+              related_item_id: quote.id,
             },
           });
         }
