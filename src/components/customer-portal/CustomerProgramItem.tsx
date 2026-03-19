@@ -330,7 +330,7 @@ export const CustomerProgramItem = ({
               )}
 
               {/* Tijd wijzigen - for pending, unavailable, or already accepted items */}
-              {(item.status === "pending" || item.status === "unavailable" || item.customer_accepted_at) && !isSelfArranged && (
+              {(item.status === "unavailable" || item.customer_accepted_at) && !isSelfArranged && (
                 item.customer_accepted_at && onCounterProposal ? (
                   <Button
                     variant="ghost"
