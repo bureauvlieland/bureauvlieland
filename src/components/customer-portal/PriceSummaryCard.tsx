@@ -76,7 +76,7 @@ export const PriceSummaryCard = ({
 
     // Build order lines with unified pricing
     const orderLines = relevantItems.map(item => {
-      const multiplier = !item.price_type || item.price_type === "per_person" ? numberOfPeople : 1;
+      const multiplier = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" ? numberOfPeople : 1;
       // Confirmed price from partner quote
       const hasQuotedPrice = item.quoted_price !== null && item.quoted_price !== undefined;
       const rawPrice = hasQuotedPrice ? (item.quoted_price || 0) : null;
