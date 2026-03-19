@@ -74,6 +74,22 @@ const AdminBuildingBlocks = () => {
     setSheetOpen(true);
   };
   
+  const handleDuplicate = async (block: BuildingBlock) => {
+    try {
+      await duplicateBlock.mutateAsync(block);
+      toast({
+        title: "Bouwsteen gedupliceerd",
+        description: `${block.name} is gekopieerd als concept.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Fout",
+        description: error.message || "Er ging iets mis bij het dupliceren.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   const formatPrice = (block: BuildingBlock) => {
     if (block.price_display_override) return block.price_display_override;
     if (!block.price_adult) return "—";
