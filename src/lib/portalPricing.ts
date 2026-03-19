@@ -13,7 +13,7 @@ export function getItemEffectivePrice(
   numberOfPeople: number,
 ): number {
   const raw = item.quoted_price ?? 0;
-  const multiplier = !item.price_type || item.price_type === "per_person" ? numberOfPeople : 1;
+  const multiplier = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" ? numberOfPeople : 1;
   return raw * multiplier;
 }
 
