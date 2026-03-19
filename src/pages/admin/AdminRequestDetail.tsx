@@ -1235,10 +1235,10 @@ const AdminRequestDetail = () => {
                                             .delete()
                                             .eq("id", item.id);
                                           if (!error) {
-                                            toast({ title: "Activiteit verwijderd" });
+                                            toast.success("Activiteit verwijderd");
                                             fetchRequestData();
                                           } else {
-                                            toast({ title: "Fout bij verwijderen", variant: "destructive" });
+                                            toast.error("Fout bij verwijderen");
                                           }
                                         }}
                                       >
