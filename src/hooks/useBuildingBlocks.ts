@@ -39,6 +39,7 @@ export const useAdminBuildingBlocks = () => {
           *,
           provider:partners!building_blocks_provider_id_fkey(id, name, email)
         `)
+        .eq("is_active", true)
         .order("category")
         .order("sort_order");
       
@@ -135,7 +136,7 @@ export const useDeleteBuildingBlock = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("building_blocks")
-        .update({ is_active: false })
+        .delete()
         .eq("id", id);
       
       if (error) throw error;
