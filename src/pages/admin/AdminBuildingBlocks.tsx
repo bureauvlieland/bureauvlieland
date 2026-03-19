@@ -25,11 +25,13 @@ import {
   Edit,
   Blocks,
   Filter,
+  Copy,
 } from "lucide-react";
-import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { useAdminBuildingBlocks, useDuplicateBuildingBlock } from "@/hooks/useBuildingBlocks";
 import { BuildingBlockSheet } from "@/components/admin/BuildingBlockSheet";
 import { categoryLabels, blockTypeLabels, statusLabels } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
+import { useToast } from "@/hooks/use-toast";
 import type { BuildingBlock, BuildingBlockCategory, BuildingBlockType, BuildingBlockStatus } from "@/types/buildingBlock";
 
 const statusBadgeStyles: Record<BuildingBlockStatus, string> = {
