@@ -322,7 +322,7 @@ Deno.serve(async (req) => {
         const req = quote.request as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const daysSince = Math.floor(
-          (Date.now() - new Date(quote.created_at).getTime()) / (1000 * 60 * 60 * 24)
+          (Date.now() - new Date(quote.updated_at).getTime()) / (1000 * 60 * 60 * 24)
         );
 
         const { error: todoError } = await supabase
