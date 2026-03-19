@@ -1111,10 +1111,10 @@ const AdminRequestDetail = () => {
                             .delete()
                             .in("id", activeItems.map(i => i.id));
                           if (!error) {
-                            toast({ title: `${activeItems.length} activiteiten verwijderd` });
+                            toast.success(`${activeItems.length} activiteiten verwijderd`);
                             fetchRequestData();
                           } else {
-                            toast({ title: "Fout bij leegmaken", variant: "destructive" });
+                            toast.error("Fout bij leegmaken");
                           }
                         }}
                       >
