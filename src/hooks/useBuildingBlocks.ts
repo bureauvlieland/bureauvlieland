@@ -150,18 +150,27 @@ export const useBlockTemplateUsage = (blockId: string | undefined) => {
   });
 };
 
-// Replace a building block in all template items
+// Replace a building block in all template items, or remove them
 export const useReplaceBlockInTemplates = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ oldBlockId, newBlockId }: { oldBlockId: string; newBlockId: string }) => {
-      const { error } = await supabase
-        .from("program_template_items")
-        .update({ block_id: newBlockId })
-        .eq("block_id", oldBlockId);
-      
-      if (error) throw error;
+    mutationFn: async ({ oldBlockId, newBlockId }: { oldBlockId: string; newBlockId: string | null }) => {
+      if (newBlockId) {
+        // Replace with new block
+        const { error } = await supabase
+          .from("program_template_items")
+          .update({ block_id: newBlockId })
+          .eq("block_id", oldBlockId);
+        if (error) throw error;
+      } else {
+        // Remove template items referencing this block
+        const { error } = await supabase
+          .from("program_template_items")
+          .delete()
+          .eq("block_id", oldBlockId);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["block-template-usage"] });
