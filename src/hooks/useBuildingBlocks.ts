@@ -135,7 +135,7 @@ export const useDeleteBuildingBlock = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("building_blocks")
-        .update({ is_active: false })
+        .delete()
         .eq("id", id);
       
       if (error) throw error;
