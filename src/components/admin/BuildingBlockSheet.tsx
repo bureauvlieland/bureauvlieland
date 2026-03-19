@@ -39,6 +39,9 @@ import {
   useUpdateBuildingBlock,
   useDeleteBuildingBlock,
   useUploadBlockImage,
+  useBlockTemplateUsage,
+  useReplaceBlockInTemplates,
+  useAdminBuildingBlocks,
 } from "@/hooks/useBuildingBlocks";
 import { Loader2, Trash2, ImageIcon } from "lucide-react";
 import type { BuildingBlock, BuildingBlockStatus } from "@/types/buildingBlock";
