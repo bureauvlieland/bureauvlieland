@@ -42,6 +42,8 @@ const statusBadgeStyles: Record<BuildingBlockStatus, string> = {
 
 const AdminBuildingBlocks = () => {
   const { data: blocks, isLoading } = useAdminBuildingBlocks();
+  const duplicateBlock = useDuplicateBuildingBlock();
+  const { toast } = useToast();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<BuildingBlockCategory | "all">("all");
