@@ -1095,22 +1095,75 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         </SheetContent>
       </Sheet>
       
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) setReplacementBlockId("");
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Bouwsteen verwijderen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Weet je zeker dat je "{block?.name}" wilt verwijderen? 
-              De bouwsteen wordt gedeactiveerd en is niet meer zichtbaar.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {isLoadingUsage ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Template-gebruik controleren...</span>
+                  </div>
+                ) : templateUsage && templateUsage.length > 0 ? (
+                  <>
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                      <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">Deze bouwsteen wordt gebruikt in {templateUsage.length} template(s):</p>
+                        <ul className="mt-1 text-sm list-disc list-inside">
+                          {templateUsage.map((usage) => (
+                            <li key={usage.id}>{usage.template?.name || usage.template_id}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">Vervang door een andere bouwsteen:</p>
+                      <Select value={replacementBlockId} onValueChange={setReplacementBlockId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecteer een vervangende bouwsteen..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allBlocks
+                            ?.filter((b) => b.id !== block?.id)
+                            .map((b) => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      {!replacementBlockId && (
+                        <p className="text-xs text-muted-foreground">
+                          Zonder vervanging wordt de bouwsteen ook uit de templates verwijderd.
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p>
+                    Weet je zeker dat je "{block?.name}" wilt verwijderen? 
+                    Deze actie kan niet ongedaan worden gemaakt.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isLoadingUsage}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Verwijderen
+              {templateUsage && templateUsage.length > 0 && replacementBlockId 
+                ? "Vervangen & verwijderen" 
+                : "Verwijderen"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
