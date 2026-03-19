@@ -296,7 +296,7 @@ export const CustomerProgramItem = ({
               )}
 
               {/* Akkoord - for confirmed/alternative items not yet accepted */}
-              {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
+              {!isQuoteMode && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
                 <Button
                   onClick={async () => {
                     setLocalAccepting(true);
