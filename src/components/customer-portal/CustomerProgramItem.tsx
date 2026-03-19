@@ -296,7 +296,7 @@ export const CustomerProgramItem = ({
               )}
 
               {/* Akkoord - for confirmed/alternative items not yet accepted */}
-              {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
+              {!isQuoteMode && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
                 <Button
                   onClick={async () => {
                     setLocalAccepting(true);
@@ -317,7 +317,7 @@ export const CustomerProgramItem = ({
               )}
 
               {/* Andere tijd - for confirmed/alternative not yet accepted */}
-              {(item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onCounterProposal && (
+              {!isQuoteMode && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onCounterProposal && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -330,7 +330,7 @@ export const CustomerProgramItem = ({
               )}
 
               {/* Tijd wijzigen - for pending, unavailable, or already accepted items */}
-              {(item.status === "pending" || item.status === "unavailable" || item.customer_accepted_at) && !isSelfArranged && (
+              {(item.status === "unavailable" || item.customer_accepted_at) && !isSelfArranged && (
                 item.customer_accepted_at && onCounterProposal ? (
                   <Button
                     variant="ghost"
