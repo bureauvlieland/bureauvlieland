@@ -155,7 +155,7 @@ export const AdminAiProgramDialog = ({
             provider_name: "",
             provider_email: null as string | null,
             day_index: s.day_index,
-            preferred_time: null,
+            preferred_time: s.preferred_time || null,
             status: "pending",
             item_quote_status: "concept",
             skip_partner_notification: true,
