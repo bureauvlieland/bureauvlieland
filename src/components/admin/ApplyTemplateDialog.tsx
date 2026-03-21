@@ -76,7 +76,7 @@ export const ApplyTemplateDialog = ({
             admin_price_override: block.price_adult || null,
             price_type: block.price_type || "per_person",
             duration: block.duration || null,
-            admin_price_notes: block.short_description || block.price_adult_note || null,
+            admin_price_notes: block.description || block.short_description || block.price_adult_note || null,
           };
         })
         .filter((r) => r !== null);
