@@ -46,7 +46,7 @@ export const FinancialOverviewCard = ({
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
-  const { getItemVatRate } = useItemVatRates(items);
+  const { getItemVatRate } = useItemVatRates(items as any);
 
   // All program items (exclude extra costs and cancelled)
   const programItems = items.filter(
