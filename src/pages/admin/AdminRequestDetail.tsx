@@ -221,6 +221,21 @@ const AdminRequestDetail = () => {
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
+  // Purchase invoices for profit summary
+  const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
+
+  // Calculate bureau invoiced amount for profit summary
+  const bureauInvoicedAmount = (() => {
+    if (!request) return 0;
+    const programTotal = items
+      .filter((i) => i.status !== "cancelled" && i.day_index !== -1)
+      .reduce((sum, item) => sum + (centralGetItemLineTotal(item as any, request.number_of_people) ?? 0), 0);
+    const extraCosts = items
+      .filter((i) => i.day_index === -1)
+      .reduce((sum, i) => sum + (i.admin_price_override ?? 0), 0);
+    return programTotal + extraCosts;
+  })();
+
   const generateProgramStatusEmailBody = (): { subject: string; body: string } => {
     if (!request || !items) return { subject: "", body: "" };
     
