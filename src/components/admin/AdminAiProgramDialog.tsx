@@ -33,6 +33,7 @@ interface AdminAiProgramDialogProps {
 interface AiSuggestion {
   block_id: string;
   day_index: number;
+  preferred_time?: string;
 }
 
 interface BlockInfo {
@@ -154,7 +155,7 @@ export const AdminAiProgramDialog = ({
             provider_name: "",
             provider_email: null as string | null,
             day_index: s.day_index,
-            preferred_time: null,
+            preferred_time: s.preferred_time || null,
             status: "pending",
             item_quote_status: "concept",
             skip_partner_notification: true,
@@ -329,7 +330,12 @@ export const AdminAiProgramDialog = ({
                               key={`${s.block_id}-${i}`}
                               className="flex items-center justify-between text-sm pl-3 py-1 border-l-2 border-primary/30"
                             >
-                              <span>{block?.name || s.block_id}</span>
+                              <span>
+                                {s.preferred_time && (
+                                  <span className="text-muted-foreground font-mono mr-2">{s.preferred_time}</span>
+                                )}
+                                {block?.name || s.block_id}
+                              </span>
                               <Badge variant="outline" className="text-xs">
                                 {block?.category || ""}
                               </Badge>

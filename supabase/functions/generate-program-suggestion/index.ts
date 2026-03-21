@@ -53,7 +53,10 @@ Regels:
 - Selecteer ALLEEN IDs die in de lijst staan
 - Kies geen "self_arranged" items tenzij expliciet gevraagd
 - Zorg voor variatie in categorieën (activiteit, catering, vervoer)
-- Pas de selectie aan op de sfeer: actief = meer sport/outdoor, ontspannen = meer culinair/natuur, mix = van alles wat`;
+- Pas de selectie aan op de sfeer: actief = meer sport/outdoor, ontspannen = meer culinair/natuur, mix = van alles wat
+- Geef elke activiteit een logische starttijd (HH:MM, 24-uursnotatie). Plan ze chronologisch op de dag zonder overlap.
+- Houd rekening met de duur van elke activiteit bij het plannen van de volgende.
+- Ontbijt/ochtend: 08:00-09:00, activiteiten overdag: 09:30-17:00, diner/avond: 18:00+`;
 
     const userPrompt = `Stel een programma samen voor:
 - Gelegenheid: ${occasion}
@@ -92,8 +95,9 @@ Gebruik de suggest_program tool om de activiteiten te retourneren.`;
                       properties: {
                         block_id: { type: "string", description: "The ID of the building block" },
                         day_index: { type: "integer", description: "Zero-based day index (0 = day 1)" },
+                        preferred_time: { type: "string", description: "Start time in HH:MM 24h format (e.g. 09:30)" },
                       },
-                      required: ["block_id", "day_index"],
+                      required: ["block_id", "day_index", "preferred_time"],
                       additionalProperties: false,
                     },
                   },
