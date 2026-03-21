@@ -38,6 +38,7 @@ interface AdminAddActivitySheetProps {
   selectedDates: string[];
   existingBlockIds: string[];
   onSuccess: () => void;
+  invoicingMode?: string;
 }
 
 type CategoryFilter = "all" | BuildingBlockCategory;
