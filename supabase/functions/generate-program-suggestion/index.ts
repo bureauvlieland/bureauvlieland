@@ -53,7 +53,10 @@ Regels:
 - Selecteer ALLEEN IDs die in de lijst staan
 - Kies geen "self_arranged" items tenzij expliciet gevraagd
 - Zorg voor variatie in categorieën (activiteit, catering, vervoer)
-- Pas de selectie aan op de sfeer: actief = meer sport/outdoor, ontspannen = meer culinair/natuur, mix = van alles wat`;
+- Pas de selectie aan op de sfeer: actief = meer sport/outdoor, ontspannen = meer culinair/natuur, mix = van alles wat
+- Geef elke activiteit een logische starttijd (HH:MM, 24-uursnotatie). Plan ze chronologisch op de dag zonder overlap.
+- Houd rekening met de duur van elke activiteit bij het plannen van de volgende.
+- Ontbijt/ochtend: 08:00-09:00, activiteiten overdag: 09:30-17:00, diner/avond: 18:00+`;
 
     const userPrompt = `Stel een programma samen voor:
 - Gelegenheid: ${occasion}
