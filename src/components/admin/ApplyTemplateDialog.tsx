@@ -31,6 +31,7 @@ export const ApplyTemplateDialog = ({
   onOpenChange,
   requestId,
   onSuccess,
+  invoicingMode,
 }: ApplyTemplateDialogProps) => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
