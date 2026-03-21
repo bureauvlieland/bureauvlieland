@@ -61,8 +61,8 @@ export const FinancialOverviewCard = ({
   const coordVatRate = getVatRate("standard");
 
   // Format price display per item
-  const formatItemPrice = (item: ProgramRequestItem) => {
-    const lineTotal = getItemLineTotal(item, numberOfPeople);
+  const formatItemPrice = (item: FinancialItem) => {
+    const lineTotal = getItemLineTotal(item as any, numberOfPeople);
     if (lineTotal == null) return "Op aanvraag";
 
     const unitPrice = getItemUnitPrice(item, numberOfPeople);
