@@ -8,12 +8,10 @@ import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
-import { getItemLineTotal, getItemUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
+import { getItemLineTotal as centralLineTotal, getItemUnitPrice as centralUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 
-// Minimal item shape needed by this component — compatible with both
-// the canonical ProgramRequestItem and local interfaces in admin pages.
 interface FinancialItem {
   id: string;
   block_id?: string | null;
@@ -36,6 +34,10 @@ interface FinancialOverviewCardProps {
   isQuoteMode?: boolean;
 }
 
+// Wrappers to avoid type incompatibility with the full ProgramRequestItem
+const getLineTotal = (item: FinancialItem, n: number) => centralLineTotal(item as any, n);
+const getUnitPrice = (item: FinancialItem, n: number) => centralUnitPrice(item as any, n);
+
 export const FinancialOverviewCard = ({
   requestId,
   numberOfPeople,
@@ -48,25 +50,21 @@ export const FinancialOverviewCard = ({
   const navigate = useNavigate();
   const { getItemVatRate } = useItemVatRates(items as any);
 
-  // All program items (exclude extra costs and cancelled)
   const programItems = items.filter(
     (item) => item.status !== "cancelled" && item.day_index !== -1
   );
-
-  // Extra costs (day_index = -1)
   const extraCostItems = items.filter((item) => item.day_index === -1);
 
-  // Coordination fee
   const coordinationFee = getCoordinationFee(numberOfPeople);
   const coordVatRate = getVatRate("standard");
 
-  // Format price display per item
-  const formatItemPrice = (item: FinancialItem) => {
-    const lineTotal = getItemLineTotal(item as any, numberOfPeople);
-    if (lineTotal == null) return "Op aanvraag";
+  const formatCurrency = (amount: number) =>
+    `€${amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    const unitPrice = getItemUnitPrice(item, numberOfPeople);
-    // Show "p.p. = total" only for admin_price_override with per_person
+  const formatItemPrice = (item: FinancialItem) => {
+    const lineTotal = getLineTotal(item, numberOfPeople);
+    if (lineTotal == null) return "Op aanvraag";
+    const unitPrice = getUnitPrice(item, numberOfPeople);
     if (
       item.quoted_price == null &&
       item.admin_price_override != null &&
@@ -78,22 +76,13 @@ export const FinancialOverviewCard = ({
     return formatCurrency(lineTotal);
   };
 
-  // Status badge helper
-  const getStatusBadge = (item: ProgramRequestItem) => {
+  const getStatusBadge = (item: FinancialItem) => {
     if (isQuoteMode) {
       const qs = item.item_quote_status;
       if (qs === "bevestigd")
-        return (
-          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-            Bevestigd
-          </Badge>
-        );
+        return <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Bevestigd</Badge>;
       if (qs === "optioneel")
-        return (
-          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-            Optioneel
-          </Badge>
-        );
+        return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Optioneel</Badge>;
       return <Badge variant="outline" className="text-xs">Concept</Badge>;
     }
     if (item.status === "confirmed" || item.status === "executed")
@@ -103,22 +92,18 @@ export const FinancialOverviewCard = ({
     return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
   };
 
-  // Calculate totals using central pricing
   const programTotal = programItems.reduce(
-    (sum, item) => sum + (getItemLineTotal(item, numberOfPeople) ?? 0),
-    0
+    (sum, item) => sum + (getLineTotal(item, numberOfPeople) ?? 0), 0
   );
   const extraCostsTotal = extraCostItems.reduce(
-    (sum, item) => sum + (item.admin_price_override ?? 0),
-    0
+    (sum, item) => sum + (item.admin_price_override ?? 0), 0
   );
   const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal;
 
-  // VAT breakdown per item using actual VAT rates
   const programVatBreakdown = programItems.reduce(
     (acc, item) => {
-      const lineTotal = getItemLineTotal(item, numberOfPeople) ?? 0;
-      const vatRate = getItemVatRate(item);
+      const lineTotal = getLineTotal(item, numberOfPeople) ?? 0;
+      const vatRate = getItemVatRate(item as any);
       acc.exclVat += calculateExclVat(lineTotal, vatRate);
       acc.vatAmount += calculateVatAmount(lineTotal, vatRate);
       return acc;
@@ -128,14 +113,12 @@ export const FinancialOverviewCard = ({
 
   const coordExcl = calculateExclVat(coordinationFee, coordVatRate);
   const coordVat = calculateVatAmount(coordinationFee, coordVatRate);
-
   const extraExcl = calculateExclVat(extraCostsTotal, coordVatRate);
   const extraVat = calculateVatAmount(extraCostsTotal, coordVatRate);
 
   const totalExclVat = programVatBreakdown.exclVat + coordExcl + extraExcl;
   const totalVat = programVatBreakdown.vatAmount + coordVat + extraVat;
 
-  // Invoiced amounts
   const invoicedInclVat = invoices
     .filter((inv) => inv.invoice_type !== "credit")
     .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
@@ -144,9 +127,6 @@ export const FinancialOverviewCard = ({
     .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
   const netInvoicedInclVat = invoicedInclVat - creditedInclVat;
   const outstandingAmount = grandTotalInclVat - netInvoicedInclVat;
-
-  const formatCurrency = (amount: number) =>
-    `€${amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const invoiceTypeLabelMap: Record<InvoiceType, string> = {
     partial: "Deelfactuur",
