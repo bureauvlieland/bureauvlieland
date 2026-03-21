@@ -64,6 +64,7 @@ export const AdminAiProgramDialog = ({
   onSuccess,
 }: AdminAiProgramDialogProps) => {
   const [vibe, setVibe] = useState<string>("mix");
+  const [editableDescription, setEditableDescription] = useState(customerDescription ?? "");
   const [extraWishes, setExtraWishes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
