@@ -1566,6 +1566,7 @@ const AdminRequestDetail = () => {
           selectedDates={request.selected_dates as string[]}
           existingBlockIds={items.map(item => item.block_id)}
           onSuccess={fetchRequestData}
+          invoicingMode={request.invoicing_mode}
         />
       )}
 
