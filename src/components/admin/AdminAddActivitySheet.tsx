@@ -38,6 +38,7 @@ interface AdminAddActivitySheetProps {
   selectedDates: string[];
   existingBlockIds: string[];
   onSuccess: () => void;
+  invoicingMode?: string;
 }
 
 type CategoryFilter = "all" | BuildingBlockCategory;
@@ -49,6 +50,7 @@ export const AdminAddActivitySheet = ({
   selectedDates,
   existingBlockIds,
   onSuccess,
+  invoicingMode,
 }: AdminAddActivitySheetProps) => {
   const { data: blocks = [], isLoading } = useAdminBuildingBlocks();
   
@@ -79,7 +81,7 @@ export const AdminAddActivitySheet = ({
   const [priceOverride, setPriceOverride] = useState<string>("");
   const [customName, setCustomName] = useState<string>("");
   const [customDescription, setCustomDescription] = useState<string>("");
-  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
+  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">(invoicingMode === "bureau_central" ? "bureau" : "partner");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(null);
   const [locationLng, setLocationLng] = useState<number | null>(null);
@@ -118,7 +120,7 @@ export const AdminAddActivitySheet = ({
     setPriceOverride(block.price_adult ? String(block.price_adult) : "");
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
-    setInvoicedBy(block.block_type === "bureau" ? "bureau" : "partner");
+    setInvoicedBy(invoicingMode === "bureau_central" ? "bureau" : (block.block_type === "bureau" ? "bureau" : "partner"));
     setSelectedProviderId(block.provider_id || "bureau-vlieland");
     setLocationLat(block.location_lat ?? null);
     setLocationLng(block.location_lng ?? null);

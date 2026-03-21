@@ -23,6 +23,7 @@ interface ApplyTemplateDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   onSuccess: () => void;
+  invoicingMode?: string;
 }
 
 export const ApplyTemplateDialog = ({
@@ -30,6 +31,7 @@ export const ApplyTemplateDialog = ({
   onOpenChange,
   requestId,
   onSuccess,
+  invoicingMode,
 }: ApplyTemplateDialogProps) => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
@@ -64,7 +66,7 @@ export const ApplyTemplateDialog = ({
             block_id: block.id,
             block_name: block.name,
             block_category: block.category as string,
-            block_type: block.block_type as string,
+            block_type: invoicingMode === "bureau_central" ? "bureau" : (block.block_type as string),
             provider_id: block.provider_id || "bureau-vlieland",
             provider_name: block.provider_id ? "" : "Bureau Vlieland",
             provider_email: null as string | null,

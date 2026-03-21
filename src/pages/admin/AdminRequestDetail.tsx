@@ -1566,6 +1566,7 @@ const AdminRequestDetail = () => {
           selectedDates={request.selected_dates as string[]}
           existingBlockIds={items.map(item => item.block_id)}
           onSuccess={fetchRequestData}
+          invoicingMode={request.invoicing_mode}
         />
       )}
 
@@ -1588,6 +1589,7 @@ const AdminRequestDetail = () => {
           onOpenChange={setApplyTemplateOpen}
           requestId={request.id}
           onSuccess={fetchRequestData}
+          invoicingMode={request.invoicing_mode}
         />
       )}
 
@@ -1670,6 +1672,7 @@ const AdminRequestDetail = () => {
           selectedDates={request.selected_dates as string[]}
           customerDescription={request.general_notes}
           onSuccess={fetchRequestData}
+          invoicingMode={request.invoicing_mode}
         />
       )}
     </>
