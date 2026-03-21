@@ -91,7 +91,7 @@ export const AdminAiProgramDialog = ({
       }
 
       // Combine customer description with extra wishes
-      const combinedWishes = [customerDescription, extraWishes.trim()]
+      const combinedWishes = [editableDescription.trim(), extraWishes.trim()]
         .filter(Boolean)
         .join("\n\nExtra wensen van admin: ");
 
