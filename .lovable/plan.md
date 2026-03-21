@@ -1,50 +1,50 @@
 
 
-## Plan: Admin Financiën-tab gelijkschakelen met klantomgeving
+## Plan: Terminologie en statusbadges synchroniseren
 
-### Huidige situatie
+### Probleem
 
-De admin Financiën-tab toont twee kaarten (RequestCompletionStatus + FinancialOverviewCard) maar:
-1. **FinancialOverviewCard** gebruikt lokale prijslogica i.p.v. de centrale `portalPricing.ts`
-2. Quote-mode toont "p.p." label bij items die al een groepstotaal zijn (`quoted_price`)
-3. **Geen compleet kostenoverzicht** — alleen bureau-items worden getoond, partner-items ontbreken
-4. **ProjectProfitSummary** (marge) wordt niet getoond
-5. Geen toeristenbelasting, natuurbijdrage of andere toeslagen zichtbaar
+Twee kaarten tonen twee verschillende database-velden met hetzelfde label "Bevestigd":
+- `RequestCompletionStatus` kijkt naar `item.status` (confirmed/pending/etc.)
+- `FinancialOverviewCard` in quote-mode kijkt naar `item_quote_status` (bevestigd/concept/optioneel)
+
+4 van 7 items hebben `item.status = "pending"` maar `item_quote_status = "bevestigd"`, waardoor de admin tegenstrijdige informatie ziet.
+
+### Oplossing
+
+**1. FinancialOverviewCard — badge aanpassen voor quote-mode**
+
+In quote-mode niet `item_quote_status` tonen, maar de **operationele status** (`item.status`) gebruiken, net als de voltooiingskaart. Zo wordt het consistent:
+- `confirmed` → groene badge "Bevestigd"
+- `pending` → amber badge "In afwachting"
+- `alternative` → blauwe badge "Alternatief"
+- Overige → grijze badge
+
+**2. Alternatief: quote-mode badge-labels differentiëren**
+
+Als je wél `item_quote_status` wilt blijven tonen in het financieel overzicht (omdat dat relevant is voor de offerte), dan de labels aanpassen:
+- `item_quote_status = "bevestigd"` → badge "Prijs bevestigd" (i.p.v. "Bevestigd")
+- `item.status = "confirmed"` → badge "Partner bevestigd" (in voltooiingskaart)
+
+### Aanbeveling: optie 1
+
+Eén consistente badge per item op basis van `item.status`. De `item_quote_status` is meer een intern offerte-veld en hoeft de admin niet te verwarren in het financieel overzicht.
 
 ### Aanpassingen
 
-**1. `src/components/admin/FinancialOverviewCard.tsx` — Centrale prijslogica gebruiken**
+**`src/components/admin/FinancialOverviewCard.tsx`** — `getStatusBadge` functie (regel 79-93)
 
-- Importeer `getItemLineTotal`, `getItemUnitPrice`, `isPerPersonItem` uit `portalPricing.ts`
-- Verwijder lokale kopieën van `isPerPerson`, `getItemPrice`, `getItemLineTotal`
-- Quote-mode prijsweergave per regel: toon regeltotaal + "(p.p.)" label alleen als het item een `admin_price_override` heeft met price_type per_person
-- Alle items tonen (niet alleen bureau), gegroepeerd per dag, met status-badge
+Verwijder de aparte quote-mode branch. Gebruik altijd `item.status` voor de badge:
+- `confirmed`/`executed` → groene CheckCircle + "Bevestigd"
+- `pending` → amber Clock + "In afwachting"  
+- `alternative` → blauwe badge "Alternatief"
+- `cancelled` → (al uitgefilterd)
 
-**2. `src/components/admin/FinancialOverviewCard.tsx` — Compleet kostenoverzicht**
+**`src/components/admin/RequestCompletionStatus.tsx`** — terminologie
 
-- Sectie "ALLE PROGRAMMAKOSTEN" toevoegen die alle items toont (zoals de klantomgeving)
-- Per item: naam, regeltotaal, status (bevestigd/voorlopig/op aanvraag)
-- Onderaan: coördinatiefee + regeltotalen + BTW-uitsplitsing + totaal incl. BTW
-- Dit vervangt de huidige "VOORLOPIGE PROGRAMMAKOSTEN" sectie in quote-mode
+- "Activiteiten bevestigd" → "Partners bevestigd" (verduidelijkt dat het om partnerbevestigingen gaat)
 
-**3. `src/pages/admin/AdminRequestDetail.tsx` — ProjectProfitSummary toevoegen**
+### Resultaat
 
-- ProjectProfitSummary kaart toevoegen aan de Financiën-tab
-- `bureauInvoicedAmount` berekenen uit het totaal van alle programma-items + coördinatiefee
-- Inkoopfacturen en commissies doorgeven
-
-**4. Display-regels (consistent met klantomgeving)**
-
-| Situatie | Weergave regelprijs |
-|---|---|
-| `quoted_price` aanwezig | "€1.300,00" (groepstotaal) |
-| `admin_price_override` + per_person | "€30,00 p.p. = €1.050,00" |
-| `admin_price_override` + total | "€300,00" |
-| Geen prijs | "Op aanvraag" |
-
-### Technische details
-
-- Import `getItemLineTotal`, `getItemUnitPrice`, `isPerPersonItem` uit `@/lib/portalPricing`
-- De `ProgramRequestItem` interface in FinancialOverviewCard moet compatible zijn met de types in portalPricing (dat is al het geval)
-- ProjectProfitSummary ontvangt `bureauInvoicedAmount` = som van alle `getItemLineTotal()` + coordinationFee
+Beide kaarten tonen dezelfde status per item, gebaseerd op hetzelfde veld (`item.status`). Geen verwarring meer.
 
