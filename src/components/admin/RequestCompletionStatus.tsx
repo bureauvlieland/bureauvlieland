@@ -88,7 +88,7 @@ export const RequestCompletionStatus = ({
             <Clock className="h-4 w-4 text-amber-600" />
           )}
           <span className={allItemsConfirmed ? "text-green-700" : "text-amber-700"}>
-            Activiteiten bevestigd ({confirmedItems.length}/{nonCancelledItems.length})
+            Partners bevestigd ({confirmedItems.length}/{nonCancelledItems.length})
           </span>
         </div>
 
