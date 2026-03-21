@@ -65,6 +65,7 @@ export const AdminAiProgramDialog = ({
   selectedDates,
   customerDescription,
   onSuccess,
+  invoicingMode,
 }: AdminAiProgramDialogProps) => {
   const [vibe, setVibe] = useState<string>("mix");
   const [editableDescription, setEditableDescription] = useState(customerDescription ?? "");
