@@ -1,39 +1,46 @@
 
 
-## Plan: AI laat ook tijden voorstellen per activiteit
+## Plan: Facturatiemodel standaard op "bureau" zetten
 
-### Huidige situatie
+### Probleem
 
-De AI stelt activiteiten voor met alleen `block_id` en `day_index`. Het veld `preferred_time` wordt altijd op `null` gezet bij het toevoegen.
+Het project gebruikt `invoicing_mode = "bureau_central"`, maar bij het toevoegen van activiteiten wordt `block_type` standaard bepaald door het building block zelf (meestal `"partner"`). Dit gebeurt op drie plekken:
+
+1. **AdminAddActivitySheet** — `invoicedBy` default is `"partner"` (regel 82), en bij blockselectie wordt `block.block_type` overgenomen (regel 121)
+2. **AdminAiProgramDialog** — gebruikt `block.block_type` direct bij insert (regel 154)
+3. **ApplyTemplateDialog** — gebruikt `block.block_type` direct bij insert (regel 67)
 
 ### Aanpassingen
 
-**1. Edge function `generate-program-suggestion/index.ts`**
+**1. `AdminAddActivitySheet.tsx`**
+- Prop `invoicingMode?: string` toevoegen
+- Default van `invoicedBy` state wijzigen: als `invoicingMode === "bureau_central"` → default `"bureau"`
+- Bij blockselectie (regel 121): als `invoicingMode === "bureau_central"` → altijd `"bureau"` zetten
+- Optioneel: de hele "Gefactureerd door" radio verbergen als `bureau_central` actief is (want er is geen keuze)
 
-- Prompt uitbreiden: "Plan activiteiten in logische volgorde op de dag en geef een starttijd mee (HH:MM, 24-uursnotatie). Houd rekening met de duur van elke activiteit."
-- Tool-schema uitbreiden met `preferred_time` (string, "HH:MM" formaat) in het `suggestions` array
-- Regels toevoegen: ochtend = 09:00-12:00, middag = 12:00-17:00, avond = 17:00+. Geen overlap met eerdere activiteiten op dezelfde dag.
+**2. `AdminRequestDetail.tsx`**
+- De prop `invoicingMode={request?.invoicing_mode}` meegeven aan `AdminAddActivitySheet`
 
-**2. Frontend `AdminAiProgramDialog.tsx`**
+**3. `AdminAiProgramDialog.tsx`**
+- Prop `invoicingMode?: string` toevoegen
+- Bij insert: als `invoicingMode === "bureau_central"` → `block_type: "bureau"` forceren
 
-- `AiSuggestion` interface uitbreiden met `preferred_time?: string`
-- Bij `handleApply`: `preferred_time: s.preferred_time || null` meegeven aan de insert
-- In de preview per item de voorgestelde tijd tonen (bijv. "09:00 — Strandwandeling")
+**4. `ApplyTemplateDialog.tsx`**
+- Prop `invoicingMode?: string` toevoegen
+- Bij insert: als `invoicingMode === "bureau_central"` → `block_type: "bureau"` forceren
+
+**5. Bestaande data repareren**
+- Database migratie: alle `program_request_items` waar het gekoppelde `program_requests.invoicing_mode = 'bureau_central'` maar `block_type != 'bureau'` → update naar `block_type = 'bureau'`
 
 ### Technische details
 
-Tool-schema aanpassing:
-```json
-{
-  "block_id": { "type": "string" },
-  "day_index": { "type": "integer" },
-  "preferred_time": { "type": "string", "description": "Start time in HH:MM 24h format" }
-}
-```
-
-Prompt toevoeging:
-```
-- Geef elke activiteit een logische starttijd (HH:MM). Plan ze chronologisch op de dag zonder overlap.
-- Ontbijt/ochtend: 08:00-09:00, activiteiten overdag: 09:30-17:00, diner/avond: 18:00+
+SQL migratie voor bestaande data:
+```sql
+UPDATE program_request_items pri
+SET block_type = 'bureau'
+FROM program_requests pr
+WHERE pri.request_id = pr.id
+  AND pr.invoicing_mode = 'bureau_central'
+  AND pri.block_type != 'bureau';
 ```
 
