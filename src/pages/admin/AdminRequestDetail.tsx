@@ -1589,6 +1589,7 @@ const AdminRequestDetail = () => {
           onOpenChange={setApplyTemplateOpen}
           requestId={request.id}
           onSuccess={fetchRequestData}
+          invoicingMode={request.invoicing_mode}
         />
       )}
 
