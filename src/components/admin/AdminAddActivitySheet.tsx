@@ -81,7 +81,7 @@ export const AdminAddActivitySheet = ({
   const [priceOverride, setPriceOverride] = useState<string>("");
   const [customName, setCustomName] = useState<string>("");
   const [customDescription, setCustomDescription] = useState<string>("");
-  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
+  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">(invoicingMode === "bureau_central" ? "bureau" : "partner");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(null);
   const [locationLng, setLocationLng] = useState<number | null>(null);
