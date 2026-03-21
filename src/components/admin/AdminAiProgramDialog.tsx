@@ -46,6 +46,7 @@ interface BlockInfo {
   price_type: string | null;
   price_adult_note: string | null;
   short_description: string | null;
+  description: string | null;
   duration: string | null;
 }
 
@@ -120,7 +121,7 @@ export const AdminAiProgramDialog = ({
       const blockIds = [...new Set(result.map((s) => s.block_id))];
       const { data: blockDetails } = await supabase
         .from("building_blocks")
-        .select("id, name, category, block_type, provider_id, price_adult, price_type, price_adult_note, short_description, duration")
+        .select("id, name, category, block_type, provider_id, price_adult, price_type, price_adult_note, short_description, description, duration")
         .in("id", blockIds);
 
       setSuggestions(result);
@@ -162,7 +163,7 @@ export const AdminAiProgramDialog = ({
             admin_price_override: block.price_adult || null,
             price_type: block.price_type || "per_person",
             duration: block.duration || null,
-            admin_price_notes: block.short_description || block.price_adult_note || null,
+            admin_price_notes: block.description || block.short_description || block.price_adult_note || null,
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
