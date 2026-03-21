@@ -8,7 +8,7 @@ import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
-import { getItemLineTotal as centralLineTotal, getItemUnitPrice as centralUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
+import { getItemLineTotal as centralLineTotal, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 
@@ -36,7 +36,7 @@ interface FinancialOverviewCardProps {
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
 const getLineTotal = (item: FinancialItem, n: number) => centralLineTotal(item as any, n);
-const getUnitPrice = (item: FinancialItem, n: number) => centralUnitPrice(item as any, n);
+
 
 export const FinancialOverviewCard = ({
   requestId,
@@ -64,16 +64,19 @@ export const FinancialOverviewCard = ({
   const formatItemPrice = (item: FinancialItem) => {
     const lineTotal = getLineTotal(item, numberOfPeople);
     if (lineTotal == null) return "Op aanvraag";
-    const unitPrice = getUnitPrice(item, numberOfPeople);
+
+    // admin_price_override + per person → show unit price and total
     if (
       item.quoted_price == null &&
       item.admin_price_override != null &&
       isPerPersonItem(item) &&
       numberOfPeople > 1
     ) {
-      return `${formatCurrency(unitPrice ?? 0)} p.p. = ${formatCurrency(lineTotal)}`;
+      return `${formatCurrency(item.admin_price_override)} p.p.`;
     }
-    return formatCurrency(lineTotal);
+
+    // quoted_price or flat admin override → show as group total
+    return `${formatCurrency(lineTotal)} totaal`;
   };
 
   const getStatusBadge = (item: FinancialItem) => {
