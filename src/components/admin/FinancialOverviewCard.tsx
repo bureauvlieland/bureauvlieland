@@ -41,9 +41,17 @@ export const FinancialOverviewCard = ({
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
   
-  // Helper to get item price (admin override or quoted price)
+  // Helper to get item unit price for display
   const getItemPrice = (item: ProgramRequestItem) => {
     return item.admin_price_override ?? item.quoted_price ?? 0;
+  };
+
+  // Helper to get item line total (quoted_price = group total, admin_price_override = unit price)
+  const getItemLineTotal = (item: ProgramRequestItem) => {
+    if (item.quoted_price != null) return item.quoted_price;
+    const unit = item.admin_price_override ?? 0;
+    const mult = isPerPerson(item) ? numberOfPeople : 1;
+    return unit * mult;
   };
 
   // Calculate items to be invoiced by Bureau Vlieland (exclude overige kosten)
