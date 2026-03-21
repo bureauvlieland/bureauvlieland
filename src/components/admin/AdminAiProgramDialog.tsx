@@ -259,15 +259,16 @@ export const AdminAiProgramDialog = ({
               </span>
             </div>
 
-            {/* Customer description */}
-            {customerDescription && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Klantomschrijving</Label>
-                <div className="text-sm bg-muted/50 rounded-md p-3 whitespace-pre-wrap max-h-24 overflow-y-auto">
-                  {customerDescription}
-                </div>
-              </div>
-            )}
+            {/* Customer description - editable */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Klantomschrijving</Label>
+              <Textarea
+                value={editableDescription}
+                onChange={(e) => setEditableDescription(e.target.value)}
+                placeholder="Beschrijf het type groep, wensen, bijzonderheden..."
+                rows={3}
+              />
+            </div>
 
             {/* Extra wishes */}
             <div className="space-y-1.5">
