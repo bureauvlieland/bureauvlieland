@@ -120,8 +120,7 @@ export const FinancialOverviewCard = ({
 
   // Calculate quote mode totals (preliminary)
   const quoteItemsTotal = quoteItems.reduce((sum, item) => {
-    const price = getItemPrice(item);
-    return sum + (isPerPerson(item) ? price * numberOfPeople : price);
+    return sum + getItemLineTotal(item);
   }, 0);
   const quoteSubtotalInclVat = quoteItemsTotal + coordinationFee;
   const quoteSubtotalExclVat = quoteSubtotalInclVat / vatMultiplier;

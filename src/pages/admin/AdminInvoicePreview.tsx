@@ -241,8 +241,11 @@ const AdminInvoicePreview = () => {
     item.admin_price_override ?? item.quoted_price ?? 0;
 
   const getItemTotal = (item: ProgramItem) => {
-    const unitPrice = getItemPrice(item);
-    if (item.price_type === "per_person") {
+    // quoted_price = already a group total, never multiply
+    if (item.quoted_price != null) return item.quoted_price;
+    // admin_price_override = unit price, multiply for per_person
+    const unitPrice = item.admin_price_override ?? 0;
+    if (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request") {
       return unitPrice * (request?.number_of_people || 1);
     }
     return unitPrice;

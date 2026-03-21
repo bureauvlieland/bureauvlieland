@@ -281,6 +281,15 @@ const AdminQuotePreview = () => {
     return item.admin_price_override ?? item.quoted_price ?? 0;
   };
 
+  /** Group total: quoted_price is already group total, admin_price_override needs multiplier */
+  const getItemTotal = (item: ProgramItem) => {
+    if (item.quoted_price != null) return item.quoted_price;
+    const unit = item.admin_price_override ?? 0;
+    const mult = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request")
+      ? (request?.number_of_people || 1) : 1;
+    return unit * mult;
+  };
+
 
   const getExtraTotal = (extra: AccommodationExtraData) => {
     if (extra.pricing_type === 'fixed') return extra.unit_price;

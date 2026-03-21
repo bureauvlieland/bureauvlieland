@@ -262,10 +262,8 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, effectiveRaw }) => {
+          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, unitPrice, isPerPerson }) => {
             const showPrice = effectivePrice !== null;
-            const unitPrice = effectiveRaw;
-            const totalPrice = effectivePrice;
             return (
               <div key={item.id} className="py-2">
                 <div className="flex items-center justify-between gap-4">
@@ -275,13 +273,13 @@ export const PriceSummaryCard = ({
                   </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">
                     {showPrice ? (
-                      !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" ? (
+                      isPerPerson && unitPrice !== null ? (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
-                          €{formatPrice(unitPrice!)} p.p. = €{formatPrice(totalPrice!)}
+                          €{formatPrice(unitPrice)} p.p. = €{formatPrice(effectivePrice!)}
                         </span>
                       ) : (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
-                          €{formatPrice(totalPrice!)}
+                          €{formatPrice(effectivePrice!)}
                         </span>
                       )
                     ) : (
