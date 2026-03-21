@@ -10,8 +10,22 @@ import { useNavigate } from "react-router-dom";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { getItemLineTotal, getItemUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
-import type { ProgramRequestItem } from "@/types/programRequest";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
+
+// Minimal item shape needed by this component — compatible with both
+// the canonical ProgramRequestItem and local interfaces in admin pages.
+interface FinancialItem {
+  id: string;
+  block_id?: string | null;
+  block_name: string;
+  block_type?: string;
+  status: string;
+  quoted_price: number | null;
+  admin_price_override?: number | null;
+  item_quote_status?: string | null;
+  day_index: number;
+  price_type?: string | null;
+}
 
 interface FinancialOverviewCardProps {
   requestId: string;
