@@ -30,7 +30,7 @@ interface FinancialItem {
 interface FinancialOverviewCardProps {
   requestId: string;
   numberOfPeople: number;
-  items: ProgramRequestItem[];
+  items: FinancialItem[];
   invoices: BureauInvoice[];
   onRegisterInvoice: () => void;
   isQuoteMode?: boolean;
