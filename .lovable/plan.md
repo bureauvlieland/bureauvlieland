@@ -1,37 +1,50 @@
 
 
-## Probleem: `quoted_price` wordt onterecht vermenigvuldigd met aantal personen
+## Plan: Admin Financiën-tab gelijkschakelen met klantomgeving
 
-### Oorzaak
+### Huidige situatie
 
-De partner vult in het portaal een **totaalprijs** in (het label zegt letterlijk "Totaalprijs (incl. BTW) — Prijs voor X personen"). Maar het systeem vermenigvuldigt deze prijs alsnog met `numberOfPeople` wanneer `price_type === "per_person"`. Bij de Strand BBQ: partner quoot €1.300 totaal → systeem toont €1.300 × 35 = €45.500.
+De admin Financiën-tab toont twee kaarten (RequestCompletionStatus + FinancialOverviewCard) maar:
+1. **FinancialOverviewCard** gebruikt lokale prijslogica i.p.v. de centrale `portalPricing.ts`
+2. Quote-mode toont "p.p." label bij items die al een groepstotaal zijn (`quoted_price`)
+3. **Geen compleet kostenoverzicht** — alleen bureau-items worden getoond, partner-items ontbreken
+4. **ProjectProfitSummary** (marge) wordt niet getoond
+5. Geen toeristenbelasting, natuurbijdrage of andere toeslagen zichtbaar
 
-### Oplossing: vereenvoudiging prijslogica
+### Aanpassingen
 
-**Regel**: `quoted_price` = altijd het totaalbedrag voor de hele groep (nooit vermenigvuldigen). `admin_price_override` = eenheidsprijs die wél volgens `price_type` wordt vermenigvuldigd.
+**1. `src/components/admin/FinancialOverviewCard.tsx` — Centrale prijslogica gebruiken**
 
-### Aanpassingen (4 bestanden)
+- Importeer `getItemLineTotal`, `getItemUnitPrice`, `isPerPersonItem` uit `portalPricing.ts`
+- Verwijder lokale kopieën van `isPerPerson`, `getItemPrice`, `getItemLineTotal`
+- Quote-mode prijsweergave per regel: toon regeltotaal + "(p.p.)" label alleen als het item een `admin_price_override` heeft met price_type per_person
+- Alle items tonen (niet alleen bureau), gegroepeerd per dag, met status-badge
 
-**1. `src/lib/portalPricing.ts`** — `getItemEffectivePrice`
-- `quoted_price`: altijd direct gebruiken zonder multiplier
-- `admin_price_override`: wél vermenigvuldigen als `price_type` = per_person/on_request
+**2. `src/components/admin/FinancialOverviewCard.tsx` — Compleet kostenoverzicht**
 
-**2. `src/components/customer-portal/PriceSummaryCard.tsx`** — orderLines berekening (regel 78-90)
-- Zelfde logica: `quoted_price` = totaal, `admin_price_override` × multiplier
-- Display-logica aanpassen: bij quoted_price toon "€1.300,00" (geen "p.p. = totaal"), bij admin_price_override toon "€30,00 p.p. = €1.050,00"
+- Sectie "ALLE PROGRAMMAKOSTEN" toevoegen die alle items toont (zoals de klantomgeving)
+- Per item: naam, regeltotaal, status (bevestigd/voorlopig/op aanvraag)
+- Onderaan: coördinatiefee + regeltotalen + BTW-uitsplitsing + totaal incl. BTW
+- Dit vervangt de huidige "VOORLOPIGE PROGRAMMAKOSTEN" sectie in quote-mode
 
-**3. `src/pages/admin/AdminInvoicePreview.tsx`** — `getItemTotal` (regel 243-249)
-- `quoted_price` niet vermenigvuldigen, `admin_price_override` wél
+**3. `src/pages/admin/AdminRequestDetail.tsx` — ProjectProfitSummary toevoegen**
 
-**4. `src/pages/admin/AdminQuotePreview.tsx`** — prijsweergave
-- Zelfde aanpassing: quoted_price is al totaal
+- ProjectProfitSummary kaart toevoegen aan de Financiën-tab
+- `bureauInvoicedAmount` berekenen uit het totaal van alle programma-items + coördinatiefee
+- Inkoopfacturen en commissies doorgeven
 
-### Samenvatting displayregels
+**4. Display-regels (consistent met klantomgeving)**
 
-| Situatie | Berekening | Weergave |
-|---|---|---|
-| Partner heeft geoffreerd (`quoted_price`) | Totaal = quoted_price | "€1.300,00" |
-| Admin schatting (`admin_price_override`, per_person) | Totaal = override × personen | "€30,00 p.p. = €1.050,00 (voorlopig)" |
-| Admin schatting (`admin_price_override`, total) | Totaal = override | "€300,00 (voorlopig)" |
-| Nog geen prijs | — | "—" |
+| Situatie | Weergave regelprijs |
+|---|---|
+| `quoted_price` aanwezig | "€1.300,00" (groepstotaal) |
+| `admin_price_override` + per_person | "€30,00 p.p. = €1.050,00" |
+| `admin_price_override` + total | "€300,00" |
+| Geen prijs | "Op aanvraag" |
+
+### Technische details
+
+- Import `getItemLineTotal`, `getItemUnitPrice`, `isPerPersonItem` uit `@/lib/portalPricing`
+- De `ProgramRequestItem` interface in FinancialOverviewCard moet compatible zijn met de types in portalPricing (dat is al het geval)
+- ProjectProfitSummary ontvangt `bureauInvoicedAmount` = som van alle `getItemLineTotal()` + coordinationFee
 
