@@ -64,16 +64,19 @@ export const FinancialOverviewCard = ({
   const formatItemPrice = (item: FinancialItem) => {
     const lineTotal = getLineTotal(item, numberOfPeople);
     if (lineTotal == null) return "Op aanvraag";
-    const unitPrice = getUnitPrice(item, numberOfPeople);
+
+    // admin_price_override + per person → show unit price and total
     if (
       item.quoted_price == null &&
       item.admin_price_override != null &&
       isPerPersonItem(item) &&
       numberOfPeople > 1
     ) {
-      return `${formatCurrency(unitPrice ?? 0)} p.p. = ${formatCurrency(lineTotal)}`;
+      return `${formatCurrency(item.admin_price_override)} p.p.`;
     }
-    return formatCurrency(lineTotal);
+
+    // quoted_price or flat admin override → show as group total
+    return `${formatCurrency(lineTotal)} totaal`;
   };
 
   const getStatusBadge = (item: FinancialItem) => {
