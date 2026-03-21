@@ -95,8 +95,9 @@ Gebruik de suggest_program tool om de activiteiten te retourneren.`;
                       properties: {
                         block_id: { type: "string", description: "The ID of the building block" },
                         day_index: { type: "integer", description: "Zero-based day index (0 = day 1)" },
+                        preferred_time: { type: "string", description: "Start time in HH:MM 24h format (e.g. 09:30)" },
                       },
-                      required: ["block_id", "day_index"],
+                      required: ["block_id", "day_index", "preferred_time"],
                       additionalProperties: false,
                     },
                   },

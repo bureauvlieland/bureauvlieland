@@ -33,6 +33,7 @@ interface AdminAiProgramDialogProps {
 interface AiSuggestion {
   block_id: string;
   day_index: number;
+  preferred_time?: string;
 }
 
 interface BlockInfo {
