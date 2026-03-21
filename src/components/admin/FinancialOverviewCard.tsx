@@ -8,7 +8,7 @@ import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
-import { getItemLineTotal as centralLineTotal, getItemUnitPrice as centralUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
+import { getItemLineTotal as centralLineTotal, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 
