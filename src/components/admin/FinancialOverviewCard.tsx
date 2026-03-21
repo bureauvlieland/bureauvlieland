@@ -77,18 +77,12 @@ export const FinancialOverviewCard = ({
   };
 
   const getStatusBadge = (item: FinancialItem) => {
-    if (isQuoteMode) {
-      const qs = item.item_quote_status;
-      if (qs === "bevestigd")
-        return <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Bevestigd</Badge>;
-      if (qs === "optioneel")
-        return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Optioneel</Badge>;
-      return <Badge variant="outline" className="text-xs">Concept</Badge>;
-    }
     if (item.status === "confirmed" || item.status === "executed")
       return <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />;
     if (item.status === "pending")
       return <Clock className="h-3.5 w-3.5 text-amber-500" />;
+    if (item.status === "alternative")
+      return <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Alternatief</Badge>;
     return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
   };
 
