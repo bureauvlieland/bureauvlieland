@@ -23,6 +23,7 @@ interface ApplyTemplateDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   onSuccess: () => void;
+  invoicingMode?: string;
 }
 
 export const ApplyTemplateDialog = ({
