@@ -76,19 +76,25 @@ export const PriceSummaryCard = ({
 
     // Build order lines with unified pricing
     const orderLines = relevantItems.map(item => {
-      const multiplier = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" ? numberOfPeople : 1;
-      // Confirmed price from partner quote
-      const hasQuotedPrice = item.quoted_price !== null && item.quoted_price !== undefined;
-      const rawPrice = hasQuotedPrice ? (item.quoted_price || 0) : null;
-      const price = rawPrice !== null ? rawPrice * multiplier : null;
-      // Preliminary: admin set an override estimate but no partner quote yet
-      const isPreliminary = !hasQuotedPrice && !!item.admin_price_override;
-      const rawPreliminaryPrice = isPreliminary ? item.admin_price_override! : null;
-      const preliminaryPrice = rawPreliminaryPrice !== null ? rawPreliminaryPrice * multiplier : null;
-      // Best available price for totalling
-      const effectivePrice = price ?? preliminaryPrice;
-      const effectiveRaw = rawPrice ?? rawPreliminaryPrice;
-      return { item, hasQuotedPrice, price, rawPrice, isPreliminary, preliminaryPrice, rawPreliminaryPrice, effectivePrice, effectiveRaw };
+      const hasQuotedPrice = item.quoted_price != null;
+      const isPreliminary = !hasQuotedPrice && item.admin_price_override != null;
+
+      // quoted_price = group total (never multiply)
+      // admin_price_override = unit price (multiply for per_person)
+      const ppMultiplier = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request") ? numberOfPeople : 1;
+
+      let effectivePrice: number | null = null;
+      let unitPrice: number | null = null;
+
+      if (hasQuotedPrice) {
+        effectivePrice = item.quoted_price!;
+        unitPrice = ppMultiplier > 1 ? item.quoted_price! / numberOfPeople : item.quoted_price!;
+      } else if (isPreliminary) {
+        unitPrice = item.admin_price_override!;
+        effectivePrice = unitPrice * ppMultiplier;
+      }
+
+      return { item, hasQuotedPrice, isPreliminary, effectivePrice, unitPrice, isPerPerson: ppMultiplier > 1 };
     });
 
     const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
