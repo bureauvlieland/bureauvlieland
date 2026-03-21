@@ -46,6 +46,7 @@ interface BlockInfo {
   price_type: string | null;
   price_adult_note: string | null;
   short_description: string | null;
+  description: string | null;
   duration: string | null;
 }
 
