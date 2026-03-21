@@ -261,11 +261,22 @@ export const AdminAiProgramDialog = ({
             {customerDescription && (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Klantomschrijving</Label>
-                <div className="text-sm bg-muted/50 rounded-md p-3 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                <div className="text-sm bg-muted/50 rounded-md p-3 whitespace-pre-wrap max-h-24 overflow-y-auto">
                   {customerDescription}
                 </div>
               </div>
             )}
+
+            {/* Extra wishes */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Extra wensen / instructies</Label>
+              <Textarea
+                value={extraWishes}
+                onChange={(e) => setExtraWishes(e.target.value)}
+                placeholder="Bijv. 'Voeg een BBQ toe op dag 2' of 'Focus op teambuilding activiteiten'"
+                rows={2}
+              />
+            </div>
 
             {/* Vibe picker */}
             <div className="space-y-2">
@@ -285,17 +296,6 @@ export const AdminAiProgramDialog = ({
                   </Label>
                 ))}
               </RadioGroup>
-            </div>
-
-            {/* Extra wishes */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Extra wensen / instructies</Label>
-              <Textarea
-                value={extraWishes}
-                onChange={(e) => setExtraWishes(e.target.value)}
-                placeholder="Bijv. 'Voeg een BBQ toe op dag 2' of 'Focus op teambuilding activiteiten'"
-                rows={3}
-              />
             </div>
 
             {/* Preview suggestions */}
