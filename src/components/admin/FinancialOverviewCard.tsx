@@ -36,7 +36,7 @@ interface FinancialOverviewCardProps {
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
 const getLineTotal = (item: FinancialItem, n: number) => centralLineTotal(item as any, n);
-const getUnitPrice = (item: FinancialItem, n: number) => centralUnitPrice(item as any, n);
+
 
 export const FinancialOverviewCard = ({
   requestId,
