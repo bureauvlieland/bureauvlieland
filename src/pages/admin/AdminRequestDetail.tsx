@@ -1672,6 +1672,7 @@ const AdminRequestDetail = () => {
           selectedDates={request.selected_dates as string[]}
           customerDescription={request.general_notes}
           onSuccess={fetchRequestData}
+          invoicingMode={request.invoicing_mode}
         />
       )}
     </>
