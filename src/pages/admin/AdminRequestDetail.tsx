@@ -89,6 +89,9 @@ import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicati
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
+import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
+import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
+import { getItemLineTotal as centralGetItemLineTotal } from "@/lib/portalPricing";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
@@ -217,6 +220,21 @@ const AdminRequestDetail = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+
+  // Purchase invoices for profit summary
+  const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
+
+  // Calculate bureau invoiced amount for profit summary
+  const bureauInvoicedAmount = (() => {
+    if (!request) return 0;
+    const programTotal = items
+      .filter((i) => i.status !== "cancelled" && i.day_index !== -1)
+      .reduce((sum, item) => sum + (centralGetItemLineTotal(item as any, request.number_of_people) ?? 0), 0);
+    const extraCosts = items
+      .filter((i) => i.day_index === -1)
+      .reduce((sum, i) => sum + (i.admin_price_override ?? 0), 0);
+    return programTotal + extraCosts;
+  })();
 
   const generateProgramStatusEmailBody = (): { subject: string; body: string } => {
     if (!request || !items) return { subject: "", body: "" };
@@ -1426,6 +1444,12 @@ const AdminRequestDetail = () => {
                   isQuoteMode={isQuoteMode}
                 />
               </div>
+              {/* Margin overview */}
+              <ProjectProfitSummary
+                purchaseInvoices={purchaseInvoices || []}
+                bureauInvoicedAmount={bureauInvoicedAmount}
+                coordinationFee={0}
+              />
             </TabsContent>
 
             {/* Tab: Communicatie */}
