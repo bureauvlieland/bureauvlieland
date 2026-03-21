@@ -225,6 +225,7 @@ export const AdminAiProgramDialog = ({
     if (!open) {
       setSuggestions(null);
       setExtraWishes("");
+      setEditableDescription(customerDescription ?? "");
     }
     onOpenChange(open);
   };
