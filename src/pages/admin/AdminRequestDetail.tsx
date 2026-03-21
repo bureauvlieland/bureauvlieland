@@ -89,6 +89,9 @@ import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicati
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
+import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
+import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
+import { getItemLineTotal as centralGetItemLineTotal } from "@/lib/portalPricing";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
