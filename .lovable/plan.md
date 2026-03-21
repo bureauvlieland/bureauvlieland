@@ -1,32 +1,37 @@
 
 
-## Probleem: Bouwsteen wordt niet echt verwijderd
+## Probleem: `quoted_price` wordt onterecht vermenigvuldigd met aantal personen
 
-De `useDeleteBuildingBlock` hook doet een **soft delete** (`is_active: false`), maar de admin-query haalt **alle** bouwstenen op zonder te filteren op `is_active`. Resultaat: de toast zegt "verwijderd", maar het item blijft zichtbaar.
+### Oorzaak
 
-### Oplossing
+De partner vult in het portaal een **totaalprijs** in (het label zegt letterlijk "Totaalprijs (incl. BTW) — Prijs voor X personen"). Maar het systeem vermenigvuldigt deze prijs alsnog met `numberOfPeople` wanneer `price_type === "per_person"`. Bij de Strand BBQ: partner quoot €1.300 totaal → systeem toont €1.300 × 35 = €45.500.
 
-Twee aanpassingen:
+### Oplossing: vereenvoudiging prijslogica
 
-**1. `src/hooks/useBuildingBlocks.ts` — Hard delete in plaats van soft delete**
+**Regel**: `quoted_price` = altijd het totaalbedrag voor de hele groep (nooit vermenigvuldigen). `admin_price_override` = eenheidsprijs die wél volgens `price_type` wordt vermenigvuldigd.
 
-De `useDeleteBuildingBlock` mutatie wijzigen van `.update({ is_active: false })` naar `.delete()`. Dit verwijdert de bouwsteen daadwerkelijk uit de database.
+### Aanpassingen (4 bestanden)
 
-```typescript
-// Was:
-.update({ is_active: false })
+**1. `src/lib/portalPricing.ts`** — `getItemEffectivePrice`
+- `quoted_price`: altijd direct gebruiken zonder multiplier
+- `admin_price_override`: wél vermenigvuldigen als `price_type` = per_person/on_request
 
-// Wordt:
-.delete()
-```
+**2. `src/components/customer-portal/PriceSummaryCard.tsx`** — orderLines berekening (regel 78-90)
+- Zelfde logica: `quoted_price` = totaal, `admin_price_override` × multiplier
+- Display-logica aanpassen: bij quoted_price toon "€1.300,00" (geen "p.p. = totaal"), bij admin_price_override toon "€30,00 p.p. = €1.050,00"
 
-**2. Vangnet: admin-query filteren op `is_active`**
+**3. `src/pages/admin/AdminInvoicePreview.tsx`** — `getItemTotal` (regel 243-249)
+- `quoted_price` niet vermenigvuldigen, `admin_price_override` wél
 
-Als extra veiligheid (voor het geval er nog soft-deleted items in de database staan) een filter toevoegen aan de admin-query:
+**4. `src/pages/admin/AdminQuotePreview.tsx`** — prijsweergave
+- Zelfde aanpassing: quoted_price is al totaal
 
-```typescript
-.eq("is_active", true)
-```
+### Samenvatting displayregels
 
-Dit zorgt ervoor dat eventueel eerder soft-deleted items ook niet meer getoond worden.
+| Situatie | Berekening | Weergave |
+|---|---|---|
+| Partner heeft geoffreerd (`quoted_price`) | Totaal = quoted_price | "€1.300,00" |
+| Admin schatting (`admin_price_override`, per_person) | Totaal = override × personen | "€30,00 p.p. = €1.050,00 (voorlopig)" |
+| Admin schatting (`admin_price_override`, total) | Totaal = override | "€300,00 (voorlopig)" |
+| Nog geen prijs | — | "—" |
 
