@@ -1446,28 +1446,7 @@ const AdminRequestDetail = () => {
               </div>
               {/* Margin overview */}
               <ProjectProfitSummary
-                purchaseInvoices={(purchaseInvoices || []).map(inv => ({
-                  id: inv.id,
-                  partner_id: inv.partner_id,
-                  request_id: inv.request_id,
-                  invoice_number: inv.invoice_number,
-                  invoice_date: inv.invoice_date,
-                  amount_excl_vat: inv.amount_excl_vat,
-                  amount_incl_vat: inv.amount_incl_vat,
-                  vat_amount: inv.vat_amount,
-                  vat_rate: inv.vat_rate,
-                  description: inv.description,
-                  status: inv.status,
-                  file_path: inv.file_path,
-                  item_id: inv.item_id,
-                  registered_by: inv.registered_by,
-                  created_at: inv.created_at,
-                  updated_at: inv.updated_at,
-                  paid_at: inv.paid_at,
-                  approved_at: inv.approved_at,
-                  forwarded_to_accounting_at: inv.forwarded_to_accounting_at,
-                  forwarded_by: inv.forwarded_by,
-                }))}
+                purchaseInvoices={purchaseInvoices || []}
                 bureauInvoicedAmount={bureauInvoicedAmount}
                 coordinationFee={0}
               />
