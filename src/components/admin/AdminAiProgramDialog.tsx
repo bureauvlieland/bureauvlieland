@@ -28,6 +28,7 @@ interface AdminAiProgramDialogProps {
   selectedDates: string[];
   customerDescription: string | null;
   onSuccess: () => void;
+  invoicingMode?: string;
 }
 
 interface AiSuggestion {
