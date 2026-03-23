@@ -1,29 +1,36 @@
 
 
-## Plan: Aantal deelnemers bewerkbaar maken in klantportaal
+## Plan: Deelnemersaantal tonen in berekening op Facturatie-tab
 
 ### Probleem
-Het `override_people` veld is alleen bewerkbaar in de admin. De klant ziet het wel als label in de kostenspecificatie, maar kan het niet aanpassen per onderdeel.
+De kostenspecificatie toont nu `€16,16 p.p. = €565,60` zonder te verduidelijken met hoeveel personen er gerekend is. Bij items met een afwijkend aantal (`override_people`) is dat extra verwarrend.
 
 ### Aanpassing
 
-**`src/components/customer-portal/CustomerProgramItem.tsx`**
+**`src/components/customer-portal/PriceSummaryCard.tsx`** — de prijsweergave per orderregel (regel ~278-288):
 
-In de expanded content sectie (regel ~424, binnen de `grid sm:grid-cols-2` area), voeg ik een derde veld toe **"Aantal deelnemers"** naast "Gewenste tijd" en "Dag":
+Huidige weergave:
+```
+€16,16 p.p. = €565,60
+```
 
-- Een compact number-input met als placeholder het groepstotaal (bijv. "35")
-- Leeg = gebruik groepstotaal (standaard gedrag)
-- Bij wijziging: `onUpdate({ override_people: value || null })`
-- Wanneer het afwijkt van het groepstotaal, toon een subtiele hint: "Standaard: 35 personen"
-- In `readOnly` modus: toon alleen het afwijkende aantal als tekst
+Nieuwe weergave:
+```
+€16,16 p.p. × 35 = €565,60
+```
 
-De grid wordt `sm:grid-cols-3` wanneer er meerdere dagen zijn, anders `sm:grid-cols-2` (tijd + deelnemers).
+En bij afwijkend aantal (override_people):
+```
+€32,50 p.p. × 25 = €812,50
+```
 
-**Geen andere bestanden nodig** — de `onUpdate` callback in `useCustomerProgram` slaat al `override_people` mee als onderdeel van `Partial<ProgramRequestItem>`, en de pricing in `portalPricing.ts` pikt het automatisch op.
+Dit maakt de berekening volledig transparant. De `ppMultiplier` waarde (= `item.override_people ?? numberOfPeople`) wordt al berekend in de `orderLines` mapping — ik voeg die waarde toe aan het return-object en toon die in de prijskolom.
 
-### Technische details
+### Technische wijziging
 
-- Het veld gebruikt `<Input type="number" min={1}>` met `onChange` → `onUpdate({ override_people: val ? parseInt(val) : null })`
-- De `numberOfPeople` prop moet als extra prop aan `CustomerProgramItem` worden doorgegeven (via het program object dat al beschikbaar is in de parent)
-- Het label verschijnt altijd in de expanded content, niet in de collapsed meta-row (om de compacte weergave niet te belasten)
+1. In de `orderLines.map()` (regel 78-98): voeg `peopleCount: ppMultiplier` toe aan het return-object
+2. In de render (regel 280-282): wijzig van `€{unitPrice} p.p. = €{effectivePrice}` naar `€{unitPrice} p.p. × {peopleCount} = €{effectivePrice}`
+3. Voor `per_person_per_day` items: toon ook de dagvermenigvuldiging: `€{unitPrice} p.p. × {peopleCount} × {days} dgn = €{effectivePrice}`
+
+Eén bestand, minimale wijziging.
 
