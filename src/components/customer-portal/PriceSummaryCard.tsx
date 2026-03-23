@@ -270,6 +270,9 @@ export const PriceSummaryCard = ({
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm">
                     {item.block_name}
+                    {item.override_people != null && item.override_people !== numberOfPeople && (
+                      <span className="text-muted-foreground text-xs ml-1">({item.override_people} deelnemers)</span>
+                    )}
                     {isPreliminary && <span className="text-muted-foreground text-xs ml-1">(voorlopig)</span>}
                   </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">
