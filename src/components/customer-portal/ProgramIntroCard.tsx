@@ -35,7 +35,7 @@ export const ProgramIntroCard = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
-  const isQuoteMode = programType === "quote";
+  const isQuoteMode = programType === "quote" || !!programType?.startsWith("maatwerk_");
   const isAwaitingApproval = isQuoteMode && quoteStatus === "offerte_verstuurd";
   const isBeingPrepared = isQuoteMode && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
   const isConfirmed = !!termsAcceptedAt || quoteStatus === "definitief_bevestigd" || quoteStatus === "akkoord_ontvangen";
