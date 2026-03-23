@@ -21,7 +21,7 @@ export const PipelineFunnel = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_requests")
-        .select("id, status, quote_status, terms_accepted_at, completion_status")
+        .select("id, status, quote_status, terms_accepted_at, completion_status, program_type")
         .eq("status", "active");
       if (error) throw error;
       return data || [];
@@ -34,16 +34,21 @@ export const PipelineFunnel = () => {
     let concept = 0, offerte = 0, av = 0, afgerond = 0, gefactureerd = 0;
 
     projects.forEach((p) => {
-      if (p.completion_status === "completed") {
+      const isQuote = p.program_type === "quote" || !!p.program_type?.startsWith("maatwerk_");
+      
+      if (p.completion_status === "fully_invoiced") {
         afgerond++;
-      } else if (p.completion_status === "ready_for_invoice" || p.completion_status === "invoiced") {
+      } else if (p.completion_status === "ready_for_invoice" || p.completion_status === "partially_invoiced") {
         gefactureerd++;
       } else if (p.terms_accepted_at) {
         av++;
-      } else if (p.quote_status === "offerte_verstuurd") {
+      } else if (isQuote && p.quote_status === "offerte_verstuurd") {
         offerte++;
-      } else {
+      } else if (isQuote) {
         concept++;
+      } else {
+        // Self-service projects: count as active/AV
+        av++;
       }
     });
 

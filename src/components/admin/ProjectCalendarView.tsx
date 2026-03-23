@@ -42,7 +42,7 @@ interface ProjectCalendarViewProps {
 function getChipColor(project: Project): string {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled")
     return "bg-red-100 text-red-700 border-red-200";
-  if (project.completion_status === "completed") return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (project.completion_status === "fully_invoiced") return "bg-emerald-100 text-emerald-700 border-emerald-200";
   if (project.terms_accepted_at) return "bg-green-100 text-green-700 border-green-200";
   if (project.quote_status === "offerte_verstuurd") return "bg-blue-100 text-blue-700 border-blue-200";
   if (project.quote_status === "concept") return "bg-slate-100 text-slate-600 border-slate-200";

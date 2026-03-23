@@ -80,13 +80,13 @@ const AdminDashboardContent = () => {
           { data: accommodationRequests },
         ] = await Promise.all([
           supabase.from("program_requests").select("id, customer_name, customer_company, status, created_at"),
-          supabase.from("program_request_items").select("id, status, request_id"),
+          supabase.from("program_request_items").select("id, status, request_id, skip_partner_notification"),
           supabase.from("partners").select("id, is_active"),
           supabase.from("accommodation_requests").select("id, customer_name, customer_company, status, created_at, number_of_guests"),
         ]);
 
         const activeRequests = requests?.filter(r => r.status === "active") || [];
-        const pendingItems = items?.filter(i => i.status === "pending") || [];
+        const pendingItems = items?.filter(i => i.status === "pending" && !i.skip_partner_notification) || [];
         const confirmedItems = items?.filter(i => i.status === "confirmed") || [];
         const activePartners = partners?.filter(p => p.is_active) || [];
         const pendingAccommodation = accommodationRequests?.filter(r =>
@@ -153,9 +153,9 @@ const AdminDashboardContent = () => {
 
       {/* Compact stat bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <StatChip label="Actieve aanvragen" value={stats?.activeRequests ?? 0} to="/admin/aanvragen" color="text-blue-600" />
-        <StatChip label="Te bevestigen" value={stats?.pendingItems ?? 0} to="/admin/aanvragen" color="text-amber-600" />
-        <StatChip label="Bevestigd" value={stats?.confirmedItems ?? 0} to="/admin/aanvragen" color="text-green-600" />
+        <StatChip label="Actieve aanvragen" value={stats?.activeRequests ?? 0} to="/admin/projecten" color="text-blue-600" />
+        <StatChip label="Te bevestigen" value={stats?.pendingItems ?? 0} to="/admin/projecten" color="text-amber-600" />
+        <StatChip label="Bevestigd" value={stats?.confirmedItems ?? 0} to="/admin/projecten" color="text-green-600" />
         <StatChip label="Partners" value={`${stats?.activePartners ?? 0}/${stats?.totalPartners ?? 0}`} to="/admin/partners" />
 
         {/* Separator */}
