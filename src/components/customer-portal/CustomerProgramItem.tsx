@@ -44,6 +44,7 @@ interface CustomerProgramItemProps {
   isQuoteMode?: boolean;
   readOnly?: boolean;
   hideDay?: boolean;
+  numberOfPeople?: number;
 }
 
 export const CustomerProgramItem = ({
