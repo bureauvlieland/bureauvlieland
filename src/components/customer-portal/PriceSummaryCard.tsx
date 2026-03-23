@@ -95,7 +95,8 @@ export const PriceSummaryCard = ({
         effectivePrice = unitPrice * ppMultiplier * dayMultiplier;
       }
 
-      return { item, hasQuotedPrice, isPreliminary, effectivePrice, unitPrice, isPerPerson: ppMultiplier > 1 };
+      const isPerDay = item.price_type === "per_person_per_day";
+      return { item, hasQuotedPrice, isPreliminary, effectivePrice, unitPrice, isPerPerson: ppMultiplier > 1, peopleCount: ppMultiplier, isPerDay, dayCount: dayMultiplier };
     });
 
     const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
