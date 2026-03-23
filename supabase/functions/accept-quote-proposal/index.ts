@@ -512,19 +512,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let items = approvedItemsForPartners || [];
 
     if (items.length === 0) {
-      const { data: fallbackItems, error: fallbackItemsError } = await supabase
-        .from("program_request_items")
-        .select("*")
-        .eq("request_id", program.id)
-        .eq("skip_partner_notification", true)
-        .neq("status", "cancelled");
-
-      if (fallbackItemsError) {
-        console.error("Error fetching fallback items:", fallbackItemsError);
-        throw fallbackItemsError;
-      }
-
-      items = fallbackItems || [];
+      console.log("No customer-approved items found to send to partners");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Geen onderdelen klaar om te versturen. Wacht op klantakkoord.",
+          partnersNotified: 0,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     console.log(`Found ${items?.length || 0} items to notify partners about`);

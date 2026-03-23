@@ -82,6 +82,7 @@ interface ItemDetail {
   provider_name: string;
   status: string;
   skip_partner_notification: boolean;
+  customer_approved_at: string | null;
 }
 
 interface Project {
@@ -155,8 +156,9 @@ function getDerivedStatus(project: Project): DerivedStatus {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled") return "geannuleerd";
   if (project.completion_status === "completed") return "afgerond";
   if (project.terms_accepted_at) return "av_getekend";
-  if (project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
-  if (project.quote_status === "concept") return "concept";
+  const isQuote = project.program_type === "quote" || !!project.program_type?.startsWith("maatwerk_");
+  if (isQuote && project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
+  if (isQuote && project.quote_status === "concept") return "concept";
   return "actief";
 }
 
@@ -217,7 +219,7 @@ const AdminProjectsContent = () => {
           .order("created_at", { ascending: false }),
         supabase
           .from("program_request_items")
-          .select("request_id, status, skip_partner_notification, provider_name"),
+          .select("request_id, status, skip_partner_notification, provider_name, customer_approved_at"),
         supabase
           .from("accommodation_quotes")
           .select("request_id, status, valid_until, accommodation_name, partner_id"),
@@ -255,11 +257,15 @@ const AdminProjectsContent = () => {
         itemStats[item.request_id].total++;
         if (item.status === "pending") itemStats[item.request_id].pending++;
         if (item.status === "confirmed") itemStats[item.request_id].confirmed++;
-        if (item.skip_partner_notification) itemStats[item.request_id].notSent++;
+        if (item.skip_partner_notification && item.customer_approved_at) {
+          // Only count as "not sent" if customer already approved (ready to send)
+          itemStats[item.request_id].notSent++;
+        }
         itemDetailsByRequest[item.request_id].push({
           provider_name: item.provider_name,
           status: item.status,
           skip_partner_notification: item.skip_partner_notification ?? false,
+          customer_approved_at: item.customer_approved_at ?? null,
         });
       });
 
@@ -583,7 +589,7 @@ const AdminProjectsContent = () => {
                                         {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
                                       </span>
                                     </Badge>
-                                    {project.program_type === "quote" && (
+                                    {(project.program_type === "quote" || project.program_type?.startsWith("maatwerk_")) && (
                                       <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
                                         Maatwerk
                                       </Badge>
