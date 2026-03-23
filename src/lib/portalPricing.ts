@@ -47,13 +47,15 @@ export function getItemUnitPrice(
 export function getItemLineTotal(
   item: ProgramRequestItem,
   numberOfPeople: number,
+  numberOfDays: number = 1,
 ): number | null {
   if (item.quoted_price != null) {
     return item.quoted_price;
   }
   if (item.admin_price_override != null) {
-    const multiplier = isPerPersonItem(item) ? numberOfPeople : 1;
-    return item.admin_price_override * multiplier;
+    const personMultiplier = isPerPersonItem(item) ? numberOfPeople : 1;
+    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+    return item.admin_price_override * personMultiplier * dayMultiplier;
   }
   return null;
 }
