@@ -142,11 +142,11 @@ export const AdminAddActivitySheet = ({
       // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
-      const providerId = selectedProviderId || "bureau-vlieland";
-      const providerName = selectedProviderId === "bureau-vlieland" 
+      const providerId = selectedProviderId || "bureau";
+      const providerName = selectedProviderId === "bureau" 
         ? "Bureau Vlieland" 
         : (selectedPartner?.name || selectedBlock.provider?.name || "Bureau Vlieland");
-      const providerEmail = selectedProviderId === "bureau-vlieland" 
+      const providerEmail = selectedProviderId === "bureau" 
         ? null 
         : (selectedPartner?.email || selectedBlock.provider?.email || null);
       const blockType = isBureauInvoiced ? "bureau" : selectedBlock.block_type;
