@@ -67,8 +67,9 @@ export function getItemLineTotal(
 export function getItemEffectivePrice(
   item: ProgramRequestItem,
   numberOfPeople: number,
+  numberOfDays: number = 1,
 ): number {
-  return getItemLineTotal(item, numberOfPeople) ?? 0;
+  return getItemLineTotal(item, numberOfPeople, numberOfDays) ?? 0;
 }
 
 /**
