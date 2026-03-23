@@ -2,7 +2,7 @@
 
 export type BuildingBlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer" | "services" | "overig" | "activiteiten";
 export type BuildingBlockType = "bureau" | "partner" | "self_arranged";
-export type BuildingBlockPriceType = "per_person" | "total" | "on_request";
+export type BuildingBlockPriceType = "per_person" | "total" | "on_request" | "per_person_per_day";
 export type BuildingBlockStatus = "concept" | "active" | "published";
 
 export interface BuildingBlock {
