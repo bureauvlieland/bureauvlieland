@@ -49,6 +49,10 @@ interface BlockInfo {
   short_description: string | null;
   description: string | null;
   duration: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_address: string | null;
+  external_url: string | null;
 }
 
 const vibeOptions = [
@@ -123,7 +127,7 @@ export const AdminAiProgramDialog = ({
       const blockIds = [...new Set(result.map((s) => s.block_id))];
       const { data: blockDetails } = await supabase
         .from("building_blocks")
-        .select("id, name, category, block_type, provider_id, price_adult, price_type, price_adult_note, short_description, description, duration")
+        .select("id, name, category, block_type, provider_id, price_adult, price_type, price_adult_note, short_description, description, duration, location_lat, location_lng, location_address, external_url")
         .in("id", blockIds);
 
       setSuggestions(result);
@@ -166,6 +170,10 @@ export const AdminAiProgramDialog = ({
             price_type: block.price_type || "per_person",
             duration: block.duration || null,
             admin_price_notes: block.description || block.short_description || block.price_adult_note || null,
+            location_lat: block.location_lat ?? null,
+            location_lng: block.location_lng ?? null,
+            location_address: block.location_address ?? null,
+            external_url: block.external_url ?? null,
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
