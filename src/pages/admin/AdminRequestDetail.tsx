@@ -1210,6 +1210,7 @@ const AdminRequestDetail = () => {
                           {isQuoteMode ? (
                             <>
                               <TableHead>Offerte-status</TableHead>
+                              <TableHead>Deelnemers</TableHead>
                               <TableHead>Prijs (aanpasbaar)</TableHead>
                               <TableHead className="w-[80px]"></TableHead>
                             </>
