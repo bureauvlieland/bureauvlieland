@@ -1451,6 +1451,7 @@ export type Database = {
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
+          override_people: number | null
           preferred_time: string | null
           price_indication: string | null
           price_type: string | null
@@ -1510,6 +1511,7 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          override_people?: number | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
@@ -1569,6 +1571,7 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          override_people?: number | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
