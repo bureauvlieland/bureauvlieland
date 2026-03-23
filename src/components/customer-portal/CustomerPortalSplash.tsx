@@ -255,7 +255,7 @@ export const CustomerPortalSplash = ({
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 {isQuoteAwaitingApproval ? (
                   <><strong>Uw offerte staat klaar.</strong> Open het programma om de onderdelen te bekijken en akkoord te geven.</>
-                ) : isMaatwerk ? (
+                ) : isMaatwerkEmpty ? (
                   <><strong>Bureau Vlieland is uw programma aan het samenstellen.</strong> Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op.</>
                 ) : (
                   <><strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief.</>
