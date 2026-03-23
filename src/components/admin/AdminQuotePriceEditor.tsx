@@ -91,9 +91,13 @@ export const AdminQuotePriceEditor = ({
   };
 
   const calculateTotal = (price: number | null) => {
-    if (price === null || priceType !== "per_person") return null;
-    return price * numberOfPeople;
+    if (price === null) return null;
+    if (priceType === "per_person") return price * numberOfPeople;
+    if (priceType === "per_person_per_day") return price * numberOfPeople * numberOfDays;
+    return null;
   };
+
+  const priceTypeLabel = priceType === "per_person_per_day" ? "p.p.p.d." : priceType === "per_person" ? "p.p." : "totaal";
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpen}>
