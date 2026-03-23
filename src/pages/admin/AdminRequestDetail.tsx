@@ -1269,7 +1269,28 @@ const AdminRequestDetail = () => {
                                 )}
                               </TableCell>
                               <TableCell>
-                                {item.preferred_time || "-"}
+                                {(() => {
+                                  const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+                                  if (!activeTime) return "-";
+                                  const isConfirmed = !!item.confirmed_time;
+                                  const isProposal = !item.confirmed_time && !!item.proposed_time;
+                                  const showOriginal = (isConfirmed || isProposal) && item.preferred_time && activeTime !== item.preferred_time;
+                                  return (
+                                    <div className="space-y-0.5">
+                                      <span className={cn(
+                                        "font-medium",
+                                        isConfirmed && "text-green-700",
+                                        isProposal && "text-orange-600",
+                                      )}>
+                                        {activeTime}
+                                        {isProposal && <span className="text-xs ml-1">(voorstel)</span>}
+                                      </span>
+                                      {showOriginal && (
+                                        <div className="text-xs text-muted-foreground line-through">{item.preferred_time}</div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </TableCell>
                               
                               {isQuoteMode ? (
