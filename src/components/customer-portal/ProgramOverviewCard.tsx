@@ -47,7 +47,7 @@ export const ProgramOverviewCard = ({
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
   const isMaatwerk = programType === "maatwerk_zakelijk" || programType === "maatwerk_prive";
-  const isQuoteMode = programType === "quote" || isMaatwerk;
+  const isQuoteMode = true; // All projects use unified quote pipeline
   
   // Calculate quote validity
   const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;
