@@ -102,6 +102,8 @@ import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { getItemLineTotal as centralGetItemLineTotal } from "@/lib/portalPricing";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { isBureauItem } from "@/lib/projectWorkflow";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
@@ -245,7 +247,12 @@ const AdminRequestDetail = () => {
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
 
-  // Calculate bureau invoiced amount for profit summary
+  // App settings for coordination fee
+  const { getCoordinationFee: calcCoordFee } = useAppSettings();
+
+  // Calculate bureau invoiced amount for profit summary (incl. coordination fee)
+  const numberOfPeople = request?.number_of_people ?? 20;
+  const coordinationFeeForProfit = calcCoordFee(numberOfPeople);
   const bureauInvoicedAmount = (() => {
     if (!request) return 0;
     const programTotal = items
@@ -254,7 +261,15 @@ const AdminRequestDetail = () => {
     const extraCosts = items
       .filter((i) => i.day_index === -1)
       .reduce((sum, i) => sum + (i.admin_price_override ?? 0), 0);
-    return programTotal + extraCosts;
+    return programTotal + extraCosts + coordinationFeeForProfit;
+  })();
+
+  // Calculate expected partner costs from items (for when no purchase invoices exist yet)
+  const expectedPartnerCosts = (() => {
+    if (!request) return 0;
+    return items
+      .filter((i) => i.status !== "cancelled" && !isBureauItem(i))
+      .reduce((sum, item) => sum + (centralGetItemLineTotal(item as any, request.number_of_people) ?? 0), 0);
   })();
 
   const generateProgramStatusEmailBody = (): { subject: string; body: string } => {
@@ -1676,7 +1691,8 @@ const AdminRequestDetail = () => {
               <ProjectProfitSummary
                 purchaseInvoices={purchaseInvoices || []}
                 bureauInvoicedAmount={bureauInvoicedAmount}
-                coordinationFee={0}
+                coordinationFee={coordinationFeeForProfit}
+                expectedPartnerCosts={expectedPartnerCosts}
               />
             </TabsContent>
 
