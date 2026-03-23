@@ -27,7 +27,6 @@ const voorPriveItems: NavItem[] = [
 ];
 
 const extraItems: NavItem[] = [
-  { label: "Diensten", href: "/diensten" },
   { label: "Catering", href: "/catering" },
   { label: "Evenementen", href: "/evenementen" },
 ];
