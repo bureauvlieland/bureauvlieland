@@ -86,13 +86,14 @@ const AdminDashboardContent = () => {
         ]);
 
         const activeRequests = requests?.filter(r => r.status === "active") || [];
-        const pendingItems = items?.filter(i => i.status === "pending" && !i.skip_partner_notification) || [];
-        const confirmedItems = items?.filter(i => i.status === "confirmed") || [];
+        const activeRequestIds = new Set(activeRequests.map(r => r.id));
+        const pendingItems = items?.filter(i => i.status === "pending" && !i.skip_partner_notification && activeRequestIds.has(i.request_id)) || [];
+        const confirmedItems = items?.filter(i => i.status === "confirmed" && activeRequestIds.has(i.request_id)) || [];
         const activePartners = partners?.filter(p => p.is_active) || [];
         const pendingAccommodation = accommodationRequests?.filter(r =>
-          r.status === "submitted" || r.status === "processing"
+          r.status === "processing" || r.status === "pending"
         ) || [];
-        const quotedAccommodation = accommodationRequests?.filter(r => r.status === "quoted") || [];
+        const quotedAccommodation = accommodationRequests?.filter(r => r.status === "accepted") || [];
 
         const recentRequests = (requests || [])
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
