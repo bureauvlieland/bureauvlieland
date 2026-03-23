@@ -1,30 +1,24 @@
 
 
-## Plan: Akkoord-knop alleen tonen bij bevestigde items
+## Plan: Banner-melding corrigeren op splash-pagina
 
 ### Probleem
-In de quote-modus toont het portaal de "Akkoord"-knop bij items met `item_quote_status` "in_afstemming" óf "bevestigd". Maar een item met status "Aangevraagd" (partner nog niet bevestigd) toont dan dezelfde groene "Akkoord"-knop als een item met status "Bevestigd". De klant weet niet waar ze akkoord op geven — er is nog niks concreets bevestigd door de partner.
+De amber banner op de splash-pagina toont altijd "Bureau Vlieland is uw programma aan het samenstellen" voor maatwerk-projecten, ook wanneer er al items in het programma staan. De check op regel 258 gebruikt `isMaatwerk` terwijl het `isMaatwerkEmpty` zou moeten zijn.
 
-### Oplossing
+### Aanpassing
 
-**Optie: "Akkoord" pas tonen wanneer het item operationeel bevestigd is**
+**`src/components/customer-portal/CustomerPortalSplash.tsx`** — regel 253-264:
 
-In `src/lib/customerQuoteApproval.ts` — de functie `isQuoteItemAwaitingCustomerApproval`:
+De banner-logica wordt aangescherpt met drie scenario's:
 
-- Voeg een extra check toe: het item moet operationeel status `confirmed` (of `alternative`) hebben, niet alleen een `item_quote_status` van "in_afstemming"/"bevestigd"
-- Items die nog "aangevraagd" zijn bij de partner krijgen dan geen "Akkoord"-knop meer
+1. **Offerte wacht op akkoord** (`isQuoteAwaitingApproval`): "Uw offerte staat klaar" — blijft ongewijzigd
+2. **Maatwerk zonder items** (`isMaatwerkEmpty`): "Bureau Vlieland is uw programma aan het samenstellen" — dit is de correcte situatie voor deze melding
+3. **Maatwerk mét items / standaard quote**: Contextafhankelijke melding over de huidige fase (bijv. "Dit is een werkdocument" of een melding over de afstemming)
 
-```typescript
-// Huidige logica:
-return customerQuoteApprovalStatuses.includes(item.item_quote_status);
+Concreet: wijzig `isMaatwerk` naar `isMaatwerkEmpty` op regel 258.
 
-// Nieuwe logica:
-const operationallyReady = item.status === "confirmed" || item.status === "alternative";
-return operationallyReady && customerQuoteApprovalStatuses.includes(item.item_quote_status);
-```
-
-Dit zorgt ervoor dat de klant alleen "Akkoord" kan geven op items die daadwerkelijk bevestigd zijn door de partner, wat de verwarring wegneemt.
+Daarnaast: als het programma al gepubliceerd is en de status voorbij "concept" is, kan de amber banner mogelijk helemaal weg of een passendere tekst tonen. Ik check of `quote_status` al verder is (bijv. "offerte_verstuurd") — dat wordt al afgevangen door `isQuoteAwaitingApproval`. Voor tussenstatussen zoals "in_afstemming" past de werkdocument-tekst.
 
 ### Eén bestand
-- `src/lib/customerQuoteApproval.ts` — extra statuscheck toevoegen
+- `src/components/customer-portal/CustomerPortalSplash.tsx` — `isMaatwerk` → `isMaatwerkEmpty` in de banner-conditie
 
