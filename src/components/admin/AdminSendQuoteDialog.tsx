@@ -84,7 +84,7 @@ Programmadetails:
 - Aantal personen: ${numberOfPeople || ""}
 - Geldig tot: ${validUntilFormatted}
 
-U kunt het voorstel bekijken en akkoord geven via de knop in de e-mail. Uiteraard kunnen we het programma qua onderdelen en tijden nog aanpassen.
+U kunt het volledige voorstel bekijken en akkoord geven via onderstaande knop. Uiteraard kunnen we het programma qua onderdelen en tijden nog aanpassen.
 
 Heeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.
 
