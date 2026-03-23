@@ -218,7 +218,7 @@ const AdminProjectsContent = () => {
           .order("created_at", { ascending: false }),
         supabase
           .from("program_request_items")
-          .select("request_id, status, skip_partner_notification, provider_name"),
+          .select("request_id, status, skip_partner_notification, provider_name, customer_approved_at"),
         supabase
           .from("accommodation_quotes")
           .select("request_id, status, valid_until, accommodation_name, partner_id"),
