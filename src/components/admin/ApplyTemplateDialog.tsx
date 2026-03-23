@@ -67,7 +67,7 @@ export const ApplyTemplateDialog = ({
             block_name: block.name,
             block_category: block.category as string,
             block_type: invoicingMode === "bureau_central" ? "bureau" : (block.block_type as string),
-            provider_id: block.provider_id || "bureau-vlieland",
+            provider_id: block.provider_id || "bureau",
             provider_name: block.provider_id ? "" : "Bureau Vlieland",
             provider_email: null as string | null,
             day_index: item.day_index,
@@ -84,7 +84,7 @@ export const ApplyTemplateDialog = ({
         .filter((r) => r !== null);
 
       // Enrich provider names from partners table
-      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau-vlieland"))];
+      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau"))];
       if (partnerIds.length > 0) {
         const { data: partners } = await supabase
           .from("partners")

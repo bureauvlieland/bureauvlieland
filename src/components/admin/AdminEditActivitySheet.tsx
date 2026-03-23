@@ -121,7 +121,7 @@ export const AdminEditActivitySheet = ({
       setPriceOverride(item.admin_price_override?.toString() || "");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
-      setSelectedProviderId(item.provider_id || "bureau-vlieland");
+      setSelectedProviderId(item.provider_id || "bureau");
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
       setLocationAddress(item.location_address || "");
@@ -151,11 +151,11 @@ export const AdminEditActivitySheet = ({
         location_lat: locationLat,
         location_lng: locationLng,
         location_address: locationAddress || null,
-        provider_id: selectedProviderId || "bureau-vlieland",
-        provider_name: selectedProviderId === "bureau-vlieland" 
+        provider_id: selectedProviderId || "bureau",
+        provider_name: selectedProviderId === "bureau" 
           ? "Bureau Vlieland" 
           : (selectedPartner?.name || item.provider_name),
-        provider_email: selectedProviderId === "bureau-vlieland" 
+        provider_email: selectedProviderId === "bureau" 
           ? null 
           : (selectedPartner?.email || item.provider_email),
       };
@@ -232,7 +232,7 @@ export const AdminEditActivitySheet = ({
 
   if (!item) return null;
 
-  const selectedProviderName = selectedProviderId === "bureau-vlieland"
+  const selectedProviderName = selectedProviderId === "bureau"
     ? "Bureau Vlieland"
     : (partners.find(p => p.id === selectedProviderId)?.name || item.provider_name);
 
@@ -278,7 +278,7 @@ export const AdminEditActivitySheet = ({
                 <SelectValue placeholder="Kies een uitvoerder..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bureau-vlieland">Bureau Vlieland</SelectItem>
+                <SelectItem value="bureau">Bureau Vlieland</SelectItem>
                 {partners.map((partner) => (
                   <SelectItem key={partner.id} value={partner.id}>
                     {partner.name}
@@ -310,7 +310,7 @@ export const AdminEditActivitySheet = ({
             </RadioGroup>
 
             {/* Info when Bureau invoicing is selected but executor is a partner */}
-            {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau-vlieland" && (
+            {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau" && (
               <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="text-blue-800">

@@ -154,7 +154,7 @@ export const AdminAiProgramDialog = ({
             block_name: block.name,
             block_category: block.category,
             block_type: invoicingMode === "bureau_central" ? "bureau" : block.block_type,
-            provider_id: block.provider_id || "bureau-vlieland",
+            provider_id: block.provider_id || "bureau",
             provider_name: "",
             provider_email: null as string | null,
             day_index: s.day_index,
@@ -171,7 +171,7 @@ export const AdminAiProgramDialog = ({
         .filter((r): r is NonNullable<typeof r> => r !== null);
 
       // Enrich provider names
-      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau-vlieland"))];
+      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau"))];
       if (partnerIds.length > 0) {
         const { data: partners } = await supabase
           .from("partners")
@@ -184,13 +184,13 @@ export const AdminAiProgramDialog = ({
           if (partner) {
             row.provider_name = partner.name;
             row.provider_email = partner.email;
-          } else if (row.provider_id === "bureau-vlieland") {
+          } else if (row.provider_id === "bureau") {
             row.provider_name = "Bureau Vlieland";
           }
         });
       } else {
         rowsToInsert.forEach((row) => {
-          if (row.provider_id === "bureau-vlieland") {
+          if (row.provider_id === "bureau") {
             row.provider_name = "Bureau Vlieland";
           }
         });

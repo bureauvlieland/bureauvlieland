@@ -172,8 +172,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const items = (allItems || []) as ProgramItem[];
 
     // 3. Categorize items
-    const bureauItems = items.filter(i => i.provider_id === "bureau" || i.block_type === "bureau");
-    const partnerItems = items.filter(i => i.provider_id !== "bureau" && i.block_type !== "bureau");
+    const bureauItems = items.filter(i => i.provider_id === "bureau");
+    const partnerItems = items.filter(i => i.provider_id !== "bureau");
 
     // 4. If dry_run, return preview data without sending
     if (dry_run) {

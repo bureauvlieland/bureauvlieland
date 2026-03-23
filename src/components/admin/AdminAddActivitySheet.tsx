@@ -121,7 +121,7 @@ export const AdminAddActivitySheet = ({
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
     setInvoicedBy(invoicingMode === "bureau_central" ? "bureau" : (block.block_type === "bureau" ? "bureau" : "partner"));
-    setSelectedProviderId(block.provider_id || "bureau-vlieland");
+    setSelectedProviderId(block.provider_id || "bureau");
     setLocationLat(block.location_lat ?? null);
     setLocationLng(block.location_lng ?? null);
     setLocationAddress(block.location_address || "");
@@ -142,11 +142,11 @@ export const AdminAddActivitySheet = ({
       // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
-      const providerId = selectedProviderId || "bureau-vlieland";
-      const providerName = selectedProviderId === "bureau-vlieland" 
+      const providerId = selectedProviderId || "bureau";
+      const providerName = selectedProviderId === "bureau" 
         ? "Bureau Vlieland" 
         : (selectedPartner?.name || selectedBlock.provider?.name || "Bureau Vlieland");
-      const providerEmail = selectedProviderId === "bureau-vlieland" 
+      const providerEmail = selectedProviderId === "bureau" 
         ? null 
         : (selectedPartner?.email || selectedBlock.provider?.email || null);
       const blockType = isBureauInvoiced ? "bureau" : selectedBlock.block_type;
@@ -296,7 +296,7 @@ export const AdminAddActivitySheet = ({
                   <SelectValue placeholder="Kies een uitvoerder..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bureau-vlieland">Bureau Vlieland</SelectItem>
+                  <SelectItem value="bureau">Bureau Vlieland</SelectItem>
                   {partners.map((partner) => (
                     <SelectItem key={partner.id} value={partner.id}>
                       {partner.name}
@@ -328,7 +328,7 @@ export const AdminAddActivitySheet = ({
               </RadioGroup>
               
               {/* Info when Bureau invoicing is selected but executor is a partner */}
-              {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau-vlieland" && (
+              {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau" && (
                 <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
                   <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                   <div className="text-blue-800">
