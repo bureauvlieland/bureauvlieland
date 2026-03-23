@@ -34,6 +34,7 @@ export const AdminQuotePriceEditor = ({
   overridePrice,
   priceNotes,
   numberOfPeople,
+  numberOfDays = 1,
   priceType = "per_person",
   onSave,
   disabled = false,
