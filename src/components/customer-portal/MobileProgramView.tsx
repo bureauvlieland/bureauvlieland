@@ -407,6 +407,7 @@ export const MobileProgramView = ({
                         vatRate={getItemVatRate(item)}
                         readOnly={!isPublished}
                         hideDay
+                        numberOfPeople={program.number_of_people}
                       />
                     )}
                   </CustomerTimeline>
