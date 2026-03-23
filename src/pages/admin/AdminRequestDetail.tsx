@@ -102,6 +102,8 @@ import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { getItemLineTotal as centralGetItemLineTotal } from "@/lib/portalPricing";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { isBureauItem } from "@/lib/projectWorkflow";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
