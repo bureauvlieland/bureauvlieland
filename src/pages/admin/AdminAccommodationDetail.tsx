@@ -826,6 +826,23 @@ export default function AdminAccommodationDetail() {
                             <p className="text-xs text-muted-foreground truncate">{partner.email}</p>
                           </div>
                           {statusBadge}
+                          {canWithdraw && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => {
+                                const q = quotes?.find((q) => q.partner_id === partner.id && q.status === "pending");
+                                if (q) {
+                                  setWithdrawQuoteId(q.id);
+                                  setWithdrawNotify(true);
+                                }
+                              }}
+                              title="Aanvraag intrekken"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           <span className="text-xs text-muted-foreground shrink-0">
                             {partner.accommodation_commission_percentage || 10}%
                           </span>
