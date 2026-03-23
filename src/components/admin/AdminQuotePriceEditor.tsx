@@ -132,8 +132,8 @@ export const AdminQuotePriceEditor = ({
             <h4 className="font-medium">Prijsaanpassing</h4>
             {originalPrice !== null && (
               <p className="text-sm text-muted-foreground">
-                Standaardprijs: {formatPrice(originalPrice)}
-                {priceType === "per_person" && ` p.p. (${numberOfPeople}p = ${formatPrice(calculateTotal(originalPrice))})`}
+              Standaardprijs: {formatPrice(originalPrice)}
+                {priceType !== "total" && ` ${priceTypeLabel} (${numberOfPeople}p${priceType === "per_person_per_day" ? ` × ${numberOfDays}d` : ""} = ${formatPrice(calculateTotal(originalPrice))})`}
               </p>
             )}
           </div>
