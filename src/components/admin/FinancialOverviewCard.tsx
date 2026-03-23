@@ -48,10 +48,16 @@ const getLineTotal = (item: FinancialItem, n: number) => centralLineTotal(item a
 export const FinancialOverviewCard = ({
   requestId,
   numberOfPeople,
+  numberOfDays = 1,
   items,
   invoices,
   onRegisterInvoice,
   isQuoteMode = false,
+  touristTax = 0,
+  natureContribution = 0,
+  centralSurcharge = 0,
+  accommodationTotal = 0,
+  accommodationName,
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
