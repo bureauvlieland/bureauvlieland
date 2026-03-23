@@ -72,7 +72,7 @@ const formSchema = z.object({
   duration: z.string().optional(),
   price_adult: z.coerce.number().nullable().optional(),
   price_adult_note: z.string().optional(),
-  price_type: z.enum(["per_person", "total", "on_request"]),
+  price_type: z.enum(["per_person", "per_person_per_day", "total", "on_request"]),
   price_child: z.coerce.number().nullable().optional(),
   price_child_note: z.string().optional(),
   price_child_min_age: z.coerce.number().optional(),
