@@ -81,7 +81,7 @@ import {
   type QuoteStatus,
   type ItemQuoteStatus,
 } from "@/types/programRequest";
-import { isQuoteOrMaatwerk, getQuoteItemSendPhase, countReadyToSend, countWaitingForCustomer } from "@/lib/quoteItemSendStatus";
+import { getQuoteItemSendPhase, countReadyToSend, countWaitingForCustomer } from "@/lib/quoteItemSendStatus";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
