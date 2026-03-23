@@ -172,6 +172,10 @@ interface ProgramRequestItem {
   price_type: string | null;
   // Partner notification flag
   skip_partner_notification: boolean | null;
+  // Customer approval
+  customer_approved_at: string | null;
+  // Per-item participant override
+  override_people: number | null;
   // Calendar export fields
   confirmed_time: string | null;
   proposed_time: string | null;
