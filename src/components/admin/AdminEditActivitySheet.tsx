@@ -151,11 +151,11 @@ export const AdminEditActivitySheet = ({
         location_lat: locationLat,
         location_lng: locationLng,
         location_address: locationAddress || null,
-        provider_id: selectedProviderId || "bureau-vlieland",
-        provider_name: selectedProviderId === "bureau-vlieland" 
+        provider_id: selectedProviderId || "bureau",
+        provider_name: selectedProviderId === "bureau" 
           ? "Bureau Vlieland" 
           : (selectedPartner?.name || item.provider_name),
-        provider_email: selectedProviderId === "bureau-vlieland" 
+        provider_email: selectedProviderId === "bureau" 
           ? null 
           : (selectedPartner?.email || item.provider_email),
       };
