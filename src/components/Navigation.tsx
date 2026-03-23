@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronDown, Phone } from "lucide-react";
+import { Menu, ChevronDown, Phone } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { MegaDropdown, navItems } from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
 
@@ -151,18 +152,23 @@ export const Navigation = () => {
 
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => setIsMenuOpen(true)}
               className="lg:hidden p-2 text-foreground"
-              aria-label="Toggle menu"
+              aria-label="Open menu"
             >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              <Menu size={24} />
             </button>
           </div>
-
-          {/* Mobile Navigation */}
-          {isMenuOpen && <MobileNav onClose={() => setIsMenuOpen(false)} />}
         </nav>
       </header>
+
+      {/* Mobile Navigation Sheet */}
+      <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0">
+          <SheetTitle className="sr-only">Navigatiemenu</SheetTitle>
+          <MobileNav onClose={() => setIsMenuOpen(false)} />
+        </SheetContent>
+      </Sheet>
     </>
   );
 };
