@@ -23,8 +23,9 @@ interface AdminQuotePriceEditorProps {
   overridePrice: number | null;
   priceNotes: string | null;
   numberOfPeople: number;
-  priceType?: "per_person" | "total";
-  onSave: (price: number | null, notes: string, priceType?: "per_person" | "total") => Promise<void>;
+  numberOfDays?: number;
+  priceType?: "per_person" | "per_person_per_day" | "total";
+  onSave: (price: number | null, notes: string, priceType?: "per_person" | "per_person_per_day" | "total") => Promise<void>;
   disabled?: boolean;
 }
 
