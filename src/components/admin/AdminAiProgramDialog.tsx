@@ -170,6 +170,10 @@ export const AdminAiProgramDialog = ({
             price_type: block.price_type || "per_person",
             duration: block.duration || null,
             admin_price_notes: block.description || block.short_description || block.price_adult_note || null,
+            location_lat: block.location_lat ?? null,
+            location_lng: block.location_lng ?? null,
+            location_address: block.location_address ?? null,
+            external_url: block.external_url ?? null,
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
