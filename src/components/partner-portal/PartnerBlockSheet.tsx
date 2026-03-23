@@ -635,6 +635,7 @@ export const PartnerBlockSheet = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="per_person">Per persoon</SelectItem>
+                    <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
                     <SelectItem value="total">Totaalprijs</SelectItem>
                     <SelectItem value="on_request">Op aanvraag</SelectItem>
                   </SelectContent>
