@@ -328,7 +328,7 @@ export const AdminAddActivitySheet = ({
               </RadioGroup>
               
               {/* Info when Bureau invoicing is selected but executor is a partner */}
-              {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau-vlieland" && (
+              {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau" && (
                 <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
                   <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                   <div className="text-blue-800">
