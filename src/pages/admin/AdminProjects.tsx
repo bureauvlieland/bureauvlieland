@@ -256,11 +256,15 @@ const AdminProjectsContent = () => {
         itemStats[item.request_id].total++;
         if (item.status === "pending") itemStats[item.request_id].pending++;
         if (item.status === "confirmed") itemStats[item.request_id].confirmed++;
-        if (item.skip_partner_notification) itemStats[item.request_id].notSent++;
+        if (item.skip_partner_notification && item.customer_approved_at) {
+          // Only count as "not sent" if customer already approved (ready to send)
+          itemStats[item.request_id].notSent++;
+        }
         itemDetailsByRequest[item.request_id].push({
           provider_name: item.provider_name,
           status: item.status,
           skip_partner_notification: item.skip_partner_notification ?? false,
+          customer_approved_at: item.customer_approved_at ?? null,
         });
       });
 
