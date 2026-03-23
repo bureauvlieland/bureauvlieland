@@ -1,0 +1,1 @@
+UPDATE program_request_items SET confirmed_time = '18:00', status = 'confirmed', status_note = 'Partner bevestigde dat 18:00 uitkomt', status_updated_at = now(), updated_at = now() WHERE id = '2eb885d5-0e66-4686-b958-843e1ed1e26f';
