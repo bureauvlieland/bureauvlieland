@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -17,7 +18,7 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
 import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
@@ -44,6 +45,7 @@ interface CustomerProgramItemProps {
   isQuoteMode?: boolean;
   readOnly?: boolean;
   hideDay?: boolean;
+  numberOfPeople?: number;
 }
 
 export const CustomerProgramItem = ({
@@ -63,6 +65,7 @@ export const CustomerProgramItem = ({
   isQuoteMode = false,
   readOnly = false,
   hideDay = false,
+  numberOfPeople,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -421,7 +424,7 @@ export const CustomerProgramItem = ({
               </a>
             )}
             {/* Time editing */}
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className={cn("grid gap-4", selectedDates.length > 1 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
               <div>
                 <Label className="text-sm">Gewenste tijd</Label>
                 {readOnly ? (
@@ -429,7 +432,6 @@ export const CustomerProgramItem = ({
                     {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
                   </p>
                 ) : isEditingTime ? (
-                  // For accepted items, use counter-proposal dialog instead of direct edit
                   item.customer_accepted_at && onCounterProposal ? (
                     <div className="mt-1.5 flex items-center gap-2">
                       <span className="text-sm">
@@ -481,6 +483,39 @@ export const CustomerProgramItem = ({
                     >
                       <Edit2 className="h-3 w-3" />
                     </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Aantal deelnemers */}
+              <div>
+                <Label className="text-sm flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  Aantal deelnemers
+                </Label>
+                {readOnly ? (
+                  <p className="text-sm mt-1.5">
+                    {item.override_people ?? numberOfPeople ?? "-"}
+                    {item.override_people && numberOfPeople && item.override_people !== numberOfPeople && (
+                      <span className="text-xs text-muted-foreground ml-1">(standaard: {numberOfPeople})</span>
+                    )}
+                  </p>
+                ) : (
+                  <div className="mt-1.5">
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder={numberOfPeople ? `${numberOfPeople} (groepstotaal)` : "Aantal"}
+                      value={item.override_people ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        onUpdate({ override_people: val ? parseInt(val) : null });
+                      }}
+                      className="h-9"
+                    />
+                    {item.override_people && numberOfPeople && item.override_people !== numberOfPeople && (
+                      <p className="text-xs text-muted-foreground mt-1">Standaard: {numberOfPeople} personen</p>
+                    )}
                   </div>
                 )}
               </div>
