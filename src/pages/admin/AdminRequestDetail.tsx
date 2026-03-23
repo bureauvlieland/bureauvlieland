@@ -247,7 +247,12 @@ const AdminRequestDetail = () => {
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
 
-  // Calculate bureau invoiced amount for profit summary
+  // App settings for coordination fee
+  const { getCoordinationFee: calcCoordFee } = useAppSettings();
+
+  // Calculate bureau invoiced amount for profit summary (incl. coordination fee)
+  const numberOfPeople = request?.number_of_people ?? 20;
+  const coordinationFeeForProfit = calcCoordFee(numberOfPeople);
   const bureauInvoicedAmount = (() => {
     if (!request) return 0;
     const programTotal = items
@@ -256,7 +261,15 @@ const AdminRequestDetail = () => {
     const extraCosts = items
       .filter((i) => i.day_index === -1)
       .reduce((sum, i) => sum + (i.admin_price_override ?? 0), 0);
-    return programTotal + extraCosts;
+    return programTotal + extraCosts + coordinationFeeForProfit;
+  })();
+
+  // Calculate expected partner costs from items (for when no purchase invoices exist yet)
+  const expectedPartnerCosts = (() => {
+    if (!request) return 0;
+    return items
+      .filter((i) => i.status !== "cancelled" && !isBureauItem(i))
+      .reduce((sum, item) => sum + (centralGetItemLineTotal(item as any, request.number_of_people) ?? 0), 0);
   })();
 
   const generateProgramStatusEmailBody = (): { subject: string; body: string } => {
