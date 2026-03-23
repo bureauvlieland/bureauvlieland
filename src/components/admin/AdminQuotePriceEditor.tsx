@@ -154,7 +154,7 @@ export const AdminQuotePriceEditor = ({
 
           <div className="space-y-2">
             <Label htmlFor="override-price">
-              Aangepaste prijs {editPriceType === "per_person" ? "(per persoon)" : "(totaal)"}
+              Aangepaste prijs {editPriceType === "per_person" ? "(per persoon)" : editPriceType === "per_person_per_day" ? "(per persoon per dag)" : "(totaal)"}
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
