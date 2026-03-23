@@ -567,14 +567,6 @@ const AdminRequestDetail = () => {
   const readyToSendCount = itemCounts.readyForPartner;
   const waitingForCustomerCount = itemCounts.waitingForCustomer;
   const bureauInternCount = itemCounts.bureauIntern;
-
-  const [sendPreview, setSendPreview] = useState<{
-    partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
-    bureauItemsList: { id: string; block_name: string }[];
-  } | null>(null);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
-
-  const handlePreviewSendToPartners = async () => {
     if (!request) return;
     try {
       const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
