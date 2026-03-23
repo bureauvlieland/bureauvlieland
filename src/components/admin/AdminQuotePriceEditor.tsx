@@ -119,7 +119,7 @@ export const AdminQuotePriceEditor = ({
             {hasOverride && originalPrice !== null && (
               <span className="text-xs text-muted-foreground line-through">
                 {formatPrice(originalPrice)}
-                {priceType === "per_person" && " p.p."}
+                {priceType !== "total" && ` ${priceTypeLabel}`}
               </span>
             )}
           </div>
