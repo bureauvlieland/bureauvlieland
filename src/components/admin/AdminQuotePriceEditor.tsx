@@ -114,7 +114,7 @@ export const AdminQuotePriceEditor = ({
           <div className="flex flex-col items-start text-left">
             <span className={cn("text-sm", hasOverride && "font-medium")}>
               {formatPrice(displayPrice)}
-              {displayPrice !== null && (priceType === "per_person" ? " p.p." : " totaal")}
+              {displayPrice !== null && ` ${priceTypeLabel}`}
             </span>
             {hasOverride && originalPrice !== null && (
               <span className="text-xs text-muted-foreground line-through">
