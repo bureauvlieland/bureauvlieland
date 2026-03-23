@@ -236,6 +236,11 @@ const AdminRequestDetail = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [editingTimeItemId, setEditingTimeItemId] = useState<string | null>(null);
   const [editingTimeValue, setEditingTimeValue] = useState("");
+  const [sendPreview, setSendPreview] = useState<{
+    partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
+    bureauItemsList: { id: string; block_name: string }[];
+  } | null>(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
