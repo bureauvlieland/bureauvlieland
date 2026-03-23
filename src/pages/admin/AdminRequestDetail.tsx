@@ -64,7 +64,15 @@ import {
   Euro,
   Trash2,
   CalendarPlus,
+  Check,
+  ClockArrowUp,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { 
   itemStatusConfig, 
