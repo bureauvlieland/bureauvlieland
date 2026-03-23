@@ -1048,18 +1048,38 @@ const AdminRequestDetail = () => {
                         {readyToSendCount} {readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen
                       </p>
                       <p className="text-sm text-amber-700">
-                        Klant heeft akkoord gegeven. Verstuur wanneer gereed.
+                        Verstuur wanneer gereed.
+                        {bureauInternCount > 0 && ` ${bureauInternCount} bureau-item(s) worden intern afgehandeld.`}
                       </p>
                     </div>
                   </div>
                   <Button
-                    onClick={handleSendToPartners}
+                    onClick={handlePreviewSendToPartners}
                     disabled={isSendingToPartners}
                     className="shrink-0"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    {isSendingToPartners ? "Versturen..." : "Verstuur naar partners"}
+                    Bekijk &amp; verstuur
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bureau items only — no partner items to send */}
+          {readyToSendCount === 0 && bureauInternCount > 0 && waitingForCustomerCount === 0 && (
+            <Card className="border-slate-300 bg-slate-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-5 w-5 text-slate-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {bureauInternCount} bureau-item(s) worden intern afgehandeld
+                    </p>
+                    <p className="text-sm text-slate-700">
+                      Alle resterende onderdelen zijn interne bureau-items. Er hoeven geen externe partners genotificeerd te worden.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
