@@ -21,7 +21,7 @@ export const PipelineFunnel = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_requests")
-        .select("id, status, quote_status, terms_accepted_at, completion_status")
+        .select("id, status, quote_status, terms_accepted_at, completion_status, program_type")
         .eq("status", "active");
       if (error) throw error;
       return data || [];
