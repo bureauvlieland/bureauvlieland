@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown, Phone } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useCallback } from "react";
+import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MegaDropdown } from "./navigation/MegaDropdown";
+import { MegaDropdown, navItems } from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
 
 const overOnsItems = [
@@ -18,23 +18,53 @@ const overOnsItems = [
   { label: "Contact", href: "/contact" },
 ];
 
+// All hrefs covered by the MegaDropdown
+const megaDropdownHrefs = [
+  ...navItems.voorBedrijvenItems.map((i) => i.href),
+  ...navItems.voorPriveItems.map((i) => i.href),
+  ...navItems.extraItems.map((i) => i.href),
+];
+
+const overOnsHrefs = overOnsItems.map((i) => i.href);
+
+function useNavItemClass(hrefs: string[]) {
+  const { pathname } = useLocation();
+  const isActive = hrefs.some((h) => pathname === h || pathname.startsWith(h + "/"));
+  return isActive
+    ? "text-sm font-medium text-primary border-b-2 border-primary pb-0.5"
+    : "text-sm text-muted-foreground hover:text-foreground transition-colors";
+}
+
+function useSingleNavClass(href: string) {
+  const { pathname } = useLocation();
+  const isActive = pathname === href || pathname.startsWith(href + "/");
+  return isActive
+    ? "text-sm font-medium text-primary border-b-2 border-primary pb-0.5"
+    : "text-sm text-muted-foreground hover:text-foreground transition-colors";
+}
+
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMegaOpen, setIsMegaOpen] = useState(false);
   const megaRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Close mega dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (megaRef.current && !megaRef.current.contains(e.target as Node)) {
-        setIsMegaOpen(false);
-      }
-    };
-    if (isMegaOpen) {
-      document.addEventListener("mousedown", handler);
+  const megaClass = useNavItemClass(megaDropdownHrefs);
+  const logiesClass = useSingleNavClass("/logies-vlieland");
+  const inspiratieClass = useSingleNavClass("/voorbeeldprogrammas");
+  const overOnsClass = useNavItemClass(overOnsHrefs);
+
+  const openMega = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
     }
-    return () => document.removeEventListener("mousedown", handler);
-  }, [isMegaOpen]);
+    setIsMegaOpen(true);
+  }, []);
+
+  const closeMega = useCallback(() => {
+    closeTimer.current = setTimeout(() => setIsMegaOpen(false), 150);
+  }, []);
 
   return (
     <>
@@ -51,41 +81,40 @@ export const Navigation = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-4">
-              {/* Ons aanbod - Mega Dropdown */}
-              <div ref={megaRef} className="relative">
+              {/* Ons aanbod - Mega Dropdown (hover) */}
+              <div
+                ref={megaRef}
+                className="relative"
+                onMouseEnter={openMega}
+                onMouseLeave={closeMega}
+              >
                 <button
-                  onClick={() => setIsMegaOpen(!isMegaOpen)}
-                  className="text-sm font-semibold text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                  onClick={() => setIsMegaOpen((v) => !v)}
+                  className={`${megaClass} flex items-center gap-1`}
                 >
                   Ons aanbod
                   <ChevronDown className={`h-4 w-4 transition-transform ${isMegaOpen ? "rotate-180" : ""}`} />
                 </button>
                 {isMegaOpen && (
-                  <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-lg shadow-lg z-50">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-card border border-border rounded-lg shadow-lg z-50">
                     <MegaDropdown onNavigate={() => setIsMegaOpen(false)} />
                   </div>
                 )}
               </div>
 
-              {/* Logies - direct link */}
-              <Link
-                to="/logies-vlieland"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
+              {/* Logies */}
+              <Link to="/logies-vlieland" className={logiesClass}>
                 Logies
               </Link>
 
-              {/* Inspiratie - direct link */}
-              <Link
-                to="/voorbeeldprogrammas"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
+              {/* Inspiratie */}
+              <Link to="/voorbeeldprogrammas" className={inspiratieClass}>
                 Inspiratie
               </Link>
 
               {/* Over ons Dropdown */}
               <DropdownMenu>
-                <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                <DropdownMenuTrigger className={`${overOnsClass} flex items-center gap-1`}>
                   Over ons <ChevronDown className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-card border-border min-w-[180px]">
