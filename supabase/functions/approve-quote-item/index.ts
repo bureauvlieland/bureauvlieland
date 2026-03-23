@@ -213,7 +213,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         action: "item_approved",
         actor: "customer",
         actor_name: program.customer_name,
-        notes: `Klant heeft \"${item.block_name}\" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
+        notes: `Klant heeft "${item.block_name}" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
       });
 
       const { data: allItems } = await supabase
