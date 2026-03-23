@@ -1,26 +1,32 @@
 
 
-## Plan: Hoofdnavigatie verbeteren
+## Plan: Locatie en URL meenemen bij AI/template-items + voorbeeldprogramma's actualiseren
+
+### Probleem 1: Locatiegegevens ontbreken bij AI-gegenereerde items
+
+Wanneer items worden toegevoegd via het AI-dialoog (`AdminAiProgramDialog`) of via template-toepassing (`ApplyTemplateDialog`), worden `location_lat`, `location_lng`, `location_address` en `external_url` **niet** overgenomen van de bouwsteen. De handmatige "Activiteit toevoegen" sheet (`AdminAddActivitySheet`) doet dit wél correct.
+
+### Probleem 2: Voorbeeldprogramma's verwijzen mogelijk naar verouderde bouwstenen
+
+Templates in `program_template_items` verwijzen via `block_id` naar bouwstenen. Als bouwstenen zijn gewijzigd (naam, prijs, provider, etc.), zijn de templates automatisch up-to-date — ze fetchen live block data. **Maar**: als een `block_id` is verwijderd of hernoemd, verschijnt het item als "onbekend". Dit moet gecontroleerd worden in de database.
 
 ### Wijzigingen
 
-**1. Navigation.tsx — hover-open + actieve-pagina-indicator + consistente styling**
-- MegaDropdown opent op `onMouseEnter` en sluit op `onMouseLeave` (met kleine delay om per ongeluk sluiten te voorkomen)
-- Verwijder de `onClick` toggle — hover is primair, click blijft als fallback voor accessibility
-- Voeg `useLocation()` toe om de actieve route te detecteren
-- Alle nav-items krijgen dezelfde base styling (`text-sm text-muted-foreground`) — "Ons aanbod" verliest de afwijkende `font-semibold text-foreground`
-- Actieve items krijgen `text-primary font-medium` + een 2px bottom-border indicator
-- "Ons aanbod" is actief als de huidige route matcht met een van de MegaDropdown hrefs
-- Dropdown-positionering: `left-0` → `left-1/2 -translate-x-1/2` zodat het gecentreerd onder de trigger staat en niet buiten het scherm valt
+**1. `src/components/admin/AdminAiProgramDialog.tsx`**
+- Voeg `location_lat`, `location_lng`, `location_address`, `external_url` toe aan de block select query (regel 126)
+- Voeg deze velden toe aan `BlockInfo` interface
+- Neem ze mee in `rowsToInsert` bij `handleApply`
 
-**2. MegaDropdown.tsx — verwijder "Diensten" link**
-- Verwijder `{ label: "Diensten", href: "/diensten" }` uit `extraItems` — de pagina is overbodig en de link is circulair
-- Alleen "Catering" en "Evenementen" blijven in de bottom row
+**2. `src/components/admin/ApplyTemplateDialog.tsx`**
+- De block query haalt al `select("*")` op, dus alle velden zijn beschikbaar
+- Voeg `location_lat`, `location_lng`, `location_address`, `external_url` toe aan `rowsToInsert` (regel 64-82)
 
-**3. MobileNav.tsx — verwijder "Diensten" uit de mobiele navigatie**
-- Dezelfde `extraItems` array wordt gebruikt, dus de wijziging werkt automatisch door. Geen aparte aanpassing nodig.
+**3. Database check — verouderde template-items opsporen**
+- Query uitvoeren om template-items te vinden die verwijzen naar niet-bestaande of niet-gepubliceerde bouwstenen
+- Resultaat rapporteren zodat je weet of er templates bijgewerkt moeten worden
 
 ### Bestanden
-1. `src/components/Navigation.tsx`
-2. `src/components/navigation/MegaDropdown.tsx`
+1. `src/components/admin/AdminAiProgramDialog.tsx` — locatie + URL velden toevoegen
+2. `src/components/admin/ApplyTemplateDialog.tsx` — locatie + URL velden toevoegen
+3. Database query — orphaned template items opsporen
 
