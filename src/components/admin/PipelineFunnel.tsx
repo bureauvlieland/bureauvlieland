@@ -31,30 +31,29 @@ export const PipelineFunnel = () => {
   const stages: FunnelStage[] = useMemo(() => {
     if (!projects) return [];
 
-    let concept = 0, offerte = 0, av = 0, afgerond = 0, gefactureerd = 0;
+    let concept = 0, offerte = 0, akkoord = 0, av = 0, afgerond = 0, gefactureerd = 0;
 
     projects.forEach((p) => {
-      const isQuote = p.program_type === "quote" || !!p.program_type?.startsWith("maatwerk_");
-      
       if (p.completion_status === "fully_invoiced") {
         afgerond++;
       } else if (p.completion_status === "ready_for_invoice" || p.completion_status === "partially_invoiced") {
         gefactureerd++;
       } else if (p.terms_accepted_at) {
         av++;
-      } else if (isQuote && p.quote_status === "offerte_verstuurd") {
+      } else if (p.quote_status === "akkoord_ontvangen" || p.quote_status === "definitief_bevestigd") {
+        akkoord++;
+      } else if (p.quote_status === "offerte_verstuurd") {
         offerte++;
-      } else if (isQuote) {
-        concept++;
       } else {
-        // Self-service projects: count as active/AV
-        av++;
+        // concept or null quote_status
+        concept++;
       }
     });
 
     return [
       { key: "concept", label: "Concept", icon: <FileText className="h-4 w-4" />, color: "text-slate-700", bgColor: "bg-slate-100", count: concept },
       { key: "offerte", label: "Offerte verstuurd", icon: <Send className="h-4 w-4" />, color: "text-blue-700", bgColor: "bg-blue-100", count: offerte },
+      { key: "akkoord", label: "Akkoord", icon: <CheckCircle2 className="h-4 w-4" />, color: "text-amber-700", bgColor: "bg-amber-100", count: akkoord },
       { key: "av", label: "AV getekend", icon: <FileCheck className="h-4 w-4" />, color: "text-green-700", bgColor: "bg-green-100", count: av },
       { key: "afgerond", label: "Afgerond", icon: <CheckCircle2 className="h-4 w-4" />, color: "text-emerald-700", bgColor: "bg-emerald-100", count: afgerond },
       { key: "facturatie", label: "Facturatie", icon: <Receipt className="h-4 w-4" />, color: "text-purple-700", bgColor: "bg-purple-100", count: gefactureerd },

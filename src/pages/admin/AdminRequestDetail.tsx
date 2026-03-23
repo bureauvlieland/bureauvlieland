@@ -1046,7 +1046,7 @@ const AdminRequestDetail = () => {
           )}
 
           {/* Pending partner items that don't fit quote flow (self_service programs) */}
-          {pendingPartnerItems.length > 0 && !isQuoteMode && waitingForCustomerCount === 0 && readyToSendCount === 0 && (
+          {false && pendingPartnerItems.length > 0 && waitingForCustomerCount === 0 && readyToSendCount === 0 && (
             <Card className="border-amber-300 bg-amber-50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

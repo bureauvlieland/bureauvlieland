@@ -1,5 +1,9 @@
 /**
  * Shared helpers for determining quote-aware item send status in admin views.
+ * 
+ * Since all projects now follow the uniform quote pipeline (concept → offerte_verstuurd → akkoord_ontvangen),
+ * the isQuoteOrMaatwerk check is kept for backward compatibility but effectively always returns true
+ * for projects with a quote_status.
  */
 
 export type QuoteItemSendPhase =
@@ -18,8 +22,9 @@ export interface ProgramForQuoteStatus {
   quote_status?: string | null;
 }
 
+/** @deprecated All projects now use quote_status; this always returns true for projects with a quote_status */
 export function isQuoteOrMaatwerk(programType?: string | null): boolean {
-  return programType === "quote" || !!programType?.startsWith("maatwerk_");
+  return programType === "quote" || !!programType?.startsWith("maatwerk_") || programType === "self_service";
 }
 
 export function getQuoteItemSendPhase(
@@ -28,12 +33,18 @@ export function getQuoteItemSendPhase(
 ): QuoteItemSendPhase {
   if (!item.skip_partner_notification) return "verstuurd";
   
-  const isQuote = isQuoteOrMaatwerk(program.program_type);
+  // If customer already approved this specific item, it's ready to send
+  if (item.customer_approved_at) return "klaar_om_te_sturen";
+
+  // If the overall quote is already approved, treat all items as ready to send
+  const overallApproved = program.quote_status === "akkoord_ontvangen" 
+    || program.quote_status === "definitief_bevestigd";
+  if (overallApproved) return "klaar_om_te_sturen";
+
+  // If quote has been sent to customer, items are waiting for approval
+  if (program.quote_status === "offerte_verstuurd") return "wacht_op_klant";
   
-  if (isQuote && !item.customer_approved_at) {
-    return "wacht_op_klant";
-  }
-  
+  // Default: concept phase, items are ready to send (admin decides when)
   return "klaar_om_te_sturen";
 }
 

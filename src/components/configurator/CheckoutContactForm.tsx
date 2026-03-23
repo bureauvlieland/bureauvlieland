@@ -93,6 +93,7 @@ export const CheckoutContactForm = ({
           general_notes: formData.notes || null,
           program_type: "self_service",
           program_description: finalEventType,
+          quote_status: "concept",
         })
         .select()
         .single();

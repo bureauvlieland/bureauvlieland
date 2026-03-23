@@ -340,13 +340,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 4. Update quote_status and program_published_at
-    // For self_service programs, skip quote_status update (they don't use quotes)
-    const isSelfService = program.program_type === "self_service";
+    // All projects use the unified quote pipeline
     const updateFields: Record<string, any> = {
       updated_at: new Date().toISOString(),
     };
     
-    if (!isSelfService && !(isAdmin && program.quote_status === "akkoord_ontvangen")) {
+    if (!(isAdmin && program.quote_status === "akkoord_ontvangen")) {
       updateFields.quote_status = "akkoord_ontvangen";
     }
     
