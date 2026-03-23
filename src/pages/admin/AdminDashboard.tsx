@@ -80,7 +80,7 @@ const AdminDashboardContent = () => {
           { data: accommodationRequests },
         ] = await Promise.all([
           supabase.from("program_requests").select("id, customer_name, customer_company, status, created_at"),
-          supabase.from("program_request_items").select("id, status, request_id"),
+          supabase.from("program_request_items").select("id, status, request_id, skip_partner_notification"),
           supabase.from("partners").select("id, is_active"),
           supabase.from("accommodation_requests").select("id, customer_name, customer_company, status, created_at, number_of_guests"),
         ]);
