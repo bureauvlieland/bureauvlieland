@@ -498,7 +498,7 @@ const AdminRequestDetail = () => {
 
   const statusSummary = getStatusSummary();
   const customerPortalUrl = `/mijn-programma/${request.customer_token}`;
-  const isQuoteMode = request.program_type === "quote";
+  const isQuoteMode = isQuoteOrMaatwerk(request.program_type);
 
 
   const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
