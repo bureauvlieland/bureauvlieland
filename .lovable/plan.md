@@ -1,50 +1,29 @@
 
 
-## Plan: Offerte-dialoog en portal-link verduidelijken
+## Plan: Standaardprijzen tonen in activiteitenlijst
 
 ### Probleem
 
-De admin ziet in de offerte-preview niet dat de klant een portal-link krijgt. De standaardtekst zegt vaag "via de knop in de e-mail" maar toont de URL niet. Dit creëert onzekerheid over de workflow.
+Bij het toevoegen van activiteiten (via template, AI of handmatig) wordt `admin_price_override` correct gevuld met de bouwsteenprijs. Maar in de niet-offerte weergave (regel 1283-1291) toont de "Prijs"-kolom alleen `item.quoted_price` (de partnerprijs). Die is altijd `null` voor nieuwe items. De `admin_price_override` wordt genegeerd als fallback.
 
-### Aanpassingen
+### Aanpassing
 
-**1. `AdminSendQuoteDialog.tsx` — Portal-URL zichtbaar maken in preview**
+**`AdminRequestDetail.tsx` (regel 1283-1291)**
 
-- De `portalUrl` prop wordt al meegegeven maar niet gebruikt in het dialoog
-- In de preview-modus: onder de e-mailtekst een duidelijke indicatie tonen dat de "Bekijk voorstel"-knop met portal-link automatisch wordt toegevoegd door de template
-- De huidige vage melding "De volledige e-mail wordt opgemaakt vanuit de database-template" vervangen door een concreter blokje dat laat zien:
-  - ✅ "Bekijk voorstel"-knop wordt automatisch toegevoegd
-  - Link: `[portal URL]` (klikbaar, zodat admin kan verifiëren)
-  - Programmadetails-tabel wordt automatisch toegevoegd
+De prijskolom in de operationele weergave aanpassen om `admin_price_override` als fallback te gebruiken wanneer `quoted_price` ontbreekt:
 
-**2. `AdminSendQuoteDialog.tsx` — Standaardtekst verbeteren**
+```text
+Huidige logica:   quoted_price ? toon prijs : "-"
+Nieuwe logica:    quoted_price || admin_price_override != null ? toon prijs : "-"
+```
 
-- De zin "U kunt het voorstel bekijken en akkoord geven via de knop in de e-mail" aanpassen naar iets explicieter, bijv.: "U kunt het volledige voorstel bekijken en akkoord geven via onderstaande knop."
-- Dit sluit beter aan bij de HTML-template waar de CTA-knop direct onder de persoonlijke tekst staat
-
-**3. Geen wijzigingen nodig aan edge function of database-template**
-
-De `send-quote-offer` edge function bouwt de portal-URL correct op (`/mijn-programma/{customer_token}`) en de HTML-template bevat al de CTA-knop. Dit werkt goed.
+Bij weergave van `admin_price_override` (i.p.v. `quoted_price`) een subtiel label tonen zodat duidelijk is dat het de standaardprijs betreft, niet een partnerofferte.
 
 ### Technische details
 
-Wijzigingen alleen in `src/components/admin/AdminSendQuoteDialog.tsx`:
+Eén wijziging in `src/pages/admin/AdminRequestDetail.tsx`, regels 1283-1291:
 
-1. Preview-footer (regel ~289-291): vervang de vage italic tekst door een gestructureerd blokje met portal-link info
-2. `getDefaultIntro()` (regel ~87): tekst aanpassen
-3. De `portalUrl` prop wordt al doorgegeven — deze gebruiken om de link te tonen in de preview
-
-### Samenvatting workflow (ter bevestiging)
-
-```text
-Programma aanmaken → items toevoegen
-        ↓
-Publiceren naar klant → portaal wordt "live" (geen e-mail)
-        ↓
-Offerte versturen → e-mail met "Bekijk voorstel" knop + portal-link
-        ↓
-Klant opent portaal → kan akkoord geven
-```
-
-Alles werkt correct; alleen de admin-preview geeft onvoldoende zicht op wat de klant ontvangt.
+- Toon `quoted_price` als die bestaat (huidige gedrag)
+- Anders: toon `admin_price_override` als die niet null is, met een kleine "standaard" indicator
+- Alleen "-" tonen als beide null zijn
 
