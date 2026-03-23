@@ -1,72 +1,129 @@
 
+Doen. Op basis van code, data en logs is een volledige status-sweep nu zinvol.
 
-## Plan: Uniforme workflow — alle projecten als offerteaanvraag
+### Wat er nu concreet misgaat
+Voor dit project lijkt er op dit moment niets meer naar externe partners verstuurd te worden:
+- de 2 resterende “klaar om te versturen”-items zijn **bureau-items** (`Overtocht Harlingen → Vlieland` en retour), geen partner-items
+- de knop **“Verstuur naar partners”** roept nu `accept-quote-proposal` aan
+- die backend zoekt alleen items met `customer_approved_at`
+- in dit project hebben die 2 items géén `customer_approved_at`
+- edge logs bevestigen 2 no-op pogingen: `No customer-approved items found to send to partners`
 
-### Kern van de wijziging
+Dus: de UI zegt “2 klaar”, maar backend kan en hoeft hier niets naar partners te sturen.
 
-Elk project doorloopt dezelfde pipeline, ongeacht of het door de klant of admin is aangemaakt. `program_type` blijft bestaan om de **herkomst** te traceren ("self_service" vs "maatwerk_zakelijk" etc.), maar de **workflow** wordt volledig gestuurd door `quote_status`. Hierdoor verdwijnt alle vertakkende logica en krijgen admin, klant en partner een uniforme ervaring.
+### Extra bevindingen uit de data
+Er zijn bredere workflow-inconsistenties:
+- 1 actief project heeft nog `quote_status = null`
+- meerdere projecten staan op `akkoord_ontvangen`, maar hebben nog verborgen items zonder `customer_approved_at`
+- tellingen en badges gebruiken niet overal dezelfde logica
+- bureau-items en partner-items worden nu te vaak op één hoop gegooid
 
-### Nieuwe uniforme pipeline
+### Plan
 
-```text
-Klant dient aan ──┐
-                  ├──▶ concept ──▶ offerte_verstuurd ──▶ akkoord_ontvangen ──▶ AV getekend ──▶ Afgerond
-Admin maakt aan ──┘
-```
+#### 1. Statusmodel centraliseren
+Eén gedeelde workflow-helper maken voor:
+- projectfase: `concept → offerte_verstuurd → akkoord_ontvangen → av_getekend → afgerond`
+- itemfase:
+  - intern bureau-item
+  - wacht op klant
+  - klaar voor partner
+  - al verstuurd
+  - niet van toepassing
 
-De admin reviewt en past altijd aan voordat het naar de klant gaat. Statuswijzigingen, akkoorden en publicatie werken identiek.
+Daarmee halen we dubbele en conflicterende statuslogica weg uit:
+- `src/lib/quoteItemSendStatus.ts`
+- `src/pages/admin/AdminProjects.tsx`
+- `src/components/admin/PipelineFunnel.tsx`
+- `src/components/admin/ProjectCalendarView.tsx`
+- `src/components/admin/ProjectDateListView.tsx`
+- `src/components/admin/ProjectGanttChart.tsx`
+- `src/hooks/useProgramStatus.ts`
+- relevante klantportaal componenten
 
-### Wijzigingen per bestand
+#### 2. “Verstuur naar partners” ontkoppelen van klantakkoord-functie
+De huidige hergebruikte function is te verwarrend. Ik stel voor:
+- `accept-quote-proposal` alleen voor **klantakkoord**
+- nieuwe admin-only backendfunctie voor **daadwerkelijk versturen naar partners**
 
-**1. Klant-aanmaak: `quote_status: "concept"` meegeven**
-- `src/components/configurator/CheckoutContactForm.tsx` — voeg `quote_status: "concept"` toe aan insert
-- `src/components/configurator/RequestFormModal.tsx` — idem
+Die nieuwe flow:
+- neemt alleen echte partner-items mee
+- sluit `provider_id = 'bureau'` en `block_type = 'bureau'` uit
+- geeft exact terug:
+  - welke partners gemaild worden
+  - welke items intern blijven
+  - welke items nog niet verstuurd mogen worden
+  - waarom iets niet meegaat
 
-**2. `isQuoteOrMaatwerk` verwijderen / vereenvoudigen**
-- `src/lib/quoteItemSendStatus.ts` — `isQuoteOrMaatwerk()` functie wordt vervangen. Alle projecten met `quote_status` volgen nu de quote-flow. Aangezien álle projecten `quote_status` krijgen, kan de check versimpeld worden naar: "heeft het project een `quote_status`?" (altijd true). De `getQuoteItemSendPhase` functie verwijdert de `isQuote` gate — elk item met `skip_partner_notification` en zonder `customer_approved_at` is "wacht_op_klant" als de offerte verstuurd is.
+#### 3. Admin UI verbeteren op detailpagina
+De knop op `AdminRequestDetail` vervangen door een controleerbare flow:
+- eerst een dialog/sheet met:
+  - partners die nu bericht krijgen
+  - items per partner
+  - interne bureau-items apart
+  - items die nog wachten op klant apart
+- pas daarna verzenden
+- bij 0 verzendbare partner-items geen stille no-op meer, maar duidelijke uitleg
 
-**3. Admin project detail — geen speciale self-service paden meer**
-- `src/pages/admin/AdminRequestDetail.tsx`:
-  - `isQuoteMode` wordt altijd `true` → variabele kan weg, alle quote-specifieke UI (offertestatus-selector, item quote status kolom, "Verstuur offerte" knop) toont altijd
-  - Concept-banner (regel 1078): verwijder `request.program_type !== "self_service"` check — banner toont nu voor álle niet-gepubliceerde projecten
-  - Quote status badge en selector: altijd zichtbaar
+Voor dit soort projecten wordt de melding dan bijvoorbeeld:
+- niet “2 onderdelen klaar om naar partners te sturen”
+- maar “2 interne bureau-items nog in verwerking”
 
-**4. Admin projectenlijst — pipeline vereenvoudigen**
-- `src/pages/admin/AdminProjects.tsx`:
-  - `getDerivedStatus`: verwijder de `isQuote` check en `!isQuote` fallback. Alle projecten volgen: cancelled → fully_invoiced → av_getekend → offerte_verstuurd → concept
-  - Verwijder de `actief` status uit `DerivedStatus` en `DERIVED_STATUS_CONFIG` (wordt nu afgedekt door bestaande quote-statussen)
+#### 4. Data opschonen / backfill
+Een migratie/backfill uitvoeren om oude projecten recht te trekken:
+- `quote_status = null` aanvullen naar correcte startstatus (minimaal `concept`)
+- projecten met goedgekeurd programma maar verborgen partner-items normaliseren
+- alleen waar nodig `customer_approved_at` aanvullen of de nieuwe verzendlogica daarop niet meer laten leunen
 
-**5. Klantportaal — uniforme weergave**
-- `src/components/customer-portal/ProgramIntroCard.tsx`: `isQuoteMode` altijd true → vereenvoudig naar directe checks op `quoteStatus`
-- `src/components/customer-portal/CustomerProgramItem.tsx`: `isQuoteMode` prop wordt altijd true → verwijder de `!isQuoteMode` paden (akkoord/tegenvoorstel knoppen voor niet-quote items)
-- `src/components/customer-portal/DesktopProgramView.tsx` en `MobileProgramView.tsx`: `isQuoteMode` berekening vereenvoudigen
-- `src/components/customer-portal/CustomerPortalSplash.tsx`: verwijder self-service-specifieke banners
+Doel: oude data past weer bij de uniforme workflow.
 
-**6. Edge function — self-service uitzondering verwijderen**
-- `supabase/functions/accept-quote-proposal/index.ts`: verwijder de `isSelfService` check (regel 344). Alle projecten krijgen `quote_status = "akkoord_ontvangen"` bij klantakkoord.
+#### 5. Dashboard- en lijsttellingen gelijk trekken
+Alle metrieken en badges baseren op dezelfde helperlogica:
+- “klaar voor partners” = alleen echte partner-items
+- bureau-items apart tellen
+- null/legacy statuses niet meer als “klaar” laten verschijnen
+- projectlijst, funnel, kalender, dashboard en detailpagina moeten hetzelfde verhaal vertellen
 
-**7. PipelineFunnel — `actief` fase verwijderen**
-- `src/components/admin/PipelineFunnel.tsx`: verwijder "Actief" als aparte categorie. Alle projecten vallen in de bestaande quote-statussen.
+#### 6. Logies-statussen meteen meenemen
+Bij dezelfde sweep ook de logiesstatussen nalopen, zodat alles consistent is met recente wijzigingen:
+- `pending / submitted / selected / declined / rejected / expired / withdrawn`
+- checken of badges, filters, dashboardtelling en communicatie-overzicht overal kloppen
+- legacy/ongebruikte vertakkingen verwijderen
 
-### Wat er NIET verandert
-- `program_type` veld blijft bestaan — het trackt de herkomst (wie heeft het aangemaakt)
-- De `ProgramType` TypeScript type blijft
-- Bestaande data: self-service projecten zonder `quote_status` worden in de UI behandeld als `concept` (fallback)
-- Partner-notificatie flow: items worden nog steeds aangemaakt met `skip_partner_notification: true` en handmatig vrijgegeven
+### Technische focus
+Belangrijkste root cause:
+- frontend-ready-state en backend-send-state gebruiken nu **verschillende criteria**
 
-### Bestanden (17 wijzigingen)
-1. `src/components/configurator/CheckoutContactForm.tsx`
-2. `src/components/configurator/RequestFormModal.tsx`
-3. `src/lib/quoteItemSendStatus.ts`
-4. `src/pages/admin/AdminRequestDetail.tsx`
-5. `src/pages/admin/AdminProjects.tsx`
-6. `src/components/admin/PipelineFunnel.tsx`
-7. `src/components/customer-portal/ProgramIntroCard.tsx`
-8. `src/components/customer-portal/CustomerProgramItem.tsx`
-9. `src/components/customer-portal/DesktopProgramView.tsx`
-10. `src/components/customer-portal/MobileProgramView.tsx`
-11. `src/components/customer-portal/CustomerPortalSplash.tsx`
-12. `src/components/admin/FinancialOverviewCard.tsx`
-13. `supabase/functions/accept-quote-proposal/index.ts`
-14. Database migratie — backfill bestaande self-service projecten: `UPDATE program_requests SET quote_status = 'concept' WHERE program_type = 'self_service' AND quote_status IS NULL`
+Die worden gelijkgetrokken door:
+- één gedeelde status-helper
+- één aparte admin-send functie
+- expliciet onderscheid tussen:
+  - partner-items
+  - bureau-items
+  - klantakkoord
+  - partnernotificatie
 
+### Bestanden
+Waarschijnlijk in scope:
+- `src/lib/quoteItemSendStatus.ts`
+- nieuw: `src/lib/projectWorkflow.ts` of vergelijkbaar
+- `src/pages/admin/AdminRequestDetail.tsx`
+- `src/pages/admin/AdminProjects.tsx`
+- `src/pages/admin/AdminDashboard.tsx`
+- `src/components/admin/PipelineFunnel.tsx`
+- `src/components/admin/ProjectCalendarView.tsx`
+- `src/components/admin/ProjectDateListView.tsx`
+- `src/components/admin/ProjectGanttChart.tsx`
+- `src/hooks/useProgramStatus.ts`
+- `src/components/customer-portal/ProgramIntroCard.tsx`
+- `src/components/customer-portal/CustomerPortalSplash.tsx`
+- `supabase/functions/accept-quote-proposal/index.ts`
+- nieuw: aparte backendfunctie voor admin partnerverzending
+- database migratie voor backfill / opschoning
+
+### Resultaat
+Na deze opschoning krijg je:
+- één uniforme workflow
+- geen “klik maar er gebeurt niets”-situaties meer
+- altijd zichtbaar welke partners nog iets ontvangen
+- correcte tellingen op detailpagina, projectenlijst en dashboard
+- minder legacy-verwarring in code én data
