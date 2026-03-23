@@ -567,6 +567,8 @@ const AdminRequestDetail = () => {
   const readyToSendCount = itemCounts.readyForPartner;
   const waitingForCustomerCount = itemCounts.waitingForCustomer;
   const bureauInternCount = itemCounts.bureauIntern;
+
+  const handlePreviewSendToPartners = async () => {
     if (!request) return;
     try {
       const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
