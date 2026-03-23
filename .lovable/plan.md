@@ -1,39 +1,47 @@
 
 
-## Plan: Financiële berekeningen corrigeren
+## Plan: Klantportaal en Admin financieel gelijktrekken
 
-### Wat er mis is (5 problemen)
+### Huidige discrepanties
 
-1. **`coordinationFee={0}` hardcoded** in AdminRequestDetail → Marge toont €0
-2. **Omzet = incl. BTW, Inkoop = excl. BTW** → appels met peren vergelijking
-3. **Betaalde inkoopfacturen uitgesloten** door `status !== "paid"` filter
-4. **Coördinatiefee niet in omzet** → Marge Overzicht toont lagere omzet dan Financieel Overzicht
-5. **100% marge bij 0 inkoopfacturen** misleidend — er zijn wel partnerkosten maar geen facturen geregistreerd
+De klantpagina (PriceSummaryCard) telt **6 kostenregels** die de admin (FinancialOverviewCard + ProjectProfitSummary) **niet** meeneemt:
+
+| Kostenregel | Klantportaal | Admin Financieel | Admin Marge |
+|---|---|---|---|
+| Programma-items | ✅ | ✅ | ✅ |
+| Coördinatiefee | ✅ | ✅ | ✅ |
+| **Toeristenbelasting** | ✅ (€270,90) | ❌ | ❌ |
+| **Natuurbijdrage** | ✅ (€35,00) | ❌ | ❌ |
+| **Opslag centrale facturatie** | ✅ (€87,50) | ❌ | ❌ |
+| **Logies** | ✅ (geselecteerde offerte) | ❌ | ❌ |
+
+Hierdoor toont de klant een totaal van ~€7.489,60 terwijl de admin een lager totaal ziet. De marge-berekening mist ook deze omzetregels.
 
 ### Oplossing
 
-**1. AdminRequestDetail.tsx — correcte props doorgeven**
-- `coordinationFee` berekenen via `getCoordinationFee(numberOfPeople)` en doorgeven aan `ProjectProfitSummary`
-- `bureauInvoicedAmount` inclusief coördinatiefee maken
+**1. FinancialOverviewCard.tsx — ontbrekende regels toevoegen**
+- Props uitbreiden met: `touristTax`, `natureContribution`, `centralSurcharge`, `accommodationTotal`
+- Deze regels toevoegen aan de itemlijst en het grandTotal
+- BTW-breakdown aanpassen (toeristenbelasting/natuurbijdrage = 0% BTW, logies = 9% BTW)
 
-**2. ProjectProfitSummary.tsx — berekening fixen**
-- Inkoopkosten: ALLE purchase invoices meetellen (verwijder `status !== "paid"` filter)
-- Alles in dezelfde eenheid: excl. BTW voor zowel omzet als inkoop
-- `bureauInvoicedAmount` omzetten naar excl. BTW (of de input al excl. BTW aanleveren)
+**2. AdminRequestDetail.tsx — ontbrekende waarden berekenen en doorgeven**
+- Toeristenbelasting: `appSettings.tourist_tax_pp_per_day × personen × dagen`
+- Natuurbijdrage: `appSettings.nature_contribution_pp × personen`
+- Centrale opslag: `appSettings.bureau_central_surcharge_pp × personen` (als bureau_central)
+- Logies: geselecteerde accommodatie-offerte prijs ophalen
+- Al deze waarden doorgeven aan zowel FinancialOverviewCard als ProjectProfitSummary
 
-**3. Verwachte inkoopkosten tonen als er nog geen facturen zijn**
-- Als er géén inkoopfacturen zijn maar wél partner-items met prijzen, een "verwachte inkoop" regel tonen op basis van `quoted_price` van externe partner-items
-- Dit voorkomt de misleidende 100% marge
-
-### Bestanden
-1. `src/pages/admin/AdminRequestDetail.tsx` — correcte `coordinationFee` en `bureauInvoicedAmount` berekenen
-2. `src/components/admin/ProjectProfitSummary.tsx` — filter fixen, eenheid gelijktrekken, verwachte kosten toevoegen
-3. `src/components/admin/FinancialOverviewCard.tsx` — kleine aanpassing: dezelfde excl. BTW logica gebruiken voor consistentie
+**3. ProjectProfitSummary.tsx — omzet corrigeren**
+- `bureauInvoicedAmount` moet nu ook toeristenbelasting, natuurbijdrage, opslag en logies bevatten
+- Zodat het totaal overeenkomt met wat de klant ziet en gefactureerd wordt
 
 ### Resultaat
-- Omzet en inkoop beiden excl. BTW → vergelijkbaar
-- Coördinatiefee correct meegenomen
-- Alle inkoopfacturen tellen mee
-- Bij ontbrekende inkoopfacturen: verwachte kosten zichtbaar
-- Marge% geeft realistisch beeld
+- Admin "Financieel Overzicht" toont exact dezelfde regels en totalen als de klantpagina
+- Marge-berekening gebaseerd op het werkelijke gefactureerde bedrag
+- Geen verwarring meer over welk bedrag "het totaal" is
+
+### Bestanden
+1. `src/pages/admin/AdminRequestDetail.tsx` — extra berekeningen + props
+2. `src/components/admin/FinancialOverviewCard.tsx` — 4 extra kostenregels + BTW
+3. `src/components/admin/ProjectProfitSummary.tsx` — aangepaste omzet
 
