@@ -81,7 +81,7 @@ import {
   type QuoteStatus,
   type ItemQuoteStatus,
 } from "@/types/programRequest";
-import { getItemSendCounts, isBureauItem } from "@/lib/projectWorkflow";
+import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
