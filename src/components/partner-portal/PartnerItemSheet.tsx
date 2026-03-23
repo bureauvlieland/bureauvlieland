@@ -434,15 +434,15 @@ export const PartnerItemSheet = ({
                   <div className="flex items-center gap-2">
                     <Euro className="h-4 w-4 text-primary" />
                     <span className="font-semibold text-lg">
-                      €{item.price_type === "per_person"
+                      €{(item.price_type === "per_person" || item.price_type === "per_person_per_day")
                         ? (item.admin_price_override * request.number_of_people).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         : item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       }
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {item.price_type === "per_person" 
-                      ? `€${item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p. × ${request.number_of_people} personen`
+                    {(item.price_type === "per_person" || item.price_type === "per_person_per_day")
+                      ? `€${item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."} × ${request.number_of_people} personen`
                       : "Totaalprijs"
                     } · Bevestig of pas aan bij uw reactie.
                   </p>

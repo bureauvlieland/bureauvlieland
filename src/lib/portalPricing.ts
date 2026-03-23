@@ -10,7 +10,12 @@ import type { ProgramRequestItem } from "@/types/programRequest";
 
 /** Whether this item should be multiplied by number of people */
 export function isPerPersonItem(item: { price_type?: string | null }): boolean {
-  return !item.price_type || item.price_type === "per_person" || item.price_type === "on_request";
+  return !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
+}
+
+/** Whether this item should also be multiplied by number of days */
+export function isPerDayItem(item: { price_type?: string | null }): boolean {
+  return item.price_type === "per_person_per_day";
 }
 
 /**
@@ -42,13 +47,15 @@ export function getItemUnitPrice(
 export function getItemLineTotal(
   item: ProgramRequestItem,
   numberOfPeople: number,
+  numberOfDays: number = 1,
 ): number | null {
   if (item.quoted_price != null) {
     return item.quoted_price;
   }
   if (item.admin_price_override != null) {
-    const multiplier = isPerPersonItem(item) ? numberOfPeople : 1;
-    return item.admin_price_override * multiplier;
+    const personMultiplier = isPerPersonItem(item) ? numberOfPeople : 1;
+    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+    return item.admin_price_override * personMultiplier * dayMultiplier;
   }
   return null;
 }
@@ -60,8 +67,9 @@ export function getItemLineTotal(
 export function getItemEffectivePrice(
   item: ProgramRequestItem,
   numberOfPeople: number,
+  numberOfDays: number = 1,
 ): number {
-  return getItemLineTotal(item, numberOfPeople) ?? 0;
+  return getItemLineTotal(item, numberOfPeople, numberOfDays) ?? 0;
 }
 
 /**
@@ -70,8 +78,9 @@ export function getItemEffectivePrice(
 export function calculateDayTotal(
   items: ProgramRequestItem[],
   numberOfPeople: number,
+  numberOfDays: number = 1,
 ): number {
   return items
     .filter((i) => i.status !== "cancelled" && (i.quoted_price != null || i.admin_price_override != null))
-    .reduce((sum, item) => sum + getItemEffectivePrice(item, numberOfPeople), 0);
+    .reduce((sum, item) => sum + getItemEffectivePrice(item, numberOfPeople, numberOfDays), 0);
 }

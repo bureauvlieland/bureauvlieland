@@ -1,0 +1,1 @@
+ALTER TYPE building_block_price_type ADD VALUE 'per_person_per_day';

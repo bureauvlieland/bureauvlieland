@@ -2,7 +2,7 @@
 
 export type BuildingBlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer" | "services" | "overig" | "activiteiten";
 export type BuildingBlockType = "bureau" | "partner" | "self_arranged";
-export type BuildingBlockPriceType = "per_person" | "total" | "on_request";
+export type BuildingBlockPriceType = "per_person" | "total" | "on_request" | "per_person_per_day";
 export type BuildingBlockStatus = "concept" | "active" | "published";
 
 export interface BuildingBlock {
@@ -171,6 +171,7 @@ export const formatPriceNote = (block: BuildingBlock): string => {
   
   switch (block.price_type) {
     case "per_person": return "p.p.";
+    case "per_person_per_day": return "p.p.p.d.";
     case "total": return "totaal";
     default: return "";
   }
@@ -187,6 +188,7 @@ export const calculateIndicativeTotal = (blocks: BuildingBlock[], numberOfPeople
     // Calculate based on price type
     switch (block.price_type) {
       case "per_person":
+      case "per_person_per_day":
         return total + (block.price_adult * numberOfPeople);
       case "total":
         return total + block.price_adult;
@@ -235,6 +237,7 @@ export const blockTypeLabels: Record<BuildingBlockType, string> = {
 // Price type labels for display
 export const priceTypeLabels: Record<BuildingBlockPriceType, string> = {
   per_person: "Per persoon",
+  per_person_per_day: "Per persoon per dag",
   total: "Totaalprijs",
   on_request: "Op aanvraag",
 };

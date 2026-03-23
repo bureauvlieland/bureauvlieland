@@ -2001,7 +2001,11 @@ export type Database = {
         | "locaties"
         | "services"
         | "overig"
-      building_block_price_type: "per_person" | "total" | "on_request"
+      building_block_price_type:
+        | "per_person"
+        | "total"
+        | "on_request"
+        | "per_person_per_day"
       building_block_type: "bureau" | "partner" | "self_arranged"
     }
     CompositeTypes: {
@@ -2142,7 +2146,12 @@ export const Constants = {
         "services",
         "overig",
       ],
-      building_block_price_type: ["per_person", "total", "on_request"],
+      building_block_price_type: [
+        "per_person",
+        "total",
+        "on_request",
+        "per_person_per_day",
+      ],
       building_block_type: ["bureau", "partner", "self_arranged"],
     },
   },

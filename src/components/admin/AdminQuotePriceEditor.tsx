@@ -23,8 +23,9 @@ interface AdminQuotePriceEditorProps {
   overridePrice: number | null;
   priceNotes: string | null;
   numberOfPeople: number;
-  priceType?: "per_person" | "total";
-  onSave: (price: number | null, notes: string, priceType?: "per_person" | "total") => Promise<void>;
+  numberOfDays?: number;
+  priceType?: "per_person" | "per_person_per_day" | "total";
+  onSave: (price: number | null, notes: string, priceType?: "per_person" | "per_person_per_day" | "total") => Promise<void>;
   disabled?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const AdminQuotePriceEditor = ({
   overridePrice,
   priceNotes,
   numberOfPeople,
+  numberOfDays = 1,
   priceType = "per_person",
   onSave,
   disabled = false,
@@ -42,7 +44,7 @@ export const AdminQuotePriceEditor = ({
     overridePrice?.toString() || ""
   );
   const [editNotes, setEditNotes] = useState(priceNotes || "");
-  const [editPriceType, setEditPriceType] = useState<"per_person" | "total">(priceType || "per_person");
+  const [editPriceType, setEditPriceType] = useState<"per_person" | "per_person_per_day" | "total">(priceType || "per_person");
   const [isSaving, setIsSaving] = useState(false);
 
   const displayPrice = overridePrice ?? originalPrice;
@@ -89,9 +91,13 @@ export const AdminQuotePriceEditor = ({
   };
 
   const calculateTotal = (price: number | null) => {
-    if (price === null || priceType !== "per_person") return null;
-    return price * numberOfPeople;
+    if (price === null) return null;
+    if (priceType === "per_person") return price * numberOfPeople;
+    if (priceType === "per_person_per_day") return price * numberOfPeople * numberOfDays;
+    return null;
   };
+
+  const priceTypeLabel = priceType === "per_person_per_day" ? "p.p.p.d." : priceType === "per_person" ? "p.p." : "totaal";
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpen}>
@@ -108,12 +114,12 @@ export const AdminQuotePriceEditor = ({
           <div className="flex flex-col items-start text-left">
             <span className={cn("text-sm", hasOverride && "font-medium")}>
               {formatPrice(displayPrice)}
-              {displayPrice !== null && (priceType === "per_person" ? " p.p." : " totaal")}
+              {displayPrice !== null && ` ${priceTypeLabel}`}
             </span>
             {hasOverride && originalPrice !== null && (
               <span className="text-xs text-muted-foreground line-through">
                 {formatPrice(originalPrice)}
-                {priceType === "per_person" && " p.p."}
+                {priceType !== "total" && ` ${priceTypeLabel}`}
               </span>
             )}
           </div>
@@ -126,20 +132,21 @@ export const AdminQuotePriceEditor = ({
             <h4 className="font-medium">Prijsaanpassing</h4>
             {originalPrice !== null && (
               <p className="text-sm text-muted-foreground">
-                Standaardprijs: {formatPrice(originalPrice)}
-                {priceType === "per_person" && ` p.p. (${numberOfPeople}p = ${formatPrice(calculateTotal(originalPrice))})`}
+              Standaardprijs: {formatPrice(originalPrice)}
+                {priceType !== "total" && ` ${priceTypeLabel} (${numberOfPeople}p${priceType === "per_person_per_day" ? ` × ${numberOfDays}d` : ""} = ${formatPrice(calculateTotal(originalPrice))})`}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="price-type">Prijsconfiguratie</Label>
-            <Select value={editPriceType} onValueChange={(v) => setEditPriceType(v as "per_person" | "total")}>
+            <Select value={editPriceType} onValueChange={(v) => setEditPriceType(v as "per_person" | "per_person_per_day" | "total")}>
               <SelectTrigger id="price-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="per_person">Per persoon</SelectItem>
+                <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
                 <SelectItem value="total">Totaalprijs</SelectItem>
               </SelectContent>
             </Select>
@@ -147,7 +154,7 @@ export const AdminQuotePriceEditor = ({
 
           <div className="space-y-2">
             <Label htmlFor="override-price">
-              Aangepaste prijs {editPriceType === "per_person" ? "(per persoon)" : "(totaal)"}
+              Aangepaste prijs {editPriceType === "per_person" ? "(per persoon)" : editPriceType === "per_person_per_day" ? "(per persoon per dag)" : "(totaal)"}
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -164,9 +171,9 @@ export const AdminQuotePriceEditor = ({
                 className="pl-7"
               />
             </div>
-            {editPrice && editPriceType === "per_person" && (
+            {editPrice && editPriceType !== "total" && (
               <p className="text-xs text-muted-foreground">
-                Totaal: {formatPrice(parseFloat(editPrice) * numberOfPeople)} ({numberOfPeople} personen)
+                Totaal: {formatPrice(parseFloat(editPrice) * numberOfPeople * (editPriceType === "per_person_per_day" ? numberOfDays : 1))} ({numberOfPeople} personen{editPriceType === "per_person_per_day" ? ` × ${numberOfDays} dagen` : ""})
               </p>
             )}
           </div>

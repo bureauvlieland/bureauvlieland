@@ -308,7 +308,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
               preferred_time: cartItem.preferredTime,
               customer_notes: cartItem.notes || null,
               price_indication: block.price_adult 
-                ? `€${block.price_adult}${block.price_type === "per_person" ? " p.p." : ""}` 
+                ? `€${block.price_adult}${block.price_type === "per_person" ? " p.p." : block.price_type === "per_person_per_day" ? " p.p.p.d." : ""}` 
                 : "Op aanvraag",
               duration: block.duration || null,
               status: "pending",
