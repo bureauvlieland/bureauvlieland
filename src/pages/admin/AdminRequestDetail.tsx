@@ -543,6 +543,8 @@ const AdminRequestDetail = () => {
   const pendingPartnerItems = items.filter(
     (item) => item.status !== "cancelled" && item.skip_partner_notification === true
   );
+  const readyToSendCount = countReadyToSend(items, request);
+  const waitingForCustomerCount = countWaitingForCustomer(items, request);
 
   const handleSendToPartners = async () => {
     if (!request) return;
