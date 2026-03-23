@@ -10,7 +10,12 @@ import type { ProgramRequestItem } from "@/types/programRequest";
 
 /** Whether this item should be multiplied by number of people */
 export function isPerPersonItem(item: { price_type?: string | null }): boolean {
-  return !item.price_type || item.price_type === "per_person" || item.price_type === "on_request";
+  return !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
+}
+
+/** Whether this item should also be multiplied by number of days */
+export function isPerDayItem(item: { price_type?: string | null }): boolean {
+  return item.price_type === "per_person_per_day";
 }
 
 /**
