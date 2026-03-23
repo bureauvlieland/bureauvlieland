@@ -204,6 +204,50 @@ export const FinancialOverviewCard = ({
                 </span>
               </div>
             ))}
+
+            {/* Accommodation */}
+            {accommodationTotal > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="truncate max-w-[200px]">Logies{accommodationName ? `: ${accommodationName}` : ""}</span>
+                </div>
+                <span className="font-medium">{formatCurrency(accommodationTotal)}</span>
+              </div>
+            )}
+
+            {/* Tourist tax */}
+            {touristTax > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(touristTax)}</span>
+              </div>
+            )}
+
+            {/* Nature contribution */}
+            {natureContribution > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Natuurbijdrage ({numberOfPeople} pers.)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(natureContribution)}</span>
+              </div>
+            )}
+
+            {/* Central surcharge */}
+            {centralSurcharge > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Opslag centrale facturatie ({numberOfPeople} pers.)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(centralSurcharge)}</span>
+              </div>
+            )}
           </div>
 
           {/* Totals */}
