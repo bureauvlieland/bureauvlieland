@@ -317,8 +317,21 @@ Bureau Vlieland`;
                     }),
                   }}
                 />
-                <div className="bg-muted/50 px-4 py-2 border-t text-xs text-muted-foreground italic">
-                  De volledige e-mail wordt opgemaakt vanuit de database-template
+                <div className="bg-muted/50 px-4 py-3 border-t space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Automatisch toegevoegd door e-mailtemplate:</p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-green-600">✅</span>
+                    <span>"Bekijk voorstel"-knop</span>
+                    {portalUrl && (
+                      <a href={portalUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline truncate max-w-[300px]">
+                        {portalUrl}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-green-600">✅</span>
+                    <span>Programmadetails-tabel met alle onderdelen</span>
+                  </div>
                 </div>
               </div>
             )}
