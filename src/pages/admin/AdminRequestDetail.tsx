@@ -248,7 +248,7 @@ const AdminRequestDetail = () => {
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
 
   // App settings for coordination fee + surcharges
-  const { getCoordinationFee: calcCoordFee, settings: appSettings, getVatRate: calcVatRate } = useAppSettings();
+  const { getCoordinationFee: calcCoordFee, settings: appSettings } = useAppSettings();
 
   // Selected accommodation quote for this request
   const [selectedAccommodationQuote, setSelectedAccommodationQuote] = useState<{

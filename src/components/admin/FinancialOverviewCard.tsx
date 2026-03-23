@@ -29,10 +29,16 @@ interface FinancialItem {
 interface FinancialOverviewCardProps {
   requestId: string;
   numberOfPeople: number;
+  numberOfDays?: number;
   items: FinancialItem[];
   invoices: BureauInvoice[];
   onRegisterInvoice: () => void;
   isQuoteMode?: boolean;
+  touristTax?: number;
+  natureContribution?: number;
+  centralSurcharge?: number;
+  accommodationTotal?: number;
+  accommodationName?: string;
 }
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
