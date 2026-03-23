@@ -1,30 +1,50 @@
 
 
-## Plan: Fix €0 prijzen die als "Op aanvraag" worden weergegeven
+## Plan: Offerte-dialoog en portal-link verduidelijken
 
 ### Probleem
 
-`block.price_adult || null` evalueert `0` als falsy → wordt `null` → toont "Op aanvraag". Zelfde issue bij het opslaan van handmatige prijsinvoer.
+De admin ziet in de offerte-preview niet dat de klant een portal-link krijgt. De standaardtekst zegt vaag "via de knop in de e-mail" maar toont de URL niet. Dit creëert onzekerheid over de workflow.
 
 ### Aanpassingen
 
-**1. `AdminAiProgramDialog.tsx` (regel 165)**
-- `block.price_adult || null` → `block.price_adult ?? null`
+**1. `AdminSendQuoteDialog.tsx` — Portal-URL zichtbaar maken in preview**
 
-**2. `ApplyTemplateDialog.tsx` (regel 78)**
-- `block.price_adult || null` → `block.price_adult ?? null`
+- De `portalUrl` prop wordt al meegegeven maar niet gebruikt in het dialoog
+- In de preview-modus: onder de e-mailtekst een duidelijke indicatie tonen dat de "Bekijk voorstel"-knop met portal-link automatisch wordt toegevoegd door de template
+- De huidige vage melding "De volledige e-mail wordt opgemaakt vanuit de database-template" vervangen door een concreter blokje dat laat zien:
+  - ✅ "Bekijk voorstel"-knop wordt automatisch toegevoegd
+  - Link: `[portal URL]` (klikbaar, zodat admin kan verifiëren)
+  - Programmadetails-tabel wordt automatisch toegevoegd
 
-**3. `AdminAddActivitySheet.tsx` (regel 140)**
-- `priceOverride ? parseFloat(priceOverride) : null` → `priceOverride !== "" ? parseFloat(priceOverride) : null`
+**2. `AdminSendQuoteDialog.tsx` — Standaardtekst verbeteren**
 
-**4. `AdminAddActivitySheet.tsx` (regel 120)**
-- `block.price_adult ? String(block.price_adult) : ""` → `block.price_adult != null ? String(block.price_adult) : ""`
+- De zin "U kunt het voorstel bekijken en akkoord geven via de knop in de e-mail" aanpassen naar iets explicieter, bijv.: "U kunt het volledige voorstel bekijken en akkoord geven via onderstaande knop."
+- Dit sluit beter aan bij de HTML-template waar de CTA-knop direct onder de persoonlijke tekst staat
 
-**5. `AdminQuotePriceEditor.tsx` (regel 83-84)**
-- `formatPrice`: toon `€ 0,00` als prijs `=== 0`, alleen "Op aanvraag" als prijs `=== null`
-- Dit werkt al correct (0 is niet null), dus hier hoeft niets te veranderen — het probleem zit puur in het opslaan.
+**3. Geen wijzigingen nodig aan edge function of database-template**
 
-### Samenvatting
+De `send-quote-offer` edge function bouwt de portal-URL correct op (`/mijn-programma/{customer_token}`) en de HTML-template bevat al de CTA-knop. Dit werkt goed.
 
-Overal `||` vervangen door `??` (nullish coalescing) zodat `0` correct als geldige prijs wordt behandeld. Vier kleine wijzigingen in drie bestanden.
+### Technische details
+
+Wijzigingen alleen in `src/components/admin/AdminSendQuoteDialog.tsx`:
+
+1. Preview-footer (regel ~289-291): vervang de vage italic tekst door een gestructureerd blokje met portal-link info
+2. `getDefaultIntro()` (regel ~87): tekst aanpassen
+3. De `portalUrl` prop wordt al doorgegeven — deze gebruiken om de link te tonen in de preview
+
+### Samenvatting workflow (ter bevestiging)
+
+```text
+Programma aanmaken → items toevoegen
+        ↓
+Publiceren naar klant → portaal wordt "live" (geen e-mail)
+        ↓
+Offerte versturen → e-mail met "Bekijk voorstel" knop + portal-link
+        ↓
+Klant opent portaal → kan akkoord geven
+```
+
+Alles werkt correct; alleen de admin-preview geeft onvoldoende zicht op wat de klant ontvangt.
 
