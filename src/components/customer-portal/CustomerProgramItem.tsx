@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
+import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
@@ -274,8 +275,8 @@ export const CustomerProgramItem = ({
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
             <div className="mt-3 flex flex-wrap gap-2 justify-end">
-              {/* Per-item akkoord for quote mode items with status bevestigd */}
-              {isQuoteMode && item.item_quote_status === "bevestigd" && !item.customer_approved_at && onApproveQuoteItem && (
+              {/* Per-item akkoord for quote mode items that are part of the sent quote */}
+              {isQuoteMode && isQuoteItemAwaitingCustomerApproval(item) && onApproveQuoteItem && (
                 <Button
                   onClick={async () => {
                     setLocalApproving(true);

@@ -111,7 +111,7 @@ export const ProgramIntroCard = ({
               Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld. U kunt per onderdeel akkoord geven, of alle resterende onderdelen in één keer accorderen.
             </p>
             <p className="text-sm text-foreground leading-relaxed">
-              Onderdelen die u goedkeurt worden direct naar de betreffende aanbieder gestuurd om de reservering te starten.
+              Na uw akkoord verwerkt Bureau Vlieland de geselecteerde onderdelen en zet de aanvragen daarna uit naar de aanbieders.
             </p>
             <p className="text-sm text-foreground leading-relaxed">
               Wilt u wijzigingen aanbrengen? Neem gerust contact op met Bureau Vlieland.
@@ -155,7 +155,7 @@ export const ProgramIntroCard = ({
                   )}
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  De leveranciers worden hierna benaderd
+                  Bureau Vlieland verwerkt deze daarna richting de leveranciers
                 </span>
               </div>
             </>
