@@ -558,23 +558,44 @@ const AdminRequestDetail = () => {
   const pendingPartnerItems = items.filter(
     (item) => item.status !== "cancelled" && item.skip_partner_notification === true
   );
-  const readyToSendCount = countReadyToSend(items, request);
-  const waitingForCustomerCount = countWaitingForCustomer(items, request);
+  const itemCounts = getItemSendCounts(items, request);
+  const readyToSendCount = itemCounts.readyForPartner;
+  const waitingForCustomerCount = itemCounts.waitingForCustomer;
+  const bureauInternCount = itemCounts.bureauIntern;
 
-  const handleSendToPartners = async () => {
+  const [sendPreview, setSendPreview] = useState<{
+    partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
+    bureauItemsList: { id: string; block_name: string }[];
+  } | null>(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+
+  const handlePreviewSendToPartners = async () => {
+    if (!request) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
+        body: { request_id: request.id, origin: window.location.origin, dry_run: true },
+      });
+      if (error) throw error;
+      setSendPreview(data);
+      setSendDialogOpen(true);
+    } catch (error) {
+      console.error("Error previewing send:", error);
+      toast.error("Fout bij ophalen verzendoverzicht");
+    }
+  };
+
+  const handleConfirmSendToPartners = async () => {
     if (!request) return;
     setIsSendingToPartners(true);
     try {
-      const { error } = await supabase.functions.invoke("accept-quote-proposal", {
-        body: {
-          request_id: request.id,
-          admin_override: true,
-          origin: window.location.origin,
-        },
+      const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
+        body: { request_id: request.id, origin: window.location.origin },
       });
       if (error) throw error;
 
-      toast.success(`${pendingPartnerItems.length} onderde${pendingPartnerItems.length === 1 ? "el" : "len"} naar partners verstuurd`);
+      setSendDialogOpen(false);
+      setSendPreview(null);
+      toast.success(data?.message || "Items naar partners verstuurd");
       fetchRequestData();
     } catch (error) {
       console.error("Error sending to partners:", error);
