@@ -44,7 +44,7 @@ export const AdminQuotePriceEditor = ({
     overridePrice?.toString() || ""
   );
   const [editNotes, setEditNotes] = useState(priceNotes || "");
-  const [editPriceType, setEditPriceType] = useState<"per_person" | "total">(priceType || "per_person");
+  const [editPriceType, setEditPriceType] = useState<"per_person" | "per_person_per_day" | "total">(priceType || "per_person");
   const [isSaving, setIsSaving] = useState(false);
 
   const displayPrice = overridePrice ?? originalPrice;
