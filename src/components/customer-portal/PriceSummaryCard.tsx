@@ -81,7 +81,7 @@ export const PriceSummaryCard = ({
 
       // quoted_price = group total (never multiply)
       // admin_price_override = unit price (multiply for per_person)
-      const ppMultiplier = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day") ? numberOfPeople : 1;
+      const ppMultiplier = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day") ? (item.override_people ?? numberOfPeople) : 1;
       const dayMultiplier = item.price_type === "per_person_per_day" ? numberOfDays : 1;
 
       let effectivePrice: number | null = null;
