@@ -797,6 +797,8 @@ export default function AdminAccommodationDetail() {
                     {partners?.map((partner) => {
                       const quoteStatus = partnerQuoteStatusMap[partner.id];
                       const isBlocked = quoteStatus === "submitted" || quoteStatus === "selected";
+                      const canWithdraw = quoteStatus === "pending";
+                      const isWithdrawn = quoteStatus === "withdrawn";
                       const isSelected = selectedPartners.includes(partner.id);
 
                       const statusBadge = quoteStatus ? (() => {
@@ -806,6 +808,7 @@ export default function AdminAccommodationDetail() {
                           case "selected": return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">Geselecteerd</Badge>;
                           case "declined": case "rejected": return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">Afgewezen</Badge>;
                           case "expired": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Verlopen</Badge>;
+                          case "withdrawn": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Ingetrokken</Badge>;
                           default: return <Badge variant="secondary" className="text-xs">Reeds aangevraagd</Badge>;
                         }
                       })() : null;
