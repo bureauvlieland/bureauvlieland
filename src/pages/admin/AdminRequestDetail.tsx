@@ -1280,7 +1280,7 @@ const AdminRequestDetail = () => {
                                       originalPrice={item.quoted_price}
                                       overridePrice={item.admin_price_override}
                                       priceNotes={item.admin_price_notes}
-                                      numberOfPeople={request.number_of_people}
+                                      numberOfPeople={item.override_people ?? request.number_of_people}
                                       priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
                                       onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                     />
