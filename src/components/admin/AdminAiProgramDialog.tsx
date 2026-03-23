@@ -154,7 +154,7 @@ export const AdminAiProgramDialog = ({
             block_name: block.name,
             block_category: block.category,
             block_type: invoicingMode === "bureau_central" ? "bureau" : block.block_type,
-            provider_id: block.provider_id || "bureau-vlieland",
+            provider_id: block.provider_id || "bureau",
             provider_name: "",
             provider_email: null as string | null,
             day_index: s.day_index,
