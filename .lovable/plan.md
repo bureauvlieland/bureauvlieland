@@ -1,29 +1,60 @@
 
 
-## Plan: Standaardprijzen tonen in activiteitenlijst
+## Plan: Prijsconfiguratie "Per persoon per dag" toevoegen
 
-### Probleem
+### Overzicht
 
-Bij het toevoegen van activiteiten (via template, AI of handmatig) wordt `admin_price_override` correct gevuld met de bouwsteenprijs. Maar in de niet-offerte weergave (regel 1283-1291) toont de "Prijs"-kolom alleen `item.quoted_price` (de partnerprijs). Die is altijd `null` voor nieuwe items. De `admin_price_override` wordt genegeerd als fallback.
+Een nieuw prijstype `per_person_per_day` toevoegen aan bouwstenen. Dit type vermenigvuldigt de eenheidsprijs met zowel het aantal personen als het aantal dagen.
 
-### Aanpassing
+### Aanpassingen
 
-**`AdminRequestDetail.tsx` (regel 1283-1291)**
+**1. Database migratie — enum uitbreiden**
 
-De prijskolom in de operationele weergave aanpassen om `admin_price_override` als fallback te gebruiken wanneer `quoted_price` ontbreekt:
-
-```text
-Huidige logica:   quoted_price ? toon prijs : "-"
-Nieuwe logica:    quoted_price || admin_price_override != null ? toon prijs : "-"
+```sql
+ALTER TYPE building_block_price_type ADD VALUE 'per_person_per_day';
 ```
 
-Bij weergave van `admin_price_override` (i.p.v. `quoted_price`) een subtiel label tonen zodat duidelijk is dat het de standaardprijs betreft, niet een partnerofferte.
+**2. `src/types/buildingBlock.ts` — TypeScript type + labels**
 
-### Technische details
+- `BuildingBlockPriceType` uitbreiden met `"per_person_per_day"`
+- `priceTypeLabels`: nieuw entry `per_person_per_day: "Per persoon per dag"`
+- `formatPriceNote`: case toevoegen → `"p.p.p.d."`
+- `calculateIndicativeTotal`: case toevoegen → `price_adult * numberOfPeople` (dagen niet bekend op bouwsteenniveau, dus zelfde als per_person als indicatie)
 
-Eén wijziging in `src/pages/admin/AdminRequestDetail.tsx`, regels 1283-1291:
+**3. `src/lib/portalPricing.ts` — prijsberekening**
 
-- Toon `quoted_price` als die bestaat (huidige gedrag)
-- Anders: toon `admin_price_override` als die niet null is, met een kleine "standaard" indicator
-- Alleen "-" tonen als beide null zijn
+- `isPerPersonItem`: ook `per_person_per_day` opnemen (wordt vermenigvuldigd met personen)
+- Nieuwe helper `isPerDayItem` of de `getItemLineTotal` aanpassen zodat bij `per_person_per_day` ook het aantal dagen wordt meegenomen
+- Aantal dagen afleiden uit het programma: `selected_dates.length` of `numberOfDays` parameter toevoegen aan functies
+
+**4. Admin formulieren — select opties**
+
+- `BuildingBlockSheet.tsx` (regel 672-674): `<SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>` toevoegen
+- Zod schema (regel 75): enum uitbreiden
+- Kind/huisdier secties ook tonen voor dit type (zelfde als `per_person`)
+
+**5. `AdminQuotePriceEditor.tsx` — weergave**
+
+- Props type uitbreiden met `"per_person_per_day"`
+- Label tonen als `"p.p.p.d."` en totaalberekening aanpassen (personen × dagen)
+- `numberOfDays` prop toevoegen
+
+**6. Overige bestanden die `price_type` verwerken**
+
+- `AdminAddActivitySheet.tsx`: price_type doorvoeren
+- `AdminAiProgramDialog.tsx`, `ApplyTemplateDialog.tsx`: al generiek, werkt automatisch
+- `PartnerBlockSheet.tsx`: select opties + zod uitbreiden
+- `PartnerItemSheet.tsx`, `PartnerItemCard.tsx`: display label aanpassen
+- `CheckoutContactForm.tsx`, `RequestFormModal.tsx`: al generiek
+- `PriceSummaryCard.tsx`: multiplier aanpassen (personen × dagen)
+- `AccommodationWizard.tsx`: label `"p.p.p.d."` toevoegen
+
+**7. Aantal dagen beschikbaar maken in prijsberekening**
+
+Het aantal dagen wordt afgeleid uit `selected_dates` (array van datums op `program_requests`). In de portal/admin detail is dit al beschikbaar. De `portalPricing` functies krijgen een optionele `numberOfDays` parameter; als die niet meegegeven wordt, valt het terug op 1.
+
+### Samenvatting
+
+- 1 database migratie (enum value)
+- ~12 bestanden aanpassen voor type, labels, berekeningen en UI
 
