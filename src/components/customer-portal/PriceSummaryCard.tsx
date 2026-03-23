@@ -264,7 +264,7 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, unitPrice, isPerPerson }) => {
+          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, unitPrice, isPerPerson, peopleCount, isPerDay, dayCount }) => {
             const showPrice = effectivePrice !== null;
             return (
               <div key={item.id} className="py-2">
@@ -280,7 +280,7 @@ export const PriceSummaryCard = ({
                     {showPrice ? (
                       isPerPerson && unitPrice !== null ? (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
-                          €{formatPrice(unitPrice)} p.p. = €{formatPrice(effectivePrice!)}
+                          €{formatPrice(unitPrice)} p.p. × {peopleCount}{isPerDay && dayCount > 1 ? ` × ${dayCount} dgn` : ""} = €{formatPrice(effectivePrice!)}
                         </span>
                       ) : (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
