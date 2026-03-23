@@ -9,7 +9,8 @@ export const isQuoteItemAwaitingCustomerApproval = (
     return false;
   }
 
-  return customerQuoteApprovalStatuses.includes(item.item_quote_status);
+  const operationallyReady = item.status === "confirmed" || item.status === "alternative";
+  return operationallyReady && customerQuoteApprovalStatuses.includes(item.item_quote_status);
 };
 
 export const hasQuoteItemsAwaitingCustomerApproval = (items: ProgramRequestItem[]) =>
