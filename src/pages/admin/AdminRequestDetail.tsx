@@ -1281,10 +1281,17 @@ const AdminRequestDetail = () => {
                                     )}
                                   </TableCell>
                                   <TableCell>
-                                    {item.quoted_price ? (
+                                    {item.quoted_price != null ? (
                                       <span className="font-medium">
                                         €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
                                       </span>
+                                    ) : item.admin_price_override != null ? (
+                                      <div>
+                                        <span className="font-medium">
+                                          €{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground ml-1">(standaard)</span>
+                                      </div>
                                     ) : (
                                       <span className="text-slate-400">-</span>
                                     )}
