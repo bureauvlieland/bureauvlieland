@@ -1322,9 +1322,14 @@ const AdminRequestDetail = () => {
                                     <div className="flex items-center gap-2">
                                       {statusIcons[item.status]}
                                       <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                        {request?.invoicing_mode === "bureau_central" && item.status === "pending" && item.skip_partner_notification
-                                          ? "Nog niet verstuurd"
-                                          : statusInfo.label}
+                                        {(() => {
+                                          if (item.skip_partner_notification) {
+                                            const phase = getQuoteItemSendPhase(item, request);
+                                            if (phase === "wacht_op_klant") return "Wacht op klant";
+                                            if (phase === "klaar_om_te_sturen") return "Klaar om te versturen";
+                                          }
+                                          return statusInfo.label;
+                                        })()}
                                       </Badge>
                                     </div>
                                     {item.status_note && (

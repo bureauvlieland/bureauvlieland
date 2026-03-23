@@ -588,7 +588,7 @@ const AdminProjectsContent = () => {
                                         {project.type === "combined" ? "Beide" : project.type === "accommodation_only" ? "Logies" : "Activ."}
                                       </span>
                                     </Badge>
-                                    {project.program_type === "quote" && (
+                                    {(project.program_type === "quote" || project.program_type?.startsWith("maatwerk_")) && (
                                       <Badge variant="outline" className="text-xs border-purple-200 bg-purple-50 text-purple-700">
                                         Maatwerk
                                       </Badge>
