@@ -47,8 +47,14 @@ export const AdminQuotePriceEditor = ({
   const [editPriceType, setEditPriceType] = useState<"per_person" | "per_person_per_day" | "total">(priceType || "per_person");
   const [isSaving, setIsSaving] = useState(false);
 
-  const displayPrice = overridePrice ?? originalPrice;
+  // originalPrice = quoted_price (definitieve partnerprijs, IS het groepstotaal)
+  // overridePrice = admin_price_override (schatting, eenheidsprijs)
+  const hasQuotedPrice = originalPrice !== null;
   const hasOverride = overridePrice !== null;
+  // Effective display: quoted_price wins (it's the confirmed partner price)
+  const displayPrice = originalPrice ?? overridePrice;
+  // Show the override as struck-through secondary when quoted_price supersedes it
+  const showPreviousEstimate = hasQuotedPrice && hasOverride;
 
   const handleOpen = (open: boolean) => {
     if (open) {
@@ -99,6 +105,9 @@ export const AdminQuotePriceEditor = ({
 
   const priceTypeLabel = priceType === "per_person_per_day" ? "p.p.p.d." : priceType === "per_person" ? "p.p." : "totaal";
 
+  // For quoted_price: it's already a group total, so label differs
+  const displayLabel = hasQuotedPrice ? "totaal" : priceTypeLabel;
+
   return (
     <Popover open={isOpen} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>
@@ -107,19 +116,26 @@ export const AdminQuotePriceEditor = ({
           size="sm"
           className={cn(
             "h-auto p-1.5 gap-1.5 font-normal",
-            hasOverride && "text-amber-700 dark:text-amber-400"
+            hasQuotedPrice && "text-emerald-700 dark:text-emerald-400",
+            !hasQuotedPrice && hasOverride && "text-amber-700 dark:text-amber-400"
           )}
           disabled={disabled}
         >
           <div className="flex flex-col items-start text-left">
-            <span className={cn("text-sm", hasOverride && "font-medium")}>
+            <span className={cn("text-sm", (hasQuotedPrice || hasOverride) && "font-medium")}>
               {formatPrice(displayPrice)}
-              {displayPrice !== null && ` ${priceTypeLabel}`}
+              {displayPrice !== null && ` ${displayLabel}`}
             </span>
-            {hasOverride && originalPrice !== null && (
+            {hasQuotedPrice && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-500">Partnerprijs</span>
+            )}
+            {!hasQuotedPrice && hasOverride && (
+              <span className="text-xs text-amber-600 dark:text-amber-500">(schatting)</span>
+            )}
+            {showPreviousEstimate && (
               <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(originalPrice)}
-                {priceType !== "total" && ` ${priceTypeLabel}`}
+                {formatPrice(overridePrice)}
+                {` ${priceTypeLabel}`}
               </span>
             )}
           </div>
