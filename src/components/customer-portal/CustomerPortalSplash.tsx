@@ -39,6 +39,7 @@ interface CustomerPortalSplashProps {
     number_of_people: number;
     terms_accepted_at?: string;
     program_type?: string;
+    quote_status?: string | null;
     invoicing_mode?: string | null;
   };
   selectedDates: Date[];
@@ -115,10 +116,14 @@ export const CustomerPortalSplash = ({
 }: CustomerPortalSplashProps) => {
   const termsAccepted = !!program.terms_accepted_at;
   const isMaatwerk = !!program.program_type?.startsWith("maatwerk_");
+  const isQuoteMode = program.program_type === "quote" || isMaatwerk;
+  const isQuoteAwaitingApproval = isQuoteMode && program.quote_status === "offerte_verstuurd" && !termsAccepted;
   const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
   const accStatus = getAccommodationStatus(accommodation, accommodationQuotes);
   const progStatus = isMaatwerkEmpty 
     ? { label: "In voorbereiding", variant: "outline" as const }
+    : isQuoteAwaitingApproval
+    ? { label: "Wacht op akkoord", variant: "secondary" as const }
     : getProgramStatus(statusSummary, termsAccepted);
   const effectiveInvoicingMode = program.invoicing_mode ?? null;
   const visibleSteps = steps.filter((s) => !s.multiDayOnly || isMultiDay);
@@ -248,7 +253,9 @@ export const CustomerPortalSplash = ({
             <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                {isMaatwerk ? (
+                {isQuoteAwaitingApproval ? (
+                  <><strong>Uw offerte staat klaar.</strong> Open het programma om de onderdelen te bekijken en akkoord te geven.</>
+                ) : isMaatwerk ? (
                   <><strong>Bureau Vlieland is uw programma aan het samenstellen.</strong> Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op.</>
                 ) : (
                   <><strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief.</>
@@ -365,6 +372,8 @@ export const CustomerPortalSplash = ({
               <p className="text-sm text-muted-foreground">
                 {isMaatwerkEmpty
                   ? "Bureau Vlieland stelt uw programma op maat samen. U vindt het straks hier terug."
+                  : isQuoteAwaitingApproval
+                  ? "Uw offerte staat klaar. Open het programma om per onderdeel of in één keer akkoord te geven."
                   : "Bureau Vlieland coördineert de activiteiten en stemt af met de aanbieders. Bekijk het programma, geef feedback en geef akkoord."
                 }
               </p>
@@ -383,7 +392,13 @@ export const CustomerPortalSplash = ({
                 className="w-full"
                 onClick={() => onNavigate("program")}
               >
-                {termsAccepted ? "Programma bekijken" : statusSummary.total > 0 ? "Programma beoordelen" : "Programma bekijken"}
+                {termsAccepted
+                  ? "Programma bekijken"
+                  : isQuoteAwaitingApproval
+                  ? "Offerte bekijken en akkoord geven"
+                  : statusSummary.total > 0
+                  ? "Programma beoordelen"
+                  : "Programma bekijken"}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </CardContent>
