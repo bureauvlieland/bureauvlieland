@@ -86,7 +86,7 @@ const AdminDashboardContent = () => {
         ]);
 
         const activeRequests = requests?.filter(r => r.status === "active") || [];
-        const pendingItems = items?.filter(i => i.status === "pending") || [];
+        const pendingItems = items?.filter(i => i.status === "pending" && !i.skip_partner_notification) || [];
         const confirmedItems = items?.filter(i => i.status === "confirmed") || [];
         const activePartners = partners?.filter(p => p.is_active) || [];
         const pendingAccommodation = accommodationRequests?.filter(r =>
