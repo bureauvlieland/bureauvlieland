@@ -127,7 +127,7 @@ export const AdminAiProgramDialog = ({
       const blockIds = [...new Set(result.map((s) => s.block_id))];
       const { data: blockDetails } = await supabase
         .from("building_blocks")
-        .select("id, name, category, block_type, provider_id, price_adult, price_type, price_adult_note, short_description, description, duration")
+        .select("id, name, category, block_type, provider_id, price_adult, price_type, price_adult_note, short_description, description, duration, location_lat, location_lng, location_address, external_url")
         .in("id", blockIds);
 
       setSuggestions(result);
