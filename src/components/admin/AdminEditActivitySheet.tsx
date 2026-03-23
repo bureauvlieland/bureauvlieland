@@ -121,7 +121,7 @@ export const AdminEditActivitySheet = ({
       setPriceOverride(item.admin_price_override?.toString() || "");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
-      setSelectedProviderId(item.provider_id || "bureau-vlieland");
+      setSelectedProviderId(item.provider_id || "bureau");
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
       setLocationAddress(item.location_address || "");
