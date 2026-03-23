@@ -29,10 +29,16 @@ interface FinancialItem {
 interface FinancialOverviewCardProps {
   requestId: string;
   numberOfPeople: number;
+  numberOfDays?: number;
   items: FinancialItem[];
   invoices: BureauInvoice[];
   onRegisterInvoice: () => void;
   isQuoteMode?: boolean;
+  touristTax?: number;
+  natureContribution?: number;
+  centralSurcharge?: number;
+  accommodationTotal?: number;
+  accommodationName?: string;
 }
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
@@ -42,10 +48,16 @@ const getLineTotal = (item: FinancialItem, n: number) => centralLineTotal(item a
 export const FinancialOverviewCard = ({
   requestId,
   numberOfPeople,
+  numberOfDays = 1,
   items,
   invoices,
   onRegisterInvoice,
   isQuoteMode = false,
+  touristTax = 0,
+  natureContribution = 0,
+  centralSurcharge = 0,
+  accommodationTotal = 0,
+  accommodationName,
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
@@ -96,7 +108,12 @@ export const FinancialOverviewCard = ({
   const extraCostsTotal = extraCostItems.reduce(
     (sum, item) => sum + (item.admin_price_override ?? 0), 0
   );
-  const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal;
+
+  // Accommodation VAT (9%)
+  const accommodationVatRate = 9;
+
+  const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal
+    + touristTax + natureContribution + centralSurcharge + accommodationTotal;
 
   const programVatBreakdown = programItems.reduce(
     (acc, item) => {
@@ -109,13 +126,17 @@ export const FinancialOverviewCard = ({
     { exclVat: 0, vatAmount: 0 }
   );
 
-  const coordExcl = calculateExclVat(coordinationFee, coordVatRate);
-  const coordVat = calculateVatAmount(coordinationFee, coordVatRate);
+  const coordExcl = calculateExclVat(coordinationFee + centralSurcharge, coordVatRate);
+  const coordVat = calculateVatAmount(coordinationFee + centralSurcharge, coordVatRate);
   const extraExcl = calculateExclVat(extraCostsTotal, coordVatRate);
   const extraVat = calculateVatAmount(extraCostsTotal, coordVatRate);
+  const accommExcl = accommodationTotal > 0 ? calculateExclVat(accommodationTotal, accommodationVatRate) : 0;
+  const accommVat = accommodationTotal > 0 ? calculateVatAmount(accommodationTotal, accommodationVatRate) : 0;
+  // Tourist tax & nature contribution = 0% VAT (levies)
+  const leviesExcl = touristTax + natureContribution;
 
-  const totalExclVat = programVatBreakdown.exclVat + coordExcl + extraExcl;
-  const totalVat = programVatBreakdown.vatAmount + coordVat + extraVat;
+  const totalExclVat = programVatBreakdown.exclVat + coordExcl + extraExcl + accommExcl + leviesExcl;
+  const totalVat = programVatBreakdown.vatAmount + coordVat + extraVat + accommVat;
 
   const invoicedInclVat = invoices
     .filter((inv) => inv.invoice_type !== "credit")
@@ -183,6 +204,50 @@ export const FinancialOverviewCard = ({
                 </span>
               </div>
             ))}
+
+            {/* Accommodation */}
+            {accommodationTotal > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="truncate max-w-[200px]">Logies{accommodationName ? `: ${accommodationName}` : ""}</span>
+                </div>
+                <span className="font-medium">{formatCurrency(accommodationTotal)}</span>
+              </div>
+            )}
+
+            {/* Tourist tax */}
+            {touristTax > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(touristTax)}</span>
+              </div>
+            )}
+
+            {/* Nature contribution */}
+            {natureContribution > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Natuurbijdrage ({numberOfPeople} pers.)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(natureContribution)}</span>
+              </div>
+            )}
+
+            {/* Central surcharge */}
+            {centralSurcharge > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Opslag centrale facturatie ({numberOfPeople} pers.)</span>
+                </div>
+                <span className="font-medium">{formatCurrency(centralSurcharge)}</span>
+              </div>
+            )}
           </div>
 
           {/* Totals */}

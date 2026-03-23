@@ -247,12 +247,54 @@ const AdminRequestDetail = () => {
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
 
-  // App settings for coordination fee
-  const { getCoordinationFee: calcCoordFee } = useAppSettings();
+  // App settings for coordination fee + surcharges
+  const { getCoordinationFee: calcCoordFee, settings: appSettings } = useAppSettings();
+
+  // Selected accommodation quote for this request
+  const [selectedAccommodationQuote, setSelectedAccommodationQuote] = useState<{
+    price_total: number;
+    vat_rate: number;
+    accommodation_name: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!request?.linked_accommodation_id) {
+      setSelectedAccommodationQuote(null);
+      return;
+    }
+    supabase
+      .from("accommodation_quotes")
+      .select("price_total, vat_rate, accommodation_name")
+      .eq("request_id", request.linked_accommodation_id)
+      .eq("status", "selected")
+      .maybeSingle()
+      .then(({ data }) => {
+        setSelectedAccommodationQuote(data ? {
+          price_total: data.price_total,
+          vat_rate: data.vat_rate ?? 9,
+          accommodation_name: data.accommodation_name,
+        } : null);
+      });
+  }, [request?.linked_accommodation_id]);
 
   // Calculate bureau invoiced amount for profit summary (incl. coordination fee)
   const numberOfPeople = request?.number_of_people ?? 20;
   const coordinationFeeForProfit = calcCoordFee(numberOfPeople);
+
+  // Number of days from selected_dates
+  const numberOfDays = (() => {
+    const dates = (request?.selected_dates as string[]) || [];
+    return Math.max(dates.length, 1);
+  })();
+
+  // Extra cost lines matching customer portal
+  const touristTax = appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
+  const natureContribution = appSettings.nature_contribution_pp * numberOfPeople;
+  const centralSurcharge = request?.invoicing_mode === "bureau_central"
+    ? appSettings.bureau_central_surcharge_pp * numberOfPeople
+    : 0;
+  const accommodationTotal = selectedAccommodationQuote?.price_total ?? 0;
+
   const bureauInvoicedAmount = (() => {
     if (!request) return 0;
     const programTotal = items
@@ -261,7 +303,7 @@ const AdminRequestDetail = () => {
     const extraCosts = items
       .filter((i) => i.day_index === -1)
       .reduce((sum, i) => sum + (i.admin_price_override ?? 0), 0);
-    return programTotal + extraCosts + coordinationFeeForProfit;
+    return programTotal + extraCosts + coordinationFeeForProfit + touristTax + natureContribution + centralSurcharge + accommodationTotal;
   })();
 
   // Calculate expected partner costs from items (for when no purchase invoices exist yet)
@@ -1681,10 +1723,16 @@ const AdminRequestDetail = () => {
                 <FinancialOverviewCard
                   requestId={request.id}
                   numberOfPeople={request.number_of_people}
+                  numberOfDays={numberOfDays}
                   items={items}
                   invoices={bureauInvoices}
                   onRegisterInvoice={() => setInvoiceDialogOpen(true)}
                   isQuoteMode={isQuoteMode}
+                  touristTax={touristTax}
+                  natureContribution={natureContribution}
+                  centralSurcharge={centralSurcharge}
+                  accommodationTotal={accommodationTotal}
+                  accommodationName={selectedAccommodationQuote?.accommodation_name}
                 />
               </div>
               {/* Margin overview */}
