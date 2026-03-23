@@ -1,54 +1,35 @@
 
 
-## Beoordeling mobiele navigatie
+## Plan: Prijsweergave AdminQuotePriceEditor corrigeren
 
-### Wat goed werkt
-- Dezelfde structuur als desktop (4 items + CTA)
-- Accordions voor submenu's
-- Deelt `navItems` met MegaDropdown — geen dubbele data
+### Probleem
 
-### Problemen
+De `AdminQuotePriceEditor` toont de prijzen omgedraaid:
+- **Hoofdprijs** (groot, vet): `admin_price_override` (€660,00) — de voorlopige schatting
+- **Doorgestreept** (klein, grijs): `quoted_price` (€598,95) — de definitieve partnerprijs
 
-**1. Geen actieve-pagina-indicator**
-Desktop heeft nu `text-primary border-b-2 border-primary` voor de actieve route. Mobiel toont geen enkele visuele feedback. Gebruiker weet niet waar hij is.
+Maar `portalPricing.ts` zegt: `quoted_price` wint altijd van `admin_price_override`. De klantpagina en het financieel overzicht gebruiken correct €598,95. De admin-tabel toont het tegenovergestelde.
 
-**2. Inconsistente styling accordion-triggers**
-- "Ons aanbod": `font-semibold text-foreground` (altijd opvallend)
-- "Over ons": `text-muted-foreground` (subtiel)
-- "Logies" en "Inspiratie": ook `text-muted-foreground`
+### Oorzaak
 
-Dit is dezelfde inconsistentie die we net op desktop hebben opgelost.
+Regel 50: `displayPrice = overridePrice ?? originalPrice` — behandelt override als "actueel" en quoted als "oud". Maar de semantiek is andersom: zodra een partner een `quoted_price` vastlegt, is dát de definitieve prijs en wordt de admin-schatting irrelevant.
 
-**3. Menu sluit niet bij scroll of back-navigatie**
-Het menu is een inline `<div>` dat open blijft totdat de gebruiker expliciet op X klikt. Bij navigatie via browser-back blijft het menu visueel open.
+### Oplossing
 
-**4. Geen overlay/backdrop**
-Het menu duwt de pagina-inhoud omlaag in plaats van erover te schuiven. Op lange submenu's (10+ links bij "Ons aanbod") scrollt de gebruiker ver naar beneden. Een slide-in sheet of overlay is gebruikelijker op mobiel.
+**`src/components/admin/AdminQuotePriceEditor.tsx`**
 
-**5. CTA bovenaan is goed, maar telefoonlink krijgt te weinig nadruk**
-Op mobiel is bellen de belangrijkste conversieactie. Het telefoonnummer staat klein en subtiel onder de CTA-knop.
+De weergavelogica aanpassen zodat de **effectieve** prijs (quoted_price als die bestaat, anders admin_price_override) prominent wordt getoond:
 
-### Plan
+- Hoofdprijs = `quoted_price ?? admin_price_override` (wat daadwerkelijk gefactureerd wordt)
+- Secundair (doorgestreept) = als er een `admin_price_override` was én `quoted_price` nu afwijkt, toon de override als "eerdere schatting"
+- Kleuraanduiding:
+  - Groen als `quoted_price` aanwezig is (definitieve partnerprijs)
+  - Amber als alleen `admin_price_override` (schatting)
+  - Geen kleur als geen prijs ("Op aanvraag")
+- Label: "Partnerprijs" als quoted_price aanwezig, "(schatting)" als alleen override
 
-**1. MobileNav omzetten naar Sheet (slide-in overlay)**
-- Gebruik de bestaande `Sheet` component (side="left" of "right")
-- Menu schuift over de pagina heen i.p.v. de content te verplaatsen
-- Sluit automatisch bij navigatie (al afgedekt door `onClose`)
-
-**2. Actieve-pagina-indicator toevoegen**
-- Importeer `useLocation` en hergebruik dezelfde matching-logica als desktop
-- Actief item: `text-primary font-medium` (geen border nodig in verticale lijst)
-
-**3. Styling uniformeren**
-- Alle top-level items: `text-base font-medium text-foreground`
-- Submenu-items: `text-sm text-muted-foreground`
-- Verwijder de afwijkende `font-semibold` op "Ons aanbod"
-
-**4. Telefoonlink prominenter maken**
-- Toon als gestylede knop met `Phone` icoon, naast of onder de CTA
-- `variant="outline"` voor visueel onderscheid
+De popover-editor zelf hoeft niet te veranderen — die bewerkt altijd de `admin_price_override`.
 
 ### Bestanden
-1. `src/components/navigation/MobileNav.tsx` — sheet, actieve staat, styling
-2. `src/components/Navigation.tsx` — Sheet trigger i.p.v. inline toggle
+1. `src/components/admin/AdminQuotePriceEditor.tsx` — weergavelogica omdraaien
 
