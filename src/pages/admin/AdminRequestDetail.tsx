@@ -1075,7 +1075,7 @@ const AdminRequestDetail = () => {
           )}
 
           {/* Concept banner — program not yet published to customer */}
-          {!request.program_published_at && request.program_type !== "self_service" && items.length > 0 && (
+          {!request.program_published_at && items.length > 0 && (
             <Card className="border-blue-300 bg-blue-50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
