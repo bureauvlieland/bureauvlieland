@@ -1,23 +1,13 @@
 
 
-## Plan: Fix withdraw — voeg `withdrawn` toe aan database constraint
+## Plan: Status- en workflow-optimalisatie — uniforme projectpipeline
 
-### Probleem
-De edge function probeert de status op `withdrawn` te zetten, maar de database heeft een CHECK constraint die alleen deze waarden toestaat: `pending`, `submitted`, `selected`, `rejected`, `expired`, `declined`.
+### Status: ✅ Uitgevoerd
 
-### Oplossing
-Eén database migratie die de bestaande CHECK constraint vervangt door een versie die ook `withdrawn` bevat.
+### Doorgevoerde wijzigingen
 
-```sql
-ALTER TABLE accommodation_quotes DROP CONSTRAINT accommodation_quotes_status_check;
-ALTER TABLE accommodation_quotes ADD CONSTRAINT accommodation_quotes_status_check 
-  CHECK (status = ANY (ARRAY['pending','submitted','selected','rejected','expired','declined','withdrawn']));
-```
-
-### Daarnaast: fix `logEmail` aanroep in edge function
-De `withdraw-accommodation-quote` edge function roept `logEmail(supabase, {...})` aan met twee argumenten, maar de gedeelde `logEmail` functie in `_shared/email-logger.ts` accepteert maar één argument (een `EmailLogEntry` object) en maakt intern een eigen Supabase client aan. Dit moet gecorrigeerd worden — verwijder het eerste `supabase` argument. Ook ontbreekt het verplichte `sent_by` veld.
-
-### Bestanden
-1. Database migratie — constraint updaten
-2. `supabase/functions/withdraw-accommodation-quote/index.ts` — `logEmail` aanroep fixen
-
+1. **`completion_status === "completed"` bug gefixt** in PipelineFunnel, ProjectGanttChart, ProjectCalendarView, ProjectDateListView → nu `fully_invoiced`
+2. **Dashboard stat-chips**: "Te bevestigen" filtert nu op daadwerkelijk verstuurde items (`skip_partner_notification = false`), links naar `/admin/projecten`
+3. **AdminRequests.tsx verwijderd**, route `/admin/aanvragen` redirect naar `/admin/projecten`
+4. **PipelineFunnel**: self-service projecten tellen nu als "Actief/AV" i.p.v. "Concept", maatwerk-specifieke offerte-logica toegevoegd
+5. **getDerivedStatus**: self-service projecten categoriseren correct als "actief" i.p.v. "concept"
