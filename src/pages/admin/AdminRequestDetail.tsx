@@ -1906,6 +1906,69 @@ const AdminRequestDetail = () => {
           invoicingMode={request.invoicing_mode}
         />
       )}
+      {/* Send to partners review dialog */}
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Verstuur naar partners</DialogTitle>
+            <DialogDescription>
+              Controleer welke partners een notificatie ontvangen.
+            </DialogDescription>
+          </DialogHeader>
+          {sendPreview && (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {sendPreview.partners.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Send className="h-4 w-4" />
+                    Partners die bericht krijgen ({sendPreview.partners.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {sendPreview.partners.map((partner) => (
+                      <div key={partner.partnerId} className="border rounded-lg p-3">
+                        <p className="font-medium text-sm">{partner.partnerName}</p>
+                        <ul className="mt-1 space-y-0.5">
+                          {partner.items.map((item) => (
+                            <li key={item.id} className="text-xs text-muted-foreground">• {item.block_name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sendPreview.bureauItemsList.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Bureau-items (intern, geen notificatie)
+                  </h4>
+                  <ul className="space-y-0.5">
+                    {sendPreview.bureauItemsList.map((item) => (
+                      <li key={item.id} className="text-xs text-muted-foreground">• {item.block_name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {sendPreview.partners.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Geen partner-items om te versturen. Alle resterende items zijn bureau-items.
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Annuleren</Button>
+            <Button
+              onClick={handleConfirmSendToPartners}
+              disabled={isSendingToPartners || !sendPreview?.partners.length}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {isSendingToPartners ? "Versturen..." : `Verstuur naar ${sendPreview?.partners.length || 0} partner(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
