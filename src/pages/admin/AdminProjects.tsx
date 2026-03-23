@@ -156,8 +156,9 @@ function getDerivedStatus(project: Project): DerivedStatus {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled") return "geannuleerd";
   if (project.completion_status === "completed") return "afgerond";
   if (project.terms_accepted_at) return "av_getekend";
-  if (project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
-  if (project.quote_status === "concept") return "concept";
+  const isQuote = project.program_type === "quote" || !!project.program_type?.startsWith("maatwerk_");
+  if (isQuote && project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
+  if (isQuote && project.quote_status === "concept") return "concept";
   return "actief";
 }
 

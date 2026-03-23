@@ -49,9 +49,10 @@ export const useProgramStatus = (
   const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
   const hasActiveAccommodation = hasSelectedAccommodation || false; // caller can override with accommodation prop
 
-  const isQuoteAwaitingApproval = program.program_type === "quote" && program.quote_status === "offerte_verstuurd";
+  const isQuoteType = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
+  const isQuoteAwaitingApproval = isQuoteType && program.quote_status === "offerte_verstuurd";
 
-  const isPreApproval = program.program_type === "quote" &&
+  const isPreApproval = isQuoteType &&
     !!program.quote_status &&
     ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
 
