@@ -61,7 +61,7 @@ export const AdminAddCostSheet = ({
         block_category: "overig",
         block_type: "bureau",
         provider_name: "Bureau Vlieland",
-        provider_id: "bureau-vlieland",
+        provider_id: "bureau",
         day_index: -1,
         status: "confirmed",
         admin_price_override: parsedAmount,

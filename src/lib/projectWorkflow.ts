@@ -54,8 +54,8 @@ export interface ProjectForItemPhase {
 }
 
 /** Check if an item is an internal bureau item */
-export function isBureauItem(item: Pick<ItemForSendPhase, "provider_id" | "block_type">): boolean {
-  return item.provider_id === "bureau" || item.block_type === "bureau";
+export function isBureauItem(item: Pick<ItemForSendPhase, "provider_id">): boolean {
+  return item.provider_id === "bureau";
 }
 
 /** Get the send phase for a single item in the context of a project */

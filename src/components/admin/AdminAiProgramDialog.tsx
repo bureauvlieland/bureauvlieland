@@ -171,7 +171,7 @@ export const AdminAiProgramDialog = ({
         .filter((r): r is NonNullable<typeof r> => r !== null);
 
       // Enrich provider names
-      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau-vlieland"))];
+      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau"))];
       if (partnerIds.length > 0) {
         const { data: partners } = await supabase
           .from("partners")
@@ -184,13 +184,13 @@ export const AdminAiProgramDialog = ({
           if (partner) {
             row.provider_name = partner.name;
             row.provider_email = partner.email;
-          } else if (row.provider_id === "bureau-vlieland") {
+          } else if (row.provider_id === "bureau") {
             row.provider_name = "Bureau Vlieland";
           }
         });
       } else {
         rowsToInsert.forEach((row) => {
-          if (row.provider_id === "bureau-vlieland") {
+          if (row.provider_id === "bureau") {
             row.provider_name = "Bureau Vlieland";
           }
         });
