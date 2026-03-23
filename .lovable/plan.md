@@ -1,24 +1,43 @@
 
 
-## Plan: Banner-melding corrigeren op splash-pagina
+## Plan: Logiesaanvraag intrekken bij partners
 
-### Probleem
-De amber banner op de splash-pagina toont altijd "Bureau Vlieland is uw programma aan het samenstellen" voor maatwerk-projecten, ook wanneer er al items in het programma staan. De check op regel 258 gebruikt `isMaatwerk` terwijl het `isMaatwerkEmpty` zou moeten zijn.
+### Wat
+Een "Intrekken" actie toevoegen per partner in de partnerlijst en bij offertekaarten, waarmee een admin een uitgevraagde offerte kan intrekken (status `pending` → verwijderd of geannuleerd). Optioneel kan de partner een notificatie-email ontvangen.
 
-### Aanpassing
+### Aanpassingen
 
-**`src/components/customer-portal/CustomerPortalSplash.tsx`** — regel 253-264:
+**1. `src/pages/admin/AdminAccommodationDetail.tsx`** — Partner selectielijst uitbreiden:
+- Bij partners met status `pending` ("Wacht op reactie"): een "Intrekken" knop toevoegen (XCircle icoon)
+- Bij klikken: AlertDialog ter bevestiging met optie om de partner per email te informeren
+- Na bevestiging: quote record verwijderen of status op `withdrawn` zetten, `quotes_requested_count` decrementeren, en communicatielog aanmaken
+- De partnerlijst refreshen na actie
 
-De banner-logica wordt aangescherpt met drie scenario's:
+**2. Database migratie** — Nieuwe status `withdrawn` toevoegen:
+- De `accommodation_quotes` tabel staat al vrije text-statussen toe (geen enum), dus `withdrawn` kan direct gebruikt worden
+- Update `quotes_requested_count` op de `accommodation_requests` tabel bij intrekking
 
-1. **Offerte wacht op akkoord** (`isQuoteAwaitingApproval`): "Uw offerte staat klaar" — blijft ongewijzigd
-2. **Maatwerk zonder items** (`isMaatwerkEmpty`): "Bureau Vlieland is uw programma aan het samenstellen" — dit is de correcte situatie voor deze melding
-3. **Maatwerk mét items / standaard quote**: Contextafhankelijke melding over de huidige fase (bijv. "Dit is een werkdocument" of een melding over de afstemming)
+**3. `supabase/functions/withdraw-accommodation-quote/index.ts`** — Nieuwe edge function:
+- Accepteert `quoteId` en optioneel `notifyPartner: boolean`
+- Zet quote status op `withdrawn`
+- Decrementeert `quotes_requested_count` op de request
+- Stuurt optioneel een email naar de partner (template of inline)
+- Logt in `project_communications`
 
-Concreet: wijzig `isMaatwerk` naar `isMaatwerkEmpty` op regel 258.
+**4. UI-weergave updates**:
+- In de partner selectielijst: `withdrawn` status tonen als grijze badge "Ingetrokken"
+- Ingetrokken partners weer selecteerbaar maken (zodat ze opnieuw uitgevraagd kunnen worden)
+- In de offertekaarten-grid: ingetrokken offertes niet tonen (of als aparte groep)
 
-Daarnaast: als het programma al gepubliceerd is en de status voorbij "concept" is, kan de amber banner mogelijk helemaal weg of een passendere tekst tonen. Ik check of `quote_status` al verder is (bijv. "offerte_verstuurd") — dat wordt al afgevangen door `isQuoteAwaitingApproval`. Voor tussenstatussen zoals "in_afstemming" past de werkdocument-tekst.
+### Technische details
 
-### Eén bestand
-- `src/components/customer-portal/CustomerPortalSplash.tsx` — `isMaatwerk` → `isMaatwerkEmpty` in de banner-conditie
+- De edge function valideert admin-authenticatie en controleert dat de quote daadwerkelijk status `pending` heeft
+- `quotes_requested_count` wordt met 1 verlaagd via een SQL update
+- De email aan de partner is optioneel en gebruikt een simpel inline template ("Bureau Vlieland heeft de offerteaanvraag voor [periode] ingetrokken")
+- Communication log entry met type `email` of `note`, direction `outbound`
+
+### Bestanden
+1. `src/pages/admin/AdminAccommodationDetail.tsx` — intrekken-knop + bevestigingsdialog
+2. `supabase/functions/withdraw-accommodation-quote/index.ts` — nieuwe edge function
+3. Database migratie — geen schemawijziging nodig (status is vrij tekstveld)
 
