@@ -1045,34 +1045,8 @@ const AdminRequestDetail = () => {
             </Card>
           )}
 
-          {/* Pending partner items that don't fit quote flow (self_service programs) */}
-          {false && pendingPartnerItems.length > 0 && waitingForCustomerCount === 0 && readyToSendCount === 0 && (
-            <Card className="border-amber-300 bg-amber-50">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <Send className="h-5 w-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-amber-900">
-                        {pendingPartnerItems.length} {pendingPartnerItems.length === 1 ? "onderdeel is" : "onderdelen zijn"} nog niet naar partners verstuurd
-                      </p>
-                      <p className="text-sm text-amber-700">
-                        Pas tijden en details aan en verstuur wanneer gereed.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleSendToPartners}
-                    disabled={isSendingToPartners}
-                    className="shrink-0"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {isSendingToPartners ? "Versturen..." : "Verstuur naar partners"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
+
 
           {/* Concept banner — program not yet published to customer */}
           {!request.program_published_at && items.length > 0 && (
