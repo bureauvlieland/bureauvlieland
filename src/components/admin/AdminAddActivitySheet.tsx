@@ -117,7 +117,7 @@ export const AdminAddActivitySheet = ({
     setSelectedDayIndex(0);
     setPreferredTime("flexibel");
     setNotes("");
-    setPriceOverride(block.price_adult ? String(block.price_adult) : "");
+    setPriceOverride(block.price_adult != null ? String(block.price_adult) : "");
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
     setInvoicedBy(invoicingMode === "bureau_central" ? "bureau" : (block.block_type === "bureau" ? "bureau" : "partner"));
