@@ -140,12 +140,13 @@ export const AdminQuotePriceEditor = ({
 
           <div className="space-y-2">
             <Label htmlFor="price-type">Prijsconfiguratie</Label>
-            <Select value={editPriceType} onValueChange={(v) => setEditPriceType(v as "per_person" | "total")}>
+            <Select value={editPriceType} onValueChange={(v) => setEditPriceType(v as "per_person" | "per_person_per_day" | "total")}>
               <SelectTrigger id="price-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="per_person">Per persoon</SelectItem>
+                <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
                 <SelectItem value="total">Totaalprijs</SelectItem>
               </SelectContent>
             </Select>
