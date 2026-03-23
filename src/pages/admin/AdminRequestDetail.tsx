@@ -1470,11 +1470,12 @@ const AdminRequestDetail = () => {
                                     <div className="flex items-center gap-2">
                                       {statusIcons[item.status]}
                                       <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                        {(() => {
+                                      {(() => {
                                           if (item.skip_partner_notification) {
-                                            const phase = getQuoteItemSendPhase(item, request);
+                                            const phase = getItemSendPhase(item, request);
                                             if (phase === "wacht_op_klant") return "Wacht op klant";
-                                            if (phase === "klaar_om_te_sturen") return "Klaar om te versturen";
+                                            if (phase === "klaar_voor_partner") return "Klaar om te versturen";
+                                            if (phase === "bureau_intern") return "Bureau intern";
                                           }
                                           return statusInfo.label;
                                         })()}
