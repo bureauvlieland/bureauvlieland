@@ -108,7 +108,12 @@ export const FinancialOverviewCard = ({
   const extraCostsTotal = extraCostItems.reduce(
     (sum, item) => sum + (item.admin_price_override ?? 0), 0
   );
-  const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal;
+
+  // Accommodation VAT (9%)
+  const accommodationVatRate = 9;
+
+  const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal
+    + touristTax + natureContribution + centralSurcharge + accommodationTotal;
 
   const programVatBreakdown = programItems.reduce(
     (acc, item) => {
@@ -121,13 +126,17 @@ export const FinancialOverviewCard = ({
     { exclVat: 0, vatAmount: 0 }
   );
 
-  const coordExcl = calculateExclVat(coordinationFee, coordVatRate);
-  const coordVat = calculateVatAmount(coordinationFee, coordVatRate);
+  const coordExcl = calculateExclVat(coordinationFee + centralSurcharge, coordVatRate);
+  const coordVat = calculateVatAmount(coordinationFee + centralSurcharge, coordVatRate);
   const extraExcl = calculateExclVat(extraCostsTotal, coordVatRate);
   const extraVat = calculateVatAmount(extraCostsTotal, coordVatRate);
+  const accommExcl = accommodationTotal > 0 ? calculateExclVat(accommodationTotal, accommodationVatRate) : 0;
+  const accommVat = accommodationTotal > 0 ? calculateVatAmount(accommodationTotal, accommodationVatRate) : 0;
+  // Tourist tax & nature contribution = 0% VAT (levies)
+  const leviesExcl = touristTax + natureContribution;
 
-  const totalExclVat = programVatBreakdown.exclVat + coordExcl + extraExcl;
-  const totalVat = programVatBreakdown.vatAmount + coordVat + extraVat;
+  const totalExclVat = programVatBreakdown.exclVat + coordExcl + extraExcl + accommExcl + leviesExcl;
+  const totalVat = programVatBreakdown.vatAmount + coordVat + extraVat + accommVat;
 
   const invoicedInclVat = invoices
     .filter((inv) => inv.invoice_type !== "credit")
