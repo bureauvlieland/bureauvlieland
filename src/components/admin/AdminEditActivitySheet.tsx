@@ -232,7 +232,7 @@ export const AdminEditActivitySheet = ({
 
   if (!item) return null;
 
-  const selectedProviderName = selectedProviderId === "bureau-vlieland"
+  const selectedProviderName = selectedProviderId === "bureau"
     ? "Bureau Vlieland"
     : (partners.find(p => p.id === selectedProviderId)?.name || item.provider_name);
 
