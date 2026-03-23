@@ -164,7 +164,7 @@ const AdminDashboardContent = () => {
 
         <StatChip label="Logies totaal" value={stats?.totalAccommodationRequests ?? 0} to="/admin/logies" color="text-indigo-600" />
         <StatChip label="Te verwerken" value={stats?.pendingAccommodationRequests ?? 0} to="/admin/logies" color="text-amber-600" />
-        <StatChip label="Offertes verstuurd" value={stats?.quotedAccommodationRequests ?? 0} to="/admin/logies" color="text-purple-600" />
+        <StatChip label="Geaccepteerd" value={stats?.quotedAccommodationRequests ?? 0} to="/admin/logies" color="text-purple-600" />
       </div>
 
       {/* 2-column main layout: feed (2/3) + sidebar (1/3) */}
