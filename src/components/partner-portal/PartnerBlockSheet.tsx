@@ -375,7 +375,7 @@ export const PartnerBlockSheet = ({
         duration: formData.duration.trim() || null,
         price_adult: formData.price_adult ? parseFloat(formData.price_adult) : null,
         price_adult_note: formData.price_adult_note.trim() || null,
-        price_type: formData.price_type as "per_person" | "total" | "on_request",
+        price_type: formData.price_type as "per_person" | "per_person_per_day" | "total" | "on_request",
         price_child: formData.price_child ? parseFloat(formData.price_child) : null,
         price_child_note: formData.price_child_note.trim() || null,
         price_child_min_age: formData.price_child_min_age ? parseInt(formData.price_child_min_age) : 4,

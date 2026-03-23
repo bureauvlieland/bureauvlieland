@@ -171,9 +171,9 @@ export const AdminQuotePriceEditor = ({
                 className="pl-7"
               />
             </div>
-            {editPrice && editPriceType === "per_person" && (
+            {editPrice && editPriceType !== "total" && (
               <p className="text-xs text-muted-foreground">
-                Totaal: {formatPrice(parseFloat(editPrice) * numberOfPeople)} ({numberOfPeople} personen)
+                Totaal: {formatPrice(parseFloat(editPrice) * numberOfPeople * (editPriceType === "per_person_per_day" ? numberOfDays : 1))} ({numberOfPeople} personen{editPriceType === "per_person_per_day" ? ` × ${numberOfDays} dagen` : ""})
               </p>
             )}
           </div>

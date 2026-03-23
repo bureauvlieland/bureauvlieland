@@ -78,8 +78,9 @@ export function getItemEffectivePrice(
 export function calculateDayTotal(
   items: ProgramRequestItem[],
   numberOfPeople: number,
+  numberOfDays: number = 1,
 ): number {
   return items
     .filter((i) => i.status !== "cancelled" && (i.quoted_price != null || i.admin_price_override != null))
-    .reduce((sum, item) => sum + getItemEffectivePrice(item, numberOfPeople), 0);
+    .reduce((sum, item) => sum + getItemEffectivePrice(item, numberOfPeople, numberOfDays), 0);
 }

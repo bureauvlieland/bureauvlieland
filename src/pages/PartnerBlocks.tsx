@@ -282,6 +282,7 @@ const BlockCard = ({ block, onEdit, status }: BlockCardProps) => {
     const price = block.price_adult.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
     switch (block.price_type) {
       case "per_person": return `€${price} p.p.`;
+      case "per_person_per_day": return `€${price} p.p.p.d.`;
       case "total": return `€${price} totaal`;
       default: return `€${price}`;
     }

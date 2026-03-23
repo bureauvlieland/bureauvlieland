@@ -237,6 +237,7 @@ export const blockTypeLabels: Record<BuildingBlockType, string> = {
 // Price type labels for display
 export const priceTypeLabels: Record<BuildingBlockPriceType, string> = {
   per_person: "Per persoon",
+  per_person_per_day: "Per persoon per dag",
   total: "Totaalprijs",
   on_request: "Op aanvraag",
 };

@@ -166,14 +166,14 @@ export const PartnerItemCard = ({
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
             <span className="text-muted-foreground">Verwachte prijs:</span>{" "}
             <span className="font-medium">
-              €{item.price_type === "per_person"
+              €{(item.price_type === "per_person" || item.price_type === "per_person_per_day")
                 ? (item.admin_price_override * request.number_of_people).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                 : item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               }
             </span>
-            {item.price_type === "per_person" && (
+            {(item.price_type === "per_person" || item.price_type === "per_person_per_day") && (
               <span className="text-xs text-muted-foreground ml-1">
-                (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.)
+                (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."})
               </span>
             )}
           </div>

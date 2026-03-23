@@ -92,7 +92,7 @@ export const PriceSummaryCard = ({
         unitPrice = ppMultiplier > 1 ? item.quoted_price! / numberOfPeople : item.quoted_price!;
       } else if (isPreliminary) {
         unitPrice = item.admin_price_override!;
-        effectivePrice = unitPrice * ppMultiplier;
+        effectivePrice = unitPrice * ppMultiplier * dayMultiplier;
       }
 
       return { item, hasQuotedPrice, isPreliminary, effectivePrice, unitPrice, isPerPerson: ppMultiplier > 1 };
