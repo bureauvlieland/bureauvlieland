@@ -188,6 +188,7 @@ export const calculateIndicativeTotal = (blocks: BuildingBlock[], numberOfPeople
     // Calculate based on price type
     switch (block.price_type) {
       case "per_person":
+      case "per_person_per_day":
         return total + (block.price_adult * numberOfPeople);
       case "total":
         return total + block.price_adult;
