@@ -609,7 +609,7 @@ const AdminRequestDetail = () => {
     }
   };
 
-  const handleItemPriceUpdate = async (itemId: string, price: number | null, notes: string, newPriceType?: "per_person" | "total") => {
+  const handleItemPriceUpdate = async (itemId: string, price: number | null, notes: string, newPriceType?: "per_person" | "per_person_per_day" | "total") => {
     try {
       const updateData: Record<string, unknown> = { 
         admin_price_override: price,
