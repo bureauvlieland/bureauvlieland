@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
           }),
         });
 
-        await logEmail(supabase, {
+        await logEmail({
           email_type: "accommodation_quote_withdrawn",
           subject,
           recipient_email: partnerEmail,
@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
           related_request_id: accRequest.linked_program_id,
           related_partner_id: partner.id,
           status: "sent",
+          sent_by: "system",
         });
       } catch (emailErr) {
         console.error("Failed to send withdrawal email:", emailErr);
