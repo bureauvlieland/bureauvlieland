@@ -115,11 +115,17 @@ export const PartnerItemSheet = ({
     return getBlockedTimeSlotsFromPartnerItems(sameDayItems, item.day_index, item.id);
   }, [item]);
 
-  // Generate available time slots (exclude blocked ones)
+  // Generate available time slots (exclude blocked ones, but always include preferred_time)
   const availableTimeSlots = useMemo(() => {
     const allSlots = generateTimeSlots();
-    return allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
-  }, [blockedTimeSlots, item?.duration]);
+    const filtered = allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
+    // Always allow the customer's preferred time so the partner can confirm it
+    if (item?.preferred_time && !filtered.includes(item.preferred_time)) {
+      filtered.push(item.preferred_time);
+      filtered.sort();
+    }
+    return filtered;
+  }, [blockedTimeSlots, item?.duration, item?.preferred_time]);
 
   if (!item) return null;
 

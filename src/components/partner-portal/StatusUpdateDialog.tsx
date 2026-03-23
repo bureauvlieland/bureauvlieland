@@ -58,11 +58,16 @@ export const StatusUpdateDialog = ({
     return getBlockedTimeSlotsFromPartnerItems(compatibleItems, item.day_index, item.id);
   }, [allDayItems, item]);
 
-  // Generate available time slots
+  // Generate available time slots (always include preferred_time)
   const availableTimeSlots = useMemo(() => {
     const allSlots = generateTimeSlots();
-    return allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
-  }, [blockedTimeSlots, item?.duration]);
+    const filtered = allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
+    if (item?.preferred_time && !filtered.includes(item.preferred_time)) {
+      filtered.push(item.preferred_time);
+      filtered.sort();
+    }
+    return filtered;
+  }, [blockedTimeSlots, item?.duration, item?.preferred_time]);
 
   const handleSubmit = async () => {
     let hasError = false;
