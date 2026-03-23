@@ -798,7 +798,7 @@ export default function AdminAccommodationDetail() {
                       const quoteStatus = partnerQuoteStatusMap[partner.id];
                       const isBlocked = quoteStatus === "submitted" || quoteStatus === "selected";
                       const canWithdraw = quoteStatus === "pending";
-                      const isWithdrawn = quoteStatus === "withdrawn";
+                      
                       const isSelected = selectedPartners.includes(partner.id);
 
                       const statusBadge = quoteStatus ? (() => {
