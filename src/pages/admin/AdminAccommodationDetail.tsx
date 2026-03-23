@@ -103,6 +103,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   rejected: { label: "Afgewezen", variant: "destructive" },
   declined: { label: "Afgewezen door partner", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
+  withdrawn: { label: "Ingetrokken", variant: "outline" },
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -176,6 +177,8 @@ export default function AdminAccommodationDetail() {
   const [commLogOpen, setCommLogOpen] = useState(false);
   const [reactivateQuoteId, setReactivateQuoteId] = useState<string | null>(null);
   const [reactivateDate, setReactivateDate] = useState<Date | undefined>(addDays(new Date(), 14));
+  const [withdrawQuoteId, setWithdrawQuoteId] = useState<string | null>(null);
+  const [withdrawNotify, setWithdrawNotify] = useState(true);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -368,6 +371,27 @@ export default function AdminAccommodationDetail() {
     },
     onError: (error) => {
       toast({ title: "Fout bij heractiveren", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Withdraw pending quote
+  const withdrawQuoteMutation = useMutation({
+    mutationFn: async ({ quoteId, notifyPartner }: { quoteId: string; notifyPartner: boolean }) => {
+      const response = await supabase.functions.invoke("withdraw-accommodation-quote", {
+        body: { quoteId, notifyPartner },
+      });
+      if (response.error) throw new Error(response.error.message || "Fout bij intrekken");
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      setWithdrawQuoteId(null);
+      setWithdrawNotify(true);
+      toast({ title: "Offerteaanvraag ingetrokken" });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij intrekken", description: error.message, variant: "destructive" });
     },
   });
 
@@ -773,6 +797,8 @@ export default function AdminAccommodationDetail() {
                     {partners?.map((partner) => {
                       const quoteStatus = partnerQuoteStatusMap[partner.id];
                       const isBlocked = quoteStatus === "submitted" || quoteStatus === "selected";
+                      const canWithdraw = quoteStatus === "pending";
+                      
                       const isSelected = selectedPartners.includes(partner.id);
 
                       const statusBadge = quoteStatus ? (() => {
@@ -782,6 +808,7 @@ export default function AdminAccommodationDetail() {
                           case "selected": return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">Geselecteerd</Badge>;
                           case "declined": case "rejected": return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">Afgewezen</Badge>;
                           case "expired": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Verlopen</Badge>;
+                          case "withdrawn": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Ingetrokken</Badge>;
                           default: return <Badge variant="secondary" className="text-xs">Reeds aangevraagd</Badge>;
                         }
                       })() : null;
@@ -799,6 +826,23 @@ export default function AdminAccommodationDetail() {
                             <p className="text-xs text-muted-foreground truncate">{partner.email}</p>
                           </div>
                           {statusBadge}
+                          {canWithdraw && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => {
+                                const q = quotes?.find((q) => q.partner_id === partner.id && q.status === "pending");
+                                if (q) {
+                                  setWithdrawQuoteId(q.id);
+                                  setWithdrawNotify(true);
+                                }
+                              }}
+                              title="Aanvraag intrekken"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           <span className="text-xs text-muted-foreground shrink-0">
                             {partner.accommodation_commission_percentage || 10}%
                           </span>
@@ -1159,6 +1203,43 @@ export default function AdminAccommodationDetail() {
               }}
             >
               {reactivateQuoteMutation.isPending ? "Bezig..." : "Heractiveren"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Withdraw Quote Dialog */}
+      <Dialog open={!!withdrawQuoteId} onOpenChange={(open) => { if (!open) { setWithdrawQuoteId(null); setWithdrawNotify(true); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Offerteaanvraag intrekken</DialogTitle>
+            <DialogDescription>
+              Weet je zeker dat je deze aanvraag bij {quotes?.find((q) => q.id === withdrawQuoteId)?.partner?.name || "deze partner"} wilt intrekken?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="withdraw-notify"
+                checked={withdrawNotify}
+                onCheckedChange={(checked) => setWithdrawNotify(!!checked)}
+              />
+              <label htmlFor="withdraw-notify" className="text-sm">
+                Partner per e-mail informeren
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setWithdrawQuoteId(null); setWithdrawNotify(true); }}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={withdrawQuoteMutation.isPending}
+              onClick={() => {
+                if (withdrawQuoteId) {
+                  withdrawQuoteMutation.mutate({ quoteId: withdrawQuoteId, notifyPartner: withdrawNotify });
+                }
+              }}
+            >
+              {withdrawQuoteMutation.isPending ? "Bezig..." : "Intrekken"}
             </Button>
           </DialogFooter>
         </DialogContent>
