@@ -82,6 +82,7 @@ interface ItemDetail {
   provider_name: string;
   status: string;
   skip_partner_notification: boolean;
+  customer_approved_at: string | null;
 }
 
 interface Project {
