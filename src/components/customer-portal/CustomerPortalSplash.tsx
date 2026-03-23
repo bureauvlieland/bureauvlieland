@@ -116,8 +116,7 @@ export const CustomerPortalSplash = ({
 }: CustomerPortalSplashProps) => {
   const termsAccepted = !!program.terms_accepted_at;
   const isMaatwerk = !!program.program_type?.startsWith("maatwerk_");
-  const isQuoteMode = program.program_type === "quote" || isMaatwerk;
-  const isQuoteAwaitingApproval = isQuoteMode && program.quote_status === "offerte_verstuurd" && !termsAccepted;
+  const isQuoteAwaitingApproval = program.quote_status === "offerte_verstuurd" && !termsAccepted;
   const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
   const accStatus = getAccommodationStatus(accommodation, accommodationQuotes);
   const progStatus = isMaatwerkEmpty 

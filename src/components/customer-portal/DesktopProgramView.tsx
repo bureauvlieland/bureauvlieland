@@ -154,8 +154,8 @@ export const DesktopProgramView = ({
   const [showHistory, setShowHistory] = useState(false);
 
   const isPublished = !!program.program_published_at;
-  const isQuoteMode = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
-  const hasUnapprovedItems = isQuoteMode && hasQuoteItemsAwaitingCustomerApproval(program.items);
+  const isQuoteMode = true; // All projects use unified quote pipeline
+  const hasUnapprovedItems = hasQuoteItemsAwaitingCustomerApproval(program.items);
 
   const { getItemVatRate } = useItemVatRates(program.items);
   const {
