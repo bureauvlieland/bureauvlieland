@@ -278,7 +278,7 @@ export const AdminEditActivitySheet = ({
                 <SelectValue placeholder="Kies een uitvoerder..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bureau-vlieland">Bureau Vlieland</SelectItem>
+                <SelectItem value="bureau">Bureau Vlieland</SelectItem>
                 {partners.map((partner) => (
                   <SelectItem key={partner.id} value={partner.id}>
                     {partner.name}
