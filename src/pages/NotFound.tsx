@@ -60,11 +60,6 @@ const NotFound = () => {
 
   // Perform client-side redirect for old URLs
   if (redirectTo) {
-    // For hash routes, we need to navigate and then scroll
-    if (redirectTo.includes('#')) {
-      window.location.href = redirectTo;
-      return null;
-    }
     return <Navigate to={redirectTo} replace />;
   }
 
