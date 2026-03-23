@@ -431,6 +431,7 @@ export const DesktopProgramView = ({
                           isQuoteMode={isQuoteMode}
                           vatRate={getItemVatRate(item)}
                           readOnly={!isPublished}
+                          numberOfPeople={program.number_of_people}
                         />
                       )}
                     </CustomerTimeline>
