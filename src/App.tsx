@@ -63,7 +63,7 @@ const PartnerResetPassword = lazy(() => import("./pages/PartnerResetPassword"));
 // Lazy-loaded admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminCRM = lazy(() => import("./pages/admin/AdminCRM"));
-const AdminRequests = lazy(() => import("./pages/admin/AdminRequests"));
+
 const AdminRequestDetail = lazy(() => import("./pages/admin/AdminRequestDetail"));
 const AdminPartners = lazy(() => import("./pages/admin/AdminPartners"));
 const AdminPartnerDetail = lazy(() => import("./pages/admin/AdminPartnerDetail"));

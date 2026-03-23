@@ -58,7 +58,7 @@ function getProjectDates(project: Project): { start: Date; end: Date } | null {
 function getStatusColor(project: Project): string {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled")
     return "bg-red-400";
-  if (project.completion_status === "completed") return "bg-emerald-400";
+  if (project.completion_status === "fully_invoiced") return "bg-emerald-400";
   if (project.terms_accepted_at) return "bg-green-400";
   if (project.quote_status === "offerte_verstuurd") return "bg-blue-400";
   if (project.quote_status === "concept") return "bg-slate-300";

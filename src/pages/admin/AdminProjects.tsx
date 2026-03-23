@@ -154,11 +154,12 @@ const QUOTE_STATUS_ICON: Record<string, string> = {
 
 function getDerivedStatus(project: Project): DerivedStatus {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled") return "geannuleerd";
-  if (project.completion_status === "completed") return "afgerond";
+  if (project.completion_status === "fully_invoiced") return "afgerond";
   if (project.terms_accepted_at) return "av_getekend";
   const isQuote = project.program_type === "quote" || !!project.program_type?.startsWith("maatwerk_");
   if (isQuote && project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
-  if (isQuote && project.quote_status === "concept") return "concept";
+  if (isQuote && (project.quote_status === "concept" || !project.quote_status)) return "concept";
+  if (!isQuote) return "actief";
   return "actief";
 }
 

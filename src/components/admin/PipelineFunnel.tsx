@@ -34,9 +34,9 @@ export const PipelineFunnel = () => {
     let concept = 0, offerte = 0, av = 0, afgerond = 0, gefactureerd = 0;
 
     projects.forEach((p) => {
-      if (p.completion_status === "completed") {
+      if (p.completion_status === "fully_invoiced") {
         afgerond++;
-      } else if (p.completion_status === "ready_for_invoice" || p.completion_status === "invoiced") {
+      } else if (p.completion_status === "ready_for_invoice" || p.completion_status === "partially_invoiced") {
         gefactureerd++;
       } else if (p.terms_accepted_at) {
         av++;

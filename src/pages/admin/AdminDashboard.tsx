@@ -153,9 +153,9 @@ const AdminDashboardContent = () => {
 
       {/* Compact stat bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <StatChip label="Actieve aanvragen" value={stats?.activeRequests ?? 0} to="/admin/aanvragen" color="text-blue-600" />
-        <StatChip label="Te bevestigen" value={stats?.pendingItems ?? 0} to="/admin/aanvragen" color="text-amber-600" />
-        <StatChip label="Bevestigd" value={stats?.confirmedItems ?? 0} to="/admin/aanvragen" color="text-green-600" />
+        <StatChip label="Actieve aanvragen" value={stats?.activeRequests ?? 0} to="/admin/projecten" color="text-blue-600" />
+        <StatChip label="Te bevestigen" value={stats?.pendingItems ?? 0} to="/admin/projecten" color="text-amber-600" />
+        <StatChip label="Bevestigd" value={stats?.confirmedItems ?? 0} to="/admin/projecten" color="text-green-600" />
         <StatChip label="Partners" value={`${stats?.activePartners ?? 0}/${stats?.totalPartners ?? 0}`} to="/admin/partners" />
 
         {/* Separator */}
