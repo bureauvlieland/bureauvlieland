@@ -234,6 +234,8 @@ const AdminRequestDetail = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [editingTimeItemId, setEditingTimeItemId] = useState<string | null>(null);
+  const [editingTimeValue, setEditingTimeValue] = useState("");
 
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
