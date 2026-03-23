@@ -1723,10 +1723,16 @@ const AdminRequestDetail = () => {
                 <FinancialOverviewCard
                   requestId={request.id}
                   numberOfPeople={request.number_of_people}
+                  numberOfDays={numberOfDays}
                   items={items}
                   invoices={bureauInvoices}
                   onRegisterInvoice={() => setInvoiceDialogOpen(true)}
                   isQuoteMode={isQuoteMode}
+                  touristTax={touristTax}
+                  natureContribution={natureContribution}
+                  centralSurcharge={centralSurcharge}
+                  accommodationTotal={accommodationTotal}
+                  accommodationName={selectedAccommodationQuote?.accommodation_name}
                 />
               </div>
               {/* Margin overview */}
