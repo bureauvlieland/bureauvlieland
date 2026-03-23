@@ -982,8 +982,56 @@ const AdminRequestDetail = () => {
             selectedDates={request.selected_dates as string[]}
           />
 
-          {/* Pending partner notification banner */}
-          {pendingPartnerItems.length > 0 && (
+          {/* Waiting for customer banner (offerte verstuurd, no customer approval yet) */}
+          {waitingForCustomerCount > 0 && readyToSendCount === 0 && (
+            <Card className="border-blue-300 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-900">
+                      Offerte verstuurd — wacht op akkoord van klant
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      {waitingForCustomerCount} {waitingForCustomerCount === 1 ? "onderdeel wacht" : "onderdelen wachten"} op klantakkoord voordat ze naar partners verstuurd kunnen worden.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ready to send banner (customer approved, admin can send to partners) */}
+          {readyToSendCount > 0 && (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <Send className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-900">
+                        {readyToSendCount} {readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen
+                      </p>
+                      <p className="text-sm text-amber-700">
+                        Klant heeft akkoord gegeven. Verstuur wanneer gereed.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleSendToPartners}
+                    disabled={isSendingToPartners}
+                    className="shrink-0"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {isSendingToPartners ? "Versturen..." : "Verstuur naar partners"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Pending partner items that don't fit quote flow (self_service programs) */}
+          {pendingPartnerItems.length > 0 && !isQuoteMode && waitingForCustomerCount === 0 && readyToSendCount === 0 && (
             <Card className="border-amber-300 bg-amber-50">
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
