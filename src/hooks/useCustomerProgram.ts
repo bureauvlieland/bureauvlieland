@@ -430,6 +430,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       external_url: block.external_url || null,
       // Per-item approval
       customer_approved_at: null,
+      override_people: null,
     };
 
     setProgram((prev) => {
