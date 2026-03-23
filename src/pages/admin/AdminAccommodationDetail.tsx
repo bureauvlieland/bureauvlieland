@@ -1207,6 +1207,43 @@ export default function AdminAccommodationDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Withdraw Quote Dialog */}
+      <Dialog open={!!withdrawQuoteId} onOpenChange={(open) => { if (!open) { setWithdrawQuoteId(null); setWithdrawNotify(true); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Offerteaanvraag intrekken</DialogTitle>
+            <DialogDescription>
+              Weet je zeker dat je deze aanvraag bij {quotes?.find((q) => q.id === withdrawQuoteId)?.partner?.name || "deze partner"} wilt intrekken?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="withdraw-notify"
+                checked={withdrawNotify}
+                onCheckedChange={(checked) => setWithdrawNotify(!!checked)}
+              />
+              <label htmlFor="withdraw-notify" className="text-sm">
+                Partner per e-mail informeren
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setWithdrawQuoteId(null); setWithdrawNotify(true); }}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              disabled={withdrawQuoteMutation.isPending}
+              onClick={() => {
+                if (withdrawQuoteId) {
+                  withdrawQuoteMutation.mutate({ quoteId: withdrawQuoteId, notifyPartner: withdrawNotify });
+                }
+              }}
+            >
+              {withdrawQuoteMutation.isPending ? "Bezig..." : "Intrekken"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
