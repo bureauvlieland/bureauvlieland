@@ -513,7 +513,7 @@ const AdminRequestDetail = () => {
 
   const statusSummary = getStatusSummary();
   const customerPortalUrl = `/mijn-programma/${request.customer_token}`;
-  const isQuoteMode = isQuoteOrMaatwerk(request.program_type);
+  const isQuoteMode = true; // All projects now use the unified quote pipeline
 
 
   const handleQuoteStatusChange = async (newStatus: QuoteStatus) => {
