@@ -1,32 +1,54 @@
 
 
-## Plan: Locatie en URL meenemen bij AI/template-items + voorbeeldprogramma's actualiseren
+## Beoordeling mobiele navigatie
 
-### Probleem 1: Locatiegegevens ontbreken bij AI-gegenereerde items
+### Wat goed werkt
+- Dezelfde structuur als desktop (4 items + CTA)
+- Accordions voor submenu's
+- Deelt `navItems` met MegaDropdown — geen dubbele data
 
-Wanneer items worden toegevoegd via het AI-dialoog (`AdminAiProgramDialog`) of via template-toepassing (`ApplyTemplateDialog`), worden `location_lat`, `location_lng`, `location_address` en `external_url` **niet** overgenomen van de bouwsteen. De handmatige "Activiteit toevoegen" sheet (`AdminAddActivitySheet`) doet dit wél correct.
+### Problemen
 
-### Probleem 2: Voorbeeldprogramma's verwijzen mogelijk naar verouderde bouwstenen
+**1. Geen actieve-pagina-indicator**
+Desktop heeft nu `text-primary border-b-2 border-primary` voor de actieve route. Mobiel toont geen enkele visuele feedback. Gebruiker weet niet waar hij is.
 
-Templates in `program_template_items` verwijzen via `block_id` naar bouwstenen. Als bouwstenen zijn gewijzigd (naam, prijs, provider, etc.), zijn de templates automatisch up-to-date — ze fetchen live block data. **Maar**: als een `block_id` is verwijderd of hernoemd, verschijnt het item als "onbekend". Dit moet gecontroleerd worden in de database.
+**2. Inconsistente styling accordion-triggers**
+- "Ons aanbod": `font-semibold text-foreground` (altijd opvallend)
+- "Over ons": `text-muted-foreground` (subtiel)
+- "Logies" en "Inspiratie": ook `text-muted-foreground`
 
-### Wijzigingen
+Dit is dezelfde inconsistentie die we net op desktop hebben opgelost.
 
-**1. `src/components/admin/AdminAiProgramDialog.tsx`**
-- Voeg `location_lat`, `location_lng`, `location_address`, `external_url` toe aan de block select query (regel 126)
-- Voeg deze velden toe aan `BlockInfo` interface
-- Neem ze mee in `rowsToInsert` bij `handleApply`
+**3. Menu sluit niet bij scroll of back-navigatie**
+Het menu is een inline `<div>` dat open blijft totdat de gebruiker expliciet op X klikt. Bij navigatie via browser-back blijft het menu visueel open.
 
-**2. `src/components/admin/ApplyTemplateDialog.tsx`**
-- De block query haalt al `select("*")` op, dus alle velden zijn beschikbaar
-- Voeg `location_lat`, `location_lng`, `location_address`, `external_url` toe aan `rowsToInsert` (regel 64-82)
+**4. Geen overlay/backdrop**
+Het menu duwt de pagina-inhoud omlaag in plaats van erover te schuiven. Op lange submenu's (10+ links bij "Ons aanbod") scrollt de gebruiker ver naar beneden. Een slide-in sheet of overlay is gebruikelijker op mobiel.
 
-**3. Database check — verouderde template-items opsporen**
-- Query uitvoeren om template-items te vinden die verwijzen naar niet-bestaande of niet-gepubliceerde bouwstenen
-- Resultaat rapporteren zodat je weet of er templates bijgewerkt moeten worden
+**5. CTA bovenaan is goed, maar telefoonlink krijgt te weinig nadruk**
+Op mobiel is bellen de belangrijkste conversieactie. Het telefoonnummer staat klein en subtiel onder de CTA-knop.
+
+### Plan
+
+**1. MobileNav omzetten naar Sheet (slide-in overlay)**
+- Gebruik de bestaande `Sheet` component (side="left" of "right")
+- Menu schuift over de pagina heen i.p.v. de content te verplaatsen
+- Sluit automatisch bij navigatie (al afgedekt door `onClose`)
+
+**2. Actieve-pagina-indicator toevoegen**
+- Importeer `useLocation` en hergebruik dezelfde matching-logica als desktop
+- Actief item: `text-primary font-medium` (geen border nodig in verticale lijst)
+
+**3. Styling uniformeren**
+- Alle top-level items: `text-base font-medium text-foreground`
+- Submenu-items: `text-sm text-muted-foreground`
+- Verwijder de afwijkende `font-semibold` op "Ons aanbod"
+
+**4. Telefoonlink prominenter maken**
+- Toon als gestylede knop met `Phone` icoon, naast of onder de CTA
+- `variant="outline"` voor visueel onderscheid
 
 ### Bestanden
-1. `src/components/admin/AdminAiProgramDialog.tsx` — locatie + URL velden toevoegen
-2. `src/components/admin/ApplyTemplateDialog.tsx` — locatie + URL velden toevoegen
-3. Database query — orphaned template items opsporen
+1. `src/components/navigation/MobileNav.tsx` — sheet, actieve staat, styling
+2. `src/components/Navigation.tsx` — Sheet trigger i.p.v. inline toggle
 
