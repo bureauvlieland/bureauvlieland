@@ -560,9 +560,6 @@ const AdminRequestDetail = () => {
     }
   };
 
-  const unsendableItems = items.filter(
-    (item) => item.status !== "cancelled" && item.skip_partner_notification === true
-  );
   const itemCounts = getItemSendCounts(items, request);
   const readyToSendCount = itemCounts.readyForPartner;
   const waitingForCustomerCount = itemCounts.waitingForCustomer;
