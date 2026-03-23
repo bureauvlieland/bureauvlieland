@@ -64,6 +64,7 @@ interface ProgramItem {
   admin_price_notes: string | null;
   quoted_price: number | null;
   price_type: string | null;
+  override_people: number | null;
   image_url: string | null;
   image_asset: string | null;
 }
