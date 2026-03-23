@@ -1691,7 +1691,8 @@ const AdminRequestDetail = () => {
               <ProjectProfitSummary
                 purchaseInvoices={purchaseInvoices || []}
                 bureauInvoicedAmount={bureauInvoicedAmount}
-                coordinationFee={0}
+                coordinationFee={coordinationFeeForProfit}
+                expectedPartnerCosts={expectedPartnerCosts}
               />
             </TabsContent>
 
