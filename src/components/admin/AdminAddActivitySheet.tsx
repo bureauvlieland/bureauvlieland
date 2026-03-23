@@ -121,7 +121,7 @@ export const AdminAddActivitySheet = ({
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
     setInvoicedBy(invoicingMode === "bureau_central" ? "bureau" : (block.block_type === "bureau" ? "bureau" : "partner"));
-    setSelectedProviderId(block.provider_id || "bureau-vlieland");
+    setSelectedProviderId(block.provider_id || "bureau");
     setLocationLat(block.location_lat ?? null);
     setLocationLng(block.location_lng ?? null);
     setLocationAddress(block.location_address || "");
