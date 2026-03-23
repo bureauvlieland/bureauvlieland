@@ -137,7 +137,7 @@ export const AdminAddActivitySheet = ({
     setIsSubmitting(true);
     try {
       const time = preferredTime === "flexibel" ? null : preferredTime;
-      const price = priceOverride ? parseFloat(priceOverride) : null;
+      const price = priceOverride !== "" ? parseFloat(priceOverride) : null;
       
       // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
