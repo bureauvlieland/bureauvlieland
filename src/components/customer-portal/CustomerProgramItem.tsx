@@ -64,6 +64,7 @@ export const CustomerProgramItem = ({
   isQuoteMode = false,
   readOnly = false,
   hideDay = false,
+  numberOfPeople,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
