@@ -200,7 +200,6 @@ function generatePartnerNotificationEmail(
 
 function generateCustomerConfirmationEmail(
   program: any,
-  partnerCount: number,
   portalUrl: string
 ): string {
   return `
@@ -213,13 +212,14 @@ function generateCustomerConfirmationEmail(
       <div style="padding: 32px 24px; background: #ffffff;">
         <p>Beste ${sanitizeHtml(program.customer_name)},</p>
         
-        <p>Bedankt voor uw akkoord op het programmavoorstel! Wij hebben de ${partnerCount} betrokken leverancier${partnerCount !== 1 ? "s" : ""} op de hoogte gebracht van uw reservering.</p>
+        <p>Bedankt voor uw akkoord op het programmavoorstel. Wij hebben uw akkoord goed ontvangen.</p>
         
         <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #22c55e;">
           <h3 style="margin-top: 0; color: #166534;">✓ Wat gebeurt er nu?</h3>
           <ul style="margin-bottom: 0; padding-left: 20px;">
-            <li>De leveranciers controleren hun beschikbaarheid</li>
-            <li>U ontvangt per activiteit een bevestiging in uw portaal</li>
+            <li>Bureau Vlieland verwerkt uw akkoord intern</li>
+            <li>Daarna zetten wij de aanvragen uit naar de betrokken leveranciers</li>
+            <li>U ontvangt per activiteit een update in uw portaal</li>
             <li>Na alle bevestigingen vult u de factuurgegevens in</li>
             <li>Daarna is uw boeking compleet</li>
           </ul>
@@ -393,18 +393,138 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .neq("status", "done");
     console.log(`Resolved terms_reminder todo for program ${program.id}`);
 
-    // 5. Fetch items with skip_partner_notification = true AND not already approved individually
-    const { data: items, error: itemsError } = await supabase
+    if (!isAdmin) {
+      const approvedAt = new Date().toISOString();
+      const { data: approvedItems, error: approveItemsError } = await supabase
+        .from("program_request_items")
+        .update({
+          customer_approved_at: approvedAt,
+          updated_at: approvedAt,
+        })
+        .eq("request_id", program.id)
+        .eq("skip_partner_notification", true)
+        .is("customer_approved_at", null)
+        .neq("status", "cancelled")
+        .in("item_quote_status", ["in_afstemming", "bevestigd"])
+        .select("id");
+
+      if (approveItemsError) {
+        console.error("Error marking quote items as customer-approved:", approveItemsError);
+        throw approveItemsError;
+      }
+
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        action: "quote_accepted",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Klant heeft het voorstel geaccordeerd. ${approvedItems?.length || 0} onderdeel(en) wachten op verwerking door Bureau Vlieland.`,
+      });
+
+      const customerEmailHtml = generateCustomerConfirmationEmail(
+        program,
+        customerPortalUrl
+      );
+      const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
+
+      try {
+        const customerMailjetResponse = await sendEmailViaMailjet([
+          {
+            From: {
+              Email: "hallo@bureauvlieland.nl",
+              Name: "Bureau Vlieland",
+            },
+            To: [
+              {
+                Email: customerRecipientEmail,
+                Name: program.customer_name,
+              },
+            ],
+            Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+            HTMLPart: customerEmailHtml,
+          },
+        ]);
+
+        await logEmail({
+          email_type: "quote_accepted_customer",
+          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+          recipient_email: customerRecipientEmail,
+          recipient_name: program.customer_name,
+          related_request_id: program.id,
+          status: "sent",
+          mailjet_message_id:
+            customerMailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
+          sent_by: "system",
+          metadata: {
+            approved_item_count: approvedItems?.length || 0,
+            test_mode: testMode,
+          },
+        });
+
+        console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
+      } catch (customerEmailError) {
+        console.error("Error sending customer confirmation:", customerEmailError);
+        await logEmail({
+          email_type: "quote_accepted_customer",
+          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+          recipient_email: customerRecipientEmail,
+          recipient_name: program.customer_name,
+          related_request_id: program.id,
+          status: "failed",
+          error_message:
+            customerEmailError instanceof Error
+              ? customerEmailError.message
+              : "Unknown error",
+          sent_by: "system",
+        });
+      }
+
+      console.log(`Customer quote acceptance completed for ${program.reference_number}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Voorstel geaccepteerd",
+          partnersNotified: 0,
+          approvedItems: approvedItems?.length || 0,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 5. Fetch items ready to send to partners.
+    const { data: approvedItemsForPartners, error: approvedItemsError } = await supabase
       .from("program_request_items")
       .select("*")
       .eq("request_id", program.id)
       .eq("skip_partner_notification", true)
-      .is("customer_approved_at", null)
-      .neq("status", "cancelled");
+      .neq("status", "cancelled")
+      .not("customer_approved_at", "is", null);
 
-    if (itemsError) {
-      console.error("Error fetching items:", itemsError);
-      throw itemsError;
+    if (approvedItemsError) {
+      console.error("Error fetching approved items:", approvedItemsError);
+      throw approvedItemsError;
+    }
+
+    let items = approvedItemsForPartners || [];
+
+    if (items.length === 0) {
+      const { data: fallbackItems, error: fallbackItemsError } = await supabase
+        .from("program_request_items")
+        .select("*")
+        .eq("request_id", program.id)
+        .eq("skip_partner_notification", true)
+        .neq("status", "cancelled");
+
+      if (fallbackItemsError) {
+        console.error("Error fetching fallback items:", fallbackItemsError);
+        throw fallbackItemsError;
+      }
+
+      items = fallbackItems || [];
     }
 
     console.log(`Found ${items?.length || 0} items to notify partners about`);
@@ -546,68 +666,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? `Admin heeft ${partnerGroups.size} partner(s) genotificeerd over ${items?.length || 0} item(s).`
         : `Klant heeft voorstel geaccepteerd. ${partnerGroups.size} partner(s) genotificeerd.`,
     });
-
-    // 10. Send confirmation email to customer (only for customer-initiated acceptance)
-    if (!isAdmin) {
-      const customerEmailHtml = generateCustomerConfirmationEmail(
-        program,
-        partnerGroups.size,
-        customerPortalUrl
-      );
-      const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
-
-      try {
-        const customerMailjetResponse = await sendEmailViaMailjet([
-          {
-            From: {
-              Email: "hallo@bureauvlieland.nl",
-              Name: "Bureau Vlieland",
-            },
-            To: [
-              {
-                Email: customerRecipientEmail,
-                Name: program.customer_name,
-              },
-            ],
-            Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-            HTMLPart: customerEmailHtml,
-          },
-        ]);
-
-        await logEmail({
-          email_type: "quote_accepted_customer",
-          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          recipient_email: customerRecipientEmail,
-          recipient_name: program.customer_name,
-          related_request_id: program.id,
-          status: "sent",
-          mailjet_message_id:
-            customerMailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
-          sent_by: "system",
-          metadata: {
-            partner_count: partnerGroups.size,
-            test_mode: testMode,
-          },
-        });
-
-        console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
-      } catch (customerEmailError) {
-        console.error("Error sending customer confirmation:", customerEmailError);
-        await logEmail({
-          email_type: "quote_accepted_customer",
-          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          recipient_email: customerRecipientEmail,
-          recipient_name: program.customer_name,
-          related_request_id: program.id,
-          status: "failed",
-          error_message:
-            customerEmailError instanceof Error
-              ? customerEmailError.message
-              : "Unknown error",
-          sent_by: "system",
-        });
-      }
-    }
 
     console.log(`Quote acceptance completed for ${program.reference_number}`);
 

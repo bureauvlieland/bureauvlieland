@@ -118,14 +118,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
 
-    // Block customer-triggered partner notifications — only admins can send to partners
-    if (!admin_override) {
-      return new Response(
-        JSON.stringify({ error: "Alleen beheerders kunnen aanvragen naar partners versturen" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // 1. Fetch program by token
     const { data: program, error: programError } = await supabase
       .from("program_requests")
@@ -175,7 +167,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 5. Validate item state
-    if (item.item_quote_status !== "bevestigd") {
+    if (!["in_afstemming", "bevestigd"].includes(item.item_quote_status || "")) {
       return new Response(
         JSON.stringify({ error: "Dit onderdeel kan nog niet geaccordeerd worden" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -190,19 +182,71 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 6. Update the item
+    const approvalTimestamp = new Date().toISOString();
+    const updatePayload = admin_override
+      ? {
+          customer_approved_at: approvalTimestamp,
+          skip_partner_notification: false,
+          status: "pending",
+          status_updated_at: approvalTimestamp,
+          updated_at: approvalTimestamp,
+        }
+      : {
+          customer_approved_at: approvalTimestamp,
+          updated_at: approvalTimestamp,
+        };
+
     const { error: updateError } = await supabase
       .from("program_request_items")
-      .update({
-        customer_approved_at: new Date().toISOString(),
-        skip_partner_notification: false,
-        status: "pending",
-        status_updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", item_id);
 
     if (updateError) {
       console.error("Error updating item:", updateError);
       throw updateError;
+    }
+
+    if (!admin_override) {
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        item_id: item_id,
+        action: "item_approved",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Klant heeft \"${item.block_name}\" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
+      });
+
+      const { data: allItems } = await supabase
+        .from("program_request_items")
+        .select("id, item_quote_status, customer_approved_at")
+        .eq("request_id", program.id)
+        .neq("status", "cancelled");
+
+      const approvableItems = (allItems || []).filter((i: any) =>
+        ["in_afstemming", "bevestigd"].includes(i.item_quote_status)
+      );
+      const allApproved = approvableItems.length > 0 && approvableItems.every((i: any) => i.customer_approved_at);
+
+      if (allApproved && program.quote_status === "offerte_verstuurd") {
+        await supabase
+          .from("program_requests")
+          .update({
+            quote_status: "akkoord_ontvangen",
+            updated_at: approvalTimestamp,
+          })
+          .eq("id", program.id);
+
+        console.log("All quoted items approved — quote_status set to akkoord_ontvangen");
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Onderdeel geaccordeerd",
+          all_approved: allApproved,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // 7. Send partner notification
@@ -305,26 +349,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
       notes: `Klant heeft "${item.block_name}" goedgekeurd. Partner ${item.provider_name} is genotificeerd.`,
     });
 
-    // 9. Check if all bevestigde items are now approved → update quote_status
+    // 9. Check if all quoted items are now approved → update quote_status
     const { data: allItems } = await supabase
       .from("program_request_items")
       .select("id, item_quote_status, customer_approved_at")
       .eq("request_id", program.id)
       .neq("status", "cancelled");
 
-    const confirmedItems = (allItems || []).filter((i: any) => i.item_quote_status === "bevestigd");
-    const allApproved = confirmedItems.length > 0 && confirmedItems.every((i: any) => i.customer_approved_at);
+    const approvableItems = (allItems || []).filter((i: any) =>
+      ["in_afstemming", "bevestigd"].includes(i.item_quote_status)
+    );
+    const allApproved = approvableItems.length > 0 && approvableItems.every((i: any) => i.customer_approved_at);
 
     if (allApproved && program.quote_status === "offerte_verstuurd") {
       await supabase
         .from("program_requests")
         .update({
           quote_status: "akkoord_ontvangen",
-          updated_at: new Date().toISOString(),
+          updated_at: approvalTimestamp,
         })
         .eq("id", program.id);
 
-      console.log("All confirmed items approved — quote_status set to akkoord_ontvangen");
+      console.log("All quoted items approved — quote_status set to akkoord_ontvangen");
     }
 
     return new Response(

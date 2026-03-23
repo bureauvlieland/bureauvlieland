@@ -20,6 +20,7 @@ import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
+import { hasQuoteItemsAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
 import {
   Calendar,
   Settings,
@@ -154,9 +155,7 @@ export const DesktopProgramView = ({
 
   const isPublished = !!program.program_published_at;
   const isQuoteMode = program.program_type === "quote" || !!program.program_type?.startsWith("maatwerk_");
-  const hasUnapprovedItems = isQuoteMode && program.items.some(
-    (i) => i.item_quote_status === "bevestigd" && !i.customer_approved_at && i.status !== "cancelled"
-  );
+  const hasUnapprovedItems = isQuoteMode && hasQuoteItemsAwaitingCustomerApproval(program.items);
 
   const { getItemVatRate } = useItemVatRates(program.items);
   const {
