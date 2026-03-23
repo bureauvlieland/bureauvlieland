@@ -374,6 +374,27 @@ export default function AdminAccommodationDetail() {
     },
   });
 
+  // Withdraw pending quote
+  const withdrawQuoteMutation = useMutation({
+    mutationFn: async ({ quoteId, notifyPartner }: { quoteId: string; notifyPartner: boolean }) => {
+      const response = await supabase.functions.invoke("withdraw-accommodation-quote", {
+        body: { quoteId, notifyPartner },
+      });
+      if (response.error) throw new Error(response.error.message || "Fout bij intrekken");
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      setWithdrawQuoteId(null);
+      setWithdrawNotify(true);
+      toast({ title: "Offerteaanvraag ingetrokken" });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij intrekken", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Update guests mutation
   const updateGuestsMutation = useMutation({
     mutationFn: async ({ newGuests, selectedQuoteIds }: { newGuests: number; selectedQuoteIds: string[] }) => {
