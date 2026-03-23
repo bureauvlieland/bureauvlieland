@@ -1,36 +1,30 @@
 
 
-## Plan: Deelnemersaantal tonen in berekening op Facturatie-tab
+## Plan: Akkoord-knop alleen tonen bij bevestigde items
 
 ### Probleem
-De kostenspecificatie toont nu `€16,16 p.p. = €565,60` zonder te verduidelijken met hoeveel personen er gerekend is. Bij items met een afwijkend aantal (`override_people`) is dat extra verwarrend.
+In de quote-modus toont het portaal de "Akkoord"-knop bij items met `item_quote_status` "in_afstemming" óf "bevestigd". Maar een item met status "Aangevraagd" (partner nog niet bevestigd) toont dan dezelfde groene "Akkoord"-knop als een item met status "Bevestigd". De klant weet niet waar ze akkoord op geven — er is nog niks concreets bevestigd door de partner.
 
-### Aanpassing
+### Oplossing
 
-**`src/components/customer-portal/PriceSummaryCard.tsx`** — de prijsweergave per orderregel (regel ~278-288):
+**Optie: "Akkoord" pas tonen wanneer het item operationeel bevestigd is**
 
-Huidige weergave:
+In `src/lib/customerQuoteApproval.ts` — de functie `isQuoteItemAwaitingCustomerApproval`:
+
+- Voeg een extra check toe: het item moet operationeel status `confirmed` (of `alternative`) hebben, niet alleen een `item_quote_status` van "in_afstemming"/"bevestigd"
+- Items die nog "aangevraagd" zijn bij de partner krijgen dan geen "Akkoord"-knop meer
+
+```typescript
+// Huidige logica:
+return customerQuoteApprovalStatuses.includes(item.item_quote_status);
+
+// Nieuwe logica:
+const operationallyReady = item.status === "confirmed" || item.status === "alternative";
+return operationallyReady && customerQuoteApprovalStatuses.includes(item.item_quote_status);
 ```
-€16,16 p.p. = €565,60
-```
 
-Nieuwe weergave:
-```
-€16,16 p.p. × 35 = €565,60
-```
+Dit zorgt ervoor dat de klant alleen "Akkoord" kan geven op items die daadwerkelijk bevestigd zijn door de partner, wat de verwarring wegneemt.
 
-En bij afwijkend aantal (override_people):
-```
-€32,50 p.p. × 25 = €812,50
-```
-
-Dit maakt de berekening volledig transparant. De `ppMultiplier` waarde (= `item.override_people ?? numberOfPeople`) wordt al berekend in de `orderLines` mapping — ik voeg die waarde toe aan het return-object en toon die in de prijskolom.
-
-### Technische wijziging
-
-1. In de `orderLines.map()` (regel 78-98): voeg `peopleCount: ppMultiplier` toe aan het return-object
-2. In de render (regel 280-282): wijzig van `€{unitPrice} p.p. = €{effectivePrice}` naar `€{unitPrice} p.p. × {peopleCount} = €{effectivePrice}`
-3. Voor `per_person_per_day` items: toon ook de dagvermenigvuldiging: `€{unitPrice} p.p. × {peopleCount} × {days} dgn = €{effectivePrice}`
-
-Eén bestand, minimale wijziging.
+### Eén bestand
+- `src/lib/customerQuoteApproval.ts` — extra statuscheck toevoegen
 
