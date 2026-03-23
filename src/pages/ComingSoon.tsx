@@ -34,9 +34,8 @@ const ComingSoon = () => {
           <h1 className="text-3xl md:text-4xl font-bold mb-6">Binnenkort Beschikbaar</h1>
           
           <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
-            We werken hard aan ons nieuwe platform. Binnenkort kun je hier zelf 
-            je programma samenstellen en boeken. Neem gerust contact met ons op 
-            voor meer informatie.
+            Deze functie is momenteel niet beschikbaar. Neem gerust contact met 
+            ons op als u vragen heeft — wij helpen u graag verder.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

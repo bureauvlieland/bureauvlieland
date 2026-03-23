@@ -7,8 +7,8 @@ const getRedirectDestination = (pathname: string): string | null => {
   const path = pathname.toLowerCase().replace(/\/$/, ''); // normalize: lowercase, remove trailing slash
   
   // Contact pages
-  if (path === '/contact') return '/#contact';
-  if (path === '/offerteformulier') return '/#contact';
+  if (path === '/contact') return '/contact';
+  if (path === '/offerteformulier') return '/contact';
   
   // Voorbeeldprogrammas & diensten
   if (path === '/voorbeeldprogrammas') return '/bouwstenen';
@@ -33,13 +33,13 @@ const getRedirectDestination = (pathname: string): string | null => {
   if (path === '/vergaderen-op-vlieland-2') return '/heisessie-vlieland';
   if (path === '/teambuilding-op-vlieland') return '/teamuitje-vlieland';
   if (path === '/trouwen-op-vlieland-2') return '/trouwen-op-vlieland';
-  if (path === '/schoolreis-naar-vlieland') return '/#voor-wie';
+  if (path === '/schoolreis-naar-vlieland') return '/voor-wie';
   
   // Team/Over ons
-  if (path === '/team') return '/#over-erwin';
+  if (path === '/team') return '/over-ons';
   
   // Testimonials
-  if (path === '/klanten-aan-het-woord') return '/#testimonials';
+  if (path === '/klanten-aan-het-woord') return '/over-ons';
   
   // Algemene voorwaarden - has its own page
   if (path === '/algemene-voorwaarden') return '/algemene-voorwaarden';
