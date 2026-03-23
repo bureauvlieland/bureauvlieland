@@ -84,7 +84,7 @@ export const ApplyTemplateDialog = ({
         .filter((r) => r !== null);
 
       // Enrich provider names from partners table
-      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau-vlieland"))];
+      const partnerIds = [...new Set(rowsToInsert.map((r) => r.provider_id).filter((id) => id !== "bureau"))];
       if (partnerIds.length > 0) {
         const { data: partners } = await supabase
           .from("partners")
