@@ -64,6 +64,7 @@ interface ProgramItem {
   admin_price_notes: string | null;
   quoted_price: number | null;
   price_type: string | null;
+  override_people: number | null;
   image_url: string | null;
   image_asset: string | null;
 }
@@ -285,8 +286,9 @@ const AdminQuotePreview = () => {
   const getItemTotal = (item: ProgramItem) => {
     if (item.quoted_price != null) return item.quoted_price;
     const unit = item.admin_price_override ?? 0;
+    const effectivePeople = item.override_people ?? request?.number_of_people ?? 1;
     const mult = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request")
-      ? (request?.number_of_people || 1) : 1;
+      ? effectivePeople : 1;
     return unit * mult;
   };
 

@@ -81,7 +81,7 @@ export const PriceSummaryCard = ({
 
       // quoted_price = group total (never multiply)
       // admin_price_override = unit price (multiply for per_person)
-      const ppMultiplier = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day") ? numberOfPeople : 1;
+      const ppMultiplier = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day") ? (item.override_people ?? numberOfPeople) : 1;
       const dayMultiplier = item.price_type === "per_person_per_day" ? numberOfDays : 1;
 
       let effectivePrice: number | null = null;
@@ -89,7 +89,7 @@ export const PriceSummaryCard = ({
 
       if (hasQuotedPrice) {
         effectivePrice = item.quoted_price!;
-        unitPrice = ppMultiplier > 1 ? item.quoted_price! / numberOfPeople : item.quoted_price!;
+        unitPrice = ppMultiplier > 1 ? item.quoted_price! / (item.override_people ?? numberOfPeople) : item.quoted_price!;
       } else if (isPreliminary) {
         unitPrice = item.admin_price_override!;
         effectivePrice = unitPrice * ppMultiplier * dayMultiplier;
@@ -270,6 +270,9 @@ export const PriceSummaryCard = ({
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm">
                     {item.block_name}
+                    {item.override_people != null && item.override_people !== numberOfPeople && (
+                      <span className="text-muted-foreground text-xs ml-1">({item.override_people} deelnemers)</span>
+                    )}
                     {isPreliminary && <span className="text-muted-foreground text-xs ml-1">(voorlopig)</span>}
                   </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">

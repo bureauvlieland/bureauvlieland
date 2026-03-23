@@ -5,8 +5,17 @@
  * KEY RULE:
  * - `quoted_price` = always the TOTAL for the whole group (never multiply)
  * - `admin_price_override` = unit price, multiply by numberOfPeople when price_type is per_person/on_request
+ * - `override_people` on item = use instead of program-wide numberOfPeople when set
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
+
+/** Get the effective number of people for an item (override or program total) */
+export function getEffectivePeople(
+  item: { override_people?: number | null },
+  programPeople: number,
+): number {
+  return item.override_people ?? programPeople;
+}
 
 /** Whether this item should be multiplied by number of people */
 export function isPerPersonItem(item: { price_type?: string | null }): boolean {
@@ -27,10 +36,11 @@ export function getItemUnitPrice(
   item: ProgramRequestItem,
   numberOfPeople: number,
 ): number | null {
+  const effectivePeople = getEffectivePeople(item, numberOfPeople);
   if (item.quoted_price != null) {
     // quoted_price is already a group total; derive unit price
-    return isPerPersonItem(item) && numberOfPeople > 0
-      ? item.quoted_price / numberOfPeople
+    return isPerPersonItem(item) && effectivePeople > 0
+      ? item.quoted_price / effectivePeople
       : item.quoted_price;
   }
   if (item.admin_price_override != null) {
@@ -42,7 +52,7 @@ export function getItemUnitPrice(
 /**
  * Calculate the effective GROUP total for a single program item.
  * - quoted_price → use directly (it IS the group total)
- * - admin_price_override → multiply by numberOfPeople when per_person
+ * - admin_price_override → multiply by effectivePeople when per_person
  */
 export function getItemLineTotal(
   item: ProgramRequestItem,
@@ -53,7 +63,8 @@ export function getItemLineTotal(
     return item.quoted_price;
   }
   if (item.admin_price_override != null) {
-    const personMultiplier = isPerPersonItem(item) ? numberOfPeople : 1;
+    const effectivePeople = getEffectivePeople(item, numberOfPeople);
+    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
     const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
     return item.admin_price_override * personMultiplier * dayMultiplier;
   }

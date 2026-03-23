@@ -275,6 +275,8 @@ export interface ProgramRequestItem {
   price_type: string | null;
   // External URL for self-arranged items
   external_url: string | null;
+  // Per-item participant override (null = use program total)
+  override_people: number | null;
   // Location fields
   location_lat?: number | null;
   location_lng?: number | null;

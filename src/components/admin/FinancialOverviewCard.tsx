@@ -23,6 +23,7 @@ interface FinancialItem {
   item_quote_status?: string | null;
   day_index: number;
   price_type?: string | null;
+  override_people?: number | null;
 }
 
 interface FinancialOverviewCardProps {

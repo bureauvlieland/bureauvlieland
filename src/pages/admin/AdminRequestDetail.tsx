@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
@@ -172,6 +173,10 @@ interface ProgramRequestItem {
   price_type: string | null;
   // Partner notification flag
   skip_partner_notification: boolean | null;
+  // Customer approval
+  customer_approved_at: string | null;
+  // Per-item participant override
+  override_people: number | null;
   // Calendar export fields
   confirmed_time: string | null;
   proposed_time: string | null;
@@ -1210,6 +1215,7 @@ const AdminRequestDetail = () => {
                           {isQuoteMode ? (
                             <>
                               <TableHead>Offerte-status</TableHead>
+                              <TableHead>Deelnemers</TableHead>
                               <TableHead>Prijs (aanpasbaar)</TableHead>
                               <TableHead className="w-[80px]"></TableHead>
                             </>
@@ -1275,11 +1281,39 @@ const AdminRequestDetail = () => {
                                     />
                                   </TableCell>
                                   <TableCell>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      className={cn(
+                                        "w-16 h-8 text-sm text-center rounded border bg-background px-1",
+                                        item.override_people != null && item.override_people !== request.number_of_people
+                                          ? "border-orange-400 text-orange-700 font-medium"
+                                          : "border-input"
+                                      )}
+                                      placeholder={String(request.number_of_people)}
+                                      defaultValue={item.override_people ?? ""}
+                                      onBlur={async (e) => {
+                                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                                        if (val === item.override_people) return;
+                                        const { error } = await supabase
+                                          .from("program_request_items")
+                                          .update({ override_people: val })
+                                          .eq("id", item.id);
+                                        if (error) {
+                                          toast.error("Fout bij opslaan deelnemers");
+                                        } else {
+                                          toast.success("Deelnemers bijgewerkt");
+                                          fetchRequestData();
+                                        }
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
                                     <AdminQuotePriceEditor
                                       originalPrice={item.quoted_price}
                                       overridePrice={item.admin_price_override}
                                       priceNotes={item.admin_price_notes}
-                                      numberOfPeople={request.number_of_people}
+                                      numberOfPeople={item.override_people ?? request.number_of_people}
                                       priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
                                       onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                     />
