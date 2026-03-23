@@ -65,18 +65,18 @@ const Diensten = () => {
         <section className="py-16 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-center">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Weet je al wat je wilt?
+              Weet u al wat u wilt?
             </h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
-              Stel direct je programma samen uit onze bouwstenen. Liever persoonlijk advies? Vraag een maatwerkofferte aan.
+              Stel direct uw programma samen uit onze bouwstenen. Liever persoonlijk advies? Vraag een maatwerkofferte aan.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/programma-samenstellen">
                 <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                  Stel je programma samen
+                  Stel uw programma samen
                 </Button>
               </Link>
-              <Link to="/programma-samenstellen">
+              <Link to="/programma-samenstellen?mode=maatwerk">
                 <Button size="lg" variant="heroOutline">
                   Liever maatwerk?
                 </Button>

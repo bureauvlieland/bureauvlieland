@@ -11,7 +11,9 @@ export const GlobalCartDrawer = () => {
   const isOnPortalPage = location.pathname.startsWith("/partner") || 
                          location.pathname.startsWith("/admin") || 
                          location.pathname.startsWith("/programma/") ||
-                         location.pathname.startsWith("/mijn-programma/");
+                         location.pathname.startsWith("/mijn-programma/") ||
+                         location.pathname === "/logies-aanvragen" ||
+                         location.pathname === "/activiteiten-boeken";
 
   if (isOnPortalPage || !cart) {
     return null;
