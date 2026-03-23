@@ -86,13 +86,14 @@ const AdminDashboardContent = () => {
         ]);
 
         const activeRequests = requests?.filter(r => r.status === "active") || [];
-        const pendingItems = items?.filter(i => i.status === "pending" && !i.skip_partner_notification) || [];
-        const confirmedItems = items?.filter(i => i.status === "confirmed") || [];
+        const activeRequestIds = new Set(activeRequests.map(r => r.id));
+        const pendingItems = items?.filter(i => i.status === "pending" && !i.skip_partner_notification && activeRequestIds.has(i.request_id)) || [];
+        const confirmedItems = items?.filter(i => i.status === "confirmed" && activeRequestIds.has(i.request_id)) || [];
         const activePartners = partners?.filter(p => p.is_active) || [];
         const pendingAccommodation = accommodationRequests?.filter(r =>
-          r.status === "submitted" || r.status === "processing"
+          r.status === "processing" || r.status === "pending"
         ) || [];
-        const quotedAccommodation = accommodationRequests?.filter(r => r.status === "quoted") || [];
+        const quotedAccommodation = accommodationRequests?.filter(r => r.status === "accepted") || [];
 
         const recentRequests = (requests || [])
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -163,7 +164,7 @@ const AdminDashboardContent = () => {
 
         <StatChip label="Logies totaal" value={stats?.totalAccommodationRequests ?? 0} to="/admin/logies" color="text-indigo-600" />
         <StatChip label="Te verwerken" value={stats?.pendingAccommodationRequests ?? 0} to="/admin/logies" color="text-amber-600" />
-        <StatChip label="Offertes verstuurd" value={stats?.quotedAccommodationRequests ?? 0} to="/admin/logies" color="text-purple-600" />
+        <StatChip label="Geaccepteerd" value={stats?.quotedAccommodationRequests ?? 0} to="/admin/logies" color="text-purple-600" />
       </div>
 
       {/* 2-column main layout: feed (2/3) + sidebar (1/3) */}

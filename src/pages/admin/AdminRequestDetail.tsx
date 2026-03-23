@@ -81,7 +81,7 @@ import {
   type QuoteStatus,
   type ItemQuoteStatus,
 } from "@/types/programRequest";
-import { getQuoteItemSendPhase, countReadyToSend, countWaitingForCustomer } from "@/lib/quoteItemSendStatus";
+import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
@@ -236,6 +236,11 @@ const AdminRequestDetail = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [editingTimeItemId, setEditingTimeItemId] = useState<string | null>(null);
   const [editingTimeValue, setEditingTimeValue] = useState("");
+  const [sendPreview, setSendPreview] = useState<{
+    partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
+    bureauItemsList: { id: string; block_name: string }[];
+  } | null>(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
@@ -555,26 +560,38 @@ const AdminRequestDetail = () => {
     }
   };
 
-  const pendingPartnerItems = items.filter(
-    (item) => item.status !== "cancelled" && item.skip_partner_notification === true
-  );
-  const readyToSendCount = countReadyToSend(items, request);
-  const waitingForCustomerCount = countWaitingForCustomer(items, request);
+  const itemCounts = getItemSendCounts(items, request);
+  const readyToSendCount = itemCounts.readyForPartner;
+  const waitingForCustomerCount = itemCounts.waitingForCustomer;
+  const bureauInternCount = itemCounts.bureauIntern;
 
-  const handleSendToPartners = async () => {
+  const handlePreviewSendToPartners = async () => {
+    if (!request) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
+        body: { request_id: request.id, origin: window.location.origin, dry_run: true },
+      });
+      if (error) throw error;
+      setSendPreview(data);
+      setSendDialogOpen(true);
+    } catch (error) {
+      console.error("Error previewing send:", error);
+      toast.error("Fout bij ophalen verzendoverzicht");
+    }
+  };
+
+  const handleConfirmSendToPartners = async () => {
     if (!request) return;
     setIsSendingToPartners(true);
     try {
-      const { error } = await supabase.functions.invoke("accept-quote-proposal", {
-        body: {
-          request_id: request.id,
-          admin_override: true,
-          origin: window.location.origin,
-        },
+      const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
+        body: { request_id: request.id, origin: window.location.origin },
       });
       if (error) throw error;
 
-      toast.success(`${pendingPartnerItems.length} onderde${pendingPartnerItems.length === 1 ? "el" : "len"} naar partners verstuurd`);
+      setSendDialogOpen(false);
+      setSendPreview(null);
+      toast.success(data?.message || "Items naar partners verstuurd");
       fetchRequestData();
     } catch (error) {
       console.error("Error sending to partners:", error);
@@ -1028,18 +1045,38 @@ const AdminRequestDetail = () => {
                         {readyToSendCount} {readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen
                       </p>
                       <p className="text-sm text-amber-700">
-                        Klant heeft akkoord gegeven. Verstuur wanneer gereed.
+                        Verstuur wanneer gereed.
+                        {bureauInternCount > 0 && ` ${bureauInternCount} bureau-item(s) worden intern afgehandeld.`}
                       </p>
                     </div>
                   </div>
                   <Button
-                    onClick={handleSendToPartners}
+                    onClick={handlePreviewSendToPartners}
                     disabled={isSendingToPartners}
                     className="shrink-0"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    {isSendingToPartners ? "Versturen..." : "Verstuur naar partners"}
+                    Bekijk &amp; verstuur
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bureau items only — no partner items to send */}
+          {readyToSendCount === 0 && bureauInternCount > 0 && waitingForCustomerCount === 0 && (
+            <Card className="border-slate-300 bg-slate-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-5 w-5 text-slate-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {bureauInternCount} bureau-item(s) worden intern afgehandeld
+                    </p>
+                    <p className="text-sm text-slate-700">
+                      Alle resterende onderdelen zijn interne bureau-items. Er hoeven geen externe partners genotificeerd te worden.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1449,11 +1486,12 @@ const AdminRequestDetail = () => {
                                     <div className="flex items-center gap-2">
                                       {statusIcons[item.status]}
                                       <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                        {(() => {
+                                      {(() => {
                                           if (item.skip_partner_notification) {
-                                            const phase = getQuoteItemSendPhase(item, request);
+                                            const phase = getItemSendPhase(item, request);
                                             if (phase === "wacht_op_klant") return "Wacht op klant";
-                                            if (phase === "klaar_om_te_sturen") return "Klaar om te versturen";
+                                            if (phase === "klaar_voor_partner") return "Klaar om te versturen";
+                                            if (phase === "bureau_intern") return "Bureau intern";
                                           }
                                           return statusInfo.label;
                                         })()}
@@ -1865,6 +1903,69 @@ const AdminRequestDetail = () => {
           invoicingMode={request.invoicing_mode}
         />
       )}
+      {/* Send to partners review dialog */}
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Verstuur naar partners</DialogTitle>
+            <DialogDescription>
+              Controleer welke partners een notificatie ontvangen.
+            </DialogDescription>
+          </DialogHeader>
+          {sendPreview && (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {sendPreview.partners.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Send className="h-4 w-4" />
+                    Partners die bericht krijgen ({sendPreview.partners.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {sendPreview.partners.map((partner) => (
+                      <div key={partner.partnerId} className="border rounded-lg p-3">
+                        <p className="font-medium text-sm">{partner.partnerName}</p>
+                        <ul className="mt-1 space-y-0.5">
+                          {partner.items.map((item) => (
+                            <li key={item.id} className="text-xs text-muted-foreground">• {item.block_name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sendPreview.bureauItemsList.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Bureau-items (intern, geen notificatie)
+                  </h4>
+                  <ul className="space-y-0.5">
+                    {sendPreview.bureauItemsList.map((item) => (
+                      <li key={item.id} className="text-xs text-muted-foreground">• {item.block_name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {sendPreview.partners.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Geen partner-items om te versturen. Alle resterende items zijn bureau-items.
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Annuleren</Button>
+            <Button
+              onClick={handleConfirmSendToPartners}
+              disabled={isSendingToPartners || !sendPreview?.partners.length}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {isSendingToPartners ? "Versturen..." : `Verstuur naar ${sendPreview?.partners.length || 0} partner(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
