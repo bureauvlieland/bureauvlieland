@@ -281,7 +281,7 @@ const LogiesVlieland = () => {
                 variant="heroOutline"
                 className="text-lg px-8"
               >
-                <Link to="/programma-samenstellen">Liever maatwerk?</Link>
+                <Link to="/programma-samenstellen?mode=maatwerk">Liever maatwerk?</Link>
               </Button>
             </div>
           </div>

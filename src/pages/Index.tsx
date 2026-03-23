@@ -176,7 +176,7 @@ const Index = () => {
                     Stel uw programma samen
                   </Button>
                 </Link>
-                <Link to="/programma-samenstellen">
+                <Link to="/programma-samenstellen?mode=maatwerk">
                   <Button size="lg" variant="outline">
                     Liever maatwerk?
                   </Button>
