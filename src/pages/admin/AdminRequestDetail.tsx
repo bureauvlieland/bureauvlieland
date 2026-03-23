@@ -1280,6 +1280,34 @@ const AdminRequestDetail = () => {
                                     />
                                   </TableCell>
                                   <TableCell>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      className={cn(
+                                        "w-16 h-8 text-sm text-center rounded border bg-background px-1",
+                                        item.override_people != null && item.override_people !== request.number_of_people
+                                          ? "border-orange-400 text-orange-700 font-medium"
+                                          : "border-input"
+                                      )}
+                                      placeholder={String(request.number_of_people)}
+                                      defaultValue={item.override_people ?? ""}
+                                      onBlur={async (e) => {
+                                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                                        if (val === item.override_people) return;
+                                        const { error } = await supabase
+                                          .from("program_request_items")
+                                          .update({ override_people: val })
+                                          .eq("id", item.id);
+                                        if (error) {
+                                          toast.error("Fout bij opslaan deelnemers");
+                                        } else {
+                                          toast.success("Deelnemers bijgewerkt");
+                                          fetchRequestData();
+                                        }
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
                                     <AdminQuotePriceEditor
                                       originalPrice={item.quoted_price}
                                       overridePrice={item.admin_price_override}
