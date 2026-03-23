@@ -103,6 +103,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   rejected: { label: "Afgewezen", variant: "destructive" },
   declined: { label: "Afgewezen door partner", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
+  withdrawn: { label: "Ingetrokken", variant: "outline" },
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
