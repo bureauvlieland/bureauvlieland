@@ -113,7 +113,7 @@ import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy } from "lucide-react";
+import { Copy, RefreshCw } from "lucide-react";
 
 interface ProgramRequest {
   id: string;
