@@ -1,25 +1,28 @@
 
 
-## Plan: Reply-To domein updaten naar reply.bureauvlieland.nl
+## Plan: Partner-notificatie bij gastenaantal-wijziging + communicatielog compleet maken
 
-### Probleem
-Alle Reply-To adressen gebruiken `@bureauvlieland.nl`, maar Mailjet Parse API draait op het subdomein `reply.bureauvlieland.nl`. Hierdoor matchen de Reply-To adressen niet met de MX-records en komen antwoorden niet binnen.
+### Probleem 1: Geen e-mail naar partner bij wijziging gastenaantal
+De `updateGuestsMutation` in `AdminAccommodationDetail.tsx` reset offertes naar "pending" en logt een history-event, maar stuurt **geen e-mail** naar de geselecteerde partners. Partners weten dus niet dat ze opnieuw moeten offreren.
 
-### Wijzigingen
+### Probleem 2: Communicatielog op logiespagina mist programma-gerelateerde mails
+De `ProjectCommunicationsCard` op de logies-detailpagina krijgt alleen `accommodationId` mee, niet `requestId`. Mails die in `email_log` zijn gelogd met alleen `related_request_id` (bv. klantbevestigingen, programma-emails) verschijnen daardoor niet in het communicatiedossier van de logiespagina.
 
-**3 bestanden, zelfde wijziging: `@bureauvlieland.nl` → `@reply.bureauvlieland.nl`**
+### Oplossing
 
-1. **`supabase/functions/_shared/email-templates.ts`** (regel 284)
-   - `buildReplyTo()`: `reply+${ref}@bureauvlieland.nl` → `reply+${ref}@reply.bureauvlieland.nl`
+**1. `src/pages/admin/AdminAccommodationDetail.tsx` — partner-notificatie toevoegen**
 
-2. **`supabase/functions/send-customer-accommodation-message/index.ts`** (regel 143)
-   - Hardcoded Reply-To: zelfde wijziging
+Na het resetten van de offertes, voor elke geselecteerde partner de bestaande edge function `send-accommodation-quote-request` aanroepen. Deze stuurt al een offerteaanvraag-email met de juiste template. Parameters:
+- `request_id`: accommodation request ID
+- `partner_ids`: alleen de partners van de geselecteerde quotes
+- `email_subject` en `email_body`: een aangepaste tekst die meldt dat het gastenaantal is gewijzigd en er een nieuwe offerte wordt gevraagd
 
-3. **`supabase/functions/inbound-email/index.ts`** (regel 12, 15)
-   - `extractReferenceNumber()` regex matcht al op `@` zonder domeincheck → geen wijziging nodig, maar comment updaten voor duidelijkheid
+Dit hergebruikt de bestaande infrastructure en logt automatisch in `email_log` met `related_accommodation_id`.
 
-Na wijziging: alle 3 edge functions redeployen.
+**2. `src/pages/admin/AdminAccommodationDetail.tsx` — `requestId` meegeven aan communicatielog**
 
-### Resultaat
-Partner drukt op "beantwoorden" → mail gaat naar `reply+BV-2503-0012@reply.bureauvlieland.nl` → Mailjet MX-records vangen dit op → Parse API stuurt door naar inbound-email edge function.
+Wijzig de `ProjectCommunicationsCard` aanroep (regel 909-913) om ook `requestId={linkedProgram?.id}` mee te geven. Hierdoor toont het communicatielog zowel logies-specifieke als programma-gerelateerde emails.
+
+### Bestanden
+1. `src/pages/admin/AdminAccommodationDetail.tsx` — edge function call na gastwijziging + requestId aan communicatiecard
 
