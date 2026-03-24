@@ -1,28 +1,32 @@
 
 
-## Plan: Partner-notificatie bij gastenaantal-wijziging + communicatielog compleet maken
+## Plan: Mail naar Zeezicht versturen + klantmelding verbeteren
 
-### Probleem 1: Geen e-mail naar partner bij wijziging gastenaantal
-De `updateGuestsMutation` in `AdminAccommodationDetail.tsx` reset offertes naar "pending" en logt een history-event, maar stuurt **geen e-mail** naar de geselecteerde partners. Partners weten dus niet dat ze opnieuw moeten offreren.
+### 1. Mail naar Zeezicht alsnog versturen
 
-### Probleem 2: Communicatielog op logiespagina mist programma-gerelateerde mails
-De `ProjectCommunicationsCard` op de logies-detailpagina krijgt alleen `accommodationId` mee, niet `requestId`. Mails die in `email_log` zijn gelogd met alleen `related_request_id` (bv. klantbevestigingen, programma-emails) verschijnen daardoor niet in het communicatiedossier van de logiespagina.
+De code voor het versturen is net toegevoegd, maar was nog niet actief toen je het gastenaantal wijzigde. Ik kan de edge function direct aanroepen om de mail alsnog te versturen naar Zeezicht met de juiste inhoud over de wijziging.
 
-### Oplossing
+**Actie**: `send-accommodation-quote-request` edge function aanroepen met:
+- De huidige accommodation request ID
+- Partner ID van Zeezicht
+- Onderwerp en body over de gastenaantalwijziging
 
-**1. `src/pages/admin/AdminAccommodationDetail.tsx` — partner-notificatie toevoegen**
+Hiervoor moet ik het request ID en partner ID ophalen uit de database.
 
-Na het resetten van de offertes, voor elke geselecteerde partner de bestaande edge function `send-accommodation-quote-request` aanroepen. Deze stuurt al een offerteaanvraag-email met de juiste template. Parameters:
-- `request_id`: accommodation request ID
-- `partner_ids`: alleen de partners van de geselecteerde quotes
-- `email_subject` en `email_body`: een aangepaste tekst die meldt dat het gastenaantal is gewijzigd en er een nieuwe offerte wordt gevraagd
+### 2. Klantmelding contextueel maken
 
-Dit hergebruikt de bestaande infrastructure en logt automatisch in `email_log` met `related_accommodation_id`.
+**Probleem**: Na het resetten van de offerte ziet de klant weer dezelfde generieke banner "Wij verzamelen offertes voor u" — alsof het een nieuwe aanvraag is. De klant (Milou) heeft al een offerte gekozen en weet niet waarom die weg is.
 
-**2. `src/pages/admin/AdminAccommodationDetail.tsx` — `requestId` meegeven aan communicatielog**
+**Oplossing**: `AccommodationStatusBanner.tsx` uitbreiden met een "heraanvraag" status die verschijnt wanneer er eerder een offerte was geselecteerd maar nu is gereset.
 
-Wijzig de `ProjectCommunicationsCard` aanroep (regel 909-913) om ook `requestId={linkedProgram?.id}` mee te geven. Hierdoor toont het communicatielog zowel logies-specifieke als programma-gerelateerde emails.
+Detectie: als er een quote bestaat met `status = "pending"` die eerder `"selected"` was (te herkennen aan `selected_at` datum die gevuld is, of via `program_request_history` met `action = "people_changed"`).
+
+Eenvoudiger: check of `request.status === "processing"` en er een history-event `people_changed` bestaat. Of — het simpelst — kijk of er quotes met `submitted_at` in het verleden zijn die nu `status = "pending"` hebben (= ze waren eerder ingediend, nu gereset).
+
+**Nieuwe banner-variant** (amber, maar met andere tekst):
+> "Het aantal gasten is gewijzigd. Bureau Vlieland heeft de accommodatie gevraagd om een aangepaste offerte in te dienen. U ontvangt bericht zodra deze binnen is."
 
 ### Bestanden
-1. `src/pages/admin/AdminAccommodationDetail.tsx` — edge function call na gastwijziging + requestId aan communicatiecard
+1. Edge function call (via tooling) — mail naar Zeezicht versturen
+2. `src/components/accommodation-portal/AccommodationStatusBanner.tsx` — contextuele melding bij herofferte
 
