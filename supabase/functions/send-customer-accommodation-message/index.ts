@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
 
     const senderLabel = isCentralBilling ? "Bureau Vlieland" : sanitizeHtml(programRequest.customer_name);
     const replyToEmail = programRequest.reference_number
-      ? `reply+${programRequest.reference_number}@bureauvlieland.nl`
+      ? `reply+${programRequest.reference_number}@reply.bureauvlieland.nl`
       : (isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email);
     const replyToName = isCentralBilling ? "Bureau Vlieland" : programRequest.customer_name;
     const replyInfo = isCentralBilling ? "Bureau Vlieland" : "de klant";
