@@ -110,7 +110,7 @@ export const StatusSummary = ({
                     ? `Alternatief bekijken (${confirmed}/${total})`
                     : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
               }
-              color={activitiesConfirmed ? "green" : isPreApproval ? "muted" : "amber"}
+              color={activitiesConfirmed ? "green" : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "muted" : "amber"}
             />
           </div>
 
