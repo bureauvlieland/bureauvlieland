@@ -1528,7 +1528,7 @@ const AdminRequestDetail = () => {
                                             const phase = getItemSendPhase(item, request);
                                             if (phase === "wacht_op_klant") return "Wacht op klant";
                                             if (phase === "klaar_voor_partner") return "Klaar om te versturen";
-                                            if (phase === "bureau_intern") return "Bureau intern";
+                                            
                                           }
                                           return statusInfo.label;
                                         })()}
