@@ -96,7 +96,7 @@ export const StatusSummary = ({
             <StatusItem
               icon={activitiesConfirmed 
                 ? <CheckCircle className="h-4 w-4 text-green-600" />
-                : isPreApproval
+                : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus))
                   ? <Clock className="h-4 w-4 text-muted-foreground" />
                   : alternative > 0 
                     ? <AlertCircle className="h-4 w-4 text-amber-500" />
