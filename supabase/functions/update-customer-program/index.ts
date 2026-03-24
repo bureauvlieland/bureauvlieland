@@ -72,6 +72,7 @@ interface ProgramRequestItem {
   status: string;
   status_note: string | null;
   version: number;
+  override_people: number | null;
 }
 
 const sendEmailViaMailjet = async (messages: any[]) => {
