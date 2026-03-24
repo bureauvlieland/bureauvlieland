@@ -1873,6 +1873,16 @@ const AdminRequestDetail = () => {
         />
       )}
 
+      {/* Sync building blocks dialog */}
+      {request && (
+        <SyncBuildingBlocksDialog
+          open={syncBlocksOpen}
+          onOpenChange={setSyncBlocksOpen}
+          requestId={request.id}
+          onSuccess={fetchRequestData}
+        />
+      )}
+
       {/* Copy from program dialog */}
       {request && (
         <CopyFromProgramDialog
