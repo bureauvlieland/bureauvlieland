@@ -402,8 +402,9 @@ export const MobileProgramView = ({
                         allItems={program.items}
                         hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                         invoicingMode={invoicingMode}
-                        isPreApproval={isPreApproval}
-                        isQuoteMode={isQuoteMode}
+                         isPreApproval={isPreApproval}
+                         quoteStatus={program.quote_status}
+                         isQuoteMode={isQuoteMode}
                         vatRate={getItemVatRate(item)}
                         readOnly={!isPublished}
                         hideDay
