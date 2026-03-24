@@ -17,6 +17,7 @@ interface StatusSummaryProps {
   termsAccepted?: boolean;
   isMultiDay?: boolean;
   isPreApproval?: boolean;
+  quoteStatus?: string | null;
 }
 
 export const StatusSummary = ({
