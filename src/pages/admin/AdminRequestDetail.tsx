@@ -113,7 +113,9 @@ import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon } from "lucide-react";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+
 
 interface ProgramRequest {
   id: string;
@@ -846,14 +848,49 @@ const AdminRequestDetail = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {request.quote_valid_until && (
-                      <div>
-                        <span className="text-muted-foreground">Geldig tot: </span>
-                        <span className="font-medium">
-                          {format(new Date(request.quote_valid_until), "d MMM yyyy", { locale: nl })}
-                        </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const validUntil = request.quote_valid_until ? new Date(request.quote_valid_until + "T00:00:00") : null;
+                      const isExpired = validUntil ? validUntil < new Date() : false;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Geldig tot: </span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm" className={cn("h-auto px-1.5 py-0.5 font-medium", isExpired && "text-destructive")}>
+                                <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                                {validUntil ? format(validUntil, "d MMM yyyy", { locale: nl }) : "Stel in"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <CalendarPicker
+                                mode="single"
+                                selected={validUntil || undefined}
+                                onSelect={async (date) => {
+                                  if (!date) return;
+                                  const dateStr = format(date, "yyyy-MM-dd");
+                                  const updates: Record<string, string> = { quote_valid_until: dateStr };
+                                  // If extending past today and status is verlopen, revert to offerte_verstuurd
+                                  if (date >= new Date() && request.quote_status === "verlopen") {
+                                    updates.quote_status = "offerte_verstuurd";
+                                  }
+                                  const { error } = await supabase.from("program_requests").update(updates).eq("id", request.id);
+                                  if (error) {
+                                    toast.error("Kon verloopdatum niet opslaan");
+                                  } else {
+                                    toast.success("Verloopdatum bijgewerkt");
+                                    fetchRequestData();
+                                  }
+                                }}
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          {isExpired && request.quote_status !== "verlopen" && request.quote_status !== "geannuleerd" && (
+                            <Badge variant="destructive" className="text-xs">Verlopen</Badge>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </CardContent>
