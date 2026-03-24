@@ -25,7 +25,7 @@ export const DashboardTodoWidget = () => {
     const { data, error } = await supabase
       .from("admin_todos")
       .select("id, title, priority, due_date, status, related_request_id")
-      .in("status", ["open", "in_progress"])
+      .in("status", ["todo", "in_progress"])
       .order("priority", { ascending: true })
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(5);
