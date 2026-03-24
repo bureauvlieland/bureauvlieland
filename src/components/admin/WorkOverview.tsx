@@ -17,7 +17,6 @@ import {
   Users,
   CalendarDays,
   ArrowRight,
-  Filter,
 } from "lucide-react";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
