@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, buildReplyTo, SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
+import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +12,6 @@ const corsHeaders = {
  * Extract reference number from a Reply-To address like reply+BV-2503-0012@bureauvlieland.nl
  */
 function extractReferenceNumber(toAddress: string): string | null {
-  // Match reply+REFERENCE@domain pattern
   const match = toAddress.match(/reply\+([A-Z]+-\d{4}-\d{4})@/i);
   return match ? match[1].toUpperCase() : null;
 }
@@ -36,7 +37,6 @@ function stripHtml(html: string): string {
 
 /**
  * Extract sender name from email "From" field
- * Handles formats like: "John Doe <john@example.com>" or just "john@example.com"
  */
 function parseSender(from: string): { name: string; email: string } {
   const match = from.match(/^"?([^"<]*)"?\s*<?([^>]+)>?$/);
@@ -49,13 +49,108 @@ function parseSender(from: string): { name: string; email: string } {
   return { name: from.trim(), email: from.trim() };
 }
 
+/**
+ * Send a notification email to the customer about the partner reply
+ */
+async function notifyCustomer(
+  supabase: ReturnType<typeof createClient>,
+  requestId: string,
+  referenceNumber: string,
+  contactName: string,
+  subject: string,
+  messageContent: string,
+) {
+  try {
+    // Fetch customer details from program_requests
+    const { data: pr } = await supabase
+      .from("program_requests")
+      .select("customer_email, customer_name, customer_company, customer_token")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (!pr?.customer_email) {
+      console.warn("No customer email found for notification");
+      return;
+    }
+
+    const portalUrl = `https://bureauvlieland.nl/klant/${pr.customer_token}`;
+    const customerDisplayName = pr.customer_company || pr.customer_name;
+
+    // Render template
+    const rendered = await getRenderedTemplate("inbound_reply_to_customer", {
+      customer_name: customerDisplayName,
+      partner_name: contactName,
+      reference_number: referenceNumber,
+      subject: subject || "Reactie op uw bericht",
+      message: messageContent.substring(0, 2000),
+      portal_url: portalUrl,
+    });
+
+    if (!rendered) {
+      console.error("Could not render inbound_reply_to_customer template");
+      return;
+    }
+
+    // Send via Mailjet
+    const MJ_APIKEY_PUBLIC = Deno.env.get("MAILJET_API_KEY");
+    const MJ_APIKEY_PRIVATE = Deno.env.get("MAILJET_SECRET_KEY");
+
+    if (!MJ_APIKEY_PUBLIC || !MJ_APIKEY_PRIVATE) {
+      console.error("Mailjet API keys not configured");
+      return;
+    }
+
+    const recipientEmail = getRecipientEmail(pr.customer_email);
+    const subjectPrefix = getSubjectPrefix();
+    const replyTo = buildReplyTo(referenceNumber);
+
+    const mailjetPayload = {
+      Messages: [
+        {
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          To: [{ Email: recipientEmail, Name: customerDisplayName }],
+          Subject: `${subjectPrefix}${rendered.subject}`,
+          HTMLPart: rendered.body,
+          ...(replyTo ? { ReplyTo: replyTo } : {}),
+        },
+      ],
+    };
+
+    const mjResponse = await fetch("https://api.mailjet.com/v3.1/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Basic " + btoa(`${MJ_APIKEY_PUBLIC}:${MJ_APIKEY_PRIVATE}`),
+      },
+      body: JSON.stringify(mailjetPayload),
+    });
+
+    const mjResult = await mjResponse.json();
+    const messageId = mjResult?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+
+    await logEmail({
+      email_type: "inbound_reply_to_customer",
+      subject: rendered.subject,
+      recipient_email: recipientEmail,
+      recipient_name: customerDisplayName,
+      related_request_id: requestId,
+      status: mjResponse.ok ? "sent" : "failed",
+      error_message: mjResponse.ok ? undefined : JSON.stringify(mjResult),
+      mailjet_message_id: messageId,
+      sent_by: "system",
+    });
+
+    console.log(`Customer notification sent to ${recipientEmail} for ${referenceNumber}`);
+  } catch (err) {
+    console.error("Error sending customer notification:", err);
+  }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only accept POST
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
@@ -65,7 +160,6 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Mailjet Parse API sends form-data or JSON depending on configuration
     const contentType = req.headers.get("content-type") || "";
     let sender = "";
     let recipient = "";
@@ -88,7 +182,6 @@ Deno.serve(async (req) => {
       textContent = formData.get("Text-part")?.toString() || formData.get("Text")?.toString() || "";
       htmlContent = formData.get("Html-part")?.toString() || formData.get("Html")?.toString() || "";
     } else {
-      // Try JSON as fallback
       try {
         const body = await req.json();
         sender = body.From || body.Sender || "";
@@ -107,11 +200,9 @@ Deno.serve(async (req) => {
 
     console.log(`Inbound email received — From: ${sender}, To: ${recipient}, Subject: ${subject}`);
 
-    // Extract reference number from recipient address
     const referenceNumber = extractReferenceNumber(recipient);
     if (!referenceNumber) {
       console.warn(`No valid reference number found in recipient: ${recipient}`);
-      // Still return 200 to prevent Mailjet retries
       return new Response(JSON.stringify({ status: "ignored", reason: "no_reference" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -120,13 +211,8 @@ Deno.serve(async (req) => {
 
     console.log(`Extracted reference: ${referenceNumber}`);
 
-    // Parse sender
     const { name: contactName, email: contactEmail } = parseSender(sender);
-
-    // Get message content (prefer text, fallback to stripped HTML)
     const content = textContent || stripHtml(htmlContent) || "(geen inhoud)";
-
-    // Truncate to prevent abuse (max 10000 chars)
     const truncatedContent = content.length > 10000 ? content.substring(0, 10000) + "\n\n[Bericht ingekort]" : content;
 
     // Look up the project by reference number
@@ -135,7 +221,6 @@ Deno.serve(async (req) => {
     let customerName: string | null = null;
 
     if (referenceNumber.startsWith("BV-")) {
-      // Program request
       const { data: pr } = await supabase
         .from("program_requests")
         .select("id, customer_name, customer_company")
@@ -147,7 +232,6 @@ Deno.serve(async (req) => {
         customerName = pr.customer_company || pr.customer_name;
       }
     } else if (referenceNumber.startsWith("LOG-")) {
-      // Accommodation request
       const { data: ar } = await supabase
         .from("accommodation_requests")
         .select("id, customer_name, customer_company, linked_program_id")
@@ -203,6 +287,18 @@ Deno.serve(async (req) => {
       auto_entity_id: referenceNumber,
     });
 
+    // Notify customer about the partner reply
+    if (requestId) {
+      await notifyCustomer(
+        supabase,
+        requestId,
+        referenceNumber,
+        contactName || contactEmail,
+        subject,
+        truncatedContent,
+      );
+    }
+
     console.log(`Inbound email saved for ${referenceNumber} — from ${contactEmail}`);
 
     return new Response(
@@ -211,7 +307,6 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in inbound-email:", error);
-    // Return 200 to prevent Mailjet retries on server errors
     return new Response(
       JSON.stringify({ status: "error", message: "Internal error" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
