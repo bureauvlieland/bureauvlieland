@@ -281,7 +281,7 @@ export const TemplateIds = {
 export function buildReplyTo(referenceNumber: string | null | undefined): { Email: string; Name: string } | undefined {
   if (!referenceNumber) return undefined;
   return {
-    Email: `reply+${referenceNumber}@bureauvlieland.nl`,
+    Email: `reply+${referenceNumber}@reply.bureauvlieland.nl`,
     Name: SENDER_NAME,
   };
 }

@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 /**
- * Extract reference number from a Reply-To address like reply+BV-2503-0012@bureauvlieland.nl
+ * Extract reference number from a Reply-To address like reply+BV-2503-0012@reply.bureauvlieland.nl
  */
 function extractReferenceNumber(toAddress: string): string | null {
   const match = toAddress.match(/reply\+([A-Z]+-\d{4}-\d{4})@/i);
