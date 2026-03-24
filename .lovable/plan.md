@@ -1,48 +1,37 @@
 
 
-## Plan: Override_people wijzigingen persisteren naar database
+## Plan: Override_people vergelijking normaliseren
 
 ### Probleem
-Wanneer een klant het aantal deelnemers per onderdeel wijzigt (`override_people`), wordt dit alleen in de React-state opgeslagen. Bij paginaverversing of navigatie gaat de wijziging verloren. Bovendien:
-- `getPendingChanges()` detecteert geen `override_people` wijzigingen (alleen tijd, dag, annulering)
-- `update-customer-program` edge function kent `override_people` niet
-- Partners worden dus niet geïnformeerd over het gewijzigde aantal
+Als een klant het deelnemersaantal wijzigt naar een waarde en het daarna terugzet naar het origineel, wordt het alsnog als wijziging gedetecteerd. Dit kan twee oorzaken hebben:
+- Klant typt het groepstotaal in (bv. 31) terwijl origineel `null` was → `31 !== null` = wijziging
+- Klant wist het veld, maar `null` vs `undefined` type-mismatch
 
 ### Oplossing
 
-**1. `src/hooks/useCustomerProgram.ts` — override_people als pending change detecteren**
+**`src/hooks/useCustomerProgram.ts` — getPendingChanges normalisatie**
 
-In `getPendingChanges()` een extra check toevoegen:
-```
-if (item.override_people !== original.override_people) {
-  changes.push({
-    type: "people_changed",
-    itemId: item.id,
-    itemName: item.block_name,
-    providerName: item.provider_name,
-    providerEmail: item.provider_email,
-    oldValue: original.override_people ? String(original.override_people) : "groepstotaal",
-    newValue: item.override_people ? String(item.override_people) : "groepstotaal",
-  });
+De vergelijking normaliseren zodat:
+1. `override_people` gelijk aan het groepstotaal (`number_of_people`) wordt behandeld als `null` (= geen override)
+2. `null` en `undefined` als gelijk worden behandeld
+
+```typescript
+// Normaliseer: als override === groepstotaal, behandel als null (geen override)
+const normalizeOverride = (val: number | null | undefined, groupTotal: number) => {
+  if (val == null || val === groupTotal) return null;
+  return val;
+};
+
+const normalizedCurrent = normalizeOverride(item.override_people, program.number_of_people);
+const normalizedOriginal = normalizeOverride(original.override_people, program.number_of_people);
+
+if (normalizedCurrent !== normalizedOriginal) {
+  // ... push change
 }
 ```
 
-**2. `supabase/functions/update-customer-program/index.ts` — override_people verwerken**
-
-- `PendingChange` interface uitbreiden met `type: "people_changed"`
-- Bij het verwerken van changes: als type `people_changed`, update `program_request_items.override_people` in de database
-- Optioneel: partner notificeren als het item al bij een partner is aangevraagd (status niet `concept`)
-
-**3. Edge function `ProgramRequestItem` interface uitbreiden**
-
-Het `override_people` veld toevoegen zodat de edge function de huidige items correct kan verwerken bij submit.
-
-### Resultaat
-- Klant wijzigt deelnemers → verschijnt in "Wijzigingen doorvoeren" overzicht
-- Na doorvoeren: opgeslagen in database, overleft paginaverversing
-- Partner wordt geïnformeerd als het item al was aangevraagd
+Dit voorkomt ook dat onnodige mails naar partners worden verstuurd.
 
 ### Bestanden
-1. `src/hooks/useCustomerProgram.ts` — people_changed detectie in getPendingChanges
-2. `supabase/functions/update-customer-program/index.ts` — people_changed afhandeling + override_people persisteren
+1. `src/hooks/useCustomerProgram.ts` — normalisatie in `getPendingChanges()`
 
