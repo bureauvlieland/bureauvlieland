@@ -124,7 +124,7 @@ export const CustomerProgramItem = ({
                     Goedgekeurd
                   </Badge>
                 ) : (
-                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : undefined} />} />
+                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : undefined} />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
