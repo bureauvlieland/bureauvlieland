@@ -170,8 +170,9 @@ const AdminDashboardContent = () => {
 
       {/* 2-column main layout: feed (2/3) + sidebar (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-        {/* Live activity feed — takes 2/3 */}
-        <div className="lg:col-span-2">
+        {/* Main content — takes 2/3 */}
+        <div className="lg:col-span-2 space-y-5">
+          <WorkOverview />
           <LiveActivityFeed />
         </div>
 

@@ -103,7 +103,7 @@ function getExecutionDate(selectedDates: unknown): Date | null {
   return sorted[0] || null;
 }
 
-function getPipelineBadge(quoteStatus: string | null, programType: string) {
+function getPipelineBadge(quoteStatus: string | null, _programType: string) {
   if (!quoteStatus) {
     return { label: "Actief", className: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" };
   }
