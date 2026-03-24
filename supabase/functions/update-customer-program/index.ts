@@ -1355,6 +1355,17 @@ Deno.serve(async (req) => {
               version: item.version + 1,
             })
             .eq("id", item.id);
+        } else if (change.type === "people_changed") {
+          // Persist override_people to database
+          const newOverride = change.newValue === "groepstotaal" ? null : parseInt(change.newValue || "0", 10);
+          await supabase
+            .from("program_request_items")
+            .update({
+              override_people: newOverride,
+              version: item.version + 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", item.id);
         } else {
           // For other changes, reset to pending and update fields
           await supabase
