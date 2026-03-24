@@ -108,6 +108,7 @@ import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
+import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
