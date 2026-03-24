@@ -123,6 +123,11 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
     );
   }
 
+  // Detect re-request: quotes exist with submitted_at but are now pending again
+  const isReRequest = useMemo(() => {
+    return quotes.some(q => q.status === 'pending' && q.submitted_at);
+  }, [quotes]);
+
   // Waiting for quotes
   return (
     <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
@@ -132,11 +137,23 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
             <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-amber-800 dark:text-amber-200">
-                Wij verzamelen offertes voor u
-              </h3>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                {(() => {
+              {isReRequest ? (
+                <>
+                  <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+                    Het aantal gasten is gewijzigd
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    Bureau Vlieland heeft de accommodatie gevraagd om een aangepaste offerte in te dienen.
+                    U ontvangt bericht zodra deze binnen is.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+                    Wij verzamelen offertes voor u
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    {(() => {
                   const parts: string[] = [];
                   if (requested > 0) {
                     parts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd.`);
