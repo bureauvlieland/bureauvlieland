@@ -1102,7 +1102,6 @@ const AdminRequestDetail = () => {
                       </p>
                       <p className="text-sm text-amber-700">
                         Verstuur wanneer gereed.
-                        {bureauInternCount > 0 && ` ${bureauInternCount} bureau-item(s) worden intern afgehandeld.`}
                       </p>
                     </div>
                   </div>
