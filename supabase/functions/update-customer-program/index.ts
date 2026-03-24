@@ -138,6 +138,7 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
   notes_changed: "Opmerking aangepast",
   removed: "Geannuleerd",
   added: "Toegevoegd",
+  people_changed: "Aantal deelnemers gewijzigd",
 };
 
 // Test mode configuration

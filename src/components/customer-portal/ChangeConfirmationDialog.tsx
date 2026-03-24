@@ -32,6 +32,7 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
   notes_changed: "opmerking aangepast",
   removed: "verwijderd",
   added: "toegevoegd",
+  people_changed: "aantal deelnemers gewijzigd",
 };
 
 export const ChangeConfirmationDialog = ({
