@@ -496,16 +496,24 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         });
       }
 
-      // Check for override_people changes
-      if (item.override_people !== original.override_people) {
+      // Check for override_people changes (normalize: null/undefined/groupTotal all mean "use group total")
+      const normalizeOverride = (val: number | null | undefined, groupTotal: number) => {
+        if (val == null || val === groupTotal) return null;
+        return val;
+      };
+      const groupTotal = program.number_of_people || 0;
+      const normalizedCurrent = normalizeOverride(item.override_people, groupTotal);
+      const normalizedOriginal = normalizeOverride(original.override_people, groupTotal);
+
+      if (normalizedCurrent !== normalizedOriginal) {
         changes.push({
           type: "people_changed",
           itemId: item.id,
           itemName: item.block_name,
           providerName: item.provider_name,
           providerEmail: item.provider_email || undefined,
-          oldValue: original.override_people ? String(original.override_people) : "groepstotaal",
-          newValue: item.override_people ? String(item.override_people) : "groepstotaal",
+          oldValue: normalizedOriginal ? String(normalizedOriginal) : "groepstotaal",
+          newValue: normalizedCurrent ? String(normalizedCurrent) : "groepstotaal",
         });
       }
 
