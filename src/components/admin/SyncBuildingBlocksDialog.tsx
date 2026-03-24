@@ -282,7 +282,7 @@ export function SyncBuildingBlocksDialog({
             </div>
 
             {/* Diffs list */}
-            <ScrollArea className="flex-1 min-h-0 max-h-[400px]">
+            <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
               <div className="space-y-3 pr-4">
                 {diffs.map(diff => {
                   const enabledKeys = new Set(fields.filter(f => f.enabled).map(f => f.key));
