@@ -428,8 +428,9 @@ export const DesktopProgramView = ({
                           allItems={program.items}
                           hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                           invoicingMode={invoicingMode}
-                          isPreApproval={isPreApproval}
-                          isQuoteMode={isQuoteMode}
+                           isPreApproval={isPreApproval}
+                           quoteStatus={program.quote_status}
+                           isQuoteMode={isQuoteMode}
                           vatRate={getItemVatRate(item)}
                           readOnly={!isPublished}
                           numberOfPeople={program.number_of_people}
