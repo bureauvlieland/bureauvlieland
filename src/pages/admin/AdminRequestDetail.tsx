@@ -230,6 +230,7 @@ const AdminRequestDetail = () => {
   const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
+  const [syncBlocksOpen, setSyncBlocksOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
