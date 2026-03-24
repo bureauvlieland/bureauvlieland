@@ -620,7 +620,6 @@ const AdminRequestDetail = () => {
   const itemCounts = getItemSendCounts(items, request);
   const readyToSendCount = itemCounts.readyForPartner;
   const waitingForCustomerCount = itemCounts.waitingForCustomer;
-  const bureauInternCount = itemCounts.bureauIntern;
 
   const handlePreviewSendToPartners = async () => {
     if (!request) return;
@@ -1103,7 +1102,6 @@ const AdminRequestDetail = () => {
                       </p>
                       <p className="text-sm text-amber-700">
                         Verstuur wanneer gereed.
-                        {bureauInternCount > 0 && ` ${bureauInternCount} bureau-item(s) worden intern afgehandeld.`}
                       </p>
                     </div>
                   </div>
@@ -1120,24 +1118,6 @@ const AdminRequestDetail = () => {
             </Card>
           )}
 
-          {/* Bureau items only — no partner items to send */}
-          {readyToSendCount === 0 && bureauInternCount > 0 && waitingForCustomerCount === 0 && (
-            <Card className="border-slate-300 bg-slate-50">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Building2 className="h-5 w-5 text-slate-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {bureauInternCount} bureau-item(s) worden intern afgehandeld
-                    </p>
-                    <p className="text-sm text-slate-700">
-                      Alle resterende onderdelen zijn interne bureau-items. Er hoeven geen externe partners genotificeerd te worden.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
 
 
@@ -1548,7 +1528,7 @@ const AdminRequestDetail = () => {
                                             const phase = getItemSendPhase(item, request);
                                             if (phase === "wacht_op_klant") return "Wacht op klant";
                                             if (phase === "klaar_voor_partner") return "Klaar om te versturen";
-                                            if (phase === "bureau_intern") return "Bureau intern";
+                                            
                                           }
                                           return statusInfo.label;
                                         })()}
@@ -1998,11 +1978,11 @@ const AdminRequestDetail = () => {
                   </div>
                 </div>
               )}
-              {sendPreview.bureauItemsList.length > 0 && (
+              {sendPreview.bureauItemsList?.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    Bureau-items (intern, geen notificatie)
+                    Bureau Vlieland items (geen e-mail, wel vrijgegeven)
                   </h4>
                   <ul className="space-y-0.5">
                     {sendPreview.bureauItemsList.map((item) => (
@@ -2011,9 +1991,9 @@ const AdminRequestDetail = () => {
                   </ul>
                 </div>
               )}
-              {sendPreview.partners.length === 0 && (
+              {sendPreview.partners.length === 0 && sendPreview.bureauItemsList?.length === 0 && (
                 <div className="text-center py-4 text-muted-foreground text-sm">
-                  Geen partner-items om te versturen. Alle resterende items zijn bureau-items.
+                  Geen items om te versturen.
                 </div>
               )}
             </div>

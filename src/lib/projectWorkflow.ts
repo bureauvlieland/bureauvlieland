@@ -35,7 +35,6 @@ export function getProjectPipelineStage(project: ProjectForPipeline): ProjectPip
 // ── Item send phase ───────────────────────────────────────────────────
 
 export type ItemSendPhase =
-  | "bureau_intern"         // internal bureau item — not sent to external partners
   | "wacht_op_klant"        // offerte sent, customer hasn't approved yet
   | "klaar_voor_partner"    // ready to send to external partner
   | "verstuurd"             // already sent to partner
@@ -53,7 +52,7 @@ export interface ProjectForItemPhase {
   quote_status?: string | null;
 }
 
-/** Check if an item is an internal bureau item */
+/** @deprecated Bureau items now follow the same workflow as partner items */
 export function isBureauItem(item: Pick<ItemForSendPhase, "provider_id">): boolean {
   return item.provider_id === "bureau";
 }
@@ -65,10 +64,7 @@ export function getItemSendPhase(
 ): ItemSendPhase {
   if (item.status === "cancelled") return "niet_van_toepassing";
 
-  // Bureau items are always handled internally
-  if (isBureauItem(item)) return "bureau_intern";
-
-  // Already sent to partner
+  // Already sent to partner (or bureau)
   if (!item.skip_partner_notification) return "verstuurd";
 
   // Item explicitly approved by customer → ready to send
@@ -91,7 +87,6 @@ export function getItemSendPhase(
 export interface ItemCounts {
   readyForPartner: number;
   waitingForCustomer: number;
-  bureauIntern: number;
   alreadySent: number;
 }
 
@@ -102,7 +97,6 @@ export function getItemSendCounts(
   const counts: ItemCounts = {
     readyForPartner: 0,
     waitingForCustomer: 0,
-    bureauIntern: 0,
     alreadySent: 0,
   };
 
@@ -114,9 +108,6 @@ export function getItemSendCounts(
         break;
       case "wacht_op_klant":
         counts.waitingForCustomer++;
-        break;
-      case "bureau_intern":
-        counts.bureauIntern++;
         break;
       case "verstuurd":
         counts.alreadySent++;

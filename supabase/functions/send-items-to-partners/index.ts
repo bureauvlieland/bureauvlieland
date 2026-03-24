@@ -171,13 +171,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const items = (allItems || []) as ProgramItem[];
 
-    // 3. Categorize items
+    // 3. Separate bureau items (no email needed) from external partner items
     const bureauItems = items.filter(i => i.provider_id === "bureau");
     const partnerItems = items.filter(i => i.provider_id !== "bureau");
 
     // 4. If dry_run, return preview data without sending
     if (dry_run) {
-      // Group partner items by provider for preview
       const partnerGroups = new Map<string, { partnerName: string; items: { id: string; block_name: string }[] }>();
       for (const item of partnerItems) {
         if (!partnerGroups.has(item.provider_id)) {
@@ -203,13 +202,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 5. Send only partner items
+    // 5. Release bureau items (no email, just update status)
+    if (bureauItems.length > 0) {
+      const bureauItemIds = bureauItems.map(i => i.id);
+      await supabase
+        .from("program_request_items")
+        .update({
+          skip_partner_notification: false,
+          status: "pending",
+          status_updated_at: new Date().toISOString(),
+        })
+        .in("id", bureauItemIds);
+      console.log(`Released ${bureauItems.length} bureau item(s) without email`);
+    }
+
+    // 6. Send only partner items via email
     if (partnerItems.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
           message: bureauItems.length > 0
-            ? `Geen partner-items om te versturen. ${bureauItems.length} bureau-item(s) worden intern afgehandeld.`
+            ? `${bureauItems.length} bureau-item(s) vrijgegeven. Geen externe partners om te notificeren.`
             : "Geen items klaar om te versturen.",
           partnersNotified: 0,
           bureauItems: bureauItems.length,
@@ -357,7 +370,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       action: "admin_sent_to_partners",
       actor: "admin",
       actor_name: "Admin",
-      notes: `Admin heeft ${groups.size} partner(s) genotificeerd over ${partnerItems.length} item(s).${bureauItems.length > 0 ? ` ${bureauItems.length} bureau-item(s) worden intern afgehandeld.` : ""}`,
+      notes: `Admin heeft ${groups.size} partner(s) genotificeerd over ${partnerItems.length} item(s).${bureauItems.length > 0 ? ` ${bureauItems.length} bureau-item(s) vrijgegeven.` : ""}`,
     });
 
     // 10. Set program_published_at if not set
