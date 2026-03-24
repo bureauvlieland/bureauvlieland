@@ -129,6 +129,8 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
   }
 
   // Waiting for quotes — re-request or new
+  if (isReRequest) {
+    return (
       <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
