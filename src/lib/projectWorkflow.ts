@@ -52,7 +52,7 @@ export interface ProjectForItemPhase {
   quote_status?: string | null;
 }
 
-/** Check if an item is an internal bureau item */
+/** @deprecated Bureau items now follow the same workflow as partner items */
 export function isBureauItem(item: Pick<ItemForSendPhase, "provider_id">): boolean {
   return item.provider_id === "bureau";
 }
@@ -64,10 +64,7 @@ export function getItemSendPhase(
 ): ItemSendPhase {
   if (item.status === "cancelled") return "niet_van_toepassing";
 
-  // Bureau items are always handled internally
-  if (isBureauItem(item)) return "bureau_intern";
-
-  // Already sent to partner
+  // Already sent to partner (or bureau)
   if (!item.skip_partner_notification) return "verstuurd";
 
   // Item explicitly approved by customer → ready to send
