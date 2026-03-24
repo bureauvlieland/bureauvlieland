@@ -30,6 +30,7 @@ interface ProgramSidebarProps {
   accommodation?: AccommodationRequest | null;
   isMultiDay?: boolean;
   isPreApproval?: boolean;
+  quoteStatus?: string | null;
   totalCost?: number;
   allConfirmed?: boolean;
   onScrollToTerms?: () => void;
