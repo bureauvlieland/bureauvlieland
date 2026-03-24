@@ -30,6 +30,11 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
     return [...new Set(reasons)];
   }, [quotes]);
 
+  // Detect re-request: quotes exist with submitted_at but are now pending again
+  const isReRequest = useMemo(() => {
+    return quotes.some(q => q.status === 'pending' && q.submitted_at);
+  }, [quotes]);
+
   // Determine the status display
   if (selected > 0) {
     return (
@@ -123,7 +128,30 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
     );
   }
 
-  // Waiting for quotes
+  // Waiting for quotes — re-request or new
+  if (isReRequest) {
+    return (
+      <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900">
+              <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+                Het aantal gasten is gewijzigd
+              </h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                Bureau Vlieland heeft de accommodatie gevraagd om een aangepaste offerte in te dienen.
+                U ontvangt bericht zodra deze binnen is.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
       <CardContent className="pt-6">
