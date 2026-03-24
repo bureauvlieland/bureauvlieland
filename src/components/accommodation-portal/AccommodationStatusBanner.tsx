@@ -30,6 +30,11 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
     return [...new Set(reasons)];
   }, [quotes]);
 
+  // Detect re-request: quotes exist with submitted_at but are now pending again
+  const isReRequest = useMemo(() => {
+    return quotes.some(q => q.status === 'pending' && q.submitted_at);
+  }, [quotes]);
+
   // Determine the status display
   if (selected > 0) {
     return (
