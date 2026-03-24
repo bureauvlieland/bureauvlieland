@@ -416,12 +416,36 @@ export default function AdminAccommodationDetail() {
           notes: `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests} (admin).${selectedQuoteIds.length > 0 ? ` Offertes gereset voor: ${resetPartnerNames}.` : " Geen offertes gereset."}`,
         });
       }
+
+      // Send notification to partners whose quotes were reset
+      if (selectedQuoteIds.length > 0) {
+        const resetPartnerIds = quotes
+          ?.filter((q) => selectedQuoteIds.includes(q.id))
+          .map((q) => q.partner_id) || [];
+
+        if (resetPartnerIds.length > 0) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          if (token) {
+            await supabase.functions.invoke("send-accommodation-quote-request", {
+              body: {
+                request_id: id,
+                partner_ids: resetPartnerIds,
+                email_subject: `Wijziging aantal gasten — ${request?.customer_name || "Klant"}`,
+                email_body: `Beste partner,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWij vragen u vriendelijk een aangepaste offerte in te dienen via het partnerportaal.`,
+              },
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
       queryClient.invalidateQueries({ queryKey: ["admin-linked-program", id] });
-      toast({ title: "Aantal gasten bijgewerkt", description: "Wijzigingen opgeslagen." });
+      queryClient.invalidateQueries({ queryKey: ["project-communications"] });
+      toast({ title: "Aantal gasten bijgewerkt", description: "Partners zijn geïnformeerd over de wijziging." });
     },
     onError: () => {
       toast({ title: "Fout bij bijwerken", variant: "destructive" });
@@ -907,10 +931,11 @@ export default function AdminAccommodationDetail() {
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3">
                 <ProjectCommunicationsCard
-                  accommodationId={id}
-                  customerName={request.customer_name}
-                  customerEmail={request.customer_email}
-                />
+                   accommodationId={id}
+                   requestId={linkedProgram?.id}
+                   customerName={request.customer_name}
+                   customerEmail={request.customer_email}
+                 />
               </CollapsibleContent>
             </Collapsible>
           </div>
