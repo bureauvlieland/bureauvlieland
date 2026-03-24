@@ -907,10 +907,11 @@ export default function AdminAccommodationDetail() {
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3">
                 <ProjectCommunicationsCard
-                  accommodationId={id}
-                  customerName={request.customer_name}
-                  customerEmail={request.customer_email}
-                />
+                   accommodationId={id}
+                   requestId={linkedProgram?.id}
+                   customerName={request.customer_name}
+                   customerEmail={request.customer_email}
+                 />
               </CollapsibleContent>
             </Collapsible>
           </div>
