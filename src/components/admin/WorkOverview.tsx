@@ -181,10 +181,10 @@ export const WorkOverview = () => {
         const daysUntilExecution = executionDate ? differenceInDays(executionDate, now) : null;
 
         // Items analysis
-        const externalItems = projectItems.filter(
-          (i) => i.provider_id !== "bureau" && !i.skip_partner_notification
+        const activeItems = projectItems.filter(
+          (i) => !i.skip_partner_notification
         );
-        const pendingPartnerItems = externalItems.filter(
+        const pendingPartnerItems = activeItems.filter(
           (i) => i.status === "pending"
         );
         const confirmedItems = projectItems.filter(

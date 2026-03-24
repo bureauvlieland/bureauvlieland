@@ -1978,11 +1978,11 @@ const AdminRequestDetail = () => {
                   </div>
                 </div>
               )}
-              {sendPreview.bureauItemsList.length > 0 && (
+              {sendPreview.bureauItemsList?.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    Bureau-items (intern, geen notificatie)
+                    Bureau Vlieland items (geen e-mail, wel vrijgegeven)
                   </h4>
                   <ul className="space-y-0.5">
                     {sendPreview.bureauItemsList.map((item) => (
@@ -1991,9 +1991,9 @@ const AdminRequestDetail = () => {
                   </ul>
                 </div>
               )}
-              {sendPreview.partners.length === 0 && (
+              {sendPreview.partners.length === 0 && sendPreview.bureauItemsList?.length === 0 && (
                 <div className="text-center py-4 text-muted-foreground text-sm">
-                  Geen partner-items om te versturen. Alle resterende items zijn bureau-items.
+                  Geen items om te versturen.
                 </div>
               )}
             </div>

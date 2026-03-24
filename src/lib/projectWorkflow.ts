@@ -97,7 +97,6 @@ export function getItemSendCounts(
   const counts: ItemCounts = {
     readyForPartner: 0,
     waitingForCustomer: 0,
-    bureauIntern: 0,
     alreadySent: 0,
   };
 
@@ -109,9 +108,6 @@ export function getItemSendCounts(
         break;
       case "wacht_op_klant":
         counts.waitingForCustomer++;
-        break;
-      case "bureau_intern":
-        counts.bureauIntern++;
         break;
       case "verstuurd":
         counts.alreadySent++;
