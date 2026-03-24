@@ -58,7 +58,7 @@ interface UseCustomerProgramReturn {
 }
 
 export interface PendingChange {
-  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added";
+  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added" | "people_changed";
   itemId: string;
   itemName: string;
   providerName: string;
