@@ -370,7 +370,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       action: "admin_sent_to_partners",
       actor: "admin",
       actor_name: "Admin",
-      notes: `Admin heeft ${groups.size} partner(s) genotificeerd over ${partnerItems.length} item(s).${bureauItems.length > 0 ? ` ${bureauItems.length} bureau-item(s) worden intern afgehandeld.` : ""}`,
+      notes: `Admin heeft ${groups.size} partner(s) genotificeerd over ${partnerItems.length} item(s).${bureauItems.length > 0 ? ` ${bureauItems.length} bureau-item(s) vrijgegeven.` : ""}`,
     });
 
     // 10. Set program_published_at if not set
