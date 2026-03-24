@@ -1,32 +1,48 @@
 
 
-## Plan: Mail naar Zeezicht versturen + klantmelding verbeteren
+## Plan: Override_people wijzigingen persisteren naar database
 
-### 1. Mail naar Zeezicht alsnog versturen
+### Probleem
+Wanneer een klant het aantal deelnemers per onderdeel wijzigt (`override_people`), wordt dit alleen in de React-state opgeslagen. Bij paginaverversing of navigatie gaat de wijziging verloren. Bovendien:
+- `getPendingChanges()` detecteert geen `override_people` wijzigingen (alleen tijd, dag, annulering)
+- `update-customer-program` edge function kent `override_people` niet
+- Partners worden dus niet geïnformeerd over het gewijzigde aantal
 
-De code voor het versturen is net toegevoegd, maar was nog niet actief toen je het gastenaantal wijzigde. Ik kan de edge function direct aanroepen om de mail alsnog te versturen naar Zeezicht met de juiste inhoud over de wijziging.
+### Oplossing
 
-**Actie**: `send-accommodation-quote-request` edge function aanroepen met:
-- De huidige accommodation request ID
-- Partner ID van Zeezicht
-- Onderwerp en body over de gastenaantalwijziging
+**1. `src/hooks/useCustomerProgram.ts` — override_people als pending change detecteren**
 
-Hiervoor moet ik het request ID en partner ID ophalen uit de database.
+In `getPendingChanges()` een extra check toevoegen:
+```
+if (item.override_people !== original.override_people) {
+  changes.push({
+    type: "people_changed",
+    itemId: item.id,
+    itemName: item.block_name,
+    providerName: item.provider_name,
+    providerEmail: item.provider_email,
+    oldValue: original.override_people ? String(original.override_people) : "groepstotaal",
+    newValue: item.override_people ? String(item.override_people) : "groepstotaal",
+  });
+}
+```
 
-### 2. Klantmelding contextueel maken
+**2. `supabase/functions/update-customer-program/index.ts` — override_people verwerken**
 
-**Probleem**: Na het resetten van de offerte ziet de klant weer dezelfde generieke banner "Wij verzamelen offertes voor u" — alsof het een nieuwe aanvraag is. De klant (Milou) heeft al een offerte gekozen en weet niet waarom die weg is.
+- `PendingChange` interface uitbreiden met `type: "people_changed"`
+- Bij het verwerken van changes: als type `people_changed`, update `program_request_items.override_people` in de database
+- Optioneel: partner notificeren als het item al bij een partner is aangevraagd (status niet `concept`)
 
-**Oplossing**: `AccommodationStatusBanner.tsx` uitbreiden met een "heraanvraag" status die verschijnt wanneer er eerder een offerte was geselecteerd maar nu is gereset.
+**3. Edge function `ProgramRequestItem` interface uitbreiden**
 
-Detectie: als er een quote bestaat met `status = "pending"` die eerder `"selected"` was (te herkennen aan `selected_at` datum die gevuld is, of via `program_request_history` met `action = "people_changed"`).
+Het `override_people` veld toevoegen zodat de edge function de huidige items correct kan verwerken bij submit.
 
-Eenvoudiger: check of `request.status === "processing"` en er een history-event `people_changed` bestaat. Of — het simpelst — kijk of er quotes met `submitted_at` in het verleden zijn die nu `status = "pending"` hebben (= ze waren eerder ingediend, nu gereset).
-
-**Nieuwe banner-variant** (amber, maar met andere tekst):
-> "Het aantal gasten is gewijzigd. Bureau Vlieland heeft de accommodatie gevraagd om een aangepaste offerte in te dienen. U ontvangt bericht zodra deze binnen is."
+### Resultaat
+- Klant wijzigt deelnemers → verschijnt in "Wijzigingen doorvoeren" overzicht
+- Na doorvoeren: opgeslagen in database, overleft paginaverversing
+- Partner wordt geïnformeerd als het item al was aangevraagd
 
 ### Bestanden
-1. Edge function call (via tooling) — mail naar Zeezicht versturen
-2. `src/components/accommodation-portal/AccommodationStatusBanner.tsx` — contextuele melding bij herofferte
+1. `src/hooks/useCustomerProgram.ts` — people_changed detectie in getPendingChanges
+2. `supabase/functions/update-customer-program/index.ts` — people_changed afhandeling + override_people persisteren
 
