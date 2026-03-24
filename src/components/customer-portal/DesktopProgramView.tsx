@@ -542,7 +542,8 @@ export const DesktopProgramView = ({
         selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
         accommodation={accommodation}
         isMultiDay={isMultiDay}
-        isPreApproval={isPreApproval}
+         isPreApproval={isPreApproval}
+         quoteStatus={program.quote_status}
         totalCost={totalCost}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}

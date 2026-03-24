@@ -93,7 +93,8 @@ export const ProgramSidebar = ({
         accommodationStatus={accommodationStatus}
         termsAccepted={termsAccepted}
         isMultiDay={isMultiDay}
-        isPreApproval={isPreApproval}
+         isPreApproval={isPreApproval}
+         quoteStatus={quoteStatus}
       />
 
 
