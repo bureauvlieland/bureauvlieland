@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     // Validate customer token
     const { data: programRequest, error: prError } = await supabase
       .from("program_requests")
-      .select("id, customer_name, customer_email, customer_phone, customer_company, linked_accommodation_id, expires_at")
+      .select("id, customer_name, customer_email, customer_phone, customer_company, linked_accommodation_id, expires_at, reference_number")
       .eq("customer_token", customerToken)
       .maybeSingle();
 
@@ -139,7 +139,9 @@ Deno.serve(async (req) => {
     const departureFormatted = formatDateNL(accRequest.departure_date);
 
     const senderLabel = isCentralBilling ? "Bureau Vlieland" : sanitizeHtml(programRequest.customer_name);
-    const replyToEmail = isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email;
+    const replyToEmail = programRequest.reference_number
+      ? `reply+${programRequest.reference_number}@bureauvlieland.nl`
+      : (isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email);
     const replyToName = isCentralBilling ? "Bureau Vlieland" : programRequest.customer_name;
     const replyInfo = isCentralBilling ? "Bureau Vlieland" : "de klant";
 
