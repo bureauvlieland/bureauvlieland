@@ -58,7 +58,7 @@ interface UseCustomerProgramReturn {
 }
 
 export interface PendingChange {
-  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added";
+  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added" | "people_changed";
   itemId: string;
   itemName: string;
   providerName: string;
@@ -493,6 +493,19 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
           providerEmail: item.provider_email || undefined,
           oldValue: `Dag ${original.day_index + 1}`,
           newValue: `Dag ${item.day_index + 1}`,
+        });
+      }
+
+      // Check for override_people changes
+      if (item.override_people !== original.override_people) {
+        changes.push({
+          type: "people_changed",
+          itemId: item.id,
+          itemName: item.block_name,
+          providerName: item.provider_name,
+          providerEmail: item.provider_email || undefined,
+          oldValue: original.override_people ? String(original.override_people) : "groepstotaal",
+          newValue: item.override_people ? String(item.override_people) : "groepstotaal",
         });
       }
 

@@ -11,7 +11,7 @@ import {
 import { AlertTriangle, Mail } from "lucide-react";
 
 export interface PendingChange {
-  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added";
+  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added" | "people_changed";
   itemName: string;
   providerName: string;
   oldValue?: string;
@@ -32,6 +32,7 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
   notes_changed: "opmerking aangepast",
   removed: "verwijderd",
   added: "toegevoegd",
+  people_changed: "aantal deelnemers gewijzigd",
 };
 
 export const ChangeConfirmationDialog = ({

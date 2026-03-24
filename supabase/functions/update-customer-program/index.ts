@@ -18,7 +18,7 @@ const corsHeaders = {
 };
 
 interface PendingChange {
-  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added";
+  type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added" | "people_changed";
   itemId: string;
   itemName: string;
   providerName: string;
@@ -72,6 +72,7 @@ interface ProgramRequestItem {
   status: string;
   status_note: string | null;
   version: number;
+  override_people: number | null;
 }
 
 const sendEmailViaMailjet = async (messages: any[]) => {
@@ -137,6 +138,7 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
   notes_changed: "Opmerking aangepast",
   removed: "Geannuleerd",
   added: "Toegevoegd",
+  people_changed: "Aantal deelnemers gewijzigd",
 };
 
 // Test mode configuration
@@ -1351,6 +1353,17 @@ Deno.serve(async (req) => {
             .update({
               status: "cancelled",
               version: item.version + 1,
+            })
+            .eq("id", item.id);
+        } else if (change.type === "people_changed") {
+          // Persist override_people to database
+          const newOverride = change.newValue === "groepstotaal" ? null : parseInt(change.newValue || "0", 10);
+          await supabase
+            .from("program_request_items")
+            .update({
+              override_people: newOverride,
+              version: item.version + 1,
+              updated_at: new Date().toISOString(),
             })
             .eq("id", item.id);
         } else {
