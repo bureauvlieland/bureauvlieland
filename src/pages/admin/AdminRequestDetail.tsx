@@ -620,7 +620,6 @@ const AdminRequestDetail = () => {
   const itemCounts = getItemSendCounts(items, request);
   const readyToSendCount = itemCounts.readyForPartner;
   const waitingForCustomerCount = itemCounts.waitingForCustomer;
-  const bureauInternCount = itemCounts.bureauIntern;
 
   const handlePreviewSendToPartners = async () => {
     if (!request) return;
