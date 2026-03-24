@@ -1118,24 +1118,6 @@ const AdminRequestDetail = () => {
             </Card>
           )}
 
-          {/* Bureau items only — no partner items to send */}
-          {readyToSendCount === 0 && bureauInternCount > 0 && waitingForCustomerCount === 0 && (
-            <Card className="border-slate-300 bg-slate-50">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Building2 className="h-5 w-5 text-slate-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {bureauInternCount} bureau-item(s) worden intern afgehandeld
-                    </p>
-                    <p className="text-sm text-slate-700">
-                      Alle resterende onderdelen zijn interne bureau-items. Er hoeven geen externe partners genotificeerd te worden.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
 
 
