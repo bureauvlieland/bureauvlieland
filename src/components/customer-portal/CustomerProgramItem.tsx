@@ -43,6 +43,7 @@ interface CustomerProgramItemProps {
   vatRate?: number;
   isPreApproval?: boolean;
   isQuoteMode?: boolean;
+  quoteStatus?: string | null;
   readOnly?: boolean;
   hideDay?: boolean;
   numberOfPeople?: number;
