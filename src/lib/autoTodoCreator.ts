@@ -15,7 +15,8 @@ export type AutoTodoType =
   | "all_partners_responded"
   | "bureau_item_pricing"
   | "post_execution_feedback"
-  | "post_execution_invoice_check";
+  | "post_execution_invoice_check"
+  | "accommodation_selected";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -163,6 +164,9 @@ export const autoTodoTitles = {
 
   post_execution_invoice_check: (partnerName: string, activityName: string) =>
     `Factuur partner ${partnerName} nog niet ontvangen voor "${activityName}"`,
+
+  accommodation_selected: (accommodationName: string, customerName: string) =>
+    `Logies "${accommodationName}" geselecteerd door ${customerName}`,
 };
 
 /**
@@ -247,5 +251,10 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Factuur check",
     color: "text-rose-700",
     bgColor: "bg-rose-100",
+  },
+  accommodation_selected: {
+    label: "Logies bevestigen",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
   },
 };

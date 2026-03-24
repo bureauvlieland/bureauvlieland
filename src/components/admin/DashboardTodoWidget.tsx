@@ -25,7 +25,7 @@ export const DashboardTodoWidget = () => {
     const { data, error } = await supabase
       .from("admin_todos")
       .select("id, title, priority, due_date, status, related_request_id")
-      .in("status", ["open", "in_progress"])
+      .in("status", ["todo", "in_progress"])
       .order("priority", { ascending: true })
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(5);
@@ -55,8 +55,9 @@ export const DashboardTodoWidget = () => {
   };
 
   const priorityColor: Record<string, string> = {
+    urgent: "bg-red-100 text-red-700",
     high: "bg-red-100 text-red-700",
-    medium: "bg-amber-100 text-amber-700",
+    normal: "bg-amber-100 text-amber-700",
     low: "bg-slate-100 text-slate-600",
   };
 
@@ -96,7 +97,7 @@ export const DashboardTodoWidget = () => {
               )}
             </div>
             <Badge className={priorityColor[todo.priority] || priorityColor.low} variant="secondary">
-              {todo.priority === "high" ? "Hoog" : todo.priority === "medium" ? "Gemiddeld" : "Laag"}
+              {todo.priority === "urgent" ? "Urgent" : todo.priority === "high" ? "Hoog" : todo.priority === "normal" ? "Normaal" : "Laag"}
             </Badge>
           </div>
         ))}

@@ -6,6 +6,7 @@ import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilit
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
+import { WorkOverview } from "@/components/admin/WorkOverview";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
 import { PipelineFunnel } from "@/components/admin/PipelineFunnel";
 import { MapBookingsWidget } from "@/components/admin/MapBookingsWidget";
@@ -169,8 +170,9 @@ const AdminDashboardContent = () => {
 
       {/* 2-column main layout: feed (2/3) + sidebar (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-        {/* Live activity feed — takes 2/3 */}
-        <div className="lg:col-span-2">
+        {/* Main content — takes 2/3 */}
+        <div className="lg:col-span-2 space-y-5">
+          <WorkOverview />
           <LiveActivityFeed />
         </div>
 
