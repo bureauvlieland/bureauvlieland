@@ -43,6 +43,7 @@ interface CustomerProgramItemProps {
   vatRate?: number;
   isPreApproval?: boolean;
   isQuoteMode?: boolean;
+  quoteStatus?: string | null;
   readOnly?: boolean;
   hideDay?: boolean;
   numberOfPeople?: number;
@@ -63,6 +64,7 @@ export const CustomerProgramItem = ({
   vatRate,
   isPreApproval = false,
   isQuoteMode = false,
+  quoteStatus,
   readOnly = false,
   hideDay = false,
   numberOfPeople,
@@ -122,7 +124,7 @@ export const CustomerProgramItem = ({
                     Goedgekeurd
                   </Badge>
                 ) : (
-                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : isPreApproval && item.status === "pending" ? "In voorbereiding" : undefined} />
+                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : undefined} />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">

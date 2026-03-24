@@ -383,8 +383,9 @@ export const DesktopProgramView = ({
                                   allItems={program.items}
                                   hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                                   invoicingMode={invoicingMode}
-                                  isPreApproval={isPreApproval}
-                                  isQuoteMode={isQuoteMode}
+                                   isPreApproval={isPreApproval}
+                                   quoteStatus={program.quote_status}
+                                   isQuoteMode={isQuoteMode}
                                   vatRate={getItemVatRate(item)}
                                   readOnly={!isPublished}
                                   hideDay
@@ -427,8 +428,9 @@ export const DesktopProgramView = ({
                           allItems={program.items}
                           hasChanges={pendingChanges.some((c) => c.itemId === item.id)}
                           invoicingMode={invoicingMode}
-                          isPreApproval={isPreApproval}
-                          isQuoteMode={isQuoteMode}
+                           isPreApproval={isPreApproval}
+                           quoteStatus={program.quote_status}
+                           isQuoteMode={isQuoteMode}
                           vatRate={getItemVatRate(item)}
                           readOnly={!isPublished}
                           numberOfPeople={program.number_of_people}
@@ -540,7 +542,8 @@ export const DesktopProgramView = ({
         selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
         accommodation={accommodation}
         isMultiDay={isMultiDay}
-        isPreApproval={isPreApproval}
+         isPreApproval={isPreApproval}
+         quoteStatus={program.quote_status}
         totalCost={totalCost}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
