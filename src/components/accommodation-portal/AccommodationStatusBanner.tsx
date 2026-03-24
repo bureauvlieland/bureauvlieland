@@ -128,14 +128,7 @@ export function AccommodationStatusBanner({ request, quotesSummary, quotes = [] 
     );
   }
 
-  // Detect re-request: quotes exist with submitted_at but are now pending again
-  const isReRequest = useMemo(() => {
-    return quotes.some(q => q.status === 'pending' && q.submitted_at);
-  }, [quotes]);
-
-  // Waiting for quotes
-  if (isReRequest) {
-    return (
+  // Waiting for quotes — re-request or new
       <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
