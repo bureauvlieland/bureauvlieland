@@ -1,36 +1,27 @@
 
 
-## Plan: Programma-onderdelen synchroniseren met actuele bouwsteendata
+## Plan: Verloopdatum bewerkbaar maken + verloopstatus-detectie
 
 ### Probleem
-Programma-onderdelen (`program_request_items`) worden aangemaakt met een kopie van de bouwsteendata op dat moment. Als prijzen, locaties of beschrijvingen later worden bijgewerkt in de bouwstenen, blijven de items verouderd. Er is geen knop om items te verversen met actuele data.
 
-### Oplossing: "Synchroniseer met bouwstenen" functie op AdminRequestDetail
+1. **Verloopdatum niet bewerkbaar**: De "Geldig tot" datum (6 mrt. 2026) wordt alleen getoond als tekst — er is geen manier om deze te verlengen
+2. **Geen automatische verloopdetectie**: De offerte is verlopen (vandaag is 24 mrt, geldig tot 6 mrt) maar de status staat nog op "Offerte verstuurd". Dit zou automatisch op "Verlopen" moeten staan, of minimaal een waarschuwing tonen
 
-**Nieuwe knop** op de programma-tab van het projectdetailscherm: "Synchroniseer bouwstenen" (naast de bestaande "Template toepassen" knop).
+### Wijzigingen
 
-**Werking:**
-1. Haal alle `program_request_items` op die een `block_id` hebben (= gekoppeld aan een bouwsteen)
-2. Haal de actuele `building_blocks` data op voor die block_ids
-3. Toon een preview-dialoog met per item wat er zou veranderen (oude waarde → nieuwe waarde)
-4. Admin selecteert welke velden gesynchroniseerd worden (standaard alles aan):
-   - `admin_price_override` ← `block.price_adult`
-   - `price_type` ← `block.price_type`
-   - `location_lat/lng/address` ← `block.location_*`
-   - `duration` ← `block.duration`
-   - `external_url` ← `block.external_url`
-   - `admin_price_notes` ← `block.description / short_description`
-   - `block_name` ← `block.name`
-   - `block_category` ← `block.category`
-5. Na bevestiging: batch-update van de geselecteerde items
-6. Items met `quoted_price` (partnerprijs) worden overgeslagen — die prijs is definitief
+**1. `src/pages/admin/AdminRequestDetail.tsx` — verloopdatum inline bewerkbaar**
 
-**Wat niet wordt overschreven:**
-- `quoted_price` (definitieve partnerprijs)
-- `status`, `day_index`, `preferred_time` (planning)
-- `override_people`, `customer_notes` (klantdata)
+De huidige tekst "Geldig tot: 6 mrt. 2026" vervangen door een klikbare datum met een Popover + Calendar component:
+- Klik op de datum → kalender opent → kies nieuwe datum → direct opslaan naar `program_requests.quote_valid_until`
+- Als de nieuwe datum in de toekomst ligt en de status "verlopen" is, automatisch terugzetten naar "offerte_verstuurd"
+- Visuele indicatie: rode tekst als de datum in het verleden ligt
+
+**2. `src/pages/admin/AdminRequestDetail.tsx` — verlopen-waarschuwing**
+
+In de bestaande statuskaart, als `quote_valid_until < vandaag` en `quote_status === "offerte_verstuurd"`:
+- Toon een amberkleurige waarschuwing: "Let op: de geldigheidsdatum is verstreken"
+- Optioneel: knop "Markeer als verlopen" of automatisch status aanpassen
 
 ### Bestanden
-1. `src/components/admin/SyncBuildingBlocksDialog.tsx` — nieuw: preview + sync dialoog
-2. `src/pages/admin/AdminRequestDetail.tsx` — knop toevoegen die de dialoog opent
+1. `src/pages/admin/AdminRequestDetail.tsx` — bewerkbare datum + verloopwaarschuwing
 
