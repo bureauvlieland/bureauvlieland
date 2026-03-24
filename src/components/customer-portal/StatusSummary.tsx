@@ -34,6 +34,7 @@ export const StatusSummary = ({
   termsAccepted = false,
   isMultiDay = false,
   isPreApproval = false,
+  quoteStatus,
 }: StatusSummaryProps) => {
   // Derive effective accommodation status: prefer explicit prop, fall back to boolean
   const effectiveAccommodationStatus = accommodationStatus ?? (hasAccommodation ? "selected" : "none");
