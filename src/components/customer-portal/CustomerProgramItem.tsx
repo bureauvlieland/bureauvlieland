@@ -64,6 +64,7 @@ export const CustomerProgramItem = ({
   vatRate,
   isPreApproval = false,
   isQuoteMode = false,
+  quoteStatus,
   readOnly = false,
   hideDay = false,
   numberOfPeople,
