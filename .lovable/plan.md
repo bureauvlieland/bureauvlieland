@@ -1,33 +1,42 @@
 
 
-## Plan: Partner-antwoorden automatisch in het dossier laten landen
+## Plan: Klantnotificatie bij inkomend partnerantwoord
 
-### Probleem
-De `send-customer-accommodation-message` edge function stuurt mails naar partners met `Reply-To: hallo@bureauvlieland.nl`. Wanneer de partner op "beantwoorden" drukt, belandt het antwoord in de algemene inbox — niet in het inbound-email systeem dat al is ingericht voor automatische dossiervorming.
+### Context
+Het `partner_direct` model is verwijderd. Alle projecten draaien op `bureau_central`. De conditiecheck op `invoicing_mode` is daarom overbodig — klantnotificaties worden altijd verstuurd.
 
-### Oorzaak
-Regel 142: `const replyToEmail = isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email;`
+### Wijzigingen
 
-Het systeem heeft al een werkende `inbound-email` edge function die mails naar `reply+BV-XXXX-XXXX@bureauvlieland.nl` herkent en automatisch logt als communicatie + admin-todo aanmaakt. Maar deze wordt niet gebruikt in de klant-naar-partner flow.
+**1. `supabase/functions/inbound-email/index.ts` — klantnotificatie toevoegen**
 
-### Oplossing
+Na het opslaan van de communicatie en het aanmaken van de admin-todo:
+- Haal `customer_email`, `customer_name` en `customer_company` op uit `program_requests` (request_id is al beschikbaar)
+- Voor accommodatie-gerelateerde mails: haal ook de partnernaam op via `accommodation_quotes` + `partners`
+- Stuur een notificatiemail naar de klant via Mailjet met:
+  - Afzender: Bureau Vlieland
+  - Reply-To: `reply+{referentie}@bureauvlieland.nl` (zodat klantantwoord ook in het dossier komt)
+  - Inhoud: samenvatting van het partnerantwoord met context
+- Log de mail in `email_log`
+- Geen `invoicing_mode` check — altijd versturen
 
-**`supabase/functions/send-customer-accommodation-message/index.ts`**
+**2. Database migratie — nieuw e-mailtemplate `inbound_reply_to_customer`**
 
-1. Haal het `reference_number` op van de `program_request` (al beschikbaar, hoeft alleen aan de select toegevoegd te worden)
-2. Wijzig de `Reply-To` van `hallo@bureauvlieland.nl` naar `reply+{reference_number}@bureauvlieland.nl`
-3. Dit geldt voor **beide** modes (bureau_central én partner_direct) — alle antwoorden moeten in het dossier
+Template met variabelen:
+- `customer_name`, `partner_name`, `reference_number`, `subject`, `message`, `portal_url`
 
-Concrete wijziging:
-- Select uitbreiden: `reference_number` toevoegen aan de program_requests query
-- Reply-To aanpassen: `reply+${programRequest.reference_number}@bureauvlieland.nl`
-- Reply-To naam blijft: `Bureau Vlieland` (bureau_central) of klantnaam (partner_direct)
+### Mailjet Parse API configuratie (handmatig, door jou)
 
-### Resultaat
-- Partner drukt op "beantwoorden" → mail gaat naar `reply+BV-2503-0012@bureauvlieland.nl`
-- `inbound-email` edge function vangt dit op → logt in communicatiedossier + maakt admin-todo
-- Geen handmatige actie meer nodig om partnerantwoorden bij te houden
+De edge function werkt (getest). Om Mailjet inkomende mails te laten doorsturen:
+
+1. Mailjet dashboard → Account Settings → Parse API (of Transactional → Inbound)
+2. Parse Route toevoegen:
+   - URL: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
+   - Methode: POST (JSON)
+3. MX-record voor subdomein (bv. `reply.bureauvlieland.nl`):
+   - `MX 10 parse.mailjet.com.`
+   - Dan Reply-To adressen aanpassen naar `reply+REF@reply.bureauvlieland.nl`
 
 ### Bestanden
-1. `supabase/functions/send-customer-accommodation-message/index.ts` — Reply-To aanpassen
+1. `supabase/functions/inbound-email/index.ts` — klantnotificatie na opslaan
+2. Database migratie — `inbound_reply_to_customer` template invoegen
 
