@@ -35,7 +35,6 @@ export function getProjectPipelineStage(project: ProjectForPipeline): ProjectPip
 // ── Item send phase ───────────────────────────────────────────────────
 
 export type ItemSendPhase =
-  | "bureau_intern"         // internal bureau item — not sent to external partners
   | "wacht_op_klant"        // offerte sent, customer hasn't approved yet
   | "klaar_voor_partner"    // ready to send to external partner
   | "verstuurd"             // already sent to partner
