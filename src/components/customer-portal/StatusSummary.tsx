@@ -104,7 +104,7 @@ export const StatusSummary = ({
               }
               label={activitiesConfirmed
                 ? `Bevestigd (${total}/${total})`
-                : isPreApproval
+                : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus))
                   ? `In voorbereiding (${total} onderdelen)`
                   : alternative > 0
                     ? `Alternatief bekijken (${confirmed}/${total})`
