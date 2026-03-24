@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     // Validate customer token
     const { data: programRequest, error: prError } = await supabase
       .from("program_requests")
-      .select("id, customer_name, customer_email, customer_phone, customer_company, linked_accommodation_id, expires_at")
+      .select("id, customer_name, customer_email, customer_phone, customer_company, linked_accommodation_id, expires_at, reference_number")
       .eq("customer_token", customerToken)
       .maybeSingle();
 
