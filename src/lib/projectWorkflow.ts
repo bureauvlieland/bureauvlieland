@@ -87,7 +87,6 @@ export function getItemSendPhase(
 export interface ItemCounts {
   readyForPartner: number;
   waitingForCustomer: number;
-  bureauIntern: number;
   alreadySent: number;
 }
 
