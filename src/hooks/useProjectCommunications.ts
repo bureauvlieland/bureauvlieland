@@ -34,7 +34,9 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         .select("*")
         .order("communication_date", { ascending: false });
 
-      if (requestId) {
+      if (requestId && accommodationId) {
+        commQuery = commQuery.or(`request_id.eq.${requestId},accommodation_id.eq.${accommodationId}`);
+      } else if (requestId) {
         commQuery = commQuery.eq("request_id", requestId);
       } else if (accommodationId) {
         commQuery = commQuery.eq("accommodation_id", accommodationId);
