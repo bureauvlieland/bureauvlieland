@@ -164,6 +164,9 @@ export const autoTodoTitles = {
 
   post_execution_invoice_check: (partnerName: string, activityName: string) =>
     `Factuur partner ${partnerName} nog niet ontvangen voor "${activityName}"`,
+
+  accommodation_selected: (accommodationName: string, customerName: string) =>
+    `Logies "${accommodationName}" geselecteerd door ${customerName}`,
 };
 
 /**
