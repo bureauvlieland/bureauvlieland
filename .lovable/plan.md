@@ -1,35 +1,95 @@
 
 
-## Plan: Prijsweergave AdminQuotePriceEditor corrigeren
+## Plan: Operationeel Werkoverzicht — vooruitkijkend, intuitief, niet alleen afvinkbaar
 
-### Probleem
+### Wat je nu hebt vs. wat je wilt
 
-De `AdminQuotePriceEditor` toont de prijzen omgedraaid:
-- **Hoofdprijs** (groot, vet): `admin_price_override` (€660,00) — de voorlopige schatting
-- **Doorgestreept** (klein, grijs): `quoted_price` (€598,95) — de definitieve partnerprijs
+**Nu**: Een takenlijst (AdminTodos) met checkboxes, gegroepeerd op type. Reactief — je ziet wat er al had moeten gebeuren, niet wat er aankomt.
 
-Maar `portalPricing.ts` zegt: `quoted_price` wint altijd van `admin_price_override`. De klantpagina en het financieel overzicht gebruiken correct €598,95. De admin-tabel toont het tegenovergestelde.
+**Gewenst**: Een vooruitkijkend tijdlijn-overzicht dat laat zien:
+- Wat er de komende dagen/weken gaat gebeuren (termijnen, herinneringsmails, uitvoeringsdatums)
+- Waar de actie ligt (bij jou, bij partner, bij klant)
+- Wat dreigt uit te lopen
+- Wanneer het systeem automatisch een herinnering stuurt
 
-### Oorzaak
+### Oplossing: "Werkoverzicht" — een nieuw dashboard-component
 
-Regel 50: `displayPrice = overridePrice ?? originalPrice` — behandelt override als "actueel" en quoted als "oud". Maar de semantiek is andersom: zodra een partner een `quoted_price` vastlegt, is dát de definitieve prijs en wordt de admin-schatting irrelevant.
+Een horizontale tijdlijn per project, gegroepeerd op urgentie, die alle aankomende events visualiseert:
 
-### Oplossing
+```text
+VANDAAG        +3d          +7d          +14d         +30d
+  │              │            │             │            │
+  ├─ Salure ─────┤            │             │            │
+  │  🟠 2 items bij partner   │             │            │
+  │  📧 herinnering over 1d   │             │            │
+  │  📅 uitvoering 21 mei     │             │            │
+  │              │            │             │            │
+  ├─ Van Dijk ───┤            │             │            │
+  │  🔴 offerte verloopt 6 apr│             │            │
+  │  ⏳ klant moet reageren   │             │            │
+  │              │            │             │            │
+  ├─ RMD ────────┤            │             │            │
+  │  🔴 offerte VERLOPEN (17 mrt!)          │            │
+  │  📧 herinnering gestuurd 20 mrt         │            │
+```
 
-**`src/components/admin/AdminQuotePriceEditor.tsx`**
+### Concrete implementatie
 
-De weergavelogica aanpassen zodat de **effectieve** prijs (quoted_price als die bestaat, anders admin_price_override) prominent wordt getoond:
+**1. Nieuw component: `src/components/admin/WorkOverview.tsx`**
 
-- Hoofdprijs = `quoted_price ?? admin_price_override` (wat daadwerkelijk gefactureerd wordt)
-- Secundair (doorgestreept) = als er een `admin_price_override` was én `quoted_price` nu afwijkt, toon de override als "eerdere schatting"
-- Kleuraanduiding:
-  - Groen als `quoted_price` aanwezig is (definitieve partnerprijs)
-  - Amber als alleen `admin_price_override` (schatting)
-  - Geen kleur als geen prijs ("Op aanvraag")
-- Label: "Partnerprijs" als quoted_price aanwezig, "(schatting)" als alleen override
+Een card-based overzicht (geen Gantt, geen kalender — bewust simpel) met per actief project een compacte statusregel die toont:
 
-De popover-editor zelf hoeft niet te veranderen — die bewerkt altijd de `admin_price_override`.
+- **Projectnaam + bedrijf** als header
+- **Pipelinefase** als badge (concept / offerte verstuurd / akkoord / etc.)
+- **Uitvoeringsdatum** — eerste geselecteerde datum
+- **Dagen tot uitvoering** — countdown, rood als <14 dagen en nog niet alles bevestigd
+- **Waar ligt de actie?** — icoon + label:
+  - 🟠 "3 items wachten op partner" (status=pending, skip=false, geen quoted_at)
+  - 🔵 "Offerte bij klant" (quote_status=offerte_verstuurd)
+  - 🟢 "Alles bevestigd" (alle items confirmed)
+  - 🔴 "Offerte verlopen" (quote_valid_until < vandaag)
+  - ⚪ "Concept — nog niet verstuurd"
+- **Volgende automatische actie** — berekend op basis van app_settings:
+  - "Herinnering partner over X dagen" (als item >3d pending bij partner, nog geen herinnering gestuurd)
+  - "Herinnering klant over X dagen" (als offerte >7d onbeantwoord)
+  - "Herinnering al verstuurd op [datum]" (check email_log)
+- **Verlopen termijnen** — rood gemarkeerd als quote_valid_until in het verleden ligt
+
+**2. Data die wordt opgehaald (één query per sectie)**
+
+- `program_requests` — actieve projecten met quote_status, selected_dates, quote_valid_until
+- `program_request_items` — per project: status, provider_name, skip_partner_notification, updated_at, quoted_at
+- `email_log` — recente herinneringsmails (type REMINDER_*) per project/item
+- `accommodation_quotes` — logiesstatus per project
+- `app_settings` — herinneringstermijnen (5d partner, 7d klant, 14d aanvraag)
+
+**3. Sortering: urgentst bovenaan**
+
+Projecten worden gesorteerd op een urgentiescore:
+1. Verlopen termijnen (quote_valid_until < vandaag)
+2. Uitvoeringsdatum <14 dagen + nog niet alles bevestigd
+3. Items lang wachtend bij partner (>5 dagen)
+4. Offerte lang onbeantwoord door klant (>7 dagen)
+5. Rest op uitvoeringsdatum
+
+**4. Integratie in AdminDashboard**
+
+Vervangt de huidige `DashboardTodoWidget` niet — die blijft voor handmatige taken. Het Werkoverzicht komt als nieuw prominente card in de linker 2/3 kolom, boven of naast de LiveActivityFeed.
+
+**5. Filter: tijdshorizon**
+
+Toggle: "Komende 2 weken" / "Komende maand" / "Alle actieve projecten"
+
+### Bugs die meteen meegaan
+
+- `DashboardTodoWidget`: status filter `"open"` → `"todo"` (bestaande bug)
+- `DashboardTodoWidget`: priority key `"medium"` → `"normal"` (bestaande bug)
+- `autoTodoCreator.ts`: `accommodation_selected` type toevoegen aan config
 
 ### Bestanden
-1. `src/components/admin/AdminQuotePriceEditor.tsx` — weergavelogica omdraaien
+
+1. **Nieuw**: `src/components/admin/WorkOverview.tsx` — het volledige werkoverzicht
+2. `src/pages/admin/AdminDashboard.tsx` — WorkOverview toevoegen aan layout
+3. `src/components/admin/DashboardTodoWidget.tsx` — bugfixes (status + priority)
+4. `src/lib/autoTodoCreator.ts` — ontbrekend `accommodation_selected` type
 
