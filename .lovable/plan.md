@@ -1,42 +1,25 @@
 
 
-## Plan: Klantnotificatie bij inkomend partnerantwoord
+## Plan: Reply-To domein updaten naar reply.bureauvlieland.nl
 
-### Context
-Het `partner_direct` model is verwijderd. Alle projecten draaien op `bureau_central`. De conditiecheck op `invoicing_mode` is daarom overbodig — klantnotificaties worden altijd verstuurd.
+### Probleem
+Alle Reply-To adressen gebruiken `@bureauvlieland.nl`, maar Mailjet Parse API draait op het subdomein `reply.bureauvlieland.nl`. Hierdoor matchen de Reply-To adressen niet met de MX-records en komen antwoorden niet binnen.
 
 ### Wijzigingen
 
-**1. `supabase/functions/inbound-email/index.ts` — klantnotificatie toevoegen**
+**3 bestanden, zelfde wijziging: `@bureauvlieland.nl` → `@reply.bureauvlieland.nl`**
 
-Na het opslaan van de communicatie en het aanmaken van de admin-todo:
-- Haal `customer_email`, `customer_name` en `customer_company` op uit `program_requests` (request_id is al beschikbaar)
-- Voor accommodatie-gerelateerde mails: haal ook de partnernaam op via `accommodation_quotes` + `partners`
-- Stuur een notificatiemail naar de klant via Mailjet met:
-  - Afzender: Bureau Vlieland
-  - Reply-To: `reply+{referentie}@bureauvlieland.nl` (zodat klantantwoord ook in het dossier komt)
-  - Inhoud: samenvatting van het partnerantwoord met context
-- Log de mail in `email_log`
-- Geen `invoicing_mode` check — altijd versturen
+1. **`supabase/functions/_shared/email-templates.ts`** (regel 284)
+   - `buildReplyTo()`: `reply+${ref}@bureauvlieland.nl` → `reply+${ref}@reply.bureauvlieland.nl`
 
-**2. Database migratie — nieuw e-mailtemplate `inbound_reply_to_customer`**
+2. **`supabase/functions/send-customer-accommodation-message/index.ts`** (regel 143)
+   - Hardcoded Reply-To: zelfde wijziging
 
-Template met variabelen:
-- `customer_name`, `partner_name`, `reference_number`, `subject`, `message`, `portal_url`
+3. **`supabase/functions/inbound-email/index.ts`** (regel 12, 15)
+   - `extractReferenceNumber()` regex matcht al op `@` zonder domeincheck → geen wijziging nodig, maar comment updaten voor duidelijkheid
 
-### Mailjet Parse API configuratie (handmatig, door jou)
+Na wijziging: alle 3 edge functions redeployen.
 
-De edge function werkt (getest). Om Mailjet inkomende mails te laten doorsturen:
-
-1. Mailjet dashboard → Account Settings → Parse API (of Transactional → Inbound)
-2. Parse Route toevoegen:
-   - URL: `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`
-   - Methode: POST (JSON)
-3. MX-record voor subdomein (bv. `reply.bureauvlieland.nl`):
-   - `MX 10 parse.mailjet.com.`
-   - Dan Reply-To adressen aanpassen naar `reply+REF@reply.bureauvlieland.nl`
-
-### Bestanden
-1. `supabase/functions/inbound-email/index.ts` — klantnotificatie na opslaan
-2. Database migratie — `inbound_reply_to_customer` template invoegen
+### Resultaat
+Partner drukt op "beantwoorden" → mail gaat naar `reply+BV-2503-0012@reply.bureauvlieland.nl` → Mailjet MX-records vangen dit op → Parse API stuurt door naar inbound-email edge function.
 
