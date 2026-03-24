@@ -51,6 +51,7 @@ export const ProgramSidebar = ({
   accommodation,
   isMultiDay = false,
   isPreApproval = false,
+  quoteStatus,
   totalCost = 0,
   allConfirmed = false,
   onScrollToTerms,
