@@ -15,7 +15,8 @@ export type AutoTodoType =
   | "all_partners_responded"
   | "bureau_item_pricing"
   | "post_execution_feedback"
-  | "post_execution_invoice_check";
+  | "post_execution_invoice_check"
+  | "accommodation_selected";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
