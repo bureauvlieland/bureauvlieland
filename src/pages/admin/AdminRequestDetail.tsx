@@ -108,11 +108,12 @@ import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
+import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy } from "lucide-react";
+import { Copy, RefreshCw } from "lucide-react";
 
 interface ProgramRequest {
   id: string;
@@ -229,6 +230,7 @@ const AdminRequestDetail = () => {
   const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
+  const [syncBlocksOpen, setSyncBlocksOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
@@ -1186,10 +1188,16 @@ const AdminRequestDetail = () => {
                       Kopieer programma
                     </Button>
                     {items.length > 0 && (
-                      <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Opslaan als template
-                      </Button>
+                      <>
+                        <Button variant="outline" onClick={() => setSyncBlocksOpen(true)}>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Synchroniseer bouwstenen
+                        </Button>
+                        <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
+                          <Save className="h-4 w-4 mr-2" />
+                          Opslaan als template
+                        </Button>
+                      </>
                     )}
                     <Button variant="outline" onClick={() => setAddCostOpen(true)}>
                       <Euro className="h-4 w-4 mr-2" />
@@ -1862,6 +1870,16 @@ const AdminRequestDetail = () => {
           requestId={request.id}
           onSuccess={fetchRequestData}
           invoicingMode={request.invoicing_mode}
+        />
+      )}
+
+      {/* Sync building blocks dialog */}
+      {request && (
+        <SyncBuildingBlocksDialog
+          open={syncBlocksOpen}
+          onOpenChange={setSyncBlocksOpen}
+          requestId={request.id}
+          onSuccess={fetchRequestData}
         />
       )}
 
