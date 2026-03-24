@@ -1,95 +1,33 @@
 
 
-## Plan: Operationeel Werkoverzicht — vooruitkijkend, intuitief, niet alleen afvinkbaar
+## Plan: Partner-antwoorden automatisch in het dossier laten landen
 
-### Wat je nu hebt vs. wat je wilt
+### Probleem
+De `send-customer-accommodation-message` edge function stuurt mails naar partners met `Reply-To: hallo@bureauvlieland.nl`. Wanneer de partner op "beantwoorden" drukt, belandt het antwoord in de algemene inbox — niet in het inbound-email systeem dat al is ingericht voor automatische dossiervorming.
 
-**Nu**: Een takenlijst (AdminTodos) met checkboxes, gegroepeerd op type. Reactief — je ziet wat er al had moeten gebeuren, niet wat er aankomt.
+### Oorzaak
+Regel 142: `const replyToEmail = isCentralBilling ? "hallo@bureauvlieland.nl" : programRequest.customer_email;`
 
-**Gewenst**: Een vooruitkijkend tijdlijn-overzicht dat laat zien:
-- Wat er de komende dagen/weken gaat gebeuren (termijnen, herinneringsmails, uitvoeringsdatums)
-- Waar de actie ligt (bij jou, bij partner, bij klant)
-- Wat dreigt uit te lopen
-- Wanneer het systeem automatisch een herinnering stuurt
+Het systeem heeft al een werkende `inbound-email` edge function die mails naar `reply+BV-XXXX-XXXX@bureauvlieland.nl` herkent en automatisch logt als communicatie + admin-todo aanmaakt. Maar deze wordt niet gebruikt in de klant-naar-partner flow.
 
-### Oplossing: "Werkoverzicht" — een nieuw dashboard-component
+### Oplossing
 
-Een horizontale tijdlijn per project, gegroepeerd op urgentie, die alle aankomende events visualiseert:
+**`supabase/functions/send-customer-accommodation-message/index.ts`**
 
-```text
-VANDAAG        +3d          +7d          +14d         +30d
-  │              │            │             │            │
-  ├─ Salure ─────┤            │             │            │
-  │  🟠 2 items bij partner   │             │            │
-  │  📧 herinnering over 1d   │             │            │
-  │  📅 uitvoering 21 mei     │             │            │
-  │              │            │             │            │
-  ├─ Van Dijk ───┤            │             │            │
-  │  🔴 offerte verloopt 6 apr│             │            │
-  │  ⏳ klant moet reageren   │             │            │
-  │              │            │             │            │
-  ├─ RMD ────────┤            │             │            │
-  │  🔴 offerte VERLOPEN (17 mrt!)          │            │
-  │  📧 herinnering gestuurd 20 mrt         │            │
-```
+1. Haal het `reference_number` op van de `program_request` (al beschikbaar, hoeft alleen aan de select toegevoegd te worden)
+2. Wijzig de `Reply-To` van `hallo@bureauvlieland.nl` naar `reply+{reference_number}@bureauvlieland.nl`
+3. Dit geldt voor **beide** modes (bureau_central én partner_direct) — alle antwoorden moeten in het dossier
 
-### Concrete implementatie
+Concrete wijziging:
+- Select uitbreiden: `reference_number` toevoegen aan de program_requests query
+- Reply-To aanpassen: `reply+${programRequest.reference_number}@bureauvlieland.nl`
+- Reply-To naam blijft: `Bureau Vlieland` (bureau_central) of klantnaam (partner_direct)
 
-**1. Nieuw component: `src/components/admin/WorkOverview.tsx`**
-
-Een card-based overzicht (geen Gantt, geen kalender — bewust simpel) met per actief project een compacte statusregel die toont:
-
-- **Projectnaam + bedrijf** als header
-- **Pipelinefase** als badge (concept / offerte verstuurd / akkoord / etc.)
-- **Uitvoeringsdatum** — eerste geselecteerde datum
-- **Dagen tot uitvoering** — countdown, rood als <14 dagen en nog niet alles bevestigd
-- **Waar ligt de actie?** — icoon + label:
-  - 🟠 "3 items wachten op partner" (status=pending, skip=false, geen quoted_at)
-  - 🔵 "Offerte bij klant" (quote_status=offerte_verstuurd)
-  - 🟢 "Alles bevestigd" (alle items confirmed)
-  - 🔴 "Offerte verlopen" (quote_valid_until < vandaag)
-  - ⚪ "Concept — nog niet verstuurd"
-- **Volgende automatische actie** — berekend op basis van app_settings:
-  - "Herinnering partner over X dagen" (als item >3d pending bij partner, nog geen herinnering gestuurd)
-  - "Herinnering klant over X dagen" (als offerte >7d onbeantwoord)
-  - "Herinnering al verstuurd op [datum]" (check email_log)
-- **Verlopen termijnen** — rood gemarkeerd als quote_valid_until in het verleden ligt
-
-**2. Data die wordt opgehaald (één query per sectie)**
-
-- `program_requests` — actieve projecten met quote_status, selected_dates, quote_valid_until
-- `program_request_items` — per project: status, provider_name, skip_partner_notification, updated_at, quoted_at
-- `email_log` — recente herinneringsmails (type REMINDER_*) per project/item
-- `accommodation_quotes` — logiesstatus per project
-- `app_settings` — herinneringstermijnen (5d partner, 7d klant, 14d aanvraag)
-
-**3. Sortering: urgentst bovenaan**
-
-Projecten worden gesorteerd op een urgentiescore:
-1. Verlopen termijnen (quote_valid_until < vandaag)
-2. Uitvoeringsdatum <14 dagen + nog niet alles bevestigd
-3. Items lang wachtend bij partner (>5 dagen)
-4. Offerte lang onbeantwoord door klant (>7 dagen)
-5. Rest op uitvoeringsdatum
-
-**4. Integratie in AdminDashboard**
-
-Vervangt de huidige `DashboardTodoWidget` niet — die blijft voor handmatige taken. Het Werkoverzicht komt als nieuw prominente card in de linker 2/3 kolom, boven of naast de LiveActivityFeed.
-
-**5. Filter: tijdshorizon**
-
-Toggle: "Komende 2 weken" / "Komende maand" / "Alle actieve projecten"
-
-### Bugs die meteen meegaan
-
-- `DashboardTodoWidget`: status filter `"open"` → `"todo"` (bestaande bug)
-- `DashboardTodoWidget`: priority key `"medium"` → `"normal"` (bestaande bug)
-- `autoTodoCreator.ts`: `accommodation_selected` type toevoegen aan config
+### Resultaat
+- Partner drukt op "beantwoorden" → mail gaat naar `reply+BV-2503-0012@bureauvlieland.nl`
+- `inbound-email` edge function vangt dit op → logt in communicatiedossier + maakt admin-todo
+- Geen handmatige actie meer nodig om partnerantwoorden bij te houden
 
 ### Bestanden
-
-1. **Nieuw**: `src/components/admin/WorkOverview.tsx` — het volledige werkoverzicht
-2. `src/pages/admin/AdminDashboard.tsx` — WorkOverview toevoegen aan layout
-3. `src/components/admin/DashboardTodoWidget.tsx` — bugfixes (status + priority)
-4. `src/lib/autoTodoCreator.ts` — ontbrekend `accommodation_selected` type
+1. `supabase/functions/send-customer-accommodation-message/index.ts` — Reply-To aanpassen
 
