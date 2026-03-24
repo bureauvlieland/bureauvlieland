@@ -97,7 +97,7 @@ export const DashboardTodoWidget = () => {
               )}
             </div>
             <Badge className={priorityColor[todo.priority] || priorityColor.low} variant="secondary">
-              {todo.priority === "high" ? "Hoog" : todo.priority === "medium" ? "Gemiddeld" : "Laag"}
+              {todo.priority === "urgent" ? "Urgent" : todo.priority === "high" ? "Hoog" : todo.priority === "normal" ? "Normaal" : "Laag"}
             </Badge>
           </div>
         ))}

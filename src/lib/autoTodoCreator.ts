@@ -252,4 +252,9 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-rose-700",
     bgColor: "bg-rose-100",
   },
+  accommodation_selected: {
+    label: "Logies bevestigen",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
+  },
 };
