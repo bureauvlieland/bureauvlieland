@@ -1188,10 +1188,16 @@ const AdminRequestDetail = () => {
                       Kopieer programma
                     </Button>
                     {items.length > 0 && (
-                      <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Opslaan als template
-                      </Button>
+                      <>
+                        <Button variant="outline" onClick={() => setSyncBlocksOpen(true)}>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Synchroniseer bouwstenen
+                        </Button>
+                        <Button variant="outline" onClick={() => setSaveAsTemplateOpen(true)}>
+                          <Save className="h-4 w-4 mr-2" />
+                          Opslaan als template
+                        </Button>
+                      </>
                     )}
                     <Button variant="outline" onClick={() => setAddCostOpen(true)}>
                       <Euro className="h-4 w-4 mr-2" />
