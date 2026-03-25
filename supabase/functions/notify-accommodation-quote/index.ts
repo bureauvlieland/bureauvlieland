@@ -154,7 +154,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { quoteId } = await req.json();
+    const body = await req.json();
+    const { quoteId } = body;
+    const origin = body.origin || req.headers.get("origin") || "";
 
     if (!quoteId) {
       return new Response(
