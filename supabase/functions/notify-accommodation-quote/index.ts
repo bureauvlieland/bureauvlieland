@@ -191,6 +191,16 @@ Deno.serve(async (req) => {
       ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
       : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
 
+    // Fetch extras for this quote
+    const { data: quoteExtras } = await supabase
+      .from("accommodation_quote_extras")
+      .select("name, unit_price, quantity, pricing_type")
+      .eq("quote_id", quoteId);
+    const extras = quoteExtras || [];
+    const extrasTotal = extras.reduce((sum: number, e: any) =>
+      sum + (e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity), 0);
+    const grandTotal = quote.price_total + extrasTotal;
+
     // Calculate nights
     const arrivalDate = new Date(request.arrival_date);
     const departureDate = new Date(request.departure_date);
@@ -208,7 +218,10 @@ Deno.serve(async (req) => {
       departure_date: formatDateNL(request.departure_date),
       number_of_nights: String(nights),
       number_of_guests: String(request.number_of_guests),
-      price_total: formatCurrencyNL(quote.price_total),
+      price_total: formatCurrencyNL(grandTotal),
+      base_price: formatCurrencyNL(quote.price_total),
+      extras_total: extrasTotal > 0 ? formatCurrencyNL(extrasTotal) : "",
+      extras_list: extras.map((e: any) => `<li>${sanitizeHtml(e.name)}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join(""),
       price_per_person_per_night: quote.price_per_person_per_night ? formatCurrencyNL(quote.price_per_person_per_night) : "",
       includes_list: includes.map((item: string) => `<li>${sanitizeHtml(item)}</li>`).join(""),
       valid_until: formatDateNL(quote.valid_until),
