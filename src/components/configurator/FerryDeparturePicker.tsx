@@ -1,7 +1,7 @@
 import { useFerryDepartures, type FerryDeparture } from "@/hooks/useFerryDepartures";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Ship, Check, Loader2, AlertCircle } from "lucide-react";
+import { Ship, Check, Loader2, AlertCircle, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FerryDeparturePickerProps {
