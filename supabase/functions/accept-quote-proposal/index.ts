@@ -411,9 +411,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
         notes: `Klant heeft het voorstel geaccordeerd. ${approvedItems?.length || 0} onderdeel(en) wachten op verwerking door Bureau Vlieland.`,
       });
 
+      const custBaseUrl = getPortalBaseUrl(origin);
+      const custPortalUrl = `${custBaseUrl}/mijn-programma/${program.customer_token}`;
       const customerEmailHtml = generateCustomerConfirmationEmail(
         program,
-        customerPortalUrl
+        custPortalUrl
       );
       const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
 
