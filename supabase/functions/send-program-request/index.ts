@@ -276,6 +276,62 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Program request emails sent successfully");
 
+    // Enrich provider_name and provider_email on program_request_items using service-role
+    if (customerToken) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+
+        // Find the program request by token
+        const { data: programReq } = await supabaseAdmin
+          .from("program_requests")
+          .select("id")
+          .eq("customer_token", customerToken)
+          .maybeSingle();
+
+        if (programReq) {
+          // Get items with non-bureau provider_id
+          const { data: items } = await supabaseAdmin
+            .from("program_request_items")
+            .select("id, provider_id")
+            .eq("request_id", programReq.id)
+            .neq("provider_id", "")
+            .neq("provider_id", "bureau");
+
+          if (items && items.length > 0) {
+            const uniqueProviderIds = [...new Set(items.map((i: any) => i.provider_id))];
+
+            const { data: partners } = await supabaseAdmin
+              .from("partners")
+              .select("id, name, email, contact_email")
+              .in("id", uniqueProviderIds);
+
+            if (partners && partners.length > 0) {
+              const partnerMap = new Map(partners.map((p: any) => [p.id, p]));
+
+              for (const item of items) {
+                const partner = partnerMap.get(item.provider_id);
+                if (partner) {
+                  await supabaseAdmin
+                    .from("program_request_items")
+                    .update({
+                      provider_name: partner.name,
+                      provider_email: partner.contact_email || partner.email,
+                    })
+                    .eq("id", item.id);
+                }
+              }
+              console.log(`Enriched ${items.length} items with partner names`);
+            }
+          }
+        }
+      } catch (enrichError) {
+        console.error("Non-critical: Failed to enrich provider names:", enrichError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
