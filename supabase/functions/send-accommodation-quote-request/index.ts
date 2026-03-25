@@ -129,7 +129,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { request_id, partner_ids, email_subject, email_body } = (await req.json()) as QuoteRequestPayload;
+    const body = await req.json();
+    const { request_id, partner_ids, email_subject, email_body } = body as QuoteRequestPayload;
+    const origin = body.origin || req.headers.get("origin") || "";
+    const portalBaseUrl = getPortalBaseUrl(origin);
 
     if (!request_id || !partner_ids?.length || !email_subject || !email_body) {
       return new Response(
