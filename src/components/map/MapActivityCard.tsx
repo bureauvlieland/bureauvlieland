@@ -14,20 +14,16 @@ interface MapActivityCardProps {
   };
   onBook?: (activity: MapActivity & { _partnerId?: string; _partnerSlug?: string }) => void;
   showPartner?: boolean;
-  commissionMarkup?: number; // e.g. 1.10 for 10%
 }
 
 export const MapActivityCard = ({
   activity,
   onBook,
   showPartner = true,
-  commissionMarkup = 1.10,
 }: MapActivityCardProps) => {
   const departureDate = new Date(activity.Departure);
-  const displayPrice = Math.ceil(activity.PricePerPerson * commissionMarkup * 100) / 100;
-  const childDisplayPrice = activity.PricePerChild
-    ? Math.ceil(activity.PricePerChild * commissionMarkup * 100) / 100
-    : null;
+  const displayPrice = activity.PricePerPerson;
+  const childDisplayPrice = activity.PricePerChild || null;
   const spotsLeft = activity.RemainingSlots;
   const isAlmostFull = spotsLeft > 0 && spotsLeft <= 5;
   const isFull = spotsLeft <= 0;

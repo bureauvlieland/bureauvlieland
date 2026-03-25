@@ -23,14 +23,12 @@ interface MapBookingDialogProps {
     | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  commissionMarkup?: number;
 }
 
 export const MapBookingDialog = ({
   activity,
   open,
   onOpenChange,
-  commissionMarkup = 1.1,
 }: MapBookingDialogProps) => {
   const [form, setForm] = useState({
     customerName: "",
@@ -45,10 +43,8 @@ export const MapBookingDialog = ({
 
   if (!activity) return null;
 
-  const unitPrice = Math.ceil(activity.PricePerPerson * commissionMarkup * 100) / 100;
-  const childUnitPrice = activity.PricePerChild
-    ? Math.ceil(activity.PricePerChild * commissionMarkup * 100) / 100
-    : 0;
+  const unitPrice = activity.PricePerPerson;
+  const childUnitPrice = activity.PricePerChild || 0;
   const totalPrice =
     unitPrice * form.numberOfAdults + childUnitPrice * form.numberOfChildren;
 
