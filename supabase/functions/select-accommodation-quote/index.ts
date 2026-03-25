@@ -378,7 +378,7 @@ Deno.serve(async (req) => {
           console.error("Error sending partner email:", e);
           await logEmail({
             email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
-            subject: `Uw offerte voor logies is geaccepteerd`,
+            subject: `Je offerte voor logies is geaccepteerd`,
             recipient_email: partnerEmail,
             recipient_name: quote.partner?.name,
             related_accommodation_id: request.id,
