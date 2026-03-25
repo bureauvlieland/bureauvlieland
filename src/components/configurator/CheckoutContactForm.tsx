@@ -364,6 +364,24 @@ export const CheckoutContactForm = ({
           </form>
         </div>
       </div>
+
+      <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mogelijke dubbele aanvraag</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er is in de afgelopen 24 uur al een aanvraag ingediend met dit e-mailadres.
+              Weet u zeker dat u een nieuwe aanvraag wilt versturen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={() => executeSubmit()}>
+              Toch versturen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
