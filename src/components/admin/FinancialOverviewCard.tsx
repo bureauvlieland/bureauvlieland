@@ -118,7 +118,7 @@ export const FinancialOverviewCard = ({
 
   const programVatBreakdown = programItems.reduce(
     (acc, item) => {
-      const lineTotal = getLineTotal(item, numberOfPeople) ?? 0;
+      const lineTotal = getLineTotal(item, numberOfPeople, numberOfDays) ?? 0;
       const vatRate = getItemVatRate(item as any);
       acc.exclVat += calculateExclVat(lineTotal, vatRate);
       acc.vatAmount += calculateVatAmount(lineTotal, vatRate);

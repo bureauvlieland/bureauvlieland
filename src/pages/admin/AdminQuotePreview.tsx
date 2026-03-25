@@ -746,7 +746,7 @@ const AdminQuotePreview = () => {
                                         <>
                                           {formatCurrency(getItemPrice(item))}
                                           <span className="text-xs text-gray-400 ml-1">
-                                            {item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
+                                            {item.price_type === 'per_person_per_day' ? 'p.p.p.d.' : item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
                                           </span>
                                         </>
                                       )}
