@@ -285,7 +285,10 @@ Deno.serve(async (req) => {
         arrival_date: formatDateNL(request.arrival_date),
         departure_date: formatDateNL(request.departure_date),
         number_of_guests: String(request.number_of_guests),
-        price_total: formatCurrencyNL(quote.price_total),
+        price_total: formatCurrencyNL(grandTotal),
+        base_price: formatCurrencyNL(quote.price_total),
+        extras_total: extrasTotal > 0 ? formatCurrencyNL(extrasTotal) : "",
+        extras_list: extras.map((e: any) => `<li>${e.name}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join(""),
         guest_name: guestDisplayName,
       };
 
