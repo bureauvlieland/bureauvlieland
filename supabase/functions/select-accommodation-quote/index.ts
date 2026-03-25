@@ -355,7 +355,7 @@ Deno.serve(async (req) => {
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: partnerEmail }],
                   ...(replyTo ? { ReplyTo: replyTo } : {}),
-                  Subject: partnerTemplate?.subject || `${subjectPrefix}Uw offerte voor logies is geaccepteerd`,
+                  Subject: partnerTemplate?.subject || `${subjectPrefix}Je offerte voor logies is geaccepteerd`,
                   HTMLPart: partnerHtml,
                 },
               ],
