@@ -285,11 +285,12 @@ Deno.serve(async (req) => {
       partnerTemplateVariables.customer_email = "hallo@bureauvlieland.nl";
       partnerTemplateVariables.customer_phone = "0562 700 208";
 
-      const partnerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables);
-
       // Partner portal link
       const partnerToken = quote.partner?.partner_token || "";
       const partnerPortalUrl = `${origin}/partner/logies?token=${partnerToken}`;
+      partnerTemplateVariables.partner_portal_link = partnerPortalUrl;
+
+      const partnerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables);
 
       const partnerEmail = getRecipientEmail(quote.partner?.contact_email || quote.partner?.email || "", origin);
       if (partnerEmail) {
