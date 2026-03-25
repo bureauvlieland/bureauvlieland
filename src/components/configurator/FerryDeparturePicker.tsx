@@ -25,6 +25,7 @@ export const FerryDeparturePicker = ({
   date,
   selectedTime,
   onSelect,
+  hasError = false,
 }: FerryDeparturePickerProps) => {
   const dateStr = format(date, "yyyy-MM-dd");
 
