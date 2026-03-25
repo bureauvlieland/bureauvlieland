@@ -47,7 +47,7 @@ function markdownToHtml(text: string): string {
 }
 
 // Wrap plain text in a styled HTML email template
-function wrapInEmailTemplate(body: string, partnerName: string): string {
+function wrapInEmailTemplate(body: string, partnerName: string, portalBaseUrl: string): string {
   const htmlBody = markdownToHtml(body);
   
   return `
@@ -71,7 +71,7 @@ function wrapInEmailTemplate(body: string, partnerName: string): string {
       <p style="margin: 0; font-size: 14px; color: #64748b;">
         Log in op het partnerportaal om je offerte in te dienen. Je vindt de aanvraag onder "Logies aanvragen".
       </p>
-      <a href="https://bureauvlieland.nl/partner" 
+      <a href="${portalBaseUrl}/partner" 
          style="display: inline-block; margin-top: 12px; background-color: #0f766e; color: white; 
                 padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500;">
         Ga naar partnerportaal →
@@ -80,7 +80,7 @@ function wrapInEmailTemplate(body: string, partnerName: string): string {
   </div>
   
   <div style="text-align: center; padding: 20px; color: #64748b; font-size: 12px;">
-    <p style="margin: 0;">Bureau Vlieland - Uw partner voor Vlieland evenementen</p>
+    <p style="margin: 0;">Bureau Vlieland - Je partner voor Vlieland evenementen</p>
     <p style="margin: 4px 0 0;">
       <a href="mailto:hallo@bureauvlieland.nl" style="color: #0f766e;">hallo@bureauvlieland.nl</a> | 
       0562 700 208
