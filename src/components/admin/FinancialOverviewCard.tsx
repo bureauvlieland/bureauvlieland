@@ -75,7 +75,7 @@ export const FinancialOverviewCard = ({
     `€${amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const formatItemPrice = (item: FinancialItem) => {
-    const lineTotal = getLineTotal(item, numberOfPeople);
+    const lineTotal = getLineTotal(item, numberOfPeople, numberOfDays);
     if (lineTotal == null) return "Op aanvraag";
 
     // admin_price_override + per person → show unit price and total
@@ -85,7 +85,8 @@ export const FinancialOverviewCard = ({
       isPerPersonItem(item) &&
       numberOfPeople > 1
     ) {
-      return `${formatCurrency(item.admin_price_override)} p.p.`;
+      const suffix = item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p.";
+      return `${formatCurrency(item.admin_price_override)} ${suffix}`;
     }
 
     // quoted_price or flat admin override → show as group total
