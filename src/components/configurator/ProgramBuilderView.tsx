@@ -475,7 +475,7 @@ export const ProgramBuilderView = ({
           <p className="text-sm text-muted-foreground">
             {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
           </p>
-          <Button size="lg" className="gap-2" onClick={onSubmit} disabled={cartItems.length === 0}>
+          <Button size="lg" className="gap-2" onClick={handleSubmitWithValidation} disabled={cartItems.length === 0}>
             <ArrowRight className="h-4 w-4" />
             Overzicht en versturen
           </Button>
