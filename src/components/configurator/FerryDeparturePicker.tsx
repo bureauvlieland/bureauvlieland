@@ -10,6 +10,7 @@ interface FerryDeparturePickerProps {
   date: Date;
   selectedTime: string | null;
   onSelect: (departureTime: string) => void;
+  hasError?: boolean;
 }
 
 const portLabels: Record<string, string> = {
