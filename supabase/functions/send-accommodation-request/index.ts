@@ -41,7 +41,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 };
 
 // Fallback templates if database templates not found
-function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>, budgetLabels: Record<string, string>): string {
+function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>, budgetLabels: Record<string, string>, adminBaseUrl: string): string {
   const safeName = sanitizeHtml(request.customer_name);
   const safeCompany = sanitizeHtml(request.customer_company);
   const safePhone = sanitizeHtml(request.customer_phone);
