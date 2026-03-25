@@ -42,7 +42,7 @@ interface FinancialOverviewCardProps {
 }
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
-const getLineTotal = (item: FinancialItem, n: number) => centralLineTotal(item as any, n);
+const getLineTotal = (item: FinancialItem, n: number, days: number = 1) => centralLineTotal(item as any, n, days);
 
 
 export const FinancialOverviewCard = ({
@@ -75,7 +75,7 @@ export const FinancialOverviewCard = ({
     `€${amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const formatItemPrice = (item: FinancialItem) => {
-    const lineTotal = getLineTotal(item, numberOfPeople);
+    const lineTotal = getLineTotal(item, numberOfPeople, numberOfDays);
     if (lineTotal == null) return "Op aanvraag";
 
     // admin_price_override + per person → show unit price and total
@@ -85,7 +85,8 @@ export const FinancialOverviewCard = ({
       isPerPersonItem(item) &&
       numberOfPeople > 1
     ) {
-      return `${formatCurrency(item.admin_price_override)} p.p.`;
+      const suffix = item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p.";
+      return `${formatCurrency(item.admin_price_override)} ${suffix}`;
     }
 
     // quoted_price or flat admin override → show as group total
@@ -103,7 +104,7 @@ export const FinancialOverviewCard = ({
   };
 
   const programTotal = programItems.reduce(
-    (sum, item) => sum + (getLineTotal(item, numberOfPeople) ?? 0), 0
+    (sum, item) => sum + (getLineTotal(item, numberOfPeople, numberOfDays) ?? 0), 0
   );
   const extraCostsTotal = extraCostItems.reduce(
     (sum, item) => sum + (item.admin_price_override ?? 0), 0
@@ -117,7 +118,7 @@ export const FinancialOverviewCard = ({
 
   const programVatBreakdown = programItems.reduce(
     (acc, item) => {
-      const lineTotal = getLineTotal(item, numberOfPeople) ?? 0;
+      const lineTotal = getLineTotal(item, numberOfPeople, numberOfDays) ?? 0;
       const vatRate = getItemVatRate(item as any);
       acc.exclVat += calculateExclVat(lineTotal, vatRate);
       acc.vatAmount += calculateVatAmount(lineTotal, vatRate);

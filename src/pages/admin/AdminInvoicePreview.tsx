@@ -247,10 +247,10 @@ const AdminInvoicePreview = () => {
     // admin_price_override = unit price, multiply for per_person
     const unitPrice = item.admin_price_override ?? 0;
     const effectivePeople = item.override_people ?? request?.number_of_people ?? 1;
-    if (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request") {
-      return unitPrice * effectivePeople;
-    }
-    return unitPrice;
+    const isPerPerson = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
+    const personMult = isPerPerson ? effectivePeople : 1;
+    const dayMult = item.price_type === "per_person_per_day" ? (request?.selected_dates?.length || 1) : 1;
+    return unitPrice * personMult * dayMult;
   };
 
   const getExtraTotal = (extra: AccommodationExtraData) => {
@@ -609,9 +609,14 @@ const AdminInvoicePreview = () => {
                                   </td>
                                 </tr>
                                 {catItems.map((item) => {
-                                  const isPerPerson = item.price_type === "per_person";
+                                  const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+                                  const isPerDay = item.price_type === "per_person_per_day";
                                   const unitPrice = getItemPrice(item);
                                   const lineTotal = getItemTotal(item);
+                                  const numberOfDays = request.selected_dates?.length || 1;
+                                  const qty = isPerPerson
+                                    ? (isPerDay ? `${request.number_of_people} × ${numberOfDays} dgn` : String(request.number_of_people))
+                                    : "1";
 
                                   return (
                                     <tr key={item.id} className="border-b border-gray-100">
@@ -623,11 +628,14 @@ const AdminInvoicePreview = () => {
                                         <p className="text-xs text-gray-400">{item.provider_name}</p>
                                       </td>
                                       <td className="py-2 px-3 text-right">
-                                        {isPerPerson ? request.number_of_people : 1}
+                                        {qty}
                                       </td>
                                       <td className="py-2 px-3 text-right">
                                         {formatCurrency(unitPrice)}
-                                        {isPerPerson && (
+                                        {isPerDay && (
+                                          <span className="text-xs text-gray-400 ml-1">p.p.p.d.</span>
+                                        )}
+                                        {isPerPerson && !isPerDay && (
                                           <span className="text-xs text-gray-400 ml-1">p.p.</span>
                                         )}
                                       </td>
