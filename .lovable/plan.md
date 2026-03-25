@@ -1,27 +1,22 @@
 
 
-## Plan: Afbeeldingen toevoegen aan activiteitenkaarten
+## Plan: MAP afbeelding-URL's fixen
 
-De MAP API heeft **geen** afbeeldingen op het activities-endpoint, maar het **activitytypes**-endpoint heeft wel een `Image` veld. We matchen die via `ActivityTypeId`.
+De `Image` waarden uit de API zijn UUID's. De volledige URL is:
+`https://portal.mijnactiviteitenplanner.nl/File/Get?reference={uuid}`
 
-### Aanpak
+### Wijziging
 
-**1. `useAllMapActivities` hook uitbreiden** (`src/hooks/useMapActivities.ts`)
-- Per partner naast activities ook activitytypes ophalen (parallel)
-- Image uit activitytype koppelen aan elke activity via `ActivityTypeId`
-- Toevoegen als `_image: string | null` aan het resultaat
+**`src/hooks/useMapActivities.ts`** — helper toevoegen die UUID omzet naar volledige URL:
 
-**2. `MapActivity` type uitbreiden**
-- Optioneel `_image?: string` veld toevoegen aan het enriched type
+```typescript
+const mapImageUrl = (ref: string | null) =>
+  ref ? `https://portal.mijnactiviteitenplanner.nl/File/Get?reference=${ref}` : null;
+```
 
-**3. `MapActivityCard.tsx` aanpassen**
-- Afbeelding tonen boven of naast de kaart als `_image` beschikbaar is
-- Fallback naar placeholder als er geen afbeelding is
+Toepassen op twee plekken:
+1. In `useAllMapActivities` waar `_image` wordt gezet vanuit de `typeImageMap`
+2. In `useMapActivityTypes` resultaat (optioneel, voor hergebruik)
 
-### Bestanden
-
-| Actie | Bestand |
-|-------|---------|
-| Wijzig | `src/hooks/useMapActivities.ts` — activitytypes meefetchen, image koppelen |
-| Wijzig | `src/components/map/MapActivityCard.tsx` — afbeelding tonen |
+Geen andere bestanden nodig — `MapActivityCard.tsx` gebruikt `_image` al correct als `src`.
 
