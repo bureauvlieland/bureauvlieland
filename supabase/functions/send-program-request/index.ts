@@ -263,13 +263,13 @@ const handler = async (req: Request): Promise<Response> => {
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
         To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin van der Most" }],
-        Subject: `${subjectPrefix}${bureauSubject}`,
+        Subject: bureauTemplate?.subject ? bureauSubject : `${subjectPrefix}${bureauSubject}`,
         HTMLPart: bureauEmailHtml,
       },
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: requestData.email, Name: requestData.name }],
-        Subject: `${subjectPrefix}${customerSubject}`,
+        Subject: customerTemplate?.subject ? customerSubject : `${subjectPrefix}${customerSubject}`,
         HTMLPart: customerEmailHtml,
       }
     ]);

@@ -7,6 +7,7 @@ import {
   formatDateNL, 
   formatCurrencyNL,
   buildReplyTo,
+  getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -153,7 +154,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { quoteId } = await req.json();
+    const body = await req.json();
+    const { quoteId } = body;
+    const origin = body.origin || req.headers.get("origin") || "";
 
     if (!quoteId) {
       return new Response(
@@ -200,9 +203,10 @@ Deno.serve(async (req) => {
 
     // Always use the program token for the portal URL (unified customer experience)
     const programToken = request.linked_program?.customer_token;
+    const baseUrl = getPortalBaseUrl(origin);
     const portalUrl = programToken 
-      ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
-      : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
+      ? `${baseUrl}/mijn-programma/${programToken}`
+      : `${baseUrl}/mijn-logies/${request.customer_token}`;
 
     // Fetch extras for this quote
     const { data: quoteExtras } = await supabase

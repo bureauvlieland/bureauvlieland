@@ -41,7 +41,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 };
 
 // Fallback templates if database templates not found
-function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>, budgetLabels: Record<string, string>): string {
+function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>, budgetLabels: Record<string, string>, adminBaseUrl: string): string {
   const safeName = sanitizeHtml(request.customer_name);
   const safeCompany = sanitizeHtml(request.customer_company);
   const safePhone = sanitizeHtml(request.customer_phone);
@@ -84,7 +84,7 @@ function getFallbackBureauHtml(request: any, typeLabels: Record<string, string>,
       ` : ''}
       
       <p style="margin-top: 30px;">
-        <a href="${baseUrl}/admin/logies/${request.id}" 
+        <a href="${adminBaseUrl}/admin/logies/${request.id}" 
            style="display: inline-block; background-color: #1a365d; color: white; 
                   padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
           Bekijk in admin →
@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     ]);
 
     // Use database templates or fallback
-    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels, budgetLabels);
+    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels, budgetLabels, baseUrl);
     const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe logies aanvraag - ${request.number_of_guests} gasten`;
 
     const customerEmailHtml = customerTemplate?.body || getFallbackCustomerHtml(request, typeLabels, portalUrl);

@@ -310,7 +310,7 @@ Deno.serve(async (req) => {
         const partnerHtml = partnerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #16a34a;">Goed nieuws!</h1>
-            <p>Uw offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd door Bureau Vlieland.</p>
+            <p>Je offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd door Bureau Vlieland.</p>
             
             <h2>Gastgegevens</h2>
             <ul>
@@ -324,16 +324,16 @@ Deno.serve(async (req) => {
             </ul>
 
             <h2>Facturatie</h2>
-            <p>Factureer het verblijf aan <strong>Bureau Vlieland</strong>. U ontvangt hierover apart bericht via het partnerportaal.</p>
+            <p>Factureer het verblijf aan <strong>Bureau Vlieland</strong>. Je ontvangt hierover apart bericht via het partnerportaal.</p>
             <ul>
               <li><strong>Email:</strong> hallo@bureauvlieland.nl</li>
               <li><strong>Telefoon:</strong> 0562 700 208</li>
             </ul>
             
-            <p>Bureau Vlieland neemt contact met u op over de verdere afhandeling.</p>
+            <p>Bureau Vlieland neemt contact met je op over de verdere afhandeling.</p>
 
             <p style="margin-top: 24px;">
-              <a href="${partnerPortalUrl}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Partner Portal →</a>
+              <a href="${partnerPortalUrl}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ga naar partnerportaal →</a>
             </p>
             
             <p style="color: #666; font-size: 12px; margin-top: 40px;">
@@ -355,7 +355,7 @@ Deno.serve(async (req) => {
                   From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                   To: [{ Email: partnerEmail }],
                   ...(replyTo ? { ReplyTo: replyTo } : {}),
-                  Subject: partnerTemplate?.subject || `${subjectPrefix}Uw offerte voor logies is geaccepteerd`,
+                  Subject: partnerTemplate?.subject || `${subjectPrefix}Je offerte voor logies is geaccepteerd`,
                   HTMLPart: partnerHtml,
                 },
               ],
@@ -364,7 +364,7 @@ Deno.serve(async (req) => {
 
           await logEmail({
             email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
-            subject: partnerTemplate?.subject || `Uw offerte voor logies is geaccepteerd`,
+            subject: partnerTemplate?.subject || `Je offerte voor logies is geaccepteerd`,
             recipient_email: partnerEmail,
             recipient_name: quote.partner?.name,
             related_accommodation_id: request.id,
@@ -378,7 +378,7 @@ Deno.serve(async (req) => {
           console.error("Error sending partner email:", e);
           await logEmail({
             email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
-            subject: `Uw offerte voor logies is geaccepteerd`,
+            subject: `Je offerte voor logies is geaccepteerd`,
             recipient_email: partnerEmail,
             recipient_name: quote.partner?.name,
             related_accommodation_id: request.id,
@@ -400,7 +400,7 @@ Deno.serve(async (req) => {
 
           const rejectedVars = {
             partner_name: sanitizeHtml(rqPartner.name),
-            customer_name: sanitizeHtml(request.customer_name),
+            customer_name: "Bureau Vlieland",
             accommodation_name: sanitizeHtml(rq.accommodation_name),
             arrival_date: formatDateNL(request.arrival_date),
             departure_date: formatDateNL(request.departure_date),
@@ -414,9 +414,9 @@ Deno.serve(async (req) => {
           const rejectedHtml = rejectedTemplate?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <p>Beste ${sanitizeHtml(rqPartner.name)},</p>
-              <p>Wij laten u weten dat voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie is gekozen.</p>
-              <p>Uw offerte voor <strong>${sanitizeHtml(rq.accommodation_name)}</strong> wordt hiermee afgesloten.</p>
-              <p>Bedankt voor het uitbrengen van uw offerte. Wij hopen u bij een volgende aanvraag weer te mogen benaderen.</p>
+              <p>We laten je weten dat voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie is gekozen.</p>
+              <p>Je offerte voor <strong>${sanitizeHtml(rq.accommodation_name)}</strong> wordt hiermee afgesloten.</p>
+              <p>Bedankt voor het uitbrengen van je offerte. We hopen je bij een volgende aanvraag weer te mogen benaderen.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
           `;

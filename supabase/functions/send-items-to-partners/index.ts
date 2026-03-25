@@ -100,15 +100,15 @@ function generatePartnerNotificationEmail(
         <ul style="padding-left: 20px; margin-bottom: 0;">${itemsHtml}</ul>
       </div>
       <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
-        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partner Portal</h3>
-        <p style="margin-bottom: 12px;">Bekijk en beheer deze aanvraag in uw Partner Portal.</p>
+        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partnerportaal</h3>
+        <p style="margin-bottom: 12px;">Bekijk en beheer deze aanvraag in je partnerportaal.</p>
         <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
-          Open Partner Portal
+          Ga naar partnerportaal →
         </a>
       </div>
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
       <p style="color: #666; font-size: 14px;">
-        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op om beschikbaarheid te bevestigen.
+        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met Bureau Vlieland om beschikbaarheid te bevestigen.
       </p>
       <p style="margin-top: 30px;">
         Met vriendelijke groet,<br>
@@ -293,13 +293,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       emailMessages.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: recipientEmail, Name: group.partnerName }],
-        Subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name} - ${program.reference_number || ""}`,
+        Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
         HTMLPart: emailHtml,
       });
 
       emailLogs.push({
         email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name}`,
+        subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
         recipient_email: recipientEmail,
         recipient_name: group.partnerName,
         related_request_id: program.id,

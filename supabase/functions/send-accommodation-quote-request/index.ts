@@ -1,6 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { getPortalBaseUrl } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -47,7 +48,7 @@ function markdownToHtml(text: string): string {
 }
 
 // Wrap plain text in a styled HTML email template
-function wrapInEmailTemplate(body: string, partnerName: string): string {
+function wrapInEmailTemplate(body: string, partnerName: string, portalBaseUrl: string): string {
   const htmlBody = markdownToHtml(body);
   
   return `
@@ -71,7 +72,7 @@ function wrapInEmailTemplate(body: string, partnerName: string): string {
       <p style="margin: 0; font-size: 14px; color: #64748b;">
         Log in op het partnerportaal om je offerte in te dienen. Je vindt de aanvraag onder "Logies aanvragen".
       </p>
-      <a href="https://bureauvlieland.nl/partner" 
+      <a href="${portalBaseUrl}/partner" 
          style="display: inline-block; margin-top: 12px; background-color: #0f766e; color: white; 
                 padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500;">
         Ga naar partnerportaal →
@@ -80,7 +81,7 @@ function wrapInEmailTemplate(body: string, partnerName: string): string {
   </div>
   
   <div style="text-align: center; padding: 20px; color: #64748b; font-size: 12px;">
-    <p style="margin: 0;">Bureau Vlieland - Uw partner voor Vlieland evenementen</p>
+    <p style="margin: 0;">Bureau Vlieland - Je partner voor Vlieland evenementen</p>
     <p style="margin: 4px 0 0;">
       <a href="mailto:hallo@bureauvlieland.nl" style="color: #0f766e;">hallo@bureauvlieland.nl</a> | 
       0562 700 208
@@ -128,7 +129,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { request_id, partner_ids, email_subject, email_body } = (await req.json()) as QuoteRequestPayload;
+    const body = await req.json();
+    const { request_id, partner_ids, email_subject, email_body } = body as QuoteRequestPayload;
+    const origin = body.origin || req.headers.get("origin") || "";
+    const portalBaseUrl = getPortalBaseUrl(origin);
 
     if (!request_id || !partner_ids?.length || !email_subject || !email_body) {
       return new Response(
@@ -233,7 +237,7 @@ Deno.serve(async (req) => {
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: partner.contact_email || partner.email, Name: partner.name }],
       Subject: email_subject,
-      HTMLPart: wrapInEmailTemplate(email_body, partner.name),
+      HTMLPart: wrapInEmailTemplate(email_body, partner.name, portalBaseUrl),
     }));
 
     const mailjetResult = await sendEmailViaMailjet(emailMessages);
