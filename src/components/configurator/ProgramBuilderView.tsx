@@ -417,7 +417,7 @@ export const ProgramBuilderView = ({
                                   {isRegularBlock && (
                                     <InlineItemControls
                                       item={item}
-                                      onUpdate={(updates) => onUpdateItem(item.blockId, updates)}
+                                      onUpdate={(updates) => handleUpdateItemClearError(item.blockId, updates)}
                                     />
                                   )}
                                 </div>
