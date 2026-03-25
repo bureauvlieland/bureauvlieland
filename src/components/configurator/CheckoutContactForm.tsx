@@ -251,7 +251,7 @@ export const CheckoutContactForm = ({
             Vul uw contactgegevens in zodat wij u een voorstel kunnen sturen.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={checkForDuplicateAndSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Naam *</Label>
