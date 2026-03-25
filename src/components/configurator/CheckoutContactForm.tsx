@@ -60,8 +60,36 @@ export const CheckoutContactForm = ({
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const checkForDuplicateAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+    const twentyFourHoursAgo = subHours(new Date(), 24).toISOString();
+
+    try {
+      const { data: existing } = await supabase
+        .from("program_requests")
+        .select("id")
+        .eq("customer_email", formData.email)
+        .gte("created_at", twentyFourHoursAgo)
+        .limit(1);
+
+      // Also check if dates overlap
+      const hasDuplicate = (existing || []).length > 0;
+
+      if (hasDuplicate) {
+        setDuplicateWarningOpen(true);
+        return;
+      }
+    } catch {
+      // If the check fails, proceed anyway — don't block the user
+    }
+
+    await executeSubmit();
+  };
+
+  const executeSubmit = async () => {
+    setDuplicateWarningOpen(false);
     setIsSubmitting(true);
 
     try {
