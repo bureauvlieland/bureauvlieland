@@ -304,8 +304,9 @@ Deno.serve(async (req) => {
 
       const accTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER, {
         partner_name: sanitizeHtml(accPartner.name),
-        customer_name: sanitizeHtml(program.customer_name),
-        customer_company: sanitizeHtml(program.customer_company) || "",
+        customer_name: "Bureau Vlieland",
+        customer_company: "",
+        reference_number: program.reference_number || "",
         accommodation_name: sanitizeHtml(accPartner.accommodationName),
         dates: dates,
         cancellation_reason: reason ? sanitizeHtml(reason) : "",
@@ -315,7 +316,7 @@ Deno.serve(async (req) => {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: accTemplate?.subject || `${subjectPrefix}Logiesaanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+        Subject: accTemplate?.subject || `${subjectPrefix}Logiesaanvraag geannuleerd — ${program.reference_number || ""}`,
         HTMLPart: accTemplate?.body || `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>

@@ -571,7 +571,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       emailLogs.push({
         email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: `${subjectPrefix}Nieuwe aanvraag: ${program.customer_name}`,
+        subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
         recipient_email: recipientEmail,
         recipient_name: group.partnerName,
         related_request_id: program.id,

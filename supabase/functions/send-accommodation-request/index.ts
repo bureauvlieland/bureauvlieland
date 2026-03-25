@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
     ]);
 
     // Use database templates or fallback
-    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels, budgetLabels);
+    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels, budgetLabels, baseUrl);
     const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe logies aanvraag - ${request.number_of_guests} gasten`;
 
     const customerEmailHtml = customerTemplate?.body || getFallbackCustomerHtml(request, typeLabels, portalUrl);

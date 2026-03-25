@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: partner.contact_email || partner.email, Name: partner.name }],
       Subject: email_subject,
-      HTMLPart: wrapInEmailTemplate(email_body, partner.name),
+      HTMLPart: wrapInEmailTemplate(email_body, partner.name, portalBaseUrl),
     }));
 
     const mailjetResult = await sendEmailViaMailjet(emailMessages);

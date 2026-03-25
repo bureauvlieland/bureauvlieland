@@ -203,9 +203,10 @@ Deno.serve(async (req) => {
 
     // Always use the program token for the portal URL (unified customer experience)
     const programToken = request.linked_program?.customer_token;
+    const baseUrl = getPortalBaseUrl(origin);
     const portalUrl = programToken 
-      ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
-      : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
+      ? `${baseUrl}/mijn-programma/${programToken}`
+      : `${baseUrl}/mijn-logies/${request.customer_token}`;
 
     // Fetch extras for this quote
     const { data: quoteExtras } = await supabase

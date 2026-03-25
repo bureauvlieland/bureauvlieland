@@ -400,7 +400,7 @@ Deno.serve(async (req) => {
 
           const rejectedVars = {
             partner_name: sanitizeHtml(rqPartner.name),
-            customer_name: sanitizeHtml(request.customer_name),
+            customer_name: "Bureau Vlieland",
             accommodation_name: sanitizeHtml(rq.accommodation_name),
             arrival_date: formatDateNL(request.arrival_date),
             departure_date: formatDateNL(request.departure_date),
@@ -414,9 +414,9 @@ Deno.serve(async (req) => {
           const rejectedHtml = rejectedTemplate?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <p>Beste ${sanitizeHtml(rqPartner.name)},</p>
-              <p>Wij laten u weten dat voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie is gekozen.</p>
-              <p>Uw offerte voor <strong>${sanitizeHtml(rq.accommodation_name)}</strong> wordt hiermee afgesloten.</p>
-              <p>Bedankt voor het uitbrengen van uw offerte. Wij hopen u bij een volgende aanvraag weer te mogen benaderen.</p>
+              <p>We laten je weten dat voor de periode ${formatDateNL(request.arrival_date)} - ${formatDateNL(request.departure_date)} voor een andere accommodatie is gekozen.</p>
+              <p>Je offerte voor <strong>${sanitizeHtml(rq.accommodation_name)}</strong> wordt hiermee afgesloten.</p>
+              <p>Bedankt voor het uitbrengen van je offerte. We hopen je bij een volgende aanvraag weer te mogen benaderen.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
           `;
