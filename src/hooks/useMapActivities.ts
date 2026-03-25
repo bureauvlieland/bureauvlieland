@@ -136,7 +136,7 @@ export const useAllMapActivities = (
             _partnerName: partner.name,
             _partnerSlug: partner.map_tenant_slug!,
             _partnerImage: partner.image_url,
-            _image: typeImageMap.get(a.ActivityTypeId) || null,
+            _image: mapImageUrl(typeImageMap.get(a.ActivityTypeId) || null),
           }));
         })
       );
