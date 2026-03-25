@@ -23,14 +23,12 @@ interface MapBookingDialogProps {
     | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  commissionMarkup?: number;
 }
 
 export const MapBookingDialog = ({
   activity,
   open,
   onOpenChange,
-  commissionMarkup = 1.1,
 }: MapBookingDialogProps) => {
   const [form, setForm] = useState({
     customerName: "",
