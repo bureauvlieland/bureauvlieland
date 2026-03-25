@@ -193,6 +193,40 @@ export const ProgramBuilderView = ({
   const [editPeople, setEditPeople] = useState(false);
   const [editDates, setEditDates] = useState(false);
   const [tempPeople, setTempPeople] = useState(numberOfPeople);
+  const [ferryErrors, setFerryErrors] = useState<Set<string>>(new Set());
+
+  // Validate ferry blocks have a selected time before submit
+  const handleSubmitWithValidation = useCallback(() => {
+    const ferryItemsMissingTime = cartItems.filter(
+      (item) => FERRY_BLOCK_IDS.includes(item.blockId) && !item.preferredTime
+    );
+    if (ferryItemsMissingTime.length > 0) {
+      setFerryErrors(new Set(ferryItemsMissingTime.map((i) => i.blockId)));
+      toast({
+        title: "Afvaarttijd ontbreekt",
+        description: "Selecteer een afvaarttijd of kies 'Weet ik nog niet' voor de overtocht.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setFerryErrors(new Set());
+    onSubmit();
+  }, [cartItems, onSubmit]);
+
+  // Clear ferry error when a time is selected
+  const handleUpdateItemClearError = useCallback(
+    (blockId: string, updates: Partial<CartItemDetail>) => {
+      if (updates.preferredTime && ferryErrors.has(blockId)) {
+        setFerryErrors((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+      }
+      onUpdateItem(blockId, updates);
+    },
+    [onUpdateItem, ferryErrors]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
