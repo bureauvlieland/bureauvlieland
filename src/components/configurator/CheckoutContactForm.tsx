@@ -4,16 +4,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, subHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
-import { Loader2, ArrowLeft, User, Mail, Phone, Building2 } from "lucide-react";
+import { Loader2, ArrowLeft, User, Mail, Phone, Building2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 interface CheckoutContactFormProps {
   cartItems: CartItemDetail[];
