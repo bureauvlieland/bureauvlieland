@@ -191,10 +191,20 @@ Deno.serve(async (req) => {
             });
           }
 
-          accommodationItems = filteredQuotes.map((quote) => {
+          accommodationItems = await Promise.all(filteredQuotes.map(async (quote) => {
             const partner = partnersMap.get(quote.partner_id);
             const vatRate = quote.vat_rate ?? 9;
-            const priceTotal = parseFloat(quote.price_total) || 0;
+            const basePrice = parseFloat(quote.price_total) || 0;
+
+            // Fetch extras for grand total
+            const { data: quoteExtras } = await adminClient
+              .from("accommodation_quote_extras")
+              .select("unit_price, quantity, pricing_type")
+              .eq("quote_id", quote.id);
+            const extrasTotal = (quoteExtras || []).reduce((sum: number, e: any) =>
+              sum + (e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity), 0);
+            const priceTotal = basePrice + extrasTotal;
+
             const amountExclVat = quote.price_includes_vat
               ? priceTotal / (1 + vatRate / 100)
               : priceTotal;
