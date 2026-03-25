@@ -43,6 +43,7 @@ export const CheckoutContactForm = ({
   
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
