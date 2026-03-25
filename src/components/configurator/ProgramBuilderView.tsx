@@ -441,7 +441,8 @@ export const ProgramBuilderView = ({
                                 portTo={ferryExtras.portTo}
                                 date={selectedDates[dayIndex]}
                                 selectedTime={item.preferredTime}
-                                onSelect={(time) => onUpdateItem(item.blockId, { preferredTime: time })}
+                                onSelect={(time) => handleUpdateItemClearError(item.blockId, { preferredTime: time })}
+                                hasError={ferryErrors.has(item.blockId)}
                               />
                             </div>
                           )}
