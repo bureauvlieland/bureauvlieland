@@ -1,51 +1,44 @@
 
+## Plan: Sync-dialoog echt scrollbaar maken
 
-## Plan: Consistente klantmelding en item-status bij offerte_verstuurd
+### Wat er nu misgaat
+De teller met `Synchroniseer 7 onderdelen` klopt waarschijnlijk gewoon: er zijn 7 items met verschillen. Je ziet er maar 4 omdat de lijst in de dialoog wordt afgeknipt.
 
-### Probleem
+De oorzaak zit in de combinatie van:
+- `DialogContent` met alleen een `max-h`
+- `ScrollArea` met `max-h-[50vh]`
+- Radix `ScrollArea.Viewport` met `h-full`
 
-De offerte is verstuurd (`offerte_verstuurd`), maar:
-- De **intro-tekst** zegt: "U kunt per onderdeel akkoord geven"
-- De **items** tonen: "In voorbereiding" (alsof Bureau Vlieland nog bezig is)
+Daardoor krijgt de viewport geen echte vaste hoogte, maar wordt de inhoud wel verborgen. Resultaat: onderste kaarten verdwijnen uit beeld zonder bruikbare scroll.
 
-Dit is tegenstrijdig. "In voorbereiding" komt doordat `isPreApproval` ook `offerte_verstuurd` omvat — alle pending items krijgen dan dat label. Maar als de offerte al bij de klant ligt, zijn de items niet meer "in voorbereiding" maar ter beoordeling.
+### Meest logische oplossing
+De lijst in deze dialoog niet via de huidige `ScrollArea` laten lopen, maar via een normale scroll-container binnen een vaste dialog-layout. Dat past ook beter bij de rest van de codebase, waar dialogen vaak `overflow-y-auto` gebruiken.
 
-### Oorzaak
+### Wijzigingen
 
-In `CustomerProgramItem.tsx` (regel 125):
-```
-isPreApproval && item.status === "pending" ? "In voorbereiding" : undefined
-```
+**1. `src/components/admin/SyncBuildingBlocksDialog.tsx`**
+- Maak de dialog-layout expliciet:
+  - `DialogContent` met `max-h-[85vh] flex flex-col overflow-hidden`
+  - header / filters / footer als `shrink-0`
+  - middendeel als `min-h-0 flex-1`
+- Vervang de huidige `ScrollArea` rond de diff-lijst door een gewone container zoals:
+  - `div className="min-h-0 flex-1 overflow-y-auto pr-2"`
+- Laat de lijst daarin renderen, zodat alle 7 onderdelen bereikbaar zijn
+- Eventueel kleine extra UX-fix:
+  - lijst iets naar buiten laten lopen met `-mx-1 px-1` zodat scrollbar niet tegen de card-content drukt
 
-`isPreApproval` is `true` voor `concept`, `in_afstemming` én `offerte_verstuurd`. Het label "In voorbereiding" is alleen correct voor `concept` en `in_afstemming`.
+**2. Optionele cleanup**
+- Als `ScrollArea` daarna nergens nuttig voor is in deze dialoog: import verwijderen
+- Knoptekst laten zoals die is; die lijkt nu juist de volledige set te tellen
 
-### Oplossing
-
-**1. `src/components/customer-portal/CustomerProgramItem.tsx`**
-
-De override-logica splitsen:
-- `concept` / `in_afstemming` → "In voorbereiding" (correct)
-- `offerte_verstuurd` → **geen override** — toon het `item_quote_status` label (bv. "Onder voorbehoud") of de standaard pending-badge "Aangevraagd"
-
-Concreet: vervang de `isPreApproval` check door een check op `quoteStatus`:
-```
-quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus) && item.status === "pending" 
-  ? "In voorbereiding" 
-  : undefined
-```
-
-Dit vereist dat `quoteStatus` als prop wordt doorgegeven (nu komt alleen `isPreApproval` boolean mee).
-
-**2. `src/components/customer-portal/StatusSummary.tsx`**
-
-Zelfde aanpassing: "In voorbereiding (X onderdelen)" alleen bij `concept`/`in_afstemming`, niet bij `offerte_verstuurd`.
-
-**3. `src/components/customer-portal/ProgramOverviewCard.tsx`**
-
-Zelfde patroon: "In voorbereiding" label alleen voor pre-offerte fases.
+### Verwacht resultaat
+- Alle 7 bouwstenen blijven in dezelfde dialoog zichtbaar via verticale scroll
+- Footer met “Annuleren / Synchroniseer …” blijft netjes onderin staan
+- Geen afgekapt overzicht meer
+- Geen backend-wijzigingen nodig
 
 ### Bestanden
-1. `src/components/customer-portal/CustomerProgramItem.tsx` — label-override beperken tot concept/in_afstemming
-2. `src/components/customer-portal/StatusSummary.tsx` — idem
-3. `src/components/customer-portal/ProgramOverviewCard.tsx` — idem
+1. `src/components/admin/SyncBuildingBlocksDialog.tsx`
 
+### Technische noot
+Als we per se `ScrollArea` willen behouden, moet de hele hoogteketen expliciet gemaakt worden (`h-full`/vaste hoogte op parent wrappers). Maar voor deze dialoog is `overflow-y-auto` eenvoudiger, robuuster en consistenter met bestaande patronen in het project.
