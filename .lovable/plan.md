@@ -1,57 +1,27 @@
 
 
-## Plan: Correcte partnernamen bij aanmaken programma-items
+## Plan: per_person_per_day prijsberekening fixen in offerte & financieel overzicht
 
 ### Probleem
-Bij het indienen van een programma via de configurator wordt `provider_name` altijd gezet op "Bureau Vlieland". Dit komt doordat de code `block?.provider?.name || "Bureau Vlieland"` gebruikt, maar de FK-join op `building_blocks` levert in de publieke context geen partnerdata op (partners-tabel is niet publiek leesbaar voor anonieme gebruikers).
+Drie plekken houden geen rekening met `per_person_per_day`:
+1. **`AdminQuotePreview.tsx`** — `getItemTotal()` vermenigvuldigt niet met dagen; prijslabel toont alleen "p.p." of "totaal", niet "p.p.p.d."
+2. **`AdminInvoicePreview.tsx`** — zelfde `getItemTotal()` probleem
+3. **`FinancialOverviewCard.tsx`** — roept `centralLineTotal(item, numberOfPeople)` aan maar geeft `numberOfDays` niet mee (terwijl die als prop beschikbaar is)
 
-De `provider_id` wordt wél correct opgeslagen (bijv. `zuiver`, `vlieland-outdoor-center`), maar de `provider_name` is altijd de fallback.
+### Aanpassingen
 
-### Oorzaak
-De RLS-policy op de `partners` tabel vereist authenticatie of een MAP-linked partner. Anonieme gebruikers (configurator) kunnen de FK-join niet uitvoeren → `provider` is `null` → fallback naar "Bureau Vlieland".
+**1. `src/pages/admin/AdminQuotePreview.tsx`**
+- `getItemTotal()`: voeg `per_person_per_day` toe aan de per-person check, en vermenigvuldig met `request.selected_dates.length`
+- Prijslabel (regel ~748): voeg `per_person_per_day` → "p.p.p.d." toe
 
-### Oplossing
+**2. `src/pages/admin/AdminInvoicePreview.tsx`**
+- Zelfde fix in `getItemTotal()`: vermenigvuldig met aantal dagen bij `per_person_per_day`
 
-**Bestand: `src/components/configurator/CheckoutContactForm.tsx`**
+**3. `src/components/admin/FinancialOverviewCard.tsx`**
+- `getLineTotal` wrapper: geef `numberOfDays` door als tweede parameter → `centralLineTotal(item as any, n, days)`
+- `formatItemPrice`: toon "p.p.p.d." label bij `per_person_per_day` items
+- Alle plekken waar `getLineTotal(item, numberOfPeople)` wordt aangeroepen updaten naar `getLineTotal(item, numberOfPeople, numberOfDays)`
 
-Na het inserten van de `program_request_items`, een extra stap toevoegen die de partnernamen verrijkt — vergelijkbaar met de bestaande logica in `ApplyTemplateDialog.tsx`:
-
-1. Verzamel unieke `provider_id`'s die niet `"bureau"` of leeg zijn
-2. Query de `partners` tabel voor naam en e-mail (dit werkt omdat de insert al gebeurd is via de edge function, of we doen dit server-side)
-
-**Alternatief (eenvoudiger)**: Verplaats de verrijking naar de **edge function `send-program-request`**, die met service-role rechten wél de partners-tabel kan lezen. Na het aanmaken van items, update de `provider_name` en `provider_email` voor alle items met een niet-bureau `provider_id`.
-
-**Aanbevolen aanpak**: Edge function `send-program-request/index.ts`
-- Na de insert van `program_request_items`, query `partners` met de unieke `provider_id`'s
-- Update `provider_name` en `provider_email` op de zojuist aangemaakte items
-- Dit werkt gegarandeerd omdat edge functions service-role toegang hebben
-
-**Bestanden**:
-1. `supabase/functions/send-program-request/index.ts` — verrijking toevoegen na item-insert (of: na request-insert, als items daar worden aangemaakt)
-2. `src/components/configurator/CheckoutContactForm.tsx` — verrijking toevoegen na item-insert (client-side, als fallback)
-
-Aangezien de items client-side worden geïnsert in `CheckoutContactForm.tsx` (regel 164), en de client geen toegang heeft tot de partners-tabel, is de beste plek de **edge function**. Maar de items worden al vóór de edge function call geïnsert (regel 164 vs 178). Dus:
-
-**Concrete aanpak**:
-- In `CheckoutContactForm.tsx`, na de items insert, een aparte update doen: items met een niet-lege `provider_id` (niet "bureau") verrijken via een lookup op de `building_blocks` tabel (die wél publiek leesbaar is voor published blocks) — de `provider_id` is al correct, we hoeven alleen de `provider_name` te zetten vanuit de block data die we al in geheugen hebben.
-
-Wacht — we hebben `allBlocks` al geladen met de FK-join. Als de join faalt voor anonieme gebruikers, dan is het probleem fundamenteler. Laat me een eenvoudigere fix voorstellen:
-
-**Definitieve aanpak — 2 wijzigingen**:
-
-1. **`src/components/configurator/CheckoutContactForm.tsx`** (regel 149): Gebruik `block.providerId` om de naam op te zoeken uit de al geladen blocks. Als `provider.name` niet beschikbaar is, sla `provider_id` op als naam (beter dan hardcoded "Bureau Vlieland").
-
-2. **`supabase/functions/send-program-request/index.ts`**: Na het versturen van e-mails, verrijk `provider_name` en `provider_email` op alle items van dit request door partners op te zoeken met de service-role client. Dit garandeert correcte data ongeacht client-side beperkingen.
-
-### Bestaande data repareren
-Een eenmalige query om bestaande items te fixen:
-```sql
-UPDATE program_request_items pri
-SET provider_name = p.name, provider_email = COALESCE(p.contact_email, p.email)
-FROM partners p
-WHERE pri.provider_id = p.id
-AND pri.provider_name = 'Bureau Vlieland'
-AND pri.provider_id != 'bureau'
-AND pri.provider_id != '';
-```
+### Geen database-wijzigingen nodig
+De `portalPricing.ts` functies ondersteunen `numberOfDays` al correct — het probleem zit puur in de aanroepen.
 
