@@ -1170,10 +1170,10 @@ const AdminRequestDetail = () => {
                     <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
                     <div>
                       <p className="font-medium text-blue-900">
-                        Dit programma is nog niet gepubliceerd naar de klant
+                        Programma nog niet gepubliceerd als offerte
                       </p>
                       <p className="text-sm text-blue-700">
-                        De klant ziet het programma als 'In behandeling'. Na publicatie worden items zichtbaar.
+                        De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer het programma om een offerte naar de klant te sturen.
                       </p>
                     </div>
                   </div>
