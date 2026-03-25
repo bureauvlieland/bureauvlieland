@@ -101,7 +101,7 @@ export const CheckoutContactForm = ({
           id: block?.id || "",
           name: block?.name || "",
           category: block?.category || "",
-          provider: block?.provider?.name || "Bureau Vlieland",
+          provider: block?.provider?.name || (block?.block_type === "bureau" ? "Bureau Vlieland" : block?.provider_id || "Bureau Vlieland"),
           providerId: block?.provider_id || "",
           providerEmail: block?.provider?.email || "",
           blockType: block?.block_type || "partner",
