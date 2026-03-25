@@ -7,6 +7,7 @@ import {
   formatDateNL, 
   formatCurrencyNL,
   buildReplyTo,
+  getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
