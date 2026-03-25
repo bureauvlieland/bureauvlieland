@@ -264,6 +264,11 @@ Deno.serve(async (req) => {
       const replyTo = buildReplyTo(request.reference_number);
 
       // Partner email — respect invoicing_mode for PII
+      // Guest name is always shown so the partner knows who to expect
+      const guestDisplayName = request.customer_company
+        ? `${sanitizeHtml(request.customer_company)} (${sanitizeHtml(request.customer_name)})`
+        : sanitizeHtml(request.customer_name);
+
       const partnerTemplateVariables: Record<string, string> = {
         partner_name: sanitizeHtml(quote.partner?.name),
         accommodation_name: sanitizeHtml(quote.accommodation_name),
@@ -271,6 +276,7 @@ Deno.serve(async (req) => {
         departure_date: formatDateNL(request.departure_date),
         number_of_guests: String(request.number_of_guests),
         price_total: formatCurrencyNL(quote.price_total),
+        guest_name: guestDisplayName,
       };
 
       // Always hide customer PII from partners — Bureau Vlieland is the central contact
@@ -279,43 +285,41 @@ Deno.serve(async (req) => {
       partnerTemplateVariables.customer_email = "hallo@bureauvlieland.nl";
       partnerTemplateVariables.customer_phone = "0562 700 208";
 
+      // Partner portal link
+      const partnerToken = quote.partner?.partner_token || "";
+      const partnerPortalUrl = `${origin}/partner/logies?token=${partnerToken}`;
+      partnerTemplateVariables.partner_portal_link = partnerPortalUrl;
+
       const partnerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables);
 
       const partnerEmail = getRecipientEmail(quote.partner?.contact_email || quote.partner?.email || "", origin);
       if (partnerEmail) {
-        const contactBlock = isCentralBilling
-          ? `<ul>
-              <li><strong>Contact:</strong> Bureau Vlieland</li>
-              <li><strong>Email:</strong> hallo@bureauvlieland.nl</li>
-              <li><strong>Telefoon:</strong> 0562 700 208</li>
-            </ul>`
-          : `<ul>
-              <li><strong>Naam:</strong> ${sanitizeHtml(request.customer_name)}</li>
-              <li><strong>Email:</strong> ${request.customer_email}</li>
-              <li><strong>Telefoon:</strong> ${sanitizeHtml(request.customer_phone)}</li>
-              ${request.customer_company ? `<li><strong>Bedrijf:</strong> ${sanitizeHtml(request.customer_company)}</li>` : ""}
-            </ul>`;
-
         const partnerHtml = partnerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #16a34a;">Goed nieuws!</h1>
-            <p>Uw offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd.</p>
+            <p>Uw offerte voor <strong>${sanitizeHtml(quote.accommodation_name)}</strong> is geaccepteerd door Bureau Vlieland.</p>
             
-            <h2>${isCentralBilling ? "Contactgegevens" : "Klantgegevens"}</h2>
-            ${contactBlock}
-            
-            <h2>Reserveringsdetails</h2>
+            <h2>Gastgegevens</h2>
             <ul>
+              <li><strong>Gast:</strong> ${guestDisplayName}</li>
               <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
               <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
               <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
               <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
             </ul>
+
+            <h2>Facturatie</h2>
+            <p>Factureer het verblijf aan <strong>Bureau Vlieland</strong>. U ontvangt hierover apart bericht via het partnerportaal.</p>
+            <ul>
+              <li><strong>Email:</strong> hallo@bureauvlieland.nl</li>
+              <li><strong>Telefoon:</strong> 0562 700 208</li>
+            </ul>
             
-            <p>${isCentralBilling
-              ? "Bureau Vlieland neemt contact met u op over de verdere afhandeling."
-              : "Neem zo snel mogelijk contact op met de klant om de reservering te bevestigen."
-            }</p>
+            <p>Bureau Vlieland neemt contact met u op over de verdere afhandeling.</p>
+
+            <p style="margin-top: 24px;">
+              <a href="${partnerPortalUrl}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Partner Portal →</a>
+            </p>
             
             <p style="color: #666; font-size: 12px; margin-top: 40px;">
               Dit bericht is verzonden door Bureau Vlieland.
