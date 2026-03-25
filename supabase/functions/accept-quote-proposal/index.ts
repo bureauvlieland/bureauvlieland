@@ -146,18 +146,9 @@ function generatePartnerNotificationEmail(
       <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland. De klant heeft akkoord gegeven op het programmavoorstel.</p>
       
       <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748;">📋 Klantgegevens</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Naam:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(program.customer_name)}</strong></td></tr>
-          ${program.customer_company ? `<tr><td style="padding: 5px 0; color: #666;">Bedrijf:</td><td style="padding: 5px 0;"><strong>${sanitizeHtml(program.customer_company)}</strong></td></tr>` : ""}
-          <tr><td style="padding: 5px 0; color: #666;">Email:</td><td style="padding: 5px 0;"><a href="mailto:${sanitizeHtml(program.customer_email)}" style="color: #0066cc;">${sanitizeHtml(program.customer_email)}</a></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Telefoon:</td><td style="padding: 5px 0;"><a href="tel:${sanitizeHtml(program.customer_phone)}" style="color: #0066cc;">${sanitizeHtml(program.customer_phone)}</a></td></tr>
-        </table>
-      </div>
-      
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3 style="margin-top: 0; color: #2d3748;">📅 Programma details</h3>
         <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 5px 0; color: #666;">Referentie:</td><td style="padding: 5px 0;"><strong>${program.reference_number || "-"}</strong></td></tr>
           <tr><td style="padding: 5px 0; color: #666;">Datum(s):</td><td style="padding: 5px 0;"><strong>${formattedDates}</strong></td></tr>
           <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${program.number_of_people}</strong></td></tr>
         </table>
@@ -171,20 +162,20 @@ function generatePartnerNotificationEmail(
       </div>
       
       <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
-        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partner Portal</h3>
+        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partnerportaal</h3>
         <p style="margin-bottom: 12px;">
-          Bekijk en beheer deze aanvraag in uw Partner Portal. 
+          Bekijk en beheer deze aanvraag in je partnerportaal. 
           Bevestig beschikbaarheid of geef een alternatief door.
         </p>
         <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
-          Open Partner Portal
+          Ga naar partnerportaal →
         </a>
       </div>
       
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
       
       <p style="color: #666; font-size: 14px;">
-        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met de klant om 
+        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met Bureau Vlieland om 
         beschikbaarheid te bevestigen en verdere details te bespreken.
       </p>
       
