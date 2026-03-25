@@ -247,10 +247,10 @@ const AdminInvoicePreview = () => {
     // admin_price_override = unit price, multiply for per_person
     const unitPrice = item.admin_price_override ?? 0;
     const effectivePeople = item.override_people ?? request?.number_of_people ?? 1;
-    if (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request") {
-      return unitPrice * effectivePeople;
-    }
-    return unitPrice;
+    const isPerPerson = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
+    const personMult = isPerPerson ? effectivePeople : 1;
+    const dayMult = item.price_type === "per_person_per_day" ? (request?.selected_dates?.length || 1) : 1;
+    return unitPrice * personMult * dayMult;
   };
 
   const getExtraTotal = (extra: AccommodationExtraData) => {
