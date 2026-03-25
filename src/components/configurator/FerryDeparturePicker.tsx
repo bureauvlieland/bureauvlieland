@@ -65,11 +65,16 @@ export const FerryDeparturePicker = ({
     );
   }
 
+  const isFlexibel = selectedTime === "flexibel";
+
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5 rounded-md", hasError && !selectedTime && "ring-2 ring-destructive/50 p-2 -m-2")}>
       <p className="text-xs font-medium text-muted-foreground px-1">
         {fromLabel} → {toLabel} · {format(date, "EEE d MMMM", { locale: nl })}
       </p>
+      {hasError && !selectedTime && (
+        <p className="text-xs text-destructive px-1">Kies een afvaarttijd of selecteer "Weet ik nog niet"</p>
+      )}
       <div className="grid gap-1.5">
         {departures.map((dep) => {
           const depTime = dep.departureTime.slice(11, 16);
@@ -109,6 +114,24 @@ export const FerryDeparturePicker = ({
             </button>
           );
         })}
+
+        {/* "Weet ik nog niet" option */}
+        <button
+          type="button"
+          onClick={() => onSelect("flexibel")}
+          className={cn(
+            "flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors text-left",
+            isFlexibel
+              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+              : "border-dashed border-border hover:border-primary/40 hover:bg-muted/50"
+          )}
+        >
+          <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className={cn("flex-1", isFlexibel && "font-medium")}>Weet ik nog niet</span>
+          {isFlexibel && (
+            <Check className="h-4 w-4 text-primary shrink-0" />
+          )}
+        </button>
       </div>
     </div>
   );
