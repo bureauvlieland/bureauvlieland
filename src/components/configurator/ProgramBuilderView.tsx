@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
+import { toast } from "@/hooks/use-toast";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
