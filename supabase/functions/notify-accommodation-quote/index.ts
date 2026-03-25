@@ -93,9 +93,20 @@ function getFallbackEmailHtml(
         </div>
         ` : ""}
         
+        ${includes.length > 0 || extras.length > 0 ? `
+        <div style="margin-bottom: 16px;">
+          ${extras.length > 0 ? `
+          <p style="color: #166534; margin-bottom: 8px; font-weight: 600;">Extra's:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #166534;">
+            ${extras.map((e: any) => `<li>${sanitizeHtml(e.name)}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("")}
+          </ul>
+          ` : ""}
+        </div>
+        ` : ""}
+        
         <div style="background: #166534; color: white; padding: 16px; border-radius: 8px; text-align: center;">
           <p style="margin: 0; font-size: 14px;">Totaalprijs</p>
-          <p style="margin: 8px 0 0; font-size: 28px; font-weight: bold;">${formatCurrencyNL(quote.price_total)}</p>
+          <p style="margin: 8px 0 0; font-size: 28px; font-weight: bold;">${formatCurrencyNL(grandTotal)}</p>
           ${quote.price_per_person_per_night ? `
           <p style="margin: 4px 0 0; font-size: 12px; opacity: 0.9;">
             (${formatCurrencyNL(quote.price_per_person_per_night)} p.p.p.n.)

@@ -318,7 +318,9 @@ Deno.serve(async (req) => {
               <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
               <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
               <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
-              <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+              <li><strong>Verblijf:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+              ${extras.length > 0 ? extras.map((e: any) => `<li><strong>${e.name}:</strong> ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("") : ""}
+              <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
             </ul>
 
             <h2>Facturatie</h2>
