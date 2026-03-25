@@ -263,8 +263,9 @@ Deno.serve(async (req) => {
     for (const [, provider] of providers) {
       const templateVariables = {
         partner_name: sanitizeHtml(provider.name),
-        customer_name: sanitizeHtml(program.customer_name),
-        company_name: sanitizeHtml(program.customer_company) || "",
+        customer_name: "Bureau Vlieland",
+        company_name: "",
+        reference_number: program.reference_number || "",
         dates: dates,
         cancellation_reason: reason ? sanitizeHtml(reason) : "",
         activities_list: provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join(""),
@@ -276,10 +277,9 @@ Deno.serve(async (req) => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
           <p>Beste ${sanitizeHtml(provider.name)},</p>
-          <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd.</p>
+          <p>De aanvraag <strong>${program.reference_number || ""}</strong> voor <strong>${dates}</strong> is geannuleerd.</p>
           <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Klant:</strong> ${sanitizeHtml(program.customer_name)}</p>
-            ${program.customer_company ? `<p><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
+            <p><strong>Referentie:</strong> ${program.reference_number || "-"}</p>
             <p><strong>Activiteit(en):</strong></p>
             <ul>${provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join("")}</ul>
             ${reason ? `<p><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd - ${sanitizeHtml(program.customer_company || program.customer_name)}`,
+        Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd — ${program.reference_number || ""}`,
         HTMLPart: htmlContent,
       });
     }
