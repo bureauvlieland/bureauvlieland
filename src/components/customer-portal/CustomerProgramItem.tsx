@@ -173,6 +173,18 @@ export const CustomerProgramItem = ({
                 {item.duration}
               </span>
             )}
+            {(item.override_people || numberOfPeople) && (
+              <span className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" />
+                {item.override_people ?? numberOfPeople} pers.
+              </span>
+            )}
+            {item.location_address && (
+              <span className="flex items-center gap-1 truncate max-w-[200px]">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{item.location_address}</span>
+              </span>
+            )}
             {/* Show quoted price if available (confirmed by partner), otherwise show price indication - hide for self_arranged */}
             {!isSelfArranged && (
               item.quoted_price ? (
