@@ -101,26 +101,39 @@ export const useAllMapActivities = (
           if (dateStart) params.dateStart = dateStart;
           if (dateEnd) params.dateEnd = dateEnd;
 
-          const { data, error } = await supabase.functions.invoke("map-proxy", {
-            body: {
-              endpoint: "activities",
-              slug: partner.map_tenant_slug,
-              partnerId: partner.id,
-              params,
-            },
-          });
+          const [activitiesRes, typesRes] = await Promise.all([
+            supabase.functions.invoke("map-proxy", {
+              body: {
+                endpoint: "activities",
+                slug: partner.map_tenant_slug,
+                partnerId: partner.id,
+                params,
+              },
+            }),
+            supabase.functions.invoke("map-proxy", {
+              body: {
+                endpoint: "activitytypes",
+                slug: partner.map_tenant_slug,
+                partnerId: partner.id,
+              },
+            }),
+          ]);
 
-          if (error) {
-            console.warn(`MAP fetch failed for ${partner.name}:`, error);
+          if (activitiesRes.error) {
+            console.warn(`MAP fetch failed for ${partner.name}:`, activitiesRes.error);
             return [];
           }
 
-          return ((data || []) as MapActivity[]).map((a) => ({
+          const types = (typesRes.data || []) as MapActivityType[];
+          const typeImageMap = new Map(types.map((t) => [t.Id, t.Image]));
+
+          return ((activitiesRes.data || []) as MapActivity[]).map((a) => ({
             ...a,
             _partnerId: partner.id,
             _partnerName: partner.name,
             _partnerSlug: partner.map_tenant_slug!,
             _partnerImage: partner.image_url,
+            _image: typeImageMap.get(a.ActivityTypeId) || null,
           }));
         })
       );
