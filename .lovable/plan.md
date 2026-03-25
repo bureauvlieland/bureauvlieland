@@ -1,25 +1,22 @@
 
 
-## Plan: Deduplicatie-check in checkout-formulier
+## Plan: Admin-banner tekst corrigeren
 
-### Wat het doet
-Voor het versturen van een aanvraag wordt gecheckt of er al een `program_requests` record bestaat met hetzelfde e-mailadres en dezelfde datums, aangemaakt binnen de laatste 24 uur. Zo ja: toon een waarschuwingsdialoog waarin de klant kan kiezen om toch door te gaan of te annuleren.
+### Probleem
+De banner in de admin detailpagina zegt: *"De klant ziet het programma als 'In behandeling'. Na publicatie worden items zichtbaar."* — maar items zijn al wél zichtbaar voor de klant (in read-only modus). De tekst is dus misleidend.
 
-### Aanpassingen
+### Aanpassing
 
-**`src/components/configurator/CheckoutContactForm.tsx`**:
-- Bij form submit: voer eerst een Supabase query uit op `program_requests` waar `customer_email = formData.email` en `created_at > now() - 24h` en `selected_dates` overeenkomt
-- Als er een match is: toon een bevestigingsdialoog ("U heeft al een aanvraag ingediend voor deze datums. Wilt u toch een nieuwe aanvraag versturen?")
-- Bij "Toch versturen": ga door met de bestaande `handleSubmit` logica
-- Bij "Annuleren": sluit de dialoog, geen submit
-- Als er geen match is: submit direct zonder dialoog
+**Bestand**: `src/pages/admin/AdminRequestDetail.tsx` (regel 1172-1177)
 
-**Geen database- of migratiewijzigingen nodig** — de bestaande `program_requests` tabel en RLS policies (anon SELECT op niet-verlopen requests) ondersteunen deze query al.
+De twee regels tekst in de concept-banner aanpassen naar:
 
-### Technische details
+- **Titel**: "Programma nog niet gepubliceerd als offerte"
+- **Subtekst**: "De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer het programma om een offerte naar de klant te sturen."
 
-- Query: `supabase.from('program_requests').select('id, reference_number').eq('customer_email', email).gte('created_at', twentyFourHoursAgo).filter('selected_dates', 'eq', JSON.stringify(isoDates))`
-- Fallback: als de query faalt (netwerk etc.), submit gewoon door — geen blokkering
-- State: `duplicateWarningOpen` boolean + `existingRequest` object voor de dialoog
-- Dialoog: gebruik bestaande `AlertDialog` component
+Dit reflecteert correct de huidige werking: items zijn zichtbaar maar read-only, en publiceren schakelt de offerte-flow in.
+
+### Geen verdere wijzigingen
+- Geen database-migraties
+- Geen wijzigingen in klantportaal-logica (huidige read-only gedrag blijft)
 
