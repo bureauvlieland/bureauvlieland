@@ -149,6 +149,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch extras for this quote
+    const { data: quoteExtras } = await supabase
+      .from("accommodation_quote_extras")
+      .select("name, unit_price, quantity, pricing_type, category")
+      .eq("quote_id", quoteId);
+    const extras = quoteExtras || [];
+    const extrasTotal = extras.reduce((sum: number, e: any) =>
+      sum + (e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity), 0);
+    const grandTotal = quote.price_total + extrasTotal;
+
     // Check if quote is expired (skip for admin)
     if (!adminOverride && new Date(quote.valid_until) < new Date()) {
       return new Response(
@@ -178,9 +188,9 @@ Deno.serve(async (req) => {
       .eq("id", quote.partner_id)
       .maybeSingle();
 
-    // Calculate commission (default 10% for accommodation)
+    // Calculate commission over grand total (base + extras)
     const commissionPercentage = partner?.accommodation_commission_percentage || 10;
-    const commissionAmount = (quote.price_total * commissionPercentage) / 100;
+    const commissionAmount = (grandTotal * commissionPercentage) / 100;
 
     // Update the selected quote with commission data
     const { error: updateQuoteError } = await supabase
@@ -275,7 +285,10 @@ Deno.serve(async (req) => {
         arrival_date: formatDateNL(request.arrival_date),
         departure_date: formatDateNL(request.departure_date),
         number_of_guests: String(request.number_of_guests),
-        price_total: formatCurrencyNL(quote.price_total),
+        price_total: formatCurrencyNL(grandTotal),
+        base_price: formatCurrencyNL(quote.price_total),
+        extras_total: extrasTotal > 0 ? formatCurrencyNL(extrasTotal) : "",
+        extras_list: extras.map((e: any) => `<li>${e.name}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join(""),
         guest_name: guestDisplayName,
       };
 
@@ -305,7 +318,9 @@ Deno.serve(async (req) => {
               <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
               <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
               <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
-              <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+              <li><strong>Verblijf:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+              ${extras.length > 0 ? extras.map((e: any) => `<li><strong>${e.name}:</strong> ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("") : ""}
+              <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
             </ul>
 
             <h2>Facturatie</h2>

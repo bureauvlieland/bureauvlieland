@@ -244,9 +244,19 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Calculate amounts
+          // Calculate amounts including extras
           const vatRate = quote.vat_rate ?? 9; // Accommodation uses 9% VAT default
-          const priceTotal = quote.price_total;
+          const basePrice = quote.price_total;
+
+          // Fetch extras for grand total
+          const { data: quoteExtras } = await supabase
+            .from("accommodation_quote_extras")
+            .select("unit_price, quantity, pricing_type")
+            .eq("quote_id", quote.id);
+          const extrasTotal = (quoteExtras || []).reduce((sum: number, e: any) =>
+            sum + (e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity), 0);
+          const priceTotal = basePrice + extrasTotal;
+
           const amountExclVat = quote.price_includes_vat 
             ? priceTotal / (1 + vatRate / 100)
             : priceTotal;

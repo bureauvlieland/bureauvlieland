@@ -46,7 +46,9 @@ function getFallbackEmailHtml(
   quote: any, 
   partner: any, 
   portalUrl: string, 
-  nights: number
+  nights: number,
+  extras: any[],
+  grandTotal: number
 ): string {
   const safeName = sanitizeHtml(request.customer_name);
   const safeAccommodationName = sanitizeHtml(quote.accommodation_name);
@@ -93,9 +95,20 @@ function getFallbackEmailHtml(
         </div>
         ` : ""}
         
+        ${includes.length > 0 || extras.length > 0 ? `
+        <div style="margin-bottom: 16px;">
+          ${extras.length > 0 ? `
+          <p style="color: #166534; margin-bottom: 8px; font-weight: 600;">Extra's:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #166534;">
+            ${extras.map((e: any) => `<li>${sanitizeHtml(e.name)}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("")}
+          </ul>
+          ` : ""}
+        </div>
+        ` : ""}
+        
         <div style="background: #166534; color: white; padding: 16px; border-radius: 8px; text-align: center;">
           <p style="margin: 0; font-size: 14px;">Totaalprijs</p>
-          <p style="margin: 8px 0 0; font-size: 28px; font-weight: bold;">${formatCurrencyNL(quote.price_total)}</p>
+          <p style="margin: 8px 0 0; font-size: 28px; font-weight: bold;">${formatCurrencyNL(grandTotal)}</p>
           ${quote.price_per_person_per_night ? `
           <p style="margin: 4px 0 0; font-size: 12px; opacity: 0.9;">
             (${formatCurrencyNL(quote.price_per_person_per_night)} p.p.p.n.)
@@ -191,6 +204,16 @@ Deno.serve(async (req) => {
       ? `https://bureauvlieland.nl/mijn-programma/${programToken}`
       : `https://bureauvlieland.nl/mijn-logies/${request.customer_token}`;
 
+    // Fetch extras for this quote
+    const { data: quoteExtras } = await supabase
+      .from("accommodation_quote_extras")
+      .select("name, unit_price, quantity, pricing_type")
+      .eq("quote_id", quoteId);
+    const extras = quoteExtras || [];
+    const extrasTotal = extras.reduce((sum: number, e: any) =>
+      sum + (e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity), 0);
+    const grandTotal = quote.price_total + extrasTotal;
+
     // Calculate nights
     const arrivalDate = new Date(request.arrival_date);
     const departureDate = new Date(request.departure_date);
@@ -208,7 +231,10 @@ Deno.serve(async (req) => {
       departure_date: formatDateNL(request.departure_date),
       number_of_nights: String(nights),
       number_of_guests: String(request.number_of_guests),
-      price_total: formatCurrencyNL(quote.price_total),
+      price_total: formatCurrencyNL(grandTotal),
+      base_price: formatCurrencyNL(quote.price_total),
+      extras_total: extrasTotal > 0 ? formatCurrencyNL(extrasTotal) : "",
+      extras_list: extras.map((e: any) => `<li>${sanitizeHtml(e.name)}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join(""),
       price_per_person_per_night: quote.price_per_person_per_night ? formatCurrencyNL(quote.price_per_person_per_night) : "",
       includes_list: includes.map((item: string) => `<li>${sanitizeHtml(item)}</li>`).join(""),
       valid_until: formatDateNL(quote.valid_until),
@@ -219,7 +245,7 @@ Deno.serve(async (req) => {
     const template = await getRenderedTemplate(TemplateIds.ACCOMMODATION_QUOTE_NOTIFICATION, templateVariables);
 
     // Use database template or fallback
-    const emailHtml = template?.body || getFallbackEmailHtml(request, quote, partner, portalUrl, nights);
+    const emailHtml = template?.body || getFallbackEmailHtml(request, quote, partner, portalUrl, nights, extras, grandTotal);
     const emailSubject = template?.subject || `Nieuwe offerte ontvangen: ${quote.accommodation_name}`;
 
     // Build Reply-To from accommodation reference
