@@ -104,7 +104,7 @@ export const FinancialOverviewCard = ({
   };
 
   const programTotal = programItems.reduce(
-    (sum, item) => sum + (getLineTotal(item, numberOfPeople) ?? 0), 0
+    (sum, item) => sum + (getLineTotal(item, numberOfPeople, numberOfDays) ?? 0), 0
   );
   const extraCostsTotal = extraCostItems.reduce(
     (sum, item) => sum + (item.admin_price_override ?? 0), 0
