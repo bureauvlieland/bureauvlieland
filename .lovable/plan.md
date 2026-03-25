@@ -1,22 +1,25 @@
 
 
-## Plan: Admin-banner tekst corrigeren
+## Plan: Verplichte afvaartkeuze met "Weet ik nog niet" optie
 
 ### Probleem
-De banner in de admin detailpagina zegt: *"De klant ziet het programma als 'In behandeling'. Na publicatie worden items zichtbaar."* — maar items zijn al wél zichtbaar voor de klant (in read-only modus). De tekst is dus misleidend.
+Klanten kunnen het formulier versturen zonder een afvaarttijd te kiezen. Een harde verplichting om een specifieke tijd te kiezen is niet altijd realistisch — klanten weten dit soms nog niet.
 
-### Aanpassing
+### Oplossing
+Maak het veld verplicht, maar voeg een extra keuze-knop toe: **"Weet ik nog niet"**. Zo moet de klant actief een keuze maken (specifieke tijd óf "weet ik nog niet"), maar wordt niemand geblokkeerd.
 
-**Bestand**: `src/pages/admin/AdminRequestDetail.tsx` (regel 1172-1177)
+### Aanpassingen
 
-De twee regels tekst in de concept-banner aanpassen naar:
+**1. `src/components/configurator/FerryDeparturePicker.tsx`**
+- Voeg onder de lijst met afvaarten een extra knop toe: "Weet ik nog niet" die `onSelect("flexibel")` aanroept
+- Style als dezelfde keuze-knop, met vraagteken-icoon
+- Voeg optionele `hasError` prop toe — als `true`, toon rode rand om het hele blok
 
-- **Titel**: "Programma nog niet gepubliceerd als offerte"
-- **Subtekst**: "De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer het programma om een offerte naar de klant te sturen."
+**2. `src/components/configurator/ProgramBuilderView.tsx`**
+- Bij klik op "Offerte aanvragen": check of ferry-blokken (`boot-enkel-heen`, `boot-enkel-terug`) een `preferredTime` hebben (inclusief `"flexibel"` als geldige waarde)
+- Zo niet: toon toast "Selecteer een afvaarttijd of kies 'Weet ik nog niet'" en blokkeer submit
+- Markeer betreffende ferry-picker met `hasError={true}`
 
-Dit reflecteert correct de huidige werking: items zijn zichtbaar maar read-only, en publiceren schakelt de offerte-flow in.
-
-### Geen verdere wijzigingen
-- Geen database-migraties
-- Geen wijzigingen in klantportaal-logica (huidige read-only gedrag blijft)
+### Geen database-wijzigingen nodig
+De waarde `"flexibel"` wordt opgeslagen als gewone string in `preferredTime` — de admin ziet dit als tekst bij de overtocht.
 
