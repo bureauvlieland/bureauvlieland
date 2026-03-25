@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
               price_includes_vat: quote.price_includes_vat,
               status: quote.status,
             };
-          });
+          }));
         }
       }
 
