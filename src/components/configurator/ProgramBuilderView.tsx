@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
+import { toast } from "@/hooks/use-toast";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
@@ -192,6 +193,40 @@ export const ProgramBuilderView = ({
   const [editPeople, setEditPeople] = useState(false);
   const [editDates, setEditDates] = useState(false);
   const [tempPeople, setTempPeople] = useState(numberOfPeople);
+  const [ferryErrors, setFerryErrors] = useState<Set<string>>(new Set());
+
+  // Validate ferry blocks have a selected time before submit
+  const handleSubmitWithValidation = useCallback(() => {
+    const ferryItemsMissingTime = cartItems.filter(
+      (item) => FERRY_BLOCK_IDS.includes(item.blockId) && !item.preferredTime
+    );
+    if (ferryItemsMissingTime.length > 0) {
+      setFerryErrors(new Set(ferryItemsMissingTime.map((i) => i.blockId)));
+      toast({
+        title: "Afvaarttijd ontbreekt",
+        description: "Selecteer een afvaarttijd of kies 'Weet ik nog niet' voor de overtocht.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setFerryErrors(new Set());
+    onSubmit();
+  }, [cartItems, onSubmit]);
+
+  // Clear ferry error when a time is selected
+  const handleUpdateItemClearError = useCallback(
+    (blockId: string, updates: Partial<CartItemDetail>) => {
+      if (updates.preferredTime && ferryErrors.has(blockId)) {
+        setFerryErrors((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+      }
+      onUpdateItem(blockId, updates);
+    },
+    [onUpdateItem, ferryErrors]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -382,7 +417,7 @@ export const ProgramBuilderView = ({
                                   {isRegularBlock && (
                                     <InlineItemControls
                                       item={item}
-                                      onUpdate={(updates) => onUpdateItem(item.blockId, updates)}
+                                      onUpdate={(updates) => handleUpdateItemClearError(item.blockId, updates)}
                                     />
                                   )}
                                 </div>
@@ -406,7 +441,8 @@ export const ProgramBuilderView = ({
                                 portTo={ferryExtras.portTo}
                                 date={selectedDates[dayIndex]}
                                 selectedTime={item.preferredTime}
-                                onSelect={(time) => onUpdateItem(item.blockId, { preferredTime: time })}
+                                onSelect={(time) => handleUpdateItemClearError(item.blockId, { preferredTime: time })}
+                                hasError={ferryErrors.has(item.blockId)}
                               />
                             </div>
                           )}
@@ -440,7 +476,7 @@ export const ProgramBuilderView = ({
           <p className="text-sm text-muted-foreground">
             {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
           </p>
-          <Button size="lg" className="gap-2" onClick={onSubmit} disabled={cartItems.length === 0}>
+          <Button size="lg" className="gap-2" onClick={handleSubmitWithValidation} disabled={cartItems.length === 0}>
             <ArrowRight className="h-4 w-4" />
             Overzicht en versturen
           </Button>
