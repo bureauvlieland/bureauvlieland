@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
     const template = await getRenderedTemplate(TemplateIds.ACCOMMODATION_QUOTE_NOTIFICATION, templateVariables);
 
     // Use database template or fallback
-    const emailHtml = template?.body || getFallbackEmailHtml(request, quote, partner, portalUrl, nights);
+    const emailHtml = template?.body || getFallbackEmailHtml(request, quote, partner, portalUrl, nights, extras, grandTotal);
     const emailSubject = template?.subject || `Nieuwe offerte ontvangen: ${quote.accommodation_name}`;
 
     // Build Reply-To from accommodation reference
