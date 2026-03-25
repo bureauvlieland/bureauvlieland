@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+const mapImageUrl = (ref: string | null) =>
+  ref ? `https://portal.mijnactiviteitenplanner.nl/File/Get?reference=${ref}` : null;
+
 // Matches actual MAP API v1 response fields for GET /activities
 export interface MapActivity {
   Id: number;
@@ -133,7 +136,7 @@ export const useAllMapActivities = (
             _partnerName: partner.name,
             _partnerSlug: partner.map_tenant_slug!,
             _partnerImage: partner.image_url,
-            _image: typeImageMap.get(a.ActivityTypeId) || null,
+            _image: mapImageUrl(typeImageMap.get(a.ActivityTypeId) || null),
           }));
         })
       );
