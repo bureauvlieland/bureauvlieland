@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, subHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
@@ -14,6 +14,16 @@ import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 interface CheckoutContactFormProps {
   cartItems: CartItemDetail[];
@@ -33,6 +43,7 @@ export const CheckoutContactForm = ({
   
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -49,8 +60,36 @@ export const CheckoutContactForm = ({
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const checkForDuplicateAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+    const twentyFourHoursAgo = subHours(new Date(), 24).toISOString();
+
+    try {
+      const { data: existing } = await supabase
+        .from("program_requests")
+        .select("id")
+        .eq("customer_email", formData.email)
+        .gte("created_at", twentyFourHoursAgo)
+        .limit(1);
+
+      // Also check if dates overlap
+      const hasDuplicate = (existing || []).length > 0;
+
+      if (hasDuplicate) {
+        setDuplicateWarningOpen(true);
+        return;
+      }
+    } catch {
+      // If the check fails, proceed anyway — don't block the user
+    }
+
+    await executeSubmit();
+  };
+
+  const executeSubmit = async () => {
+    setDuplicateWarningOpen(false);
     setIsSubmitting(true);
 
     try {
@@ -212,7 +251,7 @@ export const CheckoutContactForm = ({
             Vul uw contactgegevens in zodat wij u een voorstel kunnen sturen.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={checkForDuplicateAndSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Naam *</Label>
@@ -325,6 +364,24 @@ export const CheckoutContactForm = ({
           </form>
         </div>
       </div>
+
+      <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mogelijke dubbele aanvraag</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er is in de afgelopen 24 uur al een aanvraag ingediend met dit e-mailadres.
+              Weet u zeker dat u een nieuwe aanvraag wilt versturen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={() => executeSubmit()}>
+              Toch versturen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
