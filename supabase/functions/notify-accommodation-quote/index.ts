@@ -46,7 +46,9 @@ function getFallbackEmailHtml(
   quote: any, 
   partner: any, 
   portalUrl: string, 
-  nights: number
+  nights: number,
+  extras: any[],
+  grandTotal: number
 ): string {
   const safeName = sanitizeHtml(request.customer_name);
   const safeAccommodationName = sanitizeHtml(quote.accommodation_name);
