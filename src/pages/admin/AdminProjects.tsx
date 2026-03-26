@@ -375,14 +375,14 @@ const AdminProjectsContent = () => {
     });
   }, [projects, searchQuery, statusFilter, typeFilter]);
 
-  const stats = useMemo(() => {
+  const stageCounts = useMemo(() => {
     const all = projects || [];
-    return {
-      total: all.length,
-      concept: all.filter((p) => getDerivedStatus(p) === "concept").length,
-      offerte: all.filter((p) => getDerivedStatus(p) === "offerte_verstuurd").length,
-      avGetekend: all.filter((p) => getDerivedStatus(p) === "av_getekend").length,
-    };
+    const counts: Record<string, number> = {};
+    all.forEach((p) => {
+      const s = getDerivedStatus(p);
+      if (s !== "geannuleerd") counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
   }, [projects]);
 
   if (isLoading) {
