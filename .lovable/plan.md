@@ -1,43 +1,41 @@
 
 
-## Plan: Sorteer projecten op eerstvolgende datum
+## Plan: Readiness-indicator per project
 
-### Wijziging
+### Idee
+Een compacte **voortgangsbalk + percentage** in een nieuwe kolom "Gereed" die in één oogopslag toont hoe ver elk project is. Geen extra klikken nodig.
 
-**`src/pages/admin/AdminProjects.tsx`** — regel 351:
+### Berekening per project
+De readiness wordt bepaald door max. 4 checkpunten (afhankelijk van projecttype):
 
-Huidige sortering:
-```typescript
-projectList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-```
+| Checkpoint | Conditie "klaar" | Van toepassing |
+|---|---|---|
+| Items verstuurd naar partners | `items_not_sent === 0` en `item_count > 0` | Als `program_id` bestaat |
+| Partners bevestigd | `items_confirmed === item_count` (non-cancelled) | Als `program_id` bestaat |
+| Logies geregeld | Een quote heeft status `selected` | Als `accommodation_id` bestaat |
+| Voorwaarden getekend | `terms_accepted_at !== null` | Altijd (behalve concept/geannuleerd) |
 
-Nieuwe sortering — eerstvolgende datum bovenaan:
-```typescript
-projectList.sort((a, b) => {
-  const getEarliestDate = (p: Project): Date | null => {
-    // Gebruik accommodation_arrival of eerste selected_date
-    const candidates: Date[] = [];
-    if (p.accommodation_arrival) candidates.push(new Date(p.accommodation_arrival));
-    if (p.selected_dates?.length) candidates.push(new Date(p.selected_dates[0]));
-    return candidates.length ? new Date(Math.min(...candidates.map(d => d.getTime()))) : null;
-  };
-  
-  const dateA = getEarliestDate(a);
-  const dateB = getEarliestDate(b);
-  
-  // Projecten zonder datum naar achteren
-  if (!dateA && !dateB) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  if (!dateA) return 1;
-  if (!dateB) return -1;
-  
-  // Eerstvolgende datum bovenaan (oplopend)
-  return dateA.getTime() - dateB.getTime();
-});
-```
+**Score** = (afgevinkte checkpoints / totaal relevante checkpoints) × 100%
 
-### Resultaat
-Projecten met de dichtstbijzijnde aankomst-/startdatum staan bovenaan. Projecten zonder datum zakken naar onder, gesorteerd op aanmaakdatum.
+- `concept` of `geannuleerd` → geen balkje tonen (dash of n.v.t.)
+- 100% → groene balk + ✓
+- 50-99% → amber balk
+- 0-49% → rode/grijze balk
+
+### Weergave
+Een smalle kolom "Gereed" met:
+- Kleine `<Progress />` balk (h-1.5, ~60px breed)
+- Percentage ernaast in `text-xs` (bijv. "75%")
+- Bij 100%: groen vinkje in plaats van percentage
+
+### Wijzigingen
+
+**`src/pages/admin/AdminProjects.tsx`**:
+1. Voeg `getReadinessScore(project): { score: number, total: number, percentage: number }` helper toe
+2. Voeg kolom "Gereed" toe aan `TableHeader` (tussen "Status" en "Referentie(s)")
+3. Voeg `TableCell` toe met `<Progress />` + percentage
+4. Import `Progress` uit `@/components/ui/progress`
 
 ### Bestanden
-1. `src/pages/admin/AdminProjects.tsx` — sorteerlogica aanpassen (1 regel → ~15 regels)
+1. `src/pages/admin/AdminProjects.tsx`
 
