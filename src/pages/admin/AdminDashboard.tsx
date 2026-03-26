@@ -179,7 +179,7 @@ const AdminDashboardContent = () => {
 
         {/* Sidebar — 1/3 */}
         <div className="space-y-4">
-          <PipelineFunnel />
+          
           <DailyActivitySummary />
           <PendingCommissionsCard />
           <AdminUnavailabilityWidget />
