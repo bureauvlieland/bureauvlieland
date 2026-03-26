@@ -174,6 +174,27 @@ export const autoTodoTitles = {
 
   accommodation_selected: (accommodationName: string, customerName: string) =>
     `Logies "${accommodationName}" geselecteerd door ${customerName}`,
+
+  new_request_received: (customerName: string) =>
+    `Nieuwe aanvraag: ${customerName} — programma samenstellen`,
+
+  quote_ready_to_send: (customerName: string) =>
+    `Offerte klaar: ${customerName} — verstuur naar klant`,
+
+  send_items_to_partners: (customerName: string) =>
+    `Akkoord ontvangen: ${customerName} — stuur items naar partners`,
+
+  partner_status_update: (partnerName: string, activityName: string, status: string) =>
+    `Partner ${partnerName} reageert op "${activityName}" — ${status}`,
+
+  forward_accommodation_quote: (partnerName: string, customerName: string) =>
+    `Logiesofferte ${partnerName} klaar — doorsturen naar ${customerName}`,
+
+  quote_expiring_soon: (customerName: string, daysLeft: number) =>
+    `Offerte ${customerName} verloopt over ${daysLeft} dagen`,
+
+  customer_counter_proposal: (customerName: string, activityName: string) =>
+    `Tegenvoorstel: ${customerName} voor "${activityName}" — beoordelen`,
 };
 
 /**
