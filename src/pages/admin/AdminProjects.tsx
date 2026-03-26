@@ -531,8 +531,8 @@ const AdminProjectsContent = () => {
                     <TableHead className="w-8"></TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-24">Gereed</TableHead>
                     <TableHead>Referentie(s)</TableHead>
-                    <TableHead>Klant</TableHead>
                     <TableHead>Logies</TableHead>
                     <TableHead>Activiteiten</TableHead>
                     <TableHead>Datum(s)</TableHead>
