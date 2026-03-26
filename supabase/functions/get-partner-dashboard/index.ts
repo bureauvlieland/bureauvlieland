@@ -86,8 +86,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Include all items (including from cancelled programs, so partners can see cancellations)
-    const activeItems = items || [];
+    // Filter: active-status items always shown, closed items only if < 3 months old
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+
+    const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
+    const activeItems = (items || []).filter(item => {
+      if (activeStatuses.includes(item.status)) return true;
+      return new Date(item.updated_at) > cutoffDate;
+    });
 
     // Get all request IDs to fetch sibling items for conflict detection
     const requestIds = [...new Set(activeItems.map(i => i.request_id))];
