@@ -601,6 +601,29 @@ const AdminProjectsContent = () => {
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
+                                  {readiness.percentage < 0 ? (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  ) : readiness.percentage === 100 ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <Progress value={100} className="h-1.5 w-14 [&>div]:bg-green-500" />
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5">
+                                      <Progress
+                                        value={readiness.percentage}
+                                        className={cn(
+                                          "h-1.5 w-14",
+                                          readiness.percentage >= 50
+                                            ? "[&>div]:bg-amber-500"
+                                            : "[&>div]:bg-slate-400"
+                                        )}
+                                      />
+                                      <span className="text-xs text-muted-foreground">{readiness.percentage}%</span>
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
                                   <div className="space-y-1">
                                     {project.program_ref && (
                                       <code className="text-xs font-mono bg-green-50 text-green-700 px-2 py-0.5 rounded block w-fit">
