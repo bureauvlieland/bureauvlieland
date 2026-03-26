@@ -109,14 +109,17 @@ export default function AdminAccommodation() {
       if (error) throw error;
 
       // Count quotes per request
-      const counts: Record<string, { total: number; submitted: number }> = {};
+      const counts: Record<string, { total: number; submitted: number; declined: number }> = {};
       data?.forEach((quote) => {
         if (!counts[quote.request_id]) {
-          counts[quote.request_id] = { total: 0, submitted: 0 };
+          counts[quote.request_id] = { total: 0, submitted: 0, declined: 0 };
         }
         counts[quote.request_id].total++;
         if (quote.status === "submitted") {
           counts[quote.request_id].submitted++;
+        }
+        if (quote.status === "declined") {
+          counts[quote.request_id].declined++;
         }
       });
       return counts;
