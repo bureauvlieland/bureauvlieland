@@ -149,6 +149,8 @@ interface ProgramRequest {
   invoicing_mode: 'bureau_central';
   // Publish flow
   program_published_at: string | null;
+  // Billing fields
+  billing_company_name: string | null;
 }
 
 interface LinkedAccommodation {
