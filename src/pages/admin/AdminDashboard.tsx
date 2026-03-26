@@ -13,10 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users,
   Hotel,
-  TrendingUp,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-
 interface DashboardStats {
   totalRequests: number;
   activeRequests: number;
