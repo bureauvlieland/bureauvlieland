@@ -169,6 +169,54 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/aanvragen",
     linkLabel: "Bekijk project",
   },
+  new_request_received: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk aanvraag",
+  },
+  quote_ready_to_send: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Verstuur offerte",
+  },
+  send_items_to_partners: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Naar partners sturen",
+  },
+  partner_status_update: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Beoordeel reactie",
+  },
+  forward_accommodation_quote: {
+    getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
+    linkLabel: "Doorsturen",
+  },
+  quote_expiring_soon: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk offerte",
+  },
+  customer_counter_proposal: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Beoordeel",
+  },
+  bureau_item_pricing: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Prijs invullen",
+  },
+  post_execution_feedback: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk project",
+  },
+  post_execution_invoice_check: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk factuur",
+  },
+  accommodation_selected: {
+    getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
+    linkLabel: "Bevestig logies",
+  },
+  accommodation_quote_declined: {
+    getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
+    linkLabel: "Bekijk logies",
+  },
 };
 
 // ─── Email Log Config ─────────────────────────────────────────
