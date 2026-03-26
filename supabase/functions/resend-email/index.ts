@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         throw new Error("Kon tijdelijk wachtwoord niet instellen");
       }
 
-      const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
+      const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
       const loginLink = `${origin}/partner/login`;
       const portalLink = `${origin}/partner`;
 

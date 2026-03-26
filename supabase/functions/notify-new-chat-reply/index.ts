@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     }
 
     // Build portal link
-    const baseUrl = "https://bureauvlieland.lovable.app";
+    const baseUrl = "https://bureauvlieland.nl";
     let portalLink = baseUrl;
 
     if (conv.source === "customer_portal" && conv.source_token) {

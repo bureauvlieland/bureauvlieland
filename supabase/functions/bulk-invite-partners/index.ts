@@ -419,7 +419,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
+    const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
     const results: InviteResult[] = [];
 
     // Process each partner with rate limiting
