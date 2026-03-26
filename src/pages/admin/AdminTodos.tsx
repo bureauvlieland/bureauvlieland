@@ -743,6 +743,20 @@ const TakenTab = () => {
                 {selectedIds.size} afvinken
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCleanupConfirm(true)}
+              disabled={cleanupMutation.isPending}
+              className="gap-2"
+            >
+              {cleanupMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Brush className="h-4 w-4" />
+              )}
+              Opschonen
+            </Button>
             <Button size="sm" onClick={() => handleOpenDialog()} className="gap-2">
               <Plus className="h-4 w-4" />
               Nieuwe taak
