@@ -1,20 +1,47 @@
 
 
-## Plan: Afgewezen offertes meenemen in logiesoverzicht
+## Plan: Fix logies-bevestiging todo's — projectkoppeling en partnernaam
 
 ### Probleem
-De kolom "Offertes" toont nu alleen `submitted` (ontvangen) van het totaal. Afgewezen offertes (`declined` status) worden niet meegeteld, waardoor het overzicht onvolledig is.
+1. **Niet gekoppeld aan project**: De todo die wordt aangemaakt bij het selecteren van een logiesofferte zet `related_request_id` niet, waardoor de taak onder "Niet gekoppeld aan project" valt
+2. **"(bureau_central)" in beschrijving**: De tekst toont het facturatiemodel in plaats van de naam van de logiespartner
 
 ### Oplossing
-In `src/pages/admin/AdminAccommodation.tsx` de quote-telling uitbreiden met een `declined` teller en de weergave aanpassen naar bijv. **"2/6 ontvangen · 1 afgewezen"**.
 
-### Wijzigingen
+**`supabase/functions/select-accommodation-quote/index.ts`** — regel 258-264:
 
-**`src/pages/admin/AdminAccommodation.tsx`**:
-1. In de `quoteCounts` query: naast `submitted` ook `declined` tellen per request
-2. In de tabelcel "Offertes": declined-telling tonen als die > 0 is, in een rode/muted kleur
+Huidige code:
+```typescript
+await supabase.from("admin_todos").insert({
+  title: todoTitle,
+  description: `Klant heeft gekozen voor ${quote.accommodation_name}. ${isCentralBilling ? "Stuur bevestiging naar klant en partner (bureau_central)." : "Partner is genotificeerd met klantgegevens."}`,
+  priority: "high",
+  auto_type: "accommodation_selected",
+  auto_entity_id: request.id,
+});
+```
 
-Voorbeeld weergave:
-- `2/6 ontvangen` → als er geen afwijzingen zijn
-- `2/6 ontvangen · 1 afgewezen` → als er wél afwijzingen zijn
+Nieuwe code:
+```typescript
+await supabase.from("admin_todos").insert({
+  title: todoTitle,
+  description: `Klant heeft gekozen voor ${quote.accommodation_name}. Stuur bevestiging naar klant en partner ${quote.accommodation_name}.`,
+  priority: "high",
+  auto_type: "accommodation_selected",
+  auto_entity_id: request.id,
+  related_request_id: request.linked_program_id || null,
+  related_partner_id: quote.partner_id || null,
+});
+```
+
+Wijzigingen:
+- `related_request_id` wordt gezet op `request.linked_program_id` zodat de taak bij het juiste project verschijnt
+- `related_partner_id` wordt gezet op `quote.partner_id`
+- Beschrijving vermeldt nu de echte partnernaam in plaats van het facturatiemodel
+
+### Bestaande taken
+De 4 bestaande taken zonder projectkoppeling worden opgeruimd door de eerder gebouwde "Opschonen"-functie, of kunnen handmatig worden afgehandeld.
+
+### Bestanden
+1. `supabase/functions/select-accommodation-quote/index.ts`
 
