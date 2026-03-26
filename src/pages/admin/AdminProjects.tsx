@@ -126,6 +126,7 @@ const DERIVED_STATUS_CONFIG: Record<DerivedStatus, { label: string; className: s
   offerte_verstuurd: { label: "Offerte verstuurd", className: "bg-blue-100 text-blue-800", icon: <Send className="h-3 w-3" /> },
   akkoord_ontvangen: { label: "Akkoord ontvangen", className: "bg-amber-100 text-amber-800", icon: <CheckCircle2 className="h-3 w-3" /> },
   av_getekend: { label: "AV getekend", className: "bg-green-100 text-green-800", icon: <FileCheck className="h-3 w-3" /> },
+  facturatie: { label: "Facturatie", className: "bg-purple-100 text-purple-800", icon: <FileText className="h-3 w-3" /> },
   afgerond: { label: "Afgerond", className: "bg-emerald-100 text-emerald-800", icon: <CheckCircle2 className="h-3 w-3" /> },
   geannuleerd: { label: "Geannuleerd", className: "bg-red-100 text-red-800", icon: <XCircle className="h-3 w-3" /> },
 };
