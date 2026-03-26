@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { PendingCommissionsCard } from "@/components/admin/PendingCommissionsCard";
 import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilityWidget";
-import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
 import { MapBookingsWidget } from "@/components/admin/MapBookingsWidget";
@@ -121,7 +120,6 @@ const AdminDashboardContent = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         <div className="lg:col-span-2 space-y-5">
-          <DashboardTodoWidget />
           <LiveActivityFeed />
         </div>
         <div className="space-y-4">
