@@ -861,12 +861,12 @@ const TakenTab = () => {
               <Collapsible key={groupKey} defaultOpen>
                 <Card>
                   <CollapsibleTrigger className="w-full">
-                    <CardHeader className="pb-0 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <ChevronDown className="h-4 w-4 transition-transform" />
+                        <CardTitle className="text-xs font-medium flex items-center gap-2">
+                          <ChevronDown className="h-3.5 w-3.5 transition-transform" />
                           {groupLabels[groupKey] || groupKey}
-                          <Badge variant="secondary" className="ml-1">{groupedTodos[groupKey].length}</Badge>
+                          <Badge variant="secondary" className="ml-1 text-[10px]">{groupedTodos[groupKey].length}</Badge>
                         </CardTitle>
                       </div>
                     </CardHeader>
