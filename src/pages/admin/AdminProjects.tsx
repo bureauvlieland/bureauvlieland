@@ -551,6 +551,7 @@ const AdminProjectsContent = () => {
                     filteredProjects.map((project) => {
                       const derived = getDerivedStatus(project);
                       const statusConfig = DERIVED_STATUS_CONFIG[derived];
+                      const readiness = getReadinessScore(project);
                       const isExpanded = expandedRows.has(project.id);
                       const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
                       const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
