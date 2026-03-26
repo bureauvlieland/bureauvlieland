@@ -166,139 +166,18 @@ const AdminDashboardContent = () => {
         <StatChip label="Geaccepteerd" value={stats?.quotedAccommodationRequests ?? 0} to="/admin/logies" color="text-purple-600" />
       </div>
 
-      {/* 2-column main layout: feed (2/3) + sidebar (1/3) */}
+      {/* 2-column main layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-        {/* Main content — takes 2/3 */}
         <div className="lg:col-span-2 space-y-5">
           <DashboardTodoWidget />
-          <WorkOverview />
           <LiveActivityFeed />
         </div>
-
-        {/* Sidebar — 1/3 */}
         <div className="space-y-4">
-          
           <DailyActivitySummary />
           <PendingCommissionsCard />
           <AdminUnavailabilityWidget />
+          <MapBookingsWidget />
         </div>
-      </div>
-
-      {/* Recent requests grid */}
-      <div className="grid lg:grid-cols-2 gap-5">
-        {/* Recent program requests */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="h-4 w-4" />
-              Recente programma aanvragen
-            </CardTitle>
-            <CardDescription className="text-xs">De laatste 5 programma aanvragen</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats?.recentRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8 text-sm">Nog geen aanvragen</p>
-            ) : (
-              <div className="space-y-2">
-                {stats?.recentRequests.map((request) => (
-                  <Link
-                    key={request.id}
-                    to={`/admin/aanvragen/${request.id}`}
-                    className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{request.customer_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {request.customer_company || "Particulier"} · {request.item_count} activiteiten
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        request.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : request.status === "cancelled"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {request.status === "active" ? "Actief" : request.status === "cancelled" ? "Geannuleerd" : request.status}
-                      </span>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(request.created_at).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent accommodation requests */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Hotel className="h-4 w-4" />
-              Recente logies aanvragen
-            </CardTitle>
-            <CardDescription className="text-xs">De laatste 5 logies aanvragen</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats?.recentAccommodationRequests.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8 text-sm">Nog geen logies aanvragen</p>
-            ) : (
-              <div className="space-y-2">
-                {stats?.recentAccommodationRequests.map((request) => (
-                  <Link
-                    key={request.id}
-                    to={`/admin/logies/${request.id}`}
-                    className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                        <Hotel className="h-4 w-4 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{request.customer_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {request.customer_company || "Particulier"} · {request.number_of_guests} gasten
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        request.status === "submitted"
-                          ? "bg-blue-100 text-blue-700"
-                          : request.status === "processing"
-                          ? "bg-amber-100 text-amber-700"
-                          : request.status === "quoted"
-                          ? "bg-purple-100 text-purple-700"
-                          : request.status === "accepted"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {request.status === "submitted" ? "Nieuw"
-                          : request.status === "processing" ? "In behandeling"
-                          : request.status === "quoted" ? "Offertes"
-                          : request.status === "accepted" ? "Geaccepteerd"
-                          : request.status}
-                      </span>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(request.created_at).toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" })}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <MapBookingsWidget />
       </div>
     </div>
   );
