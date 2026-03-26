@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       visitor_email: visitorEmail,
       source_label: sourceLabel,
       message_preview: messagePreview,
-      chat_url: "https://bureauvlieland.lovable.app/admin/chat",
+      chat_url: "https://bureauvlieland.nl/admin/chat",
     });
 
     const emailSubject = template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`;
