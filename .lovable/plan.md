@@ -1,40 +1,27 @@
 
 
-## Plan: Readiness-indicator per project
+## Plan: Fix tabelkoppen + verduidelijk activiteiten-badges
 
-### Idee
-Een compacte **voortgangsbalk + percentage** in een nieuwe kolom "Gereed" die in één oogopslag toont hoe ver elk project is. Geen extra klikken nodig.
+### Probleem 1: Ontbrekende kolom "Klant"
+De tabelheaders missen de kolom "Klant". De volgorde in de headers is:
+`Referentie(s) → Logies → Activiteiten → Datum(s)`
 
-### Berekening per project
-De readiness wordt bepaald door max. 4 checkpunten (afhankelijk van projecttype):
+Maar de cellen renderen:
+`Referentie(s) → **Klantnaam** → Logies → Activiteiten → Datum(s)`
 
-| Checkpoint | Conditie "klaar" | Van toepassing |
-|---|---|---|
-| Items verstuurd naar partners | `items_not_sent === 0` en `item_count > 0` | Als `program_id` bestaat |
-| Partners bevestigd | `items_confirmed === item_count` (non-cancelled) | Als `program_id` bestaat |
-| Logies geregeld | Een quote heeft status `selected` | Als `accommodation_id` bestaat |
-| Voorwaarden getekend | `terms_accepted_at !== null` | Altijd (behalve concept/geannuleerd) |
+Er is dus een header "Klant" vergeten. Daardoor schuiven alle koppen één kolom op.
 
-**Score** = (afgevinkte checkpoints / totaal relevante checkpoints) × 100%
-
-- `concept` of `geannuleerd` → geen balkje tonen (dash of n.v.t.)
-- 100% → groene balk + ✓
-- 50-99% → amber balk
-- 0-49% → rode/grijze balk
-
-### Weergave
-Een smalle kolom "Gereed" met:
-- Kleine `<Progress />` balk (h-1.5, ~60px breed)
-- Percentage ernaast in `text-xs` (bijv. "75%")
-- Bij 100%: groen vinkje in plaats van percentage
+### Probleem 2: Activiteiten-badges verwarring
+De badges ⏳5 ✅4 tonen **partnerstatus** (wacht op bevestiging partner / partner bevestigd). Op de detailpagina staat "Offerte-status: Bevestigd" — dat gaat over **klantgoedkeuring** van het onderdeel, een ander concept. De telling ⏳5 ✅4 klopt wél (5 in afwachting bij partner, 4 bevestigd door partner).
 
 ### Wijzigingen
 
 **`src/pages/admin/AdminProjects.tsx`**:
-1. Voeg `getReadinessScore(project): { score: number, total: number, percentage: number }` helper toe
-2. Voeg kolom "Gereed" toe aan `TableHeader` (tussen "Status" en "Referentie(s)")
-3. Voeg `TableCell` toe met `<Progress />` + percentage
-4. Import `Progress` uit `@/components/ui/progress`
+1. Voeg `<TableHead>Klant</TableHead>` toe tussen "Referentie(s)" en "Logies" (rond regel 535)
+2. Pas `colSpan` aan in de lege-rij cell (van 11 naar 12)
+
+### Resultaat
+Headers kloppen weer: Type | Status | Gereed | Referentie(s) | **Klant** | Logies | Activiteiten | Datum(s) | Personen
 
 ### Bestanden
 1. `src/pages/admin/AdminProjects.tsx`
