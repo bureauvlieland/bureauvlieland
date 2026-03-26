@@ -173,6 +173,35 @@ function getEarliestDeadline(quotes: AccommodationQuoteSummary[]): Date | null {
   return pendingDeadlines.reduce((min, d) => d < min ? d : min);
 }
 
+function getReadinessScore(project: Project): { done: number; total: number; percentage: number } {
+  const derived = getDerivedStatus(project);
+  if (derived === "concept" || derived === "geannuleerd") return { done: 0, total: 0, percentage: -1 };
+
+  const checks: boolean[] = [];
+
+  // Items sent to partners
+  if (project.program_id && project.item_count > 0) {
+    checks.push(project.items_not_sent === 0);
+  }
+
+  // Partners confirmed
+  if (project.program_id && project.item_count > 0) {
+    checks.push(project.items_confirmed === project.item_count);
+  }
+
+  // Accommodation selected
+  if (project.accommodation_id) {
+    checks.push(project.accommodation_quotes.some(q => q.status === "selected"));
+  }
+
+  // Terms accepted
+  checks.push(!!project.terms_accepted_at);
+
+  const done = checks.filter(Boolean).length;
+  const total = checks.length;
+  return { done, total, percentage: total > 0 ? Math.round((done / total) * 100) : 0 };
+}
+
 const AdminProjectsContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
