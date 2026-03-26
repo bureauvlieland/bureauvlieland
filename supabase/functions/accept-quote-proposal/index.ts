@@ -473,6 +473,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       console.log(`Customer quote acceptance completed for ${program.reference_number}`);
 
+      // Create auto-todo: admin must now send items to partners
+      const customerLabel = program.customer_company || program.customer_name;
+      const { data: existingSendTodo } = await supabase
+        .from("admin_todos")
+        .select("id")
+        .eq("auto_type", "send_items_to_partners")
+        .eq("auto_entity_id", program.id)
+        .neq("status", "done")
+        .maybeSingle();
+
+      if (!existingSendTodo) {
+        await supabase.from("admin_todos").insert({
+          title: `Akkoord ontvangen: ${customerLabel} — stuur items naar partners`,
+          description: `Klant ${program.customer_name} heeft akkoord gegeven op het programmavoorstel. Stuur de items nu naar de betrokken partners.`,
+          priority: "high",
+          status: "todo",
+          related_request_id: program.id,
+          auto_type: "send_items_to_partners",
+          auto_entity_id: program.id,
+        });
+        console.log(`Created send_items_to_partners todo for ${program.id}`);
+      }
+
       return new Response(
         JSON.stringify({
           success: true,

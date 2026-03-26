@@ -774,6 +774,62 @@ Deno.serve(async (req) => {
       }
     }
 
+    // =============================================
+    // CHECK 9: Quotes expiring soon (within 3 days)
+    // =============================================
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const threeDaysStr = threeDaysFromNow.toISOString().split("T")[0];
+
+    const { data: expiringPrograms, error: expiringError } = await supabase
+      .from("program_requests")
+      .select("id, customer_name, customer_company, quote_valid_until, quote_status")
+      .eq("status", "active")
+      .eq("quote_status", "offerte_verstuurd")
+      .not("quote_valid_until", "is", null)
+      .lte("quote_valid_until", threeDaysStr)
+      .gt("quote_valid_until", new Date().toISOString().split("T")[0]);
+
+    if (expiringError) {
+      console.error("Error fetching expiring quotes:", expiringError);
+    } else {
+      console.log(`Found ${expiringPrograms?.length || 0} quotes expiring within 3 days`);
+
+      for (const prog of expiringPrograms || []) {
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "quote_expiring_soon")
+          .eq("auto_entity_id", prog.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const customerLabel = prog.customer_company || prog.customer_name;
+        const daysLeft = Math.ceil(
+          (new Date(prog.quote_valid_until!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        );
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `Offerte ${customerLabel} verloopt over ${daysLeft} dagen`,
+            description: `De offerte voor ${prog.customer_name} verloopt op ${prog.quote_valid_until}. Neem contact op met de klant.`,
+            priority: "high",
+            status: "todo",
+            related_request_id: prog.id,
+            auto_type: "quote_expiring_soon",
+            auto_entity_id: prog.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
     console.log(`Job completed: ${totalCreated} reminders created, ${totalSkipped} skipped`);
 
     return new Response(

@@ -172,6 +172,7 @@ const AdminDashboardContent = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         {/* Main content — takes 2/3 */}
         <div className="lg:col-span-2 space-y-5">
+          <DashboardTodoWidget />
           <WorkOverview />
           <LiveActivityFeed />
         </div>
@@ -180,7 +181,6 @@ const AdminDashboardContent = () => {
         <div className="space-y-4">
           <PipelineFunnel />
           <DailyActivitySummary />
-          <DashboardTodoWidget />
           <PendingCommissionsCard />
           <AdminUnavailabilityWidget />
         </div>

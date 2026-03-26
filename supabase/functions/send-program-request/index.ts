@@ -276,7 +276,47 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Program request emails sent successfully");
 
-    // Enrich provider_name and provider_email on program_request_items using service-role
+    // Create auto-todo for new request
+    if (requestData.customerToken) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+
+        const { data: programReq } = await supabaseAdmin
+          .from("program_requests")
+          .select("id, customer_name, customer_company")
+          .eq("customer_token", requestData.customerToken)
+          .maybeSingle();
+
+        if (programReq) {
+          const customerLabel = requestData.company || requestData.name;
+          const { data: existing } = await supabaseAdmin
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "new_request_received")
+            .eq("auto_entity_id", programReq.id)
+            .neq("status", "done")
+            .maybeSingle();
+
+          if (!existing) {
+            await supabaseAdmin.from("admin_todos").insert({
+              title: `Nieuwe aanvraag: ${customerLabel} — programma samenstellen`,
+              description: `Er is een nieuwe programma-aanvraag binnengekomen van ${requestData.name}${requestData.company ? ` (${requestData.company})` : ''} voor ${requestData.numberOfPeople} personen.`,
+              priority: "high",
+              status: "todo",
+              related_request_id: programReq.id,
+              auto_type: "new_request_received",
+              auto_entity_id: programReq.id,
+            });
+            console.log(`Created new_request_received todo for ${programReq.id}`);
+          }
+        }
+      } catch (todoError) {
+        console.error("Non-critical: Failed to create auto-todo:", todoError);
+      }
+    }
     if (customerToken) {
       try {
         const supabaseAdmin = createClient(

@@ -16,7 +16,14 @@ export type AutoTodoType =
   | "bureau_item_pricing"
   | "post_execution_feedback"
   | "post_execution_invoice_check"
-  | "accommodation_selected";
+  | "accommodation_selected"
+  | "new_request_received"
+  | "quote_ready_to_send"
+  | "send_items_to_partners"
+  | "partner_status_update"
+  | "forward_accommodation_quote"
+  | "quote_expiring_soon"
+  | "customer_counter_proposal";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -167,6 +174,27 @@ export const autoTodoTitles = {
 
   accommodation_selected: (accommodationName: string, customerName: string) =>
     `Logies "${accommodationName}" geselecteerd door ${customerName}`,
+
+  new_request_received: (customerName: string) =>
+    `Nieuwe aanvraag: ${customerName} — programma samenstellen`,
+
+  quote_ready_to_send: (customerName: string) =>
+    `Offerte klaar: ${customerName} — verstuur naar klant`,
+
+  send_items_to_partners: (customerName: string) =>
+    `Akkoord ontvangen: ${customerName} — stuur items naar partners`,
+
+  partner_status_update: (partnerName: string, activityName: string, status: string) =>
+    `Partner ${partnerName} reageert op "${activityName}" — ${status}`,
+
+  forward_accommodation_quote: (partnerName: string, customerName: string) =>
+    `Logiesofferte ${partnerName} klaar — doorsturen naar ${customerName}`,
+
+  quote_expiring_soon: (customerName: string, daysLeft: number) =>
+    `Offerte ${customerName} verloopt over ${daysLeft} dagen`,
+
+  customer_counter_proposal: (customerName: string, activityName: string) =>
+    `Tegenvoorstel: ${customerName} voor "${activityName}" — beoordelen`,
 };
 
 /**
@@ -256,5 +284,40 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Logies bevestigen",
     color: "text-teal-700",
     bgColor: "bg-teal-100",
+  },
+  new_request_received: {
+    label: "Nieuwe aanvraag",
+    color: "text-blue-700",
+    bgColor: "bg-blue-100",
+  },
+  quote_ready_to_send: {
+    label: "Offerte versturen",
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+  },
+  send_items_to_partners: {
+    label: "Naar partners",
+    color: "text-indigo-700",
+    bgColor: "bg-indigo-100",
+  },
+  partner_status_update: {
+    label: "Partner reactie",
+    color: "text-amber-700",
+    bgColor: "bg-amber-100",
+  },
+  forward_accommodation_quote: {
+    label: "Logies doorsturen",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
+  },
+  quote_expiring_soon: {
+    label: "Offerte verloopt",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
+  },
+  customer_counter_proposal: {
+    label: "Tegenvoorstel",
+    color: "text-purple-700",
+    bgColor: "bg-purple-100",
   },
 };
