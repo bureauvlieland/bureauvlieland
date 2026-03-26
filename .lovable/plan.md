@@ -1,47 +1,34 @@
 
 
-## Plan: Fix logies-bevestiging todo's — projectkoppeling en partnernaam
+## Plan: Fix telling + compactere takenlijst
 
-### Probleem
-1. **Niet gekoppeld aan project**: De todo die wordt aangemaakt bij het selecteren van een logiesofferte zet `related_request_id` niet, waardoor de taak onder "Niet gekoppeld aan project" valt
-2. **"(bureau_central)" in beschrijving**: De tekst toont het facturatiemodel in plaats van de naam van de logiespartner
+### Probleem 1: Telling klopt niet (9 vs 8 zichtbaar)
+De lijst-weergave groepeert op `auto_type` en itereert over `groupOrder` (handmatig + alle keys uit `autoTodoTypeConfig`). Als een todo een `auto_type` heeft die NIET in `autoTodoTypeConfig` staat, wordt die WEL meegeteld in de header maar NIET gerenderd. Oplossing: onbekende auto_types als fallback bij de groep "Overige" plaatsen.
 
-### Oplossing
+### Probleem 2: Layout te ruim
+Elke taak-item heeft `p-4` padding, volledige beschrijving, grote badges, en veel verticale ruimte. Compacter maken door:
+- Padding reduceren naar `p-2.5` of `py-2 px-3`
+- Beschrijving op 1 regel (al `line-clamp-2`, wordt `line-clamp-1`)
+- Prioriteit-badge kleiner (alleen icoon + kleur-dot, geen tekst)
+- Meta-info (datum, partner, project) op dezelfde regel als de titel waar mogelijk
+- Action button en menu dichter bij de content
 
-**`supabase/functions/select-accommodation-quote/index.ts`** — regel 258-264:
+### Wijzigingen
 
-Huidige code:
-```typescript
-await supabase.from("admin_todos").insert({
-  title: todoTitle,
-  description: `Klant heeft gekozen voor ${quote.accommodation_name}. ${isCentralBilling ? "Stuur bevestiging naar klant en partner (bureau_central)." : "Partner is genotificeerd met klantgegevens."}`,
-  priority: "high",
-  auto_type: "accommodation_selected",
-  auto_entity_id: request.id,
-});
-```
+**`src/pages/admin/AdminTodos.tsx`**:
 
-Nieuwe code:
-```typescript
-await supabase.from("admin_todos").insert({
-  title: todoTitle,
-  description: `Klant heeft gekozen voor ${quote.accommodation_name}. Stuur bevestiging naar klant en partner ${quote.accommodation_name}.`,
-  priority: "high",
-  auto_type: "accommodation_selected",
-  auto_entity_id: request.id,
-  related_request_id: request.linked_program_id || null,
-  related_partner_id: quote.partner_id || null,
-});
-```
+1. **Fix groepering**: Na het groeperen op `auto_type`, voeg een "overige" fallback-groep toe voor types die niet in `groupOrder` zitten. Of beter: verzamel alle keys die in `groupedTodos` bestaan maar niet in `groupOrder` en voeg ze toe.
 
-Wijzigingen:
-- `related_request_id` wordt gezet op `request.linked_program_id` zodat de taak bij het juiste project verschijnt
-- `related_partner_id` wordt gezet op `quote.partner_id`
-- Beschrijving vermeldt nu de echte partnernaam in plaats van het facturatiemodel
+2. **Compactere `renderTodoItem`**:
+   - `p-4` → `py-2 px-3`
+   - Priority badge: alleen gekleurde dot + icoon, geen tekst-label
+   - Auto-type badge: kleiner (`text-[10px]`)
+   - Beschrijving: `line-clamp-1` of verberg in compacte modus
+   - Verwijder `mt-2` van meta-rij, maak `mt-1`
+   - Alles op minder regels
 
-### Bestaande taken
-De 4 bestaande taken zonder projectkoppeling worden opgeruimd door de eerder gebouwde "Opschonen"-functie, of kunnen handmatig worden afgehandeld.
+3. **Compactere groep-headers**: `CardHeader` padding reduceren
 
 ### Bestanden
-1. `supabase/functions/select-accommodation-quote/index.ts`
+1. `src/pages/admin/AdminTodos.tsx` — fix groepering + compact layout
 
