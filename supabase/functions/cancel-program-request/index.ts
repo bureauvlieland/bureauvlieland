@@ -149,6 +149,13 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError;
 
+    // Resolve ALL auto-todos for this request
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("related_request_id", program.id)
+      .neq("status", "done");
+
     // Cancel all items
     await supabase
       .from("program_request_items")

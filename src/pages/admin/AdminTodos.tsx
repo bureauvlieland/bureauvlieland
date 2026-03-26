@@ -281,9 +281,12 @@ const entityIcons: Record<string, React.ReactNode> = {
 };
 
 // ─── Taken Tab ───────────────────────────────────────────────
+type TakenView = "list" | "project";
+
 const TakenTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<TakenView>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -504,6 +507,23 @@ const TakenTab = () => {
     return groups;
   }, [visibleTodos]);
 
+  // Group by project (related_request_id)
+  const projectGroupedTodos = useMemo(() => {
+    const groups: Record<string, Todo[]> = {};
+    for (const todo of visibleTodos) {
+      const key = todo.related_request_id || "__no_project";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(todo);
+    }
+    // Sort: projects with most urgent/high priority todos first
+    const priorityWeight: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+    return Object.entries(groups).sort(([, a], [, b]) => {
+      const aMin = Math.min(...a.map(t => priorityWeight[t.priority] ?? 2));
+      const bMin = Math.min(...b.map(t => priorityWeight[t.priority] ?? 2));
+      return aMin - bMin;
+    });
+  }, [visibleTodos]);
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -666,6 +686,27 @@ const TakenTab = () => {
             </h2>
           </div>
           <div className="flex gap-2">
+            {/* View toggle */}
+            <div className="flex border rounded-md overflow-hidden">
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-none text-xs"
+              >
+                <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                Lijst
+              </Button>
+              <Button
+                variant={viewMode === "project" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("project")}
+                className="rounded-none text-xs"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                Per project
+              </Button>
+            </div>
             {selectedIds.size > 0 && (
               <Button
                 variant="outline"
@@ -726,7 +767,7 @@ const TakenTab = () => {
           </CardContent>
         </Card>
 
-        {/* Grouped Todo List */}
+        {/* Todo List */}
         {isLoading ? (
           <Card>
             <CardContent className="py-12 flex items-center justify-center">
@@ -739,14 +780,57 @@ const TakenTab = () => {
               Geen taken gevonden
             </CardContent>
           </Card>
+        ) : viewMode === "project" ? (
+          /* Per-project grouped view */
+          projectGroupedTodos.map(([requestId, todos]) => {
+            const projectLabel = requestId === "__no_project"
+              ? "Niet gekoppeld aan project"
+              : getLinkedRequestLabel(requestId) || requestId.slice(0, 8);
+
+            return (
+              <Collapsible key={requestId} defaultOpen>
+                <Card>
+                  <CollapsibleTrigger className="w-full">
+                    <CardHeader className="pb-0 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <ChevronDown className="h-4 w-4 transition-transform" />
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          {projectLabel}
+                          <Badge variant="secondary" className="ml-1">{todos.length}</Badge>
+                        </CardTitle>
+                        {requestId !== "__no_project" && (
+                          <Link
+                            to={`/admin/aanvragen/${requestId}`}
+                            className="text-xs text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Open project →
+                          </Link>
+                        )}
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="p-0">
+                      <div className="divide-y">
+                        {todos.map(renderTodoItem)}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            );
+          })
         ) : (
+          /* Standard grouped-by-type view */
           groupOrder
             .filter((key) => groupedTodos[key]?.length > 0)
             .map((groupKey) => (
               <Collapsible key={groupKey} defaultOpen>
                 <Card>
                   <CollapsibleTrigger className="w-full">
-                    <CardHeader className="pb-0 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <CardHeader className="pb-0 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
                           <ChevronDown className="h-4 w-4 transition-transform" />

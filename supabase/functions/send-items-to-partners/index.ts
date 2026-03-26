@@ -364,7 +364,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 9. Log history
+    // 9. Resolve "send_items_to_partners" auto-todo
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("related_request_id", program.id)
+      .eq("auto_type", "send_items_to_partners")
+      .neq("status", "done");
+
+    // 10. Log history
     await supabase.from("program_request_history").insert({
       request_id: program.id,
       action: "admin_sent_to_partners",

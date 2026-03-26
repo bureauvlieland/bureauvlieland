@@ -129,6 +129,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve related auto-todos for this quote
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("auto_entity_id", quoteId)
+      .neq("status", "done");
+
+    // Also resolve partner-level todos linked to this accommodation request
+    await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("auto_entity_id", accRequest.id)
+      .in("auto_type", ["quote_pending_partner", "quote_review", "forward_accommodation_quote"])
+      .eq("related_partner_id", partner.id)
+      .neq("status", "done");
+
     // Log in project_communications
     await supabase.from("project_communications").insert({
       accommodation_id: accRequest.id,

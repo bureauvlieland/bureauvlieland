@@ -242,14 +242,14 @@ Deno.serve(async (req) => {
       throw new Error("Fout bij bijwerken aanvraag");
     }
 
-    // Auto-resolve quote_pending_customer todo
+    // Auto-resolve related auto-todos
     await supabase
       .from("admin_todos")
       .update({ status: "done", completed_at: new Date().toISOString() })
-      .eq("auto_type", "quote_pending_customer")
       .eq("auto_entity_id", request.id)
+      .in("auto_type", ["quote_pending_customer", "forward_accommodation_quote", "quote_review"])
       .neq("status", "done");
-    console.log(`Resolved quote_pending_customer todo for request ${request.id}`);
+    console.log(`Resolved accommodation auto-todos for request ${request.id}`);
 
     // Create admin todo for manual confirmation
     const todoTitle = isCentralBilling

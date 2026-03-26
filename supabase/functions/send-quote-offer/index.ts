@@ -294,6 +294,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       console.log("[TEST] Skipping program_requests status update for test email");
     }
 
+    // Resolve the "quote_ready_to_send" auto-todo
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    await supabaseAdmin
+      .from("admin_todos")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("related_request_id", requestId)
+      .eq("auto_type", "quote_ready_to_send")
+      .neq("status", "done");
+
     console.log(`Quote offer sent successfully to ${recipientEmail}`);
 
     return new Response(
