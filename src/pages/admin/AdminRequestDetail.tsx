@@ -361,6 +361,29 @@ const AdminRequestDetail = () => {
       body += `\n`;
     }
     
+    // Actiepunten voor de klant
+    const actionItems: string[] = [];
+    if (!request.billing_company_name) {
+      actionItems.push("Vul uw facturatiegegevens in via het klantportaal");
+    }
+    if (!request.terms_accepted_at && request.quote_status && ["offerte_verstuurd", "akkoord_ontvangen"].includes(request.quote_status)) {
+      actionItems.push("Accepteer de voorwaarden om de boeking definitief te maken");
+    }
+    if (linkedAccommodation && linkedAccommodation.status !== "accepted") {
+      actionItems.push("Beoordeel de logiesoffertes en maak een keuze");
+    }
+    if (request.quote_status === "offerte_verstuurd" && request.quote_status !== "akkoord_ontvangen") {
+      actionItems.push("Bekijk de offerte en geef akkoord");
+    }
+
+    if (actionItems.length > 0) {
+      body += `── Wat we nog van u nodig hebben ──\n`;
+      for (const item of actionItems) {
+        body += `📌 ${item}\n`;
+      }
+      body += `\n`;
+    }
+
     body += `Bekijk uw volledige programma via: https://bureauvlieland.nl/mijn-programma/${request.customer_token}\n\n`;
     body += `Heeft u vragen? Neem gerust contact met ons op.\n`;
     
