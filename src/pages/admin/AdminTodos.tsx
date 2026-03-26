@@ -822,13 +822,13 @@ const TakenTab = () => {
               <Collapsible key={requestId} defaultOpen>
                 <Card>
                   <CollapsibleTrigger className="w-full">
-                    <CardHeader className="pb-0 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-medium flex items-center gap-2">
-                          <ChevronDown className="h-4 w-4 transition-transform" />
-                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs font-medium flex items-center gap-2">
+                          <ChevronDown className="h-3.5 w-3.5 transition-transform" />
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                           {projectLabel}
-                          <Badge variant="secondary" className="ml-1">{todos.length}</Badge>
+                          <Badge variant="secondary" className="ml-1 text-[10px]">{todos.length}</Badge>
                         </CardTitle>
                         {requestId !== "__no_project" && (
                           <Link
