@@ -452,7 +452,30 @@ const TakenTab = () => {
     },
   });
 
-  const handleOpenDialog = (todo?: Todo) => {
+  // Cleanup stale todos
+  const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("cleanup-stale-todos");
+      if (error) throw error;
+      return data as { cleaned: number; details: Record<string, number> };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      setShowCleanupConfirm(false);
+      toast({
+        title: `${data.cleaned} taken opgeschoond`,
+        description: data.cleaned === 0
+          ? "Alle taken zijn al up-to-date."
+          : "Verouderde taken zijn op 'klaar' gezet.",
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: "Fout bij opschonen", description: err.message, variant: "destructive" });
+    },
+  });
+
     if (todo) {
       setEditingTodo(todo);
       setFormData({
