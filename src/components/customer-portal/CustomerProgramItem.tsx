@@ -78,6 +78,7 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
+  const needsCustomerAction = !isSelfArranged && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at;
   
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
