@@ -412,61 +412,12 @@ const AdminProjectsContent = () => {
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <FolderKanban className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-slate-600">Totaal projecten</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <FileText className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.concept}</p>
-                <p className="text-sm text-slate-600">Concept</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Send className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.offerte}</p>
-                <p className="text-sm text-slate-600">Offerte verstuurd</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <FileCheck className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.avGetekend}</p>
-                <p className="text-sm text-slate-600">AV getekend</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Pipeline Funnel */}
+      <PipelineFunnel
+        stageCounts={stageCounts}
+        activeStage={statusFilter !== "all" && statusFilter !== "geannuleerd" ? statusFilter : null}
+        onStageClick={(key) => setStatusFilter(prev => prev === key ? "all" : key)}
+      />
 
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
