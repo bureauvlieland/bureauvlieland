@@ -350,6 +350,9 @@ export default function AdminAccommodation() {
                           {quoteInfo ? (
                             <span className="text-sm">
                               {quoteInfo.submitted}/{quoteInfo.total} ontvangen
+                              {quoteInfo.declined > 0 && (
+                                <span className="text-destructive"> · {quoteInfo.declined} afgewezen</span>
+                              )}
                             </span>
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
