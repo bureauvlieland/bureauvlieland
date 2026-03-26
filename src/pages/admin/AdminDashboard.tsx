@@ -6,9 +6,7 @@ import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilit
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
-import { WorkOverview } from "@/components/admin/WorkOverview";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
-
 import { MapBookingsWidget } from "@/components/admin/MapBookingsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
