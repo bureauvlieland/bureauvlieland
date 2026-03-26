@@ -1049,6 +1049,29 @@ const TakenTab = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cleanup Confirmation Dialog */}
+      <Dialog open={showCleanupConfirm} onOpenChange={setShowCleanupConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verouderde taken opschonen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Dit ruimt alle taken op die niet meer relevant zijn: geannuleerde of afgeronde projecten, 
+            reeds verwerkte offertes en verouderde herinneringen. Wil je doorgaan?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCleanupConfirm(false)}>Annuleren</Button>
+            <Button
+              onClick={() => cleanupMutation.mutate()}
+              disabled={cleanupMutation.isPending}
+            >
+              {cleanupMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Opschonen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
