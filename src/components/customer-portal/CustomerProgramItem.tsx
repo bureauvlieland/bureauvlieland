@@ -243,8 +243,17 @@ export const CustomerProgramItem = ({
               </a>
             </div>
           )}
-          
-          {/* Quoted price notes from partner */}
+
+          {/* Action hint for items needing customer approval */}
+          {needsCustomerAction && !readOnly && (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm text-blue-700 dark:text-blue-300">
+              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                De aanbieder is beschikbaar. Klik op <strong>'Akkoord'</strong> om deze activiteit definitief te boeken.
+              </span>
+            </div>
+          )}
+
           {!isSelfArranged && item.quoted_price && item.quoted_notes && (
             <p className="mt-1 text-xs text-muted-foreground italic">
               {item.quoted_notes}
