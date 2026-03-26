@@ -71,7 +71,7 @@ import { cn } from "@/lib/utils";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
-type DerivedStatus = "concept" | "offerte_verstuurd" | "akkoord_ontvangen" | "av_getekend" | "afgerond" | "geannuleerd";
+type DerivedStatus = "concept" | "offerte_verstuurd" | "akkoord_ontvangen" | "av_getekend" | "facturatie" | "afgerond" | "geannuleerd";
 
 interface AccommodationQuoteSummary {
   partner_name: string;
