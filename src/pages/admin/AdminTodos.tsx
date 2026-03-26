@@ -281,6 +281,8 @@ const entityIcons: Record<string, React.ReactNode> = {
 };
 
 // ─── Taken Tab ───────────────────────────────────────────────
+type TakenView = "list" | "project";
+
 const TakenTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
