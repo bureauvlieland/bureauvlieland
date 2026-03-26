@@ -1,48 +1,43 @@
 
 
-## Plan: Partner Dashboard — oude/irrelevante items opschonen
+## Plan: Duidelijkere statuslabels voor klant + actie-hints
 
-### Analyse
-De edge function `get-partner-dashboard` laadt **alle items ooit** toegewezen aan een partner, zonder enige datumfiltering. Dit betekent:
+### Probleem
+Klant ziet "Bevestigd" en denkt dat alles geregeld is. Maar "Bevestigd" betekent dat de **partner** beschikbaarheid heeft bevestigd — de klant moet nog op "Akkoord" klikken. De terminologie is verwarrend.
 
-1. **Items van geannuleerde projecten**: Worden correct op `cancelled` gezet door `cancel-program-request`, maar blijven in de respons staan (bewust, zodat partners annuleringen zien)
-2. **Oude afgeronde items**: Items van maanden/jaren geleden (gefactureerd, geannuleerd) blijven eindeloos getoond
-3. **Potentieel stale items**: Als een project op een andere manier wordt geannuleerd (bijv. admin zet handmatig status), worden items mogelijk NIET op `cancelled` gezet
+### Voorstel
+
+**1. Statuslabel aanpassen voor klant** — `src/types/programRequest.ts`
+
+Het label "Bevestigd" voor `confirmed` status wijzigen naar **"Beschikbaar ✓"** in de klantcontext. Dit maakt duidelijk dat de aanbieder beschikbaar is, maar dat de klant nog actie moet ondernemen.
+
+| Status | Huidig label | Nieuw klantlabel |
+|---|---|---|
+| `confirmed` | Bevestigd | Beschikbaar |
+| `alternative` | Alternatief | Alternatief voorstel |
+
+**2. Actie-hint onder de badge** — `src/components/customer-portal/CustomerProgramItem.tsx`
+
+Wanneer een item `confirmed` of `alternative` is en de klant nog geen akkoord heeft gegeven, een korte hint-tekst tonen:
+
+> ℹ️ De aanbieder heeft bevestigd. Klik op 'Akkoord' om deze activiteit definitief te boeken.
+
+Dit verschijnt als een subtiele tekstregel (blauw info-achtig) boven de actieknoppen.
+
+**3. Akkoord-knop prominenter**
+
+De "Akkoord" knop iets meer opvallen laten: toevoegen van een subtle pulse/ring animatie of een lichtgroene achtergrond-highlight rond de hele kaart wanneer akkoord nog nodig is.
 
 ### Wijzigingen
 
-**1. `supabase/functions/get-partner-dashboard/index.ts`** — Datumfilter toevoegen
+**`src/components/customer-portal/CustomerProgramItem.tsx`**:
+1. Override het statuslabel: als status `confirmed` is en `!item.customer_accepted_at`, toon "Beschikbaar" i.p.v. "Bevestigd"
+2. Voeg info-hint toe na de meta-rij wanneer akkoord vereist is
+3. Voeg subtiele highlight border toe aan kaarten die actie vereisen
 
-Items beperken tot:
-- Activiteiten waarvan het project `selected_dates` bevat die **niet ouder zijn dan 6 maanden** geleden, OF
-- Items met status `pending`, `confirmed`, `alternative`, `counter_proposed`, `accepted`, `executed` (altijd tonen, ongeacht datum — deze vergen actie)
-- Geannuleerde/gefactureerde items alleen tonen als ze **< 3 maanden oud** zijn
-
-Concreet: een filter toevoegen na het ophalen van items:
-```typescript
-const cutoffDate = new Date();
-cutoffDate.setMonth(cutoffDate.getMonth() - 3);
-
-const activeItems = (items || []).filter(item => {
-  // Altijd tonen: items die actie vereisen
-  const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
-  if (activeStatuses.includes(item.status)) return true;
-  
-  // Afgeronde/geannuleerde items: alleen recente tonen
-  return new Date(item.updated_at) > cutoffDate;
-});
-```
-
-**2. `supabase/functions/get-partner-dashboard/index.ts`** — Zelfde filter voor accommodation quotes
-
-Afgewezen/verlopen logiesoffertes verbergen als ze ouder dan 3 maanden zijn.
-
-### Resultaat
-- Partner dashboard toont alleen relevante items
-- Oude geannuleerde/gefactureerde items verdwijnen automatisch na 3 maanden
-- Items die nog actie vereisen worden altijd getoond ongeacht leeftijd
-- Geen database-wijzigingen nodig
+**`src/types/programRequest.ts`**:
+- Geen wijziging nodig — we overriden het label in de component via de bestaande `overrideLabel` prop van `ItemStatusBadge`
 
 ### Bestanden
-1. `supabase/functions/get-partner-dashboard/index.ts` — datumfilter voor items en accommodation quotes
+1. `src/components/customer-portal/CustomerProgramItem.tsx`
 
