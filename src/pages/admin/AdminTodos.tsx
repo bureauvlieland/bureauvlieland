@@ -507,6 +507,23 @@ const TakenTab = () => {
     return groups;
   }, [visibleTodos]);
 
+  // Group by project (related_request_id)
+  const projectGroupedTodos = useMemo(() => {
+    const groups: Record<string, Todo[]> = {};
+    for (const todo of visibleTodos) {
+      const key = todo.related_request_id || "__no_project";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(todo);
+    }
+    // Sort: projects with most urgent/high priority todos first
+    const priorityWeight: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+    return Object.entries(groups).sort(([, a], [, b]) => {
+      const aMin = Math.min(...a.map(t => priorityWeight[t.priority] ?? 2));
+      const bMin = Math.min(...b.map(t => priorityWeight[t.priority] ?? 2));
+      return aMin - bMin;
+    });
+  }, [visibleTodos]);
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
