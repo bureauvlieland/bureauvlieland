@@ -91,7 +91,8 @@ export const CustomerProgramItem = ({
     <div className={cn(
       "transition-all rounded-lg border bg-card p-4",
       hasChanges && "ring-2 ring-primary/50",
-      item.status === "cancelled" && "opacity-60"
+      item.status === "cancelled" && "opacity-60",
+      needsCustomerAction && "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
     )}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Header row */}
