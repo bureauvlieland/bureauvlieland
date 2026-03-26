@@ -533,6 +533,7 @@ const AdminProjectsContent = () => {
                     <TableHead>Status</TableHead>
                     <TableHead className="w-24">Gereed</TableHead>
                     <TableHead>Referentie(s)</TableHead>
+                    <TableHead>Klant</TableHead>
                     <TableHead>Logies</TableHead>
                     <TableHead>Activiteiten</TableHead>
                     <TableHead>Datum(s)</TableHead>
@@ -543,7 +544,7 @@ const AdminProjectsContent = () => {
                 <TableBody>
                   {filteredProjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                         Geen projecten gevonden
                       </TableCell>
                     </TableRow>
