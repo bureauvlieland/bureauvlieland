@@ -68,6 +68,7 @@ import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
 import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
