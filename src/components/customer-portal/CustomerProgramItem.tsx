@@ -18,7 +18,7 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
 import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
@@ -78,6 +78,7 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
+  const needsCustomerAction = !isSelfArranged && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at;
   
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
@@ -90,7 +91,8 @@ export const CustomerProgramItem = ({
     <div className={cn(
       "transition-all rounded-lg border bg-card p-4",
       hasChanges && "ring-2 ring-primary/50",
-      item.status === "cancelled" && "opacity-60"
+      item.status === "cancelled" && "opacity-60",
+      needsCustomerAction && "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
     )}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Header row */}
@@ -124,7 +126,13 @@ export const CustomerProgramItem = ({
                     Goedgekeurd
                   </Badge>
                 ) : (
-                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={readOnly && item.status === "pending" ? "In behandeling" : isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : undefined} />
+                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={
+                    needsCustomerAction && item.status === "confirmed" ? "Beschikbaar" :
+                    needsCustomerAction && item.status === "alternative" ? "Alternatief voorstel" :
+                    readOnly && item.status === "pending" ? "In behandeling" : 
+                    isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : 
+                    undefined
+                  } />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -235,8 +243,17 @@ export const CustomerProgramItem = ({
               </a>
             </div>
           )}
-          
-          {/* Quoted price notes from partner */}
+
+          {/* Action hint for items needing customer approval */}
+          {needsCustomerAction && !readOnly && (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm text-blue-700 dark:text-blue-300">
+              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                De aanbieder is beschikbaar. Klik op <strong>'Akkoord'</strong> om deze activiteit definitief te boeken.
+              </span>
+            </div>
+          )}
+
           {!isSelfArranged && item.quoted_price && item.quoted_notes && (
             <p className="mt-1 text-xs text-muted-foreground italic">
               {item.quoted_notes}
