@@ -1,43 +1,36 @@
 
 
-## Plan: Duidelijkere statuslabels voor klant + actie-hints
+## Plan: Alle URLs naar bureauvlieland.nl
 
 ### Probleem
-Klant ziet "Bevestigd" en denkt dat alles geregeld is. Maar "Bevestigd" betekent dat de **partner** beschikbaarheid heeft bevestigd — de klant moet nog op "Akkoord" klikken. De terminologie is verwarrend.
+Meerdere edge functions bevatten hardcoded `bureauvlieland.lovable.app` URLs. Dit moet overal `bureauvlieland.nl` zijn — dat is de productie-URL.
 
-### Voorstel
+### Gevonden probleemlocaties
 
-**1. Statuslabel aanpassen voor klant** — `src/types/programRequest.ts`
+| Bestand | Regel | Huidig | Fix |
+|---|---|---|---|
+| `send-partner-reset-email/index.ts` | 74 | `supabaseUrl.replace(".supabase.co", ".lovable.app")` | `"https://bureauvlieland.nl/partner/reset-password"` |
+| `notify-new-chat-reply/index.ts` | 65 | `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
+| `notify-new-chat/index.ts` | 80, 90 | `"https://bureauvlieland.lovable.app/admin/chat"` | `"https://bureauvlieland.nl/admin/chat"` |
+| `invite-partner/index.ts` | 314 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
+| `resend-email/index.ts` | 118 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
+| `resend-partner-invitation/index.ts` | 242 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
+| `bulk-invite-partners/index.ts` | 422 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
 
-Het label "Bevestigd" voor `confirmed` status wijzigen naar **"Beschikbaar ✓"** in de klantcontext. Dit maakt duidelijk dat de aanbieder beschikbaar is, maar dat de klant nog actie moet ondernemen.
-
-| Status | Huidig label | Nieuw klantlabel |
-|---|---|---|
-| `confirmed` | Bevestigd | Beschikbaar |
-| `alternative` | Alternatief | Alternatief voorstel |
-
-**2. Actie-hint onder de badge** — `src/components/customer-portal/CustomerProgramItem.tsx`
-
-Wanneer een item `confirmed` of `alternative` is en de klant nog geen akkoord heeft gegeven, een korte hint-tekst tonen:
-
-> ℹ️ De aanbieder heeft bevestigd. Klik op 'Akkoord' om deze activiteit definitief te boeken.
-
-Dit verschijnt als een subtiele tekstregel (blauw info-achtig) boven de actieknoppen.
-
-**3. Akkoord-knop prominenter**
-
-De "Akkoord" knop iets meer opvallen laten: toevoegen van een subtle pulse/ring animatie of een lichtgroene achtergrond-highlight rond de hele kaart wanneer akkoord nog nodig is.
+**Geen wijziging nodig:**
+- `_shared/email-templates.ts` → `getPortalBaseUrl()` default al naar `bureauvlieland.nl` ✓
+- `isTestMode()` → referentie naar `.lovable.app` is correct (voor test-detectie)
+- `update-customer-program/index.ts` `PRODUCTION_DOMAINS` array → bevat `.lovable.app` naast `.nl`, is correct (beide zijn productie)
 
 ### Wijzigingen
-
-**`src/components/customer-portal/CustomerProgramItem.tsx`**:
-1. Override het statuslabel: als status `confirmed` is en `!item.customer_accepted_at`, toon "Beschikbaar" i.p.v. "Bevestigd"
-2. Voeg info-hint toe na de meta-rij wanneer akkoord vereist is
-3. Voeg subtiele highlight border toe aan kaarten die actie vereisen
-
-**`src/types/programRequest.ts`**:
-- Geen wijziging nodig — we overriden het label in de component via de bestaande `overrideLabel` prop van `ItemStatusBadge`
+7 edge functions aanpassen — alle hardcoded `.lovable.app` fallback/default URLs vervangen door `bureauvlieland.nl`. Deploy daarna alle gewijzigde functies.
 
 ### Bestanden
-1. `src/components/customer-portal/CustomerProgramItem.tsx`
+1. `supabase/functions/send-partner-reset-email/index.ts`
+2. `supabase/functions/notify-new-chat-reply/index.ts`
+3. `supabase/functions/notify-new-chat/index.ts`
+4. `supabase/functions/invite-partner/index.ts`
+5. `supabase/functions/resend-email/index.ts`
+6. `supabase/functions/resend-partner-invitation/index.ts`
+7. `supabase/functions/bulk-invite-partners/index.ts`
 
