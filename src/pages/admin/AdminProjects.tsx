@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { PipelineFunnel } from "@/components/admin/PipelineFunnel";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,7 +71,7 @@ import { cn } from "@/lib/utils";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
-type DerivedStatus = "concept" | "offerte_verstuurd" | "akkoord_ontvangen" | "av_getekend" | "afgerond" | "geannuleerd";
+type DerivedStatus = "concept" | "offerte_verstuurd" | "akkoord_ontvangen" | "av_getekend" | "facturatie" | "afgerond" | "geannuleerd";
 
 interface AccommodationQuoteSummary {
   partner_name: string;
@@ -125,6 +126,7 @@ const DERIVED_STATUS_CONFIG: Record<DerivedStatus, { label: string; className: s
   offerte_verstuurd: { label: "Offerte verstuurd", className: "bg-blue-100 text-blue-800", icon: <Send className="h-3 w-3" /> },
   akkoord_ontvangen: { label: "Akkoord ontvangen", className: "bg-amber-100 text-amber-800", icon: <CheckCircle2 className="h-3 w-3" /> },
   av_getekend: { label: "AV getekend", className: "bg-green-100 text-green-800", icon: <FileCheck className="h-3 w-3" /> },
+  facturatie: { label: "Facturatie", className: "bg-purple-100 text-purple-800", icon: <FileText className="h-3 w-3" /> },
   afgerond: { label: "Afgerond", className: "bg-emerald-100 text-emerald-800", icon: <CheckCircle2 className="h-3 w-3" /> },
   geannuleerd: { label: "Geannuleerd", className: "bg-red-100 text-red-800", icon: <XCircle className="h-3 w-3" /> },
 };
@@ -155,10 +157,10 @@ const QUOTE_STATUS_ICON: Record<string, string> = {
 function getDerivedStatus(project: Project): DerivedStatus {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled") return "geannuleerd";
   if (project.completion_status === "fully_invoiced") return "afgerond";
+  if (project.completion_status === "ready_for_invoice" || project.completion_status === "partially_invoiced") return "facturatie";
   if (project.terms_accepted_at) return "av_getekend";
   if (project.quote_status === "akkoord_ontvangen" || project.quote_status === "definitief_bevestigd") return "akkoord_ontvangen";
   if (project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
-  // All projects now have quote_status; fallback to concept
   return "concept";
 }
 
@@ -373,14 +375,14 @@ const AdminProjectsContent = () => {
     });
   }, [projects, searchQuery, statusFilter, typeFilter]);
 
-  const stats = useMemo(() => {
+  const stageCounts = useMemo(() => {
     const all = projects || [];
-    return {
-      total: all.length,
-      concept: all.filter((p) => getDerivedStatus(p) === "concept").length,
-      offerte: all.filter((p) => getDerivedStatus(p) === "offerte_verstuurd").length,
-      avGetekend: all.filter((p) => getDerivedStatus(p) === "av_getekend").length,
-    };
+    const counts: Record<string, number> = {};
+    all.forEach((p) => {
+      const s = getDerivedStatus(p);
+      if (s !== "geannuleerd") counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
   }, [projects]);
 
   if (isLoading) {
@@ -410,61 +412,12 @@ const AdminProjectsContent = () => {
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <FolderKanban className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-slate-600">Totaal projecten</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <FileText className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.concept}</p>
-                <p className="text-sm text-slate-600">Concept</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Send className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.offerte}</p>
-                <p className="text-sm text-slate-600">Offerte verstuurd</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <FileCheck className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.avGetekend}</p>
-                <p className="text-sm text-slate-600">AV getekend</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Pipeline Funnel */}
+      <PipelineFunnel
+        stageCounts={stageCounts}
+        activeStage={statusFilter !== "all" && statusFilter !== "geannuleerd" ? statusFilter : null}
+        onStageClick={(key) => setStatusFilter(prev => prev === key ? "all" : key)}
+      />
 
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
@@ -496,9 +449,10 @@ const AdminProjectsContent = () => {
             <SelectItem value="all">Alle statussen</SelectItem>
             <SelectItem value="concept">Concept</SelectItem>
             <SelectItem value="offerte_verstuurd">Offerte verstuurd</SelectItem>
+            <SelectItem value="akkoord_ontvangen">Akkoord ontvangen</SelectItem>
             <SelectItem value="av_getekend">AV getekend</SelectItem>
+            <SelectItem value="facturatie">Facturatie</SelectItem>
             <SelectItem value="afgerond">Afgerond</SelectItem>
-            <SelectItem value="actief">Actief</SelectItem>
             <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
           </SelectContent>
         </Select>

@@ -8,7 +8,7 @@ import { DashboardTodoWidget } from "@/components/admin/DashboardTodoWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
 import { WorkOverview } from "@/components/admin/WorkOverview";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
-import { PipelineFunnel } from "@/components/admin/PipelineFunnel";
+
 import { MapBookingsWidget } from "@/components/admin/MapBookingsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -179,7 +179,7 @@ const AdminDashboardContent = () => {
 
         {/* Sidebar — 1/3 */}
         <div className="space-y-4">
-          <PipelineFunnel />
+          
           <DailyActivitySummary />
           <PendingCommissionsCard />
           <AdminUnavailabilityWidget />
