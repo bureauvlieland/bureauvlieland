@@ -698,7 +698,10 @@ const TakenTab = () => {
     ),
   };
 
-  const groupOrder = ["manual", ...Object.keys(autoTodoTypeConfig)];
+  // Build groupOrder including any unknown auto_types as fallback
+  const knownKeys = new Set(["manual", ...Object.keys(autoTodoTypeConfig)]);
+  const extraKeys = Object.keys(groupedTodos).filter((k) => !knownKeys.has(k));
+  const groupOrder = ["manual", ...Object.keys(autoTodoTypeConfig), ...extraKeys];
 
   return (
     <>
