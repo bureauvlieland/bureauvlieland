@@ -1,51 +1,46 @@
 
 
-## Plan: PipelineFunnel verplaatsen naar Projectenoverzicht met interactieve filtering
+## Plan: Bulk opschoonfunctie voor verouderde auto-taken
 
 ### Probleem
-1. **PipelineFunnel staat op het dashboard** maar hoort bij het projectenoverzicht
-2. **Statussen komen niet overeen** — de funnel toont "Akkoord" en "Facturatie", maar het statusfilter-dropdown mist "Akkoord" en heeft "Actief" (dat geen echte derived status is)
-3. **Funnel is niet interactief** — klikken linkt naar `/admin/projecten` maar filtert niet
+Bestaande auto-taken die niet meer relevant zijn (bijv. "partner heeft niet gereageerd" terwijl het project al afgerond of geannuleerd is) blijven open staan. De prospectieve auto-resolve logica ruimt alleen toekomstige wijzigingen op.
 
 ### Oplossing
+Een edge function `cleanup-stale-todos` die in bulk alle verouderde auto-taken op "done" zet, plus een knop in het Operationeel Centrum om deze te triggeren.
 
-#### 1. PipelineFunnel verplaatsen
-- **Verwijderen** uit `AdminDashboard.tsx`
-- **Toevoegen** aan `AdminProjects.tsx`, boven de filters, ter vervanging van de huidige 4 stat-cards
+### Opschoningsregels
 
-#### 2. PipelineFunnel interactief maken
-- Component krijgt een `onStageClick(stageKey: string)` callback prop
-- Klikken op een balk zet het `statusFilter` in AdminProjects
-- Actieve stage wordt visueel gemarkeerd
-- Nogmaals klikken reset naar "all"
+| Situatie | Actie |
+|----------|-------|
+| Project geannuleerd (`cancelled_at IS NOT NULL`) | Alle open todos met dat `related_request_id` → done |
+| Project afgerond (`completion_status = 'completed'`) | Alle open todos met dat `related_request_id` → done |
+| `quote_pending_partner` maar quote is niet meer `pending` | → done |
+| `quote_review` maar quote is niet meer `submitted` | → done |
+| `forward_accommodation_quote` maar quote al `forwarded_at` heeft | → done |
+| `quote_ready_to_send` maar offerte al verstuurd (`quote_sent_at`) | → done |
+| `send_items_to_partners` maar items al verstuurd (geen `pending` items meer) | → done |
+| `accommodation_selected` maar quote al `selected` status heeft | → done |
+| Todo's waarvan `auto_entity_id` verwijst naar een niet-bestaand record | → done |
 
-#### 3. Statussen synchroniseren
-De funnel en het dropdown krijgen exact dezelfde stages:
+### Implementatie
 
-| Key | Label | Funnel | Dropdown |
-|-----|-------|--------|----------|
-| `concept` | Concept | ✅ | ✅ |
-| `offerte_verstuurd` | Offerte verstuurd | ✅ | ✅ |
-| `akkoord_ontvangen` | Akkoord ontvangen | ✅ | ✅ (nu ontbreekt) |
-| `av_getekend` | AV getekend | ✅ | ✅ |
-| `facturatie` | Facturatie | ✅ | ✅ (nu ontbreekt) |
-| `afgerond` | Afgerond | ✅ | ✅ |
-| `geannuleerd` | Geannuleerd | ❌ (niet in funnel, apart) | ✅ |
+**1. Nieuwe edge function: `supabase/functions/cleanup-stale-todos/index.ts`**
+- Service-role Supabase client
+- Admin-only (JWT check)
+- Voert bovenstaande regels uit als SQL queries
+- Retourneert teller van opgeruimde taken per categorie
 
-- **Verwijderen** uit dropdown: "Actief" (geen derived status)
-- **Toevoegen** aan dropdown: "Akkoord ontvangen", "Facturatie"
-- `getDerivedStatus()` uitbreiden met `facturatie` als apart stadium (nu ontbreekt in de type)
+**2. UI: knop in `src/pages/admin/AdminTodos.tsx`**
+- "Opschonen" knop met bezem-icoon naast de bestaande knoppen
+- Confirmation dialog: "Dit ruimt alle taken op die niet meer relevant zijn (afgeronde/geannuleerde projecten, verwerkte offertes). Doorgaan?"
+- Na succes: toast met aantal opgeruimde taken + query invalidatie
+
+**3. Optioneel later: `resolveAllTodosForRequest()` helper in `autoTodoCreator.ts`**
+- Client-side helper voor directe resolve bij annulering vanuit de UI
 
 ### Bestanden
+1. `supabase/functions/cleanup-stale-todos/index.ts` — nieuwe edge function
+2. `src/pages/admin/AdminTodos.tsx` — opschoonknop + dialog
 
-1. **`src/components/admin/PipelineFunnel.tsx`** — accepteert `onStageClick` + `activeStage` props; verwijdert eigen data-fetching (krijgt data van parent of hergebruikt bestaande query); visuele highlight voor actieve stage
-2. **`src/pages/admin/AdminProjects.tsx`** — importeert PipelineFunnel, vervangt stat-cards, koppelt aan `statusFilter` state; synchroniseert dropdown-opties; voegt `facturatie` toe aan `DerivedStatus` type en `getDerivedStatus()`
-3. **`src/pages/admin/AdminDashboard.tsx`** — verwijdert PipelineFunnel import en gebruik
-
-### Technische details
-
-- `DerivedStatus` type uitbreiden: `"facturatie"` toevoegen
-- `getDerivedStatus()`: facturatie-check (`ready_for_invoice` / `partially_invoiced`) vóór `afgerond` check verplaatsen
-- PipelineFunnel hergebruikt de `admin-projects-unified` query data via props in plaats van eigen query, zodat tellingen 100% consistent zijn met de tabel
-- Funnel keys moeten exact matchen met `DerivedStatus` values voor directe filter-koppeling
+### Geen database-wijzigingen nodig
 
