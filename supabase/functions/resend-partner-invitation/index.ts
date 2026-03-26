@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const origin = req.headers.get("origin") || "https://bureauvlieland.lovable.app";
+    const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
     const loginLink = `${origin}/partner/login`;
     const portalLink = `${origin}/partner`;
 

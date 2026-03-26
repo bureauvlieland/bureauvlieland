@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       type: "recovery",
       email: trimmedEmail,
       options: {
-        redirectTo: `${supabaseUrl.replace(".supabase.co", ".lovable.app")}/partner/reset-password`,
+        redirectTo: "https://bureauvlieland.nl/partner/reset-password",
       },
     });
 
