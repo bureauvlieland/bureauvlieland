@@ -476,6 +476,7 @@ const TakenTab = () => {
     },
   });
 
+  const handleOpenDialog = (todo?: Todo) => {
     if (todo) {
       setEditingTodo(todo);
       setFormData({
