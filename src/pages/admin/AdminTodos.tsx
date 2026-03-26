@@ -583,7 +583,7 @@ const TakenTab = () => {
     return (
       <div
         key={todo.id}
-        className={`flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors ${
+        className={`flex items-center gap-2 py-2 px-3 hover:bg-slate-50 transition-colors ${
           todo.status === "done" ? "opacity-60" : ""
         } ${isSnoozed ? "opacity-50" : ""}`}
       >
@@ -592,67 +592,56 @@ const TakenTab = () => {
           onCheckedChange={(checked) => {
             toggleStatusMutation.mutate({ id: todo.id, newStatus: checked ? "done" : "todo" });
           }}
-          className="mt-1"
+          className="shrink-0"
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-start gap-2 flex-wrap">
-            <span className={`font-medium ${todo.status === "done" ? "line-through text-muted-foreground" : ""}`}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <PriorityIcon className={`h-3 w-3 shrink-0 ${priority.color.split(" ")[1]}`} />
+            <span className={`text-sm font-medium truncate ${todo.status === "done" ? "line-through text-muted-foreground" : ""}`}>
               {todo.title}
             </span>
-            <Badge variant="outline" className={priority.color}>
-              <PriorityIcon className="h-3 w-3 mr-1" />
-              {priority.label}
-            </Badge>
-            {todo.auto_type && autoTodoTypeConfig[todo.auto_type as AutoTodoType] && (
-              <Badge className={`${autoTodoTypeConfig[todo.auto_type as AutoTodoType].bgColor} ${autoTodoTypeConfig[todo.auto_type as AutoTodoType].color} border-0`}>
-                {autoTodoTypeConfig[todo.auto_type as AutoTodoType].label}
-              </Badge>
-            )}
             {isSnoozed && (
-              <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                <AlarmClock className="h-3 w-3 mr-1" />
-                Snoozed tot {format(new Date(todo.snoozed_until!), "EEE d MMM", { locale: nl })}
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 text-[10px] px-1.5 py-0">
+                <AlarmClock className="h-2.5 w-2.5 mr-0.5" />
+                {format(new Date(todo.snoozed_until!), "d MMM", { locale: nl })}
               </Badge>
             )}
           </div>
-
-          {todo.description && (
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{todo.description}</p>
-          )}
-
-          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
+            {todo.description && (
+              <span className="line-clamp-1">{todo.description}</span>
+            )}
             {todo.due_date && (
-              <span className={`flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
-                <Calendar className="h-3 w-3" />
-                {format(new Date(todo.due_date), "EEE d MMM yyyy", { locale: nl })}
-                {isOverdue && " (verlopen)"}
+              <span className={`flex items-center gap-0.5 shrink-0 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
+                <Calendar className="h-2.5 w-2.5" />
+                {format(new Date(todo.due_date), "d MMM", { locale: nl })}
+                {isOverdue && " ⚠"}
               </span>
             )}
             {linkedPartner && todo.related_partner_id && (
               <Link
                 to={`/admin/partners/${todo.related_partner_id}`}
-                className="flex items-center gap-1 hover:text-primary text-blue-600"
+                className="flex items-center gap-0.5 hover:text-primary text-blue-600 shrink-0"
               >
-                <Building2 className="h-3 w-3" />
+                <Building2 className="h-2.5 w-2.5" />
                 {linkedPartner}
               </Link>
             )}
             {linkedRequest && todo.related_request_id && (
               <Link
                 to={`/admin/aanvragen/${todo.related_request_id}`}
-                className="flex items-center gap-1 hover:text-primary text-blue-600"
+                className="flex items-center gap-0.5 hover:text-primary text-blue-600 shrink-0"
               >
-                <FileText className="h-3 w-3" />
+                <FileText className="h-2.5 w-2.5" />
                 {linkedRequest}
               </Link>
             )}
           </div>
         </div>
 
-        {/* Quick action button */}
         {actionConfig && todo.status !== "done" && (
-          <Link to={actionConfig.getLink(todo)}>
-            <Button variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap">
+          <Link to={actionConfig.getLink(todo)} className="shrink-0">
+            <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] px-2 whitespace-nowrap">
               <ExternalLink className="h-3 w-3" />
               {actionConfig.linkLabel}
             </Button>
@@ -661,8 +650,8 @@ const TakenTab = () => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+              <MoreVertical className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
