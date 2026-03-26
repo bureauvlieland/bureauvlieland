@@ -257,10 +257,12 @@ Deno.serve(async (req) => {
       : `Logies geselecteerd: ${request.customer_name} → ${quote.accommodation_name}`;
     await supabase.from("admin_todos").insert({
       title: todoTitle,
-      description: `Klant heeft gekozen voor ${quote.accommodation_name}. ${isCentralBilling ? "Stuur bevestiging naar klant en partner (bureau_central)." : "Partner is genotificeerd met klantgegevens."}`,
+      description: `Klant heeft gekozen voor ${quote.accommodation_name}. Stuur bevestiging naar klant en partner ${quote.accommodation_name}.`,
       priority: "high",
       auto_type: "accommodation_selected",
       auto_entity_id: request.id,
+      related_request_id: request.linked_program_id || null,
+      related_partner_id: quote.partner_id || null,
     });
 
     // Send email notifications
