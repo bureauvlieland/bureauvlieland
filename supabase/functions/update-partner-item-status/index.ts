@@ -347,6 +347,32 @@ Deno.serve(async (req) => {
         .neq("status", "done");
       
       console.log(`Resolved partner_reminder todo for item ${itemId}`);
+
+      // Create partner_status_update todo for admin to review
+      const statusLabel = status === "confirmed" ? "bevestigd" : status === "unavailable" ? "niet beschikbaar" : "alternatief voorgesteld";
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      
+      const { data: existingStatusTodo } = await supabase
+        .from("admin_todos")
+        .select("id")
+        .eq("auto_type", "partner_status_update")
+        .eq("auto_entity_id", itemId)
+        .neq("status", "done")
+        .maybeSingle();
+
+      if (!existingStatusTodo) {
+        await supabase.from("admin_todos").insert({
+          title: `Partner ${partner.name} reageert op "${item.block_name}" — ${statusLabel}`,
+          description: `Partner ${partner.name} heeft "${item.block_name}" ${statusLabel} voor ${programRequest.customer_name}.${quotedPrice ? ` Prijs: €${quotedPrice.toFixed(2)}` : ''}${statusNote ? ` Opmerking: ${statusNote}` : ''}`,
+          priority: status === "unavailable" ? "high" : "normal",
+          status: "todo",
+          related_request_id: item.request_id,
+          related_partner_id: partner.id,
+          auto_type: "partner_status_update",
+          auto_entity_id: itemId,
+        });
+        console.log(`Created partner_status_update todo for item ${itemId}`);
+      }
     }
 
     // Check if this is a response to a counter-proposal and send customer notification
