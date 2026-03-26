@@ -86,8 +86,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Include all items (including from cancelled programs, so partners can see cancellations)
-    const activeItems = items || [];
+    // Filter: active-status items always shown, closed items only if < 3 months old
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+
+    const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
+    const activeItems = (items || []).filter(item => {
+      if (activeStatuses.includes(item.status)) return true;
+      return new Date(item.updated_at) > cutoffDate;
+    });
 
     // Get all request IDs to fetch sibling items for conflict detection
     const requestIds = [...new Set(activeItems.map(i => i.request_id))];
@@ -200,10 +207,13 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (!quotesError && quotes) {
-        // Filter out quotes from cancelled requests
-        accommodationQuotes = quotes.filter(
-          (q) => q.accommodation_requests?.status !== "cancelled"
-        );
+        // Filter out quotes from cancelled requests + old closed quotes (> 3 months)
+        const activeQuoteStatuses = ["pending", "submitted", "selected"];
+        accommodationQuotes = quotes.filter((q) => {
+          if (q.accommodation_requests?.status === "cancelled") return false;
+          if (activeQuoteStatuses.includes(q.status)) return true;
+          return new Date(q.updated_at) > cutoffDate;
+        });
 
         // Resolve invoicing mode from linked program and redact customer contact for bureau_central
         const linkedProgramIds = [
