@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.map-create-booking]
 verify_jwt = false
+
+[functions.cleanup-stale-todos]
+verify_jwt = false
