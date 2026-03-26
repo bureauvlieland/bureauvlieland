@@ -157,10 +157,10 @@ const QUOTE_STATUS_ICON: Record<string, string> = {
 function getDerivedStatus(project: Project): DerivedStatus {
   if (project.program_status === "cancelled" || project.accommodation_status === "cancelled") return "geannuleerd";
   if (project.completion_status === "fully_invoiced") return "afgerond";
+  if (project.completion_status === "ready_for_invoice" || project.completion_status === "partially_invoiced") return "facturatie";
   if (project.terms_accepted_at) return "av_getekend";
   if (project.quote_status === "akkoord_ontvangen" || project.quote_status === "definitief_bevestigd") return "akkoord_ontvangen";
   if (project.quote_status === "offerte_verstuurd") return "offerte_verstuurd";
-  // All projects now have quote_status; fallback to concept
   return "concept";
 }
 
