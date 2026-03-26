@@ -686,6 +686,27 @@ const TakenTab = () => {
             </h2>
           </div>
           <div className="flex gap-2">
+            {/* View toggle */}
+            <div className="flex border rounded-md overflow-hidden">
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-none text-xs"
+              >
+                <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                Lijst
+              </Button>
+              <Button
+                variant={viewMode === "project" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("project")}
+                className="rounded-none text-xs"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                Per project
+              </Button>
+            </div>
             {selectedIds.size > 0 && (
               <Button
                 variant="outline"
