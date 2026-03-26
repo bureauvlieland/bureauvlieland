@@ -207,10 +207,13 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (!quotesError && quotes) {
-        // Filter out quotes from cancelled requests
-        accommodationQuotes = quotes.filter(
-          (q) => q.accommodation_requests?.status !== "cancelled"
-        );
+        // Filter out quotes from cancelled requests + old closed quotes (> 3 months)
+        const activeQuoteStatuses = ["pending", "submitted", "selected"];
+        accommodationQuotes = quotes.filter((q) => {
+          if (q.accommodation_requests?.status === "cancelled") return false;
+          if (activeQuoteStatuses.includes(q.status)) return true;
+          return new Date(q.updated_at) > cutoffDate;
+        });
 
         // Resolve invoicing mode from linked program and redact customer contact for bureau_central
         const linkedProgramIds = [
