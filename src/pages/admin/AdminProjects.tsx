@@ -449,9 +449,10 @@ const AdminProjectsContent = () => {
             <SelectItem value="all">Alle statussen</SelectItem>
             <SelectItem value="concept">Concept</SelectItem>
             <SelectItem value="offerte_verstuurd">Offerte verstuurd</SelectItem>
+            <SelectItem value="akkoord_ontvangen">Akkoord ontvangen</SelectItem>
             <SelectItem value="av_getekend">AV getekend</SelectItem>
+            <SelectItem value="facturatie">Facturatie</SelectItem>
             <SelectItem value="afgerond">Afgerond</SelectItem>
-            <SelectItem value="actief">Actief</SelectItem>
             <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
           </SelectContent>
         </Select>
