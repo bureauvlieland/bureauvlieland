@@ -767,7 +767,7 @@ const TakenTab = () => {
           </CardContent>
         </Card>
 
-        {/* Grouped Todo List */}
+        {/* Todo List */}
         {isLoading ? (
           <Card>
             <CardContent className="py-12 flex items-center justify-center">
@@ -780,14 +780,57 @@ const TakenTab = () => {
               Geen taken gevonden
             </CardContent>
           </Card>
+        ) : viewMode === "project" ? (
+          /* Per-project grouped view */
+          projectGroupedTodos.map(([requestId, todos]) => {
+            const projectLabel = requestId === "__no_project"
+              ? "Niet gekoppeld aan project"
+              : getLinkedRequestLabel(requestId) || requestId.slice(0, 8);
+
+            return (
+              <Collapsible key={requestId} defaultOpen>
+                <Card>
+                  <CollapsibleTrigger className="w-full">
+                    <CardHeader className="pb-0 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <ChevronDown className="h-4 w-4 transition-transform" />
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          {projectLabel}
+                          <Badge variant="secondary" className="ml-1">{todos.length}</Badge>
+                        </CardTitle>
+                        {requestId !== "__no_project" && (
+                          <Link
+                            to={`/admin/aanvragen/${requestId}`}
+                            className="text-xs text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Open project →
+                          </Link>
+                        )}
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="p-0">
+                      <div className="divide-y">
+                        {todos.map(renderTodoItem)}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            );
+          })
         ) : (
+          /* Standard grouped-by-type view */
           groupOrder
             .filter((key) => groupedTodos[key]?.length > 0)
             .map((groupKey) => (
               <Collapsible key={groupKey} defaultOpen>
                 <Card>
                   <CollapsibleTrigger className="w-full">
-                    <CardHeader className="pb-0 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <CardHeader className="pb-0 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
                           <ChevronDown className="h-4 w-4 transition-transform" />
