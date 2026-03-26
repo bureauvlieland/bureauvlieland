@@ -68,6 +68,7 @@ import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
 import { ProjectDateListView } from "@/components/admin/ProjectDateListView";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 type ProjectType = "program_only" | "accommodation_only" | "combined";
 
@@ -170,6 +171,35 @@ function getEarliestDeadline(quotes: AccommodationQuoteSummary[]): Date | null {
     .map(q => new Date(q.valid_until!));
   if (pendingDeadlines.length === 0) return null;
   return pendingDeadlines.reduce((min, d) => d < min ? d : min);
+}
+
+function getReadinessScore(project: Project): { done: number; total: number; percentage: number } {
+  const derived = getDerivedStatus(project);
+  if (derived === "concept" || derived === "geannuleerd") return { done: 0, total: 0, percentage: -1 };
+
+  const checks: boolean[] = [];
+
+  // Items sent to partners
+  if (project.program_id && project.item_count > 0) {
+    checks.push(project.items_not_sent === 0);
+  }
+
+  // Partners confirmed
+  if (project.program_id && project.item_count > 0) {
+    checks.push(project.items_confirmed === project.item_count);
+  }
+
+  // Accommodation selected
+  if (project.accommodation_id) {
+    checks.push(project.accommodation_quotes.some(q => q.status === "selected"));
+  }
+
+  // Terms accepted
+  checks.push(!!project.terms_accepted_at);
+
+  const done = checks.filter(Boolean).length;
+  const total = checks.length;
+  return { done, total, percentage: total > 0 ? Math.round((done / total) * 100) : 0 };
 }
 
 const AdminProjectsContent = () => {
@@ -501,8 +531,8 @@ const AdminProjectsContent = () => {
                     <TableHead className="w-8"></TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-24">Gereed</TableHead>
                     <TableHead>Referentie(s)</TableHead>
-                    <TableHead>Klant</TableHead>
                     <TableHead>Logies</TableHead>
                     <TableHead>Activiteiten</TableHead>
                     <TableHead>Datum(s)</TableHead>
@@ -513,7 +543,7 @@ const AdminProjectsContent = () => {
                 <TableBody>
                   {filteredProjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         Geen projecten gevonden
                       </TableCell>
                     </TableRow>
@@ -521,6 +551,7 @@ const AdminProjectsContent = () => {
                     filteredProjects.map((project) => {
                       const derived = getDerivedStatus(project);
                       const statusConfig = DERIVED_STATUS_CONFIG[derived];
+                      const readiness = getReadinessScore(project);
                       const isExpanded = expandedRows.has(project.id);
                       const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
                       const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
@@ -568,6 +599,29 @@ const AdminProjectsContent = () => {
                                     {statusConfig.icon}
                                     <span className="ml-1">{statusConfig.label}</span>
                                   </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {readiness.percentage < 0 ? (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  ) : readiness.percentage === 100 ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <Progress value={100} className="h-1.5 w-14 [&>div]:bg-green-500" />
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5">
+                                      <Progress
+                                        value={readiness.percentage}
+                                        className={cn(
+                                          "h-1.5 w-14",
+                                          readiness.percentage >= 50
+                                            ? "[&>div]:bg-amber-500"
+                                            : "[&>div]:bg-slate-400"
+                                        )}
+                                      />
+                                      <span className="text-xs text-muted-foreground">{readiness.percentage}%</span>
+                                    </div>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <div className="space-y-1">
