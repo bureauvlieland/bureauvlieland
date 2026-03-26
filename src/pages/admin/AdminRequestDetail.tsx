@@ -374,7 +374,7 @@ const AdminRequestDetail = () => {
     if (linkedAccommodation && linkedAccommodation.status !== "accepted") {
       actionItems.push("Beoordeel de logiesoffertes en maak een keuze");
     }
-    if (request.quote_status === "offerte_verstuurd" && request.quote_status !== "akkoord_ontvangen") {
+    if (request.quote_status === "offerte_verstuurd") {
       actionItems.push("Bekijk de offerte en geef akkoord");
     }
 
