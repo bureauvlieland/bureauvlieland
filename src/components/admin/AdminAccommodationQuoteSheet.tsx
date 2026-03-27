@@ -89,6 +89,20 @@ export function AdminAccommodationQuoteSheet({
 }: AdminAccommodationQuoteSheetProps) {
   const { data: extras, isLoading: extrasLoading } = useQuoteExtras(quote?.id);
 
+  const { data: history } = useQuery({
+    queryKey: ["accommodation-quote-history", quote?.id],
+    queryFn: async () => {
+      if (!quote?.id) return [];
+      const { data } = await supabase
+        .from("accommodation_quote_history")
+        .select("*")
+        .eq("quote_id", quote.id)
+        .order("version", { ascending: false });
+      return data || [];
+    },
+    enabled: !!quote?.id && open,
+  });
+
   if (!quote) return null;
 
   const statusConfig = QUOTE_STATUS_MAP[quote.status] || QUOTE_STATUS_MAP.pending;
