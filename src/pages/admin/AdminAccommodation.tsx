@@ -42,7 +42,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   submitted: { label: "Nieuw", variant: "default" },
   processing: { label: "In behandeling", variant: "secondary" },
   quoted: { label: "Offertes verstuurd", variant: "outline" },
-  accepted: { label: "Geaccepteerd", variant: "default" },
+  accepted: { label: "Geaccepteerd", variant: "outline", className: "bg-green-100 text-green-800 border-green-200" },
   cancelled: { label: "Geannuleerd", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
 };
