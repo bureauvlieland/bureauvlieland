@@ -365,7 +365,7 @@ export default function AdminAccommodation() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                          <Badge variant={statusConfig.variant} className={statusConfig.className}>{statusConfig.label}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
