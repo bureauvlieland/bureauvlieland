@@ -126,6 +126,65 @@ export type Database = {
           },
         ]
       }
+      accommodation_quote_history: {
+        Row: {
+          conditions: string | null
+          created_at: string
+          description: string | null
+          forwarded_at: string | null
+          id: string
+          includes: Json | null
+          number_of_guests: number | null
+          price_per_person_per_night: number | null
+          price_total: number | null
+          quote_id: string
+          room_configuration: Json | null
+          selected_at: string | null
+          submitted_at: string | null
+          version: number
+        }
+        Insert: {
+          conditions?: string | null
+          created_at?: string
+          description?: string | null
+          forwarded_at?: string | null
+          id?: string
+          includes?: Json | null
+          number_of_guests?: number | null
+          price_per_person_per_night?: number | null
+          price_total?: number | null
+          quote_id: string
+          room_configuration?: Json | null
+          selected_at?: string | null
+          submitted_at?: string | null
+          version?: number
+        }
+        Update: {
+          conditions?: string | null
+          created_at?: string
+          description?: string | null
+          forwarded_at?: string | null
+          id?: string
+          includes?: Json | null
+          number_of_guests?: number | null
+          price_per_person_per_night?: number | null
+          price_total?: number | null
+          quote_id?: string
+          room_configuration?: Json | null
+          selected_at?: string | null
+          submitted_at?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_quote_history_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accommodation_quotes: {
         Row: {
           accommodation_name: string
