@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
             status: "pending",
             submitted_at: null,
             selected_at: null,
+            forwarded_at: null,
             partner_notes: null,
             accommodation_name: "",
             price_total: 0,

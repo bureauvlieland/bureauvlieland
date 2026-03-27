@@ -403,7 +403,33 @@ export default function AdminAccommodationDetail() {
         await supabase.from("program_requests").update({ number_of_people: newGuests, updated_at: new Date().toISOString() }).eq("id", linkedProgram.id);
       }
       if (selectedQuoteIds.length > 0) {
-        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, updated_at: new Date().toISOString() }).in("id", selectedQuoteIds);
+        // Save version history snapshots before resetting
+        const quotesToReset = quotes?.filter((q) => selectedQuoteIds.includes(q.id)) || [];
+        for (const q of quotesToReset) {
+          if (q.submitted_at) {
+            // Count existing versions for this quote
+            const { count } = await supabase
+              .from("accommodation_quote_history")
+              .select("id", { count: "exact", head: true })
+              .eq("quote_id", q.id);
+            await supabase.from("accommodation_quote_history").insert({
+              quote_id: q.id,
+              version: (count || 0) + 1,
+              price_total: q.price_total,
+              price_per_person_per_night: q.price_per_person_per_night,
+              room_configuration: q.room_configuration,
+              includes: q.includes,
+              conditions: q.conditions,
+              description: q.description,
+              number_of_guests: request?.number_of_guests,
+              submitted_at: q.submitted_at,
+              selected_at: q.selected_at,
+              forwarded_at: q.forwarded_at,
+            });
+          }
+        }
+        // Reset quotes including forwarded_at
+        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, forwarded_at: null, updated_at: new Date().toISOString() }).in("id", selectedQuoteIds);
       }
       if (linkedProgram) {
         const resetPartnerNames = quotes

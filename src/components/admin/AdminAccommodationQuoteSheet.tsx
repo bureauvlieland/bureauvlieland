@@ -29,6 +29,9 @@ import {
   type ExtraCategory,
 } from "@/types/accommodationExtras";
 import type { RoomConfiguration } from "@/types/accommodation";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { History } from "lucide-react";
 
 interface QuoteData {
   id: string;
@@ -84,6 +87,20 @@ export function AdminAccommodationQuoteSheet({
   numberOfNights,
 }: AdminAccommodationQuoteSheetProps) {
   const { data: extras, isLoading: extrasLoading } = useQuoteExtras(quote?.id);
+
+  const { data: history } = useQuery({
+    queryKey: ["accommodation-quote-history", quote?.id],
+    queryFn: async () => {
+      if (!quote?.id) return [];
+      const { data } = await supabase
+        .from("accommodation_quote_history")
+        .select("*")
+        .eq("quote_id", quote.id)
+        .order("version", { ascending: false });
+      return data || [];
+    },
+    enabled: !!quote?.id && open,
+  });
 
   if (!quote) return null;
 
@@ -367,6 +384,51 @@ export function AdminAccommodationQuoteSheet({
                       </p>
                     </div>
                   )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Version history */}
+          {history && history.length > 0 && (
+            <>
+              <Separator />
+              <div className="p-3 bg-muted/50 border border-border rounded-lg">
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                  <History className="h-4 w-4" /> Versiehistorie ({history.length})
+                </h4>
+                <div className="space-y-2">
+                  {history.map((h: any) => (
+                    <div key={h.id} className="text-sm border border-border rounded p-2 bg-background">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-muted-foreground">Versie {h.version}</span>
+                        {h.submitted_at && (
+                          <span className="text-xs text-muted-foreground">
+                            Ingediend {format(new Date(h.submitted_at), "d MMM yyyy", { locale: nl })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Prijs: </span>
+                          <span className="font-medium">€{h.price_total?.toLocaleString() || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Gasten: </span>
+                          <span className="font-medium">{h.number_of_guests || "—"}</span>
+                        </div>
+                        <div>
+                          {h.forwarded_at ? (
+                            <span className="text-xs text-muted-foreground">
+                              Doorgestuurd {format(new Date(h.forwarded_at), "d MMM", { locale: nl })}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Niet doorgestuurd</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </>
