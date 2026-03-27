@@ -239,6 +239,7 @@ const AdminRequestDetail = () => {
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
+  const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
