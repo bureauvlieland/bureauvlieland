@@ -356,6 +356,9 @@ export default function AdminAccommodation() {
                               {quoteInfo.declined > 0 && (
                                 <span className="text-destructive"> · {quoteInfo.declined} afgewezen</span>
                               )}
+                              {quoteInfo.pending > 0 && (
+                                <span className="text-amber-600"> · {quoteInfo.pending} in afwachting</span>
+                              )}
                             </span>
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
