@@ -2102,6 +2102,19 @@ const AdminRequestDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {request && (
+        <EditProjectDetailsDialog
+          open={editDetailsOpen}
+          onOpenChange={setEditDetailsOpen}
+          requestId={request.id}
+          selectedDates={request.selected_dates as string[]}
+          numberOfPeople={request.number_of_people}
+          generalNotes={request.general_notes}
+          linkedAccommodationId={request.linked_accommodation_id}
+          onSuccess={() => fetchRequestData()}
+        />
+      )}
     </>
   );
 };
