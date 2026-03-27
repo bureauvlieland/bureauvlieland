@@ -38,7 +38,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
   submitted: { label: "Nieuw", variant: "default" },
   processing: { label: "In behandeling", variant: "secondary" },
   quoted: { label: "Offertes verstuurd", variant: "outline" },
