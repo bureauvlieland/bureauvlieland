@@ -983,10 +983,20 @@ const AdminRequestDetail = () => {
 
                 {/* Event details */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Evenement details
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Evenement details
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setEditDetailsOpen(true)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-slate-400" />
