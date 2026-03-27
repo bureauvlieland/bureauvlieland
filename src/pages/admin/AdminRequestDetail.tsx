@@ -111,6 +111,7 @@ import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog"
 import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
+import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, RefreshCw, CalendarIcon } from "lucide-react";
