@@ -38,11 +38,11 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
   submitted: { label: "Nieuw", variant: "default" },
   processing: { label: "In behandeling", variant: "secondary" },
   quoted: { label: "Offertes verstuurd", variant: "outline" },
-  accepted: { label: "Geaccepteerd", variant: "default" },
+  accepted: { label: "Geaccepteerd", variant: "outline", className: "bg-green-100 text-green-800 border-green-200" },
   cancelled: { label: "Geannuleerd", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
 };
@@ -109,10 +109,10 @@ export default function AdminAccommodation() {
       if (error) throw error;
 
       // Count quotes per request
-      const counts: Record<string, { total: number; submitted: number; declined: number }> = {};
+      const counts: Record<string, { total: number; submitted: number; declined: number; pending: number }> = {};
       data?.forEach((quote) => {
         if (!counts[quote.request_id]) {
-          counts[quote.request_id] = { total: 0, submitted: 0, declined: 0 };
+          counts[quote.request_id] = { total: 0, submitted: 0, declined: 0, pending: 0 };
         }
         counts[quote.request_id].total++;
         if (quote.status === "submitted") {
@@ -120,6 +120,9 @@ export default function AdminAccommodation() {
         }
         if (quote.status === "declined") {
           counts[quote.request_id].declined++;
+        }
+        if (quote.status === "pending" || quote.status === "requested") {
+          counts[quote.request_id].pending++;
         }
       });
       return counts;
@@ -353,13 +356,16 @@ export default function AdminAccommodation() {
                               {quoteInfo.declined > 0 && (
                                 <span className="text-destructive"> · {quoteInfo.declined} afgewezen</span>
                               )}
+                              {quoteInfo.pending > 0 && (
+                                <span className="text-amber-600"> · {quoteInfo.pending} in afwachting</span>
+                              )}
                             </span>
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                          <Badge variant={statusConfig.variant} className={statusConfig.className}>{statusConfig.label}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>

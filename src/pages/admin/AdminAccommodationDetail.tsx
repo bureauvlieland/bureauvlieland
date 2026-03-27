@@ -87,11 +87,11 @@ interface LinkedProgram {
   item_count: number;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
   submitted: { label: "Nieuw", variant: "default" },
   processing: { label: "In behandeling", variant: "secondary" },
   quoted: { label: "Offertes verstuurd", variant: "outline" },
-  accepted: { label: "Geaccepteerd", variant: "default" },
+  accepted: { label: "Geaccepteerd", variant: "outline", className: "bg-green-100 text-green-800 border-green-200" },
   cancelled: { label: "Geannuleerd", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
 };
@@ -549,7 +549,7 @@ export default function AdminAccommodationDetail() {
                 {request.reference_number && (
                   <code className="text-sm font-mono bg-muted px-2 py-1 rounded">{request.reference_number}</code>
                 )}
-                <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">{statusConfig.label}</Badge>
+                <Badge variant={statusConfig.variant} className={`text-sm px-3 py-1 ${statusConfig.className || ""}`}>{statusConfig.label}</Badge>
               </div>
               <p className="text-muted-foreground">{request.customer_company || request.customer_email}</p>
             </div>
