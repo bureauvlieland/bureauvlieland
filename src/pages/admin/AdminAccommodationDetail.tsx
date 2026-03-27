@@ -549,7 +549,7 @@ export default function AdminAccommodationDetail() {
                 {request.reference_number && (
                   <code className="text-sm font-mono bg-muted px-2 py-1 rounded">{request.reference_number}</code>
                 )}
-                <Badge variant={statusConfig.variant} className="text-sm px-3 py-1">{statusConfig.label}</Badge>
+                <Badge variant={statusConfig.variant} className={`text-sm px-3 py-1 ${statusConfig.className || ""}`}>{statusConfig.label}</Badge>
               </div>
               <p className="text-muted-foreground">{request.customer_company || request.customer_email}</p>
             </div>
