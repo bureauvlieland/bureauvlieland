@@ -1,36 +1,34 @@
 
 
-## Plan: Alle URLs naar bureauvlieland.nl
+## Plan: Datums en evenementgegevens bewerkbaar maken op projectdetailpagina
 
-### Probleem
-Meerdere edge functions bevatten hardcoded `bureauvlieland.lovable.app` URLs. Dit moet overal `bureauvlieland.nl` zijn — dat is de productie-URL.
+### Huidige situatie
+De "Evenement details" sectie (datums, aantal personen, notities) op de admin projectdetailpagina is volledig read-only. Er is geen manier om datums aan te passen nadat een aanvraag is aangemaakt.
 
-### Gevonden probleemlocaties
+### Voorstel
+Een bewerkknop (potlood-icoon) toevoegen naast de sectie-titel "Evenement details". Bij klikken opent een dialog waarmee de admin kan wijzigen:
 
-| Bestand | Regel | Huidig | Fix |
-|---|---|---|---|
-| `send-partner-reset-email/index.ts` | 74 | `supabaseUrl.replace(".supabase.co", ".lovable.app")` | `"https://bureauvlieland.nl/partner/reset-password"` |
-| `notify-new-chat-reply/index.ts` | 65 | `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
-| `notify-new-chat/index.ts` | 80, 90 | `"https://bureauvlieland.lovable.app/admin/chat"` | `"https://bureauvlieland.nl/admin/chat"` |
-| `invite-partner/index.ts` | 314 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
-| `resend-email/index.ts` | 118 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
-| `resend-partner-invitation/index.ts` | 242 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
-| `bulk-invite-partners/index.ts` | 422 | fallback `"https://bureauvlieland.lovable.app"` | `"https://bureauvlieland.nl"` |
+- **Datums** — datums toevoegen/verwijderen via een datumkiezer (vergelijkbaar met de bestaande `MultiDatePicker`)
+- **Aantal personen** — nummerinvoer
+- **Notities** — tekstgebied
 
-**Geen wijziging nodig:**
-- `_shared/email-templates.ts` → `getPortalBaseUrl()` default al naar `bureauvlieland.nl` ✓
-- `isTestMode()` → referentie naar `.lovable.app` is correct (voor test-detectie)
-- `update-customer-program/index.ts` `PRODUCTION_DOMAINS` array → bevat `.lovable.app` naast `.nl`, is correct (beide zijn productie)
+Na opslaan worden de velden in `program_requests` bijgewerkt via een directe Supabase update. Indien er een gekoppeld logiesverzoek is (`linked_accommodation_id`), worden `arrival_date` en `departure_date` automatisch meegewerkt (eerste en laatste datum).
 
 ### Wijzigingen
-7 edge functions aanpassen — alle hardcoded `.lovable.app` fallback/default URLs vervangen door `bureauvlieland.nl`. Deploy daarna alle gewijzigde functies.
+
+**`src/components/admin/EditProjectDetailsDialog.tsx`** (nieuw):
+- Dialog met formulier: MultiDatePicker, number input, textarea
+- Supabase update naar `program_requests` (selected_dates, number_of_people, general_notes)
+- Optioneel: sync `accommodation_requests` arrival/departure dates
+- Toast bij succes
+
+**`src/pages/admin/AdminRequestDetail.tsx`**:
+1. Import `EditProjectDetailsDialog` en `Pencil` icon
+2. Bewerkknop toevoegen naast "Evenement details" titel (~regel 985)
+3. State voor dialog open/close
+4. `onSuccess` callback die `fetchRequestData()` aanroept
 
 ### Bestanden
-1. `supabase/functions/send-partner-reset-email/index.ts`
-2. `supabase/functions/notify-new-chat-reply/index.ts`
-3. `supabase/functions/notify-new-chat/index.ts`
-4. `supabase/functions/invite-partner/index.ts`
-5. `supabase/functions/resend-email/index.ts`
-6. `supabase/functions/resend-partner-invitation/index.ts`
-7. `supabase/functions/bulk-invite-partners/index.ts`
+1. `src/components/admin/EditProjectDetailsDialog.tsx` (nieuw)
+2. `src/pages/admin/AdminRequestDetail.tsx` (bewerkknop + state)
 
