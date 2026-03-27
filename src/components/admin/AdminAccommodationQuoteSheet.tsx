@@ -31,8 +31,7 @@ import {
 import type { RoomConfiguration } from "@/types/accommodation";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, History } from "lucide-react";
+import { History } from "lucide-react";
 
 interface QuoteData {
   id: string;
