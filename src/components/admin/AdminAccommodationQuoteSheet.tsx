@@ -29,6 +29,10 @@ import {
   type ExtraCategory,
 } from "@/types/accommodationExtras";
 import type { RoomConfiguration } from "@/types/accommodation";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, History } from "lucide-react";
 
 interface QuoteData {
   id: string;
