@@ -4,6 +4,8 @@ import {
   getRenderedTemplate, 
   sanitizeHtml, 
   formatCurrencyNL,
+  getRecipientEmail,
+  getSubjectPrefix,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
