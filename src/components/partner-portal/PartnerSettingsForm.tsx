@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, CalendarOff } from "lucide-react";
+import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, CalendarOff, Globe, MapPin, Sparkles, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
 import { PartnerUnavailabilityManager } from "./PartnerUnavailabilityManager";
+import { PartnerImageUpload } from "./PartnerImageUpload";
 
 interface PartnerDetails {
   id: string;
@@ -33,6 +34,13 @@ interface PartnerDetails {
   booking_contact_phone: string | null;
   availability_notes: string | null;
   accommodation_description: string | null;
+  about_text: string | null;
+  gallery_images: { url: string; alt?: string }[];
+  location_lat: number | null;
+  location_lng: number | null;
+  location_description: string | null;
+  website_url: string | null;
+  highlight_features: string[];
 }
 
 export const PartnerSettingsForm = () => {
@@ -43,6 +51,7 @@ export const PartnerSettingsForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  
 
   // Form state
   const [formData, setFormData] = useState({
@@ -59,7 +68,14 @@ export const PartnerSettingsForm = () => {
     booking_contact_phone: "",
     availability_notes: "",
     accommodation_description: "",
+    about_text: "",
+    website_url: "",
+    location_lat: "",
+    location_lng: "",
+    location_description: "",
   });
+  const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
+  const [highlightFeatures, setHighlightFeatures] = useState<string[]>([]);
 
   // Password form state
   const [passwordData, setPasswordData] = useState({
@@ -86,7 +102,7 @@ export const PartnerSettingsForm = () => {
           .single();
 
         if (data && !error) {
-          setPartner(data as PartnerDetails);
+          setPartner(data as unknown as PartnerDetails);
             setFormData({
               name: data.name || "",
               contact_email: (data as any).contact_email || "",
@@ -101,7 +117,14 @@ export const PartnerSettingsForm = () => {
               booking_contact_phone: (data as any).booking_contact_phone || "",
               availability_notes: (data as any).availability_notes || "",
               accommodation_description: (data as any).accommodation_description || "",
+              about_text: (data as any).about_text || "",
+              website_url: (data as any).website_url || "",
+              location_lat: (data as any).location_lat?.toString() || "",
+              location_lng: (data as any).location_lng?.toString() || "",
+              location_description: (data as any).location_description || "",
             });
+          setGalleryImages((data as any).gallery_images || []);
+          setHighlightFeatures((data as any).highlight_features || []);
           setIsImpersonating(true);
         }
         setIsLoading(false);
@@ -118,7 +141,7 @@ export const PartnerSettingsForm = () => {
       .single();
 
     if (data && !error) {
-      setPartner(data as PartnerDetails);
+      setPartner(data as unknown as PartnerDetails);
       setFormData({
         name: data.name || "",
         contact_email: (data as any).contact_email || "",
@@ -133,7 +156,14 @@ export const PartnerSettingsForm = () => {
         booking_contact_phone: (data as any).booking_contact_phone || "",
         availability_notes: (data as any).availability_notes || "",
         accommodation_description: (data as any).accommodation_description || "",
+        about_text: (data as any).about_text || "",
+        website_url: (data as any).website_url || "",
+        location_lat: (data as any).location_lat?.toString() || "",
+        location_lng: (data as any).location_lng?.toString() || "",
+        location_description: (data as any).location_description || "",
       });
+      setGalleryImages((data as any).gallery_images || []);
+      setHighlightFeatures((data as any).highlight_features || []);
     }
     setIsLoading(false);
   }, [searchParams]);
@@ -172,6 +202,13 @@ export const PartnerSettingsForm = () => {
           booking_contact_phone: formData.booking_contact_phone || null,
           availability_notes: formData.availability_notes || null,
           accommodation_description: formData.accommodation_description || null,
+          about_text: formData.about_text || null,
+          website_url: formData.website_url || null,
+          location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
+          location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
+          location_description: formData.location_description || null,
+          gallery_images: galleryImages,
+          highlight_features: highlightFeatures,
         } as any)
         .eq("id", partner.id);
 

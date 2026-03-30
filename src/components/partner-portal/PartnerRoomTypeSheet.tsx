@@ -21,6 +21,9 @@ import {
 import { useAddPartnerRoomType, useUpdatePartnerRoomType } from "@/hooks/usePartnerRoomTypes";
 import type { PartnerRoomType } from "@/types/partnerRoomTypes";
 import { ROOM_FACILITIES, BED_CONFIGURATIONS } from "@/types/partnerRoomTypes";
+import { PartnerImageUpload } from "./PartnerImageUpload";
+
+
 
 interface PartnerRoomTypeSheetProps {
   open: boolean;
@@ -41,6 +44,7 @@ export function PartnerRoomTypeSheet({
   const [bedConfiguration, setBedConfiguration] = useState("");
   const [maxOccupancy, setMaxOccupancy] = useState<string>("2");
   const [facilities, setFacilities] = useState<string[]>([]);
+  const [roomImages, setRoomImages] = useState<{ url: string; alt?: string }[]>([]);
   const [pricePerNight, setPricePerNight] = useState<string>("");
   const [priceIncludesVat, setPriceIncludesVat] = useState(true);
   const [vatRate, setVatRate] = useState("9");
@@ -57,6 +61,7 @@ export function PartnerRoomTypeSheet({
       setBedConfiguration(roomType.bed_configuration || "");
       setMaxOccupancy(roomType.max_occupancy?.toString() || "2");
       setFacilities(roomType.facilities || []);
+      setRoomImages(roomType.images || []);
       setPricePerNight(roomType.price_per_night?.toString() || "");
       setPriceIncludesVat(roomType.price_includes_vat);
       setVatRate(roomType.vat_rate?.toString() || "9");
@@ -72,6 +77,7 @@ export function PartnerRoomTypeSheet({
     setBedConfiguration("");
     setMaxOccupancy("2");
     setFacilities([]);
+    setRoomImages([]);
     setPricePerNight("");
     setPriceIncludesVat(true);
     setVatRate("9");
@@ -87,6 +93,7 @@ export function PartnerRoomTypeSheet({
       bed_configuration: bedConfiguration || null,
       max_occupancy: parseInt(maxOccupancy) || 2,
       facilities,
+      images: roomImages,
       price_per_night: pricePerNight ? parseFloat(pricePerNight) : null,
       price_includes_vat: priceIncludesVat,
       vat_rate: parseFloat(vatRate),
@@ -226,6 +233,19 @@ export function PartnerRoomTypeSheet({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Photos */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm text-muted-foreground">Foto's</h4>
+            <PartnerImageUpload
+              partnerId={partnerId}
+              images={roomImages}
+              onImagesChange={setRoomImages}
+              storagePath={`rooms/${roomType?.id || 'new'}`}
+              maxImages={4}
+              label=""
+            />
           </div>
 
           {/* Pricing */}

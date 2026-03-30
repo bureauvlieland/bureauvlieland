@@ -11,6 +11,13 @@ export interface Partner {
   address_city: string | null;
   commission_percentage: number;
   is_active: boolean;
+  about_text: string | null;
+  gallery_images: { url: string; alt?: string }[];
+  location_lat: number | null;
+  location_lng: number | null;
+  location_description: string | null;
+  website_url: string | null;
+  highlight_features: string[];
 }
 
 export interface PartnerItem {
