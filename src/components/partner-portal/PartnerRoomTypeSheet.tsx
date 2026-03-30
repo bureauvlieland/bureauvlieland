@@ -76,6 +76,7 @@ export function PartnerRoomTypeSheet({
     setBedConfiguration("");
     setMaxOccupancy("2");
     setFacilities([]);
+    setRoomImages([]);
     setPricePerNight("");
     setPriceIncludesVat(true);
     setVatRate("9");
