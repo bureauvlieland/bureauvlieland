@@ -123,6 +123,7 @@ const PartnerAccommodationContent = () => {
       currentPartnerId = partner.id;
       setPartnerToken(partner.partner_token);
       setPartnerName(partner.name);
+      setPartnerEmail(partner.contact_email || partner.email);
       setPartnerDescription((partner as any).accommodation_description || "");
     } else {
       // Admin impersonating - fetch the partner token and name
