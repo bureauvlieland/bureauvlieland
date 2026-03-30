@@ -104,14 +104,7 @@ export const PartnerSettingsForm = () => {
               booking_contact_phone: (data as any).booking_contact_phone || "",
               availability_notes: (data as any).availability_notes || "",
               accommodation_description: (data as any).accommodation_description || "",
-              about_text: (data as any).about_text || "",
-              website_url: (data as any).website_url || "",
-              location_lat: (data as any).location_lat?.toString() || "",
-              location_lng: (data as any).location_lng?.toString() || "",
-              location_description: (data as any).location_description || "",
             });
-          setGalleryImages((data as any).gallery_images || []);
-          setHighlightFeatures((data as any).highlight_features || []);
           setIsImpersonating(true);
         }
         setIsLoading(false);
