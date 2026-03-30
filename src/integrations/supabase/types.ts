@@ -1308,6 +1308,7 @@ export type Database = {
       }
       partners: {
         Row: {
+          about_text: string | null
           accommodation_commission_percentage: number | null
           accommodation_description: string | null
           accommodation_types: Json | null
@@ -1324,6 +1325,8 @@ export type Database = {
           contact_email: string | null
           created_at: string
           email: string
+          gallery_images: Json | null
+          highlight_features: Json | null
           id: string
           image_url: string | null
           initial_password: string | null
@@ -1331,6 +1334,9 @@ export type Database = {
           is_active: boolean
           kvk_number: string | null
           last_login_at: string | null
+          location_description: string | null
+          location_lat: number | null
+          location_lng: number | null
           map_api_key: string | null
           map_tenant_slug: string | null
           name: string
@@ -1343,8 +1349,10 @@ export type Database = {
           terms_uploaded_at: string | null
           updated_at: string
           uses_default_terms: boolean | null
+          website_url: string | null
         }
         Insert: {
+          about_text?: string | null
           accommodation_commission_percentage?: number | null
           accommodation_description?: string | null
           accommodation_types?: Json | null
@@ -1361,6 +1369,8 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           email: string
+          gallery_images?: Json | null
+          highlight_features?: Json | null
           id: string
           image_url?: string | null
           initial_password?: string | null
@@ -1368,6 +1378,9 @@ export type Database = {
           is_active?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
+          location_description?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           map_api_key?: string | null
           map_tenant_slug?: string | null
           name: string
@@ -1380,8 +1393,10 @@ export type Database = {
           terms_uploaded_at?: string | null
           updated_at?: string
           uses_default_terms?: boolean | null
+          website_url?: string | null
         }
         Update: {
+          about_text?: string | null
           accommodation_commission_percentage?: number | null
           accommodation_description?: string | null
           accommodation_types?: Json | null
@@ -1398,6 +1413,8 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           email?: string
+          gallery_images?: Json | null
+          highlight_features?: Json | null
           id?: string
           image_url?: string | null
           initial_password?: string | null
@@ -1405,6 +1422,9 @@ export type Database = {
           is_active?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
+          location_description?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           map_api_key?: string | null
           map_tenant_slug?: string | null
           name?: string
@@ -1417,6 +1437,7 @@ export type Database = {
           terms_uploaded_at?: string | null
           updated_at?: string
           uses_default_terms?: boolean | null
+          website_url?: string | null
         }
         Relationships: []
       }
