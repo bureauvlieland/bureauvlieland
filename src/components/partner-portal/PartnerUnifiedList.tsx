@@ -101,7 +101,7 @@ const isRecentlyUpdated = (updatedAt: string): boolean => {
 };
 
 const canItemBeInvoiced = (item: PartnerItem): boolean => {
-  const hasCustomerAccepted = !!item.customer_accepted_at;
+  const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
   const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
   
   return (
