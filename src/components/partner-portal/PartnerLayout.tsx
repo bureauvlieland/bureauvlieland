@@ -46,6 +46,7 @@ interface PartnerInfo {
   partner_token: string;
   commission_percentage: number;
   partner_type: string | null;
+  map_tenant_slug: string | null;
 }
 
 const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
