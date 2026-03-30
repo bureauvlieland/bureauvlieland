@@ -234,10 +234,11 @@ Deno.serve(async (req) => {
     }
 
     // Send emails to each partner (prefer contact_email for notifications)
+    const subjectPrefix = getSubjectPrefix(origin);
     const emailMessages = partners.map((partner: any) => ({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-      To: [{ Email: partner.contact_email || partner.email, Name: partner.name }],
-      Subject: email_subject,
+      To: [{ Email: getRecipientEmail(partner.contact_email || partner.email, origin), Name: partner.name }],
+      Subject: `${subjectPrefix}${email_subject}`,
       HTMLPart: wrapInEmailTemplate(email_body, partner.name, portalBaseUrl),
     }));
 

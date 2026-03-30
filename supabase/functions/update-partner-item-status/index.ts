@@ -195,7 +195,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes, proposedTime, proposedDate } = await req.json();
+    const reqBody = await req.json();
+    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes, proposedTime, proposedDate } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!partnerToken || !itemId || !status) {
       return new Response(
