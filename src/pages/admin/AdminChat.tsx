@@ -140,9 +140,9 @@ const AdminChat = () => {
               <TabsList className="w-full">
                 <TabsTrigger value="waiting" className="flex-1 text-xs gap-1">
                   Inbox
-                  {waitingCount > 0 && (
+                  {inboxUnreadCount > 0 && (
                     <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
-                      {waitingCount}
+                      {inboxUnreadCount}
                     </Badge>
                   )}
                 </TabsTrigger>
