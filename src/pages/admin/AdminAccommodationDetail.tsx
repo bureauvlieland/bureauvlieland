@@ -430,8 +430,9 @@ export default function AdminAccommodationDetail() {
             });
           }
         }
-        // Reset quotes including forwarded_at
-        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, forwarded_at: null, updated_at: new Date().toISOString() }).in("id", selectedQuoteIds);
+        // Reset quotes including forwarded_at, set reset_reason
+        const resetReason = `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests}`;
+        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, forwarded_at: null, reset_reason: resetReason, updated_at: new Date().toISOString() } as any).in("id", selectedQuoteIds);
       }
       if (linkedProgram) {
         const resetPartnerNames = quotes
