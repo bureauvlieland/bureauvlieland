@@ -62,9 +62,12 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   // Check if partner handles activities or accommodation
   const isActivityPartner = partner.partner_type === "activity_provider" || partner.partner_type === "both" || !partner.partner_type;
   const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
+  const hasMapIntegration = !!partner.map_tenant_slug;
 
   const menuItems = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    // Planning alleen tonen als partner MAP-koppeling heeft
+    ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
     // Alleen tonen als partner activiteiten levert
     ...(isActivityPartner ? [{ title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
     // Alleen tonen als partner logies levert

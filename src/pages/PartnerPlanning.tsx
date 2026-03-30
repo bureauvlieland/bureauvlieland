@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, startOfWeek, addWeeks, subWeeks } from "date-fns";
+import { format, startOfWeek, addWeeks } from "date-fns";
 import { nl } from "date-fns/locale";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerPlanningCalendar } from "@/components/partner-portal/PartnerPlanningCalendar";

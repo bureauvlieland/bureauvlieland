@@ -4,7 +4,7 @@ import { nl } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Clock, MapPin } from "lucide-react";
+import { Users, Clock } from "lucide-react";
 import type { MapActivity } from "@/hooks/useMapActivities";
 import type { PartnerItem } from "@/types/partner";
 
