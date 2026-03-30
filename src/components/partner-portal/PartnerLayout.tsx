@@ -29,6 +29,7 @@ import {
   BedDouble,
   UtensilsCrossed,
   DoorOpen,
+  CalendarDays,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
