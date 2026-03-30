@@ -700,6 +700,14 @@ export const AdminPartnersContent = () => {
         connectedCount={stats.connectedCount}
         onComplete={handleResetComplete}
       />
+
+      {/* Partner mailing dialog */}
+      <SendPartnerMailingDialog
+        open={mailingOpen}
+        onOpenChange={setMailingOpen}
+        selectedPartnerIds={selectedIds.size > 0 ? Array.from(selectedIds) : undefined}
+        totalActivePartners={stats.active}
+      />
     </div>
   );
 };
