@@ -63,6 +63,7 @@ import { nl } from "date-fns/locale";
 import { PartnerOnboardingStats } from "@/components/admin/PartnerOnboardingStats";
 import { BulkInviteDialog } from "@/components/admin/BulkInviteDialog";
 import { ResetPartnerConnectionsDialog } from "@/components/admin/ResetPartnerConnectionsDialog";
+import { SendPartnerMailingDialog } from "@/components/admin/SendPartnerMailingDialog";
 
 interface Partner {
   id: string;
@@ -126,6 +127,7 @@ export const AdminPartnersContent = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
   const [resetConnectionsOpen, setResetConnectionsOpen] = useState(false);
+  const [mailingOpen, setMailingOpen] = useState(false);
   
   // Get unavailability data for all partners
   const partnerIds = useMemo(() => partners.map(p => p.id), [partners]);
@@ -369,6 +371,13 @@ export const AdminPartnersContent = () => {
       <div className="flex items-center justify-between">
         <div />
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setMailingOpen(true)}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Mailing versturen
+          </Button>
           {stats.connectedCount > 0 && (
             <Button
               variant="outline"
@@ -690,6 +699,14 @@ export const AdminPartnersContent = () => {
         onOpenChange={setResetConnectionsOpen}
         connectedCount={stats.connectedCount}
         onComplete={handleResetComplete}
+      />
+
+      {/* Partner mailing dialog */}
+      <SendPartnerMailingDialog
+        open={mailingOpen}
+        onOpenChange={setMailingOpen}
+        selectedPartnerIds={selectedIds.size > 0 ? Array.from(selectedIds) : undefined}
+        totalActivePartners={stats.active}
       />
     </div>
   );
