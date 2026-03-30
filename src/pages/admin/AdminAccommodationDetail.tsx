@@ -180,6 +180,7 @@ export default function AdminAccommodationDetail() {
   const [reactivateDate, setReactivateDate] = useState<Date | undefined>(addDays(new Date(), 14));
   const [withdrawQuoteId, setWithdrawQuoteId] = useState<string | null>(null);
   const [withdrawNotify, setWithdrawNotify] = useState(true);
+  const [chatQuote, setChatQuote] = useState<{ id: string; partnerId: string; partnerName: string; partnerEmail: string } | null>(null);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
