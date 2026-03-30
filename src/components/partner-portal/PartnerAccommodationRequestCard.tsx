@@ -72,6 +72,7 @@ interface AccommodationQuote {
   price_total: number;
   submitted_at: string | null;
   valid_until: string;
+  reset_reason?: string | null;
 }
 
 interface PartnerAccommodationRequestCardProps {
