@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,10 @@ import {
   X,
   Send,
   Eye,
+  MessageSquare,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES } from "@/types/accommodation";
+import { PartnerAccommodationChatSheet } from "./PartnerAccommodationChatSheet";
 
 const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Te beantwoorden", variant: "secondary" },
@@ -74,6 +77,9 @@ interface PartnerAccommodationRequestCardProps {
   quote: AccommodationQuote | null;
   onSubmitQuote: () => void;
   invoicingMode?: string | null;
+  partnerId: string;
+  partnerName: string;
+  partnerEmail: string;
 }
 
 export const PartnerAccommodationRequestCard = ({
@@ -81,7 +87,11 @@ export const PartnerAccommodationRequestCard = ({
   quote,
   onSubmitQuote,
   invoicingMode,
+  partnerId,
+  partnerName,
+  partnerEmail,
 }: PartnerAccommodationRequestCardProps) => {
+  const [showChat, setShowChat] = useState(false);
   const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
   const statusConfig = QUOTE_STATUS_CONFIG[quote?.status || "pending"];
   const typeConfig = ACCOMMODATION_TYPES.find(t => t.value === request.accommodation_type);
@@ -254,8 +264,27 @@ export const PartnerAccommodationRequestCard = ({
               Details bekijken
             </Button>
           )}
+          {quote && (
+            <Button variant="ghost" size="icon" onClick={() => setShowChat(true)} title="Berichten">
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
+
+      {/* Chat Sheet */}
+      {quote && (
+        <PartnerAccommodationChatSheet
+          open={showChat}
+          onOpenChange={setShowChat}
+          accommodationId={request.id}
+          quoteId={quote.id}
+          partnerId={partnerId}
+          partnerName={partnerName}
+          partnerEmail={partnerEmail}
+          referenceLabel={`Logiesaanvraag ${request.customer_company || request.customer_name}`}
+        />
+      )}
     </Card>
   );
 };

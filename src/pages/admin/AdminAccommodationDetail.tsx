@@ -76,6 +76,7 @@ import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicati
 import { AdminAccommodationQuoteSheet } from "@/components/admin/AdminAccommodationQuoteSheet";
 import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodationGuestsDialog";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
+import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodationChatSheet";
 
 interface LinkedProgram {
   id: string;
@@ -179,6 +180,7 @@ export default function AdminAccommodationDetail() {
   const [reactivateDate, setReactivateDate] = useState<Date | undefined>(addDays(new Date(), 14));
   const [withdrawQuoteId, setWithdrawQuoteId] = useState<string | null>(null);
   const [withdrawNotify, setWithdrawNotify] = useState(true);
+  const [chatQuote, setChatQuote] = useState<{ id: string; partnerId: string; partnerName: string; partnerEmail: string } | null>(null);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -764,6 +766,20 @@ export default function AdminAccommodationDetail() {
                               <Eye className="h-3 w-3 mr-1" />
                               Bekijken
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => setChatQuote({
+                                id: quote.id,
+                                partnerId: partner?.id || "",
+                                partnerName: partner?.name || "Partner",
+                                partnerEmail: partner?.email || "",
+                              })}
+                            >
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Bericht
+                            </Button>
                             {quote.status === "submitted" && !(quote as any).forwarded_at && (
                               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setForwardQuoteId(quote.id)}>
                                 <Send className="h-3 w-3 mr-1" />
@@ -1295,6 +1311,19 @@ export default function AdminAccommodationDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Accommodation Chat Sheet */}
+      {chatQuote && id && (
+        <AdminAccommodationChatSheet
+          open={!!chatQuote}
+          onOpenChange={(open) => { if (!open) setChatQuote(null); }}
+          accommodationId={id}
+          quoteId={chatQuote.id}
+          partnerId={chatQuote.partnerId}
+          partnerName={chatQuote.partnerName}
+          partnerEmail={chatQuote.partnerEmail}
+        />
+      )}
     </AdminLayout>
   );
 }

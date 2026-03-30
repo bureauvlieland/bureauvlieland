@@ -68,10 +68,25 @@ Deno.serve(async (req) => {
       .limit(1)
       .single();
 
-    const sourceLabel = conv.source === "partner_portal" ? "Partnerportaal" : "Klantportaal";
+    const isAccommodationChat = !!conv.accommodation_id;
+    let sourceLabel = conv.source === "partner_portal" ? "Partnerportaal" : "Klantportaal";
     const visitorName = conv.visitor_name || "Bezoeker";
     const visitorEmail = conv.visitor_email || "onbekend";
     const messagePreview = latestMsg?.content?.substring(0, 200) || "";
+
+    // Build subject with accommodation context
+    let subjectExtra = "";
+    if (isAccommodationChat && conv.accommodation_id) {
+      sourceLabel = "Logiespartner";
+      const { data: accReq } = await supabase
+        .from("accommodation_requests")
+        .select("reference_number")
+        .eq("id", conv.accommodation_id)
+        .single();
+      if (accReq?.reference_number) {
+        subjectExtra = ` (${accReq.reference_number})`;
+      }
+    }
 
     // Try DB template
     const template = await getRenderedTemplate(TemplateIds.CHAT_NOTIFICATION_BUREAU, {
@@ -82,9 +97,9 @@ Deno.serve(async (req) => {
       chat_url: "https://bureauvlieland.nl/admin/chat",
     });
 
-    const emailSubject = `${getSubjectPrefix(origin)}${template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`}`;
+    const emailSubject = `${getSubjectPrefix(origin)}${template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})${subjectExtra}`}`;
     const emailBody = template?.body || `
-      <h3>Nieuw chatbericht</h3>
+      <h3>Nieuw chatbericht${subjectExtra}</h3>
       <p><strong>Van:</strong> ${visitorName} (${visitorEmail})</p>
       <p><strong>Bron:</strong> ${sourceLabel}</p>
       <p><strong>Bericht:</strong></p>
@@ -127,6 +142,7 @@ Deno.serve(async (req) => {
       recipient_name: "Bureau Vlieland",
       status: "sent",
       sent_at: new Date().toISOString(),
+      related_accommodation_id: conv.accommodation_id || null,
       metadata: { conversation_id, source: conv.source },
     });
 

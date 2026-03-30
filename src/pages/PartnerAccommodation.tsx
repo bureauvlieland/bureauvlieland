@@ -77,6 +77,7 @@ const PartnerAccommodationContent = () => {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
+  const [partnerEmail, setPartnerEmail] = useState<string>("");
   const [partnerDescription, setPartnerDescription] = useState<string>("");
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
@@ -108,7 +109,7 @@ const PartnerAccommodationContent = () => {
       // Get partner ID and token from auth
       const { data: partner } = await supabase
         .from("partners")
-        .select("id, partner_token, name, accommodation_description")
+        .select("id, partner_token, name, email, contact_email, accommodation_description")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .maybeSingle();
@@ -122,17 +123,19 @@ const PartnerAccommodationContent = () => {
       currentPartnerId = partner.id;
       setPartnerToken(partner.partner_token);
       setPartnerName(partner.name);
+      setPartnerEmail(partner.contact_email || partner.email);
       setPartnerDescription((partner as any).accommodation_description || "");
     } else {
       // Admin impersonating - fetch the partner token and name
       const { data: impersonatedPartner } = await supabase
         .from("partners")
-        .select("partner_token, name, accommodation_description")
+        .select("partner_token, name, email, contact_email, accommodation_description")
         .eq("id", currentPartnerId)
         .maybeSingle();
       if (impersonatedPartner) {
         setPartnerToken(impersonatedPartner.partner_token);
         setPartnerName(impersonatedPartner.name);
+        setPartnerEmail(impersonatedPartner.contact_email || impersonatedPartner.email);
         setPartnerDescription((impersonatedPartner as any).accommodation_description || "");
       }
     }
@@ -537,6 +540,9 @@ const PartnerAccommodationContent = () => {
                     key={request.id}
                     request={request}
                     quote={request.quote}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -561,6 +567,9 @@ const PartnerAccommodationContent = () => {
                     key={request.id}
                     request={request}
                     quote={request.quote}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -585,6 +594,9 @@ const PartnerAccommodationContent = () => {
                     key={request.id}
                     request={request}
                     quote={request.quote}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -610,6 +622,9 @@ const PartnerAccommodationContent = () => {
                     request={request}
                     quote={request.quote}
                     invoicingMode={request.invoicingMode}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -634,6 +649,9 @@ const PartnerAccommodationContent = () => {
                     key={request.id}
                     request={request}
                     quote={request.quote}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
