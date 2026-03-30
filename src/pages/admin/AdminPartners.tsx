@@ -371,6 +371,13 @@ export const AdminPartnersContent = () => {
       <div className="flex items-center justify-between">
         <div />
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setMailingOpen(true)}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Mailing versturen
+          </Button>
           {stats.connectedCount > 0 && (
             <Button
               variant="outline"
