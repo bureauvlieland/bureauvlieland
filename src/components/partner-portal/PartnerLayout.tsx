@@ -214,7 +214,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
       // Regular partner login flow
       const { data: partnerData, error } = await supabase
         .from("partners")
-        .select("id, name, email, partner_token, commission_percentage, partner_type")
+        .select("id, name, email, partner_token, commission_percentage, partner_type, map_tenant_slug")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .single();

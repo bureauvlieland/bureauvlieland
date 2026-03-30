@@ -172,6 +172,7 @@ const App = () => {
             <Route path="/partner/extras" element={<PartnerExtras />} />
             <Route path="/partner/kamersoorten" element={<PartnerRoomTypes />} />
             <Route path="/partner/handleidingen" element={<PartnerGuides />} />
+            <Route path="/partner/planning" element={<PartnerPlanning />} />
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* Admin routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
