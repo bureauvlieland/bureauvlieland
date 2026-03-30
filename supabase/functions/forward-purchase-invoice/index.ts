@@ -155,14 +155,14 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Prepare email message
+    const emailSubject = `${getSubjectPrefix(origin)}Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`;
     const emailMessage: any = {
       From: {
         Email: "hallo@bureauvlieland.nl",
         Name: "Bureau Vlieland Admin",
       },
-      To: [{ Email: snelstartEmail, Name: "Boekhouding" }],
-      Subject: `Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`,
+      To: [{ Email: getRecipientEmail(snelstartEmail, origin), Name: "Boekhouding" }],
+      Subject: emailSubject,
       HTMLPart: htmlContent,
     };
 
