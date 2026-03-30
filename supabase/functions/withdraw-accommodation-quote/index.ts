@@ -37,7 +37,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleCheck) throw new Error("Not authorized");
 
-    const { quoteId, notifyPartner } = await req.json();
+    const body = await req.json();
+    const { quoteId, notifyPartner } = body;
+    const origin = body.origin || req.headers.get("origin") || "";
     if (!quoteId) throw new Error("quoteId is required");
 
     // Fetch quote with partner info
