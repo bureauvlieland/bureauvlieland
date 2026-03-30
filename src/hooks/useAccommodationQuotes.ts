@@ -90,7 +90,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
         .from('accommodation_quotes')
         .select(`
           *,
-          partner:partners(id, name, email)
+          partner:partners(id, name, email, gallery_images, about_text, highlight_features)
         `)
         .eq('request_id', requestData.id)
         .in('status', ['submitted', 'selected', 'expired', 'declined'])

@@ -218,7 +218,7 @@ export default function AdminAccommodationDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accommodation_quotes")
-        .select("*, partner:partners(id, name, email)")
+        .select("*, partner:partners(id, name, email, gallery_images, about_text, highlight_features)")
         .eq("request_id", id)
         .order("created_at", { ascending: false });
 

@@ -211,7 +211,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
           // Fetch accommodation quotes
           const { data: quotesData } = await supabase
             .from("accommodation_quotes")
-            .select(`*, partner:partners(id, name, email)`)
+            .select(`*, partner:partners(id, name, email, gallery_images, about_text, highlight_features)`)
             .eq("request_id", accomData.id)
             .in("status", ["submitted", "selected", "expired", "declined"])
             .order("price_per_person_per_night", { ascending: true });
