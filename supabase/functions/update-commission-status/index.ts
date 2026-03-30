@@ -71,7 +71,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { itemIds, status, notes, commissionInvoiceNumber, itemType = "activity" } = await req.json();
+    const reqBody = await req.json();
+    const { itemIds, status, notes, commissionInvoiceNumber, itemType = "activity" } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return new Response(
