@@ -294,7 +294,7 @@ export const PartnerItemSheet = ({
             >
               {statusInfo.label}
             </Badge>
-            {item.customer_accepted_at && (
+            {(item.customer_accepted_at || item.customer_approved_at) && (
               <Badge className="bg-green-600 hover:bg-green-700">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Klant akkoord

@@ -20,7 +20,7 @@ export const ExportInvoicesButton = ({
 
   // Helper to determine effective status
   const getEffectiveStatus = (item: PartnerItem): string => {
-    const hasCustomerAccepted = !!item.customer_accepted_at;
+    const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
     return (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
   };
 

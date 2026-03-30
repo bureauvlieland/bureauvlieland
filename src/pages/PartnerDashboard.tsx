@@ -606,7 +606,7 @@ const PartnerDashboardContent = () => {
   // In progress: confirmed/alternative/submitted (not accepted, not expired)
   const inProgressCount =
     data.items.filter((i) => {
-      return ["confirmed", "alternative"].includes(i.status) && !i.customer_accepted_at;
+      return ["confirmed", "alternative"].includes(i.status) && !i.customer_accepted_at && !i.customer_approved_at;
     }).length +
     accommodationQuotes.filter((q) => q.status === "submitted").length;
 
