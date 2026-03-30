@@ -191,6 +191,7 @@ interface ProgramRequestItem {
   skip_partner_notification: boolean | null;
   // Customer approval
   customer_approved_at: string | null;
+  customer_accepted_at: string | null;
   // Per-item participant override
   override_people: number | null;
   // Calendar export fields
