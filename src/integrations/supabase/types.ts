@@ -778,10 +778,12 @@ export type Database = {
       }
       chat_conversations: {
         Row: {
+          accommodation_id: string | null
           created_at: string
           id: string
           last_email_notified_at: string | null
           last_message_at: string | null
+          quote_id: string | null
           request_id: string | null
           source: string
           source_partner_id: string | null
@@ -792,10 +794,12 @@ export type Database = {
           visitor_name: string
         }
         Insert: {
+          accommodation_id?: string | null
           created_at?: string
           id?: string
           last_email_notified_at?: string | null
           last_message_at?: string | null
+          quote_id?: string | null
           request_id?: string | null
           source: string
           source_partner_id?: string | null
@@ -806,10 +810,12 @@ export type Database = {
           visitor_name?: string
         }
         Update: {
+          accommodation_id?: string | null
           created_at?: string
           id?: string
           last_email_notified_at?: string | null
           last_message_at?: string | null
+          quote_id?: string | null
           request_id?: string | null
           source?: string
           source_partner_id?: string | null
@@ -820,6 +826,20 @@ export type Database = {
           visitor_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_conversations_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_quotes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_conversations_request_id_fkey"
             columns: ["request_id"]
