@@ -475,12 +475,13 @@ Deno.serve(async (req) => {
         </html>
       `;
       
-      const counterResponseRecipient = programRequest.customer_email;
+      const counterResponseRecipient = getRecipientEmail(programRequest.customer_email, origin);
+      const counterSubjectPrefix = getSubjectPrefix(origin);
       
       const emailSent = await sendEmailViaMailjet(
         counterResponseRecipient,
         programRequest.customer_name,
-        emailSubject,
+        `${counterSubjectPrefix}${emailSubject}`,
         emailBody
       );
       
