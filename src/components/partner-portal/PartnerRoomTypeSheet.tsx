@@ -22,16 +22,8 @@ import { useAddPartnerRoomType, useUpdatePartnerRoomType } from "@/hooks/usePart
 import type { PartnerRoomType } from "@/types/partnerRoomTypes";
 import { ROOM_FACILITIES, BED_CONFIGURATIONS } from "@/types/partnerRoomTypes";
 import { PartnerImageUpload } from "./PartnerImageUpload";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useAddPartnerRoomType, useUpdatePartnerRoomType } from "@/hooks/usePartnerRoomTypes";
-import type { PartnerRoomType } from "@/types/partnerRoomTypes";
-import { ROOM_FACILITIES, BED_CONFIGURATIONS } from "@/types/partnerRoomTypes";
+
+
 
 interface PartnerRoomTypeSheetProps {
   open: boolean;
