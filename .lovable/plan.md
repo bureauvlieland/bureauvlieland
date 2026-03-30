@@ -1,24 +1,32 @@
 
 
-## Plan: Klant-akkoord zichtbaar maken in admin overzicht
+## Plan: Activiteitentabel vereenvoudigen
 
 ### Probleem
-In de admin-detailpagina tonen items met status "confirmed" dezelfde badge, ongeacht of de klant al akkoord heeft gegeven. De Watertaxi (partner bevestigd, klant nog niet akkoord) en de 4x4 Terreinwagen (partner bevestigd, klant akkoord) zien er identiek uit.
+De tabel heeft 9+ kolommen met veel visuele ruis: badges, inline-editors, popovers en dubbele statusindicatoren. Op een breed scherm is het nog leesbaar, maar het voelt overweldigend.
 
-### Oplossing
-In de status-kolom van de items-tabel op `AdminRequestDetail.tsx` een visuele indicator toevoegen wanneer de klant akkoord heeft gegeven (`customer_accepted_at` of `customer_approved_at` is gezet).
+### Aanpak — minder kolommen, visuele groepering per dag
 
-**Wat verandert:**
-- Items waar de klant akkoord heeft gegeven krijgen een extra groene badge/indicator "Klant akkoord" onder of naast de bestaande status-badge
-- Items waar de klant nog geen akkoord heeft gegeven maar de partner wel heeft bevestigd, krijgen een subtiele amber-indicator "Wacht op klant" (alleen bij confirmed/alternative status)
+**1. Kolom "Gefactureerd door" verwijderen**
+Deze info is bijna altijd hetzelfde (bepaald door `invoicing_mode`). Al zichtbaar in het blauwe banner bovenaan. Kolom schrappen uit beide tabel-varianten.
 
-Dit geldt voor zowel de quote-modus tabel als de reguliere tabel.
+**2. Dag-kolom vervangen door visuele groepering**
+In plaats van elke rij "Dag 1", "Dag 1", "Dag 2" te herhalen: een groepskop-rij per dag (`colspan`) met "Dag 1 — do 9 apr." als label. De aparte Dag-kolom vervalt.
 
-### Wijzigingen
+**3. Klant-akkoord samenvoegen met status**
+De losse "Klant akkoord" / "Wacht op klant" badge integreren als klein icoon (✓ groen / ⏳ amber) direct naast de status-badge, in plaats van eronder als tweede badge.
+
+**4. Tijd-kolom compacter**
+De inline-edit popover en confirm-button alleen tonen bij hover op de rij, niet standaard zichtbaar. Scheelt visuele drukte.
+
+### Resultaat
+Van 9 kolommen → 7 kolommen (quote-modus) / 6 kolommen (regulier), plus visuele daggroepering die de structuur verduidelijkt.
+
+### Bestanden
 
 | Bestand | Actie |
 |---|---|
-| `src/pages/admin/AdminRequestDetail.tsx` | Na de status-badge een "Klant akkoord" of "Wacht op klant" indicator tonen op basis van `customer_accepted_at` / `customer_approved_at` |
+| `src/pages/admin/AdminRequestDetail.tsx` | Kolom "Gefactureerd door" verwijderen, dag-groepering toevoegen, klant-akkoord icoon inline, tijd-knoppen hover-only |
 
-Eén bestand, kleine toevoeging in de status-cel van beide tabel-varianten (quote-modus en regulier).
+Eén bestand, refactor van de tabel-sectie.
 
