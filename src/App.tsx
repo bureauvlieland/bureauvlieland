@@ -166,6 +166,7 @@ const App = () => {
             <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/profiel" element={<PartnerProfile />} />
             <Route path="/partner/aanbod" element={<PartnerBlocks />} />
             <Route path="/partner/facturatie" element={<PartnerFinance />} />
             <Route path="/partner/instellingen" element={<PartnerSettings />} />

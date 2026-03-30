@@ -67,6 +67,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
 
   const menuItems = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    { title: "Mijn Profiel", url: `/partner/profiel${urlSuffix}`, icon: UserCircle },
     // Planning alleen tonen als partner MAP-koppeling heeft
     ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
     // Alleen tonen als partner activiteiten levert
