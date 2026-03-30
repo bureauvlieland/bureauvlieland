@@ -77,6 +77,7 @@ const PartnerAccommodationContent = () => {
   const [partnerId, setPartnerId] = useState<string | null>(null);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [partnerName, setPartnerName] = useState<string>("");
+  const [partnerEmail, setPartnerEmail] = useState<string>("");
   const [partnerDescription, setPartnerDescription] = useState<string>("");
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
