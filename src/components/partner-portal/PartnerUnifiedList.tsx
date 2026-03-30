@@ -127,7 +127,7 @@ export const PartnerUnifiedList = ({
       const activityDate = dates[i.day_index] || "";
       const canInvoice = canItemBeInvoiced(i);
       
-      const hasCustomerAccepted = !!i.customer_accepted_at;
+      const hasCustomerAccepted = !!i.customer_accepted_at || !!i.customer_approved_at;
       const effectiveStatus = (i.status === "confirmed" && hasCustomerAccepted) ? "accepted" : i.status;
       
       const awaitingTerms = hasCustomerAccepted && 

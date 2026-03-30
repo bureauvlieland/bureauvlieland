@@ -38,6 +38,7 @@ export interface PartnerItem {
   status_updated_at: string | null;
   executed_at: string | null;
   customer_accepted_at: string | null; // When customer accepted the partner's proposal
+  customer_approved_at: string | null; // When customer approved in quote flow
   version: number;
   created_at: string;
   updated_at: string;
