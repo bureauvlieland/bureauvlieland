@@ -6,6 +6,7 @@ import {
   sanitizeHtml, 
   formatDateNL, 
   getSubjectPrefix,
+  getRecipientEmail,
   getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
