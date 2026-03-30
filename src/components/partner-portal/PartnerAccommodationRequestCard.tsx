@@ -190,6 +190,19 @@ export const PartnerAccommodationRequestCard = ({
           </div>
         )}
 
+        {/* Reset reason banner */}
+        {quote?.status === "pending" && quote?.reset_reason && (
+          <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-800 dark:text-amber-300">Wijziging ontvangen</p>
+              <p className="text-amber-700 dark:text-amber-400 mt-0.5">
+                {quote.reset_reason}. Pas uw offerte aan en dien deze opnieuw in.
+              </p>
+            </div>
+          </div>
+        )}
+
         <Separator />
 
         {/* Quote info if submitted */}

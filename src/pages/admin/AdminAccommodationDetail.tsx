@@ -805,10 +805,10 @@ export default function AdminAccommodationDetail() {
                               </Button>
                             )}
                             {quote.status === "submitted" && (quote as any).forwarded_at && (
-                              <Badge variant="outline" className="text-xs h-7 px-2">
-                                <Check className="h-3 w-3 mr-1" />
-                                Doorgestuurd
-                              </Badge>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setForwardQuoteId(quote.id)}>
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Opnieuw doorsturen
+                              </Button>
                             )}
                             {quote.status === "submitted" && (
                               <AlertDialog>
