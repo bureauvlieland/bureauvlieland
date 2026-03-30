@@ -1,52 +1,64 @@
 
 
-## Plan: Ontbrekende automatische e-mails toevoegen
+## Plan: Partner "Over ons" profiel + foto-upload bij kamersoorten
 
-### Huidige dekking (wat al werkt)
-- Programma-aanvraag → bureau + klant + partners
-- Partner statusupdate (confirmed/unavailable/alternative) → klant
-- Tegenvoorstel klant → partner + reactie terug naar klant
-- Annulering → klant + partners + logiespartners
-- Offerte verstuurd → klant
-- Logiesaanvraag → bureau + klant + partners
-- Logiesofferte ontvangen → klant (notify-accommodation-quote)
-- Logies geselecteerd → partner + klant
-- Commissiebevestiging → partner
-- Chat → bureau + bezoeker
-- Datumwijziging, itemwijziging, toevoeging → partner + klant
-- Alle partners gereageerd → admin_todo (geen mail)
-- Akkoord klant op offertevoorstel → partners worden direct gemaild
-
-### Ontbrekende e-mails (5 gaps)
-
-| # | Trigger | Ontvanger | Waarom nuttig |
-|---|---|---|---|
-| 1 | **Klant accepteert individueel item** (akkoord-knop) | Bureau (admin) | Bureau weet niet dat de klant een item heeft geaccepteerd. Er wordt alleen een history-entry gemaakt, geen mail of todo. |
-| 2 | **Klant annuleert individueel item** | Bureau (admin) | Zelfde als hierboven — geen notificatie naar bureau. |
-| 3 | **Alle items geaccepteerd door klant** (quote_status → akkoord_ontvangen) | Bureau (admin) | Bij per-item akkoord (niet-offerte flow) mist de bureau-notificatie dat álles nu akkoord is. |
-| 4 | **Partner dient logiesofferte in** | Bureau (admin) | Er gaat nu alleen een mail naar de klant (notify-accommodation-quote). Bureau krijgt geen seintje dat er een nieuwe offerte is binnengekomen. |
-| 5 | **Klant accepteert logiesofferte** (select-accommodation-quote) | Bureau (admin) | Bureau moet weten dat de klant een keuze heeft gemaakt. Nu alleen partner + klant genotificeerd. |
+### Huidige situatie
+- Partners hebben basale bedrijfsgegevens (naam, adres, KvK) en een korte `accommodation_description` tekst
+- Kamersoorten (`partner_room_types`) hebben een `images` JSONB-kolom maar er is geen upload-UI
+- Er is geen "Over ons" sectie met bedrijfsfoto's, beschrijving, of locatie
+- De `partners` tabel heeft al `image_url` (niet gebruikt in portaal) en locatievelden ontbreken
 
 ### Voorstel
 
-Alle 5 gaps oplossen als **admin_todo's** + optioneel een **e-mail naar bureau** (erwin@bureauvlieland.nl). Admin_todo's zijn het belangrijkst want die verschijnen direct in het dashboard.
+**Fase 1: Database — nieuwe velden op `partners` tabel**
 
-**Gap 1 + 2 + 3: Klant accepteert/annuleert item**
-In `supabase/functions/update-customer-program/index.ts`:
-- Bij `acceptItemId`: admin_todo aanmaken ("Klant {naam} akkoord op {item}")
-- Bij `cancelItemId`: admin_todo aanmaken ("Klant {naam} annuleert {item}")
-- Bij alle items geaccepteerd: admin_todo + mail naar bureau
+Migratie met nieuwe kolommen:
+- `about_text` (text) — uitgebreide "Over ons" tekst
+- `gallery_images` (jsonb, default `[]`) — array van `{ url, alt? }` objecten
+- `location_lat` (numeric) — breedtegraad
+- `location_lng` (numeric) — lengtegraad
+- `location_description` (text) — korte locatiebeschrijving ("Direct aan het strand")
+- `website_url` (text) — website van de partner
+- `highlight_features` (jsonb, default `[]`) — USP's/kenmerken ("Eigen restaurant", "Fietsverhuur")
 
-**Gap 4: Partner dient logiesofferte in**
-In `supabase/functions/notify-accommodation-quote/index.ts` (wordt al aangeroepen bij partner-indienen):
-- Admin_todo toevoegen: "Nieuwe logiesofferte van {partner} voor {referentie}"
+**Fase 2: Storage bucket voor partner-afbeeldingen**
 
-**Gap 5: Klant selecteert logiesofferte**
-In `supabase/functions/select-accommodation-quote/index.ts`:
-- Admin_todo toevoegen: "Klant {naam} heeft logies {partner} geselecteerd"
+Nieuwe storage bucket `partner-images` (public) met RLS:
+- Partners mogen uploaden/verwijderen in hun eigen map (`{partner_id}/...`)
+- Publiek leesbaar
+
+**Fase 3: Partner Settings — "Over ons" sectie**
+
+In `PartnerSettingsForm.tsx` een nieuwe Card toevoegen:
+- **Over ons tekst** — Textarea voor uitgebreide beschrijving
+- **Website URL** — Input
+- **Kenmerken/USP's** — Tags die partner kan toevoegen/verwijderen
+- **Locatie** — Lat/lng velden (of adres-gebaseerd)
+- **Foto's** — Upload-grid (max ~8 foto's), drag-and-drop, verwijderen
+  - Uploadt naar `partner-images/{partner_id}/`
+  - Slaat URLs op in `gallery_images` JSONB
+
+**Fase 4: Kamertype foto-upload**
+
+In `PartnerRoomTypeSheet.tsx`:
+- Foto-uploadsectie toevoegen (max ~4 per kamertype)
+- Uploadt naar `partner-images/{partner_id}/rooms/`
+- Slaat op in de bestaande `images` JSONB-kolom op `partner_room_types`
+
+**Fase 5: Weergave aan de voorkant**
+
+Nog niet in deze iteratie — eerst de data laten vullen door partners. Daarna gebruiken bij:
+- Configurator (BuildingBlockCard)
+- Klantportaal (programma-presentatie)
+- Offertes (PDF)
 
 ### Bestanden
-1. `supabase/functions/update-customer-program/index.ts` — admin_todo's bij item accept/cancel + all-accepted notificatie
-2. `supabase/functions/notify-accommodation-quote/index.ts` — admin_todo bij nieuwe logiesofferte
-3. `supabase/functions/select-accommodation-quote/index.ts` — admin_todo bij klant-selectie logies
+
+| Bestand | Wat |
+|---|---|
+| Database migratie | Kolommen + storage bucket + RLS |
+| `src/components/partner-portal/PartnerSettingsForm.tsx` | "Over ons" Card met tekst, website, kenmerken, foto-upload |
+| `src/components/partner-portal/PartnerRoomTypeSheet.tsx` | Foto-uploadsectie voor kamertypes |
+| `src/components/partner-portal/PartnerImageUpload.tsx` (nieuw) | Herbruikbare foto-upload component |
+| `src/types/partner.ts` | Nieuwe velden toevoegen aan Partner interface |
 
