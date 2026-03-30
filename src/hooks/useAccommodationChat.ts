@@ -114,19 +114,28 @@ export function useAccommodationChat(options: UseAccommodationChatOptions) {
         return;
       }
       convId = data.id;
-      setConversationId(convId);
     }
 
     const senderType = options.senderRole === "admin" ? "admin" : "visitor";
     const senderName = options.senderRole === "admin" ? "Bureau Vlieland" : options.partnerName;
 
-    // Send message
-    await supabase.from("chat_messages").insert({
+    // Send message and get it back
+    const { data: newMsg } = await supabase.from("chat_messages").insert({
       conversation_id: convId,
       sender_type: senderType,
       sender_name: senderName,
       content: content.trim(),
-    });
+    }).select().single();
+
+    // Optimistically add to local state
+    if (newMsg) {
+      setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg as unknown as AccommodationChatMessage]);
+    }
+
+    // Set conversationId AFTER insert so realtime subscription picks up future messages
+    if (!conversationId) {
+      setConversationId(convId);
+    }
 
     // Update last_message_at
     await supabase
