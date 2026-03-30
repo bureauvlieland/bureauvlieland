@@ -190,7 +190,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
           // Fetch the impersonated partner
           const { data: partnerData, error } = await supabase
             .from("partners")
-            .select("id, name, email, partner_token, commission_percentage, partner_type")
+            .select("id, name, email, partner_token, commission_percentage, partner_type, map_tenant_slug")
             .eq("id", impersonatePartnerId)
             .single();
 
