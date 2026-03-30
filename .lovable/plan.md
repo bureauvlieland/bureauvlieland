@@ -1,55 +1,24 @@
 
 
-## Plan: Fix — Goedgekeurd items tonen nog steeds "klik op Akkoord" hint
+## Plan: Klant-akkoord zichtbaar maken in admin overzicht
 
 ### Probleem
-Wanneer een klant in quote-modus op "Akkoord" klikt, wordt `customer_approved_at` gezet. Maar:
-1. Het blauwe hint-blok ("klik op Akkoord om te boeken") verdwijnt niet — het controleert `customer_accepted_at` (een ander veld)
-2. De partner ziet het item niet als "geaccepteerd" — de partner portal leidt de effectieve status af uit `customer_accepted_at`
-3. De Akkoord-knop verdwijnt wel (via `isQuoteItemAwaitingCustomerApproval`), maar de visuele inconsistentie blijft
-
-### Oorzaak
-Er zijn twee aparte velden: `customer_accepted_at` (niet-quote flow) en `customer_approved_at` (quote flow). De `needsCustomerAction` logica en de partner portal kijken alleen naar `customer_accepted_at`.
+In de admin-detailpagina tonen items met status "confirmed" dezelfde badge, ongeacht of de klant al akkoord heeft gegeven. De Watertaxi (partner bevestigd, klant nog niet akkoord) en de 4x4 Terreinwagen (partner bevestigd, klant akkoord) zien er identiek uit.
 
 ### Oplossing
-Bij het goedkeuren van een quote-item moet ook `customer_accepted_at` gezet worden zodat de rest van de applicatie (partner portal, admin, blauwe hint) correct reageert.
+In de status-kolom van de items-tabel op `AdminRequestDetail.tsx` een visuele indicator toevoegen wanneer de klant akkoord heeft gegeven (`customer_accepted_at` of `customer_approved_at` is gezet).
+
+**Wat verandert:**
+- Items waar de klant akkoord heeft gegeven krijgen een extra groene badge/indicator "Klant akkoord" onder of naast de bestaande status-badge
+- Items waar de klant nog geen akkoord heeft gegeven maar de partner wel heeft bevestigd, krijgen een subtiele amber-indicator "Wacht op klant" (alleen bij confirmed/alternative status)
+
+Dit geldt voor zowel de quote-modus tabel als de reguliere tabel.
 
 ### Wijzigingen
 
-**1. Edge function `approve-quote-item/index.ts`**
-In het non-admin_override pad: naast `customer_approved_at` ook `customer_accepted_at` meezetten in de update payload.
-
-```ts
-// Was:
-{ customer_approved_at: approvalTimestamp, updated_at: approvalTimestamp }
-// Wordt:
-{ customer_approved_at: approvalTimestamp, customer_accepted_at: approvalTimestamp, updated_at: approvalTimestamp }
-```
-
-Idem voor het admin_override pad.
-
-**2. Customer portal `CustomerProgramItem.tsx`**
-De `needsCustomerAction` check uitbreiden met `customer_approved_at` als extra veiligheid (belt-and-suspenders):
-
-```ts
-const needsCustomerAction = !isSelfArranged 
-  && (item.status === "confirmed" || item.status === "alternative") 
-  && !item.customer_accepted_at 
-  && !item.customer_approved_at;
-```
-
-### Effect
-- Blauwe hint verdwijnt direct na akkoord
-- Partner portal toont item als "Geaccepteerd"
-- Admin ziet correcte status
-- Bestaande niet-quote items blijven ongewijzigd
-
-### Bestanden
-
 | Bestand | Actie |
 |---|---|
-| `supabase/functions/approve-quote-item/index.ts` | `customer_accepted_at` meezetten |
-| `src/components/customer-portal/CustomerProgramItem.tsx` | `needsCustomerAction` check uitbreiden |
+| `src/pages/admin/AdminRequestDetail.tsx` | Na de status-badge een "Klant akkoord" of "Wacht op klant" indicator tonen op basis van `customer_accepted_at` / `customer_approved_at` |
 
-Twee kleine wijzigingen, geen migratie nodig.
+Eén bestand, kleine toevoeging in de status-cel van beide tabel-varianten (quote-modus en regulier).
 
