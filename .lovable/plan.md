@@ -1,34 +1,55 @@
 
 
-## Plan: Fix chathistorie niet zichtbaar in accommodation chat
+## Plan: Fix — Goedgekeurd items tonen nog steeds "klik op Akkoord" hint
 
 ### Probleem
-Het bericht is succesvol opgeslagen in de database, maar de UI toont "Nog geen berichten" door twee timing-problemen in `useAccommodationChat.ts`:
+Wanneer een klant in quote-modus op "Akkoord" klikt, wordt `customer_approved_at` gezet. Maar:
+1. Het blauwe hint-blok ("klik op Akkoord om te boeken") verdwijnt niet — het controleert `customer_accepted_at` (een ander veld)
+2. De partner ziet het item niet als "geaccepteerd" — de partner portal leidt de effectieve status af uit `customer_accepted_at`
+3. De Akkoord-knop verdwijnt wel (via `isQuoteItemAwaitingCustomerApproval`), maar de visuele inconsistentie blijft
 
-1. **Na eerste bericht:** `setConversationId()` wordt aangeroepen vóórdat het bericht is ingevoegd. React kan de re-render (en dus `loadMessages`) uitvoeren vóór de insert klaar is → 0 berichten gevonden. De realtime subscription is op dat moment ook nog niet actief.
-
-2. **Bij heropenen sheet:** De `findConversation` query werkt correct, maar na het laden van berichten wordt geen optimistische update gedaan als berichten via `sendMessage` worden verstuurd.
+### Oorzaak
+Er zijn twee aparte velden: `customer_accepted_at` (niet-quote flow) en `customer_approved_at` (quote flow). De `needsCustomerAction` logica en de partner portal kijken alleen naar `customer_accepted_at`.
 
 ### Oplossing
-Twee aanpassingen in `src/hooks/useAccommodationChat.ts`:
+Bij het goedkeuren van een quote-item moet ook `customer_accepted_at` gezet worden zodat de rest van de applicatie (partner portal, admin, blauwe hint) correct reageert.
 
-**A) Optimistische message-update na insert**
-Na het succesvol inserten van een bericht, dit direct toevoegen aan de lokale `messages` state (zonder te wachten op realtime of een re-fetch):
+### Wijzigingen
+
+**1. Edge function `approve-quote-item/index.ts`**
+In het non-admin_override pad: naast `customer_approved_at` ook `customer_accepted_at` meezetten in de update payload.
 
 ```ts
-const { data: newMsg } = await supabase.from("chat_messages").insert({...}).select().single();
-if (newMsg) {
-  setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
-}
+// Was:
+{ customer_approved_at: approvalTimestamp, updated_at: approvalTimestamp }
+// Wordt:
+{ customer_approved_at: approvalTimestamp, customer_accepted_at: approvalTimestamp, updated_at: approvalTimestamp }
 ```
 
-**B) Volgorde fixen bij nieuwe conversatie**
-Bij het aanmaken van een nieuwe conversatie: eerst het bericht inserten, dan pas `setConversationId` aanroepen. Of: de volgorde behouden maar na alle inserts een expliciete `loadMessages` doen.
+Idem voor het admin_override pad.
 
-### Bestand
+**2. Customer portal `CustomerProgramItem.tsx`**
+De `needsCustomerAction` check uitbreiden met `customer_approved_at` als extra veiligheid (belt-and-suspenders):
+
+```ts
+const needsCustomerAction = !isSelfArranged 
+  && (item.status === "confirmed" || item.status === "alternative") 
+  && !item.customer_accepted_at 
+  && !item.customer_approved_at;
+```
+
+### Effect
+- Blauwe hint verdwijnt direct na akkoord
+- Partner portal toont item als "Geaccepteerd"
+- Admin ziet correcte status
+- Bestaande niet-quote items blijven ongewijzigd
+
+### Bestanden
+
 | Bestand | Actie |
 |---|---|
-| `src/hooks/useAccommodationChat.ts` | Optimistische updates + volgorde fix |
+| `supabase/functions/approve-quote-item/index.ts` | `customer_accepted_at` meezetten |
+| `src/components/customer-portal/CustomerProgramItem.tsx` | `needsCustomerAction` check uitbreiden |
 
-Eén bestand, kleine wijziging.
+Twee kleine wijzigingen, geen migratie nodig.
 
