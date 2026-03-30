@@ -129,7 +129,7 @@ const PartnerAccommodationContent = () => {
       // Admin impersonating - fetch the partner token and name
       const { data: impersonatedPartner } = await supabase
         .from("partners")
-        .select("partner_token, name, accommodation_description")
+        .select("partner_token, name, email, contact_email, accommodation_description")
         .eq("id", currentPartnerId)
         .maybeSingle();
       if (impersonatedPartner) {
