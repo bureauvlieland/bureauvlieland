@@ -1,64 +1,57 @@
 
 
-## Plan: Partner "Over ons" profiel + foto-upload bij kamersoorten
+## Plan: MAP Planning integreren in Partner Portal
+
+### Doel
+Partners met een MijnActiviteitenPlanner (MAP) koppeling krijgen een planningsoverzicht in hun partnerportaal. Hierin zien ze hun MAP-activiteiten (bezetting) naast de maatwerkaanvragen van Bureau Vlieland, zodat ze in één oogopslag kunnen beoordelen of ze een aanvraag kunnen bevestigen.
 
 ### Huidige situatie
-- Partners hebben basale bedrijfsgegevens (naam, adres, KvK) en een korte `accommodation_description` tekst
-- Kamersoorten (`partner_room_types`) hebben een `images` JSONB-kolom maar er is geen upload-UI
-- Er is geen "Over ons" sectie met bedrijfsfoto's, beschrijving, of locatie
-- De `partners` tabel heeft al `image_url` (niet gebruikt in portaal) en locatievelden ontbreken
+- 3 partners hebben een `map_tenant_slug` + `map_api_key`
+- De `map-proxy` edge function haalt MAP data op (activiteiten + activiteitstypes)
+- `useMapActivities` hook bestaat al voor de admin/configurator
+- Het partner dashboard toont nu Bureau Vlieland items + aankomende activiteiten, maar geen MAP-data
 
 ### Voorstel
 
-**Fase 1: Database — nieuwe velden op `partners` tabel**
+**Nieuwe pagina: `/partner/planning`**
 
-Migratie met nieuwe kolommen:
-- `about_text` (text) — uitgebreide "Over ons" tekst
-- `gallery_images` (jsonb, default `[]`) — array van `{ url, alt? }` objecten
-- `location_lat` (numeric) — breedtegraad
-- `location_lng` (numeric) — lengtegraad
-- `location_description` (text) — korte locatiebeschrijving ("Direct aan het strand")
-- `website_url` (text) — website van de partner
-- `highlight_features` (jsonb, default `[]`) — USP's/kenmerken ("Eigen restaurant", "Fietsverhuur")
+Een gecombineerd weekoverzicht (agenda-stijl) dat twee datastromen samenvoegt:
 
-**Fase 2: Storage bucket voor partner-afbeeldingen**
+1. **MAP-activiteiten** — via bestaande `map-proxy`, gefilterd op de partner's eigen `map_tenant_slug`
+2. **Bureau Vlieland items** — de bestaande `PartnerItem[]` uit het dashboard (bevestigd/pending)
 
-Nieuwe storage bucket `partner-images` (public) met RLS:
-- Partners mogen uploaden/verwijderen in hun eigen map (`{partner_id}/...`)
-- Publiek leesbaar
+De weergave is een **weekkalender** met datumnavigatie, waarin per dag/tijdslot zichtbaar is:
+- MAP-activiteiten (kleur A) met bezetting (`NumberOfPersonsBooked / MaxPersons`)
+- Bureau Vlieland aanvragen (kleur B) met status-badge (pending/bevestigd/akkoord)
 
-**Fase 3: Partner Settings — "Over ons" sectie**
+Partners kunnen direct vanuit de planning doorklikken naar een aanvraag om deze te bevestigen/afwijzen.
 
-In `PartnerSettingsForm.tsx` een nieuwe Card toevoegen:
-- **Over ons tekst** — Textarea voor uitgebreide beschrijving
-- **Website URL** — Input
-- **Kenmerken/USP's** — Tags die partner kan toevoegen/verwijderen
-- **Locatie** — Lat/lng velden (of adres-gebaseerd)
-- **Foto's** — Upload-grid (max ~8 foto's), drag-and-drop, verwijderen
-  - Uploadt naar `partner-images/{partner_id}/`
-  - Slaat URLs op in `gallery_images` JSONB
+**Navigatie**
+- Nieuw menu-item "Planning" in `PartnerLayout` sidebar, alleen zichtbaar voor partners met `map_tenant_slug`
+- Icoon: `CalendarDays`
+- Geplaatst na "Overzicht"
 
-**Fase 4: Kamertype foto-upload**
+### Technische details
 
-In `PartnerRoomTypeSheet.tsx`:
-- Foto-uploadsectie toevoegen (max ~4 per kamertype)
-- Uploadt naar `partner-images/{partner_id}/rooms/`
-- Slaat op in de bestaande `images` JSONB-kolom op `partner_room_types`
-
-**Fase 5: Weergave aan de voorkant**
-
-Nog niet in deze iteratie — eerst de data laten vullen door partners. Daarna gebruiken bij:
-- Configurator (BuildingBlockCard)
-- Klantportaal (programma-presentatie)
-- Offertes (PDF)
-
-### Bestanden
+**Bestanden**
 
 | Bestand | Wat |
 |---|---|
-| Database migratie | Kolommen + storage bucket + RLS |
-| `src/components/partner-portal/PartnerSettingsForm.tsx` | "Over ons" Card met tekst, website, kenmerken, foto-upload |
-| `src/components/partner-portal/PartnerRoomTypeSheet.tsx` | Foto-uploadsectie voor kamertypes |
-| `src/components/partner-portal/PartnerImageUpload.tsx` (nieuw) | Herbruikbare foto-upload component |
-| `src/types/partner.ts` | Nieuwe velden toevoegen aan Partner interface |
+| `src/pages/PartnerPlanning.tsx` (nieuw) | Pagina met weekoverzicht, datumnavigatie, gecombineerde data |
+| `src/components/partner-portal/PartnerPlanningCalendar.tsx` (nieuw) | Weekkalender component die MAP + BV items rendert |
+| `src/components/partner-portal/PartnerLayout.tsx` | Menu-item "Planning" toevoegen (conditoneel op `map_tenant_slug`) |
+| `src/App.tsx` | Route `/partner/planning` toevoegen |
+
+**Data ophalen**
+- Partner's `map_tenant_slug` ophalen uit de `partners` tabel (al beschikbaar via auth)
+- MAP activiteiten: hergebruik `useMapActivities` hook met partner's eigen slug + partnerId
+- BV items: hergebruik bestaande dashboard fetch of directe query op `program_request_items`
+
+**Weergave**
+- Weekweergave met dag-kolommen (ma-zo)
+- Vorige/volgende week navigatie
+- Per activiteit: naam, tijdstip, bezetting
+- Bureau Vlieland items met status-kleur en klik-actie
+- Legenda voor MAP vs Bureau Vlieland items
+- Samenvattingsrij bovenaan: totaal geboekt per dag
 
