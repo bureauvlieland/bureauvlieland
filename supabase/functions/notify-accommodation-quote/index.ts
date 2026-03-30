@@ -297,6 +297,18 @@ Deno.serve(async (req) => {
       .neq("status", "done");
     console.log(`Resolved quote_pending_partner todo for quote ${quoteId}`);
 
+    // Create admin_todo: new accommodation quote received from partner
+    await supabase.from("admin_todos").insert({
+      title: `Nieuwe logiesofferte: ${partner.name} voor ${request.customer_name}`,
+      description: `${partner.name} heeft een offerte ingediend voor ${quote.accommodation_name} (${formatCurrencyNL(grandTotal)}). Beoordeel en stuur eventueel door naar de klant.`,
+      priority: "high",
+      auto_type: "forward_accommodation_quote",
+      auto_entity_id: quoteId,
+      related_request_id: request.linked_program_id || null,
+      related_partner_id: partner.id,
+    });
+    console.log(`Created forward_accommodation_quote todo for quote ${quoteId}`);
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
