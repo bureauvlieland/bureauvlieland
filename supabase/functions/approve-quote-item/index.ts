@@ -193,6 +193,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
       : {
           customer_approved_at: approvalTimestamp,
+          customer_accepted_at: approvalTimestamp,
           updated_at: approvalTimestamp,
         };
 
