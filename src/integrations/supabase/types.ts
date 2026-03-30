@@ -219,6 +219,7 @@ export type Database = {
           quote_attachment_path: string | null
           quote_external_url: string | null
           request_id: string
+          reset_reason: string | null
           room_configuration: Json | null
           selected_at: string | null
           status: string
@@ -260,6 +261,7 @@ export type Database = {
           quote_attachment_path?: string | null
           quote_external_url?: string | null
           request_id: string
+          reset_reason?: string | null
           room_configuration?: Json | null
           selected_at?: string | null
           status?: string
@@ -301,6 +303,7 @@ export type Database = {
           quote_attachment_path?: string | null
           quote_external_url?: string | null
           request_id?: string
+          reset_reason?: string | null
           room_configuration?: Json | null
           selected_at?: string | null
           status?: string

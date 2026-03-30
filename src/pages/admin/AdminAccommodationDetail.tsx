@@ -430,8 +430,9 @@ export default function AdminAccommodationDetail() {
             });
           }
         }
-        // Reset quotes including forwarded_at
-        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, forwarded_at: null, updated_at: new Date().toISOString() }).in("id", selectedQuoteIds);
+        // Reset quotes including forwarded_at, set reset_reason
+        const resetReason = `Aantal gasten gewijzigd: ${request?.number_of_guests} → ${newGuests}`;
+        await supabase.from("accommodation_quotes").update({ status: "pending", submitted_at: null, selected_at: null, forwarded_at: null, reset_reason: resetReason, updated_at: new Date().toISOString() } as any).in("id", selectedQuoteIds);
       }
       if (linkedProgram) {
         const resetPartnerNames = quotes
@@ -455,14 +456,31 @@ export default function AdminAccommodationDetail() {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData?.session?.access_token;
           if (token) {
+            const emailSubject = `Wijziging aantal gasten — ${request?.customer_name || "Klant"}`;
+            const emailBody = `Beste partner,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWij vragen u vriendelijk een aangepaste offerte in te dienen via het partnerportaal.`;
             await supabase.functions.invoke("send-accommodation-quote-request", {
               body: {
                 request_id: id,
                 partner_ids: resetPartnerIds,
-                email_subject: `Wijziging aantal gasten — ${request?.customer_name || "Klant"}`,
-                email_body: `Beste partner,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWij vragen u vriendelijk een aangepaste offerte in te dienen via het partnerportaal.`,
+                email_subject: emailSubject,
+                email_body: emailBody,
               },
               headers: { Authorization: `Bearer ${token}` },
+            });
+
+            // Log to communications timeline
+            const resetPartnerNames = quotes
+              ?.filter((q) => resetPartnerIds.includes(q.partner_id))
+              .map((q) => q.partner?.name || "Onbekend")
+              .join(", ") || "";
+            await supabase.from("project_communications").insert({
+              accommodation_id: id,
+              request_id: request?.linked_program_id || null,
+              communication_type: "email",
+              direction: "outbound",
+              subject: emailSubject,
+              content: `Gastenwijziging (${request?.number_of_guests} → ${newGuests}) gemeld aan: ${resetPartnerNames}. Offertes gereset naar "wachtend".`,
+              contact_name: resetPartnerNames,
             });
           }
         }
@@ -735,9 +753,9 @@ export default function AdminAccommodationDetail() {
                           {/* Price */}
                           {quote.price_total > 0 && (
                             <div className="flex items-baseline gap-2">
-                              <span className="text-lg font-bold text-foreground">€{quote.price_total.toLocaleString()}</span>
+                              <span className="text-lg font-bold text-foreground">€{quote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               {quote.price_per_person_per_night && (
-                                <span className="text-xs text-muted-foreground">€{quote.price_per_person_per_night} p.p.p.n.</span>
+                                <span className="text-xs text-muted-foreground">€{Number(quote.price_per_person_per_night).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.p.n.</span>
                               )}
                             </div>
                           )}
@@ -787,10 +805,10 @@ export default function AdminAccommodationDetail() {
                               </Button>
                             )}
                             {quote.status === "submitted" && (quote as any).forwarded_at && (
-                              <Badge variant="outline" className="text-xs h-7 px-2">
-                                <Check className="h-3 w-3 mr-1" />
-                                Doorgestuurd
-                              </Badge>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setForwardQuoteId(quote.id)}>
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Opnieuw doorsturen
+                              </Button>
                             )}
                             {quote.status === "submitted" && (
                               <AlertDialog>

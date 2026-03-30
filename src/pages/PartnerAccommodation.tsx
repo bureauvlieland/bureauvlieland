@@ -259,7 +259,9 @@ const PartnerAccommodationContent = () => {
           quote_external_url: quoteData.quoteExternalUrl || null,
           status: "submitted",
           submitted_at: new Date().toISOString(),
-        })
+          forwarded_at: null,
+          reset_reason: null,
+        } as any)
         .eq("id", selectedRequest.quote.id);
 
       if (error) throw error;

@@ -1,0 +1,1 @@
+ALTER TABLE public.accommodation_quotes ADD COLUMN reset_reason text;
