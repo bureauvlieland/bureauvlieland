@@ -112,22 +112,26 @@ export function useAdminChat() {
     return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
-  // Unread count
+  // Unread count – count distinct conversations with unread visitor messages
+  const [unreadConversationIds, setUnreadConversationIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const fetchUnread = async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from("chat_messages")
-        .select("*", { count: "exact", head: true })
+        .select("conversation_id")
         .eq("sender_type", "visitor")
         .is("read_at", null);
-      setUnreadCount(count || 0);
+      const ids = new Set((data || []).map((r: { conversation_id: string }) => r.conversation_id));
+      setUnreadConversationIds(ids);
+      setUnreadCount(ids.size);
     };
     fetchUnread();
 
     const channel = supabase
       .channel("admin-unread-count")
       .on("postgres_changes", {
-        event: "INSERT",
+        event: "*",
         schema: "public",
         table: "chat_messages",
       }, () => fetchUnread())
@@ -243,6 +247,7 @@ export function useAdminChat() {
     setActiveConversationId,
     messages,
     unreadCount,
+    unreadConversationIds,
     isOnline,
     statusFilter,
     setStatusFilter,

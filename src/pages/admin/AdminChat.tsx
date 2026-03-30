@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useAdminChat, type ChatStatusFilter } from "@/hooks/useAdminChat";
+import { formatNL } from "@/lib/dateFormat";
+import { isToday, isYesterday, isSameDay } from "date-fns";
 import { useConversationProjects } from "@/hooks/useConversationProjects";
 import { ChatConversationItem } from "@/components/admin/chat/ChatConversationItem";
 import { ChatMessageBubble } from "@/components/admin/chat/ChatMessageBubble";
@@ -38,6 +40,7 @@ const AdminChat = () => {
     setActiveConversationId,
     messages,
     unreadCount,
+    unreadConversationIds,
     isOnline,
     statusFilter,
     setStatusFilter,
@@ -91,10 +94,15 @@ const AdminChat = () => {
     }
   };
 
-  // Count conversations per tab for badges
-  const waitingCount = conversations.filter(
-    (c) => c.status === "waiting" || c.status === "active"
-  ).length;
+  // Inbox badge = unread conversations (not total active)
+  const inboxUnreadCount = unreadConversationIds.size;
+
+  // Helper for date separators
+  const getDateLabel = (date: Date): string => {
+    if (isToday(date)) return "Vandaag";
+    if (isYesterday(date)) return "Gisteren";
+    return formatNL(date, "EEEE d MMMM yyyy");
+  };
   
 
   return (
@@ -132,9 +140,9 @@ const AdminChat = () => {
               <TabsList className="w-full">
                 <TabsTrigger value="waiting" className="flex-1 text-xs gap-1">
                   Inbox
-                  {waitingCount > 0 && (
+                  {inboxUnreadCount > 0 && (
                     <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
-                      {waitingCount}
+                      {inboxUnreadCount}
                     </Badge>
                   )}
                 </TabsTrigger>
@@ -244,9 +252,26 @@ const AdminChat = () => {
 
               {/* Messages */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.map((msg) => (
-                  <ChatMessageBubble key={msg.id} message={msg} />
-                ))}
+                {messages.map((msg, idx) => {
+                  const msgDate = new Date(msg.created_at);
+                  const prevDate = idx > 0 ? new Date(messages[idx - 1].created_at) : null;
+                  const showDateSep = !prevDate || !isSameDay(msgDate, prevDate);
+
+                  return (
+                    <div key={msg.id}>
+                      {showDateSep && (
+                        <div className="flex items-center gap-3 my-4">
+                          <div className="flex-1 h-px bg-border" />
+                          <span className="text-[11px] text-muted-foreground font-medium capitalize">
+                            {getDateLabel(msgDate)}
+                          </span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                      )}
+                      <ChatMessageBubble message={msg} />
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Input */}
