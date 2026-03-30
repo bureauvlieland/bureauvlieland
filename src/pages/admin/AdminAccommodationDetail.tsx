@@ -76,6 +76,7 @@ import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicati
 import { AdminAccommodationQuoteSheet } from "@/components/admin/AdminAccommodationQuoteSheet";
 import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodationGuestsDialog";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
+import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodationChatSheet";
 
 interface LinkedProgram {
   id: string;
