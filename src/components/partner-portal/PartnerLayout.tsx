@@ -30,6 +30,7 @@ import {
   UtensilsCrossed,
   DoorOpen,
   CalendarDays,
+  UserCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
