@@ -572,7 +572,7 @@ const PartnerDashboardContent = () => {
   // Waiting on customer: confirmed/alternative WITHOUT customer_accepted_at
   const waitingOnCustomer =
     data.items.filter((i) => 
-      (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at
+      (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at && !i.customer_approved_at
     ).length +
     accommodationQuotes.filter((q) => q.status === "submitted").length;
   
