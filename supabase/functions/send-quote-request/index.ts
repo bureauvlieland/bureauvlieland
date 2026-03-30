@@ -151,6 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const rawData = await req.json();
+    const origin = rawData.origin || req.headers.get("origin") || "";
     
     // Validate with Zod schema
     const validationResult = QuoteRequestSchema.safeParse(rawData);
