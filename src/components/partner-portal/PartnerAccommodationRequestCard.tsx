@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,10 @@ import {
   X,
   Send,
   Eye,
+  MessageSquare,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES } from "@/types/accommodation";
+import { PartnerAccommodationChatSheet } from "./PartnerAccommodationChatSheet";
 
 const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Te beantwoorden", variant: "secondary" },

@@ -1311,6 +1311,19 @@ export default function AdminAccommodationDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Accommodation Chat Sheet */}
+      {chatQuote && id && (
+        <AdminAccommodationChatSheet
+          open={!!chatQuote}
+          onOpenChange={(open) => { if (!open) setChatQuote(null); }}
+          accommodationId={id}
+          quoteId={chatQuote.id}
+          partnerId={chatQuote.partnerId}
+          partnerName={chatQuote.partnerName}
+          partnerEmail={chatQuote.partnerEmail}
+        />
+      )}
     </AdminLayout>
   );
 }
