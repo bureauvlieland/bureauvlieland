@@ -203,6 +203,13 @@ export const PartnerSettingsForm = () => {
           booking_contact_phone: formData.booking_contact_phone || null,
           availability_notes: formData.availability_notes || null,
           accommodation_description: formData.accommodation_description || null,
+          about_text: formData.about_text || null,
+          website_url: formData.website_url || null,
+          location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
+          location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
+          location_description: formData.location_description || null,
+          gallery_images: galleryImages,
+          highlight_features: highlightFeatures,
         } as any)
         .eq("id", partner.id);
 
