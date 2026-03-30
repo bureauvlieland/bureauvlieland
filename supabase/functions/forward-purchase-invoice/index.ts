@@ -53,7 +53,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { invoiceId, includePdf } = await req.json();
+    const reqBody = await req.json();
+    const { invoiceId, includePdf } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!invoiceId) {
       return new Response(
