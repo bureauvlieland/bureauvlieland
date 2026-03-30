@@ -673,6 +673,63 @@ Deno.serve(async (req) => {
         new_value: { status: "accepted", quoted_price: item.quoted_price },
       });
 
+      // Create admin_todo for bureau notification
+      await supabase.from("admin_todos").insert({
+        title: `Klant ${program.customer_name} akkoord op "${item.block_name}"`,
+        description: `De klant heeft het onderdeel "${item.block_name}" geaccepteerd${item.quoted_price ? ` (€${Number(item.quoted_price).toFixed(2)})` : ""}.`,
+        priority: "normal",
+        auto_type: "partner_status_update",
+        auto_entity_id: acceptItemId,
+        related_request_id: program.id,
+        related_partner_id: item.provider_id !== "bureau" ? item.provider_id : null,
+      });
+
+      // Check if ALL non-cancelled items are now accepted
+      const { data: allItems } = await supabase
+        .from("program_request_items")
+        .select("id, status")
+        .eq("request_id", program.id)
+        .neq("status", "cancelled");
+
+      const allAccepted = allItems && allItems.length > 0 && allItems.every((i: any) => i.status === "accepted");
+      if (allAccepted) {
+        console.log(`All items accepted for program ${program.id}`);
+        
+        // Create admin_todo
+        await supabase.from("admin_todos").insert({
+          title: `Alle onderdelen akkoord: ${program.customer_name}`,
+          description: `Alle ${allItems.length} onderdelen zijn geaccepteerd door de klant. Programma kan definitief worden afgerond.`,
+          priority: "high",
+          auto_type: "quote_ready_to_send",
+          auto_entity_id: program.id,
+          related_request_id: program.id,
+        });
+
+        // Send notification email to bureau
+        const bureauEmail = "erwin@bureauvlieland.nl";
+        const allAcceptedSubject = `${subjectPrefix}Alle onderdelen akkoord: ${program.customer_name}`;
+        emailMessages.push({
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
+          Subject: allAcceptedSubject,
+          HTMLPart: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #16a34a; padding: 24px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">✅ Alle onderdelen akkoord</h1>
+              </div>
+              <div style="padding: 32px;">
+                <p>Klant <strong>${sanitizeHtml(program.customer_name)}</strong> heeft alle ${allItems.length} onderdelen geaccepteerd.</p>
+                <p>Het programma kan nu definitief worden afgerond.</p>
+                <p style="text-align: center; margin: 24px 0;">
+                  <a href="https://bureauvlieland.nl/admin/aanvragen/${program.id}" style="display: inline-block; background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk project →</a>
+                </p>
+                <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+              </div>
+            </div>
+          `,
+        });
+      }
+
       console.log(`Customer accepted item ${acceptItemId}`);
     }
 
