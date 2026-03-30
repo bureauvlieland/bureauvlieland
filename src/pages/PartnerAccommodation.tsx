@@ -567,6 +567,9 @@ const PartnerAccommodationContent = () => {
                     key={request.id}
                     request={request}
                     quote={request.quote}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
