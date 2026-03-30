@@ -1344,14 +1344,12 @@ const AdminRequestDetail = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Dag</TableHead>
                           <TableHead>Activiteit</TableHead>
                           <TableHead>Partner</TableHead>
-                          <TableHead>Gefactureerd door</TableHead>
                           <TableHead>Tijd</TableHead>
                           {isQuoteMode ? (
                             <>
@@ -1371,346 +1369,373 @@ const AdminRequestDetail = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.filter(item => item.day_index >= 0).map((item) => {
-                          const statusInfo = itemStatusConfig[item.status];
-                          const isBureauInvoiced = request?.invoicing_mode === "bureau_central" || item.block_type === "bureau";
-                          return (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-medium">
-                                Dag {item.day_index + 1}
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <div className="font-medium">{item.block_name}</div>
-                                  <div className="text-xs text-slate-500">{item.block_category}</div>
-                                  {item.admin_price_notes && (
-                                    <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Link 
-                                  to={`/admin/partners/${item.provider_id}`}
-                                  className="text-primary hover:underline"
-                                >
-                                  {item.provider_name}
-                                </Link>
-                              </TableCell>
-                              <TableCell>
-                                {isBureauInvoiced ? (
-                                  <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary whitespace-nowrap">
-                                    <Building2 className="h-3 w-3" />
-                                    Bureau → Klant
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="gap-1 border-slate-300 bg-slate-50 text-slate-700 whitespace-nowrap">
-                                    <Users className="h-3 w-3" />
-                                    Partner → Klant
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {(() => {
-                                  const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
-                                  if (!activeTime) return "-";
-                                  const isConfirmed = !!item.confirmed_time;
-                                  const isProposal = !item.confirmed_time && !!item.proposed_time;
-                                  const showOriginal = (isConfirmed || isProposal) && item.preferred_time && activeTime !== item.preferred_time;
-                                  const isEditingTime = editingTimeItemId === item.id;
+                        {(() => {
+                          const programItems = items.filter(item => item.day_index >= 0);
+                          const dayGroups = programItems.reduce<Record<number, typeof programItems>>((acc, item) => {
+                            if (!acc[item.day_index]) acc[item.day_index] = [];
+                            acc[item.day_index].push(item);
+                            return acc;
+                          }, {});
+                          const sortedDays = Object.keys(dayGroups).map(Number).sort((a, b) => a - b);
+                          const dates = (request.selected_dates as string[]) || [];
+                          const totalColumns = isQuoteMode ? 7 : 7;
 
-                                  const handleConfirmTime = async (time: string) => {
-                                    const { error } = await supabase
-                                      .from("program_request_items")
-                                      .update({
-                                        confirmed_time: time,
-                                        status: "confirmed",
-                                        status_note: `Tijd ${time} bevestigd door admin`,
-                                        status_updated_at: new Date().toISOString(),
-                                      })
-                                      .eq("id", item.id);
-                                    if (error) {
-                                      toast.error("Fout bij bevestigen tijd");
-                                    } else {
-                                      toast.success(`Tijd ${time} bevestigd`);
-                                      setEditingTimeItemId(null);
-                                      setEditingTimeValue("");
-                                      fetchRequestData();
-                                    }
-                                  };
+                          return sortedDays.flatMap((dayIdx) => {
+                            const dayDate = dates[dayIdx] ? format(new Date(dates[dayIdx]), "EEE d MMM", { locale: nl }) : null;
+                            const dayLabel = `Dag ${dayIdx + 1}${dayDate ? ` — ${dayDate}` : ""}`;
+                            const dayItems = dayGroups[dayIdx];
 
-                                  return (
-                                    <div className="space-y-0.5">
-                                      <div className="flex items-center gap-1">
-                                        <span className={cn(
-                                          "font-medium",
-                                          isConfirmed && "text-green-700",
-                                          isProposal && "text-orange-600",
-                                        )}>
-                                          {activeTime}
-                                          {isProposal && <span className="text-xs ml-1">(voorstel)</span>}
-                                        </span>
-                                        {isProposal && (
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                  onClick={() => handleConfirmTime(item.proposed_time!)}
-                                                >
-                                                  <Check className="h-3.5 w-3.5" />
-                                                </Button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>Accepteer {item.proposed_time}</TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        )}
-                                        {!isConfirmed && (
-                                          <Popover open={isEditingTime} onOpenChange={(open) => {
-                                            if (open) {
-                                              setEditingTimeItemId(item.id);
-                                              setEditingTimeValue(item.proposed_time || item.preferred_time || "");
-                                            } else {
-                                              setEditingTimeItemId(null);
-                                              setEditingTimeValue("");
-                                            }
-                                          }}>
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <PopoverTrigger asChild>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="icon"
-                                                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                                    >
-                                                      <Clock className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                  </PopoverTrigger>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Andere tijd instellen</TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                            <PopoverContent className="w-48 p-3" align="start">
-                                              <div className="space-y-2">
-                                                <label className="text-xs font-medium">Bevestigde tijd</label>
-                                                <Input
-                                                  type="time"
-                                                  value={editingTimeValue}
-                                                  onChange={(e) => setEditingTimeValue(e.target.value)}
-                                                  className="h-8"
-                                                />
-                                                <Button
-                                                  size="sm"
-                                                  className="w-full"
-                                                  disabled={!editingTimeValue}
-                                                  onClick={() => handleConfirmTime(editingTimeValue)}
-                                                >
-                                                  Bevestigen
-                                                </Button>
-                                              </div>
-                                            </PopoverContent>
-                                          </Popover>
-                                        )}
-                                      </div>
-                                      {showOriginal && (
-                                        <div className="text-xs text-muted-foreground line-through">{item.preferred_time}</div>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
-                              </TableCell>
-                              
-                              {isQuoteMode ? (
-                                <>
-                                   <TableCell>
-                                    <div className="space-y-1">
-                                      <AdminItemQuoteStatusSelect
-                                        status={item.item_quote_status}
-                                        onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
-                                      />
-                                      {(item.customer_accepted_at || item.customer_approved_at) ? (
-                                        <Badge variant="outline" className="gap-1 text-xs border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
-                                          <CheckCircle2 className="h-3 w-3" />
-                                          Klant akkoord
-                                        </Badge>
-                                      ) : (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification ? (
-                                        <Badge variant="outline" className="gap-1 text-xs border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
-                                          <Clock className="h-3 w-3" />
-                                          Wacht op klant
-                                        </Badge>
-                                      ) : null}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      className={cn(
-                                        "w-16 h-8 text-sm text-center rounded border bg-background px-1",
-                                        item.override_people != null && item.override_people !== request.number_of_people
-                                          ? "border-orange-400 text-orange-700 font-medium"
-                                          : "border-input"
-                                      )}
-                                      placeholder={String(request.number_of_people)}
-                                      defaultValue={item.override_people ?? ""}
-                                      onBlur={async (e) => {
-                                        const val = e.target.value ? parseInt(e.target.value, 10) : null;
-                                        if (val === item.override_people) return;
-                                        const { error } = await supabase
-                                          .from("program_request_items")
-                                          .update({ override_people: val })
-                                          .eq("id", item.id);
-                                        if (error) {
-                                          toast.error("Fout bij opslaan deelnemers");
-                                        } else {
-                                          toast.success("Deelnemers bijgewerkt");
-                                          fetchRequestData();
-                                        }
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <AdminQuotePriceEditor
-                                      originalPrice={item.quoted_price}
-                                      overridePrice={item.admin_price_override}
-                                      priceNotes={item.admin_price_notes}
-                                      numberOfPeople={item.override_people ?? request.number_of_people}
-                                      priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
-                                      onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
-                                    />
-                                  </TableCell>
-                                   <TableCell>
-                                    <div className="flex items-center gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setEditingItem(item)}
-                                        className="h-8 w-8"
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-destructive hover:text-destructive"
-                                        onClick={async () => {
-                                          const { error } = await supabase
-                                            .from("program_request_items")
-                                            .delete()
-                                            .eq("id", item.id);
-                                          if (!error) {
-                                            toast.success("Activiteit verwijderd");
-                                            fetchRequestData();
-                                          } else {
-                                            toast.error("Fout bij verwijderen");
-                                          }
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </>
-                              ) : (
-                                <>
-                                   <TableCell>
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        {statusIcons[item.status]}
-                                        <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                        {(() => {
-                                            if (item.skip_partner_notification) {
-                                              const phase = getItemSendPhase(item, request);
-                                              if (phase === "wacht_op_klant") return "Wacht op klant";
-                                              if (phase === "klaar_voor_partner") return "Klaar om te versturen";
-                                              
-                                            }
-                                            return statusInfo.label;
-                                          })()}
-                                        </Badge>
-                                      </div>
-                                      {(item.customer_accepted_at || item.customer_approved_at) ? (
-                                        <Badge variant="outline" className="gap-1 text-xs border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
-                                          <CheckCircle2 className="h-3 w-3" />
-                                          Klant akkoord
-                                        </Badge>
-                                      ) : (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification ? (
-                                        <Badge variant="outline" className="gap-1 text-xs border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
-                                          <Clock className="h-3 w-3" />
-                                          Wacht op klant
-                                        </Badge>
-                                      ) : null}
-                                      {item.status_note && (
-                                        <p className="text-xs text-muted-foreground mt-1">{item.status_note}</p>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    {item.quoted_price != null ? (
-                                      <span className="font-medium">
-                                        €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                                      </span>
-                                    ) : item.admin_price_override != null ? (
+                            return [
+                              <TableRow key={`day-header-${dayIdx}`} className="bg-muted/40 hover:bg-muted/40">
+                                <TableCell colSpan={totalColumns} className="py-2 px-4">
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    {dayLabel}
+                                  </span>
+                                </TableCell>
+                              </TableRow>,
+                              ...dayItems.map((item) => {
+                                const statusInfo = itemStatusConfig[item.status];
+                                const hasCustomerApproval = !!(item.customer_accepted_at || item.customer_approved_at);
+                                const showWaitingForCustomer = (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification && !hasCustomerApproval;
+                                return (
+                                  <TableRow key={item.id} className="group">
+                                    <TableCell>
                                       <div>
-                                        <span className="font-medium">
-                                          €{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground ml-1">(standaard)</span>
+                                        <div className="font-medium">{item.block_name}</div>
+                                        <div className="text-xs text-slate-500">{item.block_category}</div>
+                                        {item.admin_price_notes && (
+                                          <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
+                                        )}
                                       </div>
-                                    ) : (
-                                      <span className="text-slate-400">-</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {item.invoiced_number ? (
-                                      <div className="text-sm">
-                                        <div className="font-medium">{item.invoiced_number}</div>
-                                        <div className="text-slate-500">
-                                          €{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <span className="text-slate-400">-</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setEditingItem(item)}
-                                        className="h-8 w-8"
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link 
+                                        to={`/admin/partners/${item.provider_id}`}
+                                        className="text-primary hover:underline"
                                       >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-destructive hover:text-destructive"
-                                        onClick={async () => {
+                                        {item.provider_name}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      {(() => {
+                                        const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+                                        if (!activeTime) return "-";
+                                        const isConfirmed = !!item.confirmed_time;
+                                        const isProposal = !item.confirmed_time && !!item.proposed_time;
+                                        const showOriginal = (isConfirmed || isProposal) && item.preferred_time && activeTime !== item.preferred_time;
+                                        const isEditingTime = editingTimeItemId === item.id;
+
+                                        const handleConfirmTime = async (time: string) => {
                                           const { error } = await supabase
                                             .from("program_request_items")
-                                            .delete()
+                                            .update({
+                                              confirmed_time: time,
+                                              status: "confirmed",
+                                              status_note: `Tijd ${time} bevestigd door admin`,
+                                              status_updated_at: new Date().toISOString(),
+                                            })
                                             .eq("id", item.id);
                                           if (error) {
-                                            toast.error("Fout bij verwijderen");
+                                            toast.error("Fout bij bevestigen tijd");
                                           } else {
-                                            toast.success("Activiteit verwijderd");
+                                            toast.success(`Tijd ${time} bevestigd`);
+                                            setEditingTimeItemId(null);
+                                            setEditingTimeValue("");
                                             fetchRequestData();
                                           }
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </>
-                              )}
-                            </TableRow>
-                          );
-                        })}
+                                        };
+
+                                        return (
+                                          <div className="space-y-0.5">
+                                            <div className="flex items-center gap-1">
+                                              <span className={cn(
+                                                "font-medium",
+                                                isConfirmed && "text-green-700",
+                                                isProposal && "text-orange-600",
+                                              )}>
+                                                {activeTime}
+                                                {isProposal && <span className="text-xs ml-1">(voorstel)</span>}
+                                              </span>
+                                              {isProposal && (
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={() => handleConfirmTime(item.proposed_time!)}
+                                                      >
+                                                        <Check className="h-3.5 w-3.5" />
+                                                      </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>Accepteer {item.proposed_time}</TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              )}
+                                              {!isConfirmed && (
+                                                <Popover open={isEditingTime} onOpenChange={(open) => {
+                                                  if (open) {
+                                                    setEditingTimeItemId(item.id);
+                                                    setEditingTimeValue(item.proposed_time || item.preferred_time || "");
+                                                  } else {
+                                                    setEditingTimeItemId(null);
+                                                    setEditingTimeValue("");
+                                                  }
+                                                }}>
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <PopoverTrigger asChild>
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                                                          >
+                                                            <Clock className="h-3.5 w-3.5" />
+                                                          </Button>
+                                                        </PopoverTrigger>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>Andere tijd instellen</TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                  <PopoverContent className="w-48 p-3" align="start">
+                                                    <div className="space-y-2">
+                                                      <label className="text-xs font-medium">Bevestigde tijd</label>
+                                                      <Input
+                                                        type="time"
+                                                        value={editingTimeValue}
+                                                        onChange={(e) => setEditingTimeValue(e.target.value)}
+                                                        className="h-8"
+                                                      />
+                                                      <Button
+                                                        size="sm"
+                                                        className="w-full"
+                                                        disabled={!editingTimeValue}
+                                                        onClick={() => handleConfirmTime(editingTimeValue)}
+                                                      >
+                                                        Bevestigen
+                                                      </Button>
+                                                    </div>
+                                                  </PopoverContent>
+                                                </Popover>
+                                              )}
+                                            </div>
+                                            {showOriginal && (
+                                              <div className="text-xs text-muted-foreground line-through">{item.preferred_time}</div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
+                                    </TableCell>
+                                    
+                                    {isQuoteMode ? (
+                                      <>
+                                        <TableCell>
+                                          <div className="flex items-center gap-1.5">
+                                            <AdminItemQuoteStatusSelect
+                                              status={item.item_quote_status}
+                                              onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
+                                            />
+                                            {hasCustomerApproval && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Klant akkoord</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                            {showWaitingForCustomer && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Wacht op klant</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            className={cn(
+                                              "w-16 h-8 text-sm text-center rounded border bg-background px-1",
+                                              item.override_people != null && item.override_people !== request.number_of_people
+                                                ? "border-orange-400 text-orange-700 font-medium"
+                                                : "border-input"
+                                            )}
+                                            placeholder={String(request.number_of_people)}
+                                            defaultValue={item.override_people ?? ""}
+                                            onBlur={async (e) => {
+                                              const val = e.target.value ? parseInt(e.target.value, 10) : null;
+                                              if (val === item.override_people) return;
+                                              const { error } = await supabase
+                                                .from("program_request_items")
+                                                .update({ override_people: val })
+                                                .eq("id", item.id);
+                                              if (error) {
+                                                toast.error("Fout bij opslaan deelnemers");
+                                              } else {
+                                                toast.success("Deelnemers bijgewerkt");
+                                                fetchRequestData();
+                                              }
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <AdminQuotePriceEditor
+                                            originalPrice={item.quoted_price}
+                                            overridePrice={item.admin_price_override}
+                                            priceNotes={item.admin_price_notes}
+                                            numberOfPeople={item.override_people ?? request.number_of_people}
+                                            priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
+                                            onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex items-center gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => setEditingItem(item)}
+                                              className="h-8 w-8"
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-destructive hover:text-destructive"
+                                              onClick={async () => {
+                                                const { error } = await supabase
+                                                  .from("program_request_items")
+                                                  .delete()
+                                                  .eq("id", item.id);
+                                                if (!error) {
+                                                  toast.success("Activiteit verwijderd");
+                                                  fetchRequestData();
+                                                } else {
+                                                  toast.error("Fout bij verwijderen");
+                                                }
+                                              }}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                        </TableCell>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <TableCell>
+                                          <div className="flex items-center gap-1.5">
+                                            {statusIcons[item.status]}
+                                            <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
+                                              {(() => {
+                                                if (item.skip_partner_notification) {
+                                                  const phase = getItemSendPhase(item, request);
+                                                  if (phase === "wacht_op_klant") return "Wacht op klant";
+                                                  if (phase === "klaar_voor_partner") return "Klaar om te versturen";
+                                                }
+                                                return statusInfo.label;
+                                              })()}
+                                            </Badge>
+                                            {hasCustomerApproval && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Klant akkoord</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                            {showWaitingForCustomer && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Wacht op klant</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                          </div>
+                                          {item.status_note && (
+                                            <p className="text-xs text-muted-foreground mt-1">{item.status_note}</p>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {item.quoted_price != null ? (
+                                            <span className="font-medium">
+                                              €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                            </span>
+                                          ) : item.admin_price_override != null ? (
+                                            <div>
+                                              <span className="font-medium">
+                                                €{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground ml-1">(standaard)</span>
+                                            </div>
+                                          ) : (
+                                            <span className="text-slate-400">-</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {item.invoiced_number ? (
+                                            <div className="text-sm">
+                                              <div className="font-medium">{item.invoiced_number}</div>
+                                              <div className="text-slate-500">
+                                                €{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <span className="text-slate-400">-</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex items-center gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => setEditingItem(item)}
+                                              className="h-8 w-8"
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-destructive hover:text-destructive"
+                                              onClick={async () => {
+                                                const { error } = await supabase
+                                                  .from("program_request_items")
+                                                  .delete()
+                                                  .eq("id", item.id);
+                                                if (error) {
+                                                  toast.error("Fout bij verwijderen");
+                                                } else {
+                                                  toast.success("Activiteit verwijderd");
+                                                  fetchRequestData();
+                                                }
+                                              }}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                        </TableCell>
+                                      </>
+                                    )}
+                                  </TableRow>
+                                );
+                              }),
+                            ];
+                          });
+                        })()}
                       </TableBody>
                     </Table>
                   </div>
