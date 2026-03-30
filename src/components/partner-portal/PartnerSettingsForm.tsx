@@ -34,13 +34,6 @@ interface PartnerDetails {
   booking_contact_phone: string | null;
   availability_notes: string | null;
   accommodation_description: string | null;
-  about_text: string | null;
-  gallery_images: { url: string; alt?: string }[];
-  location_lat: number | null;
-  location_lng: number | null;
-  location_description: string | null;
-  website_url: string | null;
-  highlight_features: string[];
 }
 
 export const PartnerSettingsForm = () => {
