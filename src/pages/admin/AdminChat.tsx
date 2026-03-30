@@ -94,10 +94,15 @@ const AdminChat = () => {
     }
   };
 
-  // Count conversations per tab for badges
-  const waitingCount = conversations.filter(
-    (c) => c.status === "waiting" || c.status === "active"
-  ).length;
+  // Inbox badge = unread conversations (not total active)
+  const inboxUnreadCount = unreadConversationIds.size;
+
+  // Helper for date separators
+  const getDateLabel = (date: Date): string => {
+    if (isToday(date)) return "Vandaag";
+    if (isYesterday(date)) return "Gisteren";
+    return formatNL(date, "EEEE d MMMM yyyy");
+  };
   
 
   return (
