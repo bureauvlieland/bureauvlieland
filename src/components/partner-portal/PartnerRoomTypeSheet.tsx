@@ -44,6 +44,7 @@ export function PartnerRoomTypeSheet({
   const [bedConfiguration, setBedConfiguration] = useState("");
   const [maxOccupancy, setMaxOccupancy] = useState<string>("2");
   const [facilities, setFacilities] = useState<string[]>([]);
+  const [roomImages, setRoomImages] = useState<{ url: string; alt?: string }[]>([]);
   const [pricePerNight, setPricePerNight] = useState<string>("");
   const [priceIncludesVat, setPriceIncludesVat] = useState(true);
   const [vatRate, setVatRate] = useState("9");
