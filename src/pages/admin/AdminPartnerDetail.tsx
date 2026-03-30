@@ -108,7 +108,7 @@ const ACCOMMODATION_QUOTE_STATUS: Record<string, { label: string; variant: "defa
   pending: { label: "Te beantwoorden", variant: "default" },
   submitted: { label: "Offerte verstuurd", variant: "secondary" },
   selected: { label: "Gekozen", variant: "outline" },
-  rejected: { label: "Niet gekozen", variant: "destructive" },
+  rejected: { label: "Niet gekozen", variant: "secondary" },
   expired: { label: "Verlopen", variant: "destructive" },
   declined: { label: "Afgewezen", variant: "destructive" },
 };

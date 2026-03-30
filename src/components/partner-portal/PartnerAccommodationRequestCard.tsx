@@ -26,7 +26,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   pending: { label: "Te beantwoorden", variant: "secondary" },
   submitted: { label: "Offerte verstuurd", variant: "default" },
   selected: { label: "Geaccepteerd", variant: "default" },
-  rejected: { label: "Niet gekozen", variant: "destructive" },
+  rejected: { label: "Niet gekozen", variant: "secondary" },
   expired: { label: "Verlopen", variant: "destructive" },
   declined: { label: "Afgewezen", variant: "destructive" },
 };

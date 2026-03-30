@@ -78,7 +78,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   cancelled: { label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive/10" },
   submitted: { label: "Offerte verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
   selected: { label: "Akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  rejected: { label: "Niet gekozen", color: "text-destructive", bgColor: "bg-destructive/10" },
+  rejected: { label: "Niet gekozen", color: "text-muted-foreground", bgColor: "bg-muted" },
   declined: { label: "Afgewezen (door u)", color: "text-muted-foreground", bgColor: "bg-muted" },
   expired: { label: "Verlopen", color: "text-muted-foreground", bgColor: "bg-muted" },
 };
