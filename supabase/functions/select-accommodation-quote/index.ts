@@ -251,18 +251,18 @@ Deno.serve(async (req) => {
       .neq("status", "done");
     console.log(`Resolved accommodation auto-todos for request ${request.id}`);
 
-    // Create admin todo for manual confirmation
-    const todoTitle = isCentralBilling
-      ? `Logies bevestiging versturen: ${request.customer_name} → ${quote.accommodation_name}`
-      : `Logies geselecteerd: ${request.customer_name} → ${quote.accommodation_name}`;
+    // Create admin todo as informational log entry (auto-done since email is sent automatically)
+    const todoTitle = `Logies bevestigd: ${request.customer_name} → ${quote.accommodation_name}`;
     await supabase.from("admin_todos").insert({
       title: todoTitle,
-      description: `Klant heeft gekozen voor ${quote.accommodation_name}. Stuur bevestiging naar klant en partner ${quote.accommodation_name}.`,
-      priority: "high",
+      description: `Klant heeft gekozen voor ${quote.accommodation_name}. Bevestigingsmail automatisch verstuurd naar klant en partner.`,
+      priority: "low",
       auto_type: "accommodation_selected",
       auto_entity_id: request.id,
       related_request_id: request.linked_program_id || null,
       related_partner_id: quote.partner_id || null,
+      status: "done",
+      completed_at: new Date().toISOString(),
     });
 
     // Send email notifications
