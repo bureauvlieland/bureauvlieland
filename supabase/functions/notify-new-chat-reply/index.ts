@@ -41,9 +41,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // No email if visitor has no email
-    if (!conv.visitor_email) {
-      return new Response(JSON.stringify({ skipped: true, reason: "no_visitor_email" }), {
+    // Determine recipient: for accommodation chats the visitor is a partner
+    const isAccommodationChat = !!conv.accommodation_id;
+    let recipientEmail = conv.visitor_email;
+    let recipientName = conv.visitor_name || "Bezoeker";
+
+    // For accommodation chats, use partner's contact_email if available
+    if (isAccommodationChat && conv.source_partner_id) {
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("contact_email, email, name")
+        .eq("id", conv.source_partner_id)
+        .single();
+      if (partner) {
+        recipientEmail = partner.contact_email || partner.email;
+        recipientName = partner.name;
+      }
+    }
+
+    // No email if no recipient
+    if (!recipientEmail) {
+      return new Response(JSON.stringify({ skipped: true, reason: "no_recipient_email" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -61,25 +79,39 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build portal link
+    // Build portal link and subject
     const baseUrl = "https://bureauvlieland.nl";
     let portalLink = baseUrl;
+    let emailSubject = "Nieuw bericht van Bureau Vlieland";
 
-    if (conv.source === "customer_portal" && conv.source_token) {
+    if (isAccommodationChat) {
+      // Get accommodation reference number
+      let refNumber = "";
+      if (conv.accommodation_id) {
+        const { data: accReq } = await supabase
+          .from("accommodation_requests")
+          .select("reference_number")
+          .eq("id", conv.accommodation_id)
+          .single();
+        refNumber = accReq?.reference_number || "";
+      }
+      portalLink = `${baseUrl}/partner/logies`;
+      emailSubject = refNumber
+        ? `Nieuw bericht inzake logiesaanvraag ${refNumber}`
+        : "Nieuw bericht over een logiesaanvraag";
+    } else if (conv.source === "customer_portal" && conv.source_token) {
       portalLink = `${baseUrl}/programma/${conv.source_token}?chat=open`;
     } else if (conv.source === "partner_portal") {
       portalLink = `${baseUrl}/partner/dashboard`;
     }
 
-    const visitorName = conv.visitor_name || "Bezoeker";
-
     // Try DB template
     const template = await getRenderedTemplate(TemplateIds.CHAT_REPLY_VISITOR, {
-      visitor_name: visitorName,
+      visitor_name: recipientName,
       portal_link: portalLink,
     });
 
-    const emailSubject = template?.subject || "Nieuw bericht van Bureau Vlieland";
+    const finalSubject = template?.subject || emailSubject;
     const htmlBody = template?.body || `
       <!DOCTYPE html>
       <html>
@@ -88,8 +120,8 @@ Deno.serve(async (req) => {
           <tr><td align="center" style="padding:40px 20px;">
             <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;">
               <tr><td style="font-size:16px;line-height:24px;color:#333333;">
-                <p style="margin:0 0 16px 0;">Hallo ${visitorName},</p>
-                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen in je persoonlijke portaal van Bureau Vlieland.</p>
+                <p style="margin:0 0 16px 0;">Hallo ${recipientName},</p>
+                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen van Bureau Vlieland.</p>
                 <p style="margin:0 0 24px 0;">Klik op de knop hieronder om het bericht te bekijken en te reageren.</p>
               </td></tr>
               <tr><td style="padding-bottom:32px;">
@@ -127,8 +159,8 @@ Deno.serve(async (req) => {
         Messages: [
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-            To: [{ Email: conv.visitor_email, Name: visitorName }],
-            Subject: emailSubject,
+            To: [{ Email: recipientEmail, Name: recipientName }],
+            Subject: finalSubject,
             HTMLPart: htmlBody,
           },
         ],
@@ -148,10 +180,11 @@ Deno.serve(async (req) => {
     // Log email
     await logEmail({
       email_type: "chat_reply_notification",
-      subject: emailSubject,
-      recipient_email: conv.visitor_email,
-      recipient_name: visitorName,
+      subject: finalSubject,
+      recipient_email: recipientEmail,
+      recipient_name: recipientName,
       related_request_id: conv.request_id || undefined,
+      related_accommodation_id: conv.accommodation_id || undefined,
       status: emailStatus,
       mailjet_message_id: mailjetMessageId || undefined,
       sent_by: "system",
