@@ -109,7 +109,7 @@ const PartnerAccommodationContent = () => {
       // Get partner ID and token from auth
       const { data: partner } = await supabase
         .from("partners")
-        .select("id, partner_token, name, accommodation_description")
+        .select("id, partner_token, name, email, contact_email, accommodation_description")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .maybeSingle();
