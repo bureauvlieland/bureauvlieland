@@ -59,6 +59,7 @@ const PartnerExtras = lazy(() => import("./pages/PartnerExtras"));
 const PartnerRoomTypes = lazy(() => import("./pages/PartnerRoomTypes"));
 const PartnerGuides = lazy(() => import("./pages/PartnerGuides"));
 const PartnerResetPassword = lazy(() => import("./pages/PartnerResetPassword"));
+const PartnerPlanning = lazy(() => import("./pages/PartnerPlanning"));
 
 // Lazy-loaded admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -171,6 +172,7 @@ const App = () => {
             <Route path="/partner/extras" element={<PartnerExtras />} />
             <Route path="/partner/kamersoorten" element={<PartnerRoomTypes />} />
             <Route path="/partner/handleidingen" element={<PartnerGuides />} />
+            <Route path="/partner/planning" element={<PartnerPlanning />} />
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* Admin routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

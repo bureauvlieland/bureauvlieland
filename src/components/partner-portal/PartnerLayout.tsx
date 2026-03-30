@@ -29,6 +29,7 @@ import {
   BedDouble,
   UtensilsCrossed,
   DoorOpen,
+  CalendarDays,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -45,6 +46,7 @@ interface PartnerInfo {
   partner_token: string;
   commission_percentage: number;
   partner_type: string | null;
+  map_tenant_slug: string | null;
 }
 
 const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
@@ -60,9 +62,12 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   // Check if partner handles activities or accommodation
   const isActivityPartner = partner.partner_type === "activity_provider" || partner.partner_type === "both" || !partner.partner_type;
   const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
+  const hasMapIntegration = !!partner.map_tenant_slug;
 
   const menuItems = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    // Planning alleen tonen als partner MAP-koppeling heeft
+    ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
     // Alleen tonen als partner activiteiten levert
     ...(isActivityPartner ? [{ title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
     // Alleen tonen als partner logies levert
@@ -185,7 +190,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
           // Fetch the impersonated partner
           const { data: partnerData, error } = await supabase
             .from("partners")
-            .select("id, name, email, partner_token, commission_percentage, partner_type")
+            .select("id, name, email, partner_token, commission_percentage, partner_type, map_tenant_slug")
             .eq("id", impersonatePartnerId)
             .single();
 
@@ -209,7 +214,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
       // Regular partner login flow
       const { data: partnerData, error } = await supabase
         .from("partners")
-        .select("id, name, email, partner_token, commission_percentage, partner_type")
+        .select("id, name, email, partner_token, commission_percentage, partner_type, map_tenant_slug")
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .single();
