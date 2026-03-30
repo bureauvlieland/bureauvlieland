@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
         </div>
       `;
 
-      const subject = `Offerteaanvraag ingetrokken${accRequest.reference_number ? ` — ${accRequest.reference_number}` : ""}`;
+      const subject = `${getSubjectPrefix(origin)}Offerteaanvraag ingetrokken${accRequest.reference_number ? ` — ${accRequest.reference_number}` : ""}`;
 
       try {
         const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
