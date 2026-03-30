@@ -92,6 +92,7 @@ export function PartnerRoomTypeSheet({
       bed_configuration: bedConfiguration || null,
       max_occupancy: parseInt(maxOccupancy) || 2,
       facilities,
+      images: roomImages,
       price_per_night: pricePerNight ? parseFloat(pricePerNight) : null,
       price_includes_vat: priceIncludesVat,
       vat_rate: parseFloat(vatRate),
