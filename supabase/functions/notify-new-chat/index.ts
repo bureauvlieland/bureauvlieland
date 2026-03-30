@@ -13,7 +13,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { conversation_id } = await req.json();
+    const reqBody = await req.json();
+    const { conversation_id } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
     if (!conversation_id) {
       return new Response(JSON.stringify({ error: "Missing conversation_id" }), {
         status: 400,
