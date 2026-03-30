@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
 import { PartnerUnavailabilityManager } from "./PartnerUnavailabilityManager";
-import { PartnerImageUpload } from "./PartnerImageUpload";
+
 
 interface PartnerDetails {
   id: string;
