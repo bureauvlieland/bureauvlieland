@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, TemplateIds } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +13,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { conversation_id } = await req.json();
+    const reqBody = await req.json();
+    const { conversation_id } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
     if (!conversation_id) {
       return new Response(JSON.stringify({ error: "Missing conversation_id" }), {
         status: 400,
@@ -80,7 +82,7 @@ Deno.serve(async (req) => {
       chat_url: "https://bureauvlieland.nl/admin/chat",
     });
 
-    const emailSubject = template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`;
+    const emailSubject = `${getSubjectPrefix(origin)}${template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`}`;
     const emailBody = template?.body || `
       <h3>Nieuw chatbericht</h3>
       <p><strong>Van:</strong> ${visitorName} (${visitorEmail})</p>
@@ -105,7 +107,7 @@ Deno.serve(async (req) => {
           Messages: [
             {
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
+              To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
               Subject: emailSubject,
               HTMLPart: emailBody,
             },

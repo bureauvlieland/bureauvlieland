@@ -1,7 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
-import { getPortalBaseUrl } from "../_shared/email-templates.ts";
+import { getPortalBaseUrl, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -234,10 +234,11 @@ Deno.serve(async (req) => {
     }
 
     // Send emails to each partner (prefer contact_email for notifications)
+    const subjectPrefix = getSubjectPrefix(origin);
     const emailMessages = partners.map((partner: any) => ({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-      To: [{ Email: partner.contact_email || partner.email, Name: partner.name }],
-      Subject: email_subject,
+      To: [{ Email: getRecipientEmail(partner.contact_email || partner.email, origin), Name: partner.name }],
+      Subject: `${subjectPrefix}${email_subject}`,
       HTMLPart: wrapInEmailTemplate(email_body, partner.name, portalBaseUrl),
     }));
 

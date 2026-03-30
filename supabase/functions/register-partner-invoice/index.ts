@@ -1,5 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +62,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes, filePath } = await req.json();
+    const reqBody = await req.json();
+    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes, filePath } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!partnerToken || !itemId || !invoicedAmount || !invoicedNumber || !invoicedDate) {
       return new Response(
@@ -301,9 +304,9 @@ Deno.serve(async (req) => {
     `;
 
     await sendEmailNotification(
-      "erwin@bureauvlieland.nl",
+      getRecipientEmail("erwin@bureauvlieland.nl", origin),
       "Bureau Vlieland",
-      `Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
+      `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
       bureauEmailHtml
     );
 

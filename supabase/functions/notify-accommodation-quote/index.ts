@@ -8,6 +8,8 @@ import {
   formatCurrencyNL,
   buildReplyTo,
   getPortalBaseUrl,
+  getRecipientEmail,
+  getSubjectPrefix,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -255,12 +257,13 @@ Deno.serve(async (req) => {
     // Build Reply-To from accommodation reference
     const replyTo = buildReplyTo(request.reference_number);
 
+    const subjectPrefix = getSubjectPrefix(origin);
     await sendEmailViaMailjet([
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: request.customer_email, Name: request.customer_name }],
+        To: [{ Email: getRecipientEmail(request.customer_email, origin), Name: request.customer_name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: emailSubject,
+        Subject: `${subjectPrefix}${emailSubject}`,
         HTMLPart: emailHtml,
       },
     ]);

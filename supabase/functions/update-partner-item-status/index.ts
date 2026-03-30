@@ -4,6 +4,8 @@ import {
   getRenderedTemplate, 
   sanitizeHtml, 
   formatCurrencyNL,
+  getRecipientEmail,
+  getSubjectPrefix,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -193,7 +195,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes, proposedTime, proposedDate } = await req.json();
+    const reqBody = await req.json();
+    const { partnerToken, itemId, status, statusNote, executedAt, quotedPrice, quotedNotes, proposedTime, proposedDate } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!partnerToken || !itemId || !status) {
       return new Response(
@@ -471,12 +475,13 @@ Deno.serve(async (req) => {
         </html>
       `;
       
-      const counterResponseRecipient = programRequest.customer_email;
+      const counterResponseRecipient = getRecipientEmail(programRequest.customer_email, origin);
+      const counterSubjectPrefix = getSubjectPrefix(origin);
       
       const emailSent = await sendEmailViaMailjet(
         counterResponseRecipient,
         programRequest.customer_name,
-        emailSubject,
+        `${counterSubjectPrefix}${emailSubject}`,
         emailBody
       );
       
@@ -656,10 +661,11 @@ Deno.serve(async (req) => {
 
       const emailSubject = template?.subject || subjectMap[status];
 
+      const statusSubjectPrefix = getSubjectPrefix(origin);
       const emailSent = await sendEmailViaMailjet(
-        programRequest.customer_email,
+        getRecipientEmail(programRequest.customer_email, origin),
         programRequest.customer_name,
-        emailSubject,
+        `${statusSubjectPrefix}${emailSubject}`,
         emailHtml
       );
 

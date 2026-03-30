@@ -1,6 +1,6 @@
 // Using Deno.serve() instead of deprecated import
 import { z } from "npm:zod@3.22.4";
-import { getRenderedTemplate, sanitizeHtml, TemplateIds, SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, sanitizeHtml, TemplateIds, SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -151,6 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const rawData = await req.json();
+    const origin = rawData.origin || req.headers.get("origin") || "";
     
     // Validate with Zod schema
     const validationResult = QuoteRequestSchema.safeParse(rawData);
@@ -192,11 +193,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Use database templates or fallback to hardcoded
     const bureauHtml = bureauTemplate?.body || getFallbackBureauHtml(requestData);
-    const bureauSubject = bureauTemplate?.subject || `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`;
+    const subjectPrefix = getSubjectPrefix(origin);
+    const bureauSubject = `${subjectPrefix}${bureauTemplate?.subject || `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`}`;
 
     const fallbackQuoteDetails = getFallbackBureauHtml(requestData);
     const customerHtml = customerTemplate?.body || getFallbackCustomerHtml(requestData, fallbackQuoteDetails);
-    const customerSubject = customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland";
+    const customerSubject = `${subjectPrefix}${customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland"}`;
 
     // Send both emails using Mailjet
     await sendEmailViaMailjet([
@@ -208,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         To: [
           {
-            Email: "erwin@bureauvlieland.nl",
+            Email: getRecipientEmail("erwin@bureauvlieland.nl", origin),
             Name: "Erwin van der Most"
           }
         ],
@@ -223,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         To: [
           {
-            Email: requestData.email,
+            Email: getRecipientEmail(requestData.email, origin),
             Name: requestData.name
           }
         ],

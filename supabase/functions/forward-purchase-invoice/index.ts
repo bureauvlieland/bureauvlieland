@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,7 +53,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { invoiceId, includePdf } = await req.json();
+    const reqBody = await req.json();
+    const { invoiceId, includePdf } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!invoiceId) {
       return new Response(
@@ -152,14 +155,14 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Prepare email message
+    const emailSubject = `${getSubjectPrefix(origin)}Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`;
     const emailMessage: any = {
       From: {
         Email: "hallo@bureauvlieland.nl",
         Name: "Bureau Vlieland Admin",
       },
-      To: [{ Email: snelstartEmail, Name: "Boekhouding" }],
-      Subject: `Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`,
+      To: [{ Email: getRecipientEmail(snelstartEmail, origin), Name: "Boekhouding" }],
+      Subject: emailSubject,
       HTMLPart: htmlContent,
     };
 
@@ -223,9 +226,9 @@ Deno.serve(async (req) => {
     // Log email
     await supabase.from("email_log").insert({
       email_type: "purchase_invoice_forward",
-      recipient_email: snelstartEmail,
+      recipient_email: getRecipientEmail(snelstartEmail, origin),
       recipient_name: "Boekhouding",
-      subject: `Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`,
+      subject: emailSubject,
       status: "sent",
       sent_at: new Date().toISOString(),
       sent_by: user.id,

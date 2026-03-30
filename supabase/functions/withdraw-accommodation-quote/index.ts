@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -36,7 +37,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleCheck) throw new Error("Not authorized");
 
-    const { quoteId, notifyPartner } = await req.json();
+    const body = await req.json();
+    const { quoteId, notifyPartner } = body;
+    const origin = body.origin || req.headers.get("origin") || "";
     if (!quoteId) throw new Error("quoteId is required");
 
     // Fetch quote with partner info
@@ -93,7 +96,7 @@ Deno.serve(async (req) => {
         </div>
       `;
 
-      const subject = `Offerteaanvraag ingetrokken${accRequest.reference_number ? ` — ${accRequest.reference_number}` : ""}`;
+      const subject = `${getSubjectPrefix(origin)}Offerteaanvraag ingetrokken${accRequest.reference_number ? ` — ${accRequest.reference_number}` : ""}`;
 
       try {
         const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
@@ -106,7 +109,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             Messages: [{
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: partnerEmail, Name: partner.name }],
+              To: [{ Email: getRecipientEmail(partnerEmail, origin), Name: partner.name }],
               Subject: subject,
               HTMLPart: emailBody,
             }],

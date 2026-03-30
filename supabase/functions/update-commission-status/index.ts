@@ -1,5 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,7 +71,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { itemIds, status, notes, commissionInvoiceNumber, itemType = "activity" } = await req.json();
+    const reqBody = await req.json();
+    const { itemIds, status, notes, commissionInvoiceNumber, itemType = "activity" } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return new Response(
@@ -290,9 +293,9 @@ Deno.serve(async (req) => {
           `;
 
           await sendEmailNotification(
-            partner.email,
+            getRecipientEmail(partner.email, origin),
             partner.name,
-            `Commissiefactuur Bureau Vlieland${commissionInvoiceNumber ? ` - ${commissionInvoiceNumber}` : ''}`,
+            `${getSubjectPrefix(origin)}Commissiefactuur Bureau Vlieland${commissionInvoiceNumber ? ` - ${commissionInvoiceNumber}` : ''}`,
             emailHtml
           );
         }
