@@ -735,9 +735,9 @@ export default function AdminAccommodationDetail() {
                           {/* Price */}
                           {quote.price_total > 0 && (
                             <div className="flex items-baseline gap-2">
-                              <span className="text-lg font-bold text-foreground">€{quote.price_total.toLocaleString()}</span>
+                              <span className="text-lg font-bold text-foreground">€{quote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                               {quote.price_per_person_per_night && (
-                                <span className="text-xs text-muted-foreground">€{quote.price_per_person_per_night} p.p.p.n.</span>
+                                <span className="text-xs text-muted-foreground">€{Number(quote.price_per_person_per_night).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.p.n.</span>
                               )}
                             </div>
                           )}
