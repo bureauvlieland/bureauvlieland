@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       chat_url: "https://bureauvlieland.nl/admin/chat",
     });
 
-    const emailSubject = template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`;
+    const emailSubject = `${getSubjectPrefix(origin)}${template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})`}`;
     const emailBody = template?.body || `
       <h3>Nieuw chatbericht</h3>
       <p><strong>Van:</strong> ${visitorName} (${visitorEmail})</p>
