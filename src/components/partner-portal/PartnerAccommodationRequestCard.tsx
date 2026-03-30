@@ -77,6 +77,9 @@ interface PartnerAccommodationRequestCardProps {
   quote: AccommodationQuote | null;
   onSubmitQuote: () => void;
   invoicingMode?: string | null;
+  partnerId: string;
+  partnerName: string;
+  partnerEmail: string;
 }
 
 export const PartnerAccommodationRequestCard = ({
@@ -84,7 +87,11 @@ export const PartnerAccommodationRequestCard = ({
   quote,
   onSubmitQuote,
   invoicingMode,
+  partnerId,
+  partnerName,
+  partnerEmail,
 }: PartnerAccommodationRequestCardProps) => {
+  const [showChat, setShowChat] = useState(false);
   const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
   const statusConfig = QUOTE_STATUS_CONFIG[quote?.status || "pending"];
   const typeConfig = ACCOMMODATION_TYPES.find(t => t.value === request.accommodation_type);
