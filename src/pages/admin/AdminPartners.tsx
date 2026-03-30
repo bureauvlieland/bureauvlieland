@@ -63,6 +63,7 @@ import { nl } from "date-fns/locale";
 import { PartnerOnboardingStats } from "@/components/admin/PartnerOnboardingStats";
 import { BulkInviteDialog } from "@/components/admin/BulkInviteDialog";
 import { ResetPartnerConnectionsDialog } from "@/components/admin/ResetPartnerConnectionsDialog";
+import { SendPartnerMailingDialog } from "@/components/admin/SendPartnerMailingDialog";
 
 interface Partner {
   id: string;
