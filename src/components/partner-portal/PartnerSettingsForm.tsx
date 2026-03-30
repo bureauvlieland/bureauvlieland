@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, CalendarOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, CalendarOff, Globe, MapPin, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
 import { PartnerUnavailabilityManager } from "./PartnerUnavailabilityManager";
+import { PartnerImageUpload } from "./PartnerImageUpload";
 
 interface PartnerDetails {
   id: string;
@@ -33,6 +35,13 @@ interface PartnerDetails {
   booking_contact_phone: string | null;
   availability_notes: string | null;
   accommodation_description: string | null;
+  about_text: string | null;
+  gallery_images: { url: string; alt?: string }[];
+  location_lat: number | null;
+  location_lng: number | null;
+  location_description: string | null;
+  website_url: string | null;
+  highlight_features: string[];
 }
 
 export const PartnerSettingsForm = () => {
@@ -43,6 +52,7 @@ export const PartnerSettingsForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const [newFeature, setNewFeature] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -59,7 +69,14 @@ export const PartnerSettingsForm = () => {
     booking_contact_phone: "",
     availability_notes: "",
     accommodation_description: "",
+    about_text: "",
+    website_url: "",
+    location_lat: "",
+    location_lng: "",
+    location_description: "",
   });
+  const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
+  const [highlightFeatures, setHighlightFeatures] = useState<string[]>([]);
 
   // Password form state
   const [passwordData, setPasswordData] = useState({
