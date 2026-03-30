@@ -186,6 +186,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const updatePayload = admin_override
       ? {
           customer_approved_at: approvalTimestamp,
+          customer_accepted_at: approvalTimestamp,
           skip_partner_notification: false,
           status: "pending",
           status_updated_at: approvalTimestamp,
@@ -193,6 +194,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
       : {
           customer_approved_at: approvalTimestamp,
+          customer_accepted_at: approvalTimestamp,
           updated_at: approvalTimestamp,
         };
 
