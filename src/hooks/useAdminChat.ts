@@ -247,6 +247,7 @@ export function useAdminChat() {
     setActiveConversationId,
     messages,
     unreadCount,
+    unreadConversationIds,
     isOnline,
     statusFilter,
     setStatusFilter,

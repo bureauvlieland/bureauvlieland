@@ -252,9 +252,26 @@ const AdminChat = () => {
 
               {/* Messages */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.map((msg) => (
-                  <ChatMessageBubble key={msg.id} message={msg} />
-                ))}
+                {messages.map((msg, idx) => {
+                  const msgDate = new Date(msg.created_at);
+                  const prevDate = idx > 0 ? new Date(messages[idx - 1].created_at) : null;
+                  const showDateSep = !prevDate || !isSameDay(msgDate, prevDate);
+
+                  return (
+                    <div key={msg.id}>
+                      {showDateSep && (
+                        <div className="flex items-center gap-3 my-4">
+                          <div className="flex-1 h-px bg-border" />
+                          <span className="text-[11px] text-muted-foreground font-medium capitalize">
+                            {getDateLabel(msgDate)}
+                          </span>
+                          <div className="flex-1 h-px bg-border" />
+                        </div>
+                      )}
+                      <ChatMessageBubble message={msg} />
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Input */}
