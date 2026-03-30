@@ -161,6 +161,14 @@ export const AccommodationSection = ({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col md:flex-row md:items-start gap-4">
+            {/* Partner gallery thumbnail */}
+            {selectedQuote.partner?.gallery_images && (selectedQuote.partner.gallery_images as any[]).length > 0 && (
+              <img
+                src={(selectedQuote.partner.gallery_images as any[])[0].url}
+                alt={selectedQuote.accommodation_name}
+                className="w-full md:w-32 h-24 md:h-24 rounded-lg object-cover shrink-0"
+              />
+            )}
             <div className="flex-1">
               <h3 className="font-semibold text-lg">{selectedQuote.accommodation_name}</h3>
               {selectedQuote.partner?.name && (
