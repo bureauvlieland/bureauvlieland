@@ -264,8 +264,27 @@ export const PartnerAccommodationRequestCard = ({
               Details bekijken
             </Button>
           )}
+          {quote && (
+            <Button variant="ghost" size="icon" onClick={() => setShowChat(true)} title="Berichten">
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
+
+      {/* Chat Sheet */}
+      {quote && (
+        <PartnerAccommodationChatSheet
+          open={showChat}
+          onOpenChange={setShowChat}
+          accommodationId={request.id}
+          quoteId={quote.id}
+          partnerId={partnerId}
+          partnerName={partnerName}
+          partnerEmail={partnerEmail}
+          referenceLabel={`Logiesaanvraag ${request.customer_company || request.customer_name}`}
+        />
+      )}
     </Card>
   );
 };
