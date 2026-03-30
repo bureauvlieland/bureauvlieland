@@ -1,57 +1,55 @@
 
 
-## Plan: MAP Planning integreren in Partner Portal
+## Plan: Partner "Over ons" als eigen pagina + frontend-integratie
 
-### Doel
-Partners met een MijnActiviteitenPlanner (MAP) koppeling krijgen een planningsoverzicht in hun partnerportaal. Hierin zien ze hun MAP-activiteiten (bezetting) naast de maatwerkaanvragen van Bureau Vlieland, zodat ze in één oogopslag kunnen beoordelen of ze een aanvraag kunnen bevestigen.
+### Wijziging t.o.v. vorig plan
+1. **Eigen pagina in sidebar** — niet verstopt in Instellingen, maar een apart menu-item "Mijn Profiel" (`/partner/profiel`) voor **alle** partners (activiteit, logies, beide)
+2. **Frontend-gebruik** — plan bevat concrete stappen waar partnerprofieldata getoond wordt
 
-### Huidige situatie
-- 3 partners hebben een `map_tenant_slug` + `map_api_key`
-- De `map-proxy` edge function haalt MAP data op (activiteiten + activiteitstypes)
-- `useMapActivities` hook bestaat al voor de admin/configurator
-- Het partner dashboard toont nu Bureau Vlieland items + aankomende activiteiten, maar geen MAP-data
+### Deel 1: Nieuwe profielpagina in partnerportaal
 
-### Voorstel
+**Nieuwe bestanden:**
+- `src/pages/PartnerProfile.tsx` — pagina met "Over ons" formulier
+- `src/components/partner-portal/PartnerProfileForm.tsx` — formuliercomponent met:
+  - Bedrijfsbeschrijving (about_text)
+  - Website URL
+  - Kenmerken/USP's als tags
+  - Locatiebeschrijving + coördinaten
+  - Fotogalerij (PartnerImageUpload)
 
-**Nieuwe pagina: `/partner/planning`**
+**Aanpassen:**
+- `src/components/partner-portal/PartnerLayout.tsx` — menu-item **"Mijn Profiel"** toevoegen met `UserCircle` icoon, direct na "Overzicht", voor **alle** partner types (geen conditie)
+- `src/App.tsx` — route `/partner/profiel` toevoegen
+- `src/components/partner-portal/PartnerSettingsForm.tsx` — about_text/gallery/locatie/website/highlights velden + state **verwijderen** uit dit bestand (verhuist naar ProfileForm)
 
-Een gecombineerd weekoverzicht (agenda-stijl) dat twee datastromen samenvoegt:
+### Deel 2: Kamertype foto-upload
 
-1. **MAP-activiteiten** — via bestaande `map-proxy`, gefilterd op de partner's eigen `map_tenant_slug`
-2. **Bureau Vlieland items** — de bestaande `PartnerItem[]` uit het dashboard (bevestigd/pending)
+In `src/components/partner-portal/PartnerRoomTypeSheet.tsx`:
+- PartnerImageUpload toevoegen voor foto's per kamertype (max 4)
+- Opslag in bestaande `images` JSONB-kolom
 
-De weergave is een **weekkalender** met datumnavigatie, waarin per dag/tijdslot zichtbaar is:
-- MAP-activiteiten (kleur A) met bezetting (`NumberOfPersonsBooked / MaxPersons`)
-- Bureau Vlieland aanvragen (kleur B) met status-badge (pending/bevestigd/akkoord)
+### Deel 3: Frontend-weergave van partnerdata
 
-Partners kunnen direct vanuit de planning doorklikken naar een aanvraag om deze te bevestigen/afwijzen.
-
-**Navigatie**
-- Nieuw menu-item "Planning" in `PartnerLayout` sidebar, alleen zichtbaar voor partners met `map_tenant_slug`
-- Icoon: `CalendarDays`
-- Geplaatst na "Overzicht"
-
-### Technische details
-
-**Bestanden**
-
-| Bestand | Wat |
+| Locatie | Wat tonen |
 |---|---|
-| `src/pages/PartnerPlanning.tsx` (nieuw) | Pagina met weekoverzicht, datumnavigatie, gecombineerde data |
-| `src/components/partner-portal/PartnerPlanningCalendar.tsx` (nieuw) | Weekkalender component die MAP + BV items rendert |
-| `src/components/partner-portal/PartnerLayout.tsx` | Menu-item "Planning" toevoegen (conditoneel op `map_tenant_slug`) |
-| `src/App.tsx` | Route `/partner/planning` toevoegen |
+| `src/components/configurator/BuildingBlockCard.tsx` | Partner foto (eerste gallery image als thumbnail), highlight_features als tags |
+| `src/components/customer-portal/AccommodationSection.tsx` | Partner beschrijving, galerij, kenmerken bij geselecteerd logies |
+| `src/components/customer-portal/CustomerProgramItem.tsx` | Partner foto naast activiteit-item |
+| `src/components/admin/AdminAccommodationQuoteSheet.tsx` | Partner galerij + beschrijving bij offertebeoordeling |
+| `src/components/admin/ForwardQuoteToCustomerDialog.tsx` | Partner foto's meesturen in klantofferte |
 
-**Data ophalen**
-- Partner's `map_tenant_slug` ophalen uit de `partners` tabel (al beschikbaar via auth)
-- MAP activiteiten: hergebruik `useMapActivities` hook met partner's eigen slug + partnerId
-- BV items: hergebruik bestaande dashboard fetch of directe query op `program_request_items`
+### Bestanden totaaloverzicht
 
-**Weergave**
-- Weekweergave met dag-kolommen (ma-zo)
-- Vorige/volgende week navigatie
-- Per activiteit: naam, tijdstip, bezetting
-- Bureau Vlieland items met status-kleur en klik-actie
-- Legenda voor MAP vs Bureau Vlieland items
-- Samenvattingsrij bovenaan: totaal geboekt per dag
+| Bestand | Actie |
+|---|---|
+| `src/pages/PartnerProfile.tsx` | Nieuw |
+| `src/components/partner-portal/PartnerProfileForm.tsx` | Nieuw |
+| `src/components/partner-portal/PartnerLayout.tsx` | Menu-item toevoegen |
+| `src/App.tsx` | Route toevoegen |
+| `src/components/partner-portal/PartnerSettingsForm.tsx` | Profiel-velden verwijderen |
+| `src/components/partner-portal/PartnerRoomTypeSheet.tsx` | Foto-upload toevoegen |
+| `src/components/configurator/BuildingBlockCard.tsx` | Partner foto + tags |
+| `src/components/customer-portal/AccommodationSection.tsx` | Partner profiel tonen |
+| `src/components/customer-portal/CustomerProgramItem.tsx` | Partner foto |
+| `src/components/admin/AdminAccommodationQuoteSheet.tsx` | Partner galerij |
 
