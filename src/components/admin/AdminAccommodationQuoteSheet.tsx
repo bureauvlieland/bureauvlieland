@@ -59,7 +59,7 @@ interface QuoteData {
   commission_amount: number | null;
   commission_status: string | null;
   forwarded_at: string | null;
-  partner?: { id: string; name: string; email: string } | null;
+  partner?: { id: string; name: string; email: string; gallery_images?: { url: string; alt?: string }[]; about_text?: string; highlight_features?: string[] } | null;
 }
 
 interface AdminAccommodationQuoteSheetProps {
