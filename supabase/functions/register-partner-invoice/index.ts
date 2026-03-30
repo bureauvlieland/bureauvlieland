@@ -61,7 +61,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes, filePath } = await req.json();
+    const reqBody = await req.json();
+    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes, filePath } = reqBody;
+    const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!partnerToken || !itemId || !invoicedAmount || !invoicedNumber || !invoicedDate) {
       return new Response(
