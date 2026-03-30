@@ -251,18 +251,18 @@ Deno.serve(async (req) => {
       .neq("status", "done");
     console.log(`Resolved accommodation auto-todos for request ${request.id}`);
 
-    // Create admin todo for manual confirmation
-    const todoTitle = isCentralBilling
-      ? `Logies bevestiging versturen: ${request.customer_name} → ${quote.accommodation_name}`
-      : `Logies geselecteerd: ${request.customer_name} → ${quote.accommodation_name}`;
+    // Create admin todo as informational log entry (auto-done since email is sent automatically)
+    const todoTitle = `Logies bevestigd: ${request.customer_name} → ${quote.accommodation_name}`;
     await supabase.from("admin_todos").insert({
       title: todoTitle,
-      description: `Klant heeft gekozen voor ${quote.accommodation_name}. Stuur bevestiging naar klant en partner ${quote.accommodation_name}.`,
-      priority: "high",
+      description: `Klant heeft gekozen voor ${quote.accommodation_name}. Bevestigingsmail automatisch verstuurd naar klant en partner.`,
+      priority: "low",
       auto_type: "accommodation_selected",
       auto_entity_id: request.id,
       related_request_id: request.linked_program_id || null,
       related_partner_id: quote.partner_id || null,
+      status: "done",
+      completed_at: new Date().toISOString(),
     });
 
     // Send email notifications
@@ -392,7 +392,113 @@ Deno.serve(async (req) => {
         }
       }
 
-      // NO automatic customer email — admin handles this manually via todo
+      // Customer confirmation email
+      const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
+      const portalLink = request.linked_program_id
+        ? `${origin}/programma/${request.customer_token}`
+        : `${origin}/logies/${request.customer_token}`;
+
+      const partnerData = quote.partner || {} as any;
+      const accommodationAddress = [partnerData.address_street, partnerData.address_postal, partnerData.address_city]
+        .filter(Boolean).join(", ");
+
+      const customerTemplateVariables: Record<string, string> = {
+        customer_name: sanitizeHtml(request.customer_name),
+        accommodation_name: sanitizeHtml(quote.accommodation_name),
+        arrival_date: formatDateNL(request.arrival_date),
+        departure_date: formatDateNL(request.departure_date),
+        number_of_guests: String(request.number_of_guests),
+        base_price: formatCurrencyNL(quote.price_total),
+        extras_total: extrasTotal > 0 ? formatCurrencyNL(extrasTotal) : "",
+        extras_list: extras.length > 0
+          ? extras.map((e: any) => `<li>${sanitizeHtml(e.name)}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("")
+          : "",
+        price_total: formatCurrencyNL(grandTotal),
+        portal_link: portalLink,
+        reference_number: request.reference_number || "",
+        accommodation_address: accommodationAddress || "",
+        accommodation_phone: partnerData.booking_phone || partnerData.phone || "",
+        partner_description: sanitizeHtml(partnerData.accommodation_description || partnerData.about_text || ""),
+      };
+
+      const customerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables);
+
+      const customerEmail = getRecipientEmail(request.customer_email, origin);
+      if (customerEmail) {
+        const customerHtml = customerTemplate?.body || `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #1e3a5f;">Je logies is bevestigd!</h1>
+            <p>Beste ${sanitizeHtml(request.customer_name)},</p>
+            <p>Goed nieuws! Je verblijft bij <strong>${sanitizeHtml(quote.accommodation_name)}</strong>.</p>
+            
+            <h2>Verblijfsgegevens</h2>
+            <ul>
+              <li><strong>Accommodatie:</strong> ${sanitizeHtml(quote.accommodation_name)}</li>
+              ${accommodationAddress ? `<li><strong>Adres:</strong> ${sanitizeHtml(accommodationAddress)}</li>` : ""}
+              <li><strong>Aankomst:</strong> ${formatDateNL(request.arrival_date)}</li>
+              <li><strong>Vertrek:</strong> ${formatDateNL(request.departure_date)}</li>
+              <li><strong>Aantal gasten:</strong> ${request.number_of_guests}</li>
+              <li><strong>Verblijf:</strong> ${formatCurrencyNL(quote.price_total)}</li>
+              ${extras.length > 0 ? extras.map((e: any) => `<li><strong>${sanitizeHtml(e.name)}:</strong> ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("") : ""}
+              <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
+            </ul>
+
+            ${request.reference_number ? `<p><strong>Referentie:</strong> ${sanitizeHtml(request.reference_number)}</p>` : ""}
+            
+            <p style="margin-top: 24px;">
+              <a href="${portalLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk je programma →</a>
+            </p>
+            
+            <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+            <p style="color: #666; font-size: 12px; margin-top: 40px;">
+              Dit bericht is verzonden door Bureau Vlieland.
+            </p>
+          </div>
+        `;
+
+        try {
+          await fetch("https://api.mailjet.com/v3.1/send", {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${auth}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              Messages: [{
+                From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                To: [{ Email: customerEmail }],
+                ...(replyTo ? { ReplyTo: replyTo } : {}),
+                Subject: customerTemplate?.subject || `${subjectPrefix}Je logies is bevestigd`,
+                HTMLPart: customerHtml,
+              }],
+            }),
+          });
+
+          await logEmail({
+            email_type: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
+            subject: customerTemplate?.subject || `Je logies is bevestigd`,
+            recipient_email: customerEmail,
+            recipient_name: request.customer_name,
+            related_accommodation_id: request.id,
+            status: "sent",
+            sent_by: "system",
+          });
+
+          console.log(`Selection confirmation sent to customer ${request.customer_name}`);
+        } catch (e) {
+          console.error("Error sending customer email:", e);
+          await logEmail({
+            email_type: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
+            subject: `Je logies is bevestigd`,
+            recipient_email: customerEmail,
+            recipient_name: request.customer_name,
+            related_accommodation_id: request.id,
+            status: "failed",
+            error_message: String(e),
+            sent_by: "system",
+          });
+        }
+      }
 
       // Notify rejected partners
       if (rejectedQuotes && rejectedQuotes.length > 0) {
