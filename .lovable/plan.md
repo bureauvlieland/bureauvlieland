@@ -1,78 +1,34 @@
 
 
-## Plan: Berichtenfunctie admin ↔ logiespartner bij offerteaanvraag
+## Plan: Fix chathistorie niet zichtbaar in accommodation chat
 
-### Doel
-Vanuit de admin logies-detailpagina een bericht sturen naar een specifieke logiespartner over een aanvraag. Berichten worden twee-richtingsverkeer: de partner kan reageren. Alles wordt gelogd bij de aanvraag (communicatielog) en is zichtbaar in het partnerportaal.
+### Probleem
+Het bericht is succesvol opgeslagen in de database, maar de UI toont "Nog geen berichten" door twee timing-problemen in `useAccommodationChat.ts`:
 
-### Aanpak
-Het bestaande chat-systeem hergebruiken (chat_conversations + chat_messages), uitgebreid met een `accommodation_id` veld. Dit geeft realtime berichten, leesbevestigingen en e-mailnotificaties gratis mee.
+1. **Na eerste bericht:** `setConversationId()` wordt aangeroepen vóórdat het bericht is ingevoegd. React kan de re-render (en dus `loadMessages`) uitvoeren vóór de insert klaar is → 0 berichten gevonden. De realtime subscription is op dat moment ook nog niet actief.
 
-### Database-migratie
+2. **Bij heropenen sheet:** De `findConversation` query werkt correct, maar na het laden van berichten wordt geen optimistische update gedaan als berichten via `sendMessage` worden verstuurd.
 
-**Tabel `chat_conversations` uitbreiden:**
-- `accommodation_id UUID REFERENCES accommodation_requests(id)` — koppeling aan logiesaanvraag
-- `quote_id UUID REFERENCES accommodation_quotes(id)` — koppeling aan specifieke offerte/partner
+### Oplossing
+Twee aanpassingen in `src/hooks/useAccommodationChat.ts`:
 
-Dit maakt het mogelijk om per partner per aanvraag een gesprek te voeren, en berichten terug te tonen op de admin-detailpagina en in het partnerportaal.
+**A) Optimistische message-update na insert**
+Na het succesvol inserten van een bericht, dit direct toevoegen aan de lokale `messages` state (zonder te wachten op realtime of een re-fetch):
 
-### Deel 1: Admin — bericht sturen naar partner
+```ts
+const { data: newMsg } = await supabase.from("chat_messages").insert({...}).select().single();
+if (newMsg) {
+  setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+}
+```
 
-**Nieuw component: `src/components/admin/AdminAccommodationChatSheet.tsx`**
-- Sheet die opent vanuit een quote-kaart op de logies-detailpagina
-- Toont bestaande berichten (chat-stijl) als er al een gesprek is
-- Tekstveld om nieuw bericht te typen
-- Bij eerste bericht: maakt automatisch een `chat_conversation` aan met:
-  - `source: "partner_portal"`
-  - `source_partner_id: partner.id`
-  - `accommodation_id: request.id`
-  - `quote_id: quote.id`
-  - `visitor_name/email` van de partner
-- Bericht wordt als `sender_type: "admin"` opgeslagen
-- Triggert `notify-new-chat-reply` edge function voor e-mailnotificatie
+**B) Volgorde fixen bij nieuwe conversatie**
+Bij het aanmaken van een nieuwe conversatie: eerst het bericht inserten, dan pas `setConversationId` aanroepen. Of: de volgorde behouden maar na alle inserts een expliciete `loadMessages` doen.
 
-**Integratie in `AdminAccommodationDetail.tsx`:**
-- Per quote-kaart een "Bericht" knop (MessageSquare icoon) toevoegen
-- Opent de chat-sheet voor die specifieke partner/quote
-
-### Deel 2: Partner — berichten zien en reageren
-
-**Aanpassen: `src/components/partner-portal/PartnerAccommodationRequestCard.tsx`**
-- "Berichten" knop toevoegen die een chat-sheet opent
-- Chat-sheet toont berichten gekoppeld aan de quote/aanvraag
-- Partner kan reageren (sender_type: "visitor")
-- Gebruikt bestaande `useChat` hook met aanpassing voor accommodation-context
-
-**Nieuw component: `src/components/partner-portal/PartnerAccommodationChatSheet.tsx`**
-- Herbruikbare chat-interface voor partner-logies-context
-- Realtime updates via bestaand Supabase Realtime kanaal
-
-### Deel 3: E-mailnotificatie bij nieuw bericht
-
-**Aanpassen: `supabase/functions/notify-new-chat-reply/index.ts`**
-- Als de conversatie een `accommodation_id` heeft: bouw een directe link naar het partnerportaal met de aanvraag
-- Onderwerp: "Nieuw bericht inzake logiesaanvraag {reference_number}"
-- Hergebruikt bestaande Mailjet-integratie en throttling (max 1 per 10 min)
-
-**Aanpassen: `supabase/functions/notify-new-chat/index.ts`**
-- Zelfde aanpassing voor berichten van partner naar admin
-
-### Deel 4: Logging in communicatiedossier
-
-**Aanpassen: `src/components/admin/ProjectCommunicationsCard.tsx`**
-- Chat-berichten gekoppeld aan de accommodation_id ook weergeven in de tijdlijn
-- Of: bij het sluiten van een gesprek automatisch opslaan als communicatie-entry (bestaand patroon in `saveChatToProject`)
-
-### Bestanden
-
+### Bestand
 | Bestand | Actie |
 |---|---|
-| Database migratie | `accommodation_id` + `quote_id` kolommen op `chat_conversations` |
-| `src/components/admin/AdminAccommodationChatSheet.tsx` | Nieuw — chat-sheet voor admin |
-| `src/pages/admin/AdminAccommodationDetail.tsx` | "Bericht" knop per quote-kaart |
-| `src/components/partner-portal/PartnerAccommodationChatSheet.tsx` | Nieuw — chat-sheet voor partner |
-| `src/components/partner-portal/PartnerAccommodationRequestCard.tsx` | "Berichten" knop toevoegen |
-| `supabase/functions/notify-new-chat-reply/index.ts` | Accommodation-context in e-mail |
-| `supabase/functions/notify-new-chat/index.ts` | Accommodation-context in admin-notificatie |
-| `src/hooks/useChat.ts` | Optionele `accommodationId`/`quoteId` parameters toevoegen |
+| `src/hooks/useAccommodationChat.ts` | Optimistische updates + volgorde fix |
+
+Eén bestand, kleine wijziging.
 
