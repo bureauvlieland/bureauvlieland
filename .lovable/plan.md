@@ -1,32 +1,46 @@
 
 
-## Plan: Activiteitentabel vereenvoudigen
+## Plan: Automatische bevestigingsmail bij logies-selectie
 
-### Probleem
-De tabel heeft 9+ kolommen met veel visuele ruis: badges, inline-editors, popovers en dubbele statusindicatoren. Op een breed scherm is het nog leesbaar, maar het voelt overweldigend.
+### Huidige situatie
+Wanneer een klant een logiesofferte selecteert, wordt:
+- **Partner**: automatisch een e-mail gestuurd (werkt al)
+- **Klant**: géén e-mail gestuurd — er wordt een handmatige admin-todo aangemaakt ("Logies bevestiging versturen")
 
-### Aanpak — minder kolommen, visuele groepering per dag
+### Wat we gaan doen
 
-**1. Kolom "Gefactureerd door" verwijderen**
-Deze info is bijna altijd hetzelfde (bepaald door `invoicing_mode`). Al zichtbaar in het blauwe banner bovenaan. Kolom schrappen uit beide tabel-varianten.
+**1. Automatische klant-bevestigingsmail toevoegen**
 
-**2. Dag-kolom vervangen door visuele groepering**
-In plaats van elke rij "Dag 1", "Dag 1", "Dag 2" te herhalen: een groepskop-rij per dag (`colspan`) met "Dag 1 — do 9 apr." als label. De aparte Dag-kolom vervalt.
+In `select-accommodation-quote/index.ts`, na de partner-mail, een bevestigingsmail naar de klant sturen via het bestaande template `accommodation_selected_customer`. De mail bevat:
 
-**3. Klant-akkoord samenvoegen met status**
-De losse "Klant akkoord" / "Wacht op klant" badge integreren als klein icoon (✓ groen / ⏳ amber) direct naast de status-badge, in plaats van eronder als tweede badge.
+- Naam van de gekozen accommodatie
+- Aankomst- en vertrekdatum
+- Aantal gasten
+- Prijsoverzicht (basis + extras + totaal)
+- **Informatie over de logiesverstrekker**: naam, eventueel adres/telefoon (uit `partners` tabel)
+- Link naar het klantportaal
+- Referentienummer
 
-**4. Tijd-kolom compacter**
-De inline-edit popover en confirm-button alleen tonen bij hover op de rij, niet standaard zichtbaar. Scheelt visuele drukte.
+**2. Admin-todo aanpassen**
 
-### Resultaat
-Van 9 kolommen → 7 kolommen (quote-modus) / 6 kolommen (regulier), plus visuele daggroepering die de structuur verduidelijkt.
+De todo "Logies bevestiging versturen" vervangen door een informatieve todo "Logies bevestigd" (lager prio, ter info) of de todo helemaal verwijderen en automatisch op "done" zetten. De todo wordt dan puur een log-entry dat de bevestiging is verstuurd.
 
-### Bestanden
+Concreet: de todo wordt nog steeds aangemaakt maar direct op `status: "done"` gezet, zodat het in de timeline zichtbaar blijft maar niet als open taak verschijnt. Alternatief: de todo helemaal weglaten aangezien de e-maillog al het bewijs levert.
+
+**3. E-mailtemplate verrijken**
+
+Het `accommodation_selected_customer` template in de database aanvullen met extra variabelen:
+- `{{accommodation_address}}` — adres van de partner
+- `{{accommodation_phone}}` — telefoonnummer partner  
+- `{{partner_description}}` — korte beschrijving indien beschikbaar
+- `{{extras_list}}` — HTML-lijst van gekozen extras
+- `{{portal_link}}` — directe link naar klantportaal
+
+### Wijzigingen
 
 | Bestand | Actie |
 |---|---|
-| `src/pages/admin/AdminRequestDetail.tsx` | Kolom "Gefactureerd door" verwijderen, dag-groepering toevoegen, klant-akkoord icoon inline, tijd-knoppen hover-only |
+| `supabase/functions/select-accommodation-quote/index.ts` | Klant-bevestigingsmail toevoegen na partner-mail; todo aanpassen naar info-only of verwijderen |
 
-Eén bestand, refactor van de tabel-sectie.
+Eén bestand. Het e-mailtemplate in de database kan via de admin-interface worden aangepast nadat de variabelen beschikbaar zijn.
 
