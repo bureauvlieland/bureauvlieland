@@ -61,14 +61,8 @@ export const PartnerSettingsForm = () => {
     booking_contact_phone: "",
     availability_notes: "",
     accommodation_description: "",
-    about_text: "",
-    website_url: "",
-    location_lat: "",
-    location_lng: "",
-    location_description: "",
   });
-  const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
-  const [highlightFeatures, setHighlightFeatures] = useState<string[]>([]);
+
 
   // Password form state
   const [passwordData, setPasswordData] = useState({
