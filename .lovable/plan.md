@@ -1,46 +1,27 @@
 
 
-## Plan: Automatische bevestigingsmail bij logies-selectie
+## Plan: Datumscheiding in chat + Inbox-badge verduidelijken
 
-### Huidige situatie
-Wanneer een klant een logiesofferte selecteert, wordt:
-- **Partner**: automatisch een e-mail gestuurd (werkt al)
-- **Klant**: géén e-mail gestuurd — er wordt een handmatige admin-todo aangemaakt ("Logies bevestiging versturen")
+### Probleem 1 — Geen datum in chat-tijdlijn
+Berichten tonen alleen het tijdstip (HH:mm), niet de datum. Bij gesprekken die meerdere dagen duren is onduidelijk wanneer berichten zijn verstuurd.
 
-### Wat we gaan doen
+### Probleem 2 — Inbox-badge blijft op "2" staan
+De badge op de Inbox-tab telt het aantal **actieve/wachtende conversaties**, niet het aantal **ongelezen berichten**. Zodra je een gesprek opent worden berichten als gelezen gemarkeerd, maar de conversatie-status blijft "active" of "waiting" — dus de badge verandert niet. De badge verdwijnt pas als je gesprekken sluit.
 
-**1. Automatische klant-bevestigingsmail toevoegen**
+### Aanpak
 
-In `select-accommodation-quote/index.ts`, na de partner-mail, een bevestigingsmail naar de klant sturen via het bestaande template `accommodation_selected_customer`. De mail bevat:
+**1. Datumgroepering in berichten**
+In `ChatMessageBubble` of in de berichtenlijst van `AdminChat.tsx`: een datumscheidingsregel tonen wanneer de datum verandert tussen berichten. Bijv. "Vandaag", "Gisteren", of "28 mrt 2026".
 
-- Naam van de gekozen accommodatie
-- Aankomst- en vertrekdatum
-- Aantal gasten
-- Prijsoverzicht (basis + extras + totaal)
-- **Informatie over de logiesverstrekker**: naam, eventueel adres/telefoon (uit `partners` tabel)
-- Link naar het klantportaal
-- Referentienummer
-
-**2. Admin-todo aanpassen**
-
-De todo "Logies bevestiging versturen" vervangen door een informatieve todo "Logies bevestigd" (lager prio, ter info) of de todo helemaal verwijderen en automatisch op "done" zetten. De todo wordt dan puur een log-entry dat de bevestiging is verstuurd.
-
-Concreet: de todo wordt nog steeds aangemaakt maar direct op `status: "done"` gezet, zodat het in de timeline zichtbaar blijft maar niet als open taak verschijnt. Alternatief: de todo helemaal weglaten aangezien de e-maillog al het bewijs levert.
-
-**3. E-mailtemplate verrijken**
-
-Het `accommodation_selected_customer` template in de database aanvullen met extra variabelen:
-- `{{accommodation_address}}` — adres van de partner
-- `{{accommodation_phone}}` — telefoonnummer partner  
-- `{{partner_description}}` — korte beschrijving indien beschikbaar
-- `{{extras_list}}` — HTML-lijst van gekozen extras
-- `{{portal_link}}` — directe link naar klantportaal
+**2. Inbox-badge aanpassen naar ongelezen conversaties**
+De badge moet het aantal conversaties tonen met ongelezen berichten (visitor messages zonder `read_at`), niet het totaal aantal actieve gesprekken. Zo verdwijnt de badge zodra je alle gesprekken hebt gelezen, ongeacht of ze open of gesloten zijn.
 
 ### Wijzigingen
 
 | Bestand | Actie |
 |---|---|
-| `supabase/functions/select-accommodation-quote/index.ts` | Klant-bevestigingsmail toevoegen na partner-mail; todo aanpassen naar info-only of verwijderen |
+| `src/pages/admin/AdminChat.tsx` | Datumscheiding invoegen in de berichtenlijst; Inbox-badge baseren op ongelezen conversatie-telling |
+| `src/hooks/useAdminChat.ts` | `unreadConversationCount` toevoegen (distinct conversation_id's met ongelezen visitor-berichten) |
 
-Eén bestand. Het e-mailtemplate in de database kan via de admin-interface worden aangepast nadat de variabelen beschikbaar zijn.
+Twee bestanden, kleine wijzigingen.
 
