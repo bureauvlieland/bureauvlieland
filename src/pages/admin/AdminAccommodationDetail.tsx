@@ -766,6 +766,20 @@ export default function AdminAccommodationDetail() {
                               <Eye className="h-3 w-3 mr-1" />
                               Bekijken
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => setChatQuote({
+                                id: quote.id,
+                                partnerId: partner?.id || "",
+                                partnerName: partner?.name || "Partner",
+                                partnerEmail: partner?.email || "",
+                              })}
+                            >
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Bericht
+                            </Button>
                             {quote.status === "submitted" && !(quote as any).forwarded_at && (
                               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setForwardQuoteId(quote.id)}>
                                 <Send className="h-3 w-3 mr-1" />
