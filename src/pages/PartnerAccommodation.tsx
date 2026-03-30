@@ -622,6 +622,9 @@ const PartnerAccommodationContent = () => {
                     request={request}
                     quote={request.quote}
                     invoicingMode={request.invoicingMode}
+                    partnerId={partnerId || ""}
+                    partnerName={partnerName}
+                    partnerEmail={partnerEmail}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
