@@ -27,7 +27,7 @@ export const PartnerUpcomingActivities = ({
 
     // Helper to determine effective status
     const getEffectiveStatus = (item: PartnerItem) => {
-      const hasCustomerAccepted = !!item.customer_accepted_at;
+      const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
       return (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
     };
 

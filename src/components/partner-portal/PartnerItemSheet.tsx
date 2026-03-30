@@ -135,7 +135,7 @@ export const PartnerItemSheet = ({
   const statusInfo = statusConfig[item.status] || statusConfig.pending;
 
   // Calculate effective status (same as dashboard logic)
-  const hasCustomerAccepted = !!item.customer_accepted_at;
+  const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
   const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
 
   // Can invoice when accepted/executed and customer accepted terms
@@ -294,7 +294,7 @@ export const PartnerItemSheet = ({
             >
               {statusInfo.label}
             </Badge>
-            {item.customer_accepted_at && (
+            {(item.customer_accepted_at || item.customer_approved_at) && (
               <Badge className="bg-green-600 hover:bg-green-700">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Klant akkoord

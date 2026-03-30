@@ -547,7 +547,7 @@ const PartnerDashboardContent = () => {
   // Helper to determine effective status - if customer has accepted but status is still confirmed,
   // treat it as "accepted" for display purposes
   const getEffectiveStatus = (item: PartnerItem) => {
-    const hasCustomerAccepted = !!item.customer_accepted_at;
+    const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
     return (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
   };
 
@@ -572,7 +572,7 @@ const PartnerDashboardContent = () => {
   // Waiting on customer: confirmed/alternative WITHOUT customer_accepted_at
   const waitingOnCustomer =
     data.items.filter((i) => 
-      (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at
+      (i.status === "confirmed" || i.status === "alternative") && !i.customer_accepted_at && !i.customer_approved_at
     ).length +
     accommodationQuotes.filter((q) => q.status === "submitted").length;
   
@@ -606,7 +606,7 @@ const PartnerDashboardContent = () => {
   // In progress: confirmed/alternative/submitted (not accepted, not expired)
   const inProgressCount =
     data.items.filter((i) => {
-      return ["confirmed", "alternative"].includes(i.status) && !i.customer_accepted_at;
+      return ["confirmed", "alternative"].includes(i.status) && !i.customer_accepted_at && !i.customer_approved_at;
     }).length +
     accommodationQuotes.filter((q) => q.status === "submitted").length;
 

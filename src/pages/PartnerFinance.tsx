@@ -245,7 +245,7 @@ const PartnerFinanceContent = () => {
 
   // Helper function to determine effective status (same logic as dashboard)
   const getEffectiveStatus = (item: PartnerItem): string => {
-    const hasCustomerAccepted = !!item.customer_accepted_at;
+    const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
     return (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
   };
 
