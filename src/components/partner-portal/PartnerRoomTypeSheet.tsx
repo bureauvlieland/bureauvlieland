@@ -234,6 +234,19 @@ export function PartnerRoomTypeSheet({
             </div>
           </div>
 
+          {/* Photos */}
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm text-muted-foreground">Foto's</h4>
+            <PartnerImageUpload
+              partnerId={partnerId}
+              images={roomImages}
+              onImagesChange={setRoomImages}
+              storagePath={`rooms/${roomType?.id || 'new'}`}
+              maxImages={4}
+              label=""
+            />
+          </div>
+
           {/* Pricing */}
           <div className="space-y-4">
             <h4 className="font-medium text-sm text-muted-foreground">Prijs</h4>
