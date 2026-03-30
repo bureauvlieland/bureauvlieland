@@ -456,14 +456,31 @@ export default function AdminAccommodationDetail() {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData?.session?.access_token;
           if (token) {
+            const emailSubject = `Wijziging aantal gasten — ${request?.customer_name || "Klant"}`;
+            const emailBody = `Beste partner,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWij vragen u vriendelijk een aangepaste offerte in te dienen via het partnerportaal.`;
             await supabase.functions.invoke("send-accommodation-quote-request", {
               body: {
                 request_id: id,
                 partner_ids: resetPartnerIds,
-                email_subject: `Wijziging aantal gasten — ${request?.customer_name || "Klant"}`,
-                email_body: `Beste partner,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWij vragen u vriendelijk een aangepaste offerte in te dienen via het partnerportaal.`,
+                email_subject: emailSubject,
+                email_body: emailBody,
               },
               headers: { Authorization: `Bearer ${token}` },
+            });
+
+            // Log to communications timeline
+            const resetPartnerNames = quotes
+              ?.filter((q) => resetPartnerIds.includes(q.partner_id))
+              .map((q) => q.partner?.name || "Onbekend")
+              .join(", ") || "";
+            await supabase.from("project_communications").insert({
+              accommodation_id: id,
+              request_id: request?.linked_program_id || null,
+              communication_type: "email",
+              direction: "outbound",
+              subject: emailSubject,
+              content: `Gastenwijziging (${request?.number_of_guests} → ${newGuests}) gemeld aan: ${resetPartnerNames}. Offertes gereset naar "wachtend".`,
+              contact_name: resetPartnerNames,
             });
           }
         }
