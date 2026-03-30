@@ -107,6 +107,9 @@ export interface AccommodationQuote {
     id: string;
     name: string;
     email: string;
+    gallery_images?: { url: string; alt?: string }[];
+    about_text?: string;
+    highlight_features?: string[];
   };
 }
 

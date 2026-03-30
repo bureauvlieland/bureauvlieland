@@ -59,7 +59,7 @@ interface QuoteData {
   commission_amount: number | null;
   commission_status: string | null;
   forwarded_at: string | null;
-  partner?: { id: string; name: string; email: string } | null;
+  partner?: { id: string; name: string; email: string; gallery_images?: { url: string; alt?: string }[]; about_text?: string; highlight_features?: string[] } | null;
 }
 
 interface AdminAccommodationQuoteSheetProps {
@@ -118,6 +118,23 @@ export function AdminAccommodationQuoteSheet({
             <SheetTitle className="text-lg">{quote.accommodation_name || "Offerte"}</SheetTitle>
             <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
           </div>
+          {quote.partner?.about_text && (
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{quote.partner.about_text}</p>
+          )}
+          {quote.partner?.gallery_images && quote.partner.gallery_images.length > 0 && (
+            <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+              {quote.partner.gallery_images.slice(0, 4).map((img, i) => (
+                <img key={i} src={img.url} alt={img.alt || `Foto ${i + 1}`} className="h-16 w-24 rounded-md object-cover shrink-0 border" />
+              ))}
+            </div>
+          )}
+          {quote.partner?.highlight_features && quote.partner.highlight_features.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {(quote.partner.highlight_features as string[]).map((f, i) => (
+                <Badge key={i} variant="outline" className="text-xs">{f}</Badge>
+              ))}
+            </div>
+          )}
           {quote.partner && (
             <SheetDescription>{quote.partner.name} • {quote.partner.email}</SheetDescription>
           )}
