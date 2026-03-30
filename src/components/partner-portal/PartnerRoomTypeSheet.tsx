@@ -60,7 +60,7 @@ export function PartnerRoomTypeSheet({
       setSizeSqm(roomType.size_sqm?.toString() || "");
       setBedConfiguration(roomType.bed_configuration || "");
       setMaxOccupancy(roomType.max_occupancy?.toString() || "2");
-      setFacilities(roomType.facilities || []);
+      setRoomImages(roomType.images || []);
       setPricePerNight(roomType.price_per_night?.toString() || "");
       setPriceIncludesVat(roomType.price_includes_vat);
       setVatRate(roomType.vat_rate?.toString() || "9");
