@@ -226,9 +226,9 @@ Deno.serve(async (req) => {
     // Log email
     await supabase.from("email_log").insert({
       email_type: "purchase_invoice_forward",
-      recipient_email: snelstartEmail,
+      recipient_email: getRecipientEmail(snelstartEmail, origin),
       recipient_name: "Boekhouding",
-      subject: `Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`,
+      subject: emailSubject,
       status: "sent",
       sent_at: new Date().toISOString(),
       sent_by: user.id,

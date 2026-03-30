@@ -293,9 +293,9 @@ Deno.serve(async (req) => {
           `;
 
           await sendEmailNotification(
-            partner.email,
+            getRecipientEmail(partner.email, origin),
             partner.name,
-            `Commissiefactuur Bureau Vlieland${commissionInvoiceNumber ? ` - ${commissionInvoiceNumber}` : ''}`,
+            `${getSubjectPrefix(origin)}Commissiefactuur Bureau Vlieland${commissionInvoiceNumber ? ` - ${commissionInvoiceNumber}` : ''}`,
             emailHtml
           );
         }

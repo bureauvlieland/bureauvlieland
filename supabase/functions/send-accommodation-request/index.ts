@@ -248,13 +248,13 @@ Deno.serve(async (req) => {
     await sendEmailViaMailjet([
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
-        To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin van der Most" }],
+        To: [{ Email: getRecipientEmail("erwin@bureauvlieland.nl", origin), Name: "Erwin van der Most" }],
         Subject: bureauSubject,
         HTMLPart: bureauEmailHtml,
       },
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: request.customer_email, Name: request.customer_name }],
+        To: [{ Email: getRecipientEmail(request.customer_email, origin), Name: request.customer_name }],
         Subject: customerSubject,
         HTMLPart: customerEmailHtml,
       },

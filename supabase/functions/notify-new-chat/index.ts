@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
           Messages: [
             {
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
+              To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
               Subject: emailSubject,
               HTMLPart: emailBody,
             },

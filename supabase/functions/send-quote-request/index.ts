@@ -193,11 +193,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Use database templates or fallback to hardcoded
     const bureauHtml = bureauTemplate?.body || getFallbackBureauHtml(requestData);
-    const bureauSubject = bureauTemplate?.subject || `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`;
+    const subjectPrefix = getSubjectPrefix(origin);
+    const bureauSubject = `${subjectPrefix}${bureauTemplate?.subject || `Nieuwe offerteaanvraag - ${requestData.numberOfPeople} personen`}`;
 
     const fallbackQuoteDetails = getFallbackBureauHtml(requestData);
     const customerHtml = customerTemplate?.body || getFallbackCustomerHtml(requestData, fallbackQuoteDetails);
-    const customerSubject = customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland";
+    const customerSubject = `${subjectPrefix}${customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland"}`;
 
     // Send both emails using Mailjet
     await sendEmailViaMailjet([
@@ -209,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         To: [
           {
-            Email: "erwin@bureauvlieland.nl",
+            Email: getRecipientEmail("erwin@bureauvlieland.nl", origin),
             Name: "Erwin van der Most"
           }
         ],
@@ -224,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         To: [
           {
-            Email: requestData.email,
+            Email: getRecipientEmail(requestData.email, origin),
             Name: requestData.name
           }
         ],

@@ -304,9 +304,9 @@ Deno.serve(async (req) => {
     `;
 
     await sendEmailNotification(
-      "erwin@bureauvlieland.nl",
+      getRecipientEmail("erwin@bureauvlieland.nl", origin),
       "Bureau Vlieland",
-      `Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
+      `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
       bureauEmailHtml
     );
 

@@ -661,10 +661,11 @@ Deno.serve(async (req) => {
 
       const emailSubject = template?.subject || subjectMap[status];
 
+      const statusSubjectPrefix = getSubjectPrefix(origin);
       const emailSent = await sendEmailViaMailjet(
-        programRequest.customer_email,
+        getRecipientEmail(programRequest.customer_email, origin),
         programRequest.customer_name,
-        emailSubject,
+        `${statusSubjectPrefix}${emailSubject}`,
         emailHtml
       );
 
