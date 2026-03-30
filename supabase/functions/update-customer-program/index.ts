@@ -801,6 +801,17 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Create admin_todo for bureau notification
+      await supabase.from("admin_todos").insert({
+        title: `Klant ${program.customer_name} annuleert "${item.block_name}"`,
+        description: `De klant heeft het onderdeel "${item.block_name}" geannuleerd. Controleer of dit gevolgen heeft voor het programma.`,
+        priority: "high",
+        auto_type: "partner_status_update",
+        auto_entity_id: cancelItemId,
+        related_request_id: program.id,
+        related_partner_id: item.provider_id !== "bureau" ? item.provider_id : null,
+      });
+
       console.log(`Customer cancelled item ${cancelItemId}`);
     }
 
