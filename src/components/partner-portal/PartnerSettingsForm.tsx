@@ -51,7 +51,7 @@ export const PartnerSettingsForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
-  const [newFeature, setNewFeature] = useState("");
+  
 
   // Form state
   const [formData, setFormData] = useState({
