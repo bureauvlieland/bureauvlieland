@@ -60,6 +60,7 @@ const PartnerRoomTypes = lazy(() => import("./pages/PartnerRoomTypes"));
 const PartnerGuides = lazy(() => import("./pages/PartnerGuides"));
 const PartnerResetPassword = lazy(() => import("./pages/PartnerResetPassword"));
 const PartnerPlanning = lazy(() => import("./pages/PartnerPlanning"));
+const PartnerProfile = lazy(() => import("./pages/PartnerProfile"));
 
 // Lazy-loaded admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
