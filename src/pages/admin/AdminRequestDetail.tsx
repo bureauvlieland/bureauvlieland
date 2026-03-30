@@ -191,6 +191,7 @@ interface ProgramRequestItem {
   skip_partner_notification: boolean | null;
   // Customer approval
   customer_approved_at: string | null;
+  customer_accepted_at: string | null;
   // Per-item participant override
   override_people: number | null;
   // Calendar export fields
@@ -1523,11 +1524,24 @@ const AdminRequestDetail = () => {
                               
                               {isQuoteMode ? (
                                 <>
-                                  <TableCell>
-                                    <AdminItemQuoteStatusSelect
-                                      status={item.item_quote_status}
-                                      onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
-                                    />
+                                   <TableCell>
+                                    <div className="space-y-1">
+                                      <AdminItemQuoteStatusSelect
+                                        status={item.item_quote_status}
+                                        onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
+                                      />
+                                      {(item.customer_accepted_at || item.customer_approved_at) ? (
+                                        <Badge variant="outline" className="gap-1 text-xs border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
+                                          <CheckCircle2 className="h-3 w-3" />
+                                          Klant akkoord
+                                        </Badge>
+                                      ) : (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification ? (
+                                        <Badge variant="outline" className="gap-1 text-xs border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
+                                          <Clock className="h-3 w-3" />
+                                          Wacht op klant
+                                        </Badge>
+                                      ) : null}
+                                    </div>
                                   </TableCell>
                                   <TableCell>
                                     <input
@@ -1601,24 +1615,37 @@ const AdminRequestDetail = () => {
                                 </>
                               ) : (
                                 <>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      {statusIcons[item.status]}
-                                      <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                      {(() => {
-                                          if (item.skip_partner_notification) {
-                                            const phase = getItemSendPhase(item, request);
-                                            if (phase === "wacht_op_klant") return "Wacht op klant";
-                                            if (phase === "klaar_voor_partner") return "Klaar om te versturen";
-                                            
-                                          }
-                                          return statusInfo.label;
-                                        })()}
-                                      </Badge>
+                                   <TableCell>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        {statusIcons[item.status]}
+                                        <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
+                                        {(() => {
+                                            if (item.skip_partner_notification) {
+                                              const phase = getItemSendPhase(item, request);
+                                              if (phase === "wacht_op_klant") return "Wacht op klant";
+                                              if (phase === "klaar_voor_partner") return "Klaar om te versturen";
+                                              
+                                            }
+                                            return statusInfo.label;
+                                          })()}
+                                        </Badge>
+                                      </div>
+                                      {(item.customer_accepted_at || item.customer_approved_at) ? (
+                                        <Badge variant="outline" className="gap-1 text-xs border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400">
+                                          <CheckCircle2 className="h-3 w-3" />
+                                          Klant akkoord
+                                        </Badge>
+                                      ) : (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification ? (
+                                        <Badge variant="outline" className="gap-1 text-xs border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
+                                          <Clock className="h-3 w-3" />
+                                          Wacht op klant
+                                        </Badge>
+                                      ) : null}
+                                      {item.status_note && (
+                                        <p className="text-xs text-muted-foreground mt-1">{item.status_note}</p>
+                                      )}
                                     </div>
-                                    {item.status_note && (
-                                      <p className="text-xs text-slate-500 mt-1">{item.status_note}</p>
-                                    )}
                                   </TableCell>
                                   <TableCell>
                                     {item.quoted_price != null ? (
