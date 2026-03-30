@@ -135,6 +135,7 @@ const PartnerAccommodationContent = () => {
       if (impersonatedPartner) {
         setPartnerToken(impersonatedPartner.partner_token);
         setPartnerName(impersonatedPartner.name);
+        setPartnerEmail(impersonatedPartner.contact_email || impersonatedPartner.email);
         setPartnerDescription((impersonatedPartner as any).accommodation_description || "");
       }
     }
