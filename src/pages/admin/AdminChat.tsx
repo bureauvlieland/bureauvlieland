@@ -40,6 +40,7 @@ const AdminChat = () => {
     setActiveConversationId,
     messages,
     unreadCount,
+    unreadConversationIds,
     isOnline,
     statusFilter,
     setStatusFilter,
