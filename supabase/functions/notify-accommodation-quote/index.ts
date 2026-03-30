@@ -8,6 +8,8 @@ import {
   formatCurrencyNL,
   buildReplyTo,
   getPortalBaseUrl,
+  getRecipientEmail,
+  getSubjectPrefix,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
