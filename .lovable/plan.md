@@ -1,56 +1,52 @@
 
 
-## Plan: Alle automatische mails testen — inconsistenties in test-mode
+## Plan: Ontbrekende automatische e-mails toevoegen
 
-### Bevinding: Het Posthuys
-Het Posthuys heeft de mail van 23 maart **wél ontvangen** — ze hebben op 29 maart een offerte ingediend via het partnerportaal. Vermoedelijk is de mail in spam beland of over het hoofd gezien. Het e-mailadres `info@posthuysvlieland.nl` is correct.
+### Huidige dekking (wat al werkt)
+- Programma-aanvraag → bureau + klant + partners
+- Partner statusupdate (confirmed/unavailable/alternative) → klant
+- Tegenvoorstel klant → partner + reactie terug naar klant
+- Annulering → klant + partners + logiespartners
+- Offerte verstuurd → klant
+- Logiesaanvraag → bureau + klant + partners
+- Logiesofferte ontvangen → klant (notify-accommodation-quote)
+- Logies geselecteerd → partner + klant
+- Commissiebevestiging → partner
+- Chat → bureau + bezoeker
+- Datumwijziging, itemwijziging, toevoeging → partner + klant
+- Alle partners gereageerd → admin_todo (geen mail)
+- Akkoord klant op offertevoorstel → partners worden direct gemaild
 
-### Bevinding: Test-mode inconsistenties
+### Ontbrekende e-mails (5 gaps)
 
-Meerdere edge functions die e-mails versturen gebruiken **geen test-mode filtering**. Dit betekent dat in de preview-omgeving echte partners/klanten worden gemaild in plaats van alleen `erwin@bureauvlieland.nl`.
-
-| Functie | Test-mode? | Risico |
-|---|---|---|
-| `send-program-request` | ✅ Ja | — |
-| `send-items-to-partners` | ✅ Ja | — |
-| `cancel-program-request` | ✅ Ja | — |
-| `send-quote-offer` | ✅ Ja | — |
-| `accept-quote-proposal` | ✅ Ja | — |
-| `approve-quote-item` | ✅ Ja | — |
-| `update-customer-program` | ✅ Ja | — |
-| `process-completed-items` | ✅ Ja | — |
-| `select-accommodation-quote` | ✅ Ja | — |
-| `send-customer-accommodation-message` | ✅ Ja | — |
-| **`send-accommodation-quote-request`** | ❌ Nee | Partners ontvangen testmails |
-| **`notify-accommodation-quote`** | ❌ Nee | Klant ontvangt testmails |
-| **`withdraw-accommodation-quote`** | ❌ Nee | Partners ontvangen testmails |
-| **`update-partner-item-status`** | ❌ Nee | Klant ontvangt testmails |
-| **`send-accommodation-request`** | ❌ Nee | Bureau + klant ontvangen testmails |
-| **`send-quote-request`** | ❌ Nee | Bureau + klant ontvangen testmails |
-| **`register-partner-invoice`** | ❌ Nee | Bureau ontvangt testmails |
-| **`forward-purchase-invoice`** | ❌ Nee | Boekhouder ontvangt testmails |
-| **`update-commission-status`** | ❌ Nee | Partners ontvangen testmails |
-| **`notify-new-chat`** | ❌ Nee | Bureau ontvangt testmails |
-| **`inbound-email`** | Gedeeltelijk | Klant wel, maar zonder origin |
+| # | Trigger | Ontvanger | Waarom nuttig |
+|---|---|---|---|
+| 1 | **Klant accepteert individueel item** (akkoord-knop) | Bureau (admin) | Bureau weet niet dat de klant een item heeft geaccepteerd. Er wordt alleen een history-entry gemaakt, geen mail of todo. |
+| 2 | **Klant annuleert individueel item** | Bureau (admin) | Zelfde als hierboven — geen notificatie naar bureau. |
+| 3 | **Alle items geaccepteerd door klant** (quote_status → akkoord_ontvangen) | Bureau (admin) | Bij per-item akkoord (niet-offerte flow) mist de bureau-notificatie dat álles nu akkoord is. |
+| 4 | **Partner dient logiesofferte in** | Bureau (admin) | Er gaat nu alleen een mail naar de klant (notify-accommodation-quote). Bureau krijgt geen seintje dat er een nieuwe offerte is binnengekomen. |
+| 5 | **Klant accepteert logiesofferte** (select-accommodation-quote) | Bureau (admin) | Bureau moet weten dat de klant een keuze heeft gemaakt. Nu alleen partner + klant genotificeerd. |
 
 ### Voorstel
 
-Test-mode filtering toevoegen aan alle 10 functies die dit missen. Per functie:
-1. Import `getRecipientEmail`, `getSubjectPrefix` uit `_shared/email-templates.ts`
-2. Gebruik `origin` parameter (uit body of header) om test-mode te bepalen
-3. In test-mode: redirect alle e-mails naar `erwin@bureauvlieland.nl` en prefix subject met `[TEST]`
+Alle 5 gaps oplossen als **admin_todo's** + optioneel een **e-mail naar bureau** (erwin@bureauvlieland.nl). Admin_todo's zijn het belangrijkst want die verschijnen direct in het dashboard.
 
-### Bestanden (10 edge functions aanpassen)
-1. `supabase/functions/send-accommodation-quote-request/index.ts`
-2. `supabase/functions/notify-accommodation-quote/index.ts`
-3. `supabase/functions/withdraw-accommodation-quote/index.ts`
-4. `supabase/functions/update-partner-item-status/index.ts`
-5. `supabase/functions/send-accommodation-request/index.ts`
-6. `supabase/functions/send-quote-request/index.ts`
-7. `supabase/functions/register-partner-invoice/index.ts`
-8. `supabase/functions/forward-purchase-invoice/index.ts`
-9. `supabase/functions/update-commission-status/index.ts`
-10. `supabase/functions/notify-new-chat/index.ts`
+**Gap 1 + 2 + 3: Klant accepteert/annuleert item**
+In `supabase/functions/update-customer-program/index.ts`:
+- Bij `acceptItemId`: admin_todo aanmaken ("Klant {naam} akkoord op {item}")
+- Bij `cancelItemId`: admin_todo aanmaken ("Klant {naam} annuleert {item}")
+- Bij alle items geaccepteerd: admin_todo + mail naar bureau
 
-Na de code-aanpassingen moeten alle 10 functies opnieuw gedeployed worden.
+**Gap 4: Partner dient logiesofferte in**
+In `supabase/functions/notify-accommodation-quote/index.ts` (wordt al aangeroepen bij partner-indienen):
+- Admin_todo toevoegen: "Nieuwe logiesofferte van {partner} voor {referentie}"
+
+**Gap 5: Klant selecteert logiesofferte**
+In `supabase/functions/select-accommodation-quote/index.ts`:
+- Admin_todo toevoegen: "Klant {naam} heeft logies {partner} geselecteerd"
+
+### Bestanden
+1. `supabase/functions/update-customer-program/index.ts` — admin_todo's bij item accept/cancel + all-accepted notificatie
+2. `supabase/functions/notify-accommodation-quote/index.ts` — admin_todo bij nieuwe logiesofferte
+3. `supabase/functions/select-accommodation-quote/index.ts` — admin_todo bij klant-selectie logies
 
