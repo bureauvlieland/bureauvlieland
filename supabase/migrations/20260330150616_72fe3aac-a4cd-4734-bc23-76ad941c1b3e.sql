@@ -1,0 +1,1 @@
+UPDATE program_request_items SET customer_accepted_at = customer_approved_at WHERE customer_approved_at IS NOT NULL AND customer_accepted_at IS NULL
