@@ -127,6 +127,7 @@ export const AdminPartnersContent = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
   const [resetConnectionsOpen, setResetConnectionsOpen] = useState(false);
+  const [mailingOpen, setMailingOpen] = useState(false);
   
   // Get unavailability data for all partners
   const partnerIds = useMemo(() => partners.map(p => p.id), [partners]);
