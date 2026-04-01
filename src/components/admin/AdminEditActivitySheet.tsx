@@ -383,6 +383,7 @@ export const AdminEditActivitySheet = ({
           <div className="space-y-2">
             <Label>Locatie (optioneel)</Label>
             <LocationPicker
+              key={item.id}
               lat={locationLat}
               lng={locationLng}
               address={locationAddress}

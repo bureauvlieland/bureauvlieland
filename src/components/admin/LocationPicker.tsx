@@ -89,30 +89,37 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
 
   // Sync map view and marker when lat/lng props change (e.g. opening a different item)
   useEffect(() => {
-    if (!leafletMapRef.current) return;
+    const map = leafletMapRef.current;
+    if (!map) return;
 
-    const updateMarker = async () => {
+    const sync = async () => {
       const L = (await import("leaflet")).default;
-      const map = leafletMapRef.current;
-      if (!map) return;
+      if (!leafletMapRef.current) return;
 
-      if (lat && lng) {
-        map.setView([lat, lng], DEFAULT_ZOOM);
-        if (markerRef.current) {
-          markerRef.current.setLatLng([lat, lng]);
+      const hasCoords = lat != null && lng != null;
+
+      // Force Leaflet to recalculate container size (critical inside sheets/modals)
+      map.invalidateSize();
+      setTimeout(() => {
+        map.invalidateSize();
+        if (hasCoords) {
+          map.setView([lat!, lng!], DEFAULT_ZOOM);
+          if (markerRef.current) {
+            markerRef.current.setLatLng([lat!, lng!]);
+          } else {
+            markerRef.current = L.marker([lat!, lng!]).addTo(map);
+          }
         } else {
-          markerRef.current = L.marker([lat, lng]).addTo(map);
+          if (markerRef.current) {
+            map.removeLayer(markerRef.current);
+            markerRef.current = null;
+          }
+          map.setView(VLIELAND_CENTER, DEFAULT_ZOOM);
         }
-      } else {
-        if (markerRef.current) {
-          map.removeLayer(markerRef.current);
-          markerRef.current = null;
-        }
-        map.setView(VLIELAND_CENTER, DEFAULT_ZOOM);
-      }
+      }, 0);
     };
 
-    updateMarker();
+    requestAnimationFrame(sync);
   }, [lat, lng]);
 
   // Search via Nominatim
