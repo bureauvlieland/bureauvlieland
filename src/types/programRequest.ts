@@ -302,12 +302,15 @@ export interface ProgramRequestWithItems extends ProgramRequest {
 
 // Helper to calculate status summary
 export function calculateStatusSummary(items: ProgramRequestItem[]) {
-  const total = items.filter(i => i.block_type !== "self_arranged").length;
+  const relevantItems = items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled");
+  const total = relevantItems.length;
   const confirmed = items.filter(i => i.status === "confirmed").length;
   const pending = items.filter(i => i.status === "pending").length;
   const alternative = items.filter(i => i.status === "alternative").length;
   const unavailable = items.filter(i => i.status === "unavailable").length;
   const cancelled = items.filter(i => i.status === "cancelled").length;
+  const counter_proposed = items.filter(i => i.status === "counter_proposed").length;
+  const customerApproved = relevantItems.filter(i => !!i.customer_approved_at).length;
   
   return {
     total,
@@ -316,6 +319,8 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
     alternative,
     unavailable,
     cancelled,
+    counter_proposed,
+    customerApproved,
     progress: total > 0 ? Math.round((confirmed / total) * 100) : 0,
   };
 }

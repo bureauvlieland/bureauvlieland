@@ -95,6 +95,8 @@ export const ProgramSidebar = ({
         isMultiDay={isMultiDay}
          isPreApproval={isPreApproval}
          quoteStatus={quoteStatus}
+        customerApprovedCount={statusSummary.counter_proposed !== undefined ? (items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at).length) : 0}
+        customerApprovableCount={items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled").length}
       />
 
 

@@ -123,7 +123,7 @@ export const ActionRequiredCard = ({
       return {
         type: "pending",
         title: "Aanvragen verstuurd naar aanbieders",
-        description: `Uw programma is ingediend en de aanvragen zijn verstuurd naar ${statusSummary.pending} aanbieder${statusSummary.pending > 1 ? "s" : ""}. Zodra zij reageren ontvangt u hiervan een e-mail.`,
+        description: `Uw aanvragen zijn verstuurd naar de aanbieders. Zodra zij reageren ontvangt u hiervan een e-mail.`,
         icon: <Clock className="h-5 w-5" />,
         variant: "info",
       };

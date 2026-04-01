@@ -19,6 +19,7 @@ interface NextStepsCardProps {
     pending: number;
     alternative: number;
     progress: number;
+    counter_proposed?: number;
   };
   termsAccepted: boolean;
   billingComplete: boolean;
@@ -49,7 +50,7 @@ export const NextStepsCard = ({
 }: NextStepsCardProps) => {
   const steps = useMemo((): Step[] => {
     const hasAlternatives = statusSummary.alternative > 0;
-    const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && statusSummary.confirmed > 0;
+    const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.confirmed > 0;
     
     // Step 1: Wait for confirmations (includes alternatives that need action)
     const step1Status: Step["status"] = 
