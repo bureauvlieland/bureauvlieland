@@ -676,7 +676,7 @@ const PartnerDashboardContent = () => {
               if (stat === "invoice") {
                 // Navigate to finance page, preserve impersonate param
                 const impersonate = searchParams.get("impersonate");
-                navigate(`/partner/finance${impersonate ? `?impersonate=${impersonate}` : ""}`);
+                navigate(`/partner/facturatie${impersonate ? `?impersonate=${impersonate}` : ""}`);
               } else if (stat === "pending") {
                 setActiveTab("action");
               } else {
