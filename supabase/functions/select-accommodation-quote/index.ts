@@ -393,7 +393,6 @@ Deno.serve(async (req) => {
       }
 
       // Customer confirmation email
-      const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
       const portalLink = request.linked_program_id
         ? `${origin}/programma/${request.customer_token}`
         : `${origin}/logies/${request.customer_token}`;
