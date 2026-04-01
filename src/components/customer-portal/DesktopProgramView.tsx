@@ -230,6 +230,7 @@ export const DesktopProgramView = ({
               onAcceptQuoteProposal={onAcceptQuoteProposal}
               hasUnapprovedItems={hasUnapprovedItems}
               programPublishedAt={program.program_published_at}
+              allConfirmed={allConfirmed}
             />
           </>
         )}
