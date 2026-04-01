@@ -1,45 +1,23 @@
 
 
-## Plan: Locatie en beschrijving meenemen bij configurator-aanvragen
+## Plan: Kaartweergave in bewerkingssheet toont locatie van vorig item
 
 ### Probleem
 
-De twee configurator-checkout flows (`CheckoutContactForm.tsx` en `RequestFormModal.tsx`) kopiëren bij het aanmaken van items **geen** `location_lat`, `location_lng`, `location_address` en `admin_price_notes` (beschrijving voor de klant) vanuit de bouwsteen. De admin-flows (handmatig toevoegen, templates, AI) doen dit wel.
+De `LocationPicker` initialiseert de Leaflet-kaart in een `useEffect` met **lege dependency array** (`[]`). Dat betekent dat de kaart alleen bij de eerste mount de `lat`/`lng` props gebruikt. Wanneer je achtereenvolgens twee items bewerkt (bijv. eerst "Overtocht Harlingen → Vlieland" en dan "Fietshuur"), blijft de kaart op de vorige locatie staan terwijl het adresveld wél correct bijwerkt.
 
 ### Oplossing
 
-In beide bestanden bij de item-insert drie locatievelden en de beschrijving toevoegen:
-
-```ts
-location_lat: fullBlock?.location_lat ?? null,
-location_lng: fullBlock?.location_lng ?? null,
-location_address: fullBlock?.location_address ?? null,
-admin_price_notes: fullBlock?.description || fullBlock?.short_description || null,
-```
-
-### Bestaande aanvragen repareren
-
-Eenmalige SQL-update om items zonder locatie/beschrijving te vullen vanuit hun gekoppelde bouwsteen:
-
-```sql
-UPDATE program_request_items pri
-SET
-  location_lat = COALESCE(pri.location_lat, bb.location_lat),
-  location_lng = COALESCE(pri.location_lng, bb.location_lng),
-  location_address = COALESCE(pri.location_address, bb.location_address),
-  admin_price_notes = COALESCE(pri.admin_price_notes, bb.description, bb.short_description),
-  updated_at = now()
-FROM building_blocks bb
-WHERE pri.block_id = bb.id
-  AND pri.admin_price_notes IS NULL
-  AND (bb.location_lat IS NOT NULL OR bb.description IS NOT NULL OR bb.short_description IS NOT NULL);
-```
+In `src/components/admin/LocationPicker.tsx` een extra `useEffect` toevoegen die reageert op wijzigingen in `lat` en `lng`:
+- Bestaande marker verplaatsen naar de nieuwe coördinaten
+- Kaart centreren op de nieuwe locatie
+- Bij `null`-coördinaten: marker verwijderen en terugvallen op Vlieland-centrum
 
 ### Wijzigingen
 
 | Bestand | Actie |
 |---|---|
-| `src/components/configurator/CheckoutContactForm.tsx` | 4 velden toevoegen aan item-insert |
-| `src/components/configurator/RequestFormModal.tsx` | Idem |
-| Migratie (SQL) | Bestaande items retroactief aanvullen |
+| `src/components/admin/LocationPicker.tsx` | `useEffect` toevoegen die bij verandering van `lat`/`lng` de marker en kaartview bijwerkt |
+
+Eén bestand, kleine toevoeging.
 
