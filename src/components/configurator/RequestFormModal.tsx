@@ -178,6 +178,10 @@ export const RequestFormModal = ({
           price_type: fullBlock?.price_type || "per_person",
           external_url: block.externalUrl || null,
           admin_price_override: fullBlock?.price_adult ?? null,
+          location_lat: fullBlock?.location_lat ?? null,
+          location_lng: fullBlock?.location_lng ?? null,
+          location_address: fullBlock?.location_address ?? null,
+          admin_price_notes: fullBlock?.description || fullBlock?.short_description || null,
         };
       });
 
