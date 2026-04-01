@@ -109,10 +109,10 @@ export default function AdminAccommodation() {
       if (error) throw error;
 
       // Count quotes per request
-      const counts: Record<string, { total: number; submitted: number; declined: number; pending: number }> = {};
+      const counts: Record<string, { total: number; submitted: number; declined: number; pending: number; withdrawn: number }> = {};
       data?.forEach((quote) => {
         if (!counts[quote.request_id]) {
-          counts[quote.request_id] = { total: 0, submitted: 0, declined: 0, pending: 0 };
+          counts[quote.request_id] = { total: 0, submitted: 0, declined: 0, pending: 0, withdrawn: 0 };
         }
         counts[quote.request_id].total++;
         if (quote.status === "submitted") {
@@ -123,6 +123,9 @@ export default function AdminAccommodation() {
         }
         if (quote.status === "pending" || quote.status === "requested") {
           counts[quote.request_id].pending++;
+        }
+        if (quote.status === "withdrawn") {
+          counts[quote.request_id].withdrawn++;
         }
       });
       return counts;
