@@ -176,6 +176,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [partnerNotes, setPartnerNotes] = useState("");
   const [roomConfiguration, setRoomConfiguration] = useState<RoomConfig[]>([]);
   const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [billingDetails, setBillingDetails] = useState<BillingDetails | null>(null);
   const [searchParams] = useSearchParams();
