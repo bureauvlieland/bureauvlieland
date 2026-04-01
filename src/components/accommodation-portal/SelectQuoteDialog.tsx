@@ -62,8 +62,8 @@ export function SelectQuoteDialog({
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Let op:</strong> Deze keuze is definitief. De accommodatie zal contact 
-                met u opnemen om de reservering af te ronden. Eventuele andere offertes 
+                <strong>Let op:</strong> Deze keuze is definitief. Bureau Vlieland neemt contact 
+                met u op over de verdere afhandeling. Eventuele andere offertes 
                 worden automatisch afgewezen.
               </p>
             </div>

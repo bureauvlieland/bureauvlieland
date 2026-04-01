@@ -137,6 +137,8 @@ export type Database = {
           number_of_guests: number | null
           price_per_person_per_night: number | null
           price_total: number | null
+          quote_attachment_filename: string | null
+          quote_attachment_path: string | null
           quote_id: string
           room_configuration: Json | null
           selected_at: string | null
@@ -153,6 +155,8 @@ export type Database = {
           number_of_guests?: number | null
           price_per_person_per_night?: number | null
           price_total?: number | null
+          quote_attachment_filename?: string | null
+          quote_attachment_path?: string | null
           quote_id: string
           room_configuration?: Json | null
           selected_at?: string | null
@@ -169,6 +173,8 @@ export type Database = {
           number_of_guests?: number | null
           price_per_person_per_night?: number | null
           price_total?: number | null
+          quote_attachment_filename?: string | null
+          quote_attachment_path?: string | null
           quote_id?: string
           room_configuration?: Json | null
           selected_at?: string | null

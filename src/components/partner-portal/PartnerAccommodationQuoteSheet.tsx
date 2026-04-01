@@ -129,6 +129,7 @@ interface PartnerAccommodationQuoteSheetProps {
     partnerNotes: string;
     roomConfiguration: RoomConfig[];
     quoteExternalUrl: string;
+    attachmentFile?: File | null;
   }) => Promise<boolean>;
   onDecline?: (reason: string, proposedArrival?: string, proposedDeparture?: string) => Promise<boolean>;
   onRefresh?: () => void;
@@ -175,6 +176,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [partnerNotes, setPartnerNotes] = useState("");
   const [roomConfiguration, setRoomConfiguration] = useState<RoomConfig[]>([]);
   const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [billingDetails, setBillingDetails] = useState<BillingDetails | null>(null);
   const [searchParams] = useSearchParams();
@@ -234,6 +236,7 @@ export const PartnerAccommodationQuoteSheet = ({
         ? (existingQuote.room_configuration as unknown as RoomConfig[])
         : []);
       setQuoteExternalUrl(existingQuote.quote_external_url || "");
+      setAttachmentFile(null);
       setResponseType("submit_quote");
       setDeclineReason(existingQuote.status === "declined" ? existingQuote.partner_notes || "" : "");
       setProposedArrivalDate("");
@@ -251,6 +254,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setPartnerNotes("");
       setRoomConfiguration([]);
       setQuoteExternalUrl("");
+      setAttachmentFile(null);
       setResponseType("submit_quote");
       setDeclineReason("");
       setProposedArrivalDate("");
@@ -336,6 +340,7 @@ export const PartnerAccommodationQuoteSheet = ({
       partnerNotes: partnerNotes.trim(),
       roomConfiguration,
       quoteExternalUrl: quoteExternalUrl.trim(),
+      attachmentFile,
     });
 
     setIsSubmitting(false);
@@ -980,6 +985,29 @@ export const PartnerAccommodationQuoteSheet = ({
               <p className="text-xs text-muted-foreground">
                 Voeg een link toe naar uw eigen offerte, boekingssysteem of prijsopgave
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quoteAttachment">Document uploaden (optioneel)</Label>
+              {existingQuote?.quote_attachment_filename && !attachmentFile && (
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{existingQuote.quote_attachment_filename}</span>
+                </div>
+              )}
+              {!isReadOnly && (
+                <>
+                  <Input
+                    id="quoteAttachment"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload uw offerte, proforma factuur of bevestiging (PDF, Word, Excel)
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
