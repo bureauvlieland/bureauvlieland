@@ -19,6 +19,7 @@ interface NextStepsCardProps {
     pending: number;
     alternative: number;
     progress: number;
+    counter_proposed?: number;
   };
   termsAccepted: boolean;
   billingComplete: boolean;
