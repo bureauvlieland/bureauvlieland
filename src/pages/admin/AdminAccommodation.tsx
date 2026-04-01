@@ -74,7 +74,7 @@ export default function AdminAccommodation() {
       const { data, error } = await supabase
         .from("accommodation_requests")
         .select("*, linked_program_id")
-        .order("created_at", { ascending: false });
+        .order("arrival_date", { ascending: true });
 
       if (error) throw error;
       return data;
