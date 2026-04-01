@@ -254,6 +254,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setPartnerNotes("");
       setRoomConfiguration([]);
       setQuoteExternalUrl("");
+      setAttachmentFile(null);
       setResponseType("submit_quote");
       setDeclineReason("");
       setProposedArrivalDate("");
