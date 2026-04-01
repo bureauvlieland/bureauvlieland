@@ -18,6 +18,7 @@ interface ProgramIntroCardProps {
   onAcceptQuoteProposal?: () => Promise<boolean>;
   hasUnapprovedItems?: boolean;
   programPublishedAt?: string | null;
+  allConfirmed?: boolean;
 }
 
 export const ProgramIntroCard = ({

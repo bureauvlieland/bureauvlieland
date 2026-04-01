@@ -99,9 +99,10 @@ function getProgramStatus(statusSummary: StatusSummary, termsAccepted: boolean):
 } {
   if (termsAccepted) return { label: "✓ Ondertekend", variant: "default" };
   if (statusSummary.total === 0) return { label: "Nog geen activiteiten", variant: "outline" };
-  if (statusSummary.pending === 0 && statusSummary.alternative === 0)
+  if (statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0)
     return { label: "Klaar voor akkoord", variant: "secondary" };
   if (statusSummary.alternative > 0) return { label: "Actie vereist", variant: "destructive" };
+  if ((statusSummary.counter_proposed || 0) > 0) return { label: "Tegenvoorstel verstuurd", variant: "secondary" };
   return { label: `${statusSummary.confirmed}/${statusSummary.total} bevestigd`, variant: "outline" };
 }
 
