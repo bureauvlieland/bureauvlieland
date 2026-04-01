@@ -129,6 +129,7 @@ interface PartnerAccommodationQuoteSheetProps {
     partnerNotes: string;
     roomConfiguration: RoomConfig[];
     quoteExternalUrl: string;
+    attachmentFile?: File | null;
   }) => Promise<boolean>;
   onDecline?: (reason: string, proposedArrival?: string, proposedDeparture?: string) => Promise<boolean>;
   onRefresh?: () => void;
