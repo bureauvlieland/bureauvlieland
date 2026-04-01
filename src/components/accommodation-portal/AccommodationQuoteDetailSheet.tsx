@@ -203,21 +203,35 @@ export function AccommodationQuoteDetailSheet({
             </div>
           )}
 
-          {/* External quote link */}
-          {quote.quote_external_url && (
-            <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg">
-              <h4 className="font-medium mb-2 text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" />
-                Offerte document
+          {/* External quote link & attachment */}
+          {(quote.quote_external_url || quote.quote_attachment_path) && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg space-y-3">
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Offerte documenten
               </h4>
-              <a 
-                href={quote.quote_external_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
-              >
-                Bekijk de volledige offerte →
-              </a>
+              {quote.quote_external_url && (
+                <a 
+                  href={quote.quote_external_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Bekijk de online offerte →
+                </a>
+              )}
+              {quote.quote_attachment_path && (
+                <a 
+                  href={quote.quote_attachment_path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
+                >
+                  <Paperclip className="h-3.5 w-3.5" />
+                  {quote.quote_attachment_filename || 'Offerte document downloaden'} →
+                </a>
+              )}
             </div>
           )}
 
