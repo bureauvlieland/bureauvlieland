@@ -340,6 +340,7 @@ export const PartnerAccommodationQuoteSheet = ({
       partnerNotes: partnerNotes.trim(),
       roomConfiguration,
       quoteExternalUrl: quoteExternalUrl.trim(),
+      attachmentFile,
     });
 
     setIsSubmitting(false);
