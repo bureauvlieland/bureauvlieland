@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
@@ -296,6 +297,37 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Realtime chat notification for admin
+  const location = useLocation();
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const channel = supabase
+      .channel("admin-chat-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        (payload) => {
+          const msg = payload.new as { sender_type: string; sender_name: string; content: string };
+          if (msg.sender_type === "visitor" && !location.pathname.startsWith("/admin/chat")) {
+            const preview = msg.content.length > 80 ? msg.content.slice(0, 80) + "…" : msg.content;
+            toast(`💬 ${msg.sender_name}`, {
+              description: preview,
+              action: {
+                label: "Bekijken",
+                onClick: () => navigate("/admin/chat"),
+              },
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, location.pathname, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
