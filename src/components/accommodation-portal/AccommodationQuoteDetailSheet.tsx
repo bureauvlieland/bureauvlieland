@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { Check, Clock, Building2, FileText, ExternalLink } from 'lucide-react';
+import { Check, Clock, Building2, FileText, ExternalLink, Paperclip } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
