@@ -87,6 +87,34 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sync map view and marker when lat/lng props change (e.g. opening a different item)
+  useEffect(() => {
+    if (!leafletMapRef.current) return;
+
+    const updateMarker = async () => {
+      const L = (await import("leaflet")).default;
+      const map = leafletMapRef.current;
+      if (!map) return;
+
+      if (lat && lng) {
+        map.setView([lat, lng], DEFAULT_ZOOM);
+        if (markerRef.current) {
+          markerRef.current.setLatLng([lat, lng]);
+        } else {
+          markerRef.current = L.marker([lat, lng]).addTo(map);
+        }
+      } else {
+        if (markerRef.current) {
+          map.removeLayer(markerRef.current);
+          markerRef.current = null;
+        }
+        map.setView(VLIELAND_CENTER, DEFAULT_ZOOM);
+      }
+    };
+
+    updateMarker();
+  }, [lat, lng]);
+
   // Search via Nominatim
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
