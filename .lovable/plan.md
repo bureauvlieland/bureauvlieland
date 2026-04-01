@@ -1,36 +1,48 @@
 
 
-## Plan: Partners notificeren bij project-verwijdering
+## Plan: Statusmeldingen klantportaal opschonen en klanterkenning toevoegen
 
-### Probleem
-Bij het verwijderen van een project via de admin worden partners met openstaande aanvragen niet geïnformeerd. Zij houden een openstaande aanvraag in hun portaal zonder te weten dat deze niet meer relevant is.
+### Problemen
+
+1. **`calculateStatusSummary` telt verkeerd**: `total` sluit `self_arranged` uit maar **niet** `cancelled`. Daardoor telt een geannuleerd item mee in het totaal. Ook ontbreekt `counter_proposed` in de telling.
+
+2. **"Verstuurd naar X aanbieders"**: Tekst in `ActionRequiredCard` toont `statusSummary.pending` als aantal aanbieders, maar dat is het aantal *items* met status `pending` — niet het aantal unieke partners. Dit klopt dus niet.
+
+3. **"Uw programma is bevestigd"**: Wordt getoond zodra `quoteStatus === "akkoord_ontvangen"`, maar er kunnen nog items wachten op partnerbevestiging. Dit is verwarrend naast de melding "Wachten op aanbieders".
+
+4. **Geen klant-akkoord info in StatusSummary (screenshot 1)**: De klant ziet "3/8 bevestigd" maar weet niet hoeveel items zij zelf nog moeten akkoorderen.
 
 ### Oplossing
-Bij het verwijderen van een project de openstaande program_items op status `"cancelled"` zetten en de betreffende partners per e-mail informeren.
 
-### Aanpak
+**A. `calculateStatusSummary` fixen** (`src/types/programRequest.ts`)
+- `total` = items die niet `self_arranged` EN niet `cancelled` zijn
+- `counter_proposed` toevoegen aan de return-waarden
+- `progress` baseren op `confirmed` + items met `customer_accepted_at` voor een realistischer beeld
 
-**1. Admin delete-flow uitbreiden** (`src/pages/admin/AdminProjects.tsx`)
-- Na het updaten van `program_requests.status` naar `"deleted"`:
-  - Alle `program_items` met status `pending`/`sent`/`accepted` ophalen
-  - Hun status naar `"cancelled"` zetten
-  - Voor elke unieke partner een notificatie-e-mail versturen via een edge function
+**B. StatusSummary checklist: klant-akkoord regel toevoegen** (`src/components/customer-portal/StatusSummary.tsx`)
+- Nieuwe prop `customerApprovedCount` en `customerApprovableCount`
+- Onder "Programma" een extra regel: "X van Y onderdelen geaccordeerd" (alleen tonen als `quoteStatus === "offerte_verstuurd"` of `"akkoord_ontvangen"`)
 
-**2. Edge function voor partner-notificatie** (`supabase/functions/notify-partner-cancellation/index.ts`)
-- Ontvangt: `partner_email`, `partner_name`, `program_ref`, `item_names[]`
-- Stuurt een kort e-mail: "De aanvraag {program_ref} is komen te vervallen. De volgende onderdelen zijn geannuleerd: ..."
-- Geen klantgegevens in de mail (conform privacy-regels)
-- Logt de communicatie in `project_communications`
+**C. ActionRequiredCard teksten corrigeren** (`src/components/customer-portal/ActionRequiredCard.tsx`)
+- "Verstuurd naar aanbieders" → generieke tekst zonder aantallen, bijv. "Uw aanvragen zijn verstuurd naar de aanbieders. Zodra zij reageren ontvangt u een e-mail."
+- De groene "bevestigd" melding alleen tonen als `allConfirmed` is EN alle items door de klant zijn geaccordeerd
+- `counter_proposed` items niet meetellen als `pending`
 
-**3. Accommodation-quotes ook afhandelen**
-- Bij het verwijderen met gekoppelde logiesaanvraag: openstaande quotes (`pending`/`submitted`) op `rejected` zetten en logiespartners informeren (hergebruik bestaande logica uit `cancel-program-request`)
+**D. ProgramIntroCard afstemmen** (`src/components/customer-portal/ProgramIntroCard.tsx`)
+- "Uw programma is bevestigd" alleen tonen als ook `allConfirmed` waar is — anders tonen dat er nog items in behandeling zijn
+
+**E. Splash-pagina tellingen** (`src/components/customer-portal/CustomerPortalSplash.tsx`)
+- `getProgramStatus` corrigeren: `counter_proposed` meenemen in de check voor "Klaar voor akkoord"
 
 ### Wijzigingen
 
 | Bestand | Actie |
 |---|---|
-| `src/pages/admin/AdminProjects.tsx` | Na delete: items cancellen + edge function aanroepen |
-| `supabase/functions/notify-partner-cancellation/index.ts` | Nieuwe edge function: partners mailen bij verwijdering |
+| `src/types/programRequest.ts` | `calculateStatusSummary` fixen: cancelled uitsluiten van total, counter_proposed toevoegen |
+| `src/components/customer-portal/StatusSummary.tsx` | Klant-akkoord regel toevoegen in checklist variant |
+| `src/components/customer-portal/ActionRequiredCard.tsx` | Teksten corrigeren: geen hardcoded aantallen aanbieders, counter_proposed meenemen |
+| `src/components/customer-portal/ProgramIntroCard.tsx` | "Bevestigd" melding alleen bij daadwerkelijk alles bevestigd |
+| `src/components/customer-portal/CustomerPortalSplash.tsx` | `getProgramStatus` counter_proposed meenemen |
 
-Twee bestanden.
+Vijf bestanden, voornamelijk logica- en tekstwijzigingen.
 
