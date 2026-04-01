@@ -118,6 +118,23 @@ export const StatusSummary = ({
             />
           </div>
 
+          {/* Klant akkoord — alleen tonen bij offerte_verstuurd of akkoord_ontvangen */}
+          {customerApprovableCount > 0 && quoteStatus && ["offerte_verstuurd", "akkoord_ontvangen"].includes(quoteStatus) && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">Uw akkoord</p>
+              <StatusItem
+                icon={customerApprovedCount >= customerApprovableCount
+                  ? <CheckCircle className="h-4 w-4 text-green-600" />
+                  : <Circle className="h-4 w-4 text-muted-foreground" />
+                }
+                label={customerApprovedCount >= customerApprovableCount
+                  ? `Alle onderdelen geaccordeerd`
+                  : `${customerApprovedCount} van ${customerApprovableCount} geaccordeerd`
+                }
+                color={customerApprovedCount >= customerApprovableCount ? "green" : "muted"}
+              />
+            </div>
+          )}
           {/* Facturatie */}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-0.5">Facturatie</p>
