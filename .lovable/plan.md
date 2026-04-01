@@ -1,35 +1,41 @@
 
 
-## Plan: PDF-upload bij logiesofferte + bevestigingstekst aanpassen
+## Plan: Fix logiesofferte opnieuw bevestigen na herziening
 
-### Twee onderdelen
+### Probleem
 
-**1. Bevestigingsdialoog tekst aanpassen**
-De tekst "De accommodatie zal contact met u opnemen om de reservering af te ronden" klopt niet altijd. Aanpassen naar een neutralere formulering, bijv.: "Bureau Vlieland neemt contact met u op over de verdere afhandeling."
+De edge function `select-accommodation-quote` blokkeert op regel 130:
 
-**2. PDF-document upload voor partner bij offerte-indienst**
+```ts
+if (request.status === "accepted") {
+  return error "Er is al een offerte gekozen voor deze aanvraag"
+}
+```
 
-De database heeft al `quote_attachment_path` en `quote_attachment_filename` kolommen op `accommodation_quotes`, maar ze worden nergens gevuld. Er is een `quote-documents` storage bucket, maar die is alleen toegankelijk voor admins.
+Na een herziening (gastenwijziging + quote-reset) wordt de request-status teruggezet naar `"processing"`. Maar als de partner zijn offerte opnieuw indient **zonder** dat er een formele gastenwijziging was (bijv. alleen prijs aangepast), blijft de request-status op `"accepted"`. Dan kan de klant niet opnieuw bevestigen.
 
-**Wat we bouwen:**
+Daarnaast: als een quote die eerder `"selected"` was, wordt gereset naar `"pending"` en daarna opnieuw ingediend als `"submitted"`, moet de klant deze opnieuw kunnen selecteren.
 
-- **Storage**: nieuw bucket `accommodation-quote-attachments` met RLS-policies voor partners (upload/lezen eigen bestanden) en admins (alles lezen). Klanten lezen via een publieke URL of signed URL.
-- **Partner quote sheet**: file-upload veld toevoegen naast het bestaande URL-veld. Partner kan een PDF/document uploaden. Bij herindienst kan een nieuw document geüpload worden (vervangt het vorige in de quote, maar historie wordt bewaard).
-- **Submit-flow**: bij indienst het bestand uploaden naar storage, `quote_attachment_path` en `quote_attachment_filename` vullen op de quote. Bij herindienst: oud document-pad loggen in historie (via `accommodation_quote_history`), nieuw document opslaan.
-- **Klantportaal**: in `AccommodationQuoteDetailSheet` het bijgevoegde document tonen als downloadlink naast de bestaande externe URL.
-- **Admin**: in `AdminAccommodationQuoteSheet` het document ook tonen (werkt al deels, maar path is nooit gevuld).
+### Oplossing
 
-**Documenthistorie**: de bestaande `accommodation_quote_history` tabel slaat al snapshots op bij reset. Het `quote_attachment_path` zit daar al in. Geen extra tabel nodig — bij elke herindienst wordt de vorige versie automatisch bewaard in de history.
+**1. Edge function aanpassen** (`select-accommodation-quote/index.ts`)
+
+De check op regel 130 versoepelen: in plaats van direct blokkeren bij `status === "accepted"`, ook controleren of de specifieke quote die geselecteerd wordt status `"submitted"` heeft. Als de quote `"submitted"` is, mag de selectie doorgaan — ongeacht de request-status. Dit dekt het scenario waarin een herziene offerte opnieuw bevestigd moet worden.
+
+Concreet:
+- Verplaats de "already accepted" check tot **na** het ophalen van de specifieke quote
+- Blokkeer alleen als `request.status === "accepted"` **én** de geselecteerde quote al `"selected"` is (niet `"submitted"`)
+
+**2. Request-status resetten bij partner-herindienst** (`PartnerAccommodation.tsx`)
+
+Wanneer een partner een quote opnieuw indient terwijl de request-status `"accepted"` is, de request-status terugzetten naar `"processing"`. Dit zorgt ervoor dat de klantportal de quote weer als "kiesbaar" toont.
 
 ### Wijzigingen
 
 | Bestand | Actie |
 |---|---|
-| `src/components/accommodation-portal/SelectQuoteDialog.tsx` | Bevestigingstekst aanpassen |
-| `src/components/partner-portal/PartnerAccommodationQuoteSheet.tsx` | File-upload input toevoegen, bestand meegeven bij submit |
-| `src/pages/PartnerAccommodation.tsx` | Bestand uploaden naar storage bij submit, path/filename opslaan |
-| `src/components/accommodation-portal/AccommodationQuoteDetailSheet.tsx` | Download-link voor bijlage tonen |
-| Migratie | Bucket `accommodation-quote-attachments` aanmaken met RLS-policies voor partners en public read |
+| `supabase/functions/select-accommodation-quote/index.ts` | "Already accepted" check versoepelen: toestaan als de specifieke quote status `submitted` heeft |
+| `src/pages/PartnerAccommodation.tsx` | Bij herindienst: als request-status `accepted` is, resetten naar `processing` |
 
-Vijf bestanden + 1 migratie.
+Twee bestanden, kleine logica-wijzigingen.
 
