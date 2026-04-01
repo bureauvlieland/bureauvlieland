@@ -988,6 +988,29 @@ export const PartnerAccommodationQuoteSheet = ({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="quoteAttachment">Document uploaden (optioneel)</Label>
+              {existingQuote?.quote_attachment_filename && !attachmentFile && (
+                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{existingQuote.quote_attachment_filename}</span>
+                </div>
+              )}
+              {!isReadOnly && (
+                <>
+                  <Input
+                    id="quoteAttachment"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload uw offerte, proforma factuur of bevestiging (PDF, Word, Excel)
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="partnerNotes">Interne notities (alleen voor u)</Label>
               <Textarea
                 id="partnerNotes"
