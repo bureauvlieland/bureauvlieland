@@ -77,16 +77,16 @@ export const ChatWidget = ({
     <>
       {/* Floating bubble */}
       {!isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full shadow-sm border">
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-1.5 group">
+          <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full shadow-sm border opacity-0 group-hover:opacity-100 transition-opacity">
             Hulp nodig?
           </span>
           <button
             onClick={() => setIsOpen(true)}
-            className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center relative"
+            className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 hover:opacity-100 opacity-70 flex items-center justify-center relative"
             aria-label="Open chat"
           >
-            <MessageCircle className="h-6 w-6" />
+            <MessageCircle className="h-5 w-5" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
                 {unreadCount}
