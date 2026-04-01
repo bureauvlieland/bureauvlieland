@@ -362,6 +362,9 @@ export default function AdminAccommodation() {
                               {quoteInfo.pending > 0 && (
                                 <span className="text-amber-600"> · {quoteInfo.pending} in afwachting</span>
                               )}
+                              {quoteInfo.withdrawn > 0 && (
+                                <span className="text-slate-500"> · {quoteInfo.withdrawn} ingetrokken</span>
+                              )}
                             </span>
                           ) : (
                             <span className="text-sm text-slate-400">-</span>
