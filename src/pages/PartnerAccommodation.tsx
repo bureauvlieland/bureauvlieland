@@ -292,6 +292,15 @@ const PartnerAccommodationContent = () => {
 
       if (error) throw error;
 
+      // If the request was already accepted (partner resubmitting a revised quote),
+      // reset the request status to processing so the customer can re-select
+      if (selectedRequest.status === "accepted") {
+        await supabase
+          .from("accommodation_requests")
+          .update({ status: "processing" })
+          .eq("id", selectedRequest.id);
+      }
+
       // Create auto-todo for admin to review the quote (instead of sending directly to customer)
       try {
         await supabase.functions.invoke("create-quote-review-todo", {

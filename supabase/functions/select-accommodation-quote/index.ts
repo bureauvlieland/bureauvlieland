@@ -126,15 +126,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if already accepted
-    if (request.status === "accepted") {
-      return new Response(
-        JSON.stringify({ error: "Er is al een offerte gekozen voor deze aanvraag" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Find the quote
+    // Find the quote first (before checking accepted status)
     const { data: quote, error: quoteError } = await supabase
       .from("accommodation_quotes")
       .select("*, partner:partners(*)")
@@ -146,6 +138,14 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Offerte niet gevonden" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if already accepted — but allow re-selection if the quote was resubmitted
+    if (request.status === "accepted" && quote.status !== "submitted") {
+      return new Response(
+        JSON.stringify({ error: "Er is al een offerte gekozen voor deze aanvraag" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -393,7 +393,6 @@ Deno.serve(async (req) => {
       }
 
       // Customer confirmation email
-      const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
       const portalLink = request.linked_program_id
         ? `${origin}/programma/${request.customer_token}`
         : `${origin}/logies/${request.customer_token}`;
