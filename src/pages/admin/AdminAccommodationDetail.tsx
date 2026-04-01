@@ -134,6 +134,7 @@ function generateStatusEmailBody(
   const declined = quotes.filter((q) => q.status === "declined" || q.status === "rejected").length;
   const pending = quotes.filter((q) => q.status === "pending").length;
   const selected = quotes.filter((q) => q.status === "selected").length;
+  const withdrawn = quotes.filter((q) => q.status === "withdrawn").length;
 
   const ref = referenceNumber ? ` (${referenceNumber})` : "";
   let body = `Beste ${request.customer_name},\n\nHierbij een update over uw logiesaanvraag${ref} voor ${request.number_of_guests} personen van ${format(new Date(request.arrival_date), "d MMMM", { locale: nl })} t/m ${format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl })}.\n\n`;
@@ -141,7 +142,8 @@ function generateStatusEmailBody(
   if (total === 0) {
     body += "Wij zijn bezig uw aanvraag uit te zetten bij logiespartners op Vlieland. Zodra wij meer informatie hebben, ontvangt u bericht van ons.\n";
   } else {
-    body += `Wij hebben ${total} logiespartner${total !== 1 ? "s" : ""} benaderd.\n`;
+    const activeTotal = total - withdrawn;
+    body += `Wij hebben ${activeTotal} logiespartner${activeTotal !== 1 ? "s" : ""} benaderd.\n`;
     if (received > 0) body += `• Van ${received} partner${received !== 1 ? "s" : ""} hebben wij een offerte ontvangen.\n`;
     if (declined > 0) body += `• ${declined} partner${declined !== 1 ? "s" : ""} ${declined !== 1 ? "hebben" : "heeft"} de aanvraag helaas afgewezen.\n`;
     if (pending > 0) body += `• Wij wachten nog op een reactie van ${pending} partner${pending !== 1 ? "s" : ""}.\n`;
