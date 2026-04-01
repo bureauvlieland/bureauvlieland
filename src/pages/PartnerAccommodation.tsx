@@ -243,6 +243,29 @@ const PartnerAccommodationContent = () => {
     if (!selectedRequest?.quote) return false;
 
     try {
+      // Upload attachment file if provided
+      let attachmentPath: string | null = selectedRequest.quote?.quote_attachment_path ?? null;
+      let attachmentFilename: string | null = selectedRequest.quote?.quote_attachment_filename ?? null;
+
+      if (quoteData.attachmentFile && partnerId) {
+        const file = quoteData.attachmentFile;
+        const ext = file.name.split('.').pop() || 'pdf';
+        const filePath = `${partnerId}/${selectedRequest.quote!.id}/${Date.now()}.${ext}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('accommodation-quote-attachments')
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('accommodation-quote-attachments')
+          .getPublicUrl(filePath);
+
+        attachmentPath = publicUrlData.publicUrl;
+        attachmentFilename = file.name;
+      }
+
       const { error } = await supabase
         .from("accommodation_quotes")
         .update({
@@ -258,6 +281,8 @@ const PartnerAccommodationContent = () => {
           partner_notes: quoteData.partnerNotes,
           room_configuration: quoteData.roomConfiguration,
           quote_external_url: quoteData.quoteExternalUrl || null,
+          quote_attachment_path: attachmentPath,
+          quote_attachment_filename: attachmentFilename,
           status: "submitted",
           submitted_at: new Date().toISOString(),
           forwarded_at: null,
