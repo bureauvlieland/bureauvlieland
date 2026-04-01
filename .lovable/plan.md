@@ -1,48 +1,55 @@
 
 
-## Plan: Statusmeldingen klantportaal opschonen en klanterkenning toevoegen
+## Plan: Fix twee issues in partnerportaal
 
-### Problemen
+### Issue 1: "Te factureren" / "Facturatie" link gaat naar loginpagina
 
-1. **`calculateStatusSummary` telt verkeerd**: `total` sluit `self_arranged` uit maar **niet** `cancelled`. Daardoor telt een geannuleerd item mee in het totaal. Ook ontbreekt `counter_proposed` in de telling.
+**Oorzaak**: De route is `/partner/facturatie` maar alle links verwijzen naar `/partner/finance`. Dat pad bestaat niet in de router, waardoor de gebruiker op een niet-bestaande pagina terechtkomt.
 
-2. **"Verstuurd naar X aanbieders"**: Tekst in `ActionRequiredCard` toont `statusSummary.pending` als aantal aanbieders, maar dat is het aantal *items* met status `pending` — niet het aantal unieke partners. Dit klopt dus niet.
+**Fix**: In twee bestanden het pad corrigeren:
+- `src/pages/PartnerDashboard.tsx` regel 678: `/partner/finance` → `/partner/facturatie`
+- `src/components/partner-portal/PartnerYtdModule.tsx` regel 44: `/partner/finance` → `/partner/facturatie`
 
-3. **"Uw programma is bevestigd"**: Wordt getoond zodra `quoteStatus === "akkoord_ontvangen"`, maar er kunnen nog items wachten op partnerbevestiging. Dit is verwarrend naast de melding "Wachten op aanbieders".
+Daarnaast: de `onNavigate("invoice")` handler in PartnerDashboard (regel 658-664) navigeert bij "invoice" naar `setActiveTab("action")` i.p.v. naar de facturatiepagina. Dit corrigeren zodat die ook naar `/partner/facturatie` navigeert met behoud van de impersonate parameter.
 
-4. **Geen klant-akkoord info in StatusSummary (screenshot 1)**: De klant ziet "3/8 bevestigd" maar weet niet hoeveel items zij zelf nog moeten akkoorderen.
+### Issue 2: Items van verwijderde projecten retroactief naar "Afgerond"
 
-### Oplossing
+**Oorzaak**: Projecten die vóór de `notify-partner-cancellation` functie zijn verwijderd, hebben hun `program_request_items` nooit op `cancelled` gezet. Die items staan nog op `pending`/`confirmed` etc. maar horen bij een `program_requests` met `status = 'deleted'`.
 
-**A. `calculateStatusSummary` fixen** (`src/types/programRequest.ts`)
-- `total` = items die niet `self_arranged` EN niet `cancelled` zijn
-- `counter_proposed` toevoegen aan de return-waarden
-- `progress` baseren op `confirmed` + items met `customer_accepted_at` voor een realistischer beeld
+**Fix**: In `supabase/functions/get-partner-dashboard/index.ts`:
+- Na het ophalen van items, items waarvan `program_requests.status === 'deleted'` automatisch behandelen als `cancelled` (effectieve status overschrijven in de response).
+- Optioneel: een eenmalige migratie om alle `program_request_items` die bij een `deleted` program_request horen en nog een actieve status hebben, op `cancelled` te zetten. Dit is het schoonste.
 
-**B. StatusSummary checklist: klant-akkoord regel toevoegen** (`src/components/customer-portal/StatusSummary.tsx`)
-- Nieuwe prop `customerApprovedCount` en `customerApprovableCount`
-- Onder "Programma" een extra regel: "X van Y onderdelen geaccordeerd" (alleen tonen als `quoteStatus === "offerte_verstuurd"` of `"akkoord_ontvangen"`)
+Ik stel voor om de migratie-aanpak te gebruiken zodat de data structureel klopt:
 
-**C. ActionRequiredCard teksten corrigeren** (`src/components/customer-portal/ActionRequiredCard.tsx`)
-- "Verstuurd naar aanbieders" → generieke tekst zonder aantallen, bijv. "Uw aanvragen zijn verstuurd naar de aanbieders. Zodra zij reageren ontvangt u een e-mail."
-- De groene "bevestigd" melding alleen tonen als `allConfirmed` is EN alle items door de klant zijn geaccordeerd
-- `counter_proposed` items niet meetellen als `pending`
+```sql
+UPDATE program_request_items
+SET status = 'cancelled', updated_at = now()
+WHERE request_id IN (
+  SELECT id FROM program_requests WHERE status = 'deleted'
+)
+AND status IN ('pending', 'confirmed', 'accepted', 'alternative', 'counter_proposed', 'executed');
+```
 
-**D. ProgramIntroCard afstemmen** (`src/components/customer-portal/ProgramIntroCard.tsx`)
-- "Uw programma is bevestigd" alleen tonen als ook `allConfirmed` waar is — anders tonen dat er nog items in behandeling zijn
-
-**E. Splash-pagina tellingen** (`src/components/customer-portal/CustomerPortalSplash.tsx`)
-- `getProgramStatus` corrigeren: `counter_proposed` meenemen in de check voor "Klaar voor akkoord"
+En hetzelfde voor accommodation_quotes:
+```sql
+UPDATE accommodation_quotes
+SET status = 'rejected', updated_at = now()
+WHERE request_id IN (
+  SELECT ar.id FROM accommodation_requests ar
+  JOIN program_requests pr ON ar.linked_program_id = pr.id
+  WHERE pr.status = 'deleted'
+)
+AND status IN ('pending', 'submitted');
+```
 
 ### Wijzigingen
 
 | Bestand | Actie |
 |---|---|
-| `src/types/programRequest.ts` | `calculateStatusSummary` fixen: cancelled uitsluiten van total, counter_proposed toevoegen |
-| `src/components/customer-portal/StatusSummary.tsx` | Klant-akkoord regel toevoegen in checklist variant |
-| `src/components/customer-portal/ActionRequiredCard.tsx` | Teksten corrigeren: geen hardcoded aantallen aanbieders, counter_proposed meenemen |
-| `src/components/customer-portal/ProgramIntroCard.tsx` | "Bevestigd" melding alleen bij daadwerkelijk alles bevestigd |
-| `src/components/customer-portal/CustomerPortalSplash.tsx` | `getProgramStatus` counter_proposed meenemen |
+| `src/pages/PartnerDashboard.tsx` | `/partner/finance` → `/partner/facturatie` + fix `onNavigate("invoice")` |
+| `src/components/partner-portal/PartnerYtdModule.tsx` | `/partner/finance` → `/partner/facturatie` |
+| Migratie (SQL) | Items van verwijderde projecten retroactief op `cancelled`/`rejected` zetten |
 
-Vijf bestanden, voornamelijk logica- en tekstwijzigingen.
+Drie kleine aanpassingen.
 
