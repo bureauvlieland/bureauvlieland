@@ -39,7 +39,7 @@ export const ProgramIntroCard = ({
 
   const isAwaitingApproval = quoteStatus === "offerte_verstuurd";
   const isBeingPrepared = !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
-  const isConfirmed = !!termsAcceptedAt || quoteStatus === "definitief_bevestigd" || quoteStatus === "akkoord_ontvangen";
+  const isConfirmed = (!!termsAcceptedAt || quoteStatus === "definitief_bevestigd") || (quoteStatus === "akkoord_ontvangen" && allConfirmed);
 
   const validUntil = quoteValidUntil ? new Date(quoteValidUntil) : null;
   const isExpired = validUntil ? validUntil < new Date() : false;
