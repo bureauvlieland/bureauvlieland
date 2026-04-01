@@ -659,7 +659,8 @@ const PartnerDashboardContent = () => {
             if (target === "action") {
               setActiveTab("action");
             } else {
-              setActiveTab("action");
+              const impersonate = searchParams.get("impersonate");
+              navigate(`/partner/facturatie${impersonate ? `?impersonate=${impersonate}` : ""}`);
             }
           }}
         />
