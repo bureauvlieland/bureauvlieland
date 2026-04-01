@@ -238,6 +238,7 @@ const PartnerAccommodationContent = () => {
     partnerNotes: string;
     roomConfiguration: any[];
     quoteExternalUrl: string;
+    attachmentFile?: File | null;
   }) => {
     if (!selectedRequest?.quote) return false;
 
