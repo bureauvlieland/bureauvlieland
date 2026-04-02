@@ -158,7 +158,7 @@ export function AdminAccommodationQuoteSheet({
             {quote.price_per_person_per_night != null && (
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground">Per persoon per nacht</p>
-                <p className="text-xl font-bold">€{quote.price_per_person_per_night}</p>
+                <p className="text-xl font-bold">€{quote.price_per_person_per_night.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <p className="text-xs text-muted-foreground">
                   {numberOfGuests} gasten • {numberOfNights} nachten
                 </p>
