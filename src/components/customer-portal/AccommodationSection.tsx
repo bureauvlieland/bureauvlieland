@@ -109,6 +109,38 @@ export const AccommodationSection = ({
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
 
+  // State 0: Cancelled - show closure message
+  if (accommodation?.status === "cancelled") {
+    return (
+      <Card className="border-muted bg-muted/30">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <BedDouble className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold text-muted-foreground">Logiesaanvraag gesloten</h3>
+              <p className="text-sm text-muted-foreground">
+                Bureau Vlieland heeft helaas geen passende logies kunnen vinden voor uw aanvraag.
+                Neem gerust contact met ons op als u zelf alternatieve logies heeft gevonden of als wij u op een andere manier kunnen helpen.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
+                <Calendar className="h-3 w-3" />
+                <span>
+                  {format(new Date(accommodation.arrival_date), "EEE d MMM", { locale: nl })} –{" "}
+                  {format(new Date(accommodation.departure_date), "EEE d MMM yyyy", { locale: nl })}
+                </span>
+                <span>·</span>
+                <Users className="h-3 w-3" />
+                <span>{accommodation.number_of_guests} gasten</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // State 1: No accommodation linked - show CTA with partner-oriented tone
   if (!accommodation) {
     return (

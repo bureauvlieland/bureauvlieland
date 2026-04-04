@@ -183,6 +183,11 @@ export default function AdminAccommodationDetail() {
   const [withdrawQuoteId, setWithdrawQuoteId] = useState<string | null>(null);
   const [withdrawNotify, setWithdrawNotify] = useState(true);
   const [chatQuote, setChatQuote] = useState<{ id: string; partnerId: string; partnerName: string; partnerEmail: string } | null>(null);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
+  const [closeNotifyCustomer, setCloseNotifyCustomer] = useState(true);
+  const [showCloseEmailSheet, setShowCloseEmailSheet] = useState(false);
+  const [closeEmailDefaults, setCloseEmailDefaults] = useState({ subject: "", body: "" });
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
