@@ -404,6 +404,60 @@ export default function AdminAccommodationDetail() {
     },
   });
 
+  // Close request (cancel) mutation
+  const closeRequestMutation = useMutation({
+    mutationFn: async ({ reason, notifyCustomer }: { reason: string; notifyCustomer: boolean }) => {
+      // Update status to cancelled + save reason in admin_notes
+      const updatedNotes = reason
+        ? `${adminNotes ? adminNotes + "\n\n" : ""}Reden sluiting: ${reason}`
+        : adminNotes;
+      const { error } = await supabase
+        .from("accommodation_requests")
+        .update({ status: "cancelled", admin_notes: updatedNotes })
+        .eq("id", id);
+      if (error) throw error;
+
+      // Withdraw all pending quotes
+      const pendingQuotes = quotes?.filter((q) => q.status === "pending") || [];
+      for (const q of pendingQuotes) {
+        await supabase.functions.invoke("withdraw-accommodation-quote", {
+          body: { quoteId: q.id, notifyPartner: false },
+        });
+      }
+
+      // Log in communications timeline
+      await supabase.from("project_communications").insert({
+        accommodation_id: id,
+        request_id: request?.linked_program_id || null,
+        communication_type: "note",
+        direction: "internal",
+        subject: "Logiesaanvraag gesloten",
+        content: `De aanvraag is gesloten (niet te helpen).${reason ? ` Reden: ${reason}` : ""}${pendingQuotes.length > 0 ? ` ${pendingQuotes.length} openstaande aanvra(a)g(en) ingetrokken.` : ""}`,
+      });
+
+      // If notify customer, prepare email defaults and show email sheet
+      if (notifyCustomer) {
+        const ref = request?.reference_number ? ` ${request.reference_number}` : "";
+        const subject = `Update logiesaanvraag${ref}`;
+        const body = `Beste ${request?.customer_name},\n\nHelaas is het ons niet gelukt om passende logies te vinden voor uw aanvraag${ref} voor ${request?.number_of_guests} personen van ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM", { locale: nl }) : "—"} t/m ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}.${reason ? `\n\n${reason}` : ""}\n\nWij raden u aan om zelf contact op te nemen met accommodaties op Vlieland, of neem gerust contact met ons op als wij u op een andere manier kunnen helpen.\n\nMet vriendelijke groet,\nBureau Vlieland`;
+        setCloseEmailDefaults({ subject, body });
+        setShowCloseEmailSheet(true);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["project-communications"] });
+      setShowCloseDialog(false);
+      setCloseReason("");
+      setCloseNotifyCustomer(true);
+      toast({ title: "Aanvraag gesloten" });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij sluiten", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Update guests mutation
   const updateGuestsMutation = useMutation({
     mutationFn: async ({ newGuests, selectedQuoteIds }: { newGuests: number; selectedQuoteIds: string[] }) => {
