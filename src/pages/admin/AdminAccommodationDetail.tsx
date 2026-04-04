@@ -1415,6 +1415,71 @@ export default function AdminAccommodationDetail() {
           partnerEmail={chatQuote.partnerEmail}
         />
       )}
+
+      {/* Close Request Dialog */}
+      <Dialog open={showCloseDialog} onOpenChange={(open) => { if (!open) { setShowCloseDialog(false); setCloseReason(""); setCloseNotifyCustomer(true); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aanvraag sluiten</DialogTitle>
+            <DialogDescription>
+              De aanvraag wordt gemarkeerd als gesloten. Openstaande offerteaanvragen worden automatisch ingetrokken.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Reden / toelichting (optioneel)</label>
+              <Textarea
+                value={closeReason}
+                onChange={(e) => setCloseReason(e.target.value)}
+                placeholder="Bijv. geen beschikbaarheid gevonden, klant heeft zelf logies geregeld..."
+                rows={3}
+                className="text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="close-notify"
+                checked={closeNotifyCustomer}
+                onCheckedChange={(checked) => setCloseNotifyCustomer(!!checked)}
+              />
+              <label htmlFor="close-notify" className="text-sm">
+                Klant per e-mail informeren
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCloseDialog(false); setCloseReason(""); setCloseNotifyCustomer(true); }}>
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={closeRequestMutation.isPending}
+              onClick={() => closeRequestMutation.mutate({ reason: closeReason, notifyCustomer: closeNotifyCustomer })}
+            >
+              {closeRequestMutation.isPending ? "Bezig..." : "Aanvraag sluiten"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Request Email Sheet */}
+      <SendProjectEmailSheet
+        open={showCloseEmailSheet}
+        onOpenChange={setShowCloseEmailSheet}
+        accommodationId={id}
+        recipients={[{
+          label: `Klant: ${request?.customer_name}`,
+          email: request?.customer_email || "",
+          name: request?.customer_name || "",
+          type: "customer" as const,
+        }]}
+        defaultSubject={closeEmailDefaults.subject}
+        defaultBody={closeEmailDefaults.body}
+        onEmailSent={() => {
+          queryClient.invalidateQueries({ queryKey: ["project-communications", undefined, id] });
+          setCommLogOpen(true);
+        }}
+      />
     </AdminLayout>
   );
 }
