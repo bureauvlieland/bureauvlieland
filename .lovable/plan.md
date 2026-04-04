@@ -1,43 +1,32 @@
 
 
-## Plan: E-mailnotificatie naar admin bij indienen logiesofferte
+## Plan: Logiesaanvraag archiveren als "niet te helpen"
 
-### Huidige situatie
-Wanneer een partner een logiesofferte indient, wordt er een `admin_todo` aangemaakt via de `create-quote-review-todo` edge function. Er wordt echter geen e-mail naar de admin gestuurd.
+### Wat wordt gebouwd
 
-### Aanpak
-De `create-quote-review-todo` edge function uitbreiden met een Mailjet e-mail naar de admin (erwin@bureauvlieland.nl) zodra een nieuwe offerte binnenkomt.
+Een "Aanvraag sluiten" actie op de admin logies-detailpagina waarmee je de aanvraag op `cancelled` zet met een reden, optioneel een e-mail naar de klant stuurt, en het klantportaal een passende melding toont.
 
 ### Wijzigingen
 
-**1. `supabase/functions/create-quote-review-todo/index.ts`**
+**1. `src/pages/admin/AdminAccommodationDetail.tsx`**
+- Knop "Aanvraag sluiten" toevoegen (destructive, met `XCircle` icon)
+- Dialog met:
+  - Tekstveld voor reden/toelichting (wordt opgeslagen in `admin_notes` of een nieuw `cancellation_reason` veld — maar dat bestaat niet op `accommodation_requests`, dus we gebruiken `admin_notes`)
+  - Checkbox "Klant per e-mail informeren" (standaard aan)
+  - Bij aanvinken: opent daarna de bestaande `SendProjectEmailSheet` met een voorgegenereerde "niet te helpen" mail
+- Mutation: `status = 'cancelled'` + `admin_notes` bijwerken
+- Na sluiting: alle openstaande quotes (`pending`) ook op `withdrawn` zetten
 
-Na het succesvol aanmaken van de todo, een e-mail versturen via Mailjet:
-- Ophalen van de `accommodation_quote_notification_admin` template uit `email_templates` (via `getRenderedTemplate`)
-- Indien template niet bestaat: eenvoudige fallback-HTML met partnernaam, accommodatienaam, prijs en link naar admin-detailpagina
-- Ontvanger: erwin@bureauvlieland.nl (of via app_settings)
-- Dezelfde test-mode logica als overige functies (in testomgeving naar erwin@bureauvlieland.nl)
-- E-mail loggen in `email_log`
+**2. `src/components/customer-portal/AccommodationSection.tsx`**
+- Nieuwe state toevoegen: als `accommodation.status === 'cancelled'`, toon een Card met:
+  - Rode/grijze styling
+  - Melding: "Bureau Vlieland heeft helaas geen passende logies kunnen vinden voor uw aanvraag."
+  - Eventueel suggestie om zelf te zoeken of contact op te nemen
+- Deze check komt vóór de bestaande states (na de `!accommodation` check)
 
-Template-variabelen:
-- `partner_name` — naam van de partner
-- `accommodation_name` — naam van de accommodatie
-- `customer_name` — klant/bedrijfsnaam
-- `reference_number` — referentie
-- `price_total` — totaalprijs
-- `admin_url` — directe link naar de logiesdetailpagina in admin
+**3. `src/pages/admin/AdminAccommodation.tsx`** (lijstpagina)
+- Controleren of `cancelled` aanvragen correct worden weergegeven (status badge bestaat al in `STATUS_CONFIG`)
 
-**2. Database: e-mailtemplate aanmaken (optioneel)**
-
-Een `accommodation_quote_notification_admin` template toevoegen aan de `email_templates` tabel zodat de tekst via de admin bewerkbaar is. Als deze stap te veel is kan de fallback-HTML volstaan.
-
-### Technische details
-- Import van `_shared/email-templates.ts` voor `getRenderedTemplate`, `SENDER_EMAIL`, `SENDER_NAME`, `logEmail`
-- Mailjet API-keys al beschikbaar als secrets
-- Geen extra secrets nodig
-- Alleen de edge function wordt aangepast + herdeployed
-- Bestaande todo-logica blijft ongewijzigd
-
-### Resultaat
-Bij elke ingediende logiesofferte ontvang je direct een e-mail met de details en een link naar het admin-paneel.
+### Geen databasewijziging nodig
+De status `cancelled` zit al in de constraint. Er hoeven geen migraties te draaien.
 
