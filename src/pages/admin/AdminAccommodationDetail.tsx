@@ -183,6 +183,11 @@ export default function AdminAccommodationDetail() {
   const [withdrawQuoteId, setWithdrawQuoteId] = useState<string | null>(null);
   const [withdrawNotify, setWithdrawNotify] = useState(true);
   const [chatQuote, setChatQuote] = useState<{ id: string; partnerId: string; partnerName: string; partnerEmail: string } | null>(null);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
+  const [closeNotifyCustomer, setCloseNotifyCustomer] = useState(true);
+  const [showCloseEmailSheet, setShowCloseEmailSheet] = useState(false);
+  const [closeEmailDefaults, setCloseEmailDefaults] = useState({ subject: "", body: "" });
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -396,6 +401,60 @@ export default function AdminAccommodationDetail() {
     },
     onError: (error) => {
       toast({ title: "Fout bij intrekken", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Close request (cancel) mutation
+  const closeRequestMutation = useMutation({
+    mutationFn: async ({ reason, notifyCustomer }: { reason: string; notifyCustomer: boolean }) => {
+      // Update status to cancelled + save reason in admin_notes
+      const updatedNotes = reason
+        ? `${adminNotes ? adminNotes + "\n\n" : ""}Reden sluiting: ${reason}`
+        : adminNotes;
+      const { error } = await supabase
+        .from("accommodation_requests")
+        .update({ status: "cancelled", admin_notes: updatedNotes })
+        .eq("id", id);
+      if (error) throw error;
+
+      // Withdraw all pending quotes
+      const pendingQuotes = quotes?.filter((q) => q.status === "pending") || [];
+      for (const q of pendingQuotes) {
+        await supabase.functions.invoke("withdraw-accommodation-quote", {
+          body: { quoteId: q.id, notifyPartner: false },
+        });
+      }
+
+      // Log in communications timeline
+      await supabase.from("project_communications").insert({
+        accommodation_id: id,
+        request_id: request?.linked_program_id || null,
+        communication_type: "note",
+        direction: "internal",
+        subject: "Logiesaanvraag gesloten",
+        content: `De aanvraag is gesloten (niet te helpen).${reason ? ` Reden: ${reason}` : ""}${pendingQuotes.length > 0 ? ` ${pendingQuotes.length} openstaande aanvra(a)g(en) ingetrokken.` : ""}`,
+      });
+
+      // If notify customer, prepare email defaults and show email sheet
+      if (notifyCustomer) {
+        const ref = request?.reference_number ? ` ${request.reference_number}` : "";
+        const subject = `Update logiesaanvraag${ref}`;
+        const body = `Beste ${request?.customer_name},\n\nHelaas is het ons niet gelukt om passende logies te vinden voor uw aanvraag${ref} voor ${request?.number_of_guests} personen van ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM", { locale: nl }) : "—"} t/m ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}.${reason ? `\n\n${reason}` : ""}\n\nWij raden u aan om zelf contact op te nemen met accommodaties op Vlieland, of neem gerust contact met ons op als wij u op een andere manier kunnen helpen.\n\nMet vriendelijke groet,\nBureau Vlieland`;
+        setCloseEmailDefaults({ subject, body });
+        setShowCloseEmailSheet(true);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+      queryClient.invalidateQueries({ queryKey: ["project-communications"] });
+      setShowCloseDialog(false);
+      setCloseReason("");
+      setCloseNotifyCustomer(true);
+      toast({ title: "Aanvraag gesloten" });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij sluiten", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1030,6 +1089,18 @@ export default function AdminAccommodationDetail() {
                 <Separator className="my-2" />
 
                 {/* Status Email Button */}
+                {request.status !== "cancelled" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => setShowCloseDialog(true)}
+                  >
+                    <XCircle className="h-3.5 w-3.5 mr-2" />
+                    Aanvraag sluiten
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -1344,6 +1415,71 @@ export default function AdminAccommodationDetail() {
           partnerEmail={chatQuote.partnerEmail}
         />
       )}
+
+      {/* Close Request Dialog */}
+      <Dialog open={showCloseDialog} onOpenChange={(open) => { if (!open) { setShowCloseDialog(false); setCloseReason(""); setCloseNotifyCustomer(true); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aanvraag sluiten</DialogTitle>
+            <DialogDescription>
+              De aanvraag wordt gemarkeerd als gesloten. Openstaande offerteaanvragen worden automatisch ingetrokken.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Reden / toelichting (optioneel)</label>
+              <Textarea
+                value={closeReason}
+                onChange={(e) => setCloseReason(e.target.value)}
+                placeholder="Bijv. geen beschikbaarheid gevonden, klant heeft zelf logies geregeld..."
+                rows={3}
+                className="text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="close-notify"
+                checked={closeNotifyCustomer}
+                onCheckedChange={(checked) => setCloseNotifyCustomer(!!checked)}
+              />
+              <label htmlFor="close-notify" className="text-sm">
+                Klant per e-mail informeren
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCloseDialog(false); setCloseReason(""); setCloseNotifyCustomer(true); }}>
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={closeRequestMutation.isPending}
+              onClick={() => closeRequestMutation.mutate({ reason: closeReason, notifyCustomer: closeNotifyCustomer })}
+            >
+              {closeRequestMutation.isPending ? "Bezig..." : "Aanvraag sluiten"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Request Email Sheet */}
+      <SendProjectEmailSheet
+        open={showCloseEmailSheet}
+        onOpenChange={setShowCloseEmailSheet}
+        accommodationId={id}
+        recipients={[{
+          label: `Klant: ${request?.customer_name}`,
+          email: request?.customer_email || "",
+          name: request?.customer_name || "",
+          type: "customer" as const,
+        }]}
+        defaultSubject={closeEmailDefaults.subject}
+        defaultBody={closeEmailDefaults.body}
+        onEmailSent={() => {
+          queryClient.invalidateQueries({ queryKey: ["project-communications", undefined, id] });
+          setCommLogOpen(true);
+        }}
+      />
     </AdminLayout>
   );
 }
