@@ -1089,6 +1089,18 @@ export default function AdminAccommodationDetail() {
                 <Separator className="my-2" />
 
                 {/* Status Email Button */}
+                {request.status !== "cancelled" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => setShowCloseDialog(true)}
+                  >
+                    <XCircle className="h-3.5 w-3.5 mr-2" />
+                    Aanvraag sluiten
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
