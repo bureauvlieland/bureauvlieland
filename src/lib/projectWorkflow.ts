@@ -46,6 +46,7 @@ export interface ItemForSendPhase {
   customer_approved_at?: string | null;
   provider_id?: string | null;
   block_type?: string | null;
+  day_index?: number | null;
 }
 
 export interface ProjectForItemPhase {
@@ -63,6 +64,9 @@ export function getItemSendPhase(
   project: ProjectForItemPhase,
 ): ItemSendPhase {
   if (item.status === "cancelled") return "niet_van_toepassing";
+
+  // Bureau cost items (day -1) are internal — never sent to partners
+  if (item.day_index === -1 && item.provider_id === "bureau") return "niet_van_toepassing";
 
   // Already sent to partner (or bureau)
   if (!item.skip_partner_notification) return "verstuurd";
