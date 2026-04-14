@@ -78,8 +78,8 @@ export const RegisterBureauInvoiceDialog = ({
     },
   });
 
-  const amountExclVat = form.watch("amount_excl_vat") || 0;
-  const vatAmount = form.watch("vat_amount") || 0;
+  const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
+  const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
   const totalInclVat = amountExclVat + vatAmount;
 
   const onSubmit = async (data: FormData) => {
