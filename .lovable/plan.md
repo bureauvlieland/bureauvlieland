@@ -1,57 +1,55 @@
 
 
-## Plan: Project aanmaken voor Stedelijk Gymnasium Haarlem (mei 2026)
+## Aangepast plan: Project OVM Partners B.V. (10-jaars uitje, juni 2026)
 
-### Wat wordt gedaan
+### Wijzigingen t.o.v. vorig plan
 
-Via de database worden de volgende zaken aangemaakt:
+Meer bestaande bouwstenen gebruiken:
 
-**1. Project (program_request) aanmaken**
-- Klant: Ineke Haeck / Stedelijk Gymnasium Haarlem
-- E-mail: i.haeck@sghaarlem.nl
-- Datums: 19, 20, 21, 22 mei 2026 (di t/m vr)
-- Aantal personen: 166
-- Type: maatwerk/offerte (quote)
-- Status: active
-- Notities: referentie naar originele offerte 2180173
+| Item in offerte | Bouwsteen | Opmerking |
+|----------------|-----------|-----------|
+| Fietstour met gids 2 uur (€180) | `fietstocht-met-begeleiding` (€19 p.p.) | `admin_price_override: 180` |
+| Overtocht Doeksen retour (€442,80) | `boot-retour` (op aanvraag) | `admin_price_override: 442.80`, 12 p.p. = €36,90 |
+| Fietshuur 2 dagen (€225,60) | `fiets-huur` (€12 p.p./dag) | `admin_price_override: 225.60`, notes: 12x 2 dagen x €9,40 |
+| Toeristenbelasting (€92,88) | Geen bouwsteen — blijft losse kost | Standaard app_setting tarief |
 
-**2. Kostenregels toevoegen (program_request_items)**
+### Volledige itemlijst
 
-De meeste regels zijn geen echte activiteiten maar logistieke kosten. Deze worden als losse kosten (day_index = -1, provider = "bureau") op het project gezet:
+**Activiteiten (met block_id, op dag-index)**
 
-- Overtocht Doeksen heenreis — €2.028,52
-- Overtocht Doeksen terugreis — €2.028,52
-- Toeristenbelasting — €1.540,48
-- Bagagevervoer retour — €830,00
-- Fietshuur totaal — €2.115,20
-- Materiaalhuur — €500,00
-- Kampvuur / brandhout — €75,00
-- Huurtent Apollo (66 st) — €2.805,00
-- Legertent (2 st) — €600,00
-- Staplaats Stortemelk — €1.133,55
-- Kampeerterrein Stortemelk — €2.514,90
-- Zaalhuur Bolder — €500,00
-- Huur kooktent — €150,00
-- Staplaats Legertent — €75,00
-- Reserveringskosten Stortemelk — €15,75
-- Verblijf Lange Paal — €2.203,65
-- Eindschoonmaak Lange Paal — €50,00
-- Euro voor de natuur (SBB) — €166,00
-- Administratiekosten Lange Paal — €17,50
-- Catering veg. avondmaaltijden — €5.229,00
-- 15% bureaukosten — €4.669,37
+| # | Item | block_id | provider_id | Dag | Prijs override |
+|---|------|----------|-------------|-----|----------------|
+| 1 | Rondleiding Brouwerij Fortuna | `rondleiding-brouwerij-fortuna` | fortuna | 0 | €210,00 |
+| 2 | Fietstocht met begeleiding | `fietstocht-met-begeleiding` | bureau | 0 | €180,00 |
+| 3 | Diner Zeezicht | `diner-zeezicht` (nieuw) | zeezicht-vlieland | 0 | €474,00 |
+| 4 | Zeehondentocht | `zeehondentocht` | zeehonden | 1 | €360,00 |
+| 5 | Lunch in de natuur | `lunch-strand` | zuiver | 1 | €294,00 |
+| 6 | Italiaans Diner Oliva | `italian-shared-dining` | trattoria-oliva | 1 | €390,00 |
+| 7 | Vliehors Expres | `vliehors-expres` | vliehors-expres | 2 | €354,00 |
+| 8 | Overtocht Doeksen retour | `boot-retour` | bureau | -1 | €442,80 |
+| 9 | Fietshuur 2 dagen | `fiets-huur` | bureau | -1 | €225,60 |
 
-**De VOC-activiteit** (Afhuur VOC & materiaal + personeel, €4.154,00) wordt als activiteit-item toegevoegd (met de juiste categorie en dag-index zodra het programma duidelijk is).
+**Losse kosten (day_index = -1, geen block_id)**
 
-**3. Bouwstenen**
-Ik maak geen nieuwe bouwstenen aan — dit zijn voornamelijk eenmalige kostenregels specifiek voor dit project. Als je na de volgende mail meer info hebt over activiteiten, kunnen we die alsnog als bouwstenen aanmaken.
+| # | Kostenregel | Bedrag |
+|---|-------------|--------|
+| 10 | Hotelkamer Zeezicht 1-pers 2 nachten (2x €438) | €876,00 |
+| 11 | Hotelkamer Zeezicht 2-pers 2 nachten (5x €478) | €2.390,00 |
+| 12 | Toeristenbelasting (12 pers x 3 dgn x €2,58) | €92,88 |
+| 13 | Bureaukosten 15% | €1.039,72 |
+
+### Nieuwe bouwsteen
+- `diner-zeezicht` — Diner Restaurant Zeezicht, €39,50 p.p., partner: `zeezicht-vlieland`, categorie: catering, status: published
+
+### Project
+- Klant: OVM Partners B.V., Vendelier 71 A, 3905PD Veenendaal
+- Datums: 18, 19, 20 juni 2026
+- 12 personen, quote_status: `offerte_verstuurd`
+- Referentie offerte 2180189, relatienummer 203
+- Alle items: `skip_partner_notification: true`
 
 ### Technisch
-- Insert in `program_requests` via database insert tool
-- Bulk insert in `program_request_items` voor alle kostenregels
-- Alle kosten als `day_index = -1`, `provider_id = "bureau"`, `skip_partner_notification = true`
-- Omschrijvingen inclusief aantallen en eenheidsprijzen in `admin_price_notes`
-
-### Opmerking
-Je gaf aan hierna nog een mailconversatie te sturen met meer programma-info. Na goedkeuring van dit plan maak ik het project aan, en verwerk ik de aanvullende info zodra je die stuurt.
+- 1 insert `building_blocks` (diner-zeezicht)
+- 1 insert `program_requests`
+- 13 inserts `program_request_items` (9 met block_id, 4 losse kosten)
 
