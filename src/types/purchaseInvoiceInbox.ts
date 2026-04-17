@@ -10,11 +10,17 @@ export interface InboxScanResult {
   vat_amount: number | null;
   amount_incl_vat: number | null;
   description: string | null;
+  vat_breakdown?: Array<{
+    vat_rate: number;
+    amount_excl: number;
+    vat_amount: number;
+  }>;
   line_items: Array<{
     description: string;
     quantity: number | null;
     unit_price: number | null;
     total_excl_vat: number | null;
+    vat_rate?: number | null;
   }>;
 }
 
