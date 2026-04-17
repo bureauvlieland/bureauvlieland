@@ -61,22 +61,29 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
   const rescan = useMutation({
     mutationFn: async (item: PurchaseInvoiceInboxItem) => {
       if (!item.attachment_path) throw new Error("Geen bijlage");
-      // Reset to pending and trigger scan via internal function (admin can call scan-purchase-invoice)
-      await supabase
+      const { error: markScanningError } = await supabase
         .from("purchase_invoice_inbox")
         .update({ scan_status: "scanning", scan_error: null })
         .eq("id", item.id);
+      if (markScanningError) throw markScanningError;
 
       const { data, error } = await supabase.functions.invoke("scan-purchase-invoice", {
         body: { file_path: item.attachment_path },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error || data?.error) {
+        const message = data?.error || error?.message || "Scan mislukt";
+        await supabase
+          .from("purchase_invoice_inbox")
+          .update({ scan_status: "failed", scan_error: message })
+          .eq("id", item.id);
+        throw new Error(message);
+      }
 
-      await supabase
+      const { error: markScannedError } = await supabase
         .from("purchase_invoice_inbox")
-        .update({ scan_status: "scanned", scan_result: data.data })
+        .update({ scan_status: "scanned", scan_result: data.data, scan_error: null })
         .eq("id", item.id);
+      if (markScannedError) throw markScannedError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
