@@ -267,26 +267,7 @@ export function AddPurchaseInvoiceDialog({
       setVatAmount("");
       setAmountIncl("");
       setDescription(result?.description || inboxItem.subject || "");
-      // Pre-fill lines from scan
-      if (result?.line_items && result.line_items.length > 0) {
-        setLines(
-          result.line_items.map((li) => ({
-            description: li.description || "",
-            quantity: li.quantity != null ? String(li.quantity) : "1",
-            unit_price:
-              li.unit_price != null
-                ? String(li.unit_price)
-                : li.total_excl_vat != null && li.quantity
-                ? String(li.total_excl_vat / li.quantity)
-                : li.total_excl_vat != null
-                ? String(li.total_excl_vat)
-                : "",
-            vat_rate: li.vat_rate != null ? String(li.vat_rate) : (result?.vat_rate != null ? String(result.vat_rate) : "21"),
-          })),
-        );
-      } else {
-        setLines([]);
-      }
+      setLines(buildLinesFromScan(result));
     } else {
       setStep("upload");
       setFile(null);
