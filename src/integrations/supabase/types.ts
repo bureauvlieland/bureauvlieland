@@ -2026,6 +2026,77 @@ export type Database = {
           },
         ]
       }
+      purchase_invoice_inbox: {
+        Row: {
+          attachment_filename: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          body_text: string | null
+          created_at: string
+          from_email: string
+          from_name: string | null
+          id: string
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          processed_invoice_id: string | null
+          scan_error: string | null
+          scan_result: Json | null
+          scan_status: string
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          attachment_filename?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          body_text?: string | null
+          created_at?: string
+          from_email: string
+          from_name?: string | null
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_invoice_id?: string | null
+          scan_error?: string | null
+          scan_result?: Json | null
+          scan_status?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attachment_filename?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          body_text?: string | null
+          created_at?: string
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_invoice_id?: string | null
+          scan_error?: string | null
+          scan_result?: Json | null
+          scan_status?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoice_inbox_processed_invoice_id_fkey"
+            columns: ["processed_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_programs: {
         Row: {
           cart_items: Json

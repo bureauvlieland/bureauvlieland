@@ -131,3 +131,9 @@ verify_jwt = false
 
 [functions.cleanup-stale-todos]
 verify_jwt = false
+
+[functions.inbound-purchase-invoice]
+verify_jwt = false
+
+[functions.scan-purchase-invoice-internal]
+verify_jwt = false
