@@ -1,55 +1,61 @@
 
 
-## Aangepast plan: Project OVM Partners B.V. (10-jaars uitje, juni 2026)
+De gebruiker wil twee dingen:
+1. Inkoopfacturen kunnen toevoegen vanuit `/admin/inkoopfacturen` (centrale plek), niet alleen vanuit het partner-portaal of project. Dan koppelen aan een project + optioneel aan een specifiek programma-item.
+2. Bij het uploaden van de PDF: AI-scan die orderregels en bedragen (ex BTW, BTW, incl BTW) automatisch herkent en de velden voorinvult.
 
-### Wijzigingen t.o.v. vorig plan
+Bestaande situatie:
+- Tabel `partner_purchase_invoices` bestaat al met velden: `request_id`, `item_id`, `partner_id`, `invoice_number`, `invoice_date`, `amount_excl_vat`, `vat_rate`, `vat_amount`, `amount_incl_vat`, `description`, `file_path`, `status`.
+- Storage bucket `partner-invoices` bestaat (private).
+- Hook `usePurchaseInvoices` met `createInvoice` mutation aanwezig.
+- Component `PurchaseInvoicesCard` toont facturen per project (read + acties), maar **er is geen 'Toevoegen' UI op de admin-overzichtspagina**.
+- Pagina `AdminPurchaseInvoices` bestaat (zie `src/pages/admin/AdminPurchaseInvoices.tsx`) — die heeft het lijstoverzicht, maar zonder add-flow.
+- Lovable AI Gateway met Gemini Pro/Flash kan PDF's analyseren (multimodal). Geen extra API-key nodig.
 
-Meer bestaande bouwstenen gebruiken:
+## Plan
 
-| Item in offerte | Bouwsteen | Opmerking |
-|----------------|-----------|-----------|
-| Fietstour met gids 2 uur (€180) | `fietstocht-met-begeleiding` (€19 p.p.) | `admin_price_override: 180` |
-| Overtocht Doeksen retour (€442,80) | `boot-retour` (op aanvraag) | `admin_price_override: 442.80`, 12 p.p. = €36,90 |
-| Fietshuur 2 dagen (€225,60) | `fiets-huur` (€12 p.p./dag) | `admin_price_override: 225.60`, notes: 12x 2 dagen x €9,40 |
-| Toeristenbelasting (€92,88) | Geen bouwsteen — blijft losse kost | Standaard app_setting tarief |
+### 1. Nieuwe edge function: `scan-purchase-invoice`
+- Input: base64 PDF (of storage path)
+- Roept Lovable AI (`google/gemini-2.5-pro`) aan met de PDF en een gestructureerde prompt
+- Output JSON:
+  ```
+  {
+    invoice_number, invoice_date, supplier_name,
+    amount_excl_vat, vat_rate, vat_amount, amount_incl_vat,
+    description,
+    line_items: [{ description, quantity, unit_price, total_excl_vat }]
+  }
+  ```
+- Authenticatie: admin JWT verifiëren
 
-### Volledige itemlijst
+### 2. Nieuwe dialog: `AddPurchaseInvoiceDialog`
+Stappen:
+1. **Upload PDF** → uploadt naar `partner-invoices` bucket → triggert AI-scan met progress indicator
+2. **Verifieer & corrigeer** → gescande velden tonen in editable formulier:
+   - Leverancier (partner-selector, met fuzzy match-suggestie op basis van gescande naam)
+   - Project (combobox met `program_requests`, zoekbaar op referentienummer/klant)
+   - Optioneel: koppel aan specifiek programma-item (dropdown filtert op gekozen project + partner)
+   - Factuurnummer, datum, ex BTW, BTW%, BTW bedrag, incl BTW
+   - Auto-recalc: bij wijziging ex BTW + BTW% → BTW bedrag en incl BTW automatisch herberekenen (lost ook het probleem op uit de eerdere screenshot)
+   - Omschrijving + line items preview (read-only, in details collapse)
+3. **Opslaan** → insert in `partner_purchase_invoices`
 
-**Activiteiten (met block_id, op dag-index)**
+### 3. Aanpassingen aan `AdminPurchaseInvoices` pagina
+- Knop "Inkoopfactuur toevoegen" rechtsboven → opent `AddPurchaseInvoiceDialog`
+- Na opslaan: lijst refreshen
 
-| # | Item | block_id | provider_id | Dag | Prijs override |
-|---|------|----------|-------------|-----|----------------|
-| 1 | Rondleiding Brouwerij Fortuna | `rondleiding-brouwerij-fortuna` | fortuna | 0 | €210,00 |
-| 2 | Fietstocht met begeleiding | `fietstocht-met-begeleiding` | bureau | 0 | €180,00 |
-| 3 | Diner Zeezicht | `diner-zeezicht` (nieuw) | zeezicht-vlieland | 0 | €474,00 |
-| 4 | Zeehondentocht | `zeehondentocht` | zeehonden | 1 | €360,00 |
-| 5 | Lunch in de natuur | `lunch-strand` | zuiver | 1 | €294,00 |
-| 6 | Italiaans Diner Oliva | `italian-shared-dining` | trattoria-oliva | 1 | €390,00 |
-| 7 | Vliehors Expres | `vliehors-expres` | vliehors-expres | 2 | €354,00 |
-| 8 | Overtocht Doeksen retour | `boot-retour` | bureau | -1 | €442,80 |
-| 9 | Fietshuur 2 dagen | `fiets-huur` | bureau | -1 | €225,60 |
-
-**Losse kosten (day_index = -1, geen block_id)**
-
-| # | Kostenregel | Bedrag |
-|---|-------------|--------|
-| 10 | Hotelkamer Zeezicht 1-pers 2 nachten (2x €438) | €876,00 |
-| 11 | Hotelkamer Zeezicht 2-pers 2 nachten (5x €478) | €2.390,00 |
-| 12 | Toeristenbelasting (12 pers x 3 dgn x €2,58) | €92,88 |
-| 13 | Bureaukosten 15% | €1.039,72 |
-
-### Nieuwe bouwsteen
-- `diner-zeezicht` — Diner Restaurant Zeezicht, €39,50 p.p., partner: `zeezicht-vlieland`, categorie: catering, status: published
-
-### Project
-- Klant: OVM Partners B.V., Vendelier 71 A, 3905PD Veenendaal
-- Datums: 18, 19, 20 juni 2026
-- 12 personen, quote_status: `offerte_verstuurd`
-- Referentie offerte 2180189, relatienummer 203
-- Alle items: `skip_partner_notification: true`
+### 4. Bedragberekening fix (was eerdere klacht)
+- Centrale helper `calculateVatAmounts(exclVat, vatRate)` met correcte afronding (2 decimalen)
+- Hergebruiken in alle invoice-dialogs (admin én partner)
 
 ### Technisch
-- 1 insert `building_blocks` (diner-zeezicht)
-- 1 insert `program_requests`
-- 13 inserts `program_request_items` (9 met block_id, 4 losse kosten)
+- Edge function gebruikt `LOVABLE_API_KEY` (al in secrets)
+- Geen schemawijzigingen nodig — bestaande tabel dekt alles
+- Storage upload pattern volgt bestaande convention (request_id/timestamp_filename.pdf)
+- Helper-functie `calculateVatAmounts` in `src/lib/vatCalculation.ts`
+
+### Buiten scope
+- Echte SnelStart REST API-koppeling (eerder besproken, nog niet aanwezig)
+- Bulk-upload van meerdere facturen tegelijk
+- Automatisch matchen aan programma-items op basis van line items (kan later)
 
