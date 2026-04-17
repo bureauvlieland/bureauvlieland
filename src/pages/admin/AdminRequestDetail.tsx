@@ -258,6 +258,9 @@ const AdminRequestDetail = () => {
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
 
+  // VAT rates per item (from building_blocks)
+  const { getItemVatRate } = useItemVatRates(items);
+
   // App settings for coordination fee + surcharges
   const { getCoordinationFee: calcCoordFee, settings: appSettings } = useAppSettings();
 
