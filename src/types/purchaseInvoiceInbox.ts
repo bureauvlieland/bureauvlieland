@@ -37,4 +37,5 @@ export interface PurchaseInvoiceInboxItem {
   processed_by: string | null;
   processed_at: string | null;
   notes: string | null;
+  raw_payload?: Record<string, unknown> | null;
 }
