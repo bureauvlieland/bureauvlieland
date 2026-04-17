@@ -11,6 +11,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { getItemLineTotal as centralLineTotal, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
+import type { ProgramItemBillingLine } from "@/types/programItemBillingLine";
 
 interface FinancialItem {
   id: string;
@@ -39,11 +40,14 @@ interface FinancialOverviewCardProps {
   centralSurcharge?: number;
   accommodationTotal?: number;
   accommodationName?: string;
+  linesByItem?: Record<string, ProgramItemBillingLine[]>;
 }
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
 const getLineTotal = (item: FinancialItem, n: number, days: number = 1) => centralLineTotal(item as any, n, days);
 
+const sumBillingLines = (lines: ProgramItemBillingLine[]) =>
+  lines.reduce((sum, l) => sum + Number(l.amount_incl_vat || 0), 0);
 
 export const FinancialOverviewCard = ({
   requestId,
@@ -58,6 +62,7 @@ export const FinancialOverviewCard = ({
   centralSurcharge = 0,
   accommodationTotal = 0,
   accommodationName,
+  linesByItem = {},
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
@@ -74,11 +79,21 @@ export const FinancialOverviewCard = ({
   const formatCurrency = (amount: number) =>
     `€${amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const hasBillingLines = (item: FinancialItem) =>
+    Array.isArray(linesByItem[item.id]) && linesByItem[item.id].length > 0;
+
+  const getEffectiveItemTotal = (item: FinancialItem): number | null => {
+    if (hasBillingLines(item)) return sumBillingLines(linesByItem[item.id]);
+    return getLineTotal(item, numberOfPeople, numberOfDays);
+  };
+
   const formatItemPrice = (item: FinancialItem) => {
+    if (hasBillingLines(item)) {
+      return `${formatCurrency(sumBillingLines(linesByItem[item.id]))} totaal`;
+    }
     const lineTotal = getLineTotal(item, numberOfPeople, numberOfDays);
     if (lineTotal == null) return "Op aanvraag";
 
-    // admin_price_override + per person → show unit price and total
     if (
       item.quoted_price == null &&
       item.admin_price_override != null &&
@@ -89,7 +104,6 @@ export const FinancialOverviewCard = ({
       return `${formatCurrency(item.admin_price_override)} ${suffix}`;
     }
 
-    // quoted_price or flat admin override → show as group total
     return `${formatCurrency(lineTotal)} totaal`;
   };
 
@@ -104,10 +118,10 @@ export const FinancialOverviewCard = ({
   };
 
   const programTotal = programItems.reduce(
-    (sum, item) => sum + (getLineTotal(item, numberOfPeople, numberOfDays) ?? 0), 0
+    (sum, item) => sum + (getEffectiveItemTotal(item) ?? 0), 0
   );
   const extraCostsTotal = extraCostItems.reduce(
-    (sum, item) => sum + (item.admin_price_override ?? 0), 0
+    (sum, item) => sum + (getEffectiveItemTotal(item) ?? item.admin_price_override ?? 0), 0
   );
 
   // Accommodation VAT (9%)
@@ -116,28 +130,65 @@ export const FinancialOverviewCard = ({
   const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal
     + touristTax + natureContribution + centralSurcharge + accommodationTotal;
 
-  const programVatBreakdown = programItems.reduce(
-    (acc, item) => {
+  // Aggregate VAT per rate. For items with billing lines we sum exact excl/vat amounts (no rounding loss).
+  const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
+  const addToGroup = (rate: number, exclVat: number, vatAmount: number) => {
+    const key = Number(rate);
+    if (!vatGroups[key]) vatGroups[key] = { exclVat: 0, vatAmount: 0 };
+    vatGroups[key].exclVat += exclVat;
+    vatGroups[key].vatAmount += vatAmount;
+  };
+
+  programItems.forEach((item) => {
+    if (hasBillingLines(item)) {
+      linesByItem[item.id].forEach((bl) => {
+        addToGroup(Number(bl.vat_rate), Number(bl.amount_excl_vat), Number(bl.vat_amount));
+      });
+    } else {
       const lineTotal = getLineTotal(item, numberOfPeople, numberOfDays) ?? 0;
       const vatRate = getItemVatRate(item as any);
-      acc.exclVat += calculateExclVat(lineTotal, vatRate);
-      acc.vatAmount += calculateVatAmount(lineTotal, vatRate);
-      return acc;
-    },
-    { exclVat: 0, vatAmount: 0 }
+      addToGroup(vatRate, calculateExclVat(lineTotal, vatRate), calculateVatAmount(lineTotal, vatRate));
+    }
+  });
+
+  // Coordination fee + central surcharge → standard VAT
+  addToGroup(
+    coordVatRate,
+    calculateExclVat(coordinationFee + centralSurcharge, coordVatRate),
+    calculateVatAmount(coordinationFee + centralSurcharge, coordVatRate),
   );
 
-  const coordExcl = calculateExclVat(coordinationFee + centralSurcharge, coordVatRate);
-  const coordVat = calculateVatAmount(coordinationFee + centralSurcharge, coordVatRate);
-  const extraExcl = calculateExclVat(extraCostsTotal, coordVatRate);
-  const extraVat = calculateVatAmount(extraCostsTotal, coordVatRate);
-  const accommExcl = accommodationTotal > 0 ? calculateExclVat(accommodationTotal, accommodationVatRate) : 0;
-  const accommVat = accommodationTotal > 0 ? calculateVatAmount(accommodationTotal, accommodationVatRate) : 0;
-  // Tourist tax & nature contribution = 0% VAT (levies)
-  const leviesExcl = touristTax + natureContribution;
+  // Extra costs: prefer billing lines if any, otherwise standard rate
+  extraCostItems.forEach((item) => {
+    if (hasBillingLines(item)) {
+      linesByItem[item.id].forEach((bl) => {
+        addToGroup(Number(bl.vat_rate), Number(bl.amount_excl_vat), Number(bl.vat_amount));
+      });
+    } else {
+      const total = item.admin_price_override ?? 0;
+      addToGroup(coordVatRate, calculateExclVat(total, coordVatRate), calculateVatAmount(total, coordVatRate));
+    }
+  });
 
-  const totalExclVat = programVatBreakdown.exclVat + coordExcl + extraExcl + accommExcl + leviesExcl;
-  const totalVat = programVatBreakdown.vatAmount + coordVat + extraVat + accommVat;
+  // Accommodation
+  if (accommodationTotal > 0) {
+    addToGroup(
+      accommodationVatRate,
+      calculateExclVat(accommodationTotal, accommodationVatRate),
+      calculateVatAmount(accommodationTotal, accommodationVatRate),
+    );
+  }
+  // Tourist tax & nature contribution = 0% VAT
+  if (touristTax + natureContribution > 0) {
+    addToGroup(0, touristTax + natureContribution, 0);
+  }
+
+  const sortedVatGroups = Object.entries(vatGroups)
+    .map(([rate, v]) => ({ rate: Number(rate), ...v }))
+    .sort((a, b) => a.rate - b.rate);
+
+  const totalExclVat = sortedVatGroups.reduce((s, g) => s + g.exclVat, 0);
+  const totalVat = sortedVatGroups.reduce((s, g) => s + g.vatAmount, 0);
 
   const invoicedInclVat = invoices
     .filter((inv) => inv.invoice_type !== "credit")
@@ -172,17 +223,41 @@ export const FinancialOverviewCard = ({
             {programItems.length === 0 && (
               <p className="text-sm text-muted-foreground">Geen programma-items</p>
             )}
-            {programItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  {getStatusBadge(item)}
-                  <span className="truncate max-w-[200px]">{item.block_name}</span>
+            {programItems.map((item) => {
+              const billingLines = linesByItem[item.id];
+              const isFinal = billingLines && billingLines.length > 0;
+              return (
+                <div key={item.id}>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {getStatusBadge(item)}
+                      <span className="truncate max-w-[180px]">{item.block_name}</span>
+                      {isFinal && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-green-50 text-green-700 border-green-200">
+                          definitief
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="font-medium whitespace-nowrap ml-2 tabular-nums">
+                      {formatItemPrice(item)}
+                    </span>
+                  </div>
+                  {isFinal && (
+                    <div className="ml-6 mt-0.5 mb-1 space-y-0.5">
+                      {billingLines.map((bl) => (
+                        <div key={bl.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="truncate max-w-[200px]">
+                            {bl.description || "Regel"}
+                            <span className="ml-1 text-[10px] opacity-70">({bl.vat_rate}%)</span>
+                          </span>
+                          <span className="tabular-nums">{formatCurrency(Number(bl.amount_incl_vat))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="font-medium whitespace-nowrap ml-2">
-                  {formatItemPrice(item)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Coordination fee */}
             <div className="flex items-center justify-between text-sm pt-1">
@@ -190,21 +265,46 @@ export const FinancialOverviewCard = ({
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Coördinatiefee ({numberOfPeople} pers.)</span>
               </div>
-              <span className="font-medium">{formatCurrency(coordinationFee)}</span>
+              <span className="font-medium tabular-nums">{formatCurrency(coordinationFee)}</span>
             </div>
 
             {/* Extra costs inline */}
-            {extraCostItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="truncate max-w-[200px]">{item.block_name}</span>
+            {extraCostItems.map((item) => {
+              const billingLines = linesByItem[item.id];
+              const isFinal = billingLines && billingLines.length > 0;
+              const total = isFinal ? sumBillingLines(billingLines) : (item.admin_price_override ?? 0);
+              return (
+                <div key={item.id}>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="truncate max-w-[180px]">{item.block_name}</span>
+                      {isFinal && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-green-50 text-green-700 border-green-200">
+                          definitief
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="font-medium tabular-nums">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                  {isFinal && (
+                    <div className="ml-6 mt-0.5 mb-1 space-y-0.5">
+                      {billingLines.map((bl) => (
+                        <div key={bl.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="truncate max-w-[200px]">
+                            {bl.description || "Regel"}
+                            <span className="ml-1 text-[10px] opacity-70">({bl.vat_rate}%)</span>
+                          </span>
+                          <span className="tabular-nums">{formatCurrency(Number(bl.amount_incl_vat))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="font-medium">
-                  {formatCurrency(item.admin_price_override ?? 0)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Accommodation */}
             {accommodationTotal > 0 && (
@@ -213,7 +313,7 @@ export const FinancialOverviewCard = ({
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="truncate max-w-[200px]">Logies{accommodationName ? `: ${accommodationName}` : ""}</span>
                 </div>
-                <span className="font-medium">{formatCurrency(accommodationTotal)}</span>
+                <span className="font-medium tabular-nums">{formatCurrency(accommodationTotal)}</span>
               </div>
             )}
 
@@ -224,7 +324,7 @@ export const FinancialOverviewCard = ({
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
                 </div>
-                <span className="font-medium">{formatCurrency(touristTax)}</span>
+                <span className="font-medium tabular-nums">{formatCurrency(touristTax)}</span>
               </div>
             )}
 
@@ -235,7 +335,7 @@ export const FinancialOverviewCard = ({
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Natuurbijdrage ({numberOfPeople} pers.)</span>
                 </div>
-                <span className="font-medium">{formatCurrency(natureContribution)}</span>
+                <span className="font-medium tabular-nums">{formatCurrency(natureContribution)}</span>
               </div>
             )}
 
@@ -246,7 +346,7 @@ export const FinancialOverviewCard = ({
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Opslag centrale facturatie ({numberOfPeople} pers.)</span>
                 </div>
-                <span className="font-medium">{formatCurrency(centralSurcharge)}</span>
+                <span className="font-medium tabular-nums">{formatCurrency(centralSurcharge)}</span>
               </div>
             )}
           </div>
@@ -256,15 +356,23 @@ export const FinancialOverviewCard = ({
           <div className="space-y-1">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotaal excl. BTW</span>
-              <span>{formatCurrency(totalExclVat)}</span>
+              <span className="tabular-nums">{formatCurrency(totalExclVat)}</span>
             </div>
+            {sortedVatGroups
+              .filter((g) => g.vatAmount > 0)
+              .map((g) => (
+                <div key={g.rate} className="flex justify-between text-xs text-muted-foreground">
+                  <span>BTW {g.rate}% over {formatCurrency(g.exclVat)}</span>
+                  <span className="tabular-nums">{formatCurrency(g.vatAmount)}</span>
+                </div>
+              ))}
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">BTW</span>
-              <span>{formatCurrency(totalVat)}</span>
+              <span className="text-muted-foreground">Totaal BTW</span>
+              <span className="tabular-nums">{formatCurrency(totalVat)}</span>
             </div>
             <div className="flex justify-between font-semibold">
               <span>Totaal incl. BTW{isQuoteMode ? " (indicatief)" : ""}</span>
-              <span>{formatCurrency(grandTotalInclVat)}</span>
+              <span className="tabular-nums">{formatCurrency(grandTotalInclVat)}</span>
             </div>
           </div>
           {isQuoteMode && (
@@ -292,7 +400,7 @@ export const FinancialOverviewCard = ({
                         {invoiceTypeLabelMap[invoice.invoice_type as InvoiceType] || invoice.invoice_type}
                       </Badge>
                     </div>
-                    <span className={invoice.invoice_type === "credit" ? "text-destructive" : ""}>
+                    <span className={`tabular-nums ${invoice.invoice_type === "credit" ? "text-destructive" : ""}`}>
                       {invoice.invoice_type === "credit" ? "-" : ""}
                       {formatCurrency(invoice.amount_incl_vat)}
                     </span>
@@ -307,7 +415,7 @@ export const FinancialOverviewCard = ({
         <Separator />
         <div className="flex items-center justify-between">
           <span className="font-semibold text-lg">Openstaand</span>
-          <span className={`font-bold text-lg ${outstandingAmount > 0 ? "text-amber-600" : "text-green-600"}`}>
+          <span className={`font-bold text-lg tabular-nums ${outstandingAmount > 0 ? "text-amber-600" : "text-green-600"}`}>
             {formatCurrency(Math.max(0, outstandingAmount))}
           </span>
         </div>
