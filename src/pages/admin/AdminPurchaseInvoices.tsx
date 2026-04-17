@@ -406,6 +406,12 @@ export default function AdminPurchaseInvoices() {
         invoice={forwardDialogInvoice}
         onClose={() => setForwardDialogInvoice(null)}
       />
+
+      {/* Add Purchase Invoice Dialog */}
+      <AddPurchaseInvoiceDialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+      />
     </AdminLayout>
   );
 }
