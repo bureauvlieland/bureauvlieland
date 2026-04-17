@@ -40,6 +40,8 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
+import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
+import { Plus } from "lucide-react";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 
 export default function AdminPurchaseInvoices() {
@@ -49,6 +51,7 @@ export default function AdminPurchaseInvoices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const { invoices, isLoading, stats, markAsPaid, markAsForwarded, getDownloadUrl } = usePurchaseInvoices({
     requestId: selectedRequestId !== "all" ? selectedRequestId : undefined,
@@ -156,14 +159,20 @@ export default function AdminPurchaseInvoices() {
     <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Package className="h-8 w-8" />
-            Inkoopfacturen
-          </h1>
-          <p className="text-muted-foreground">
-            Facturen van partners aan Bureau Vlieland
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Package className="h-8 w-8" />
+              Inkoopfacturen
+            </h1>
+            <p className="text-muted-foreground">
+              Facturen van partners aan Bureau Vlieland
+            </p>
+          </div>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Inkoopfactuur toevoegen
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -396,6 +405,12 @@ export default function AdminPurchaseInvoices() {
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
         onClose={() => setForwardDialogInvoice(null)}
+      />
+
+      {/* Add Purchase Invoice Dialog */}
+      <AddPurchaseInvoiceDialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
       />
     </AdminLayout>
   );
