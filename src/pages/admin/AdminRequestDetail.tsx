@@ -90,6 +90,7 @@ import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge"
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
 import { AdminItemBillingLinesEditor } from "@/components/admin/AdminItemBillingLinesEditor";
+import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
@@ -260,6 +261,9 @@ const AdminRequestDetail = () => {
 
   // VAT rates per item (from building_blocks)
   const { getItemVatRate } = useItemVatRates(items);
+
+  // Definitive billing lines per item (override quoted_price in financial overview)
+  const { linesByItem: billingLinesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
 
   // App settings for coordination fee + surcharges
   const { getCoordinationFee: calcCoordFee, settings: appSettings } = useAppSettings();
@@ -1860,6 +1864,7 @@ const AdminRequestDetail = () => {
                   centralSurcharge={centralSurcharge}
                   accommodationTotal={accommodationTotal}
                   accommodationName={selectedAccommodationQuote?.accommodation_name}
+                  linesByItem={billingLinesByItem}
                 />
               </div>
               {/* Margin overview */}
