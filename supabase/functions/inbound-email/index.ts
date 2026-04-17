@@ -17,6 +17,20 @@ function extractReferenceNumber(toAddress: string): string | null {
 }
 
 /**
+ * Detect if this email should be routed to the purchase invoice inbox.
+ * Matches recipients like:
+ *   - invoices@reply.bureauvlieland.nl
+ *   - inkoop@reply.bureauvlieland.nl
+ *   - facturen@reply.bureauvlieland.nl
+ *   - reply+inkoop@reply.bureauvlieland.nl
+ *   - reply+facturen@... / reply+invoices@...
+ */
+function isPurchaseInvoiceRecipient(toAddress: string): boolean {
+  const lower = (toAddress || "").toLowerCase();
+  return /(?:^|<|,|\s)(?:reply\+)?(?:invoices|inkoop|facturen)@/i.test(lower);
+}
+
+/**
  * Strip HTML tags from content, keeping text
  */
 function stripHtml(html: string): string {
@@ -166,9 +180,11 @@ Deno.serve(async (req) => {
     let subject = "";
     let textContent = "";
     let htmlContent = "";
+    let rawPayload: Record<string, unknown> = {};
 
     if (contentType.includes("application/json")) {
       const body = await req.json();
+      rawPayload = body;
       sender = body.From || body.Sender || "";
       recipient = body.To || body.Recipient || "";
       subject = body.Subject || "";
@@ -176,6 +192,9 @@ Deno.serve(async (req) => {
       htmlContent = body["Html-part"] || body.Html || "";
     } else if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
       const formData = await req.formData();
+      const obj: Record<string, unknown> = {};
+      for (const [k, v] of formData.entries()) obj[k] = typeof v === "string" ? v : v;
+      rawPayload = obj;
       sender = formData.get("From")?.toString() || formData.get("Sender")?.toString() || "";
       recipient = formData.get("To")?.toString() || formData.get("Recipient")?.toString() || "";
       subject = formData.get("Subject")?.toString() || "";
@@ -184,6 +203,7 @@ Deno.serve(async (req) => {
     } else {
       try {
         const body = await req.json();
+        rawPayload = body;
         sender = body.From || body.Sender || "";
         recipient = body.To || body.Recipient || "";
         subject = body.Subject || "";
@@ -199,6 +219,33 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Inbound email received — From: ${sender}, To: ${recipient}, Subject: ${subject}`);
+
+    // Purchase invoice inbox route — forward full payload to dedicated handler
+    if (isPurchaseInvoiceRecipient(recipient)) {
+      console.log("Routing inbound email to inbound-purchase-invoice");
+      try {
+        const fnUrl = `${supabaseUrl}/functions/v1/inbound-purchase-invoice`;
+        const fwd = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(rawPayload),
+        });
+        const fwdJson = await fwd.json().catch(() => ({}));
+        return new Response(
+          JSON.stringify({ status: "ok", routed_to: "purchase_invoice_inbox", result: fwdJson }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (err) {
+        console.error("Failed to forward to inbound-purchase-invoice:", err);
+        return new Response(
+          JSON.stringify({ status: "error", message: "forward_failed" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
 
     const referenceNumber = extractReferenceNumber(recipient);
     if (!referenceNumber) {
