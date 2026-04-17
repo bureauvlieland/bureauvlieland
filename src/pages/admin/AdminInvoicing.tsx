@@ -78,6 +78,7 @@ const AdminInvoicing = () => {
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
 
   // Calculate invoice totals using centralized settings
   const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
