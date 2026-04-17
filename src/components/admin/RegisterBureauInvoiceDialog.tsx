@@ -323,7 +323,21 @@ export const RegisterBureauInvoiceDialog = ({
               />
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-md">
+            <div className="p-3 bg-muted rounded-md space-y-1 text-sm">
+              {vatBreakdown.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground font-medium">Voorstel uit factuurregels:</p>
+                  {vatBreakdown.map((b) => (
+                    <div key={b.rate} className="flex justify-between text-muted-foreground">
+                      <span>BTW {b.rate}%</span>
+                      <span className="tabular-nums">
+                        excl. €{b.excl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW €{b.vat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t my-1" />
+                </>
+              )}
               <div className="flex justify-between font-semibold">
                 <span>Totaal incl. BTW</span>
                 <span>
