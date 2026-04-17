@@ -51,6 +51,7 @@ export default function AdminPurchaseInvoices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const { invoices, isLoading, stats, markAsPaid, markAsForwarded, getDownloadUrl } = usePurchaseInvoices({
     requestId: selectedRequestId !== "all" ? selectedRequestId : undefined,
