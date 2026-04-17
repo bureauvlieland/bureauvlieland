@@ -42,8 +42,10 @@ import {
   Hotel,
   CalendarDays,
   BarChart3,
+  Inbox,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -82,6 +84,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { data: todoCount = 0 } = useOpenTodoCount();
+  const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
 
   const menuSections: MenuSection[] = [
     {
@@ -110,6 +113,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Financieel", url: "/admin/financieel", icon: BarChart3 },
         { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
+        { title: "Inkoop-inbox", url: "/admin/inkoopfacturen/inbox", icon: Inbox, badge: inboxCount },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
       ],
     },
