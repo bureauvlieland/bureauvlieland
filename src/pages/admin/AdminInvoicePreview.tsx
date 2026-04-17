@@ -554,7 +554,7 @@ const AdminInvoicePreview = () => {
                       {/* Invoice meta + Customer address */}
                       <div className="grid grid-cols-2 gap-8 mb-8">
                         <div>
-                          <p className="text-xs uppercase text-gray-400 font-semibold mb-1">Factuuradres</p>
+                          <p className="text-[9px] uppercase text-gray-400 font-semibold tracking-wider mb-1">Factuuradres</p>
                           <p className="font-semibold">{billingName}</p>
                           {billingAddress.map((line, i) => (
                             <p key={i}>{line}</p>
@@ -564,8 +564,8 @@ const AdminInvoicePreview = () => {
                           )}
                         </div>
                         <div className="text-right">
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-end gap-4">
+                          <div className="space-y-0.5 text-[10.5px]">
+                            <div className="flex justify-end gap-3">
                               <span className="text-gray-500">Factuurnummer:</span>
                               <span className="font-semibold w-36 text-right">{invoiceNumber}</span>
                             </div>
