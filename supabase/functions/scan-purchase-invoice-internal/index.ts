@@ -7,19 +7,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `Je bent een specialist in het analyseren van Nederlandse inkoopfacturen.
-Extracteer gestructureerde data uit de bijgeleverde PDF en gebruik altijd de tool 'extract_invoice'.
-- Bedragen altijd als getallen (geen valuta-symbolen, geen duizendscheidingstekens, punt als decimaal).
+const SYSTEM_PROMPT = `Je bent een specialist in het analyseren van Nederlandse inkoopfacturen. Lees ALLE pagina's van de PDF zorgvuldig.
+
+Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regels:
+- Bedragen ALTIJD als getallen (geen €/EUR, geen duizendscheidingstekens, punt als decimaal).
 - Datums in formaat YYYY-MM-DD.
-- BTW-percentage als getal (9 of 21, geen %-teken).
+- BTW-percentage als getal (0, 9 of 21 — geen %-teken).
+- supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").
 - Als een veld niet zichtbaar is, gebruik null.
-- supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").`;
+
+ORDERREGELS:
+- Vul ALTIJD line_items in met ALLE regels van de factuur.
+- Per regel MOET je vat_rate invullen (BTW-tarief van die regel: 0, 9 of 21).
+
+VAT BREAKDOWN:
+- Vul vat_breakdown in met één entry per uniek BTW-tarief op de factuur.
+
+REKENKUNDIGE CHECK: amount_excl_vat + vat_amount = amount_incl_vat.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Service-role auth only (called from inbound-purchase-invoice)
     const auth = req.headers.get("Authorization") || "";
     const expected = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
     if (auth !== expected) {
@@ -47,7 +56,6 @@ Deno.serve(async (req) => {
       .update({ scan_status: "scanning" })
       .eq("id", inbox_id);
 
-    // Download PDF from storage
     const { data: file, error: dlErr } = await supabase.storage
       .from("partner-invoices")
       .download(file_path);
@@ -90,13 +98,13 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyseer deze inkoopfactuur via de extract_invoice tool." },
+              { type: "text", text: "Analyseer deze inkoopfactuur via de extract_invoice tool. Vul ALTIJD line_items in met vat_rate per regel." },
               { type: "image_url", image_url: { url: `data:application/pdf;base64,${pdfBase64}` } },
             ],
           },
@@ -105,7 +113,7 @@ Deno.serve(async (req) => {
           type: "function",
           function: {
             name: "extract_invoice",
-            description: "Extracteer factuurgegevens",
+            description: "Extracteer factuurgegevens incl. orderregels per BTW-tarief",
             parameters: {
               type: "object",
               properties: {
@@ -117,6 +125,19 @@ Deno.serve(async (req) => {
                 vat_amount: { type: ["number", "null"] },
                 amount_incl_vat: { type: ["number", "null"] },
                 description: { type: ["string", "null"] },
+                vat_breakdown: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      vat_rate: { type: "number" },
+                      amount_excl: { type: "number" },
+                      vat_amount: { type: "number" },
+                    },
+                    required: ["vat_rate", "amount_excl", "vat_amount"],
+                    additionalProperties: false,
+                  },
+                },
                 line_items: {
                   type: "array",
                   items: {
@@ -126,8 +147,9 @@ Deno.serve(async (req) => {
                       quantity: { type: ["number", "null"] },
                       unit_price: { type: ["number", "null"] },
                       total_excl_vat: { type: ["number", "null"] },
+                      vat_rate: { type: ["number", "null"] },
                     },
-                    required: ["description"],
+                    required: ["description", "vat_rate"],
                     additionalProperties: false,
                   },
                 },
@@ -135,7 +157,7 @@ Deno.serve(async (req) => {
               required: [
                 "invoice_number", "invoice_date", "supplier_name",
                 "amount_excl_vat", "vat_rate", "vat_amount", "amount_incl_vat",
-                "description", "line_items",
+                "description", "line_items", "vat_breakdown",
               ],
               additionalProperties: false,
             },

@@ -45,6 +45,19 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
   };
 }
 
+export interface PurchaseInvoiceLine {
+  id?: string;
+  invoice_id?: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount_excl_vat: number;
+  vat_rate: number;
+  vat_amount: number;
+  amount_incl_vat: number;
+  sort_order: number;
+}
+
 export interface PurchaseInvoiceInsert {
   request_id: string;
   item_id?: string | null;
@@ -58,6 +71,7 @@ export interface PurchaseInvoiceInsert {
   description?: string | null;
   file_path?: string | null;
   registered_by?: string;
+  lines?: PurchaseInvoiceLine[];
 }
 
 export interface PurchaseInvoiceUpdate {

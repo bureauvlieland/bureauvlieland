@@ -6,13 +6,27 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Je bent een specialist in het analyseren van Nederlandse inkoopfacturen.
-Extracteer gestructureerde data uit de bijgeleverde PDF en gebruik altijd de tool 'extract_invoice'.
-- Bedragen altijd als getallen (geen valuta-symbolen, geen duizendscheidingstekens, punt als decimaal).
+const SYSTEM_PROMPT = `Je bent een specialist in het analyseren van Nederlandse inkoopfacturen. Lees ALLE pagina's van de PDF zorgvuldig.
+
+Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regels:
+- Bedragen ALTIJD als getallen (geen €/EUR, geen duizendscheidingstekens, punt als decimaal — dus "1.234,56" → 1234.56).
 - Datums in formaat YYYY-MM-DD.
-- BTW-percentage als getal (9 of 21, geen %-teken).
+- BTW-percentage als getal (0, 9 of 21 — geen %-teken).
+- supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").
 - Als een veld niet zichtbaar is, gebruik null.
-- supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").`;
+
+ORDERREGELS (BELANGRIJK):
+- Vul ALTIJD line_items in met ALLE regels van de factuur.
+- Per regel MOET je vat_rate invullen (BTW-tarief van die specifieke regel: 0, 9 of 21).
+- Bij twijfel over BTW-tarief per regel: kijk naar BTW-subtotalen op de factuur (vaak onderaan: "9% BTW: ... / 21% BTW: ...").
+
+VAT BREAKDOWN:
+- Vul vat_breakdown in met één entry per uniek BTW-tarief op de factuur.
+- Som van vat_breakdown[].amount_excl moet gelijk zijn aan amount_excl_vat.
+
+REKENKUNDIGE CHECK:
+- amount_excl_vat + vat_amount = amount_incl_vat (controleer dit!)
+- Bij gemengde tarieven: header vat_rate = het hoogste tarief, maar lees bedragen uit subtotalen op de factuur.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,7 +59,6 @@ Deno.serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    // Check admin role
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -77,7 +90,6 @@ Deno.serve(async (req) => {
     if (file_base64) {
       pdfBase64 = file_base64;
     } else if (file_path) {
-      // Download from storage
       const { data, error } = await adminClient.storage
         .from("partner-invoices")
         .download(file_path);
@@ -88,7 +100,6 @@ Deno.serve(async (req) => {
         );
       }
       const buf = new Uint8Array(await data.arrayBuffer());
-      // base64 encode
       let binary = "";
       const chunkSize = 0x8000;
       for (let i = 0; i < buf.length; i += chunkSize) {
@@ -121,7 +132,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -130,7 +141,7 @@ Deno.serve(async (req) => {
               {
                 type: "text",
                 text:
-                  "Analyseer deze inkoopfactuur en extracteer alle relevante velden via de extract_invoice tool.",
+                  "Analyseer deze inkoopfactuur en extracteer ALLE velden via de extract_invoice tool. Vul ALTIJD line_items in met vat_rate per regel.",
               },
               {
                 type: "image_url",
@@ -144,7 +155,7 @@ Deno.serve(async (req) => {
             type: "function",
             function: {
               name: "extract_invoice",
-              description: "Extracteer factuurgegevens",
+              description: "Extracteer factuurgegevens incl. orderregels per BTW-tarief",
               parameters: {
                 type: "object",
                 properties: {
@@ -152,10 +163,24 @@ Deno.serve(async (req) => {
                   invoice_date: { type: ["string", "null"], description: "YYYY-MM-DD" },
                   supplier_name: { type: ["string", "null"] },
                   amount_excl_vat: { type: ["number", "null"] },
-                  vat_rate: { type: ["number", "null"], description: "9 of 21" },
+                  vat_rate: { type: ["number", "null"], description: "0, 9 of 21 (hoofdtarief)" },
                   vat_amount: { type: ["number", "null"] },
                   amount_incl_vat: { type: ["number", "null"] },
                   description: { type: ["string", "null"] },
+                  vat_breakdown: {
+                    type: "array",
+                    description: "Eén entry per uniek BTW-tarief op de factuur",
+                    items: {
+                      type: "object",
+                      properties: {
+                        vat_rate: { type: "number" },
+                        amount_excl: { type: "number" },
+                        vat_amount: { type: "number" },
+                      },
+                      required: ["vat_rate", "amount_excl", "vat_amount"],
+                      additionalProperties: false,
+                    },
+                  },
                   line_items: {
                     type: "array",
                     items: {
@@ -165,8 +190,9 @@ Deno.serve(async (req) => {
                         quantity: { type: ["number", "null"] },
                         unit_price: { type: ["number", "null"] },
                         total_excl_vat: { type: ["number", "null"] },
+                        vat_rate: { type: ["number", "null"], description: "BTW-tarief van deze regel: 0, 9 of 21" },
                       },
-                      required: ["description"],
+                      required: ["description", "vat_rate"],
                       additionalProperties: false,
                     },
                   },
@@ -181,6 +207,7 @@ Deno.serve(async (req) => {
                   "amount_incl_vat",
                   "description",
                   "line_items",
+                  "vat_breakdown",
                 ],
                 additionalProperties: false,
               },

@@ -61,13 +61,36 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
 
   const createInvoice = useMutation({
     mutationFn: async (invoice: PurchaseInvoiceInsert) => {
+      const { lines, ...invoiceData } = invoice;
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
-        .insert(invoice)
+        .insert(invoiceData)
         .select()
         .single();
 
       if (error) throw error;
+
+      // Insert order lines if provided
+      if (lines && lines.length > 0 && data?.id) {
+        const linesToInsert = lines.map((line, idx) => ({
+          invoice_id: data.id,
+          description: line.description,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          amount_excl_vat: line.amount_excl_vat,
+          vat_rate: line.vat_rate,
+          vat_amount: line.vat_amount,
+          amount_incl_vat: line.amount_incl_vat,
+          sort_order: idx,
+        }));
+        const { error: linesErr } = await supabase
+          .from("purchase_invoice_lines")
+          .insert(linesToInsert);
+        if (linesErr) {
+          console.error("Error inserting invoice lines:", linesErr);
+          // non-fatal: header is already saved
+        }
+      }
       return data;
     },
     onSuccess: () => {
