@@ -264,6 +264,64 @@ const AdminInvoicing = () => {
             </div>
           </div>
 
+          {/* Geregistreerde facturen + doorstuur-knop */}
+          {request.invoices.length > 0 && (
+            <div className="mt-4 pt-4 border-t space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Geregistreerde facturen
+              </p>
+              {request.invoices.map((inv) => {
+                const isForwarded = inv.status === "forwarded" || !!inv.forwarded_to_accounting_at;
+                const totalIncl = inv.amount_incl_vat ?? inv.amount_excl_vat + inv.vat_amount;
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex flex-wrap items-center justify-between gap-2 text-sm bg-muted/30 rounded-md px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{inv.invoice_number}</span>
+                      <span className="text-muted-foreground">
+                        · {formatCurrency(totalIncl)}
+                      </span>
+                      {isForwarded && (
+                        <Badge variant="secondary" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Doorgestuurd
+                        </Badge>
+                      )}
+                    </div>
+                    {!isForwarded && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() =>
+                          setForwardInvoice({
+                            id: inv.id,
+                            invoice_number: inv.invoice_number,
+                            invoice_date: inv.invoice_date,
+                            amount_excl_vat: inv.amount_excl_vat,
+                            vat_amount: inv.vat_amount,
+                            amount_incl_vat: inv.amount_incl_vat ?? totalIncl,
+                            invoice_type: inv.invoice_type,
+                            description: inv.description,
+                            customer_label:
+                              request.customer_company || request.customer_name,
+                            reference_number: (request as ProgramRequestWithItems & { reference_number?: string | null }).reference_number ?? null,
+                          })
+                        }
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        Doorsturen naar boekhouding
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
             <Button 
