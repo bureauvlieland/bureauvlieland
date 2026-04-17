@@ -89,6 +89,8 @@ import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConfl
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
+import { AdminItemBillingLinesEditor } from "@/components/admin/AdminItemBillingLinesEditor";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
