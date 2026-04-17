@@ -40,6 +40,8 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
+import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
+import { Plus } from "lucide-react";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 
 export default function AdminPurchaseInvoices() {
