@@ -1,5 +1,6 @@
 // Inbound webhook for purchase invoice emails (Mailjet Parse API)
-// Configure Mailjet Parse API to POST to this endpoint for invoices@reply.bureauvlieland.nl
+// Mailjet Parse format: attachments arrive as top-level keys "Attachment1", "Attachment2",
+// "InlineAttachment1", etc. with base64 content. The "Parts" map describes them.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -20,24 +21,8 @@ function parseSender(from: string): { name: string; email: string } {
   return { name: from.trim(), email: from.trim() };
 }
 
-interface MailjetAttachment {
-  "Content-Type"?: string;
-  ContentType?: string;
-  Filename?: string;
-  "Content-Reference"?: string;
-  "Content-ID"?: string;
-  Headers?: Record<string, string | string[]>;
-}
-
-interface MailjetPart {
-  Headers?: Record<string, string | string[]>;
-  ContentRef?: string;
-  "Content-Reference"?: string;
-}
-
 function decodeBase64(value: string): Uint8Array | null {
   try {
-    // Strip whitespace/newlines that some clients add
     const clean = value.replace(/\s+/g, "");
     const bin = atob(clean);
     const bytes = new Uint8Array(bin.length);
@@ -49,7 +34,6 @@ function decodeBase64(value: string): Uint8Array | null {
 }
 
 function looksLikePdf(bytes: Uint8Array): boolean {
-  // PDF magic: %PDF-
   return (
     bytes.length > 4 &&
     bytes[0] === 0x25 &&
@@ -59,90 +43,114 @@ function looksLikePdf(bytes: Uint8Array): boolean {
   );
 }
 
-function getHeader(headers: Record<string, string | string[]> | undefined, key: string): string {
-  if (!headers) return "";
-  const lowerKey = key.toLowerCase();
-  for (const [k, v] of Object.entries(headers)) {
-    if (k.toLowerCase() === lowerKey) {
-      return Array.isArray(v) ? v.join(" ") : String(v || "");
-    }
-  }
-  return "";
-}
-
 interface ExtractedPdf {
   filename: string;
   bytes: Uint8Array;
   source: string;
 }
 
+interface PartDescriptor {
+  ContentType?: string;
+  "Content-Type"?: string;
+  Headers?: Record<string, string | string[]>;
+  ContentRef?: string;
+  "Content-Reference"?: string;
+}
+
+function getHeader(headers: Record<string, string | string[]> | undefined, key: string): string {
+  if (!headers) return "";
+  const lower = key.toLowerCase();
+  for (const [k, v] of Object.entries(headers)) {
+    if (k.toLowerCase() === lower) {
+      return Array.isArray(v) ? v.join(" ") : String(v || "");
+    }
+  }
+  return "";
+}
+
+function filenameFromContentType(ct: string): string {
+  // Try to extract name="..." or filename="..."
+  const m = ct.match(/(?:name|filename)\s*=\s*"?([^";]+)"?/i);
+  return m ? m[1].trim() : "";
+}
+
 /**
- * Extract every PDF we can find in a Mailjet Parse payload.
- * Walks both the Attachments array and the Parts map, accepts:
- *   - Content-Type containing "pdf"
- *   - filename ending in .pdf
- *   - application/octet-stream with pdf filename
- *   - any base64 part whose decoded bytes start with %PDF-
+ * Mailjet Parse delivers attachments at the TOP LEVEL of the payload as keys like
+ * "Attachment1", "Attachment2", "InlineAttachment1", "InlineAttachment2" — each containing
+ * base64-encoded content. The "Parts" map is metadata: each entry has Headers describing the
+ * Content-Type, Content-Disposition (with filename) and a "ContentRef" pointing to the
+ * top-level attachment key.
  */
 function extractPdfs(payload: Record<string, unknown>): {
   pdfs: ExtractedPdf[];
   inventory: Array<{ filename: string; contentType: string; source: string }>;
 } {
-  const attachments = (payload.Attachments || payload.attachments || []) as MailjetAttachment[];
-  const parts = (payload.Parts || payload.parts || {}) as Record<string, unknown>;
   const pdfs: ExtractedPdf[] = [];
   const inventory: Array<{ filename: string; contentType: string; source: string }> = [];
-  const seenRefs = new Set<string>();
+  const consumed = new Set<string>();
 
-  // 1. Walk declared attachments
-  if (Array.isArray(attachments)) {
-    for (const att of attachments) {
-      const filename = att.Filename || "";
-      const ct = (att["Content-Type"] || att.ContentType || "").toLowerCase();
-      const ref = String(att["Content-Reference"] || att["Content-ID"] || "");
-      inventory.push({ filename, contentType: ct, source: "Attachments" });
+  const parts = (payload.Parts || payload.parts || []) as unknown;
+  const partList: PartDescriptor[] = Array.isArray(parts)
+    ? (parts as PartDescriptor[])
+    : Object.values(parts as Record<string, PartDescriptor>);
 
-      if (!ref) continue;
-      const partValue = parts[ref];
-      if (typeof partValue !== "string") continue;
+  // 1. Walk Parts metadata to find named attachments by ContentRef
+  for (const part of partList) {
+    const headers = part.Headers || {};
+    const ct = (part.ContentType || part["Content-Type"] || getHeader(headers, "Content-Type") || "").toLowerCase();
+    const disp = getHeader(headers, "Content-Disposition");
+    const ref = part.ContentRef || part["Content-Reference"] || "";
+    const filename =
+      filenameFromContentType(disp) ||
+      filenameFromContentType(ct) ||
+      "";
 
-      const isPdfHint =
-        ct.includes("pdf") ||
-        filename.toLowerCase().endsWith(".pdf") ||
-        (ct.includes("octet-stream") && filename.toLowerCase().endsWith(".pdf"));
+    inventory.push({ filename: filename || "(zonder naam)", contentType: ct || "(onbekend)", source: ref ? `Parts→${ref}` : "Parts" });
 
-      const bytes = decodeBase64(partValue);
-      if (!bytes) continue;
+    if (!ref) continue;
+    const raw = payload[ref];
+    if (typeof raw !== "string") continue;
 
-      if (isPdfHint || looksLikePdf(bytes)) {
-        pdfs.push({
-          filename: filename || `factuur-${pdfs.length + 1}.pdf`,
-          bytes,
-          source: `Attachments[${ref}]`,
-        });
-        seenRefs.add(ref);
-      }
+    const isPdfHint =
+      ct.includes("pdf") ||
+      filename.toLowerCase().endsWith(".pdf") ||
+      (ct.includes("octet-stream") && filename.toLowerCase().endsWith(".pdf"));
+
+    const bytes = decodeBase64(raw);
+    if (!bytes) continue;
+
+    if (isPdfHint || looksLikePdf(bytes)) {
+      pdfs.push({
+        filename: filename || `factuur-${pdfs.length + 1}.pdf`,
+        bytes,
+        source: `Parts→${ref}`,
+      });
+      consumed.add(ref);
     }
   }
 
-  // 2. Walk all Parts not already consumed — handles forwarded mails where
-  //    inline parts aren't in the Attachments array.
-  for (const [ref, value] of Object.entries(parts)) {
-    if (seenRefs.has(ref)) continue;
+  // 2. Fallback: scan ALL top-level keys matching Attachment* / InlineAttachment* / file*
+  for (const [key, value] of Object.entries(payload)) {
+    if (consumed.has(key)) continue;
     if (typeof value !== "string") continue;
-    if (value.length < 100) continue; // skip tiny parts (text bodies)
+    if (value.length < 100) continue;
+    if (!/^(Inline)?Attachment\d+$|^Part\d+$/i.test(key)) continue;
 
     const bytes = decodeBase64(value);
     if (!bytes) continue;
 
     if (looksLikePdf(bytes)) {
       pdfs.push({
-        filename: `bijlage-${ref.replace(/[^a-zA-Z0-9]/g, "")}.pdf`,
+        filename: `bijlage-${key}.pdf`,
         bytes,
-        source: `Parts[${ref}]`,
+        source: `Top-level[${key}]`,
       });
-      inventory.push({ filename: `(part ${ref})`, contentType: "application/pdf (detected)", source: "Parts" });
-      seenRefs.add(ref);
+      inventory.push({
+        filename: `(${key})`,
+        contentType: "application/pdf (auto-detected)",
+        source: "Top-level",
+      });
+      consumed.add(key);
     }
   }
 
@@ -163,7 +171,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Parse Mailjet parse payload
     const contentType = req.headers.get("content-type") || "";
     let payload: Record<string, unknown>;
     if (contentType.includes("application/json")) {
@@ -180,26 +187,21 @@ Deno.serve(async (req) => {
     const { name: fromName, email: fromEmail } = parseSender(sender);
     const isForward = /^(fw|fwd|doorgest)/i.test(subject.trim());
 
-    // Diagnostic dump
     const payloadKeys = Object.keys(payload);
-    const partsKeys = Object.keys((payload.Parts || payload.parts || {}) as Record<string, unknown>);
+    const attachmentKeys = payloadKeys.filter((k) => /^(Inline)?Attachment\d+$/i.test(k));
     console.log(
       `Inbound purchase invoice — From: ${sender}, Subject: "${subject}", Forward: ${isForward}, ` +
-      `Payload keys: [${payloadKeys.join(", ")}], Parts: ${partsKeys.length}`,
+      `Attachment keys: [${attachmentKeys.join(", ")}], All keys: [${payloadKeys.join(", ")}]`,
     );
 
     const { pdfs, inventory } = extractPdfs(payload);
     console.log(`Found ${pdfs.length} PDF(s). Inventory:`, JSON.stringify(inventory));
 
-    // Build a sanitized snapshot of the payload for debugging (drop large base64 parts)
+    // Sanitized payload snapshot (truncate base64 attachments)
     const rawForLog: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(payload)) {
-      if (k === "Parts" || k === "parts") {
-        const summary: Record<string, string> = {};
-        for (const [pk, pv] of Object.entries(v as Record<string, unknown>)) {
-          summary[pk] = typeof pv === "string" ? `<base64 ${pv.length} chars>` : typeof pv;
-        }
-        rawForLog[k] = summary;
+      if (typeof v === "string" && v.length > 500 && /^(Inline)?Attachment\d+$/i.test(k)) {
+        rawForLog[k] = `<base64 ${v.length} chars>`;
       } else {
         rawForLog[k] = v;
       }
@@ -207,7 +209,7 @@ Deno.serve(async (req) => {
 
     if (pdfs.length === 0) {
       const inventoryText = inventory.length
-        ? inventory.map((i) => `${i.filename || "(geen naam)"} [${i.contentType || "?"}]`).join(", ")
+        ? inventory.map((i) => `${i.filename} [${i.contentType}]`).join(", ")
         : "geen bijlagen aangetroffen in de mail";
       const hint = isForward
         ? "Doorgestuurde mail gedetecteerd. Bij doorsturen wordt de PDF-bijlage soms verwijderd of als inline-content opgenomen. Stuur de originele mail opnieuw door, of voeg de PDF expliciet als bijlage toe."
@@ -269,7 +271,6 @@ Deno.serve(async (req) => {
 
       inboxIds.push(inbox.id);
 
-      // Trigger AI scan in background (fire-and-forget)
       try {
         const fnUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/scan-purchase-invoice-internal`;
         fetch(fnUrl, {
@@ -285,7 +286,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create admin todo
     if (inboxIds.length > 0) {
       await supabase.from("admin_todos").insert({
         title: `Nieuwe inkoopfactuur in inbox van ${fromName || fromEmail}`,
@@ -303,7 +303,6 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("inbound-purchase-invoice error:", err);
-    // Return 200 so Mailjet doesn't keep retrying
     return new Response(
       JSON.stringify({ status: "error", message: err instanceof Error ? err.message : "Unknown" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
