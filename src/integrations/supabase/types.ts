@@ -2097,6 +2097,56 @@ export type Database = {
           },
         ]
       }
+      purchase_invoice_lines: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          quantity: number
+          sort_order: number
+          unit_price: number
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_programs: {
         Row: {
           cart_items: Json
