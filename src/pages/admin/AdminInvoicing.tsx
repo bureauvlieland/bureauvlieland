@@ -29,6 +29,7 @@ import { CheckCircle2, Mail } from "lucide-react";
 
 interface ProgramRequestWithItems {
   id: string;
+  reference_number: string | null;
   customer_name: string;
   customer_company: string | null;
   customer_email: string;
