@@ -104,6 +104,9 @@ const AdminInvoicePreview = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
 
+  // Load billing lines per item (definitive lines override quoted_price)
+  const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
+
   // Accommodation state
   const [accommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
   const [accommodationExtras, setAccommodationExtras] = useState<AccommodationExtraData[]>([]);
