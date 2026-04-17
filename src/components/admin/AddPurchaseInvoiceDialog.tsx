@@ -41,6 +41,8 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { calculateVatAmounts } from "@/lib/vatCalculation";
 import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
+import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
+import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
 interface ScanResult {
   invoice_number: string | null;
@@ -64,6 +66,7 @@ interface AddPurchaseInvoiceDialogProps {
   onClose: () => void;
   defaultRequestId?: string;
   defaultPartnerId?: string;
+  inboxItem?: PurchaseInvoiceInboxItem;
 }
 
 type Step = "upload" | "scanning" | "verify";
@@ -73,8 +76,10 @@ export function AddPurchaseInvoiceDialog({
   onClose,
   defaultRequestId,
   defaultPartnerId,
+  inboxItem,
 }: AddPurchaseInvoiceDialogProps) {
   const { createInvoice } = usePurchaseInvoices();
+  const { markProcessed } = usePurchaseInvoiceInbox();
 
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
@@ -143,7 +148,32 @@ export function AddPurchaseInvoiceDialog({
 
   // Reset on open
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+
+    if (inboxItem) {
+      // Pre-fill from inbox item
+      setStep("verify");
+      setFile(null);
+      setFilePath(inboxItem.attachment_path || null);
+      const result = inboxItem.scan_result;
+      setScanResult(result as ScanResult | null);
+      setPartnerId(defaultPartnerId || "");
+      setRequestId(defaultRequestId || "");
+      setItemId("");
+      setInvoiceNumber(result?.invoice_number || "");
+      if (result?.invoice_date) {
+        const d = new Date(result.invoice_date);
+        if (!isNaN(d.getTime())) setInvoiceDate(d);
+        else setInvoiceDate(undefined);
+      } else {
+        setInvoiceDate(undefined);
+      }
+      setAmountExcl(result?.amount_excl_vat != null ? String(result.amount_excl_vat) : "");
+      setVatRate(result?.vat_rate != null ? String(result.vat_rate) : "21");
+      setVatAmount("");
+      setAmountIncl("");
+      setDescription(result?.description || inboxItem.subject || "");
+    } else {
       setStep("upload");
       setFile(null);
       setFilePath(null);
@@ -159,7 +189,7 @@ export function AddPurchaseInvoiceDialog({
       setAmountIncl("");
       setDescription("");
     }
-  }, [open, defaultRequestId, defaultPartnerId]);
+  }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
   // Auto-recalc vat amount + incl when excl/rate changes
   useEffect(() => {
@@ -260,7 +290,7 @@ export function AddPurchaseInvoiceDialog({
     setIsSubmitting(true);
     try {
       const calc = calculateVatAmounts(excl, parseFloat(vatRate) || 0);
-      await createInvoice.mutateAsync({
+      const created = await createInvoice.mutateAsync({
         request_id: requestId,
         item_id: itemId || null,
         partner_id: partnerId,
@@ -274,6 +304,10 @@ export function AddPurchaseInvoiceDialog({
         file_path: filePath,
         registered_by: "admin",
       });
+      // Link inbox item if processing from inbox
+      if (inboxItem && created?.id) {
+        await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
+      }
       onClose();
     } catch (err: any) {
       console.error(err);
