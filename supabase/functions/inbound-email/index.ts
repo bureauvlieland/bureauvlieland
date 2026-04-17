@@ -17,6 +17,20 @@ function extractReferenceNumber(toAddress: string): string | null {
 }
 
 /**
+ * Detect if this email should be routed to the purchase invoice inbox.
+ * Matches recipients like:
+ *   - invoices@reply.bureauvlieland.nl
+ *   - inkoop@reply.bureauvlieland.nl
+ *   - facturen@reply.bureauvlieland.nl
+ *   - reply+inkoop@reply.bureauvlieland.nl
+ *   - reply+facturen@... / reply+invoices@...
+ */
+function isPurchaseInvoiceRecipient(toAddress: string): boolean {
+  const lower = (toAddress || "").toLowerCase();
+  return /(?:^|<|,|\s)(?:reply\+)?(?:invoices|inkoop|facturen)@/i.test(lower);
+}
+
+/**
  * Strip HTML tags from content, keeping text
  */
 function stripHtml(html: string): string {
