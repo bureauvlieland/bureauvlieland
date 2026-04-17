@@ -822,7 +822,7 @@ const AdminInvoicePreview = () => {
                             </div>
                           ))}
                           <div
-                            className="flex justify-between py-2 text-lg font-bold mt-1 border-t-2"
+                            className="flex justify-between py-2 text-[13px] font-bold mt-1 border-t-2"
                             style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
                           >
                             <span>Totaal incl. BTW</span>
@@ -832,13 +832,13 @@ const AdminInvoicePreview = () => {
                       </div>
 
                       {/* Payment info */}
-                      <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                        <p className="font-semibold text-sm mb-1">Betalingsgegevens</p>
-                        <p className="text-sm">
-                          Gelieve het totaalbedrag van {formatCurrency(totals.totalInclVat)} over te maken
-                          vóór {format(dueDate, "d MMMM yyyy", { locale: nl })} naar:
+                      <div className="p-3 rounded mb-5 text-[10.5px]" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                        <p className="font-semibold mb-1">Betalingsgegevens</p>
+                        <p>
+                          Gelieve het totaalbedrag van <span className="font-semibold">{formatCurrency(totals.totalInclVat)}</span> over
+                          te maken vóór {format(dueDate, "d MMMM yyyy", { locale: nl })} naar:
                         </p>
-                        <div className="mt-2 text-sm">
+                        <div className="mt-1.5">
                           <p>IBAN: <span className="font-mono font-semibold">{iban}</span></p>
                           <p>T.n.v.: {companyName}</p>
                           <p>O.v.v.: {invoiceNumber}</p>
@@ -847,14 +847,15 @@ const AdminInvoicePreview = () => {
 
                       {/* Notes */}
                       {notes && (
-                        <div className="mb-6 text-sm text-gray-600">
+                        <div className="mb-5 text-[10.5px] text-gray-600">
                           <p className="font-semibold text-gray-700 mb-1">Opmerkingen</p>
                           <p className="whitespace-pre-line">{notes}</p>
                         </div>
                       )}
 
                       {/* Footer */}
-                      <div className="border-t pt-4 text-xs text-gray-400">
+                      <div className="border-t pt-3 text-[8.5px] text-gray-400">
+                        <p className="text-center mb-2 italic">Op alle leveringen zijn onze algemene voorwaarden van toepassing.</p>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
                             <p className="font-semibold text-gray-600">{companyName}</p>
