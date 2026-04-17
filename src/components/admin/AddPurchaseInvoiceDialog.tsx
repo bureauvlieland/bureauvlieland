@@ -85,6 +85,68 @@ type Step = "upload" | "scanning" | "verify";
 
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
 
+/**
+ * Build prefill LineRows from an AI scan result.
+ *
+ * Priority:
+ * 1. If `line_items` are present AND every item has its own `vat_rate`, use those (most fine-grained).
+ * 2. Otherwise, if `vat_breakdown` has multiple entries (mixed VAT invoice), create one row per VAT rate
+ *    using the breakdown subtotals. This is the only correct path for invoices like watertaxi (9% + 21%).
+ * 3. Otherwise, fall back to `line_items` (single-rate factuur) or no rows (header-only).
+ */
+function buildLinesFromScan(result: ScanResult | null): LineRow[] {
+  if (!result) return [];
+
+  const breakdown = result.vat_breakdown || [];
+  const items = result.line_items || [];
+  const itemsAllHaveRate = items.length > 0 && items.every((li) => li.vat_rate != null);
+
+  if (itemsAllHaveRate) {
+    return items.map((li) => ({
+      description: li.description || "",
+      quantity: li.quantity != null ? String(li.quantity) : "1",
+      unit_price:
+        li.unit_price != null
+          ? String(li.unit_price)
+          : li.total_excl_vat != null && li.quantity
+          ? String(li.total_excl_vat / li.quantity)
+          : li.total_excl_vat != null
+          ? String(li.total_excl_vat)
+          : "",
+      vat_rate: String(li.vat_rate ?? result.vat_rate ?? 21),
+    }));
+  }
+
+  if (breakdown.length > 1) {
+    return breakdown
+      .filter((b) => b.amount_excl > 0 || b.vat_amount > 0)
+      .map((b) => ({
+        description: `BTW ${b.vat_rate}%`,
+        quantity: "1",
+        unit_price: String(b.amount_excl),
+        vat_rate: String(b.vat_rate),
+      }));
+  }
+
+  if (items.length > 0) {
+    return items.map((li) => ({
+      description: li.description || "",
+      quantity: li.quantity != null ? String(li.quantity) : "1",
+      unit_price:
+        li.unit_price != null
+          ? String(li.unit_price)
+          : li.total_excl_vat != null && li.quantity
+          ? String(li.total_excl_vat / li.quantity)
+          : li.total_excl_vat != null
+          ? String(li.total_excl_vat)
+          : "",
+      vat_rate: String(li.vat_rate ?? result.vat_rate ?? 21),
+    }));
+  }
+
+  return [];
+}
+
 function computeLineTotals(line: LineRow) {
   const qty = parseFloat(line.quantity) || 0;
   const unit = parseFloat(line.unit_price) || 0;
@@ -205,26 +267,7 @@ export function AddPurchaseInvoiceDialog({
       setVatAmount("");
       setAmountIncl("");
       setDescription(result?.description || inboxItem.subject || "");
-      // Pre-fill lines from scan
-      if (result?.line_items && result.line_items.length > 0) {
-        setLines(
-          result.line_items.map((li) => ({
-            description: li.description || "",
-            quantity: li.quantity != null ? String(li.quantity) : "1",
-            unit_price:
-              li.unit_price != null
-                ? String(li.unit_price)
-                : li.total_excl_vat != null && li.quantity
-                ? String(li.total_excl_vat / li.quantity)
-                : li.total_excl_vat != null
-                ? String(li.total_excl_vat)
-                : "",
-            vat_rate: li.vat_rate != null ? String(li.vat_rate) : (result?.vat_rate != null ? String(result.vat_rate) : "21"),
-          })),
-        );
-      } else {
-        setLines([]);
-      }
+      setLines(buildLinesFromScan(result));
     } else {
       setStep("upload");
       setFile(null);
@@ -360,23 +403,11 @@ export function AddPurchaseInvoiceDialog({
       }
       if (result.description) setDescription(result.description);
 
-      // Pre-fill lines from scan (auto-syncs header via effect)
-      if (result.line_items && result.line_items.length > 0) {
-        setLines(
-          result.line_items.map((li) => ({
-            description: li.description || "",
-            quantity: li.quantity != null ? String(li.quantity) : "1",
-            unit_price:
-              li.unit_price != null
-                ? String(li.unit_price)
-                : li.total_excl_vat != null && li.quantity
-                ? String(li.total_excl_vat / li.quantity)
-                : li.total_excl_vat != null
-                ? String(li.total_excl_vat)
-                : "",
-            vat_rate: li.vat_rate != null ? String(li.vat_rate) : (result.vat_rate != null ? String(result.vat_rate) : "21"),
-          })),
-        );
+      // Pre-fill lines from scan (auto-syncs header via effect).
+      // Uses vat_breakdown for mixed-VAT invoices so 9% + 21% blijven correct gescheiden.
+      const prefillLines = buildLinesFromScan(result);
+      if (prefillLines.length > 0) {
+        setLines(prefillLines);
       } else {
         if (result.amount_excl_vat != null) setAmountExcl(String(result.amount_excl_vat));
         if (result.vat_rate != null) setVatRate(String(result.vat_rate));

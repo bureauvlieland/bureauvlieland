@@ -16,12 +16,18 @@ Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regel
 - supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").
 - Als een veld niet zichtbaar is, gebruik null.
 
-ORDERREGELS:
-- Vul ALTIJD line_items in met ALLE regels van de factuur.
-- Per regel MOET je vat_rate invullen (BTW-tarief van die regel: 0, 9 of 21).
+VAT BREAKDOWN (KRITIEK):
+- Vrijwel elke factuur toont onderaan een BTW-overzicht/grondslag-tabel met de subtotalen per tarief (bv. "9% over 871,56 = 78,44" en "21% over 231,40 = 48,60"). Lees dit overzicht ZORGVULDIG.
+- Vul vat_breakdown ALTIJD in met één entry per uniek BTW-tarief dat op de factuur voorkomt (sla 0%-regels met bedrag 0 over).
+- Som van vat_breakdown[].amount_excl MOET gelijk zijn aan amount_excl_vat (header).
+- Som van vat_breakdown[].vat_amount MOET gelijk zijn aan vat_amount (header).
+- BIJ GEMENGDE TARIEVEN (meerdere entries in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen.
+- Bij één enkel tarief mag header vat_rate gelijk zijn aan dat tarief.
 
-VAT BREAKDOWN:
-- Vul vat_breakdown in met één entry per uniek BTW-tarief op de factuur.
+ORDERREGELS:
+- Vul line_items in met ALLE zichtbare regels van de factuur, indien herkenbaar.
+- Per regel MOET je vat_rate invullen (BTW-tarief van die specifieke regel: 0, 9 of 21).
+- Als regel-tarieven niet duidelijk te lezen zijn maar er WEL een BTW-overzicht is, mag line_items leeg blijven — vat_breakdown is dan leidend.
 
 REKENKUNDIGE CHECK: amount_excl_vat + vat_amount = amount_incl_vat.`;
 
