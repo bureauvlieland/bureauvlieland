@@ -222,7 +222,14 @@ Deno.serve(async (req) => {
 
     // Purchase invoice inbox route — forward full payload to dedicated handler
     if (isPurchaseInvoiceRecipient(recipient)) {
-      console.log("Routing inbound email to inbound-purchase-invoice");
+      const attCount = Array.isArray((rawPayload as Record<string, unknown>).Attachments)
+        ? ((rawPayload as Record<string, unknown>).Attachments as unknown[]).length
+        : 0;
+      const partsCount = Object.keys(((rawPayload as Record<string, unknown>).Parts || {}) as Record<string, unknown>).length;
+      console.log(
+        `Routing inbound email to inbound-purchase-invoice — recipient=${recipient}, ` +
+        `subject="${subject}", attachments=${attCount}, parts=${partsCount}`,
+      );
       try {
         const fnUrl = `${supabaseUrl}/functions/v1/inbound-purchase-invoice`;
         const fwd = await fetch(fnUrl, {
