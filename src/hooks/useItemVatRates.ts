@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProgramRequestItem } from "@/types/programRequest";
 
-export const useItemVatRates = (items: ProgramRequestItem[]) => {
+type ItemWithBlockId = { block_id: string | null };
+
+export const useItemVatRates = <T extends ItemWithBlockId>(items: T[]) => {
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export const useItemVatRates = (items: ProgramRequestItem[]) => {
       });
   }, [items]);
 
-  const getItemVatRate = useCallback((item: ProgramRequestItem): number => {
+  const getItemVatRate = useCallback((item: ItemWithBlockId): number => {
     if (item.block_id && vatRateMap[item.block_id] !== undefined) {
       return vatRateMap[item.block_id];
     }
@@ -30,3 +31,4 @@ export const useItemVatRates = (items: ProgramRequestItem[]) => {
 
   return { vatRateMap, getItemVatRate };
 };
+
