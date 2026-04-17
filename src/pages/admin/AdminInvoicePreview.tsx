@@ -288,12 +288,21 @@ const AdminInvoicePreview = () => {
   const calculateTotals = () => {
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
 
-    // Group amounts by VAT rate
+    // Group amounts by VAT rate (incl. VAT, then split below)
     const vatGroups: Record<number, number> = {};
     items.forEach(item => {
-      const total = getItemTotal(item);
-      const rate = getItemVatRate(item);
-      vatGroups[rate] = (vatGroups[rate] || 0) + total;
+      const lines = linesByItem[item.id];
+      if (lines && lines.length > 0) {
+        // Use definitive billing lines (each with its own VAT rate)
+        lines.forEach(line => {
+          const rate = Number(line.vat_rate);
+          vatGroups[rate] = (vatGroups[rate] || 0) + Number(line.amount_incl_vat);
+        });
+      } else {
+        const total = getItemTotal(item);
+        const rate = getItemVatRate(item);
+        vatGroups[rate] = (vatGroups[rate] || 0) + total;
+      }
     });
     // Bureau fee is always 21%
     vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
