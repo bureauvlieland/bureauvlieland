@@ -344,28 +344,31 @@ const AdminInvoicePreview = () => {
     setIsGenerating(true);
     try {
       const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        windowWidth: pdfRef.current.scrollWidth,
       });
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const imgWidth = 210;
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 10; // 10mm margin
+      const imgWidth = pageWidth - margin * 2;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
-      let position = 0;
-      const pageHeight = 297;
+      let position = margin;
 
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight - margin * 2;
 
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        position = margin - (imgHeight - heightLeft);
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight - margin * 2;
       }
 
       const url = URL.createObjectURL(pdf.output("blob"));
