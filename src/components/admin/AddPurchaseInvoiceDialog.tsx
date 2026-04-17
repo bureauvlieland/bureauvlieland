@@ -21,7 +21,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Upload,
   Loader2,
@@ -30,8 +29,9 @@ import {
   Check,
   ChevronsUpDown,
   CalendarIcon,
-  ChevronDown,
   AlertCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -43,6 +43,15 @@ import { calculateVatAmounts } from "@/lib/vatCalculation";
 import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
+import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
+
+interface ScanLineItem {
+  description: string;
+  quantity: number | null;
+  unit_price: number | null;
+  total_excl_vat: number | null;
+  vat_rate?: number | null;
+}
 
 interface ScanResult {
   invoice_number: string | null;
@@ -53,12 +62,15 @@ interface ScanResult {
   vat_amount: number | null;
   amount_incl_vat: number | null;
   description: string | null;
-  line_items: Array<{
-    description: string;
-    quantity: number | null;
-    unit_price: number | null;
-    total_excl_vat: number | null;
-  }>;
+  line_items: ScanLineItem[];
+  vat_breakdown?: Array<{ vat_rate: number; amount_excl: number; vat_amount: number }>;
+}
+
+interface LineRow {
+  description: string;
+  quantity: string;
+  unit_price: string;
+  vat_rate: string;
 }
 
 interface AddPurchaseInvoiceDialogProps {
@@ -70,6 +82,22 @@ interface AddPurchaseInvoiceDialogProps {
 }
 
 type Step = "upload" | "scanning" | "verify";
+
+const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
+
+function computeLineTotals(line: LineRow) {
+  const qty = parseFloat(line.quantity) || 0;
+  const unit = parseFloat(line.unit_price) || 0;
+  const rate = parseFloat(line.vat_rate) || 0;
+  const excl = qty * unit;
+  const vat = excl * (rate / 100);
+  return {
+    amount_excl_vat: excl,
+    vat_amount: vat,
+    amount_incl_vat: excl + vat,
+    vat_rate: rate,
+  };
+}
 
 export function AddPurchaseInvoiceDialog({
   open,
@@ -85,6 +113,8 @@ export function AddPurchaseInvoiceDialog({
   const [file, setFile] = useState<File | null>(null);
   const [filePath, setFilePath] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanFailed, setScanFailed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Form state
   const [partnerId, setPartnerId] = useState<string>(defaultPartnerId || "");
@@ -97,6 +127,7 @@ export function AddPurchaseInvoiceDialog({
   const [vatAmount, setVatAmount] = useState<string>("");
   const [amountIncl, setAmountIncl] = useState<string>("");
   const [description, setDescription] = useState("");
+  const [lines, setLines] = useState<LineRow[]>([]);
 
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
@@ -121,9 +152,9 @@ export function AddPurchaseInvoiceDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_requests")
-        .select("id, reference_number, customer_name, customer_company")
+        .select("id, reference_number, customer_name, customer_company, created_at, status")
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(1000);
       if (error) throw error;
       return data || [];
     },
@@ -150,21 +181,22 @@ export function AddPurchaseInvoiceDialog({
   useEffect(() => {
     if (!open) return;
 
+    setScanFailed(false);
+    setIsDragging(false);
+
     if (inboxItem) {
-      // Pre-fill from inbox item
       setStep("verify");
       setFile(null);
       setFilePath(inboxItem.attachment_path || null);
-      const result = inboxItem.scan_result;
-      setScanResult(result as ScanResult | null);
+      const result = inboxItem.scan_result as ScanResult | null;
+      setScanResult(result);
       setPartnerId(defaultPartnerId || "");
       setRequestId(defaultRequestId || "");
       setItemId("");
       setInvoiceNumber(result?.invoice_number || "");
       if (result?.invoice_date) {
         const d = new Date(result.invoice_date);
-        if (!isNaN(d.getTime())) setInvoiceDate(d);
-        else setInvoiceDate(undefined);
+        setInvoiceDate(!isNaN(d.getTime()) ? d : undefined);
       } else {
         setInvoiceDate(undefined);
       }
@@ -173,6 +205,26 @@ export function AddPurchaseInvoiceDialog({
       setVatAmount("");
       setAmountIncl("");
       setDescription(result?.description || inboxItem.subject || "");
+      // Pre-fill lines from scan
+      if (result?.line_items && result.line_items.length > 0) {
+        setLines(
+          result.line_items.map((li) => ({
+            description: li.description || "",
+            quantity: li.quantity != null ? String(li.quantity) : "1",
+            unit_price:
+              li.unit_price != null
+                ? String(li.unit_price)
+                : li.total_excl_vat != null && li.quantity
+                ? String(li.total_excl_vat / li.quantity)
+                : li.total_excl_vat != null
+                ? String(li.total_excl_vat)
+                : "",
+            vat_rate: li.vat_rate != null ? String(li.vat_rate) : (result?.vat_rate != null ? String(result.vat_rate) : "21"),
+          })),
+        );
+      } else {
+        setLines([]);
+      }
     } else {
       setStep("upload");
       setFile(null);
@@ -188,11 +240,48 @@ export function AddPurchaseInvoiceDialog({
       setVatAmount("");
       setAmountIncl("");
       setDescription("");
+      setLines([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
-  // Auto-recalc vat amount + incl when excl/rate changes
+  // When lines change, aggregate to header totals
+  const lineTotals = useMemo(() => {
+    if (lines.length === 0) return null;
+    const byRate = new Map<number, { excl: number; vat: number }>();
+    let totalExcl = 0;
+    let totalVat = 0;
+    for (const ln of lines) {
+      const t = computeLineTotals(ln);
+      totalExcl += t.amount_excl_vat;
+      totalVat += t.vat_amount;
+      const cur = byRate.get(t.vat_rate) || { excl: 0, vat: 0 };
+      byRate.set(t.vat_rate, { excl: cur.excl + t.amount_excl_vat, vat: cur.vat + t.vat_amount });
+    }
+    const rates = Array.from(byRate.keys());
+    const dominantRate = rates.length === 1 ? rates[0] : rates.reduce((a, b) => (byRate.get(a)!.excl >= byRate.get(b)!.excl ? a : b));
+    return {
+      totalExcl,
+      totalVat,
+      totalIncl: totalExcl + totalVat,
+      byRate,
+      isMixed: rates.length > 1,
+      dominantRate,
+    };
+  }, [lines]);
+
+  // Auto-sync header from lines when present
   useEffect(() => {
+    if (lineTotals) {
+      setAmountExcl(lineTotals.totalExcl.toFixed(2));
+      setVatAmount(lineTotals.totalVat.toFixed(2));
+      setAmountIncl(lineTotals.totalIncl.toFixed(2));
+      setVatRate(String(lineTotals.dominantRate));
+    }
+  }, [lineTotals]);
+
+  // When NO lines, recalc header vat amount from excl + rate
+  useEffect(() => {
+    if (lines.length > 0) return;
     const excl = parseFloat(amountExcl);
     const rate = parseFloat(vatRate);
     if (!isNaN(excl) && !isNaN(rate)) {
@@ -200,9 +289,8 @@ export function AddPurchaseInvoiceDialog({
       setVatAmount(calc.vatAmount.toFixed(2));
       setAmountIncl(calc.amountInclVat.toFixed(2));
     }
-  }, [amountExcl, vatRate]);
+  }, [amountExcl, vatRate, lines.length]);
 
-  // Fuzzy match supplier name to partner
   const suggestedPartnerId = useMemo(() => {
     if (!scanResult?.supplier_name || !partners) return null;
     const supplier = scanResult.supplier_name.toLowerCase().trim();
@@ -216,9 +304,7 @@ export function AddPurchaseInvoiceDialog({
     return partial?.id || null;
   }, [scanResult, partners]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+  const processFile = async (selected: File) => {
     if (selected.type !== "application/pdf") {
       toast.error("Alleen PDF-bestanden zijn toegestaan");
       return;
@@ -231,10 +317,23 @@ export function AddPurchaseInvoiceDialog({
     await uploadAndScan(selected);
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    await processFile(selected);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) await processFile(dropped);
+  };
+
   const uploadAndScan = async (pdfFile: File) => {
     setStep("scanning");
+    setScanFailed(false);
     try {
-      // Upload to storage
       const timestamp = Date.now();
       const safeName = pdfFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `inkomend/${timestamp}_${safeName}`;
@@ -244,7 +343,6 @@ export function AddPurchaseInvoiceDialog({
       if (upErr) throw upErr;
       setFilePath(path);
 
-      // Trigger AI scan
       const { data, error } = await supabase.functions.invoke("scan-purchase-invoice", {
         body: { file_path: path },
       });
@@ -255,22 +353,42 @@ export function AddPurchaseInvoiceDialog({
       const result: ScanResult = data.data;
       setScanResult(result);
 
-      // Pre-fill form
       if (result.invoice_number) setInvoiceNumber(result.invoice_number);
       if (result.invoice_date) {
         const d = new Date(result.invoice_date);
         if (!isNaN(d.getTime())) setInvoiceDate(d);
       }
-      if (result.amount_excl_vat != null) setAmountExcl(String(result.amount_excl_vat));
-      if (result.vat_rate != null) setVatRate(String(result.vat_rate));
       if (result.description) setDescription(result.description);
+
+      // Pre-fill lines from scan (auto-syncs header via effect)
+      if (result.line_items && result.line_items.length > 0) {
+        setLines(
+          result.line_items.map((li) => ({
+            description: li.description || "",
+            quantity: li.quantity != null ? String(li.quantity) : "1",
+            unit_price:
+              li.unit_price != null
+                ? String(li.unit_price)
+                : li.total_excl_vat != null && li.quantity
+                ? String(li.total_excl_vat / li.quantity)
+                : li.total_excl_vat != null
+                ? String(li.total_excl_vat)
+                : "",
+            vat_rate: li.vat_rate != null ? String(li.vat_rate) : (result.vat_rate != null ? String(result.vat_rate) : "21"),
+          })),
+        );
+      } else {
+        if (result.amount_excl_vat != null) setAmountExcl(String(result.amount_excl_vat));
+        if (result.vat_rate != null) setVatRate(String(result.vat_rate));
+      }
 
       setStep("verify");
       toast.success("Factuur gescand — controleer de gegevens");
     } catch (err: any) {
       console.error("Scan error:", err);
+      setScanFailed(true);
       toast.error(err.message || "Fout bij scannen factuur");
-      setStep("verify"); // allow manual entry anyway
+      setStep("verify");
     }
   };
 
@@ -278,8 +396,14 @@ export function AddPurchaseInvoiceDialog({
     if (suggestedPartnerId) setPartnerId(suggestedPartnerId);
   };
 
+  const updateLine = (idx: number, patch: Partial<LineRow>) => {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  };
+
+  const addLine = () => setLines((prev) => [...prev, emptyLine()]);
+  const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
+
   const handleSubmit = async () => {
-    // Validate
     if (!partnerId) return toast.error("Selecteer een leverancier (partner)");
     if (!requestId) return toast.error("Selecteer een project");
     if (!invoiceNumber) return toast.error("Factuurnummer is verplicht");
@@ -289,22 +413,58 @@ export function AddPurchaseInvoiceDialog({
 
     setIsSubmitting(true);
     try {
-      const calc = calculateVatAmounts(excl, parseFloat(vatRate) || 0);
+      // Build line payload (only valid lines)
+      const validLines: PurchaseInvoiceLine[] = lines
+        .filter((l) => l.description.trim() && parseFloat(l.unit_price) > 0)
+        .map((l, idx) => {
+          const t = computeLineTotals(l);
+          return {
+            description: l.description.trim(),
+            quantity: parseFloat(l.quantity) || 1,
+            unit_price: parseFloat(l.unit_price) || 0,
+            amount_excl_vat: t.amount_excl_vat,
+            vat_rate: t.vat_rate,
+            vat_amount: t.vat_amount,
+            amount_incl_vat: t.amount_incl_vat,
+            sort_order: idx,
+          };
+        });
+
+      // Header values: from lines if present, otherwise manual
+      let headerExcl: number;
+      let headerVatRate: number;
+      let headerVat: number;
+      let headerIncl: number;
+
+      if (validLines.length > 0 && lineTotals) {
+        headerExcl = lineTotals.totalExcl;
+        headerVat = lineTotals.totalVat;
+        headerIncl = lineTotals.totalIncl;
+        headerVatRate = lineTotals.isMixed ? 0 : lineTotals.dominantRate;
+      } else {
+        const calc = calculateVatAmounts(excl, parseFloat(vatRate) || 0);
+        headerExcl = calc.amountExclVat;
+        headerVatRate = calc.vatRate;
+        headerVat = calc.vatAmount;
+        headerIncl = calc.amountInclVat;
+      }
+
       const created = await createInvoice.mutateAsync({
         request_id: requestId,
         item_id: itemId || null,
         partner_id: partnerId,
         invoice_number: invoiceNumber,
         invoice_date: format(invoiceDate, "yyyy-MM-dd"),
-        amount_excl_vat: calc.amountExclVat,
-        vat_rate: calc.vatRate,
-        vat_amount: calc.vatAmount,
-        amount_incl_vat: calc.amountInclVat,
+        amount_excl_vat: headerExcl,
+        vat_rate: headerVatRate,
+        vat_amount: headerVat,
+        amount_incl_vat: headerIncl,
         description: description || null,
         file_path: filePath,
         registered_by: "admin",
+        lines: validLines.length > 0 ? validLines : undefined,
       });
-      // Link inbox item if processing from inbox
+
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
       }
@@ -319,10 +479,11 @@ export function AddPurchaseInvoiceDialog({
 
   const selectedPartner = partners?.find((p) => p.id === partnerId);
   const selectedProject = projects?.find((p) => p.id === requestId);
+  const hasLines = lines.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -337,10 +498,23 @@ export function AddPurchaseInvoiceDialog({
           <div className="py-12">
             <label
               htmlFor="invoice-pdf"
-              className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg p-12 cursor-pointer hover:bg-muted/50 transition-colors"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={cn(
+                "flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-12 cursor-pointer transition-colors",
+                isDragging
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:bg-muted/50",
+              )}
             >
-              <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-1">Sleep de PDF hierheen of klik om te uploaden</p>
+              <Upload className={cn("h-12 w-12 mb-4", isDragging ? "text-primary" : "text-muted-foreground")} />
+              <p className="text-lg font-medium mb-1">
+                {isDragging ? "Laat los om te uploaden" : "Sleep de PDF hierheen of klik om te uploaden"}
+              </p>
               <p className="text-sm text-muted-foreground">PDF, max 10 MB</p>
               <input
                 id="invoice-pdf"
@@ -395,14 +569,14 @@ export function AddPurchaseInvoiceDialog({
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Zoek partner..." />
+                    <CommandInput placeholder="Zoek partner..." autoFocus />
                     <CommandList>
                       <CommandEmpty>Geen partner gevonden</CommandEmpty>
                       <CommandGroup>
                         {partners?.map((p) => (
                           <CommandItem
                             key={p.id}
-                            value={p.name}
+                            value={p.name.toLowerCase()}
                             onSelect={() => {
                               setPartnerId(p.id);
                               setPartnerSearchOpen(false);
@@ -448,34 +622,46 @@ export function AddPurchaseInvoiceDialog({
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Zoek op referentie of klant..." />
+                    <CommandInput placeholder="Zoek op referentie, klant of bedrijf..." autoFocus />
                     <CommandList>
                       <CommandEmpty>Geen project gevonden</CommandEmpty>
                       <CommandGroup>
-                        {projects?.map((p) => (
-                          <CommandItem
-                            key={p.id}
-                            value={`${p.reference_number} ${p.customer_name} ${p.customer_company || ""}`}
-                            onSelect={() => {
-                              setRequestId(p.id);
-                              setItemId("");
-                              setProjectSearchOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                requestId === p.id ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <div>
-                              <div className="font-medium">{p.reference_number || "Geen ref"}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {p.customer_company || p.customer_name}
+                        {projects?.map((p) => {
+                          const yearMonth = p.created_at ? format(new Date(p.created_at), "yyyy MM MMM yyyy", { locale: nl }) : "";
+                          const searchValue = [
+                            p.reference_number || "",
+                            p.customer_name || "",
+                            p.customer_company || "",
+                            yearMonth,
+                            p.status || "",
+                          ]
+                            .join(" ")
+                            .toLowerCase();
+                          return (
+                            <CommandItem
+                              key={p.id}
+                              value={searchValue}
+                              onSelect={() => {
+                                setRequestId(p.id);
+                                setItemId("");
+                                setProjectSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  requestId === p.id ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <div>
+                                <div className="font-medium">{p.reference_number || "Geen ref"}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {p.customer_company || p.customer_name}
+                                </div>
                               </div>
-                            </div>
-                          </CommandItem>
-                        ))}
+                            </CommandItem>
+                          );
+                        })}
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -535,6 +721,100 @@ export function AddPurchaseInvoiceDialog({
               </div>
             </div>
 
+            {/* Order lines */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Orderregels {hasLines && <span className="text-xs text-muted-foreground font-normal">({lines.length})</span>}</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                  <Plus className="h-3 w-3 mr-1" /> Regel toevoegen
+                </Button>
+              </div>
+              {hasLines && (
+                <div className="border rounded-md overflow-hidden">
+                  <div className="grid grid-cols-[1fr_70px_100px_80px_100px_100px_36px] gap-2 px-2 py-2 bg-muted text-xs font-medium">
+                    <span>Omschrijving</span>
+                    <span className="text-right">Aantal</span>
+                    <span className="text-right">Stuksprijs</span>
+                    <span className="text-right">BTW%</span>
+                    <span className="text-right">BTW €</span>
+                    <span className="text-right">Incl. €</span>
+                    <span></span>
+                  </div>
+                  {lines.map((line, idx) => {
+                    const t = computeLineTotals(line);
+                    return (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-[1fr_70px_100px_80px_100px_100px_36px] gap-2 px-2 py-1.5 border-t items-center"
+                      >
+                        <Input
+                          value={line.description}
+                          onChange={(e) => updateLine(idx, { description: e.target.value })}
+                          placeholder="Omschrijving"
+                          className="h-8"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={line.quantity}
+                          onChange={(e) => updateLine(idx, { quantity: e.target.value })}
+                          className="h-8 text-right"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={line.unit_price}
+                          onChange={(e) => updateLine(idx, { unit_price: e.target.value })}
+                          placeholder="0,00"
+                          className="h-8 text-right"
+                        />
+                        <Select value={line.vat_rate} onValueChange={(v) => updateLine(idx, { vat_rate: v })}>
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0%</SelectItem>
+                            <SelectItem value="9">9%</SelectItem>
+                            <SelectItem value="21">21%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="text-right text-sm font-mono pr-1 text-muted-foreground">
+                          €{t.vat_amount.toFixed(2)}
+                        </div>
+                        <div className="text-right text-sm font-mono pr-1 font-medium">
+                          €{t.amount_incl_vat.toFixed(2)}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => removeLine(idx)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  {lineTotals && (
+                    <div className="border-t bg-muted/50 px-2 py-2 space-y-1 text-sm">
+                      {Array.from(lineTotals.byRate.entries()).map(([rate, v]) => (
+                        <div key={rate} className="flex justify-between text-xs text-muted-foreground">
+                          <span>BTW {rate}% over €{v.excl.toFixed(2)}</span>
+                          <span className="font-mono">€{v.vat.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between font-medium pt-1 border-t">
+                        <span>Totaal</span>
+                        <span className="font-mono">€{lineTotals.totalIncl.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Header totals (auto-filled from lines, or manual when no lines) */}
             <div className="grid grid-cols-4 gap-3">
               <div className="space-y-1.5">
                 <Label>Excl. BTW *</Label>
@@ -544,16 +824,18 @@ export function AddPurchaseInvoiceDialog({
                   value={amountExcl}
                   onChange={(e) => setAmountExcl(e.target.value)}
                   placeholder="0,00"
+                  readOnly={hasLines}
+                  className={hasLines ? "bg-muted" : ""}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>BTW %</Label>
-                <Select value={vatRate} onValueChange={setVatRate}>
-                  <SelectTrigger>
+                <Select value={vatRate} onValueChange={setVatRate} disabled={hasLines}>
+                  <SelectTrigger className={hasLines ? "bg-muted" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">0%</SelectItem>
+                    <SelectItem value="0">{lineTotals?.isMixed ? "Gemengd" : "0%"}</SelectItem>
                     <SelectItem value="9">9%</SelectItem>
                     <SelectItem value="21">21%</SelectItem>
                   </SelectContent>
@@ -568,6 +850,11 @@ export function AddPurchaseInvoiceDialog({
                 <Input value={amountIncl} readOnly className="bg-muted font-semibold" />
               </div>
             </div>
+            {hasLines && (
+              <p className="text-xs text-muted-foreground -mt-2">
+                Totalen worden berekend uit de orderregels. Verwijder alle regels om handmatig in te vullen.
+              </p>
+            )}
 
             <div className="space-y-1.5">
               <Label>Omschrijving</Label>
@@ -579,38 +866,7 @@ export function AddPurchaseInvoiceDialog({
               />
             </div>
 
-            {scanResult?.line_items && scanResult.line_items.length > 0 && (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-between">
-                    <span className="flex items-center gap-2">
-                      <Sparkles className="h-3 w-3" />
-                      Gescande orderregels ({scanResult.line_items.length})
-                    </span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
-                  <div className="border rounded-md divide-y text-sm">
-                    {scanResult.line_items.map((li, i) => (
-                      <div key={i} className="p-2 flex justify-between gap-2">
-                        <span className="flex-1">{li.description}</span>
-                        {li.quantity != null && (
-                          <span className="text-muted-foreground">{li.quantity}×</span>
-                        )}
-                        {li.total_excl_vat != null && (
-                          <span className="font-mono w-20 text-right">
-                            €{li.total_excl_vat.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
-            {!scanResult && step === "verify" && file && (
+            {scanFailed && file && (
               <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
                 <AlertCircle className="h-4 w-4 mt-0.5" />
                 <span>AI-scan mislukt. Vul de velden handmatig in.</span>
