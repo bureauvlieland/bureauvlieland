@@ -159,14 +159,20 @@ export default function AdminPurchaseInvoices() {
     <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Package className="h-8 w-8" />
-            Inkoopfacturen
-          </h1>
-          <p className="text-muted-foreground">
-            Facturen van partners aan Bureau Vlieland
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Package className="h-8 w-8" />
+              Inkoopfacturen
+            </h1>
+            <p className="text-muted-foreground">
+              Facturen van partners aan Bureau Vlieland
+            </p>
+          </div>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Inkoopfactuur toevoegen
+          </Button>
         </div>
 
         {/* Stats Cards */}
