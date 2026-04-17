@@ -1,82 +1,47 @@
 
+## Diagnose
 
-## Doel
-De gebruiker wil per programma-onderdeel:
-1. De **definitieve factuurprijs** apart kunnen vastleggen (los van offerteprijs/quoted_price), zodat nacalculatie mogelijk is.
-2. **Meerdere prijsregels per onderdeel** kunnen invoeren met **eigen BTW-tarief** (mix 9% / 21% binnen één activiteit, bv. zaalhuur 21% + diner 9%).
-3. Deze regels moeten doorrollen naar de **verkoopfactuur** (AdminInvoicePreview + bureau_invoices).
+**Partner-factuur (Watertaxi De Bazuin):**
+- 0% over €0,00 → €0,00
+- 9% over €871,56 → €78,44
+- 21% over €231,40 → €48,60
+- Totaal excl: €1.102,96 / BTW: €127,04 / Incl: €1.230,00
 
-## Huidige situatie (kort)
-- `program_request_items` heeft één prijs (`quoted_price` óf `admin_price_override`) en één BTW-tarief (uit `building_blocks.vat_rate`).
-- `AdminQuotePriceEditor` bewerkt slechts één bedrag.
-- `AdminInvoicePreview` bouwt factuur op uit deze enkele prijs per item.
-- Voor inkoopfacturen bestaat al `purchase_invoice_lines` — analoog patroon hergebruiken.
+**Wat de AI-scan invulde:**
+- Excl: €1.102,96 (juist totaal)
+- BTW%: 21% → BTW €231,62 → Incl €1.334,58 (fout)
+
+De scanner heeft het correcte excl-totaal gepakt maar **alleen één BTW-tarief gekozen** (21%) en daar het hele excl-bedrag mee belast. De factuur heeft een gemengd BTW-tarief (9% + 21% + 0%) — dat past niet in de huidige `RegisterInkoopfactuurDialog` die maar één regel met één BTW% ondersteunt.
 
 ## Plan
 
-### 1. Database (migratie)
-Nieuwe tabel `program_item_billing_lines`:
-```
-id, item_id (FK program_request_items, cascade),
-description text,
-quantity numeric default 1,
-unit_price_excl_vat numeric,
-vat_rate numeric (0/9/21),
-amount_excl_vat numeric,
-vat_amount numeric,
-amount_incl_vat numeric,
-sort_order int, created_at, updated_at
-```
-RLS: alleen admins schrijven; klant/partner geen toegang (interne factuurregels).
+### 1. Multi-BTW orderregels in `RegisterInkoopfactuurDialog`
+Vervang de enkele BTW-rij door een array van regels (zoals het ontwerp al hint: "Regel toevoegen" knop staat er al, maar voegt nog niets toe).
+- Per regel: omschrijving (optioneel), excl. BTW, BTW%, BTW-bedrag (auto), incl. BTW (auto)
+- Onder de regels: BTW-breakdown per tarief + grand total
+- Bij opslaan: regels schrijven naar `purchase_invoice_lines` (tabel bestaat al), en op `purchase_invoices`-hoofdrecord aggregaten (`amount_excl_vat`, `vat_amount`, `amount_incl_vat`) opslaan als som per tarief (BTW per groep berekenen, niet per regel — voorkomt cent-afwijkingen).
 
-Plus op `program_request_items`:
-- `final_billing_locked_at timestamptz` (markeert dat de factuurregels zijn vastgesteld → tonen op factuur i.p.v. quoted_price).
+### 2. AI-scanner uitbreiden naar multi-BTW
+In `scan-purchase-invoice` / `scan-purchase-invoice-internal`: tool-schema `extract_invoice` aanpassen zodat `vat_breakdown` (array van `{vat_rate, amount_excl, vat_amount}`) verplicht is wanneer de factuur meerdere tarieven heeft. Prompt expliciet maken: "Als de factuur een BTW-overzicht/grondslag-tabel toont met meerdere tarieven, vul dan `vat_breakdown` met één entry per tarief — vul `vat_rate` op hoofdniveau dan NIET in."
+- `line_items` blijft optioneel; bij watertaxi-achtige facturen vaak leeg of niet één-op-één matchend.
 
-### 2. Nieuwe component `AdminItemBillingLinesEditor`
-Vervangt of breidt `AdminQuotePriceEditor` uit met een tabbed Popover:
-- **Tab 1 — Offerteprijs** (huidig): bewerken van `admin_price_override` / `price_type` voor klant-offerte.
-- **Tab 2 — Factuurregels (definitief)**: tabel met kolommen
-  - Omschrijving | Aantal | Prijs excl. | BTW% | BTW€ | Incl.
-  - "+ Regel toevoegen" en verwijderknop per rij
-  - Mini-totalen onderaan: per BTW-tarief subtotaal + grand total
-  - Bij eerste opening: één regel auto-gevuld met huidige `quoted_price` of `admin_price_override` op default BTW-tarief van het block.
+### 3. Pre-fill logica in dialoog
+- Als `scan_result.vat_breakdown.length > 1` → maak één orderregel per BTW-tarief met excl-bedrag uit breakdown.
+- Als `vat_breakdown` leeg of 1 entry → één regel zoals nu.
+- Als `line_items` aanwezig én elke regel heeft `vat_rate` → gebruik die in plaats van breakdown (fijnmaziger).
 
-Visuele indicator op item-rij: groen vinkje "Factuurregels vastgesteld" zodra ≥1 regel bestaat.
+### 4. Opslag
+`purchase_invoice_lines` heeft al kolommen voor description/quantity/unit_price/vat_rate/amounts (analoog aan `program_item_billing_lines`). Geen migratie nodig — alleen verifiëren dat alle benodigde kolommen er zijn (check tijdens implementatie).
 
-### 3. Verkoopfactuur (AdminInvoicePreview)
-- **Bron-prioriteit per item:** als `program_item_billing_lines` bestaan → gebruik die regels (met eigen BTW per regel) op factuur. Anders fallback naar huidige logica (quoted_price / admin_price_override + block VAT).
-- BTW-groepering aanpassen: itereert nu over billing-lines i.p.v. één regel per item.
-- Categorie-groepering blijft, maar binnen item kunnen regels los staan (bv. "Brouwerij Fortuna — zaalhuur €200 21%" + "— diner €450 9%").
+### Bestanden
+- `src/components/admin/RegisterInkoopfactuurDialog.tsx` — multi-line orderregels + breakdown
+- `src/hooks/usePurchaseInvoices.ts` — opslag van `purchase_invoice_lines` bij create
+- `supabase/functions/scan-purchase-invoice/index.ts` + `scan-purchase-invoice-internal/index.ts` — `vat_breakdown` verplicht bij multi-rate, prompt aanscherpen
+- `src/types/purchaseInvoiceInbox.ts` — type al up-to-date, evt. minor tweaks
 
-### 4. RegisterBureauInvoiceDialog (bureau_invoices)
-- Bij openen: voorstel automatisch berekenen uit billing-lines van confirmed items (waar nog niet gefactureerd).
-- Toon onderverdeling per BTW-tarief in dialoog (read-only preview), header krijgt totaal.
-- Veld `vat_amount` blijft bewerkbaar voor handmatige aanpassing.
-- (Out of scope nu: gekoppelde regels per bureau-invoice opslaan — kan later. We slaan nu nog steeds aggregaten op `bureau_invoices`.)
+### Buiten scope
+- UI om bestaande (al opgeslagen) inkoopfactuur achteraf in regels te splitsen — handmatig corrigeren in dialoog volstaat.
+- Doorzetten van inkoopfactuur-regels naar Snelstart-export — separate stap.
 
-### 5. AdminRequestDetail
-- Nieuwe knop/icoon naast `AdminQuotePriceEditor`: "Factuurregels" (€-icoon met regel-overlay).
-- Tooltip/badge: "X regels — €Y.YY" wanneer aanwezig.
-
-## Bestanden
-
-**Nieuw**
-- `supabase/migrations/<ts>_add_program_item_billing_lines.sql`
-- `src/types/programItemBillingLine.ts`
-- `src/components/admin/AdminItemBillingLinesEditor.tsx`
-- `src/hooks/useItemBillingLines.ts`
-
-**Aanpassen**
-- `src/pages/admin/AdminRequestDetail.tsx` — knop integreren, query lines mee
-- `src/pages/admin/AdminInvoicePreview.tsx` — render priority lines
-- `src/components/admin/RegisterBureauInvoiceDialog.tsx` — auto-suggest uit lines, BTW-breakdown
-- `src/integrations/supabase/types.ts` — auto-update na migratie
-
-## Buiten scope
-- Aparte invoice-lines tabel onder `bureau_invoices` (later).
-- Synchronisatie van offerteprijzen → automatisch in factuurregels (blijft expliciete actie van admin).
-- Klant-portaal weergave van factuurregels (alleen interne factuur-PDF).
-
-## Open punt
-De huidige `AdminQuotePriceEditor` wordt nu nog steeds gebruikt voor offerte-correcties richting klant; ik laat die intact en voeg de billing-editor ernaast toe als aparte knop. Akkoord, of wil je beide juist samenvoegen tot één popover met tabs op dezelfde pencil-knop?
-
+### Vraag
+Voor déze concrete factuur: zal ik de AI opnieuw laten scannen met het verbeterde prompt, of pas je hem na de fix handmatig aan in de dialoog?
