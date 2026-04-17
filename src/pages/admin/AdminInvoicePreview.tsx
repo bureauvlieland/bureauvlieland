@@ -531,21 +531,21 @@ const AdminInvoicePreview = () => {
                   <div className="p-4 overflow-auto max-h-[900px]">
                     <div
                       ref={pdfRef}
-                      className="bg-white p-10 shadow-lg max-w-[210mm] mx-auto text-[13px] leading-relaxed"
-                      style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#1a1a1a" }}
+                      className="bg-white px-12 py-10 shadow-lg max-w-[210mm] mx-auto text-[11px] leading-snug"
+                      style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}
                     >
                       {/* Header: Company + Invoice title */}
-                      <div className="flex justify-between items-start mb-10">
+                      <div className="flex justify-between items-start mb-10 pb-4 border-b-2" style={{ borderColor: "#1e3a5f" }}>
                         <div>
-                          <h1 className="text-2xl font-bold" style={{ color: "#1e3a5f" }}>
+                          <h1 className="text-[22px] font-bold leading-tight" style={{ color: "#1e3a5f" }}>
                             {companyName}
                           </h1>
-                          {address && <p className="text-sm text-gray-500 mt-1">{address}</p>}
-                          {adminEmail && <p className="text-sm text-gray-500">{adminEmail}</p>}
-                          <p className="text-sm text-gray-500">Tel: 0562 700 208</p>
+                          {address && <p className="text-[10px] text-gray-500 mt-1">{address}</p>}
+                          {adminEmail && <p className="text-[10px] text-gray-500">{adminEmail}</p>}
+                          <p className="text-[10px] text-gray-500">Tel: 0562 700 208</p>
                         </div>
                         <div className="text-right">
-                          <h2 className="text-xl font-bold uppercase tracking-wider" style={{ color: "#1e3a5f" }}>
+                          <h2 className="text-[24px] font-bold uppercase tracking-[0.2em]" style={{ color: "#1e3a5f" }}>
                             Factuur
                           </h2>
                         </div>
