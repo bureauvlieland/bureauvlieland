@@ -1,51 +1,82 @@
 
-The user sent an empty message but uploaded a screenshot showing the inbox with two forwarded emails (FW:) — both marked "Mislukt" with "Geen PDF-bijlage gevonden". The user forwarded invoices from their own Outlook/mail client, but the PDFs didn't make it through.
 
-## Diagnose
+## Doel
+De gebruiker wil per programma-onderdeel:
+1. De **definitieve factuurprijs** apart kunnen vastleggen (los van offerteprijs/quoted_price), zodat nacalculatie mogelijk is.
+2. **Meerdere prijsregels per onderdeel** kunnen invoeren met **eigen BTW-tarief** (mix 9% / 21% binnen één activiteit, bv. zaalhuur 21% + diner 9%).
+3. Deze regels moeten doorrollen naar de **verkoopfactuur** (AdminInvoicePreview + bureau_invoices).
 
-When you **forward** an email in Outlook/Gmail, the original PDF attachment often:
-1. Gets re-encoded as inline content within the forwarded message body, or
-2. Gets stripped entirely if the forward is plain-text, or
-3. Arrives via the existing `inbound-email` catch-all (which I extended to route `invoices@`/`inkoop@`/`facturen@` to the purchase-invoice flow) — but that catch-all uses Mailjet's **Parse API webhook payload format**, while the routing I added forwards the *raw payload* to `inbound-purchase-invoice`. Both functions expect the same Mailjet payload shape, so attachments should pass through if Mailjet itself received them.
-
-The most likely root causes:
-1. **Mailjet Parse isn't configured yet** for `invoices@reply.bureauvlieland.nl` — so the mail arrived via the existing catch-all (`reply+...@`), but the user mailed to `invoices@` directly which has no Parse rule → went to a different path or was processed differently.
-2. **The forwarded mail's attachment is encoded differently** — Mailjet Parse exposes attachments via `Attachments` array + `Parts` map (base64). If forwarded as inline `message/rfc822` or as `Content-Disposition: inline`, our filter `ct.includes("pdf") || fn.endsWith(".pdf")` may miss it.
-3. **The `inbound-email` route I added forwards the payload but doesn't log what it sees** — making debugging hard.
-
-I need to read the current `inbound-email/index.ts` and `inbound-purchase-invoice/index.ts` to see exactly what's happening, plus check edge function logs for the actual payload structure of these failed mails.
+## Huidige situatie (kort)
+- `program_request_items` heeft één prijs (`quoted_price` óf `admin_price_override`) en één BTW-tarief (uit `building_blocks.vat_rate`).
+- `AdminQuotePriceEditor` bewerkt slechts één bedrag.
+- `AdminInvoicePreview` bouwt factuur op uit deze enkele prijs per item.
+- Voor inkoopfacturen bestaat al `purchase_invoice_lines` — analoog patroon hergebruiken.
 
 ## Plan
 
-### 1. Inspect logs first (after approval)
-Pull recent logs of `inbound-email` and `inbound-purchase-invoice` to see the exact Mailjet payload the failed mails produced — specifically what's in `Attachments`, `Parts`, and whether the PDF arrived as an inline forwarded part.
+### 1. Database (migratie)
+Nieuwe tabel `program_item_billing_lines`:
+```
+id, item_id (FK program_request_items, cascade),
+description text,
+quantity numeric default 1,
+unit_price_excl_vat numeric,
+vat_rate numeric (0/9/21),
+amount_excl_vat numeric,
+vat_amount numeric,
+amount_incl_vat numeric,
+sort_order int, created_at, updated_at
+```
+RLS: alleen admins schrijven; klant/partner geen toegang (interne factuurregels).
 
-### 2. Improve attachment detection in `inbound-purchase-invoice`
-- Broaden the filter: also accept `application/octet-stream` when filename ends `.pdf`, plus check `Content-Disposition`.
-- Walk **all** keys in `Parts` (not just those listed in `Attachments`) and detect PDFs by filename or content-type.
-- Also handle **nested forwarded `message/rfc822`** parts: when present, recursively scan their attachments.
-- Decode both base64 and `Headers.Content-Transfer-Encoding=base64` variants.
+Plus op `program_request_items`:
+- `final_billing_locked_at timestamptz` (markeert dat de factuurregels zijn vastgesteld → tonen op factuur i.p.v. quoted_price).
 
-### 3. Better error messages in inbox
-Instead of generic "Geen PDF-bijlage gevonden", capture and store:
-- List of attachment filenames+content-types Mailjet did send
-- Whether the mail was a forward (subject starts with `FW:`/`Fwd:`)
-- A hint: "Forward gedetecteerd zonder bijlage — stuur de mail opnieuw als bijlage of zet PDF expliciet bij"
+### 2. Nieuwe component `AdminItemBillingLinesEditor`
+Vervangt of breidt `AdminQuotePriceEditor` uit met een tabbed Popover:
+- **Tab 1 — Offerteprijs** (huidig): bewerken van `admin_price_override` / `price_type` voor klant-offerte.
+- **Tab 2 — Factuurregels (definitief)**: tabel met kolommen
+  - Omschrijving | Aantal | Prijs excl. | BTW% | BTW€ | Incl.
+  - "+ Regel toevoegen" en verwijderknop per rij
+  - Mini-totalen onderaan: per BTW-tarief subtotaal + grand total
+  - Bij eerste opening: één regel auto-gevuld met huidige `quoted_price` of `admin_price_override` op default BTW-tarief van het block.
 
-### 4. Reprocess existing failed inbox items
-Add a "Opnieuw analyseren" button on failed items that re-fetches the original Mailjet payload — but since we don't store the raw payload, instead: store `raw_payload jsonb` going forward (and add a small column via migration). For the two existing failed items, the user can simply re-forward.
+Visuele indicator op item-rij: groen vinkje "Factuurregels vastgesteld" zodra ≥1 regel bestaat.
 
-### 5. Add a diagnostic console log dump
-In the inbound function, on failure log the full payload keys + attachment metadata so future failures are debuggable in one click.
+### 3. Verkoopfactuur (AdminInvoicePreview)
+- **Bron-prioriteit per item:** als `program_item_billing_lines` bestaan → gebruik die regels (met eigen BTW per regel) op factuur. Anders fallback naar huidige logica (quoted_price / admin_price_override + block VAT).
+- BTW-groepering aanpassen: itereert nu over billing-lines i.p.v. één regel per item.
+- Categorie-groepering blijft, maar binnen item kunnen regels los staan (bv. "Brouwerij Fortuna — zaalhuur €200 21%" + "— diner €450 9%").
 
-### Files to change
-- `supabase/functions/inbound-purchase-invoice/index.ts` — broader attachment detection, recursive forwarded-mail handling, richer error messages, payload logging
-- `supabase/functions/inbound-email/index.ts` — log routing decisions for purchase-invoice forwards
-- `supabase/migrations/<new>.sql` — add `raw_payload jsonb` column to `purchase_invoice_inbox` for future debugging
+### 4. RegisterBureauInvoiceDialog (bureau_invoices)
+- Bij openen: voorstel automatisch berekenen uit billing-lines van confirmed items (waar nog niet gefactureerd).
+- Toon onderverdeling per BTW-tarief in dialoog (read-only preview), header krijgt totaal.
+- Veld `vat_amount` blijft bewerkbaar voor handmatige aanpassing.
+- (Out of scope nu: gekoppelde regels per bureau-invoice opslaan — kan later. We slaan nu nog steeds aggregaten op `bureau_invoices`.)
 
-### Out of scope
-- Reprocessing the two existing failed inbox items (user re-forwards)
-- Mailjet Parse rule setup (separate; user has the PowerShell command already)
+### 5. AdminRequestDetail
+- Nieuwe knop/icoon naast `AdminQuotePriceEditor`: "Factuurregels" (€-icoon met regel-overlay).
+- Tooltip/badge: "X regels — €Y.YY" wanneer aanwezig.
 
-### Open question
-Is Mailjet Parse already configured for `invoices@reply.bureauvlieland.nl`, or are these mails arriving via the catch-all `reply+...` route I extended? The fix differs slightly. I'll check logs after approval — no need to ask now, the fix covers both.
+## Bestanden
+
+**Nieuw**
+- `supabase/migrations/<ts>_add_program_item_billing_lines.sql`
+- `src/types/programItemBillingLine.ts`
+- `src/components/admin/AdminItemBillingLinesEditor.tsx`
+- `src/hooks/useItemBillingLines.ts`
+
+**Aanpassen**
+- `src/pages/admin/AdminRequestDetail.tsx` — knop integreren, query lines mee
+- `src/pages/admin/AdminInvoicePreview.tsx` — render priority lines
+- `src/components/admin/RegisterBureauInvoiceDialog.tsx` — auto-suggest uit lines, BTW-breakdown
+- `src/integrations/supabase/types.ts` — auto-update na migratie
+
+## Buiten scope
+- Aparte invoice-lines tabel onder `bureau_invoices` (later).
+- Synchronisatie van offerteprijzen → automatisch in factuurregels (blijft expliciete actie van admin).
+- Klant-portaal weergave van factuurregels (alleen interne factuur-PDF).
+
+## Open punt
+De huidige `AdminQuotePriceEditor` wordt nu nog steeds gebruikt voor offerte-correcties richting klant; ik laat die intact en voeg de billing-editor ernaast toe als aparte knop. Akkoord, of wil je beide juist samenvoegen tot één popover met tabs op dezelfde pencil-knop?
+
