@@ -185,14 +185,15 @@ export default function AdminPurchaseInvoiceInbox() {
                         <Download className="h-3 w-3 mr-1" /> PDF bekijken
                       </Button>
                     )}
-                    {item.scan_status === "failed" && item.attachment_path && (
+                    {item.attachment_path && (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => rescan.mutate(item)}
                         disabled={rescan.isPending}
                       >
-                        <RefreshCw className="h-3 w-3 mr-1" /> Opnieuw scannen
+                        <RefreshCw className={`h-3 w-3 mr-1 ${rescan.isPending ? "animate-spin" : ""}`} />
+                        Opnieuw scannen
                       </Button>
                     )}
                     {item.status === "new" && (
