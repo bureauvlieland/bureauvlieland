@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import type { ProgramItemBillingLine } from "@/types/programItemBillingLine";
 
 interface ProgramRequest {
   id: string;
