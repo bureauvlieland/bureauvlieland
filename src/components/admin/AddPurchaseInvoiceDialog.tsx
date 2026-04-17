@@ -403,23 +403,11 @@ export function AddPurchaseInvoiceDialog({
       }
       if (result.description) setDescription(result.description);
 
-      // Pre-fill lines from scan (auto-syncs header via effect)
-      if (result.line_items && result.line_items.length > 0) {
-        setLines(
-          result.line_items.map((li) => ({
-            description: li.description || "",
-            quantity: li.quantity != null ? String(li.quantity) : "1",
-            unit_price:
-              li.unit_price != null
-                ? String(li.unit_price)
-                : li.total_excl_vat != null && li.quantity
-                ? String(li.total_excl_vat / li.quantity)
-                : li.total_excl_vat != null
-                ? String(li.total_excl_vat)
-                : "",
-            vat_rate: li.vat_rate != null ? String(li.vat_rate) : (result.vat_rate != null ? String(result.vat_rate) : "21"),
-          })),
-        );
+      // Pre-fill lines from scan (auto-syncs header via effect).
+      // Uses vat_breakdown for mixed-VAT invoices so 9% + 21% blijven correct gescheiden.
+      const prefillLines = buildLinesFromScan(result);
+      if (prefillLines.length > 0) {
+        setLines(prefillLines);
       } else {
         if (result.amount_excl_vat != null) setAmountExcl(String(result.amount_excl_vat));
         if (result.vat_rate != null) setVatRate(String(result.vat_rate));
