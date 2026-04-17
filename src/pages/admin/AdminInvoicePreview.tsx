@@ -622,6 +622,38 @@ const AdminInvoicePreview = () => {
                                   </td>
                                 </tr>
                                 {catItems.map((item) => {
+                                  const billingLines = linesByItem[item.id];
+                                  // If definitive billing lines exist, render one row per line
+                                  if (billingLines && billingLines.length > 0) {
+                                    return (
+                                      <React.Fragment key={item.id}>
+                                        {billingLines.map((bl, blIdx) => (
+                                          <tr key={bl.id} className="border-b border-gray-100">
+                                            <td className="py-2 px-3">
+                                              {blIdx === 0 && (
+                                                <p className="font-medium">{item.block_name}</p>
+                                              )}
+                                              <p className={blIdx === 0 ? "text-xs text-gray-600" : "text-sm"}>
+                                                {bl.description || item.block_name}
+                                              </p>
+                                              {blIdx === 0 && (
+                                                <p className="text-xs text-gray-400">{item.provider_name}</p>
+                                              )}
+                                            </td>
+                                            <td className="py-2 px-3 text-right">{Number(bl.quantity)}</td>
+                                            <td className="py-2 px-3 text-right">
+                                              {formatCurrency(Number(bl.unit_price_excl_vat))}
+                                              <span className="text-xs text-gray-400 ml-1">excl. {bl.vat_rate}%</span>
+                                            </td>
+                                            <td className="py-2 px-3 text-right font-medium">
+                                              {formatCurrency(Number(bl.amount_incl_vat))}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </React.Fragment>
+                                    );
+                                  }
+
                                   const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
                                   const isPerDay = item.price_type === "per_person_per_day";
                                   const unitPrice = getItemPrice(item);
