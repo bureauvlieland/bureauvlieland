@@ -515,6 +515,12 @@ const AdminInvoicing = () => {
           onSuccess={handleInvoiceSuccess}
         />
       )}
+
+      {/* Forward to accounting dialog */}
+      <ForwardBureauInvoiceDialog
+        invoice={forwardInvoice}
+        onClose={() => setForwardInvoice(null)}
+      />
     </AdminLayout>
   );
 };
