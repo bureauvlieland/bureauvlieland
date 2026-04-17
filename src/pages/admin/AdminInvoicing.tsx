@@ -22,11 +22,14 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
+import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { calculateVatAmount, calculateTotalInclVat } from "@/types/bureauInvoice";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { CheckCircle2, Mail } from "lucide-react";
 
 interface ProgramRequestWithItems {
   id: string;
+  reference_number: string | null;
   customer_name: string;
   customer_company: string | null;
   customer_email: string;
@@ -49,7 +52,11 @@ interface ProgramRequestWithItems {
     invoice_date: string;
     amount_excl_vat: number;
     vat_amount: number;
+    amount_incl_vat: number | null;
     invoice_type: string;
+    description: string | null;
+    status: string | null;
+    forwarded_to_accounting_at: string | null;
   }[];
 }
 
@@ -72,6 +79,7 @@ const AdminInvoicing = () => {
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
 
   // Calculate invoice totals using centralized settings
   const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
@@ -133,7 +141,7 @@ const AdminInvoicing = () => {
       // Get invoices for these requests
       const { data: invoicesData, error: invoicesError } = await supabase
         .from("bureau_invoices")
-        .select("*")
+        .select("id, request_id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description, status, forwarded_to_accounting_at")
         .in("request_id", requestIds);
 
       if (invoicesError) throw invoicesError;
@@ -256,6 +264,64 @@ const AdminInvoicing = () => {
               <span>{formatCurrency(totals.vatAmount)}</span>
             </div>
           </div>
+
+          {/* Geregistreerde facturen + doorstuur-knop */}
+          {request.invoices.length > 0 && (
+            <div className="mt-4 pt-4 border-t space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Geregistreerde facturen
+              </p>
+              {request.invoices.map((inv) => {
+                const isForwarded = inv.status === "forwarded" || !!inv.forwarded_to_accounting_at;
+                const totalIncl = inv.amount_incl_vat ?? inv.amount_excl_vat + inv.vat_amount;
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex flex-wrap items-center justify-between gap-2 text-sm bg-muted/30 rounded-md px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{inv.invoice_number}</span>
+                      <span className="text-muted-foreground">
+                        · {formatCurrency(totalIncl)}
+                      </span>
+                      {isForwarded && (
+                        <Badge variant="secondary" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Doorgestuurd
+                        </Badge>
+                      )}
+                    </div>
+                    {!isForwarded && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() =>
+                          setForwardInvoice({
+                            id: inv.id,
+                            invoice_number: inv.invoice_number,
+                            invoice_date: inv.invoice_date,
+                            amount_excl_vat: inv.amount_excl_vat,
+                            vat_amount: inv.vat_amount,
+                            amount_incl_vat: inv.amount_incl_vat ?? totalIncl,
+                            invoice_type: inv.invoice_type,
+                            description: inv.description,
+                            customer_label:
+                              request.customer_company || request.customer_name,
+                            reference_number: request.reference_number ?? null,
+                          })
+                        }
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        Doorsturen naar boekhouding
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
@@ -450,6 +516,12 @@ const AdminInvoicing = () => {
           onSuccess={handleInvoiceSuccess}
         />
       )}
+
+      {/* Forward to accounting dialog */}
+      <ForwardBureauInvoiceDialog
+        invoice={forwardInvoice}
+        onClose={() => setForwardInvoice(null)}
+      />
     </AdminLayout>
   );
 };
