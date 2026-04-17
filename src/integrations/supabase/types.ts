@@ -718,11 +718,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          forwarded_by: string | null
+          forwarded_to_accounting_at: string | null
           id: string
           invoice_date: string
           invoice_number: string
           invoice_type: string
           request_id: string
+          status: string
           updated_at: string
           vat_amount: number
         }
@@ -732,11 +735,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          forwarded_by?: string | null
+          forwarded_to_accounting_at?: string | null
           id?: string
           invoice_date: string
           invoice_number: string
           invoice_type?: string
           request_id: string
+          status?: string
           updated_at?: string
           vat_amount: number
         }
@@ -746,11 +752,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          forwarded_by?: string | null
+          forwarded_to_accounting_at?: string | null
           id?: string
           invoice_date?: string
           invoice_number?: string
           invoice_type?: string
           request_id?: string
+          status?: string
           updated_at?: string
           vat_amount?: number
         }
