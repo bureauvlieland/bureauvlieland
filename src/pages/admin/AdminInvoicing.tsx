@@ -22,8 +22,10 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
+import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { calculateVatAmount, calculateTotalInclVat } from "@/types/bureauInvoice";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { CheckCircle2, Mail } from "lucide-react";
 
 interface ProgramRequestWithItems {
   id: string;
