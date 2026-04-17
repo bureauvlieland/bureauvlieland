@@ -309,7 +309,7 @@ const AdminInvoicing = () => {
                             description: inv.description,
                             customer_label:
                               request.customer_company || request.customer_name,
-                            reference_number: (request as ProgramRequestWithItems & { reference_number?: string | null }).reference_number ?? null,
+                            reference_number: request.reference_number ?? null,
                           })
                         }
                       >
