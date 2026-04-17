@@ -140,7 +140,7 @@ const AdminInvoicing = () => {
       // Get invoices for these requests
       const { data: invoicesData, error: invoicesError } = await supabase
         .from("bureau_invoices")
-        .select("*")
+        .select("id, request_id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description, status, forwarded_to_accounting_at")
         .in("request_id", requestIds);
 
       if (invoicesError) throw invoicesError;
