@@ -598,13 +598,19 @@ const AdminInvoicePreview = () => {
                       </div>
 
                       {/* Line items grouped by category */}
-                      <table className="w-full border-collapse mb-6">
+                      <table className="w-full border-collapse mb-6 text-[10.5px]" style={{ tableLayout: "fixed" }}>
+                        <colgroup>
+                          <col />
+                          <col style={{ width: "60px" }} />
+                          <col style={{ width: "90px" }} />
+                          <col style={{ width: "90px" }} />
+                        </colgroup>
                         <thead>
-                          <tr style={{ backgroundColor: "#1e3a5f", color: "#ffffff" }}>
-                            <th className="text-left py-2 px-3 text-xs uppercase font-semibold">Omschrijving</th>
-                            <th className="text-right py-2 px-3 text-xs uppercase font-semibold w-24">Aantal</th>
-                            <th className="text-right py-2 px-3 text-xs uppercase font-semibold w-28">Prijs</th>
-                            <th className="text-right py-2 px-3 text-xs uppercase font-semibold w-28">Bedrag</th>
+                          <tr style={{ borderTop: "2px solid #1e3a5f", borderBottom: "1px solid #1e3a5f" }}>
+                            <th className="text-left py-2 px-2 text-[9px] uppercase font-semibold tracking-wider" style={{ color: "#475569" }}>Omschrijving</th>
+                            <th className="text-right py-2 px-2 text-[9px] uppercase font-semibold tracking-wider" style={{ color: "#475569" }}>Aantal</th>
+                            <th className="text-right py-2 px-2 text-[9px] uppercase font-semibold tracking-wider" style={{ color: "#475569" }}>Prijs</th>
+                            <th className="text-right py-2 px-2 text-[9px] uppercase font-semibold tracking-wider" style={{ color: "#475569" }}>Bedrag</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -618,37 +624,43 @@ const AdminInvoicePreview = () => {
                                 <tr>
                                   <td
                                     colSpan={4}
-                                    className="py-2 px-3 font-semibold text-xs uppercase tracking-wider border-b"
-                                    style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+                                    className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                    style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                   >
                                     {catLabel}
                                   </td>
                                 </tr>
                                 {catItems.map((item) => {
                                   const billingLines = linesByItem[item.id];
-                                  // If definitive billing lines exist, render one row per line
+                                  // Definitive billing lines: one main row + indented subrows
                                   if (billingLines && billingLines.length > 0) {
+                                    const itemTotal = billingLines.reduce((s, b) => s + Number(b.amount_incl_vat), 0);
                                     return (
                                       <React.Fragment key={item.id}>
-                                        {billingLines.map((bl, blIdx) => (
-                                          <tr key={bl.id} className="border-b border-gray-100">
-                                            <td className="py-2 px-3">
-                                              {blIdx === 0 && (
-                                                <p className="font-medium">{item.block_name}</p>
-                                              )}
-                                              <p className={blIdx === 0 ? "text-xs text-gray-600" : "text-sm"}>
-                                                {bl.description || item.block_name}
-                                              </p>
-                                              {blIdx === 0 && (
-                                                <p className="text-xs text-gray-400">{item.provider_name}</p>
-                                              )}
+                                        <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                          <td className="py-1.5 px-2">
+                                            <p className="font-medium">{item.block_name}</p>
+                                            <p className="text-[9px] text-gray-400">{item.provider_name}</p>
+                                          </td>
+                                          <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
+                                          <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
+                                          <td className="py-1.5 px-2 text-right font-semibold">
+                                            {formatCurrency(itemTotal)}
+                                          </td>
+                                        </tr>
+                                        {billingLines.map((bl) => (
+                                          <tr key={bl.id}>
+                                            <td className="py-0.5 pl-6 pr-2 text-[10px] text-gray-600">
+                                              {bl.description || "Regel"}
                                             </td>
-                                            <td className="py-2 px-3 text-right">{Number(bl.quantity)}</td>
-                                            <td className="py-2 px-3 text-right">
+                                            <td className="py-0.5 px-2 text-right text-[10px] text-gray-500">
+                                              {Number(bl.quantity)}
+                                            </td>
+                                            <td className="py-0.5 px-2 text-right text-[10px] text-gray-500">
                                               {formatCurrency(Number(bl.unit_price_excl_vat))}
-                                              <span className="text-xs text-gray-400 ml-1">excl. {bl.vat_rate}%</span>
+                                              <span className="text-[8px] text-gray-400 ml-1">{bl.vat_rate}%</span>
                                             </td>
-                                            <td className="py-2 px-3 text-right font-medium">
+                                            <td className="py-0.5 px-2 text-right text-[10px] text-gray-600">
                                               {formatCurrency(Number(bl.amount_incl_vat))}
                                             </td>
                                           </tr>
@@ -663,31 +675,31 @@ const AdminInvoicePreview = () => {
                                   const lineTotal = getItemTotal(item);
                                   const numberOfDays = request.selected_dates?.length || 1;
                                   const qty = isPerPerson
-                                    ? (isPerDay ? `${request.number_of_people} × ${numberOfDays} dgn` : String(request.number_of_people))
+                                    ? (isPerDay ? `${request.number_of_people}×${numberOfDays}d` : String(request.number_of_people))
                                     : "1";
 
                                   return (
-                                    <tr key={item.id} className="border-b border-gray-100">
-                                      <td className="py-2 px-3">
+                                    <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                      <td className="py-1.5 px-2">
                                         <p className="font-medium">{item.block_name}</p>
                                         {item.admin_price_notes && (
-                                          <p className="text-xs text-gray-500">{item.admin_price_notes}</p>
+                                          <p className="text-[9px] text-gray-500">{item.admin_price_notes}</p>
                                         )}
-                                        <p className="text-xs text-gray-400">{item.provider_name}</p>
+                                        <p className="text-[9px] text-gray-400">{item.provider_name}</p>
                                       </td>
-                                      <td className="py-2 px-3 text-right">
+                                      <td className="py-1.5 px-2 text-right">
                                         {qty}
                                       </td>
-                                      <td className="py-2 px-3 text-right">
+                                      <td className="py-1.5 px-2 text-right">
                                         {formatCurrency(unitPrice)}
                                         {isPerDay && (
-                                          <span className="text-xs text-gray-400 ml-1">p.p.p.d.</span>
+                                          <span className="text-[8px] text-gray-400 ml-1">p.p.p.d.</span>
                                         )}
                                         {isPerPerson && !isPerDay && (
-                                          <span className="text-xs text-gray-400 ml-1">p.p.</span>
+                                          <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
                                         )}
                                       </td>
-                                      <td className="py-2 px-3 text-right font-medium">
+                                      <td className="py-1.5 px-2 text-right font-medium">
                                         {formatCurrency(lineTotal)}
                                       </td>
                                     </tr>
@@ -703,26 +715,25 @@ const AdminInvoicePreview = () => {
                               <tr>
                                 <td
                                   colSpan={4}
-                                  className="py-2 px-3 font-semibold text-xs uppercase tracking-wider border-b"
-                                  style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
                                   Logies
                                 </td>
                               </tr>
-                              <tr className="border-b border-gray-100">
-                                <td className="py-2 px-3">
+                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td className="py-1.5 px-2">
                                   <p className="font-medium">{accommodationQuote.accommodation_name}</p>
-                                  <p className="text-xs text-gray-400">{accommodationQuote.partner_name}</p>
+                                  <p className="text-[9px] text-gray-400">{accommodationQuote.partner_name}</p>
                                   {accommodationNights > 0 && (
-                                    <p className="text-xs text-gray-400">{accommodationNights} {accommodationNights === 1 ? "nacht" : "nachten"}</p>
+                                    <p className="text-[9px] text-gray-400">{accommodationNights} {accommodationNights === 1 ? "nacht" : "nachten"}</p>
                                   )}
                                 </td>
-                                <td className="py-2 px-3 text-right">1</td>
-                                <td className="py-2 px-3 text-right">
+                                <td className="py-1.5 px-2 text-right">1</td>
+                                <td className="py-1.5 px-2 text-right">
                                   {formatCurrency(accommodationQuote.price_total)}
-                                  <span className="text-xs text-gray-400 ml-1">totaal</span>
                                 </td>
-                                <td className="py-2 px-3 text-right font-medium">
+                                <td className="py-1.5 px-2 text-right font-medium">
                                   {formatCurrency(accommodationQuote.price_total)}
                                 </td>
                               </tr>
@@ -735,8 +746,8 @@ const AdminInvoicePreview = () => {
                               <tr>
                                 <td
                                   colSpan={4}
-                                  className="py-2 px-3 font-semibold text-xs uppercase tracking-wider border-b"
-                                  style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
                                   Extra's bij logies
                                 </td>
@@ -746,23 +757,23 @@ const AdminInvoicePreview = () => {
                                 const isFixed = extra.pricing_type === "fixed";
 
                                 return (
-                                  <tr key={`extra-${idx}`} className="border-b border-gray-100">
-                                    <td className="py-2 px-3">
+                                  <tr key={`extra-${idx}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                    <td className="py-1.5 px-2">
                                       <p className="font-medium">{extra.name}</p>
                                       {extra.description && (
-                                        <p className="text-xs text-gray-500">{extra.description}</p>
+                                        <p className="text-[9px] text-gray-500">{extra.description}</p>
                                       )}
                                     </td>
-                                    <td className="py-2 px-3 text-right">
+                                    <td className="py-1.5 px-2 text-right">
                                       {isFixed ? 1 : extra.quantity}
                                     </td>
-                                    <td className="py-2 px-3 text-right">
+                                    <td className="py-1.5 px-2 text-right">
                                       {formatCurrency(extra.unit_price)}
                                       {!isFixed && (
-                                        <span className="text-xs text-gray-400 ml-1">p.p.</span>
+                                        <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
                                       )}
                                     </td>
-                                    <td className="py-2 px-3 text-right font-medium">
+                                    <td className="py-1.5 px-2 text-right font-medium">
                                       {formatCurrency(extraTotal)}
                                     </td>
                                   </tr>
@@ -777,20 +788,20 @@ const AdminInvoicePreview = () => {
                               <tr>
                                 <td
                                   colSpan={4}
-                                  className="py-2 px-3 font-semibold text-xs uppercase tracking-wider border-b"
-                                  style={{ backgroundColor: "#f1f5f9", color: "#475569" }}
+                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
                                   Coördinatie
                                 </td>
                               </tr>
-                              <tr className="border-b border-gray-100">
-                                <td className="py-2 px-3">
+                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td className="py-1.5 px-2">
                                   <p className="font-medium">Coördinatiekosten</p>
-                                  <p className="text-xs text-gray-400">{request.number_of_people} personen</p>
+                                  <p className="text-[9px] text-gray-400">{request.number_of_people} personen</p>
                                 </td>
-                                <td className="py-2 px-3 text-right">1</td>
-                                <td className="py-2 px-3 text-right">{formatCurrency(totals.bureauFee)}</td>
-                                <td className="py-2 px-3 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
+                                <td className="py-1.5 px-2 text-right">1</td>
+                                <td className="py-1.5 px-2 text-right">{formatCurrency(totals.bureauFee)}</td>
+                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
                               </tr>
                             </>
                           )}
@@ -799,14 +810,14 @@ const AdminInvoicePreview = () => {
 
                       {/* Totals */}
                       <div className="flex justify-end mb-8">
-                        <div className="w-72">
-                          <div className="flex justify-between py-1 text-sm">
+                        <div className="w-[260px] text-[10.5px]">
+                          <div className="flex justify-between py-1">
                             <span className="text-gray-600">Subtotaal excl. BTW</span>
                             <span>{formatCurrency(totals.totalExclVat)}</span>
                           </div>
                           {totals.vatLines.map((line) => (
-                            <div key={line.rate} className="flex justify-between py-1 text-sm text-gray-500">
-                              <span>BTW ({line.rate}%)</span>
+                            <div key={line.rate} className="flex justify-between py-0.5 text-[10px] text-gray-500">
+                              <span>BTW {line.rate}% over {formatCurrency(line.exclVat)}</span>
                               <span>{formatCurrency(line.vatAmount)}</span>
                             </div>
                           ))}
