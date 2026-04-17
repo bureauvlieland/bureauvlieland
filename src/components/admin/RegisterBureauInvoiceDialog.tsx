@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -65,6 +65,7 @@ export const RegisterBureauInvoiceDialog = ({
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vatBreakdown, setVatBreakdown] = useState<{ rate: number; excl: number; vat: number }[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -77,6 +78,50 @@ export const RegisterBureauInvoiceDialog = ({
       description: "",
     },
   });
+
+  // On open, try to suggest amount + VAT breakdown from billing lines of confirmed items
+  useEffect(() => {
+    if (!isOpen || !requestId) return;
+    (async () => {
+      const { data: items } = await supabase
+        .from("program_request_items")
+        .select("id")
+        .eq("request_id", requestId)
+        .in("status", ["confirmed", "accepted", "executed"]);
+      const itemIds = (items || []).map((i) => i.id);
+      if (itemIds.length === 0) {
+        setVatBreakdown([]);
+        return;
+      }
+      const { data: lines } = await supabase
+        .from("program_item_billing_lines")
+        .select("vat_rate, amount_excl_vat, vat_amount, amount_incl_vat")
+        .in("item_id", itemIds);
+      if (!lines || lines.length === 0) {
+        setVatBreakdown([]);
+        return;
+      }
+      // Group by VAT rate
+      const byRate: Record<number, { excl: number; vat: number }> = {};
+      let totalExcl = 0;
+      let totalVat = 0;
+      lines.forEach((l) => {
+        const r = Number(l.vat_rate);
+        if (!byRate[r]) byRate[r] = { excl: 0, vat: 0 };
+        byRate[r].excl += Number(l.amount_excl_vat);
+        byRate[r].vat += Number(l.vat_amount);
+        totalExcl += Number(l.amount_excl_vat);
+        totalVat += Number(l.vat_amount);
+      });
+      const breakdown = Object.entries(byRate)
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([rate, v]) => ({ rate: Number(rate), excl: v.excl, vat: v.vat }));
+      setVatBreakdown(breakdown);
+      // Auto-fill form with totals
+      form.setValue("amount_excl_vat", Math.round(totalExcl * 100) / 100);
+      form.setValue("vat_amount", Math.round(totalVat * 100) / 100);
+    })();
+  }, [isOpen, requestId, form]);
 
   const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
   const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
@@ -278,7 +323,21 @@ export const RegisterBureauInvoiceDialog = ({
               />
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-md">
+            <div className="p-3 bg-muted rounded-md space-y-1 text-sm">
+              {vatBreakdown.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground font-medium">Voorstel uit factuurregels:</p>
+                  {vatBreakdown.map((b) => (
+                    <div key={b.rate} className="flex justify-between text-muted-foreground">
+                      <span>BTW {b.rate}%</span>
+                      <span className="tabular-nums">
+                        excl. €{b.excl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW €{b.vat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t my-1" />
+                </>
+              )}
               <div className="flex justify-between font-semibold">
                 <span>Totaal incl. BTW</span>
                 <span>

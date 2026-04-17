@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { calculateBureauFee } from "@/types/buildingBlock";
 import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 
 interface ProgramRequest {
   id: string;
@@ -101,6 +102,9 @@ const AdminInvoicePreview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+
+  // Load billing lines per item (definitive lines override quoted_price)
+  const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
 
   // Accommodation state
   const [accommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
@@ -283,12 +287,21 @@ const AdminInvoicePreview = () => {
   const calculateTotals = () => {
     const bureauFee = calculateBureauFee(request?.number_of_people || 0);
 
-    // Group amounts by VAT rate
+    // Group amounts by VAT rate (incl. VAT, then split below)
     const vatGroups: Record<number, number> = {};
     items.forEach(item => {
-      const total = getItemTotal(item);
-      const rate = getItemVatRate(item);
-      vatGroups[rate] = (vatGroups[rate] || 0) + total;
+      const lines = linesByItem[item.id];
+      if (lines && lines.length > 0) {
+        // Use definitive billing lines (each with its own VAT rate)
+        lines.forEach(line => {
+          const rate = Number(line.vat_rate);
+          vatGroups[rate] = (vatGroups[rate] || 0) + Number(line.amount_incl_vat);
+        });
+      } else {
+        const total = getItemTotal(item);
+        const rate = getItemVatRate(item);
+        vatGroups[rate] = (vatGroups[rate] || 0) + total;
+      }
     });
     // Bureau fee is always 21%
     vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
@@ -609,6 +622,38 @@ const AdminInvoicePreview = () => {
                                   </td>
                                 </tr>
                                 {catItems.map((item) => {
+                                  const billingLines = linesByItem[item.id];
+                                  // If definitive billing lines exist, render one row per line
+                                  if (billingLines && billingLines.length > 0) {
+                                    return (
+                                      <React.Fragment key={item.id}>
+                                        {billingLines.map((bl, blIdx) => (
+                                          <tr key={bl.id} className="border-b border-gray-100">
+                                            <td className="py-2 px-3">
+                                              {blIdx === 0 && (
+                                                <p className="font-medium">{item.block_name}</p>
+                                              )}
+                                              <p className={blIdx === 0 ? "text-xs text-gray-600" : "text-sm"}>
+                                                {bl.description || item.block_name}
+                                              </p>
+                                              {blIdx === 0 && (
+                                                <p className="text-xs text-gray-400">{item.provider_name}</p>
+                                              )}
+                                            </td>
+                                            <td className="py-2 px-3 text-right">{Number(bl.quantity)}</td>
+                                            <td className="py-2 px-3 text-right">
+                                              {formatCurrency(Number(bl.unit_price_excl_vat))}
+                                              <span className="text-xs text-gray-400 ml-1">excl. {bl.vat_rate}%</span>
+                                            </td>
+                                            <td className="py-2 px-3 text-right font-medium">
+                                              {formatCurrency(Number(bl.amount_incl_vat))}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </React.Fragment>
+                                    );
+                                  }
+
                                   const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
                                   const isPerDay = item.price_type === "per_person_per_day";
                                   const unitPrice = getItemPrice(item);

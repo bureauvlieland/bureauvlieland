@@ -1479,6 +1479,59 @@ export type Database = {
         }
         Relationships: []
       }
+      program_item_billing_lines: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          created_at: string
+          description: string
+          id: string
+          item_id: string
+          quantity: number
+          sort_order: number
+          unit_price_excl_vat: number
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          id?: string
+          item_id: string
+          quantity?: number
+          sort_order?: number
+          unit_price_excl_vat?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          id?: string
+          item_id?: string
+          quantity?: number
+          sort_order?: number
+          unit_price_excl_vat?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_item_billing_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       program_request_history: {
         Row: {
           action: string
@@ -1560,6 +1613,7 @@ export type Database = {
           duration: string | null
           executed_at: string | null
           external_url: string | null
+          final_billing_locked_at: string | null
           id: string
           invoiced_amount: number | null
           invoiced_date: string | null
@@ -1620,6 +1674,7 @@ export type Database = {
           duration?: string | null
           executed_at?: string | null
           external_url?: string | null
+          final_billing_locked_at?: string | null
           id?: string
           invoiced_amount?: number | null
           invoiced_date?: string | null
@@ -1680,6 +1735,7 @@ export type Database = {
           duration?: string | null
           executed_at?: string | null
           external_url?: string | null
+          final_billing_locked_at?: string | null
           id?: string
           invoiced_amount?: number | null
           invoiced_date?: string | null

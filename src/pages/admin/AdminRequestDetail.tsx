@@ -89,6 +89,8 @@ import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConfl
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
+import { AdminItemBillingLinesEditor } from "@/components/admin/AdminItemBillingLinesEditor";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
@@ -255,6 +257,9 @@ const AdminRequestDetail = () => {
 
   // Purchase invoices for profit summary
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
+
+  // VAT rates per item (from building_blocks)
+  const { getItemVatRate } = useItemVatRates(items);
 
   // App settings for coordination fee + surcharges
   const { getCoordinationFee: calcCoordFee, settings: appSettings } = useAppSettings();
@@ -1588,14 +1593,22 @@ const AdminRequestDetail = () => {
                                           />
                                         </TableCell>
                                         <TableCell>
-                                          <AdminQuotePriceEditor
-                                            originalPrice={item.quoted_price}
-                                            overridePrice={item.admin_price_override}
-                                            priceNotes={item.admin_price_notes}
-                                            numberOfPeople={item.override_people ?? request.number_of_people}
-                                            priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
-                                            onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
-                                          />
+                                          <div className="flex flex-col gap-1 items-start">
+                                            <AdminQuotePriceEditor
+                                              originalPrice={item.quoted_price}
+                                              overridePrice={item.admin_price_override}
+                                              priceNotes={item.admin_price_notes}
+                                              numberOfPeople={item.override_people ?? request.number_of_people}
+                                              priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
+                                              onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
+                                            />
+                                            <AdminItemBillingLinesEditor
+                                              itemId={item.id}
+                                              itemName={item.block_name}
+                                              suggestedAmount={item.quoted_price ?? item.admin_price_override}
+                                              defaultVatRate={getItemVatRate(item)}
+                                            />
+                                          </div>
                                         </TableCell>
                                         <TableCell>
                                           <div className="flex items-center gap-1">
