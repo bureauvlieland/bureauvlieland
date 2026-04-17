@@ -2049,6 +2049,7 @@ export type Database = {
           processed_at: string | null
           processed_by: string | null
           processed_invoice_id: string | null
+          raw_payload: Json | null
           scan_error: string | null
           scan_result: Json | null
           scan_status: string
@@ -2069,6 +2070,7 @@ export type Database = {
           processed_at?: string | null
           processed_by?: string | null
           processed_invoice_id?: string | null
+          raw_payload?: Json | null
           scan_error?: string | null
           scan_result?: Json | null
           scan_status?: string
@@ -2089,6 +2091,7 @@ export type Database = {
           processed_at?: string | null
           processed_by?: string | null
           processed_invoice_id?: string | null
+          raw_payload?: Json | null
           scan_error?: string | null
           scan_result?: Json | null
           scan_status?: string

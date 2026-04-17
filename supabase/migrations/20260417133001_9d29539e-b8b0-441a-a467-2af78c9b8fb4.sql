@@ -1,0 +1,1 @@
+ALTER TABLE public.purchase_invoice_inbox ADD COLUMN IF NOT EXISTS raw_payload jsonb;
