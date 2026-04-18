@@ -704,25 +704,134 @@ export function AddPurchaseInvoiceDialog({
               </Popover>
             </div>
 
-            {/* Optional: link to item */}
-            {requestId && items && items.length > 0 && (
-              <div className="space-y-1.5">
-                <Label>Programma-onderdeel (optioneel)</Label>
-                <Select value={itemId || "none"} onValueChange={(v) => setItemId(v === "none" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Geen specifiek onderdeel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Geen specifiek onderdeel</SelectItem>
-                    {items.map((it: any) => (
-                      <SelectItem key={it.id} value={it.id}>
-                        Dag {it.day_index + 1}: {it.block_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
+            {requestId && items && items.length > 0 && (() => {
+              const totalIncl = parseFloat(amountIncl) || 0;
+              const allocTotalIncl = allocations.reduce((sum, a) => {
+                const excl = parseFloat(a.amount_excl_vat) || 0;
+                const rate = parseFloat(a.vat_rate) || 0;
+                return sum + excl * (1 + rate / 100);
+              }, 0);
+              const diff = totalIncl - allocTotalIncl;
+              const matches = Math.abs(diff) < 0.01;
+              const availableItems = items.filter((it: any) => !allocations.some((a) => a.item_id === it.id));
+
+              const addAllocation = (item_id: string) => {
+                setAllocations((prev) => [
+                  ...prev,
+                  { item_id, amount_excl_vat: "", vat_rate: vatRate || "21", notes: "" },
+                ]);
+              };
+              const updateAllocation = (idx: number, patch: Partial<typeof allocations[number]>) => {
+                setAllocations((prev) => prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
+              };
+              const removeAllocation = (idx: number) => {
+                setAllocations((prev) => prev.filter((_, i) => i !== idx));
+              };
+              const distributeEvenly = () => {
+                if (allocations.length === 0 || totalIncl <= 0) return;
+                const totalExcl = parseFloat(amountExcl) || 0;
+                const per = totalExcl / allocations.length;
+                const headerRate = vatRate || "21";
+                setAllocations((prev) => prev.map((a) => ({ ...a, amount_excl_vat: per.toFixed(2), vat_rate: a.vat_rate || headerRate })));
+              };
+
+              return (
+                <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <Label className="text-sm">Toewijzen aan programma-onderdelen (optioneel)</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Verdeel het factuurbedrag over één of meerdere onderdelen.
+                      </p>
+                    </div>
+                    {allocations.length > 0 && (
+                      <Button type="button" variant="ghost" size="sm" onClick={distributeEvenly}>
+                        Verdeel gelijk
+                      </Button>
+                    )}
+                  </div>
+
+                  {allocations.length > 0 && (
+                    <div className="space-y-2">
+                      {allocations.map((alloc, idx) => {
+                        const it: any = items.find((i: any) => i.id === alloc.item_id);
+                        const excl = parseFloat(alloc.amount_excl_vat) || 0;
+                        const rate = parseFloat(alloc.vat_rate) || 0;
+                        const vat = excl * (rate / 100);
+                        const incl = excl + vat;
+                        return (
+                          <div key={alloc.item_id} className="grid grid-cols-12 gap-2 items-center text-sm bg-background rounded-md p-2 border border-border">
+                            <div className="col-span-5 truncate">
+                              <div className="font-medium truncate">
+                                {it ? `Dag ${it.day_index + 1}: ${it.block_name}` : "Onbekend onderdeel"}
+                              </div>
+                            </div>
+                            <div className="col-span-3">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="Excl. €"
+                                value={alloc.amount_excl_vat}
+                                onChange={(e) => updateAllocation(idx, { amount_excl_vat: e.target.value })}
+                                className="h-8"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <Select value={alloc.vat_rate} onValueChange={(v) => updateAllocation(idx, { vat_rate: v })}>
+                                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">0%</SelectItem>
+                                  <SelectItem value="9">9%</SelectItem>
+                                  <SelectItem value="21">21%</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="col-span-1 text-right text-xs tabular-nums text-muted-foreground">
+                              €{incl.toFixed(2)}
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeAllocation(idx)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {availableItems.length > 0 && (
+                    <Select value="" onValueChange={(v) => v && addAllocation(v)}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={allocations.length === 0 ? "+ Onderdeel toevoegen" : "+ Nog een onderdeel toevoegen"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableItems.map((it: any) => (
+                          <SelectItem key={it.id} value={it.id}>
+                            Dag {it.day_index + 1}: {it.block_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {allocations.length > 0 && (
+                    <div className={cn(
+                      "flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded-md",
+                      matches ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
+                    )}>
+                      <span>
+                        Toegewezen: <strong>€{allocTotalIncl.toFixed(2)}</strong> van €{totalIncl.toFixed(2)} (incl. BTW)
+                      </span>
+                      <span>
+                        {matches ? "✓ Klopt" : `Verschil: €${diff.toFixed(2)}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Invoice details */}
             <div className="grid grid-cols-2 gap-3">
