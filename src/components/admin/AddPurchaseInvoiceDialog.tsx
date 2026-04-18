@@ -182,6 +182,7 @@ export function AddPurchaseInvoiceDialog({
   const [partnerId, setPartnerId] = useState<string>(defaultPartnerId || "");
   const [requestId, setRequestId] = useState<string>(defaultRequestId || "");
   const [itemId, setItemId] = useState<string>("");
+  const [allocations, setAllocations] = useState<Array<{ item_id: string; amount_excl_vat: string; vat_rate: string; notes?: string }>>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(undefined);
   const [amountExcl, setAmountExcl] = useState<string>("");
