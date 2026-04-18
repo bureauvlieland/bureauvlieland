@@ -678,6 +678,7 @@ export function AddPurchaseInvoiceDialog({
                               onSelect={() => {
                                 setRequestId(p.id);
                                 setItemId("");
+                                setAllocations([]);
                                 setProjectSearchOpen(false);
                               }}
                             >
