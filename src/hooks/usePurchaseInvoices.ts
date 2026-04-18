@@ -61,7 +61,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
 
   const createInvoice = useMutation({
     mutationFn: async (invoice: PurchaseInvoiceInsert) => {
-      const { lines, ...invoiceData } = invoice;
+      const { lines, allocations, ...invoiceData } = invoice;
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
         .insert(invoiceData)
@@ -89,6 +89,27 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         if (linesErr) {
           console.error("Error inserting invoice lines:", linesErr);
           // non-fatal: header is already saved
+        }
+      }
+
+      // Insert allocations (split across program items) if provided
+      if (allocations && allocations.length > 0 && data?.id) {
+        const allocationsToInsert = allocations.map((a, idx) => ({
+          invoice_id: data.id,
+          item_id: a.item_id,
+          amount_excl_vat: a.amount_excl_vat,
+          vat_rate: a.vat_rate,
+          vat_amount: a.vat_amount,
+          amount_incl_vat: a.amount_incl_vat,
+          notes: a.notes ?? null,
+          sort_order: idx,
+        }));
+        const { error: allocErr } = await supabase
+          .from("partner_purchase_invoice_allocations")
+          .insert(allocationsToInsert);
+        if (allocErr) {
+          console.error("Error inserting invoice allocations:", allocErr);
+          toast.error("Factuur opgeslagen, maar verdeling per onderdeel niet — controleer handmatig");
         }
       }
       return data;

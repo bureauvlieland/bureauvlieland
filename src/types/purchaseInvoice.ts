@@ -58,6 +58,18 @@ export interface PurchaseInvoiceLine {
   sort_order: number;
 }
 
+export interface PurchaseInvoiceAllocation {
+  id?: string;
+  invoice_id?: string;
+  item_id: string;
+  amount_excl_vat: number;
+  vat_rate: number;
+  vat_amount: number;
+  amount_incl_vat: number;
+  notes?: string | null;
+  sort_order: number;
+}
+
 export interface PurchaseInvoiceInsert {
   request_id: string;
   item_id?: string | null;
@@ -72,6 +84,7 @@ export interface PurchaseInvoiceInsert {
   file_path?: string | null;
   registered_by?: string;
   lines?: PurchaseInvoiceLine[];
+  allocations?: PurchaseInvoiceAllocation[];
 }
 
 export interface PurchaseInvoiceUpdate {
