@@ -1150,6 +1150,63 @@ export type Database = {
           },
         ]
       }
+      partner_purchase_invoice_allocations: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          created_at: string
+          id: string
+          invoice_id: string
+          item_id: string
+          notes: string | null
+          sort_order: number
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          item_id: string
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          item_id?: string
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_purchase_invoice_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_purchase_invoice_allocations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_purchase_invoices: {
         Row: {
           amount_excl_vat: number
