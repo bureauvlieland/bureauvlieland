@@ -445,6 +445,24 @@ export function AddPurchaseInvoiceDialog({
     const excl = parseFloat(amountExcl);
     if (isNaN(excl) || excl <= 0) return toast.error("Bedrag excl. BTW is verplicht");
 
+    // Validate allocations if any are set
+    const validAllocations = allocations
+      .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
+      .map((a, idx) => {
+        const allocExcl = parseFloat(a.amount_excl_vat) || 0;
+        const rate = parseFloat(a.vat_rate) || 0;
+        const vat = allocExcl * (rate / 100);
+        return {
+          item_id: a.item_id,
+          amount_excl_vat: allocExcl,
+          vat_rate: rate,
+          vat_amount: vat,
+          amount_incl_vat: allocExcl + vat,
+          notes: a.notes || null,
+          sort_order: idx,
+        };
+      });
+
     setIsSubmitting(true);
     try {
       // Build line payload (only valid lines)
@@ -483,9 +501,19 @@ export function AddPurchaseInvoiceDialog({
         headerIncl = calc.amountInclVat;
       }
 
+      // Validate allocation totals match header (if allocations present)
+      if (validAllocations.length > 0) {
+        const allocSum = validAllocations.reduce((s, a) => s + a.amount_incl_vat, 0);
+        if (Math.abs(allocSum - headerIncl) > 0.01) {
+          setIsSubmitting(false);
+          return toast.error(`Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${headerIncl.toFixed(2)} factuurtotaal`);
+        }
+      }
+
       const created = await createInvoice.mutateAsync({
         request_id: requestId,
-        item_id: itemId || null,
+        // When allocations are used, leave legacy item_id null (split is the source of truth)
+        item_id: validAllocations.length > 0 ? null : (itemId || null),
         partner_id: partnerId,
         invoice_number: invoiceNumber,
         invoice_date: format(invoiceDate, "yyyy-MM-dd"),
@@ -497,6 +525,7 @@ export function AddPurchaseInvoiceDialog({
         file_path: filePath,
         registered_by: "admin",
         lines: validLines.length > 0 ? validLines : undefined,
+        allocations: validAllocations.length > 0 ? validAllocations : undefined,
       });
 
       if (inboxItem && created?.id) {
