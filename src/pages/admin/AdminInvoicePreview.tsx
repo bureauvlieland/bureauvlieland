@@ -671,12 +671,30 @@ const AdminInvoicePreview = () => {
 
                                   const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
                                   const isPerDay = item.price_type === "per_person_per_day";
-                                  const unitPrice = getItemPrice(item);
                                   const lineTotal = getItemTotal(item);
                                   const numberOfDays = request.selected_dates?.length || 1;
-                                  const qty = isPerPerson
-                                    ? (isPerDay ? `${request.number_of_people}×${numberOfDays}d` : String(request.number_of_people))
-                                    : "1";
+                                  const effectivePeople = item.override_people ?? request.number_of_people ?? 1;
+                                  // When quoted_price is set, derive a consistent unit price from the total
+                                  // so that qty × unit always equals lineTotal in the display.
+                                  let unitPrice = getItemPrice(item);
+                                  let qty: string;
+                                  if (item.quoted_price != null) {
+                                    if (isPerDay) {
+                                      const divisor = effectivePeople * numberOfDays || 1;
+                                      unitPrice = item.quoted_price / divisor;
+                                      qty = `${effectivePeople}×${numberOfDays}d`;
+                                    } else if (isPerPerson) {
+                                      unitPrice = item.quoted_price / (effectivePeople || 1);
+                                      qty = String(effectivePeople);
+                                    } else {
+                                      unitPrice = item.quoted_price;
+                                      qty = "1";
+                                    }
+                                  } else {
+                                    qty = isPerPerson
+                                      ? (isPerDay ? `${effectivePeople}×${numberOfDays}d` : String(effectivePeople))
+                                      : "1";
+                                  }
 
                                   return (
                                     <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
