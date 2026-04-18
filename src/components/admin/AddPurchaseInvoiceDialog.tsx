@@ -256,6 +256,7 @@ export function AddPurchaseInvoiceDialog({
       setPartnerId(defaultPartnerId || "");
       setRequestId(defaultRequestId || "");
       setItemId("");
+      setAllocations([]);
       setInvoiceNumber(result?.invoice_number || "");
       if (result?.invoice_date) {
         const d = new Date(result.invoice_date);
@@ -277,6 +278,7 @@ export function AddPurchaseInvoiceDialog({
       setPartnerId(defaultPartnerId || "");
       setRequestId(defaultRequestId || "");
       setItemId("");
+      setAllocations([]);
       setInvoiceNumber("");
       setInvoiceDate(undefined);
       setAmountExcl("");
