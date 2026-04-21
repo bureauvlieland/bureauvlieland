@@ -140,8 +140,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 3. Check validity
-    if (program.quote_valid_until) {
+    // 3. Check validity (admin override may bypass expired-quote block for backdated approvals)
+    if (!admin_override && program.quote_valid_until) {
       const validUntil = new Date(program.quote_valid_until);
       if (validUntil < new Date()) {
         return new Response(

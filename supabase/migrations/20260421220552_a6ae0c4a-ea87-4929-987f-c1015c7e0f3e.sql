@@ -1,0 +1,1 @@
+UPDATE public.program_requests SET quote_valid_until = '2026-12-31', updated_at = now() WHERE id = 'd548e22b-663d-439c-b0fa-f2b5441a00cd';
