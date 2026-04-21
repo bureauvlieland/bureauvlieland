@@ -151,7 +151,8 @@ export const PriceSummaryCard = ({
 
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
-    const accommodationVatRate = selectedAccommodationQuote?.vat_rate || 9;
+    // Keep accommodation VAT aligned with admin FinancialOverviewCard and lodging invoicing flow.
+    const accommodationVatRate = 9;
 
     // VAT breakdown — includes ALL priced items (confirmed + preliminary)
     const allVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
