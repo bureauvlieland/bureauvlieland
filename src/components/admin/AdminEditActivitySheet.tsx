@@ -160,6 +160,18 @@ export const AdminEditActivitySheet = ({
           : (selectedPartner?.email || item.provider_email),
       };
 
+      // Bureau-eigen kostenposten met een prijs hoeven geen klant-akkoord:
+      // direct als bevestigd markeren zodat de status-teller klopt.
+      if (isBureauInvoiced && price !== null && item.status === "pending") {
+        const nowIso = new Date().toISOString();
+        updateData.status = "confirmed";
+        updateData.item_quote_status = "bevestigd";
+        updateData.quoted_at = nowIso;
+        updateData.customer_approved_at = nowIso;
+        updateData.customer_accepted_at = nowIso;
+        updateData.skip_partner_notification = true;
+      }
+
       const { error } = await supabase
         .from("program_request_items")
         .update(updateData)
