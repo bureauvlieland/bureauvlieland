@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight } from "lucide-react";
+import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight, Send } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
+import { useInvoiceCustomerSendStatus } from "@/hooks/useInvoiceCustomerSendStatus";
 import { getItemLineTotal as centralLineTotal, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
@@ -69,6 +70,10 @@ export const FinancialOverviewCard = ({
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
   const { getItemVatRate } = useItemVatRates(items as any);
+  const { data: customerSendMap = {} } = useInvoiceCustomerSendStatus(
+    requestId,
+    invoices.map((i) => i.id),
+  );
 
   const programItems = items.filter(
     (item) => item.status !== "cancelled" && item.day_index !== -1
