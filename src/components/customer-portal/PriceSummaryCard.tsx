@@ -310,7 +310,7 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, unitPrice, isPerPerson, peopleCount, isPerDay, dayCount }) => {
+          {summary.orderLines.map(({ item, isPreliminary, isDefinitive, effectivePrice, unitPrice, isPerPerson, peopleCount, isPerDay, dayCount, billingLines }) => {
             const showPrice = effectivePrice !== null;
             return (
               <div key={item.id} className="py-2">
@@ -324,7 +324,9 @@ export const PriceSummaryCard = ({
                   </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">
                     {showPrice ? (
-                      isPerPerson && unitPrice !== null ? (
+                      isDefinitive ? (
+                        <span>€{formatPrice(effectivePrice!)}</span>
+                      ) : isPerPerson && unitPrice !== null ? (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
                           €{formatPrice(unitPrice)} p.p. × {peopleCount}{isPerDay && dayCount > 1 ? ` × ${dayCount} dgn` : ""} = €{formatPrice(effectivePrice!)}
                         </span>
@@ -338,6 +340,20 @@ export const PriceSummaryCard = ({
                     )}
                   </span>
                 </div>
+                {isDefinitive && billingLines && billingLines.length > 0 && (
+                  <div className="ml-3 mt-1 space-y-0.5">
+                    {billingLines.map(bl => (
+                      <div key={bl.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="truncate">
+                          {bl.description}
+                          {bl.quantity !== 1 && ` (${bl.quantity}×)`}
+                          <span className="ml-1 opacity-70">— BTW {Number(bl.vat_rate)}%</span>
+                        </span>
+                        <span className="whitespace-nowrap ml-2">€{formatPrice(Number(bl.amount_incl_vat))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {item.admin_price_notes && (
                   <p className="text-xs text-muted-foreground mt-0.5 break-words">{item.admin_price_notes}</p>
                 )}
