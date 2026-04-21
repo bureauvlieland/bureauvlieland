@@ -777,6 +777,26 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     return params.get("impersonate") === "admin";
   };
 
+  // Helper: extract a meaningful error from a Supabase functions.invoke error.
+  // The default `error.message` is the unhelpful "Edge Function returned a non-2xx status code".
+  // The actual JSON body returned by the edge function lives on `error.context` (a Response),
+  // so we read it once and surface its `error` field if present.
+  const extractEdgeError = async (err: any, fallback: string): Promise<string> => {
+    try {
+      if (err?.context && typeof err.context.json === "function") {
+        const body = await err.context.json();
+        if (body?.error) return body.error;
+      }
+      if (typeof err?.context?.error === "string") return err.context.error;
+    } catch {
+      // ignore parse errors and fall through
+    }
+    if (typeof err?.message === "string" && !err.message.includes("non-2xx")) {
+      return err.message;
+    }
+    return fallback;
+  };
+
   // Accept quote proposal (for maatwerk quotes)
   const acceptQuoteProposal = useCallback(async (): Promise<boolean> => {
     if (!program) return false;
@@ -798,10 +818,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       return true;
     } catch (err: any) {
       console.error("Error accepting quote proposal:", err);
-      const message =
-        err?.context?.error ||
-        err?.message ||
-        "Er ging iets mis bij het accorderen van dit voorstel";
+      const message = await extractEdgeError(
+        err,
+        "Er ging iets mis bij het accorderen van dit voorstel"
+      );
       toast.error(message);
       return false;
     }
@@ -829,10 +849,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       return true;
     } catch (err: any) {
       console.error("Error approving quote item:", err);
-      const message =
-        err?.context?.error ||
-        err?.message ||
-        "Er ging iets mis bij het accorderen van dit onderdeel";
+      const message = await extractEdgeError(
+        err,
+        "Er ging iets mis bij het accorderen van dit onderdeel"
+      );
       toast.error(message);
       return false;
     }
