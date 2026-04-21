@@ -109,13 +109,13 @@ export const Navigation = () => {
                 Logies
               </Link>
 
-              {/* Inspiratie Dropdown */}
+              {/* Programma's Dropdown */}
               <DropdownMenu>
-                <DropdownMenuTrigger className={`${inspiratieClass} flex items-center gap-1`}>
-                  Inspiratie <ChevronDown className="h-4 w-4" />
+                <DropdownMenuTrigger className={`${programmasClass} flex items-center gap-1`}>
+                  Programma's <ChevronDown className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-card border-border min-w-[200px]">
-                  {inspiratieItems.map((item) => (
+                  {programmasItems.map((item) => (
                     <DropdownMenuItem key={item.href} asChild>
                       <Link to={item.href} className="cursor-pointer">
                         {item.label}
@@ -125,21 +125,15 @@ export const Navigation = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Over ons Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`${overOnsClass} flex items-center gap-1`}>
-                  Over ons <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-card border-border min-w-[180px]">
-                  {overOnsItems.map((item) => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link to={item.href} className="cursor-pointer">
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Over ons */}
+              <Link to="/over-ons" className={overOnsClass}>
+                Over ons
+              </Link>
+
+              {/* Contact */}
+              <Link to="/contact" className={contactClass}>
+                Contact
+              </Link>
 
               {/* Phone link */}
               <a
