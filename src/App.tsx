@@ -25,6 +25,8 @@ import Contact from "./pages/Contact";
 const Catering = lazy(() => import("./pages/Catering"));
 const Voorbeeldprogrammas = lazy(() => import("./pages/Voorbeeldprogrammas"));
 const VoorbeeldprogrammaOverzicht = lazy(() => import("./pages/VoorbeeldprogrammaOverzicht"));
+const Bouwstenen = lazy(() => import("./pages/Bouwstenen"));
+const Partners = lazy(() => import("./pages/Partners"));
 const Programmas = lazy(() => import("./pages/Programmas"));
 const Evenementen = lazy(() => import("./pages/Evenementen"));
 const Offerte = lazy(() => import("./pages/Offerte"));
@@ -114,8 +116,10 @@ const App = () => {
             <Route path="/diensten" element={<Diensten />} />
             <Route path="/voor-wie" element={<VoorWie />} />
             <Route path="/samenwerken" element={<Programmas />} />
-            <Route path="/bouwstenen" element={<Voorbeeldprogrammas />} />
+            <Route path="/bouwstenen" element={<Bouwstenen />} />
+            <Route path="/programmamodules" element={<Voorbeeldprogrammas />} />
             <Route path="/voorbeeldprogrammas" element={<VoorbeeldprogrammaOverzicht />} />
+            <Route path="/partners" element={<Partners />} />
             <Route path="/catering" element={<Catering />} />
             <Route path="/over-ons" element={<OverOns />} />
             <Route path="/evenementen" element={<Evenementen />} />

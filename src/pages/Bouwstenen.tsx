@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useKenBurns } from "@/hooks/use-ken-burns";
-import { usePublishedBlocks } from "@/hooks/useBuildingBlocks";
+import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import {
   getBlockImage,
   getProviderName,
@@ -32,7 +32,7 @@ const HIDDEN_IDS = new Set([
 
 const Bouwstenen = () => {
   const kenBurns = useKenBurns();
-  const { data: blocks, isLoading } = usePublishedBlocks();
+  const { data: blocks, isLoading } = usePublishedBuildingBlocks();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<BuildingBlockCategory | "all">("all");
 
