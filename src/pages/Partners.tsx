@@ -27,61 +27,50 @@ const usePublicPartners = () => {
   return useQuery({
     queryKey: ["public-partners"],
     queryFn: async (): Promise<PublicPartner[]> => {
-      // Step 1 — partners that have at least one published block (joined via inner)
+      // Step 1 — count published blocks per provider_id (no FK exists, so no embed)
       const { data: blocks, error: blockErr } = await supabase
         .from("building_blocks")
-        .select("provider_id, partner:partners!building_blocks_provider_id_fkey(id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug, is_active)")
+        .select("provider_id")
         .eq("status", "published")
         .not("provider_id", "is", null);
       if (blockErr) throw blockErr;
 
-      const map = new Map<string, PublicPartner>();
+      const blockCountByProvider = new Map<string, number>();
       for (const row of blocks ?? []) {
-        const p = (row as any).partner;
-        if (!p || !p.is_active) continue;
-        if (p.id === "bureau") continue; // hide internal Bureau Vlieland from public list
-        const existing = map.get(p.id);
-        if (existing) {
-          existing.block_count += 1;
-        } else {
-          map.set(p.id, {
-            id: p.id,
-            name: p.name,
-            partner_type: p.partner_type,
-            image_url: p.image_url,
-            about_text: p.about_text,
-            website_url: p.website_url,
-            location_description: p.location_description,
-            map_tenant_slug: p.map_tenant_slug,
-            block_count: 1,
-          });
-        }
+        const pid = (row as any).provider_id as string | null;
+        if (!pid) continue;
+        blockCountByProvider.set(pid, (blockCountByProvider.get(pid) ?? 0) + 1);
       }
 
-      // Step 2 — also include MAP-linked partners (publicly visible regardless of blocks)
-      const { data: mapPartners, error: mapErr } = await supabase
+      const providerIds = Array.from(blockCountByProvider.keys()).filter((id) => id !== "bureau");
+
+      // Step 2 — fetch all active partners that either provide a published block OR have a MAP slug
+      const orFilter = providerIds.length > 0
+        ? `id.in.(${providerIds.join(",")}),map_tenant_slug.not.is.null`
+        : `map_tenant_slug.not.is.null`;
+
+      const { data: partnerRows, error: partnerErr } = await supabase
         .from("partners")
         .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
-        .not("map_tenant_slug", "is", null)
-        .eq("is_active", true);
-      if (mapErr) throw mapErr;
-      for (const p of mapPartners ?? []) {
-        if (!map.has(p.id) && p.id !== "bureau") {
-          map.set(p.id, {
-            id: p.id,
-            name: p.name,
-            partner_type: p.partner_type,
-            image_url: p.image_url,
-            about_text: p.about_text,
-            website_url: p.website_url,
-            location_description: p.location_description,
-            map_tenant_slug: p.map_tenant_slug,
-            block_count: 0,
-          });
-        }
-      }
+        .eq("is_active", true)
+        .or(orFilter);
+      if (partnerErr) throw partnerErr;
 
-      return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+      const result: PublicPartner[] = (partnerRows ?? [])
+        .filter((p) => p.id !== "bureau")
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          partner_type: p.partner_type,
+          image_url: p.image_url,
+          about_text: p.about_text,
+          website_url: p.website_url,
+          location_description: p.location_description,
+          map_tenant_slug: p.map_tenant_slug,
+          block_count: blockCountByProvider.get(p.id) ?? 0,
+        }));
+
+      return result.sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 };
