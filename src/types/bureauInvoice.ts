@@ -12,6 +12,9 @@ export interface BureauInvoice {
   amount_incl_vat: number;
   invoice_type: InvoiceType;
   description: string | null;
+  status?: string | null;
+  forwarded_to_accounting_at?: string | null;
+  forwarded_by?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
