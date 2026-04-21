@@ -14,12 +14,12 @@ export const HeroEditorial = () => {
         <img
           src={heroImage}
           alt="Vlieland kustlandschap"
-          className="w-full h-full object-cover opacity-40"
+          className="w-full h-full object-cover opacity-25"
           fetchPriority="high"
           loading="eager"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep/70 via-ocean-deep/50 to-ocean-deep" />
-        <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep via-transparent to-ocean-deep/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep/85 via-ocean-deep/70 to-ocean-deep" />
+        <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep via-ocean-deep/40 to-ocean-deep/60" />
       </div>
 
       {/* Decorative grain overlay */}
@@ -46,20 +46,21 @@ export const HeroEditorial = () => {
           </span>
         </motion.div>
 
-        <div className="grid grid-cols-12 gap-6 items-end">
+        <div className="grid grid-cols-12 gap-6 lg:gap-12 items-end">
           {/* Main editorial headline — asymmetric */}
-          <div className="col-span-12 lg:col-span-8">
+          <div className="col-span-12 lg:col-span-7 relative">
+            <div className="absolute -inset-x-4 -inset-y-6 lg:-inset-x-8 bg-ocean-deep/40 blur-2xl rounded-[2rem] -z-10" />
             <motion.h1
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
               className="font-display font-light text-primary-foreground leading-[0.92] tracking-tight"
             >
-              <span className="block text-[clamp(3rem,9vw,9rem)]">Het eiland</span>
-              <span className="block text-[clamp(3rem,9vw,9rem)] italic text-sunset font-normal">
+              <span className="block text-[clamp(3rem,8vw,8rem)]">Het eiland</span>
+              <span className="block text-[clamp(3rem,8vw,8rem)] italic text-sunset font-normal">
                 als bestemming.
               </span>
-              <span className="block text-[clamp(3rem,9vw,9rem)]">Wij als regie.</span>
+              <span className="block text-[clamp(3rem,8vw,8rem)]">Wij als regie.</span>
             </motion.h1>
           </div>
 
@@ -68,7 +69,7 @@ export const HeroEditorial = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}
-            className="hidden lg:block col-span-4 self-end"
+            className="hidden lg:block col-span-4 col-start-9 self-end lg:pl-4"
           >
             <div className="relative">
               <div className="aspect-[3/4] overflow-hidden rounded-sm shadow-dramatic">
@@ -140,7 +141,7 @@ export const HeroEditorial = () => {
             { num: "8+", label: "jaar lokale regie" },
             { num: "200+", label: "evenementen verzorgd" },
             { num: "20+", label: "lokale partners" },
-            { num: "1", label: "telefoontje genoeg" },
+            { num: "100%", label: "maatwerk" },
           ].map((s, i) => (
             <div key={i} className="text-sand">
               <div className="font-display text-4xl lg:text-5xl text-primary-foreground font-light">

@@ -63,14 +63,14 @@ export const ActivitiesShowcase = () => {
         {/* Asymmetric mosaic grid */}
         <div className="grid grid-cols-12 gap-3 lg:gap-4">
           {activities.slice(0, 6).map((activity, i) => {
-            // Asymmetric layout: alternate sizes
+            // Asymmetric layout — safer proportions to avoid title clipping
             const layouts = [
-              "col-span-12 md:col-span-7 row-span-2 aspect-[16/10] md:aspect-auto",
+              "col-span-12 md:col-span-7 aspect-[16/10]",
               "col-span-12 md:col-span-5 aspect-[4/3]",
-              "col-span-6 md:col-span-3 aspect-square",
-              "col-span-6 md:col-span-2 aspect-[3/4] md:aspect-auto",
-              "col-span-12 md:col-span-5 aspect-[4/3]",
-              "col-span-12 md:col-span-7 aspect-[16/9]",
+              "col-span-6 md:col-span-4 aspect-square",
+              "col-span-6 md:col-span-4 aspect-square",
+              "col-span-12 md:col-span-4 aspect-square",
+              "col-span-12 aspect-[21/9]",
             ];
             return (
               <motion.div
@@ -92,17 +92,18 @@ export const ActivitiesShowcase = () => {
                   <div className="absolute inset-0 bg-gradient-ocean" />
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/30 to-transparent opacity-90 group-hover:opacity-95 transition-opacity" />
+                <div className="absolute inset-0 bg-ocean-deep/15" />
+                <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/70 to-ocean-deep/10" />
 
-                <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end">
+                <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end pr-12 lg:pr-14">
                   <div className="text-[10px] uppercase tracking-[0.25em] text-sunset mb-2 font-medium">
                     {activity.category === "outdoor" ? "Outdoor" : activity.category === "excursies" ? "Excursie" : "Beleving"}
                   </div>
-                  <h3 className="font-display text-2xl lg:text-3xl text-primary-foreground font-light mb-2">
+                  <h3 className="font-display text-2xl lg:text-3xl text-primary-foreground font-light mb-2 break-words">
                     {activity.name}
                   </h3>
                   {activity.short_description && (
-                    <p className="text-sm text-sand/80 max-w-md line-clamp-2 font-light">
+                    <p className="text-sm text-sand/85 max-w-md line-clamp-2 font-light">
                       {activity.short_description}
                     </p>
                   )}

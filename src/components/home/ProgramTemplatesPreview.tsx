@@ -23,8 +23,19 @@ export const ProgramTemplatesPreview = () => {
         .select("id, name, short_description, duration_days, image_url, indicative_price_pp")
         .eq("is_published", true)
         .order("sort_order")
-        .limit(4);
-      if (data) setTemplates(data as Template[]);
+        .order("name")
+        .limit(8);
+      if (data) {
+        // Dedupe by name (case-insensitive) and cap at 3
+        const seen = new Set<string>();
+        const unique = (data as Template[]).filter((t) => {
+          const key = t.name.trim().toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        }).slice(0, 3);
+        setTemplates(unique);
+      }
     })();
   }, []);
 

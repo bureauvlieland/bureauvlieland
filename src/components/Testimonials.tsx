@@ -10,14 +10,14 @@ import {
 
 const testimonials = [
   {
+    quote: "Op het oostelijke buureiland circuleren nog weleens verhalen over 'die Vlielanders' of - erger - 'Vliebiza', maar met Erwin Soolsma en kornuiten van Bureau Vlieland was ik het snel eens over de organisatie van een stoer zakelijk event op de eilanden. Snelle ribs, parachutespringen op de Vliehors en picknicken tussen de tanks - waar kan dat nou anders dan bij ons op de Wadden? Ja, zelfs de Chablis en de oesters waren uitstekend.",
+    author: "Jort Kelder",
+    company: "Journalist & presentator"
+  },
+  {
     quote: "Na 6 maanden in het geheim samen een planning maken, dingen regelen en zorgen maken over het weer, was het dan eindelijk zo ver... Vanaf het moment dat wij op onze boot zaten, klaar om richting Vlieland te varen was daar het moment aangebroken om alles los te laten want deze jongens hadden het allemaal onder controle! Alles liep perfect, geweldige hotels, activiteiten en feestavond! Hartelijk dank Bureau Vlieland, wij hebben genoten!",
     author: "Ilona Norbart",
     company: "Districon Group"
-  },
-  {
-    quote: "Op het oostelijke buureiland circuleren nog weleens verhalen over 'die Vlielanders' of - erger - 'Vliebiza', maar met Erwin Soolsma en kornuiten van Bureau Vlieland was ik het snel eens over de organisatie van een stoer zakelijk event op de eilanden. Snelle ribs, parachutespringen op de Vliehors en picknicken tussen de tanks - waar kan dat nou anders dan bij ons op de Wadden? Ja, zelfs de Chablis en de oesters waren uitstekend.",
-    author: "Jort Kelder",
-    company: "Amsterdam"
   },
   {
     quote: "Vanaf de allereerste bespreking om invulling te geven aan een culinair, sportief en avontuurlijk weekend op Vlieland, tot en met het afscheid bij de terminal 2 dagen later in Harlingen, heeft het team van Bureau Vlieland dit weekend tot in detail onvergetelijk gemaakt voor een ieder!",
