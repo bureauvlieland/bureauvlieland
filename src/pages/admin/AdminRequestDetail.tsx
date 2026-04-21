@@ -569,23 +569,21 @@ const AdminRequestDetail = () => {
   };
 
   const calculateOutstandingAmount = () => {
-    // Calculate items to be invoiced by Bureau Vlieland
-    const bureauItems = items.filter(
-      (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price
-    );
-    const itemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
-    const coordinationFee = calculateBureauFee(request?.number_of_people || 0);
-    const totalInclVat = itemsTotal + coordinationFee;
-
-    // Calculate invoiced amounts
-    const invoicedInclVat = bureauInvoices
-      .filter((inv) => inv.invoice_type !== "credit")
-      .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
-    const creditedInclVat = bureauInvoices
-      .filter((inv) => inv.invoice_type === "credit")
-      .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
-
-    return Math.max(0, totalInclVat - (invoicedInclVat - creditedInclVat));
+    // Gebruik dezelfde berekening als FinancialOverviewCard "Openstaand"
+    // zodat Voltooiingsstatus en Financieel Overzicht altijd hetzelfde
+    // bedrag tonen.
+    return calculateProjectOutstandingAmount({
+      items,
+      invoices: bureauInvoices,
+      numberOfPeople: request?.number_of_people ?? 0,
+      numberOfDays,
+      coordinationFee: calcCoordFee(request?.number_of_people ?? 0),
+      touristTax,
+      natureContribution,
+      centralSurcharge,
+      accommodationTotal,
+      linesByItem: billingLinesByItem,
+    });
   };
 
   if (isLoading) {
