@@ -95,7 +95,7 @@ const VoorbeeldprogrammaOverzicht = () => {
               Kant-en-klare Programma's
             </h1>
             <p className="text-xl md:text-2xl mb-6 text-primary-foreground/90">
-              Laat je inspireren door onze voorbeeldprogramma's en pas ze naar wens aan
+              Laat u inspireren door onze voorbeeldprogramma's en pas ze naar wens aan
             </p>
             <Link to="/programma-samenstellen">
               <Button variant="heroPrimary" size="lg" className="text-lg px-8">
@@ -197,12 +197,12 @@ const VoorbeeldprogrammaOverzicht = () => {
               Geen passend programma gevonden?
             </h2>
             <p className="text-xl text-primary-foreground/90 mb-8">
-              Stel zelf je ideale programma samen uit onze bouwstenen, of neem contact op voor advies op maat.
+              Stel uw eigen ideale programma samen uit onze bouwstenen, of neem contact op voor advies op maat.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/programma-samenstellen">
                 <Button variant="heroPrimary" size="lg" className="text-lg px-8 w-full sm:w-auto">
-                  Zelf samenstellen
+                  Vraag uw offerte aan
                 </Button>
               </Link>
               <Link to="/contact">

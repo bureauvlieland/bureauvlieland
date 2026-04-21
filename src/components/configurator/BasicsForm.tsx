@@ -90,7 +90,7 @@ export const BasicsForm = ({ onSubmit }: BasicsFormProps) => {
         className="w-full gap-2 text-base"
         disabled={!isValid}
       >
-        Start uw programma
+        Stel uw programma samen
         <ArrowRight className="h-5 w-5" />
       </Button>
     </form>

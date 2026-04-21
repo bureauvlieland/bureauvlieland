@@ -19,6 +19,12 @@ const overOnsItems = [
   { label: "Contact", href: "/contact" },
 ];
 
+const inspiratieItems = [
+  { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
+  { label: "Bouwstenen", href: "/bouwstenen" },
+  { label: "Aangesloten partners", href: "/partners" },
+];
+
 // All hrefs covered by the MegaDropdown
 const megaDropdownHrefs = [
   ...navItems.voorBedrijvenItems.map((i) => i.href),
@@ -27,6 +33,7 @@ const megaDropdownHrefs = [
 ];
 
 const overOnsHrefs = overOnsItems.map((i) => i.href);
+const inspiratieHrefs = inspiratieItems.map((i) => i.href);
 
 function useNavItemClass(hrefs: string[]) {
   const { pathname } = useLocation();
@@ -52,7 +59,7 @@ export const Navigation = () => {
 
   const megaClass = useNavItemClass(megaDropdownHrefs);
   const logiesClass = useSingleNavClass("/logies-vlieland");
-  const inspiratieClass = useSingleNavClass("/voorbeeldprogrammas");
+  const inspiratieClass = useNavItemClass(inspiratieHrefs);
   const overOnsClass = useNavItemClass(overOnsHrefs);
 
   const openMega = useCallback(() => {
@@ -108,10 +115,21 @@ export const Navigation = () => {
                 Logies
               </Link>
 
-              {/* Inspiratie */}
-              <Link to="/voorbeeldprogrammas" className={inspiratieClass}>
-                Inspiratie
-              </Link>
+              {/* Inspiratie Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className={`${inspiratieClass} flex items-center gap-1`}>
+                  Inspiratie <ChevronDown className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-card border-border min-w-[200px]">
+                  {inspiratieItems.map((item) => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link to={item.href} className="cursor-pointer">
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Over ons Dropdown */}
               <DropdownMenu>
@@ -145,7 +163,7 @@ export const Navigation = () => {
                   size="sm"
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  Start uw programma
+                  Vraag uw offerte aan
                 </Button>
               </Link>
             </div>

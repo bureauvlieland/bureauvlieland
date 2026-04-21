@@ -11,6 +11,12 @@ const overOnsItems = [
   { label: "Contact", href: "/contact" },
 ];
 
+const inspiratieItems = [
+  { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
+  { label: "Bouwstenen", href: "/bouwstenen" },
+  { label: "Aangesloten partners", href: "/partners" },
+];
+
 const megaDropdownHrefs = [
   ...navItems.voorBedrijvenItems.map((i) => i.href),
   ...navItems.voorPriveItems.map((i) => i.href),
@@ -18,6 +24,7 @@ const megaDropdownHrefs = [
 ];
 
 const overOnsHrefs = overOnsItems.map((i) => i.href);
+const inspiratieHrefs = inspiratieItems.map((i) => i.href);
 
 interface MobileNavProps {
   onClose: () => void;
@@ -49,7 +56,7 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
         <div className="flex flex-col gap-2 px-2 mb-6">
           <Link to="/programma-samenstellen" onClick={onClose}>
             <Button variant="default" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full">
-              Start uw programma
+              Vraag uw offerte aan
             </Button>
           </Link>
           <a href="tel:0562700208">
@@ -128,14 +135,30 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
           Logies
         </Link>
 
-        {/* Inspiratie */}
-        <Link
-          to="/voorbeeldprogrammas"
-          onClick={onClose}
-          className={`px-2 py-3 ${topLevelClass(isActive("/voorbeeldprogrammas"))}`}
-        >
-          Inspiratie
-        </Link>
+        {/* Inspiratie accordion */}
+        <div className="px-2">
+          <button
+            onClick={() => toggle("inspiratie")}
+            className={`flex items-center justify-between w-full py-3 ${topLevelClass(isGroupActive(inspiratieHrefs))}`}
+          >
+            <span>Inspiratie</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === "inspiratie" ? "rotate-180" : ""}`} />
+          </button>
+          {openDropdown === "inspiratie" && (
+            <div className="pl-4 pb-2 space-y-1">
+              {inspiratieItems.map((item) => (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={onClose}
+                  className={subItemClass(item.href)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Over ons accordion */}
         <div className="px-2">
