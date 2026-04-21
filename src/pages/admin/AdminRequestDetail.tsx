@@ -84,6 +84,7 @@ import {
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
+import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
 import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConflictBanner";
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
@@ -233,6 +234,7 @@ const AdminRequestDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoice | null>(null);
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
