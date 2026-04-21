@@ -14,12 +14,12 @@ export const HeroEditorial = () => {
         <img
           src={heroImage}
           alt="Vlieland kustlandschap"
-          className="w-full h-full object-cover opacity-40"
+          className="w-full h-full object-cover opacity-25"
           fetchPriority="high"
           loading="eager"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep/70 via-ocean-deep/50 to-ocean-deep" />
-        <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep via-transparent to-ocean-deep/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep/85 via-ocean-deep/70 to-ocean-deep" />
+        <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep via-ocean-deep/40 to-ocean-deep/60" />
       </div>
 
       {/* Decorative grain overlay */}
@@ -140,7 +140,7 @@ export const HeroEditorial = () => {
             { num: "8+", label: "jaar lokale regie" },
             { num: "200+", label: "evenementen verzorgd" },
             { num: "20+", label: "lokale partners" },
-            { num: "1", label: "telefoontje genoeg" },
+            { num: "100%", label: "maatwerk" },
           ].map((s, i) => (
             <div key={i} className="text-sand">
               <div className="font-display text-4xl lg:text-5xl text-primary-foreground font-light">

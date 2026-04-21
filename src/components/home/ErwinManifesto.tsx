@@ -60,7 +60,7 @@ export const ErwinManifesto = () => {
               <span className="text-sunset font-normal italic">"</span>
             </blockquote>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 pt-10 border-t border-sand/15">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12 pt-10 border-t border-sand/15">
               {[
                 {
                   k: "Lokaal",
@@ -75,11 +75,14 @@ export const ErwinManifesto = () => {
                   v: "Geen pakketten, maar programma's die kloppen voor uw groep en doel.",
                 },
               ].map((item, i) => (
-                <div key={i}>
-                  <div className="font-display text-sunset text-sm uppercase tracking-widest mb-2">
-                    {item.k}
+                <div key={i} className="border-t-2 border-sunset/40 pt-5">
+                  <div className="font-display italic text-sunset/70 text-sm mb-3">
+                    {String(i + 1).padStart(2, "0")}
                   </div>
-                  <p className="text-sand/80 text-sm leading-relaxed font-light">
+                  <h3 className="font-display text-2xl lg:text-3xl text-primary-foreground font-light mb-3 leading-tight">
+                    {item.k}
+                  </h3>
+                  <p className="text-sand text-base leading-relaxed font-light">
                     {item.v}
                   </p>
                 </div>
