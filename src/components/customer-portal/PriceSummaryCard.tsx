@@ -38,7 +38,11 @@ export const PriceSummaryCard = ({
   const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
 
-  // Fetch VAT rates per building block
+  // Fetch definitive billing lines per item (admin-defined split-VAT lines + extras like koffie/thee)
+  const itemIds = useMemo(() => items.map(i => i.id), [items]);
+  const { linesByItem } = useItemBillingLinesBatch(itemIds);
+
+  // Fetch VAT rates per building block (fallback when no billing lines)
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   useEffect(() => {
     const blockIds = items.map(i => i.block_id).filter(Boolean) as string[];
