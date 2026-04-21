@@ -845,8 +845,8 @@ const AdminInvoicePreview = () => {
                             </>
                           )}
 
-                          {/* Coordination fee */}
-                          {totals.bureauFee > 0 && (
+                          {/* Coordination fee + levies + central surcharge */}
+                          {(totals.bureauFee > 0 || totals.touristTax > 0 || totals.natureContribution > 0 || totals.centralSurcharge > 0) && (
                             <>
                               <tr>
                                 <td
@@ -854,18 +854,62 @@ const AdminInvoicePreview = () => {
                                   className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
                                   style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
-                                  Coördinatie
+                                  Coördinatie & bijdragen
                                 </td>
                               </tr>
-                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                <td className="py-1.5 px-2">
-                                  <p className="font-medium">Coördinatiekosten</p>
-                                  <p className="text-[9px] text-gray-400">{request.number_of_people} personen</p>
-                                </td>
-                                <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">{formatCurrency(totals.bureauFee)}</td>
-                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
-                              </tr>
+                              {totals.bureauFee > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Coördinatiekosten</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">1</td>
+                                  <td className="py-1.5 px-2 text-right">{formatCurrency(totals.bureauFee)}</td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
+                                </tr>
+                              )}
+                              {totals.centralSurcharge > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Opslag centrale facturatie</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
+                                  <td className="py-1.5 px-2 text-right">
+                                    {formatCurrency(totals.centralSurcharge / Math.max(totals.numberOfPeople, 1))}
+                                    <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.centralSurcharge)}</td>
+                                </tr>
+                              )}
+                              {totals.touristTax > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Toeristenbelasting</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} pers. × {totals.numberOfDays} {totals.numberOfDays === 1 ? "dag" : "dagen"}</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople * totals.numberOfDays}</td>
+                                  <td className="py-1.5 px-2 text-right">
+                                    {formatCurrency(totals.touristTax / Math.max(totals.numberOfPeople * totals.numberOfDays, 1))}
+                                    <span className="text-[8px] text-gray-400 ml-1">p.p.p.d.</span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.touristTax)}</td>
+                                </tr>
+                              )}
+                              {totals.natureContribution > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Natuurbijdrage</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
+                                  <td className="py-1.5 px-2 text-right">
+                                    {formatCurrency(totals.natureContribution / Math.max(totals.numberOfPeople, 1))}
+                                    <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.natureContribution)}</td>
+                                </tr>
+                              )}
                             </>
                           )}
                         </tbody>
