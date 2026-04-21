@@ -133,7 +133,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 2. Validate quote status
-    if (program.quote_status !== "offerte_verstuurd" && program.quote_status !== "akkoord_ontvangen") {
+    // Allow approval for items added/changed after a project is already definitively confirmed.
+    const allowedQuoteStatuses = ["offerte_verstuurd", "akkoord_ontvangen", "definitief_bevestigd"];
+    if (!allowedQuoteStatuses.includes(program.quote_status)) {
       return new Response(
         JSON.stringify({ error: "Dit voorstel kan niet meer geaccepteerd worden", currentStatus: program.quote_status }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
