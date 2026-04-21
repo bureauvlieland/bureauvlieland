@@ -44,6 +44,15 @@ export default {
           foreground: "hsl(var(--accent-foreground))",
           soft: "hsl(var(--accent-soft))",
         },
+        sand: {
+          DEFAULT: "hsl(var(--sand))",
+          foreground: "hsl(var(--sand-foreground))",
+        },
+        sunset: {
+          DEFAULT: "hsl(var(--sunset))",
+          foreground: "hsl(var(--sunset-foreground))",
+        },
+        "ocean-deep": "hsl(var(--ocean-deep))",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
