@@ -1,88 +1,48 @@
 
 
-## Plan: leesbare labels, ontbrekende afbeeldingen koppelen, juiste partners + foto's op partnerpagina
+## Plan: Oliva, Zuiver en alle bouwsteen-partners weer zichtbaar maken op `/partners`
 
 ### Diagnose
-
-**Bouwstenen-pagina:**
-1. **Onleesbare labels**: De categorie-badge gebruikt `bg-card/90` (vrijwel wit) zonder expliciete tekstkleur → witte tekst op wit. Fix: donkere tekst + sterkere achtergrond.
-2. **Ontbrekende afbeeldingen** (9 publieke bouwstenen tonen placeholder):
-   - `catering-3-gangen-diner` — geen image_url én geen image_asset
-   - `luxe-lunch`, `fiets-huur`, `beach-games`, `vliegeren`, `surfen`, `vuurtoren` — wel `image_asset`, maar geen `image_url` in storage. (De lokale asset-import werkt, maar enkele filenames matchen niet exact, bv. `cycling-team.jpg` werkt wel — dus deze zouden moeten laden. Ik koppel ze toch aan storage-images zodat ze cdn-geserveerd worden en consistent zijn.)
-3. **Verkeerde partners**: 4 publieke bouwstenen hebben `provider_id = NULL` → tonen "door Bureau Vlieland" terwijl dat niet klopt:
-   - `borrel` → moet `zuiver` (Zuiver Traiteur) zijn
-   - `catering-3-gangen-diner` → `zuiver`
-   - `fietstocht-met-begeleiding` → `bureau` (gids door Bureau Vlieland is correct) of `vvv-vlieland` indien beschikbaar — **vraag bevestiging**
-   - `vrije-tijd` → `bureau` is OK (eigen invulling — niet expliciet partner)
-
-**Partnerpagina:**
-4. **Niet alleen MAP-partners**: de query toont 16 partners (zowel met published blocks als met MAP-slug). De gebruiker neemt dit waarschijnlijk zo waar omdat álle partners géén `image_url` hebben → grote letter-placeholder. Plus de groene "Direct boekbaar" badge trekt visueel sterk aan.
-5. **Foto's ontbreken op alle partnerkaarten**: geen enkele partner heeft een `image_url`. Oplossing: koppel een representatieve afbeelding (eerste gepubliceerde bouwsteen van die partner óf een specifiek door ons gekozen storage-image).
-
-### A. Fix label-leesbaarheid op `/bouwstenen` en `/partners`
-In `Bouwstenen.tsx` en `Partners.tsx`: vervang
-```tsx
-<Badge variant="secondary" className="bg-card/90 backdrop-blur-sm">
+De `usePublicPartners`-query in `src/pages/Partners.tsx` probeert via een PostgREST nested select de partner-gegevens op te halen vanuit `building_blocks`:
+```ts
+.select("provider_id, partner:partners!building_blocks_provider_id_fkey(...)")
 ```
-door
-```tsx
-<Badge className="bg-white/95 text-foreground border border-border shadow-sm backdrop-blur-sm">
-```
-Resultaat: witte chip met donkere leesbare tekst en lichte rand.
+Maar er bestaat **geen foreign-key constraint** tussen `building_blocks.provider_id` en `partners.id` (zie schema: "No foreign keys for the table building_blocks"). Daardoor faalt de embed stilletjes → `partner` is `null` → álle blok-rows worden geskipt door `if (!p || !p.is_active) continue;`.
 
-### B. Database: koppel ontbrekende building-block afbeeldingen
-SQL-migratie:
-- `catering-3-gangen-diner` → `1771141578047-diner_vlieland.jpg` (sfeer diner)
-- `luxe-lunch` → `luncharrangement.webp`
-- `fiets-huur` → upload bestaande lokale `cycling-team.jpg` in storage óf koppel `1770455243853-IMG_6365.jpg` (beste fiets-foto in storage)
-- `beach-games` → `voc-blokarten.jpg` (VOC-sfeer) of bestaande beach-asset uploaden
-- `vliegeren` → bestaande `kite-flying` lokaal werkt al; voor consistentie storage-versie genereren of asset_image laten staan
-- `surfen` → koppel `voc-branding-raften.jpg` (zelfde sfeer)
-- `vuurtoren` → laat lokale asset werken (lighthouse-vlieland.jpg klopt al)
+Alleen Stap 2 (MAP-partners) levert resultaten. Resultaat: pagina toont nu uitsluitend de 6 MAP-partners (Brouwerij Fortuna, Kaasbunker, Paal 50, Lepelaar, Vliehors Expres, Zeehondentochten). Alle 10+ partners die alleen via bouwstenen leveren (Oliva, Zuiver, Café Boven, Manege, Yoga, VOC, Bazuin, Zeezicht, Island Events etc.) verdwijnen.
 
-Voor de blocks waarvan de lokale asset al goed werkt (`fiets-huur`, `vliegeren`, `surfen`, `vuurtoren`, `beach-games`, `luxe-lunch`) onderzoek ik eerst waarom ze toch placeholder tonen — vermoedelijk treft de getBlockImage util ze wel maar de productie-build serveert ze met andere hash. Veiligste oplossing: koppel ze aan een storage-URL zodat het deterministisch is.
+### Fix — twee aparte queries, JS-side joinen
+Vervang de gebroken embed door twee losse queries en koppel ze in JavaScript:
 
-### C. Database: corrigeer provider_id voor publieke blocks
-SQL:
-```sql
-UPDATE building_blocks SET provider_id='zuiver' WHERE id IN ('borrel','catering-3-gangen-diner');
--- fietstocht-met-begeleiding en vrije-tijd: blijven 'bureau' (correct)
-```
+1. **Query A** — alle gepubliceerde blocks met `provider_id`:
+   ```ts
+   .from("building_blocks")
+   .select("provider_id")
+   .eq("status", "published")
+   .not("provider_id", "is", null);
+   ```
+   Tel per `provider_id` het aantal blocks → `block_count` map.
 
-### D. Database: koppel afbeeldingen aan partners
-Per partner een passende image uit storage of openbare bron koppelen. Voorstel (alleen voor de 16 zichtbare partners):
+2. **Query B** — alle actieve partners die ofwel:
+   - voorkomen in de provider-set uit Query A, **of**
+   - een `map_tenant_slug` hebben.
+   ```ts
+   .from("partners")
+   .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
+   .eq("is_active", true)
+   .or(`id.in.(${ids.join(",")}),map_tenant_slug.not.is.null`);
+   ```
+   Filter `id !== 'bureau'` eruit.
 
-| Partner | Voorstel image (storage) |
-|---|---|
-| Brouwerij Fortuna | `1771363537999-fortuna.jpg` |
-| Café Boven | `1770974443694-terras.2_1.jpg` |
-| De Bazuin Watertaxi | `watertaxi-harlingen-vlieland.jpg` |
-| De Vlielander Kaasbunker | placeholder (admin uploadt later) |
-| Island Events | `strandyoga-ontspanning.jpg` (wellness/relax sfeer) |
-| Manege De Seeruyter | `paardrijden.jpeg` |
-| Paal 50 | `1770455091370-2016-02-25_17.28.50.jpg` (strand) |
-| Rederij Doeksen | `boot-retour.png` |
-| Stichting Natuur Educatie Centrum | `wadloopexcursie.jpg` |
-| Trattoria Oliva | `1770455958249-Oliva_4.jpeg` |
-| Vliehors Expres | `vliehors-expres.JPG` |
-| Vlieland Outdoor Center | `voc-beach-golf.jpg` |
-| Vlieland Yoga | `strandyoga-ontspanning.jpg` |
-| Zeehondentochten Vlieland | `zeehondentocht.png` |
-| Zeezicht Vlieland | `1771141578047-diner_vlieland.jpg` |
-| Zuiver Traiteur | `strand-bbq.jpg` |
+3. **Merge**: combineer partner-data met `block_count` (0 als alleen via MAP) en sorteer alfabetisch.
 
-Eén SQL `UPDATE` per partner met `image_url = 'https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/building-block-images/<file>'`.
+### Verbetering: tellingen kloppen ook
+De huidige `counts` in de UI zijn ook fout omdat de lijst incompleet is. Met de fix herstellen "Alle partners (X)", "Activiteiten (X)" en "Accommodaties (X)" zich automatisch.
 
-### E. Verbeter Partner-card visueel
-- Image fallback: i.p.v. enkele letter, toon eerste-bouwsteen-image van die partner als fallback (query uit `building_blocks` met `provider_id` joinen).
-- "Direct boekbaar" badge minder schreeuwerig: vervang accent-kleur door kalmer `bg-primary/10 text-primary border border-primary/30`.
-- Voeg duidelijke tekst onder de kaart toe: "Maakt onderdeel uit van X bouwstenen in onze offertes" — al aanwezig, prima zo.
+### Bestand
+- `src/pages/Partners.tsx` — vervang `usePublicPartners` queryFn (regels ~28-77).
 
-### F. Niet in scope
-- Nieuwe foto's uploaden van klant — gebruik wat in storage staat. Admin kan later in beheer eigen foto's uploaden.
-- Detailpagina per partner (`/partners/:id`) — apart vervolg.
-- Wijzigingen aan MAP-koppeling-logica.
-
-### Vraag ter bevestiging
-**`fietstocht-met-begeleiding`**: Bureau Vlieland houden, of bestaat er een specifieke fietsgids-partner die ik moet koppelen (bijv. VVV Vlieland, Eigen gids)?
+### Niet in scope
+- FK aanmaken op `building_blocks.provider_id → partners.id` (kan later via migratie als gewenst voor data-integriteit, maar is niet nodig om de pagina te fixen).
+- Wijzigingen aan UI/styling — alleen data-laag.
 
