@@ -155,7 +155,7 @@ const Bouwstenen = () => {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="absolute top-3 left-3">
-                        <Badge variant="secondary" className="bg-card/90 backdrop-blur-sm">
+                        <Badge className="bg-background/95 text-foreground border border-border shadow-sm backdrop-blur-sm hover:bg-background">
                           {categoryLabels[block.category] ?? block.category}
                         </Badge>
                       </div>
