@@ -99,7 +99,7 @@ const AdminInvoicePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const { getSetting } = useAppSettings();
+  const { getSetting, getCoordinationFee } = useAppSettings();
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
