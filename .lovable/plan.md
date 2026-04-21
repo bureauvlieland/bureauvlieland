@@ -1,54 +1,68 @@
 
 
-## Probleem
+## Klant-factuur versturen vanuit preview-pagina + Snelstart-status zichtbaar
 
-Het kostenoverzicht in het klantportaal toont **€4.678,45**, het admin Financieel Overzicht toont **€4.761,69** — verschil **€83,24**.
+### Wat wordt gebouwd
 
-Oorzaak: zodra je in admin "definitieve" factuurregels (`program_item_billing_lines`) toevoegt aan een item (bijv. om gesplitste BTW-tarieven 9%/21% correct vast te leggen), gebruikt alléén het admin-overzicht dat totaal. Het klantportaal kent die regels niet en blijft `quoted_price` / `admin_price_override` × aantal tonen.
+**A. Klant-factuur versturen** (zoals eerder besproken)
 
-Voor dit project gaat het om twee items:
-
-| Item | Klantportaal | Admin (billing lines) | Verschil |
-|---|---|---|---|
-| Italiaanse shared dining @ Oliva | €400,50 (9 × €44,50) | €423,74 (€337 @9% + €86,74 @21%) | +€23,24 |
-| Zaalhuur Brouwerij Fortuna | €598,95 (quoted_price) | €658,95 (zaal €598,95 + koffie/thee €60) | +€60,00 |
-
-De billing lines zijn in dit geval het juiste totaal (klant betaalt straks ook €423,74 en €658,95). Het klantportaal toont dus te weinig.
-
-## Aanpak
-
-**`PriceSummaryCard` (klantportaal) gelijktrekken met `FinancialOverviewCard` (admin)** door `program_item_billing_lines` op te halen en — indien aanwezig per item — het regelsom-totaal te gebruiken in plaats van `quoted_price` / `admin_price_override`.
+**B. Snelstart-doorstuurstatus zichtbaar maken** op zowel het Financieel Overzicht (projectdetail) als op de preview-pagina, zodat je in één oogopslag ziet of een factuur al naar `bureauvlieland@boekhouding.nl` is gestuurd.
 
 ### Wijzigingen
 
-1. **`src/components/customer-portal/PriceSummaryCard.tsx`**
-   - Voeg een fetch toe (zelfde patroon als bestaande `vat_rate` fetch) die `program_item_billing_lines` ophaalt voor alle item-id's; resultaat in `linesByItem: Record<string, BillingLine[]>`.
-   - In de `summary` `useMemo`: per item eerst checken of er billing lines zijn. Zo ja → gebruik de som van `amount_incl_vat` als `effectivePrice` en de som van `amount_excl_vat` / `vat_amount` per BTW-tarief in de BTW-uitsplitsing. Zo nee → huidige logica.
-   - Gebruik in de UI-regel een subtiele "definitief" badge (zoals admin) zodat klant ziet dat dit een vaste eindprijs is.
-   - Geen wijziging in regels voor coördinatiefee, toeristenbelasting, natuurbijdrage, opslag, logies.
+**1. Nieuwe edge function `send-bureau-invoice-to-customer`**
+- Input: `requestId`, `pdfBase64`, `pdfFilename`, `invoiceNumber`, `invoiceDate`, `amountInclVat`, optioneel `customSubject` / `customMessage` / `recipientEmail`
+- Verifieert admin-rol via JWT
+- Haalt project + facturatieadres op (`billing_email` → fallback `customer_email`)
+- Verstuurt via Mailjet met PDF als base64-bijlage (Mailjet `Attachments` veld; PDF <500 KB dus ruim binnen 15 MB limiet)
+- ReplyTo gebruikt project-subaddressing voor dossierkoppeling
+- Logt in `email_log` met type `bureau_invoice_to_customer`, `related_request_id`
+- Voegt entry toe aan `program_request_history` ("Factuur {nr} verstuurd naar klant")
+- Test-mode aware via `getRecipientEmail`
 
-2. **`src/components/customer-portal/CompactBillingSection.tsx`** + **`MobileProgramView.tsx`**
-   - Geen wijziging nodig; `PriceSummaryCard` haalt zelf de billing lines op (zoals het nu ook zelf de `vat_rate`s ophaalt). Dit voorkomt prop-drilling.
+**2. UI op `AdminInvoicePreview.tsx`**
+Naast bestaande "Download PDF" twee nieuwe knoppen:
 
-3. **RLS check** — `program_item_billing_lines` heeft alleen admin-policies. Klantportaal werkt anoniem via token. We moeten een SELECT-policy toevoegen die regels leesbaar maakt zolang het bijbehorende `program_request` nog niet is verlopen, vergelijkbaar met andere "readable via active request" policies.
+- **"Verstuur naar klant"** → opent dialog met:
+  - Ontvanger (vooringevuld bewerkbaar)
+  - Onderwerp + bericht (vooringevuld bewerkbaar)
+  - Checkbox "Factuur ook registreren in administratie" (default aan)
+  - Bij submit: `generatePDF()` → base64 → roept edge function → bij checkbox: insert in `bureau_invoices`
 
-   ```sql
-   CREATE POLICY "Billing lines readable via active request"
-   ON program_item_billing_lines FOR SELECT TO anon, authenticated
-   USING (EXISTS (
-     SELECT 1 FROM program_request_items pri
-     JOIN program_requests pr ON pr.id = pri.request_id
-     WHERE pri.id = program_item_billing_lines.item_id
-       AND pr.expires_at > now()
-   ));
-   ```
+**3. Snelstart-status badge**
 
-### Resultaat
+In `FinancialOverviewCard` (projectdetail) en in de geregistreerde-facturen sectie van `AdminInvoicePreview`: per `bureau_invoices` rij een badge naast factuurnummer:
 
-Beide overzichten tonen straks exact **€4.761,69** voor dit project, met identieke BTW-uitsplitsing (9%-regels gesplitst van 21%-regels). De `Voltooiingsstatus → Openstaand` (die al `calculateProjectGrandTotal` gebruikt) blijft consistent omdat die al billing lines meeneemt.
+| Status | Badge | Tooltip |
+|---|---|---|
+| `forwarded_to_accounting_at IS NULL` | grijs "Nog niet doorgestuurd" | "Klik 'Doorsturen' om naar Snelstart te sturen" |
+| `forwarded_to_accounting_at IS NOT NULL` | groen "Doorgestuurd naar Snelstart" met datum | "Doorgestuurd op {datum}" |
+
+De bestaande "Doorsturen" knop blijft ernaast staan voor niet-doorgestuurde facturen; voor reeds doorgestuurde facturen wordt de knop een subtiele "Opnieuw doorsturen" link (voor het geval er iets mis ging).
+
+De velden `forwarded_to_accounting_at` en `status='forwarded'` worden al gezet door de bestaande `forward-bureau-invoice` edge function — alleen de UI moet ze tonen.
+
+**4. Klantmail-status badge (bonus, gratis meegenomen)**
+
+Tweede badge op dezelfde rij:
+- `bureau_invoice_to_customer` event in `email_log` aanwezig met status `sent` voor deze factuur → groen "Naar klant verstuurd op {datum}"
+- Anders → grijs "Niet naar klant verstuurd"
+
+Vereist alleen een extra query in de FinancialOverviewCard die `email_log` filtert op `metadata->>'invoiceId'` per factuur.
+
+### Resultaat — workflow vanuit projectdetail
+
+1. Klik **"Factuur Maken"** → preview-pagina
+2. Vul nummer/datum aan, controleer regels
+3. Klik **"Verstuur naar klant"** → dialog → Verstuur (factuur wordt geregistreerd + gemaild)
+4. Terug op projectdetail zie je in Financieel Overzicht:
+   - 🟢 "Naar klant verstuurd 21-04-2026"
+   - ⚪ "Nog niet doorgestuurd" + knop "Doorsturen"
+5. Klik **"Doorsturen"** → Snelstart-mail vertrekt
+6. Badge wordt 🟢 "Doorgestuurd naar Snelstart 21-04-2026"
 
 ### Niet in scope
-
-- Geen herberekening van toeristenbelasting/natuurbijdrage; die volgen al `app_settings`.
-- Geen wijziging aan admin-zijde of `projectFinancials.ts`.
+- Geen automatische Snelstart-doorsturing bij klantverzending (jouw expliciete keuze)
+- Geen wijziging in factuur-PDF lay-out
+- Geen webhook/bounce-tracking — alleen "verstuurd" status uit `email_log`
 
