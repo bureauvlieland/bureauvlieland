@@ -2346,6 +2346,10 @@ export type Database = {
         Args: { _request_id: string; _user_id: string }
         Returns: boolean
       }
+      partner_has_published_block: {
+        Args: { _partner_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "partner"
