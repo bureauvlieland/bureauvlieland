@@ -343,39 +343,45 @@ const AdminInvoicePreview = () => {
     return { bureauFee, totalExclVat, totalVat, totalInclVat, vatLines };
   };
 
-  const generatePDF = async () => {
-    if (!pdfRef.current) return;
-    setIsGenerating(true);
-    try {
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        windowWidth: pdfRef.current.scrollWidth,
-      });
+  const buildPdfBlob = async (): Promise<Blob | null> => {
+    if (!pdfRef.current) return null;
+    const canvas = await html2canvas(pdfRef.current, {
+      scale: 3,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      windowWidth: pdfRef.current.scrollWidth,
+    });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 10; // 10mm margin
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = margin;
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 10; // 10mm margin
+    const imgWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = margin;
 
+    pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight - margin * 2;
+
+    while (heightLeft > 0) {
+      position = margin - (imgHeight - heightLeft);
+      pdf.addPage();
       pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
       heightLeft -= pageHeight - margin * 2;
+    }
 
-      while (heightLeft > 0) {
-        position = margin - (imgHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - margin * 2;
-      }
+    return pdf.output("blob");
+  };
 
-      const url = URL.createObjectURL(pdf.output("blob"));
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await buildPdfBlob();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `Factuur-${invoiceNumber}.pdf`;
