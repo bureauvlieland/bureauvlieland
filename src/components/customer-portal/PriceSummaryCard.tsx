@@ -81,6 +81,27 @@ export const PriceSummaryCard = ({
 
     // Build order lines with unified pricing
     const orderLines = relevantItems.map(item => {
+      const itemLines = linesByItem[item.id];
+      const hasBillingLines = Array.isArray(itemLines) && itemLines.length > 0;
+
+      // If admin has defined definitive billing lines (split-VAT, extras), use their sum.
+      if (hasBillingLines) {
+        const linesTotal = itemLines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
+        return {
+          item,
+          hasQuotedPrice: true,
+          isPreliminary: false,
+          isDefinitive: true,
+          effectivePrice: linesTotal,
+          unitPrice: null as number | null,
+          isPerPerson: false,
+          peopleCount: 1,
+          isPerDay: false,
+          dayCount: 1,
+          billingLines: itemLines,
+        };
+      }
+
       const hasQuotedPrice = item.quoted_price != null;
       const isPreliminary = !hasQuotedPrice && item.admin_price_override != null;
 
@@ -101,7 +122,19 @@ export const PriceSummaryCard = ({
       }
 
       const isPerDay = item.price_type === "per_person_per_day";
-      return { item, hasQuotedPrice, isPreliminary, effectivePrice, unitPrice, isPerPerson: ppMultiplier > 1, peopleCount: ppMultiplier, isPerDay, dayCount: dayMultiplier };
+      return {
+        item,
+        hasQuotedPrice,
+        isPreliminary,
+        isDefinitive: false,
+        effectivePrice,
+        unitPrice,
+        isPerPerson: ppMultiplier > 1,
+        peopleCount: ppMultiplier,
+        isPerDay,
+        dayCount: dayMultiplier,
+        billingLines: undefined as typeof itemLines | undefined,
+      };
     });
 
     const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
@@ -133,9 +166,17 @@ export const PriceSummaryCard = ({
       allVatLines[0].exclVat += amount;
     };
 
-    // Add all priced items to VAT breakdown
+    // Add all priced items to VAT breakdown — billing lines are split per VAT rate
     orderLines.forEach(l => {
-      if (l.effectivePrice !== null && l.effectivePrice !== undefined) {
+      if (l.effectivePrice === null || l.effectivePrice === undefined) return;
+      if (l.billingLines && l.billingLines.length > 0) {
+        l.billingLines.forEach(bl => {
+          const rate = Number(bl.vat_rate ?? 21);
+          if (!allVatLines[rate]) allVatLines[rate] = { exclVat: 0, vatAmount: 0 };
+          allVatLines[rate].exclVat += Number(bl.amount_excl_vat || 0);
+          allVatLines[rate].vatAmount += Number(bl.vat_amount || 0);
+        });
+      } else {
         addVat(l.effectivePrice, getItemVatRate(l.item));
       }
     });
@@ -170,7 +211,7 @@ export const PriceSummaryCard = ({
       grandTotalInclVat,
       hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
