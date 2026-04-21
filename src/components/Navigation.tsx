@@ -13,13 +13,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { MegaDropdown, navItems } from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
 
-const overOnsItems = [
-  { label: "Over Bureau Vlieland", href: "/over-ons" },
-  { label: "Samenwerken", href: "/samenwerken" },
-  { label: "Contact", href: "/contact" },
-];
-
-const inspiratieItems = [
+const programmasItems = [
   { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
   { label: "Bouwstenen", href: "/bouwstenen" },
   { label: "Aangesloten partners", href: "/partners" },
