@@ -50,6 +50,8 @@ const ProgrammaSamenstellen = () => {
   );
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledBlockRef = useRef<string | null>(null);
 
   // Check for existing draft on mount
   useEffect(() => {
