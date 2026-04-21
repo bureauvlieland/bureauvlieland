@@ -1,50 +1,61 @@
 
 
-## Diagnose
+## Plan: ferry-tijden, nieuwe partner Island Events + wellness blocks, wellness-natuur uitbreiden
 
-**1. Financieel Overzicht (screenshot)**
-`FinancialOverviewCard` rekent nu uitsluitend met `quoted_price` / `admin_price_override`. De definitieve factuurregels uit `program_item_billing_lines` (die je per onderdeel hebt vastgelegd) worden hier genegeerd, terwijl `AdminInvoicePreview` ze al wél gebruikt. Daardoor matcht het overzicht niet meer met de factuur zodra je nacalculatie hebt ingevoerd.
+### A. Templates van vorige plan + ferry-tijd aanpassing
+Voer de eerder goedgekeurde template-updates uit (4 nieuwe templates + Strand BBQ → Outdoor BBQ vervanging), maar **alle `boot-retour` items krijgen `preferred_time = '09:00'`** in plaats van 13:30. Voor de bestaande templates ook `boot-retour` items die nog op andere tijden staan harmoniseren naar 09:00.
 
-**2. PDF van de factuur**
-- `html2canvas` rendert op `scale: 2` waardoor het preview-formaat (text-[13px]) klein/wazig wordt op A4. Body komt eigenlijk overeen met ~9pt op print.
-- Veel cijfers (`Aantal`, `Prijs`, `Bedrag`) gebruiken `text-right` maar getallen wisselen lengte → kolommen ogen rommelig zonder tabular-nums.
-- Categorie-headers in lichtblauw (#f1f5f9) verdwijnen bij het canvas-renderen soms half.
-- Headerbalk donkerblauw + witte tekst geeft contrast-issues op sommige printers.
-- Geen pagina-marge / herhaling van header op pagina 2.
+### B. Nieuwe partner: Island Events
+Insert in `partners`:
+- `id = 'island-events'`, `name = 'Island Events'`
+- `partner_type = 'activity'`, `is_active = true`
+- `commission_percentage = 10`
+- `website_url = 'https://vlieland.wellcomewellness.nl'`
+- Verder leeg (kan later aangevuld worden via admin)
 
-## Plan
+### C. Twee nieuwe building_blocks (gepubliceerd, gekoppeld aan `island-events`)
 
-### A. `FinancialOverviewCard` — billing lines verwerken
-- Nieuwe prop `linesByItem: Record<string, ProgramItemBillingLine[]>` (ophalen via `useItemBillingLinesBatch` in de parent `AdminRequestDetail`).
-- Per item: indien `linesByItem[item.id]` bestaat → toon **subregels** onder het item (omschrijving + bedrag + BTW%) en gebruik som van `amount_incl_vat` als itemtotaal i.p.v. `getLineTotal`.
-- Visuele indicator naast itemnaam: kleine groene badge "definitief" wanneer billing lines aanwezig.
-- BTW-breakdown onderaan: bij billing lines per BTW-tarief sommeren over `amount_excl_vat` en `vat_amount` (groep-afronding, geen regel-afronding) — voorkomt cent-verschillen met de factuur.
+**1. `wellness-sauna-dagentree` — "Wellness Sauna Dagentree"**
+- Categorie: `wellness`, `block_type = 'standard'`, `price_type = 'per_person'`
+- `price_adult = 45.55` (hele dag), `is_from_price = true`, `vat_rate = 21`
+- Beschrijving: Finse sauna, zoutkristal, infrarood, Turks stoombad, jacuzzi, zwembad, badjas/slippers/handdoek incl. (4 uur dagdeel of hele dag).
+- `external_url = 'https://vlieland.wellcomewellness.nl/behandelingen/wellness/sauna/'`
+- `min_people = 1`, `max_people = 30`, duration "halve / hele dag"
 
-### B. `AdminRequestDetail` — lines doorgeven
-- `useItemBillingLinesBatch(items.map(i=>i.id))` invoegen en doorgeven aan `FinancialOverviewCard`.
+**2. `wellness-vlieland-experience` — "Vlieland Experience (Wellness)"**
+- Categorie: `wellness`, `price_type = 'per_person'`, `price_adult = 180.00`, `vat_rate = 21`
+- Beschrijving: 120 min compleet uitgebreide behandeling — anti-stress, voedend, herstellend (lichaamspeeling, lichaamspakking, Recover Touch facial, massage).
+- `min_people = 1`, `max_people = 8` (kleine groepen), duration "120 min"
 
-### C. `AdminInvoicePreview` — PDF opmaak verbeteren
-- **Font/leesbaarheid:** preview-container van `text-[13px]` → `text-[11px]` met `leading-snug`; tabel `text-[10.5px]` zodat exporteerd PDF op A4 een prettige 9–10pt geeft (na html2canvas `scale: 2`).
-- **Tabular numbers:** `font-variant-numeric: tabular-nums` op alle prijs/aantal/bedrag-kolommen → kolommen lijnen netjes uit.
-- **Kolombreedtes vastzetten:** `Omschrijving` flex, `Aantal` 60px, `Prijs` 90px, `Bedrag` 90px (i.p.v. tailwind w-24/28 die in canvas wisselen).
-- **Categorie-headers:** lichtere achtergrond + duidelijke top-border; tekst `text-[10px]` uppercase met meer letter-spacing.
-- **Header company:** logo-blok + bedrijfsnaam links, "FACTUUR" rechts in 24pt.
-- **Tabel header:** donkerblauwe rij vervangen door dunne dubbele border boven/onder + uppercase grijze tekst → printvriendelijker en minder zwaar.
-- **Subregels (billing lines):** in plaats van eigen rij per regel → **één hoofdregel per item** met onderaan kleine indented subregels (omschrijving + bedrag + BTW%); itemtotaal staat naast de hoofdrij. Dit voorkomt visueel "exploderen" van facturen met veel splits.
-- **Totalenblok:** breder (96 i.p.v. 72) + subtotaal/BTW/totaal met duidelijke scheiding; BTW-regels per tarief met "BTW 9% over €X.XX" voor transparantie.
-- **PDF-render verbeteringen:**
-  - `html2canvas` `scale: 3` voor scherpere tekst (tradeoff: bestand wat groter, prima voor facturen).
-  - Pagina-breaks: detecteer wanneer items niet meer op pagina passen → splits tabel per categorie i.p.v. één lange image (alternatief: `windowHeight` setting voor betere chunking).
-  - Margins in PDF: `addImage` met 10mm offset i.p.v. 0 zodat content niet tot aan de rand loopt.
-- **Footer:** vaste bedrijfsgegevens-rij in 8.5pt grijs; ruimte voor "Op alle leveringen zijn onze algemene voorwaarden van toepassing."
+### D. Template `wellness-natuur` uitbreiden + 3-daagse variant
 
-### Bestanden
-- `src/components/admin/FinancialOverviewCard.tsx` — billing-lines integratie + sub-rendering
-- `src/pages/admin/AdminRequestDetail.tsx` — `useItemBillingLinesBatch` + prop doorgeven
-- `src/pages/admin/AdminInvoicePreview.tsx` — opmaak/typografie/render-pijplijn
+**Update `wellness-natuur` (2 dagen)** — voeg wellness-momenten toe:
+- Dag 0 16:30: vervang `strandyoga-ontspanning` blijft, **nieuw 17:30 `wellness-sauna-dagentree`** (relax na yoga)
+- Dag 1 14:30 (vrije tijd) → vervang door **`wellness-vlieland-experience`** als optionele topper
+- Korte beschrijving update: "Yoga, sauna, zeehondentocht en optionele luxe wellness-behandeling."
 
-### Buiten scope
-- Klantportaal `PriceSummaryCard` ook updaten met billing lines (volgende stap — financieel overzicht eerst stabiel krijgen).
-- Echte logo-image in PDF header (vereist asset-keuze).
-- PDF-templating naar server-side rendering (langere refactor; canvas-aanpak blijft voorlopig).
+**Nieuwe template `wellness-natuur-3d` — "Wellness & Natuur (3 dagen)"**
+- `duration_days = 3`, gepubliceerd, voor verlengde weekenden of doordeweekse arrangementen
+- Dag 0: Overtocht 09:00 → Fietshuur 11:00 → Strandyoga 14:00 → `wellness-sauna-dagentree` 16:00 → Diner Zeezicht 19:30
+- Dag 1: Vrije tijd 10:00 → Zeehondentocht 11:30 → Lunch 13:30 → `wellness-vlieland-experience` 15:00 → Italian shared dining @ Oliva 19:00
+- Dag 2: Vrije tijd 10:00 → Vliehors Expres 13:00 → Borrel & Hapjes 16:00 → Overtocht 09:00 (laatste dag — let op: tijd staat vast op 09:00 conform jouw verzoek)
+
+### E. Beleidsregel "1-nacht alleen doordeweeks"
+Voeg toe aan beide wellness templates in `seasonal_notes` / `description` van het template:
+> "1-nachts arrangement is uitsluitend doordeweeks (zo–do) boekbaar i.v.m. minimumverblijfsduur in het weekend. Voor weekenden adviseren we de 3-daagse variant."
+
+Geen schema-wijziging nodig — dit is communicatieve regel in template-omschrijving (wordt later in configurator getoond).
+
+### Database operaties (allemaal SQL via migrations)
+- `INSERT INTO partners` (Island Events)
+- `INSERT INTO building_blocks` × 2 (sauna + experience)
+- `UPDATE program_template_items` — ferry tijden naar 09:00
+- `INSERT INTO program_template_items` — wellness-natuur uitbreiding
+- `INSERT INTO program_templates` — `wellness-natuur-3d` + items
+- `UPDATE program_templates` — descriptions met midweek-melding
+
+### Niet in scope
+- Auth-account voor Island Events (alleen partner-record; uitnodiging kan later via admin Bulk-mailing / wachtwoord-reset flow).
+- Image uploads voor de nieuwe blocks (placeholder; later via admin).
+- Configurator-validatie die boekingen op weekend echt blokkeert — nu alleen tekstuele indicatie.
 
