@@ -33,7 +33,7 @@ export const ProgramTemplatesPreview = () => {
           if (seen.has(key)) return false;
           seen.add(key);
           return true;
-        }).slice(0, 3);
+        }).slice(0, 4);
         setTemplates(unique);
       }
     })();
