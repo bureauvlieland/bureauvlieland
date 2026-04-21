@@ -179,6 +179,7 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
         >
           Samenwerken
         </Link>
+      </div>
     </ScrollArea>
   );
 };
