@@ -7,6 +7,7 @@ import type { AccommodationQuote } from "@/types/accommodation";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
