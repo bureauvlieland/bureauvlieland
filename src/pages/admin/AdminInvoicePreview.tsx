@@ -915,6 +915,22 @@ const AdminInvoicePreview = () => {
           </div>
         </div>
       </AdminLayout>
+
+      <SendBureauInvoiceToCustomerDialog
+        isOpen={sendDialogOpen}
+        onClose={() => setSendDialogOpen(false)}
+        requestId={request.id}
+        defaultRecipient={request.billing_contact_email || request.customer_email}
+        recipientName={request.billing_contact_name || request.customer_name}
+        invoiceNumber={invoiceNumber}
+        invoiceDate={invoiceDate}
+        amountExclVat={Math.round(totals.totalExclVat * 100) / 100}
+        vatAmount={Math.round(totals.totalVat * 100) / 100}
+        invoiceType="partial"
+        description={notes}
+        onGeneratePdf={buildPdfBlob}
+        onSent={() => navigate(`/admin/projecten/${request.id}`)}
+      />
     </>
   );
 };
