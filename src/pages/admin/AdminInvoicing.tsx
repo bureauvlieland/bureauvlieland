@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -23,28 +23,36 @@ import {
 import { Link } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
-import { calculateVatAmount, calculateTotalInclVat } from "@/types/bureauInvoice";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
 import { CheckCircle2, Mail } from "lucide-react";
 
 interface ProgramRequestWithItems {
   id: string;
   reference_number: string | null;
+  linked_accommodation_id: string | null;
+  invoicing_mode: string;
   customer_name: string;
   customer_company: string | null;
   customer_email: string;
   number_of_people: number;
   selected_dates: string[];
+  selected_accommodation_total: number | null;
   completion_status: string | null;
   terms_accepted_at: string | null;
   created_at: string;
   items: {
     id: string;
+    day_index: number;
     block_name: string;
     block_type: string;
     provider_name: string;
     status: string;
     quoted_price: number | null;
+    admin_price_override?: number | null;
+    price_type?: string | null;
+    override_people?: number | null;
   }[];
   invoices: {
     id: string;
@@ -61,11 +69,14 @@ interface ProgramRequestWithItems {
 }
 
 interface InvoiceTotals {
-  bureauItemsTotal: number;
+  programItemsTotal: number;
+  extraCostsTotal: number;
   coordinationFee: number;
-  totalExclVat: number;
-  vatAmount: number;
-  totalInclVat: number;
+  touristTax: number;
+  natureContribution: number;
+  centralSurcharge: number;
+  accommodationTotal: number;
+  grandTotalInclVat: number;
   invoicedTotal: number;
   outstanding: number;
 }
@@ -75,42 +86,25 @@ const formatCurrency = (amount: number) =>
 
 const AdminInvoicing = () => {
   const queryClient = useQueryClient();
-  const { getCoordinationFee, getVatRate } = useAppSettings();
+  const { getCoordinationFee, settings } = useAppSettings();
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
 
-  // Calculate invoice totals using centralized settings
+  // Calculate invoice totals using the same full project logic as the admin financial overview
   const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
-    // Only bureau items count toward invoicing
-    const bureauItems = request.items.filter(
-      (item) => item.block_type === "bureau" && item.status === "confirmed"
-    );
-    // Note: self_arranged items are excluded from invoicing (they don't have block_type "bureau")
-    
-    const bureauItemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
-    const coordinationFee = getCoordinationFee(request.number_of_people);
-    const vatRate = getVatRate("standard");
-    const totalExclVat = bureauItemsTotal + coordinationFee;
-    const vatAmount = calculateVatAmount(totalExclVat, vatRate);
-    const totalInclVat = calculateTotalInclVat(totalExclVat, vatRate);
-    
-    const invoicedTotal = request.invoices.reduce(
-      (sum, inv) => sum + (inv.amount_excl_vat + inv.vat_amount), 
-      0
-    );
-    
-    const outstanding = totalInclVat - invoicedTotal;
-    
     return {
-      bureauItemsTotal,
-      coordinationFee,
-      totalExclVat,
-      vatAmount,
-      totalInclVat,
-      invoicedTotal,
-      outstanding,
+      ...calculateAdminInvoicingTotals(
+        request,
+        {
+          coordinationFee: getCoordinationFee(request.number_of_people),
+          touristTaxPerPersonPerDay: settings.tourist_tax_pp_per_day,
+          natureContributionPerPerson: settings.nature_contribution_pp,
+          bureauCentralSurchargePerPerson: settings.bureau_central_surcharge_pp,
+        },
+        linesByItem,
+      ),
     };
   };
 
@@ -128,12 +122,20 @@ const AdminInvoicing = () => {
 
       if (requestsError) throw requestsError;
 
+      const linkedAccommodationIds = Array.from(
+        new Set(
+          requestsData
+            .map((request) => request.linked_accommodation_id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+
       // Get items for these requests
       const requestIds = requestsData.map((r) => r.id);
       
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select("id, request_id, block_name, block_type, provider_name, status, quoted_price")
+        .select("id, request_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people")
         .in("request_id", requestIds);
 
       if (itemsError) throw itemsError;
@@ -146,15 +148,40 @@ const AdminInvoicing = () => {
 
       if (invoicesError) throw invoicesError;
 
+      const accommodationTotals = new Map<string, number>();
+
+      if (linkedAccommodationIds.length > 0) {
+        const { data: accommodationQuotes, error: accommodationError } = await supabase
+          .from("accommodation_quotes")
+          .select("request_id, price_total")
+          .eq("status", "selected")
+          .in("request_id", linkedAccommodationIds);
+
+        if (accommodationError) throw accommodationError;
+
+        accommodationQuotes?.forEach((quote) => {
+          accommodationTotals.set(quote.request_id, quote.price_total ?? 0);
+        });
+      }
+
       // Combine data
       return requestsData.map((request) => ({
         ...request,
         selected_dates: request.selected_dates as string[],
+        selected_accommodation_total: request.linked_accommodation_id
+          ? accommodationTotals.get(request.linked_accommodation_id) ?? null
+          : null,
         items: itemsData.filter((item) => item.request_id === request.id),
         invoices: invoicesData.filter((inv) => inv.request_id === request.id),
       })) as ProgramRequestWithItems[];
     },
   });
+
+  const allItemIds = useMemo(
+    () => requests.flatMap((request) => request.items.map((item) => item.id)),
+    [requests],
+  );
+  const { linesByItem } = useItemBillingLinesBatch(allItemIds);
 
   // Filter requests by completion status
   const readyRequests = requests.filter(
