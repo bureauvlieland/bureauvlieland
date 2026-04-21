@@ -20,7 +20,7 @@ import {
   formatPriceNote,
   type BuildingBlockCategory,
 } from "@/types/buildingBlock";
-import heroImage from "@/assets/dunes-group.jpg";
+import heroImage from "@/assets/vlieland-landscape.jpg";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
