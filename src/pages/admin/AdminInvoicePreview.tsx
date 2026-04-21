@@ -106,6 +106,7 @@ const AdminInvoicePreview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   // Load billing lines per item (definitive lines override quoted_price)
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
@@ -443,14 +444,20 @@ const AdminInvoicePreview = () => {
                 </p>
               </div>
             </div>
-            <Button onClick={generatePDF} disabled={isGenerating}>
-              {isGenerating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Download PDF
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={generatePDF} disabled={isGenerating}>
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Download PDF
+              </Button>
+              <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || !invoiceNumber}>
+                <Mail className="h-4 w-4 mr-2" />
+                Verstuur naar klant
+              </Button>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">
