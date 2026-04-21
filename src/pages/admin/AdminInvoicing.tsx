@@ -249,7 +249,7 @@ const AdminInvoicing = () => {
             {/* Right: Financial summary */}
             <div className="lg:text-right space-y-2">
               <div className="text-2xl font-bold text-slate-900">
-                {formatCurrency(totals.totalInclVat)}
+                {formatCurrency(totals.grandTotalInclVat)}
               </div>
               <p className="text-sm text-muted-foreground">
                 incl. BTW
@@ -279,16 +279,47 @@ const AdminInvoicing = () => {
           {/* Breakdown */}
           <div className="mt-4 pt-4 border-t space-y-1 text-sm">
             <div className="flex justify-between text-muted-foreground">
-              <span>Bureau activiteiten</span>
-              <span>{formatCurrency(totals.bureauItemsTotal)}</span>
+              <span>Programma-onderdelen</span>
+              <span>{formatCurrency(totals.programItemsTotal)}</span>
             </div>
+            {totals.extraCostsTotal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Extra kostenposten</span>
+                <span>{formatCurrency(totals.extraCostsTotal)}</span>
+              </div>
+            )}
+            {totals.accommodationTotal > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Logies</span>
+                <span>{formatCurrency(totals.accommodationTotal)}</span>
+              </div>
+            )}
+            {totals.touristTax > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Toeristenbelasting</span>
+                <span>{formatCurrency(totals.touristTax)}</span>
+              </div>
+            )}
+            {totals.natureContribution > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Natuurbijdrage</span>
+                <span>{formatCurrency(totals.natureContribution)}</span>
+              </div>
+            )}
+            {totals.centralSurcharge > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Centrale opslag</span>
+                <span>{formatCurrency(totals.centralSurcharge)}</span>
+              </div>
+            </div>
+            )}
             <div className="flex justify-between text-muted-foreground">
               <span>Coördinatiekosten</span>
               <span>{formatCurrency(totals.coordinationFee)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>BTW (21%)</span>
-              <span>{formatCurrency(totals.vatAmount)}</span>
+              <span>Totaal te factureren</span>
+              <span className="font-medium text-foreground">{formatCurrency(totals.outstanding)}</span>
             </div>
           </div>
 
@@ -374,7 +405,7 @@ const AdminInvoicing = () => {
   // Summary stats
   const totalReadyAmount = readyRequests.reduce((sum, r) => {
     const totals = calculateInvoiceTotals(r);
-    return sum + totals.totalInclVat;
+    return sum + totals.outstanding;
   }, 0);
 
   const totalPartialAmount = partialRequests.reduce((sum, r) => {
