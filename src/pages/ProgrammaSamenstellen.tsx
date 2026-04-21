@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
@@ -49,6 +50,8 @@ const ProgrammaSamenstellen = () => {
   );
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledBlockRef = useRef<string | null>(null);
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -67,6 +70,26 @@ const ProgrammaSamenstellen = () => {
       if (!isInCart(FIETS_ID)) addToCart(FIETS_ID, 0);
     }
   }, [phase]);
+
+  // Handle ?block=<id> deep link from /bouwstenen — auto-add and jump to program phase
+  useEffect(() => {
+    const blockId = searchParams.get("block");
+    if (!blockId || handledBlockRef.current === blockId) return;
+    handledBlockRef.current = blockId;
+
+    if (phase === "basics") {
+      setPhase("program");
+    }
+    if (!isInCart(blockId)) {
+      const added = addToCart(blockId, 0);
+      if (added) {
+        toast({ title: "Toegevoegd aan uw programma", duration: 1800 });
+      }
+    }
+    // Clean the query param so refresh doesn't re-trigger
+    searchParams.delete("block");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, phase, isInCart, addToCart, setSearchParams, toast]);
 
   const handleRestoreDraft = () => {
     restoreDraft();

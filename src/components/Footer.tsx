@@ -146,7 +146,7 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link to="/programma-samenstellen" className="hover:text-primary transition-colors font-medium text-foreground">
-                  Programma samenstellen
+                  Stel uw offerte samen
                 </Link>
               </li>
               <li>
