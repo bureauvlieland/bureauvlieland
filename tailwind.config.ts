@@ -14,7 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        'display': ['Montserrat', 'system-ui', 'sans-serif'],
+        'display': ['"Fraunces"', 'Georgia', 'serif'],
+        'sans': ['"Inter"', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -43,6 +44,15 @@ export default {
           foreground: "hsl(var(--accent-foreground))",
           soft: "hsl(var(--accent-soft))",
         },
+        sand: {
+          DEFAULT: "hsl(var(--sand))",
+          foreground: "hsl(var(--sand-foreground))",
+        },
+        sunset: {
+          DEFAULT: "hsl(var(--sunset))",
+          foreground: "hsl(var(--sunset-foreground))",
+        },
+        "ocean-deep": "hsl(var(--ocean-deep))",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -64,10 +74,15 @@ export default {
       },
       backgroundImage: {
         "gradient-hero": "var(--gradient-hero)",
+        "gradient-ocean": "var(--gradient-ocean)",
+        "gradient-sunset": "var(--gradient-sunset)",
+        "gradient-sand": "var(--gradient-sand)",
       },
       boxShadow: {
         "soft": "var(--shadow-soft)",
         "medium": "var(--shadow-medium)",
+        "dramatic": "var(--shadow-dramatic)",
+        "glow": "var(--shadow-glow)",
       },
       transitionTimingFunction: {
         "smooth": "var(--transition-smooth)",
