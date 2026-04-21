@@ -26,8 +26,7 @@ const megaDropdownHrefs = [
   ...navItems.extraItems.map((i) => i.href),
 ];
 
-const overOnsHrefs = overOnsItems.map((i) => i.href);
-const inspiratieHrefs = inspiratieItems.map((i) => i.href);
+const programmasHrefs = programmasItems.map((i) => i.href);
 
 function useNavItemClass(hrefs: string[]) {
   const { pathname } = useLocation();
@@ -53,8 +52,9 @@ export const Navigation = () => {
 
   const megaClass = useNavItemClass(megaDropdownHrefs);
   const logiesClass = useSingleNavClass("/logies-vlieland");
-  const inspiratieClass = useNavItemClass(inspiratieHrefs);
-  const overOnsClass = useNavItemClass(overOnsHrefs);
+  const programmasClass = useNavItemClass(programmasHrefs);
+  const overOnsClass = useSingleNavClass("/over-ons");
+  const contactClass = useSingleNavClass("/contact");
 
   const openMega = useCallback(() => {
     if (closeTimer.current) {
