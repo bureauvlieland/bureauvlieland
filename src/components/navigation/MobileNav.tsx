@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { navItems } from "./MegaDropdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const overOnsItems = [
-  { label: "Over Bureau Vlieland", href: "/over-ons" },
-  { label: "Samenwerken", href: "/samenwerken" },
-  { label: "Contact", href: "/contact" },
-];
-
-const inspiratieItems = [
+const programmasItems = [
   { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
   { label: "Bouwstenen", href: "/bouwstenen" },
   { label: "Aangesloten partners", href: "/partners" },
@@ -23,8 +17,7 @@ const megaDropdownHrefs = [
   ...navItems.extraItems.map((i) => i.href),
 ];
 
-const overOnsHrefs = overOnsItems.map((i) => i.href);
-const inspiratieHrefs = inspiratieItems.map((i) => i.href);
+const programmasHrefs = programmasItems.map((i) => i.href);
 
 interface MobileNavProps {
   onClose: () => void;
