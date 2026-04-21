@@ -290,7 +290,18 @@ const AdminInvoicePreview = () => {
   };
 
   const calculateTotals = () => {
-    const bureauFee = calculateBureauFee(request?.number_of_people || 0);
+    const numberOfPeople = request?.number_of_people || 0;
+    const numberOfDays = Math.max(request?.selected_dates?.length || 0, 1);
+    const isBureauCentral = request?.invoicing_mode === "bureau_central";
+
+    const bureauFee = getCoordinationFee(numberOfPeople);
+    const touristTaxPp = Number(getSetting("tourist_tax_pp_per_day", 2.58));
+    const natureContributionPp = Number(getSetting("nature_contribution_pp", 1.0));
+    const centralSurchargePp = Number(getSetting("bureau_central_surcharge_pp", 2.5));
+
+    const touristTax = touristTaxPp * numberOfPeople * numberOfDays;
+    const natureContribution = natureContributionPp * numberOfPeople;
+    const centralSurcharge = isBureauCentral ? centralSurchargePp * numberOfPeople : 0;
 
     // Group amounts by VAT rate (incl. VAT, then split below)
     const vatGroups: Record<number, number> = {};
@@ -308,8 +319,8 @@ const AdminInvoicePreview = () => {
         vatGroups[rate] = (vatGroups[rate] || 0) + total;
       }
     });
-    // Bureau fee is always 21%
-    vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
+    // Bureau fee + central surcharge are 21% (standard service VAT)
+    vatGroups[21] = (vatGroups[21] || 0) + bureauFee + centralSurcharge;
 
     // Add accommodation quote
     if (accommodationQuote) {
@@ -323,6 +334,11 @@ const AdminInvoicePreview = () => {
       const rate = extra.vat_rate;
       vatGroups[rate] = (vatGroups[rate] || 0) + total;
     });
+
+    // Tourist tax & nature contribution = 0% VAT levies
+    if (touristTax + natureContribution > 0) {
+      vatGroups[0] = (vatGroups[0] || 0) + touristTax + natureContribution;
+    }
 
     let totalExclVat = 0;
     let totalVat = 0;
@@ -341,7 +357,19 @@ const AdminInvoicePreview = () => {
 
     const totalInclVat = totalExclVat + totalVat;
 
-    return { bureauFee, totalExclVat, totalVat, totalInclVat, vatLines };
+    return {
+      bureauFee,
+      touristTax,
+      natureContribution,
+      centralSurcharge,
+      isBureauCentral,
+      numberOfPeople,
+      numberOfDays,
+      totalExclVat,
+      totalVat,
+      totalInclVat,
+      vatLines,
+    };
   };
 
   const buildPdfBlob = async (): Promise<Blob | null> => {
