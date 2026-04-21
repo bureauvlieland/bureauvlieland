@@ -203,11 +203,11 @@ const Partners = () => {
                           </div>
                         )}
                         <div className="absolute top-3 left-3 flex gap-2">
-                          <Badge variant="secondary" className="bg-card/90 backdrop-blur-sm">
+                          <Badge className="bg-background/95 text-foreground border border-border shadow-sm backdrop-blur-sm hover:bg-background">
                             {isAccommodation ? "Accommodatie" : "Activiteiten"}
                           </Badge>
                           {mapUrl && (
-                            <Badge className="bg-accent text-accent-foreground">
+                            <Badge className="bg-primary/10 text-primary border border-primary/30 backdrop-blur-sm hover:bg-primary/15">
                               Direct boekbaar
                             </Badge>
                           )}
