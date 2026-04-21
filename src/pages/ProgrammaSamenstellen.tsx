@@ -71,6 +71,26 @@ const ProgrammaSamenstellen = () => {
     }
   }, [phase]);
 
+  // Handle ?block=<id> deep link from /bouwstenen — auto-add and jump to program phase
+  useEffect(() => {
+    const blockId = searchParams.get("block");
+    if (!blockId || handledBlockRef.current === blockId) return;
+    handledBlockRef.current = blockId;
+
+    if (phase === "basics") {
+      setPhase("program");
+    }
+    if (!isInCart(blockId)) {
+      const added = addToCart(blockId, 0);
+      if (added) {
+        toast({ title: "Toegevoegd aan uw programma", duration: 1800 });
+      }
+    }
+    // Clean the query param so refresh doesn't re-trigger
+    searchParams.delete("block");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, phase, isInCart, addToCart, setSearchParams, toast]);
+
   const handleRestoreDraft = () => {
     restoreDraft();
     toast({ title: "Concept hersteld", description: "Uw eerder opgeslagen programma is geladen." });
