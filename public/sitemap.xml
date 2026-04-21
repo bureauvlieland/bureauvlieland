@@ -127,7 +127,13 @@
   <!-- Voorbeeldprogramma's -->
   <url>
     <loc>https://bureauvlieland.nl/voorbeeldprogrammas</loc>
-    <lastmod>2026-02-24</lastmod>
+    <lastmod>2026-04-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/partners</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
