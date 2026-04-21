@@ -1982,6 +1982,31 @@ const AdminRequestDetail = () => {
         onSuccess={fetchRequestData}
       />
 
+      {/* Forward invoice to Snelstart dialog */}
+      <ForwardBureauInvoiceDialog
+        invoice={
+          forwardInvoice && request
+            ? ({
+                id: forwardInvoice.id,
+                invoice_number: forwardInvoice.invoice_number,
+                invoice_date: forwardInvoice.invoice_date,
+                amount_excl_vat: forwardInvoice.amount_excl_vat,
+                vat_amount: forwardInvoice.vat_amount,
+                amount_incl_vat: forwardInvoice.amount_incl_vat,
+                invoice_type: forwardInvoice.invoice_type,
+                description: forwardInvoice.description,
+                customer_label:
+                  request.customer_company || request.customer_name,
+                reference_number: request.reference_number || null,
+              } as BureauInvoiceForForward)
+            : null
+        }
+        onClose={() => {
+          setForwardInvoice(null);
+          fetchRequestData();
+        }}
+      />
+
       {/* Add activity sheet */}
       {request && (
         <AdminAddActivitySheet
