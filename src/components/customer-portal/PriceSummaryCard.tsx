@@ -7,6 +7,7 @@ import type { AccommodationQuote } from "@/types/accommodation";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -37,7 +38,11 @@ export const PriceSummaryCard = ({
   const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
 
-  // Fetch VAT rates per building block
+  // Fetch definitive billing lines per item (admin-defined split-VAT lines + extras like koffie/thee)
+  const itemIds = useMemo(() => items.map(i => i.id), [items]);
+  const { linesByItem } = useItemBillingLinesBatch(itemIds);
+
+  // Fetch VAT rates per building block (fallback when no billing lines)
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   useEffect(() => {
     const blockIds = items.map(i => i.block_id).filter(Boolean) as string[];
@@ -76,6 +81,27 @@ export const PriceSummaryCard = ({
 
     // Build order lines with unified pricing
     const orderLines = relevantItems.map(item => {
+      const itemLines = linesByItem[item.id];
+      const hasBillingLines = Array.isArray(itemLines) && itemLines.length > 0;
+
+      // If admin has defined definitive billing lines (split-VAT, extras), use their sum.
+      if (hasBillingLines) {
+        const linesTotal = itemLines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
+        return {
+          item,
+          hasQuotedPrice: true,
+          isPreliminary: false,
+          isDefinitive: true,
+          effectivePrice: linesTotal,
+          unitPrice: null as number | null,
+          isPerPerson: false,
+          peopleCount: 1,
+          isPerDay: false,
+          dayCount: 1,
+          billingLines: itemLines,
+        };
+      }
+
       const hasQuotedPrice = item.quoted_price != null;
       const isPreliminary = !hasQuotedPrice && item.admin_price_override != null;
 
@@ -96,7 +122,19 @@ export const PriceSummaryCard = ({
       }
 
       const isPerDay = item.price_type === "per_person_per_day";
-      return { item, hasQuotedPrice, isPreliminary, effectivePrice, unitPrice, isPerPerson: ppMultiplier > 1, peopleCount: ppMultiplier, isPerDay, dayCount: dayMultiplier };
+      return {
+        item,
+        hasQuotedPrice,
+        isPreliminary,
+        isDefinitive: false,
+        effectivePrice,
+        unitPrice,
+        isPerPerson: ppMultiplier > 1,
+        peopleCount: ppMultiplier,
+        isPerDay,
+        dayCount: dayMultiplier,
+        billingLines: undefined as typeof itemLines | undefined,
+      };
     });
 
     const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
@@ -128,9 +166,17 @@ export const PriceSummaryCard = ({
       allVatLines[0].exclVat += amount;
     };
 
-    // Add all priced items to VAT breakdown
+    // Add all priced items to VAT breakdown — billing lines are split per VAT rate
     orderLines.forEach(l => {
-      if (l.effectivePrice !== null && l.effectivePrice !== undefined) {
+      if (l.effectivePrice === null || l.effectivePrice === undefined) return;
+      if (l.billingLines && l.billingLines.length > 0) {
+        l.billingLines.forEach(bl => {
+          const rate = Number(bl.vat_rate ?? 21);
+          if (!allVatLines[rate]) allVatLines[rate] = { exclVat: 0, vatAmount: 0 };
+          allVatLines[rate].exclVat += Number(bl.amount_excl_vat || 0);
+          allVatLines[rate].vatAmount += Number(bl.vat_amount || 0);
+        });
+      } else {
         addVat(l.effectivePrice, getItemVatRate(l.item));
       }
     });
@@ -165,7 +211,7 @@ export const PriceSummaryCard = ({
       grandTotalInclVat,
       hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
@@ -264,7 +310,7 @@ export const PriceSummaryCard = ({
           )}
 
           {/* Activity / program item lines */}
-          {summary.orderLines.map(({ item, isPreliminary, effectivePrice, unitPrice, isPerPerson, peopleCount, isPerDay, dayCount }) => {
+          {summary.orderLines.map(({ item, isPreliminary, isDefinitive, effectivePrice, unitPrice, isPerPerson, peopleCount, isPerDay, dayCount, billingLines }) => {
             const showPrice = effectivePrice !== null;
             return (
               <div key={item.id} className="py-2">
@@ -278,7 +324,9 @@ export const PriceSummaryCard = ({
                   </span>
                   <span className="text-sm whitespace-nowrap shrink-0 text-right">
                     {showPrice ? (
-                      isPerPerson && unitPrice !== null ? (
+                      isDefinitive ? (
+                        <span>€{formatPrice(effectivePrice!)}</span>
+                      ) : isPerPerson && unitPrice !== null ? (
                         <span className={isPreliminary ? "text-muted-foreground" : ""}>
                           €{formatPrice(unitPrice)} p.p. × {peopleCount}{isPerDay && dayCount > 1 ? ` × ${dayCount} dgn` : ""} = €{formatPrice(effectivePrice!)}
                         </span>
@@ -292,6 +340,20 @@ export const PriceSummaryCard = ({
                     )}
                   </span>
                 </div>
+                {isDefinitive && billingLines && billingLines.length > 0 && (
+                  <div className="ml-3 mt-1 space-y-0.5">
+                    {billingLines.map(bl => (
+                      <div key={bl.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="truncate">
+                          {bl.description}
+                          {bl.quantity !== 1 && ` (${bl.quantity}×)`}
+                          <span className="ml-1 opacity-70">— BTW {Number(bl.vat_rate)}%</span>
+                        </span>
+                        <span className="whitespace-nowrap ml-2">€{formatPrice(Number(bl.amount_incl_vat))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {item.admin_price_notes && (
                   <p className="text-xs text-muted-foreground mt-0.5 break-words">{item.admin_price_notes}</p>
                 )}
