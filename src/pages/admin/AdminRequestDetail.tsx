@@ -1858,6 +1858,7 @@ const AdminRequestDetail = () => {
                   items={items}
                   invoices={bureauInvoices}
                   onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+                  onForwardInvoice={(inv) => setForwardInvoice(inv)}
                   isQuoteMode={isQuoteMode}
                   touristTax={touristTax}
                   natureContribution={natureContribution}
