@@ -45,6 +45,7 @@ interface ProgramRequest {
   number_of_people: number;
   selected_dates: string[];
   linked_accommodation_id: string | null;
+  invoicing_mode: string | null;
   billing_company_name: string | null;
   billing_contact_name: string | null;
   billing_contact_email: string | null;
