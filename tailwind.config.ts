@@ -14,7 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        'display': ['Montserrat', 'system-ui', 'sans-serif'],
+        'display': ['"Fraunces"', 'Georgia', 'serif'],
+        'sans': ['"Inter"', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -64,10 +65,15 @@ export default {
       },
       backgroundImage: {
         "gradient-hero": "var(--gradient-hero)",
+        "gradient-ocean": "var(--gradient-ocean)",
+        "gradient-sunset": "var(--gradient-sunset)",
+        "gradient-sand": "var(--gradient-sand)",
       },
       boxShadow: {
         "soft": "var(--shadow-soft)",
         "medium": "var(--shadow-medium)",
+        "dramatic": "var(--shadow-dramatic)",
+        "glow": "var(--shadow-glow)",
       },
       transitionTimingFunction: {
         "smooth": "var(--transition-smooth)",
