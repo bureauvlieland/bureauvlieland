@@ -44,19 +44,30 @@ const usePublicPartners = () => {
 
       const providerIds = Array.from(blockCountByProvider.keys()).filter((id) => id !== "bureau");
 
-      // Step 2 — fetch all active partners that either provide a published block OR have a MAP slug
-      const orFilter = providerIds.length > 0
-        ? `id.in.(${providerIds.join(",")}),map_tenant_slug.not.is.null`
-        : `map_tenant_slug.not.is.null`;
+      // Step 2 — fetch partners in two passes to avoid PostgREST .or() escaping issues with hyphenated IDs
+      const partnerMap = new Map<string, any>();
 
-      const { data: partnerRows, error: partnerErr } = await supabase
+      // 2a) Partners that provide a published bouwsteen
+      if (providerIds.length > 0) {
+        const { data: blockProviders, error: bpErr } = await supabase
+          .from("partners")
+          .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
+          .eq("is_active", true)
+          .in("id", providerIds);
+        if (bpErr) throw bpErr;
+        for (const p of blockProviders ?? []) partnerMap.set(p.id, p);
+      }
+
+      // 2b) Partners with a MAP-koppeling (direct boekbaar)
+      const { data: mapPartners, error: mpErr } = await supabase
         .from("partners")
         .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
         .eq("is_active", true)
-        .or(orFilter);
-      if (partnerErr) throw partnerErr;
+        .not("map_tenant_slug", "is", null);
+      if (mpErr) throw mpErr;
+      for (const p of mapPartners ?? []) partnerMap.set(p.id, p);
 
-      const result: PublicPartner[] = (partnerRows ?? [])
+      const result: PublicPartner[] = Array.from(partnerMap.values())
         .filter((p) => p.id !== "bureau")
         .map((p) => ({
           id: p.id,
