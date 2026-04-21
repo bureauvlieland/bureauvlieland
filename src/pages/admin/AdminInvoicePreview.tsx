@@ -30,7 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { calculateBureauFee } from "@/types/buildingBlock";
 import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
