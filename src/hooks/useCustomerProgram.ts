@@ -782,18 +782,48 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   // The actual JSON body returned by the edge function lives on `error.context` (a Response),
   // so we read it once and surface its `error` field if present.
   const extractEdgeError = async (err: any, fallback: string): Promise<string> => {
+    // Try to extract a meaningful error message from a FunctionsHttpError.
+    // The body Response on err.context can only be read once, so we try carefully.
     try {
-      if (err?.context && typeof err.context.json === "function") {
-        const body = await err.context.json();
-        if (body?.error) return body.error;
+      const ctx = err?.context;
+      if (ctx) {
+        // Try .json() first
+        if (typeof ctx.json === "function") {
+          try {
+            const cloned = typeof ctx.clone === "function" ? ctx.clone() : ctx;
+            const body = await cloned.json();
+            console.error("[extractEdgeError] body:", body);
+            if (body?.error) return typeof body.error === "string" ? body.error : JSON.stringify(body.error);
+            if (body?.message) return body.message;
+          } catch (jsonErr) {
+            // fallback to text
+            try {
+              const cloned = typeof ctx.clone === "function" ? ctx.clone() : ctx;
+              const text = await cloned.text();
+              console.error("[extractEdgeError] text body:", text);
+              if (text) {
+                try {
+                  const parsed = JSON.parse(text);
+                  if (parsed?.error) return parsed.error;
+                  if (parsed?.message) return parsed.message;
+                } catch {
+                  return text.length < 300 ? text : fallback;
+                }
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        if (typeof ctx.error === "string") return ctx.error;
       }
-      if (typeof err?.context?.error === "string") return err.context.error;
-    } catch {
-      // ignore parse errors and fall through
+    } catch (e) {
+      console.error("[extractEdgeError] failed to parse:", e);
     }
     if (typeof err?.message === "string" && !err.message.includes("non-2xx")) {
       return err.message;
     }
+    console.error("[extractEdgeError] fallback used. raw err:", err);
     return fallback;
   };
 
