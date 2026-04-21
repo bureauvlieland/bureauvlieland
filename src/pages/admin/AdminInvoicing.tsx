@@ -311,7 +311,6 @@ const AdminInvoicing = () => {
                 <span>Centrale opslag</span>
                 <span>{formatCurrency(totals.centralSurcharge)}</span>
               </div>
-            </div>
             )}
             <div className="flex justify-between text-muted-foreground">
               <span>Coördinatiekosten</span>
