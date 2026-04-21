@@ -30,7 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { calculateBureauFee } from "@/types/buildingBlock";
 import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
@@ -46,6 +45,7 @@ interface ProgramRequest {
   number_of_people: number;
   selected_dates: string[];
   linked_accommodation_id: string | null;
+  invoicing_mode: string | null;
   billing_company_name: string | null;
   billing_contact_name: string | null;
   billing_contact_email: string | null;
@@ -99,7 +99,7 @@ const AdminInvoicePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const { getSetting } = useAppSettings();
+  const { getSetting, getCoordinationFee } = useAppSettings();
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
@@ -290,7 +290,18 @@ const AdminInvoicePreview = () => {
   };
 
   const calculateTotals = () => {
-    const bureauFee = calculateBureauFee(request?.number_of_people || 0);
+    const numberOfPeople = request?.number_of_people || 0;
+    const numberOfDays = Math.max(request?.selected_dates?.length || 0, 1);
+    const isBureauCentral = request?.invoicing_mode === "bureau_central";
+
+    const bureauFee = getCoordinationFee(numberOfPeople);
+    const touristTaxPp = Number(getSetting("tourist_tax_pp_per_day", 2.58));
+    const natureContributionPp = Number(getSetting("nature_contribution_pp", 1.0));
+    const centralSurchargePp = Number(getSetting("bureau_central_surcharge_pp", 2.5));
+
+    const touristTax = touristTaxPp * numberOfPeople * numberOfDays;
+    const natureContribution = natureContributionPp * numberOfPeople;
+    const centralSurcharge = isBureauCentral ? centralSurchargePp * numberOfPeople : 0;
 
     // Group amounts by VAT rate (incl. VAT, then split below)
     const vatGroups: Record<number, number> = {};
@@ -308,8 +319,8 @@ const AdminInvoicePreview = () => {
         vatGroups[rate] = (vatGroups[rate] || 0) + total;
       }
     });
-    // Bureau fee is always 21%
-    vatGroups[21] = (vatGroups[21] || 0) + bureauFee;
+    // Bureau fee + central surcharge are 21% (standard service VAT)
+    vatGroups[21] = (vatGroups[21] || 0) + bureauFee + centralSurcharge;
 
     // Add accommodation quote
     if (accommodationQuote) {
@@ -323,6 +334,11 @@ const AdminInvoicePreview = () => {
       const rate = extra.vat_rate;
       vatGroups[rate] = (vatGroups[rate] || 0) + total;
     });
+
+    // Tourist tax & nature contribution = 0% VAT levies
+    if (touristTax + natureContribution > 0) {
+      vatGroups[0] = (vatGroups[0] || 0) + touristTax + natureContribution;
+    }
 
     let totalExclVat = 0;
     let totalVat = 0;
@@ -341,7 +357,19 @@ const AdminInvoicePreview = () => {
 
     const totalInclVat = totalExclVat + totalVat;
 
-    return { bureauFee, totalExclVat, totalVat, totalInclVat, vatLines };
+    return {
+      bureauFee,
+      touristTax,
+      natureContribution,
+      centralSurcharge,
+      isBureauCentral,
+      numberOfPeople,
+      numberOfDays,
+      totalExclVat,
+      totalVat,
+      totalInclVat,
+      vatLines,
+    };
   };
 
   const buildPdfBlob = async (): Promise<Blob | null> => {
@@ -817,8 +845,8 @@ const AdminInvoicePreview = () => {
                             </>
                           )}
 
-                          {/* Coordination fee */}
-                          {totals.bureauFee > 0 && (
+                          {/* Coordination fee + levies + central surcharge */}
+                          {(totals.bureauFee > 0 || totals.touristTax > 0 || totals.natureContribution > 0 || totals.centralSurcharge > 0) && (
                             <>
                               <tr>
                                 <td
@@ -826,18 +854,62 @@ const AdminInvoicePreview = () => {
                                   className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
                                   style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
-                                  Coördinatie
+                                  Coördinatie & bijdragen
                                 </td>
                               </tr>
-                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                <td className="py-1.5 px-2">
-                                  <p className="font-medium">Coördinatiekosten</p>
-                                  <p className="text-[9px] text-gray-400">{request.number_of_people} personen</p>
-                                </td>
-                                <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">{formatCurrency(totals.bureauFee)}</td>
-                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
-                              </tr>
+                              {totals.bureauFee > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Coördinatiekosten</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">1</td>
+                                  <td className="py-1.5 px-2 text-right">{formatCurrency(totals.bureauFee)}</td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
+                                </tr>
+                              )}
+                              {totals.centralSurcharge > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Opslag centrale facturatie</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
+                                  <td className="py-1.5 px-2 text-right">
+                                    {formatCurrency(totals.centralSurcharge / Math.max(totals.numberOfPeople, 1))}
+                                    <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.centralSurcharge)}</td>
+                                </tr>
+                              )}
+                              {totals.touristTax > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Toeristenbelasting</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} pers. × {totals.numberOfDays} {totals.numberOfDays === 1 ? "dag" : "dagen"}</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople * totals.numberOfDays}</td>
+                                  <td className="py-1.5 px-2 text-right">
+                                    {formatCurrency(totals.touristTax / Math.max(totals.numberOfPeople * totals.numberOfDays, 1))}
+                                    <span className="text-[8px] text-gray-400 ml-1">p.p.p.d.</span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.touristTax)}</td>
+                                </tr>
+                              )}
+                              {totals.natureContribution > 0 && (
+                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <td className="py-1.5 px-2">
+                                    <p className="font-medium">Natuurbijdrage</p>
+                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
+                                  <td className="py-1.5 px-2 text-right">
+                                    {formatCurrency(totals.natureContribution / Math.max(totals.numberOfPeople, 1))}
+                                    <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.natureContribution)}</td>
+                                </tr>
+                              )}
                             </>
                           )}
                         </tbody>
