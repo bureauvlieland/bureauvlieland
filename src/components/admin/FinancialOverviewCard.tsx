@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Euro, Plus, CheckCircle2, Clock, FileText } from "lucide-react";
+import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -34,6 +34,7 @@ interface FinancialOverviewCardProps {
   items: FinancialItem[];
   invoices: BureauInvoice[];
   onRegisterInvoice: () => void;
+  onForwardInvoice?: (invoice: BureauInvoice) => void;
   isQuoteMode?: boolean;
   touristTax?: number;
   natureContribution?: number;
@@ -56,6 +57,7 @@ export const FinancialOverviewCard = ({
   items,
   invoices,
   onRegisterInvoice,
+  onForwardInvoice,
   isQuoteMode = false,
   touristTax = 0,
   natureContribution = 0,
@@ -389,23 +391,47 @@ export const FinancialOverviewCard = ({
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-2">GEFACTUREERD</h4>
               <div className="space-y-2">
-                {invoices.map((invoice) => (
-                  <div key={invoice.id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{invoice.invoice_number}</span>
-                      <span className="text-muted-foreground">
-                        ({format(new Date(invoice.invoice_date), "EEE d MMM", { locale: nl })})
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {invoiceTypeLabelMap[invoice.invoice_type as InvoiceType] || invoice.invoice_type}
-                      </Badge>
+                {invoices.map((invoice) => {
+                  const isForwarded =
+                    invoice.status === "forwarded" || !!invoice.forwarded_to_accounting_at;
+                  return (
+                    <div key={invoice.id} className="flex items-center justify-between text-sm gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-medium">{invoice.invoice_number}</span>
+                        <span className="text-muted-foreground whitespace-nowrap">
+                          ({format(new Date(invoice.invoice_date), "EEE d MMM", { locale: nl })})
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {invoiceTypeLabelMap[invoice.invoice_type as InvoiceType] || invoice.invoice_type}
+                        </Badge>
+                        {isForwarded && (
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
+                            <ArrowRight className="h-2.5 w-2.5 mr-0.5" />
+                            Snelstart
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`tabular-nums ${invoice.invoice_type === "credit" ? "text-destructive" : ""}`}>
+                          {invoice.invoice_type === "credit" ? "-" : ""}
+                          {formatCurrency(invoice.amount_incl_vat)}
+                        </span>
+                        {!isForwarded && onForwardInvoice && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2"
+                            onClick={() => onForwardInvoice(invoice)}
+                            title="Doorsturen naar Snelstart (bureauvlieland@boekhouding.nl)"
+                          >
+                            <Mail className="h-3.5 w-3.5 mr-1" />
+                            Doorsturen
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <span className={`tabular-nums ${invoice.invoice_type === "credit" ? "text-destructive" : ""}`}>
-                      {invoice.invoice_type === "credit" ? "-" : ""}
-                      {formatCurrency(invoice.amount_incl_vat)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </>

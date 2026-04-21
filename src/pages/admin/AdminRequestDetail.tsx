@@ -84,6 +84,7 @@ import {
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
+import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
 import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConflictBanner";
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
@@ -95,7 +96,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
-import { calculateBureauFee } from "@/types/buildingBlock";
+import { calculateProjectOutstandingAmount } from "@/lib/projectFinancials";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
@@ -233,6 +234,7 @@ const AdminRequestDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoice | null>(null);
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
@@ -569,23 +571,21 @@ const AdminRequestDetail = () => {
   };
 
   const calculateOutstandingAmount = () => {
-    // Calculate items to be invoiced by Bureau Vlieland
-    const bureauItems = items.filter(
-      (item) => item.block_type === "bureau" && item.status === "confirmed" && item.quoted_price
-    );
-    const itemsTotal = bureauItems.reduce((sum, item) => sum + (item.quoted_price || 0), 0);
-    const coordinationFee = calculateBureauFee(request?.number_of_people || 0);
-    const totalInclVat = itemsTotal + coordinationFee;
-
-    // Calculate invoiced amounts
-    const invoicedInclVat = bureauInvoices
-      .filter((inv) => inv.invoice_type !== "credit")
-      .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
-    const creditedInclVat = bureauInvoices
-      .filter((inv) => inv.invoice_type === "credit")
-      .reduce((sum, inv) => sum + inv.amount_incl_vat, 0);
-
-    return Math.max(0, totalInclVat - (invoicedInclVat - creditedInclVat));
+    // Gebruik dezelfde berekening als FinancialOverviewCard "Openstaand"
+    // zodat Voltooiingsstatus en Financieel Overzicht altijd hetzelfde
+    // bedrag tonen.
+    return calculateProjectOutstandingAmount({
+      items,
+      invoices: bureauInvoices,
+      numberOfPeople: request?.number_of_people ?? 0,
+      numberOfDays,
+      coordinationFee: calcCoordFee(request?.number_of_people ?? 0),
+      touristTax,
+      natureContribution,
+      centralSurcharge,
+      accommodationTotal,
+      linesByItem: billingLinesByItem,
+    });
   };
 
   if (isLoading) {
@@ -1858,6 +1858,7 @@ const AdminRequestDetail = () => {
                   items={items}
                   invoices={bureauInvoices}
                   onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+                  onForwardInvoice={(inv) => setForwardInvoice(inv)}
                   isQuoteMode={isQuoteMode}
                   touristTax={touristTax}
                   natureContribution={natureContribution}
@@ -1979,6 +1980,31 @@ const AdminRequestDetail = () => {
         requestId={request?.id || ""}
         suggestedAmount={calculateOutstandingAmount()}
         onSuccess={fetchRequestData}
+      />
+
+      {/* Forward invoice to Snelstart dialog */}
+      <ForwardBureauInvoiceDialog
+        invoice={
+          forwardInvoice && request
+            ? ({
+                id: forwardInvoice.id,
+                invoice_number: forwardInvoice.invoice_number,
+                invoice_date: forwardInvoice.invoice_date,
+                amount_excl_vat: forwardInvoice.amount_excl_vat,
+                vat_amount: forwardInvoice.vat_amount,
+                amount_incl_vat: forwardInvoice.amount_incl_vat,
+                invoice_type: forwardInvoice.invoice_type,
+                description: forwardInvoice.description,
+                customer_label:
+                  request.customer_company || request.customer_name,
+                reference_number: request.reference_number || null,
+              } as BureauInvoiceForForward)
+            : null
+        }
+        onClose={() => {
+          setForwardInvoice(null);
+          fetchRequestData();
+        }}
       />
 
       {/* Add activity sheet */}
