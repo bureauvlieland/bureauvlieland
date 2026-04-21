@@ -8,6 +8,7 @@ import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
+import { useInvoiceCustomerSendStatus } from "@/hooks/useInvoiceCustomerSendStatus";
 import { getItemLineTotal as centralLineTotal, isPerPersonItem } from "@/lib/portalPricing";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
@@ -69,6 +70,10 @@ export const FinancialOverviewCard = ({
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
   const { getItemVatRate } = useItemVatRates(items as any);
+  const { data: customerSendMap = {} } = useInvoiceCustomerSendStatus(
+    requestId,
+    invoices.map((i) => i.id),
+  );
 
   const programItems = items.filter(
     (item) => item.status !== "cancelled" && item.day_index !== -1
@@ -394,38 +399,71 @@ export const FinancialOverviewCard = ({
                 {invoices.map((invoice) => {
                   const isForwarded =
                     invoice.status === "forwarded" || !!invoice.forwarded_to_accounting_at;
+                  const customerSentAt = customerSendMap[invoice.id];
                   return (
-                    <div key={invoice.id} className="flex items-center justify-between text-sm gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium">{invoice.invoice_number}</span>
-                        <span className="text-muted-foreground whitespace-nowrap">
-                          ({format(new Date(invoice.invoice_date), "EEE d MMM", { locale: nl })})
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {invoiceTypeLabelMap[invoice.invoice_type as InvoiceType] || invoice.invoice_type}
-                        </Badge>
-                        {isForwarded && (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">
-                            <ArrowRight className="h-2.5 w-2.5 mr-0.5" />
-                            Snelstart
+                    <div key={invoice.id} className="flex items-start justify-between text-sm gap-2">
+                      <div className="flex flex-col gap-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{invoice.invoice_number}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            ({format(new Date(invoice.invoice_date), "EEE d MMM", { locale: nl })})
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {invoiceTypeLabelMap[invoice.invoice_type as InvoiceType] || invoice.invoice_type}
                           </Badge>
-                        )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {customerSentAt ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] h-4 px-1 bg-green-50 text-green-700 border-green-200"
+                              title={`Verstuurd op ${format(new Date(customerSentAt), "d MMM yyyy HH:mm", { locale: nl })}`}
+                            >
+                              <Mail className="h-2.5 w-2.5 mr-0.5" />
+                              Naar klant {format(new Date(customerSentAt), "d MMM", { locale: nl })}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 bg-muted text-muted-foreground">
+                              Niet naar klant verstuurd
+                            </Badge>
+                          )}
+                          {isForwarded ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-200"
+                              title={
+                                invoice.forwarded_to_accounting_at
+                                  ? `Doorgestuurd op ${format(new Date(invoice.forwarded_to_accounting_at), "d MMM yyyy HH:mm", { locale: nl })}`
+                                  : "Doorgestuurd naar Snelstart"
+                              }
+                            >
+                              <ArrowRight className="h-2.5 w-2.5 mr-0.5" />
+                              Snelstart{invoice.forwarded_to_accounting_at ? ` ${format(new Date(invoice.forwarded_to_accounting_at), "d MMM", { locale: nl })}` : ""}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 bg-muted text-muted-foreground">
+                              Nog niet doorgestuurd
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end gap-1">
                         <span className={`tabular-nums ${invoice.invoice_type === "credit" ? "text-destructive" : ""}`}>
                           {invoice.invoice_type === "credit" ? "-" : ""}
                           {formatCurrency(invoice.amount_incl_vat)}
                         </span>
-                        {!isForwarded && onForwardInvoice && (
+                        {onForwardInvoice && (
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 px-2"
+                            className="h-6 px-2 text-xs"
                             onClick={() => onForwardInvoice(invoice)}
-                            title="Doorsturen naar Snelstart (bureauvlieland@boekhouding.nl)"
+                            title={isForwarded
+                              ? "Opnieuw doorsturen naar Snelstart"
+                              : "Doorsturen naar Snelstart (bureauvlieland@boekhouding.nl)"}
                           >
-                            <Mail className="h-3.5 w-3.5 mr-1" />
-                            Doorsturen
+                            <Mail className="h-3 w-3 mr-1" />
+                            {isForwarded ? "Opnieuw doorsturen" : "Doorsturen"}
                           </Button>
                         )}
                       </div>

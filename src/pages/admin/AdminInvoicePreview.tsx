@@ -25,6 +25,7 @@ import {
   Download,
   Loader2,
   FileText,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,7 @@ import { calculateBureauFee } from "@/types/buildingBlock";
 import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
 
 interface ProgramRequest {
   id: string;
@@ -45,6 +47,8 @@ interface ProgramRequest {
   selected_dates: string[];
   linked_accommodation_id: string | null;
   billing_company_name: string | null;
+  billing_contact_name: string | null;
+  billing_contact_email: string | null;
   billing_address_street: string | null;
   billing_address_postal: string | null;
   billing_address_city: string | null;
@@ -102,6 +106,7 @@ const AdminInvoicePreview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   // Load billing lines per item (definitive lines override quoted_price)
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
@@ -339,39 +344,45 @@ const AdminInvoicePreview = () => {
     return { bureauFee, totalExclVat, totalVat, totalInclVat, vatLines };
   };
 
-  const generatePDF = async () => {
-    if (!pdfRef.current) return;
-    setIsGenerating(true);
-    try {
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        windowWidth: pdfRef.current.scrollWidth,
-      });
+  const buildPdfBlob = async (): Promise<Blob | null> => {
+    if (!pdfRef.current) return null;
+    const canvas = await html2canvas(pdfRef.current, {
+      scale: 3,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      windowWidth: pdfRef.current.scrollWidth,
+    });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 10; // 10mm margin
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = margin;
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 10; // 10mm margin
+    const imgWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = margin;
 
+    pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight - margin * 2;
+
+    while (heightLeft > 0) {
+      position = margin - (imgHeight - heightLeft);
+      pdf.addPage();
       pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
       heightLeft -= pageHeight - margin * 2;
+    }
 
-      while (heightLeft > 0) {
-        position = margin - (imgHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - margin * 2;
-      }
+    return pdf.output("blob");
+  };
 
-      const url = URL.createObjectURL(pdf.output("blob"));
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await buildPdfBlob();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `Factuur-${invoiceNumber}.pdf`;
@@ -433,14 +444,20 @@ const AdminInvoicePreview = () => {
                 </p>
               </div>
             </div>
-            <Button onClick={generatePDF} disabled={isGenerating}>
-              {isGenerating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Download PDF
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={generatePDF} disabled={isGenerating}>
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Download PDF
+              </Button>
+              <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || !invoiceNumber}>
+                <Mail className="h-4 w-4 mr-2" />
+                Verstuur naar klant
+              </Button>
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">
@@ -898,6 +915,22 @@ const AdminInvoicePreview = () => {
           </div>
         </div>
       </AdminLayout>
+
+      <SendBureauInvoiceToCustomerDialog
+        isOpen={sendDialogOpen}
+        onClose={() => setSendDialogOpen(false)}
+        requestId={request.id}
+        defaultRecipient={request.billing_contact_email || request.customer_email}
+        recipientName={request.billing_contact_name || request.customer_name}
+        invoiceNumber={invoiceNumber}
+        invoiceDate={invoiceDate}
+        amountExclVat={Math.round(totals.totalExclVat * 100) / 100}
+        vatAmount={Math.round(totals.totalVat * 100) / 100}
+        invoiceType="partial"
+        description={notes}
+        onGeneratePdf={buildPdfBlob}
+        onSent={() => navigate(`/admin/projecten/${request.id}`)}
+      />
     </>
   );
 };
