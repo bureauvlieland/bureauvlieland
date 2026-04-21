@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { navItems } from "./MegaDropdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const overOnsItems = [
-  { label: "Over Bureau Vlieland", href: "/over-ons" },
-  { label: "Samenwerken", href: "/samenwerken" },
-  { label: "Contact", href: "/contact" },
-];
-
-const inspiratieItems = [
+const programmasItems = [
   { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
   { label: "Bouwstenen", href: "/bouwstenen" },
   { label: "Aangesloten partners", href: "/partners" },
@@ -23,8 +17,7 @@ const megaDropdownHrefs = [
   ...navItems.extraItems.map((i) => i.href),
 ];
 
-const overOnsHrefs = overOnsItems.map((i) => i.href);
-const inspiratieHrefs = inspiratieItems.map((i) => i.href);
+const programmasHrefs = programmasItems.map((i) => i.href);
 
 interface MobileNavProps {
   onClose: () => void;
@@ -135,18 +128,18 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
           Logies
         </Link>
 
-        {/* Inspiratie accordion */}
+        {/* Programma's accordion */}
         <div className="px-2">
           <button
-            onClick={() => toggle("inspiratie")}
-            className={`flex items-center justify-between w-full py-3 ${topLevelClass(isGroupActive(inspiratieHrefs))}`}
+            onClick={() => toggle("programmas")}
+            className={`flex items-center justify-between w-full py-3 ${topLevelClass(isGroupActive(programmasHrefs))}`}
           >
-            <span>Inspiratie</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === "inspiratie" ? "rotate-180" : ""}`} />
+            <span>Programma's</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === "programmas" ? "rotate-180" : ""}`} />
           </button>
-          {openDropdown === "inspiratie" && (
+          {openDropdown === "programmas" && (
             <div className="pl-4 pb-2 space-y-1">
-              {inspiratieItems.map((item) => (
+              {programmasItems.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}
@@ -160,30 +153,32 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
           )}
         </div>
 
-        {/* Over ons accordion */}
-        <div className="px-2">
-          <button
-            onClick={() => toggle("overons")}
-            className={`flex items-center justify-between w-full py-3 ${topLevelClass(isGroupActive(overOnsHrefs))}`}
-          >
-            <span>Over ons</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === "overons" ? "rotate-180" : ""}`} />
-          </button>
-          {openDropdown === "overons" && (
-            <div className="pl-4 pb-2 space-y-1">
-              {overOnsItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={onClose}
-                  className={subItemClass(item.href)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Over ons */}
+        <Link
+          to="/over-ons"
+          onClick={onClose}
+          className={`px-2 py-3 ${topLevelClass(isActive("/over-ons"))}`}
+        >
+          Over ons
+        </Link>
+
+        {/* Contact */}
+        <Link
+          to="/contact"
+          onClick={onClose}
+          className={`px-2 py-3 ${topLevelClass(isActive("/contact"))}`}
+        >
+          Contact
+        </Link>
+
+        {/* Samenwerken */}
+        <Link
+          to="/samenwerken"
+          onClick={onClose}
+          className={`px-2 py-3 ${topLevelClass(isActive("/samenwerken"))}`}
+        >
+          Samenwerken
+        </Link>
       </div>
     </ScrollArea>
   );
