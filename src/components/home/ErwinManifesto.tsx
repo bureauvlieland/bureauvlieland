@@ -33,10 +33,6 @@ export const ErwinManifesto = () => {
                 </div>
                 <div className="font-display text-lg leading-tight">Erwin Soolsma</div>
               </div>
-              {/* Vertical decorative text */}
-              <div className="hidden lg:block absolute top-6 -left-12 -rotate-90 origin-top-left text-[10px] uppercase tracking-[0.4em] text-sand/40">
-                · figuur 01 — sinds 2017 · Vlieland
-              </div>
             </div>
           </motion.div>
 
