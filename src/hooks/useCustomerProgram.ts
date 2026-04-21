@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   type ProgramRequestItem,
   type ProgramRequestHistory,
@@ -769,24 +770,39 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  // Detect admin impersonation via URL param (?impersonate=admin or any value with admin token)
+  const isAdminImpersonating = (): boolean => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get("impersonate") === "admin";
+  };
+
   // Accept quote proposal (for maatwerk quotes)
   const acceptQuoteProposal = useCallback(async (): Promise<boolean> => {
     if (!program) return false;
 
     try {
-      const { error } = await supabase.functions.invoke("accept-quote-proposal", {
+      const adminOverride = isAdminImpersonating();
+      const { data, error } = await supabase.functions.invoke("accept-quote-proposal", {
         body: {
           token: token,
           origin: window.location.origin,
+          ...(adminOverride ? { admin_override: true } : {}),
         },
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       await fetchProgram();
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error accepting quote proposal:", err);
+      const message =
+        err?.context?.error ||
+        err?.message ||
+        "Er ging iets mis bij het accorderen van dit voorstel";
+      toast.error(message);
       return false;
     }
   }, [program, token, fetchProgram]);
@@ -796,20 +812,28 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     if (!program) return false;
 
     try {
-      const { error } = await supabase.functions.invoke("approve-quote-item", {
+      const adminOverride = isAdminImpersonating();
+      const { data, error } = await supabase.functions.invoke("approve-quote-item", {
         body: {
           token: token,
           item_id: itemId,
           origin: window.location.origin,
+          ...(adminOverride ? { admin_override: true } : {}),
         },
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       await fetchProgram();
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error approving quote item:", err);
+      const message =
+        err?.context?.error ||
+        err?.message ||
+        "Er ging iets mis bij het accorderen van dit onderdeel";
+      toast.error(message);
       return false;
     }
   }, [program, token, fetchProgram]);
