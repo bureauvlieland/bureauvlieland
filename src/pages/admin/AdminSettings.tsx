@@ -191,9 +191,22 @@ export default function AdminSettings() {
       );
     }
 
-    // Default text rendering
+    // Default text rendering (with edit support)
+    if (isEditing) {
+      return (
+        <Input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="max-w-md"
+        />
+      );
+    }
+
     return (
-      <span className="text-sm">{String(setting.value)}</span>
+      <span className="text-sm">
+        {setting.value ? String(setting.value) : <span className="text-muted-foreground italic">— niet ingesteld —</span>}
+      </span>
     );
   };
 
