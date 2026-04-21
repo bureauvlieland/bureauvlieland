@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Euro, Plus, CheckCircle2, Clock, FileText } from "lucide-react";
+import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -34,6 +34,7 @@ interface FinancialOverviewCardProps {
   items: FinancialItem[];
   invoices: BureauInvoice[];
   onRegisterInvoice: () => void;
+  onForwardInvoice?: (invoice: BureauInvoice) => void;
   isQuoteMode?: boolean;
   touristTax?: number;
   natureContribution?: number;
@@ -56,6 +57,7 @@ export const FinancialOverviewCard = ({
   items,
   invoices,
   onRegisterInvoice,
+  onForwardInvoice,
   isQuoteMode = false,
   touristTax = 0,
   natureContribution = 0,
