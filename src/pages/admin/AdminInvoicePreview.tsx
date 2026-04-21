@@ -25,6 +25,7 @@ import {
   Download,
   Loader2,
   FileText,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,7 @@ import { calculateBureauFee } from "@/types/buildingBlock";
 import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
 
 interface ProgramRequest {
   id: string;
@@ -45,6 +47,8 @@ interface ProgramRequest {
   selected_dates: string[];
   linked_accommodation_id: string | null;
   billing_company_name: string | null;
+  billing_contact_name: string | null;
+  billing_contact_email: string | null;
   billing_address_street: string | null;
   billing_address_postal: string | null;
   billing_address_city: string | null;
