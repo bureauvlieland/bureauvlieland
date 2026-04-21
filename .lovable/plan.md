@@ -1,32 +1,54 @@
 
 
-## Akkoord met terugwerkende kracht mogelijk maken
+## Probleem
 
-### Probleem
-In het screenshot zie ik dat geen enkele "Akkoord"-knop werkt. Niet omdat de programmadata in het verleden liggen, maar omdat de **geldigheidsdatum van het voorstel** (`quote_valid_until` = 2 maart 2026) is verstreken. Beide edge functions die akkoord verwerken (`accept-quote-proposal` en `approve-quote-item`) blokkeren hard op `quote_valid_until < now()`. De foutmelding is "Dit voorstel is verlopen", maar in de UI komt dat momenteel waarschijnlijk niet duidelijk binnen — de knop lijkt gewoon niets te doen.
+Het kostenoverzicht in het klantportaal toont **€4.678,45**, het admin Financieel Overzicht toont **€4.761,69** — verschil **€83,24**.
 
-### Oplossing — twee lagen
+Oorzaak: zodra je in admin "definitieve" factuurregels (`program_item_billing_lines`) toevoegt aan een item (bijv. om gesplitste BTW-tarieven 9%/21% correct vast te leggen), gebruikt alléén het admin-overzicht dat totaal. Het klantportaal kent die regels niet en blijft `quoted_price` / `admin_price_override` × aantal tonen.
 
-**1. Korte termijn (deze case oplossen):** verleng de geldigheidsdatum van dit specifieke project. Dit is een eenmalige database-update via een migratie. Voor het project van Jack Frieling (id `d548e22b-…`) zet ik `quote_valid_until` op een datum in de toekomst zodat klant + admin direct akkoord kunnen geven.
+Voor dit project gaat het om twee items:
 
-**2. Structureel (admin override):** voeg in beide edge functions een check toe die de validity-blokkade overslaat als de aanroep van een **admin-impersonatie** komt. Op die manier kun je als beheerder altijd met terugwerkende kracht namens een klant akkoorderen, ook als het oorspronkelijke voorstel is verlopen.
+| Item | Klantportaal | Admin (billing lines) | Verschil |
+|---|---|---|---|
+| Italiaanse shared dining @ Oliva | €400,50 (9 × €44,50) | €423,74 (€337 @9% + €86,74 @21%) | +€23,24 |
+| Zaalhuur Brouwerij Fortuna | €598,95 (quoted_price) | €658,95 (zaal €598,95 + koffie/thee €60) | +€60,00 |
 
-   - In `approve-quote-item` bestaat `admin_override` al als parameter, maar de validity-check op regel 144-152 staat *vóór* de admin-check. Die verplaats ik naar binnen een `if (!admin_override)`-blok.
-   - In `accept-quote-proposal` zit de check al wél binnen `if (!isAdmin)` (regel 301-331), dus daar werkt admin-override correct. Geen wijziging nodig.
-   - In de klant-flow (`approveQuoteItem` in `useCustomerProgram.ts`) geef ik `admin_override: true` mee wanneer er een `?impersonate=admin` token in de URL staat — exact dezelfde patroon als het bestaande Admin Impersonation-mechanisme (zie memory).
+De billing lines zijn in dit geval het juiste totaal (klant betaalt straks ook €423,74 en €658,95). Het klantportaal toont dus te weinig.
 
-**3. UX-fix (foutmelding tonen):** de huidige `approveQuoteItem`-functie in `useCustomerProgram.ts` slikt de foutmelding stilletjes (`console.error`). Ik laat 'm de Nederlandstalige error van de edge function via een toast tonen ("Dit voorstel is verlopen — neem contact op met Bureau Vlieland"). Zo weten klanten in de toekomst meteen waarom de knop niet doet wat ze verwachten.
+## Aanpak
 
-### Bestanden
+**`PriceSummaryCard` (klantportaal) gelijktrekken met `FinancialOverviewCard` (admin)** door `program_item_billing_lines` op te halen en — indien aanwezig per item — het regelsom-totaal te gebruiken in plaats van `quoted_price` / `admin_price_override`.
 
-| Bestand | Wijziging |
-|---|---|
-| **Migratie** (nieuw SQL) | `quote_valid_until` van project Jack Frieling (`d548e22b-663d-439c-b0fa-f2b5441a00cd`) verlengen naar 2026-12-31 |
-| `supabase/functions/approve-quote-item/index.ts` | Validity-check binnen `if (!admin_override)`-blok plaatsen (regels 143-152) |
-| `src/hooks/useCustomerProgram.ts` | `approveQuoteItem` + `acceptQuoteProposal`: `admin_override` doorgeven bij impersonatie; toast tonen bij fout |
+### Wijzigingen
 
-### Wat we NIET doen
-- Geen verwijdering van de validity-check in z'n geheel — die beschermt klanten tegen het ongemerkt accepteren van verlopen prijzen, dat blijft waardevol.
-- Geen wijziging aan `update-customer-program` — die heeft geen validity-check (per-item akkoord via oudere flow werkt daar al).
-- Geen wijziging aan andere lopende projecten — alleen de zichtbaar geblokkeerde case van Jack Frieling.
+1. **`src/components/customer-portal/PriceSummaryCard.tsx`**
+   - Voeg een fetch toe (zelfde patroon als bestaande `vat_rate` fetch) die `program_item_billing_lines` ophaalt voor alle item-id's; resultaat in `linesByItem: Record<string, BillingLine[]>`.
+   - In de `summary` `useMemo`: per item eerst checken of er billing lines zijn. Zo ja → gebruik de som van `amount_incl_vat` als `effectivePrice` en de som van `amount_excl_vat` / `vat_amount` per BTW-tarief in de BTW-uitsplitsing. Zo nee → huidige logica.
+   - Gebruik in de UI-regel een subtiele "definitief" badge (zoals admin) zodat klant ziet dat dit een vaste eindprijs is.
+   - Geen wijziging in regels voor coördinatiefee, toeristenbelasting, natuurbijdrage, opslag, logies.
+
+2. **`src/components/customer-portal/CompactBillingSection.tsx`** + **`MobileProgramView.tsx`**
+   - Geen wijziging nodig; `PriceSummaryCard` haalt zelf de billing lines op (zoals het nu ook zelf de `vat_rate`s ophaalt). Dit voorkomt prop-drilling.
+
+3. **RLS check** — `program_item_billing_lines` heeft alleen admin-policies. Klantportaal werkt anoniem via token. We moeten een SELECT-policy toevoegen die regels leesbaar maakt zolang het bijbehorende `program_request` nog niet is verlopen, vergelijkbaar met andere "readable via active request" policies.
+
+   ```sql
+   CREATE POLICY "Billing lines readable via active request"
+   ON program_item_billing_lines FOR SELECT TO anon, authenticated
+   USING (EXISTS (
+     SELECT 1 FROM program_request_items pri
+     JOIN program_requests pr ON pr.id = pri.request_id
+     WHERE pri.id = program_item_billing_lines.item_id
+       AND pr.expires_at > now()
+   ));
+   ```
+
+### Resultaat
+
+Beide overzichten tonen straks exact **€4.761,69** voor dit project, met identieke BTW-uitsplitsing (9%-regels gesplitst van 21%-regels). De `Voltooiingsstatus → Openstaand` (die al `calculateProjectGrandTotal` gebruikt) blijft consistent omdat die al billing lines meeneemt.
+
+### Niet in scope
+
+- Geen herberekening van toeristenbelasting/natuurbijdrage; die volgen al `app_settings`.
+- Geen wijziging aan admin-zijde of `projectFinancials.ts`.
 
