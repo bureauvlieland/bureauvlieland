@@ -104,7 +104,7 @@ const Index = () => {
                     size="lg"
                     className="bg-card text-primary hover:bg-card/90 shadow-medium text-base px-8"
                   >
-                    Stel uw programma samen
+                    Vraag uw offerte aan
                   </Button>
                 </Link>
                 <Link to="/diensten">
@@ -165,20 +165,20 @@ const Index = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground">
-                Begin vandaag nog met uw programma
+                Stel vandaag uw programma samen en vraag een offerte aan
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Kies uw onderdelen, geef uw wensen door, en ontvang binnen 5 werkdagen bevestiging. Uw aanvraag is vrijblijvend.
+                Kies uw onderdelen, geef uw wensen door, en ontvang binnen 5 werkdagen een offerte. Uw aanvraag is geheel vrijblijvend.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/programma-samenstellen">
                   <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Stel uw programma samen
+                    Vraag uw offerte aan
                   </Button>
                 </Link>
-                <Link to="/programma-samenstellen?mode=maatwerk">
+                <Link to="/contact">
                   <Button size="lg" variant="outline">
-                    Liever maatwerk?
+                    Liever persoonlijk advies?
                   </Button>
                 </Link>
               </div>
