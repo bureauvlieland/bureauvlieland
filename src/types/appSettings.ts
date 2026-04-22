@@ -34,11 +34,25 @@ export interface AppSettingsMap {
   bureau_central_surcharge_pp: number;
   tourist_tax_pp_per_day: number;
   nature_contribution_pp: number;
+  // Bureau company details (used on invoices)
+  bureau_legal_name: string;
+  bureau_company_name: string;
+  bureau_street: string;
+  bureau_postal_code: string;
+  bureau_city: string;
+  bureau_phone: string;
+  bureau_website: string;
+  bureau_admin_email: string;
+  bureau_iban: string;
+  bureau_kvk_number: string;
+  bureau_vat_number: string;
+  bureau_payment_term_days: number;
 }
 
 // Setting categories for grouping in admin UI
 export const SETTING_CATEGORIES = {
   features: "Functies",
+  bureau: "Bedrijfsgegevens",
   pricing: "Prijzen",
   vat: "BTW Tarieven",
   commission: "Commissies",
