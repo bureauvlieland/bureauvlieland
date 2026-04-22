@@ -250,8 +250,13 @@ export const PriceSummaryCard = ({
         <div className="space-y-1.5 text-sm">
           {summary.hasAccommodation && (
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Logies</span>
-              <span>€{formatPrice(summary.accommodationTotal)}</span>
+              <span className="text-muted-foreground">
+                Logies
+                {summary.accommodationExtrasTotal > 0 && (
+                  <span className="text-xs ml-1 opacity-70">(incl. extra's)</span>
+                )}
+              </span>
+              <span>€{formatPrice(summary.accommodationTotal + summary.accommodationExtrasTotal)}</span>
             </div>
           )}
           {pricedActivityLines.length > 0 && (
