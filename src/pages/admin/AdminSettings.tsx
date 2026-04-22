@@ -252,6 +252,7 @@ export default function AdminSettings() {
                   </CardTitle>
                   <CardDescription>
                     {categoryKey === "features" && "Schakel functies in of uit voor de publieke website"}
+                    {categoryKey === "bureau" && "Bedrijfsgegevens die op facturen, e-mails en in juridische documenten verschijnen"}
                     {categoryKey === "pricing" && "Coördinatiefee staffel gebaseerd op groepsgrootte"}
                     {categoryKey === "vat" && "BTW tarieven voor verschillende diensten"}
                     {categoryKey === "commission" && "Standaard commissie percentages voor partners"}
