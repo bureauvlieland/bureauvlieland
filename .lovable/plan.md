@@ -1,68 +1,45 @@
 
 
-## Klant-factuur versturen vanuit preview-pagina + Snelstart-status zichtbaar
+## Klant-kostenspecificatie syncen met Financieel Overzicht & factuur
 
-### Wat wordt gebouwd
+### Probleem
+Op de klantportaal-pagina toont de **Kostenspecificatie** (`PriceSummaryCard`) wel de basis-logiesprijs, maar **niet de logies-extra's** (bijv. ontbijt, lunch, diner) die wél in:
+- het admin Financieel Overzicht staan,
+- op de PDF-factuur staan,
+- en op de individuele logiesofferte (`AccommodationQuoteItem`) zichtbaar zijn.
 
-**A. Klant-factuur versturen** (zoals eerder besproken)
+Hierdoor ziet de klant een lager totaal dan wat er gefactureerd wordt.
 
-**B. Snelstart-doorstuurstatus zichtbaar maken** op zowel het Financieel Overzicht (projectdetail) als op de preview-pagina, zodat je in één oogopslag ziet of een factuur al naar `bureauvlieland@boekhouding.nl` is gestuurd.
+### Wijziging
 
-### Wijzigingen
+**Eén bestand: `src/components/customer-portal/PriceSummaryCard.tsx`**
 
-**1. Nieuwe edge function `send-bureau-invoice-to-customer`**
-- Input: `requestId`, `pdfBase64`, `pdfFilename`, `invoiceNumber`, `invoiceDate`, `amountInclVat`, optioneel `customSubject` / `customMessage` / `recipientEmail`
-- Verifieert admin-rol via JWT
-- Haalt project + facturatieadres op (`billing_email` → fallback `customer_email`)
-- Verstuurt via Mailjet met PDF als base64-bijlage (Mailjet `Attachments` veld; PDF <500 KB dus ruim binnen 15 MB limiet)
-- ReplyTo gebruikt project-subaddressing voor dossierkoppeling
-- Logt in `email_log` met type `bureau_invoice_to_customer`, `related_request_id`
-- Voegt entry toe aan `program_request_history` ("Factuur {nr} verstuurd naar klant")
-- Test-mode aware via `getRecipientEmail`
+1. **Extras ophalen**: voeg `useQuoteExtras(selectedAccommodationQuote?.id)` toe — dit werkt direct (RLS staat lezen toe voor quotes met status `submitted`/`selected`).
 
-**2. UI op `AdminInvoicePreview.tsx`**
-Naast bestaande "Download PDF" twee nieuwe knoppen:
+2. **Berekening uitbreiden** in de `useMemo`:
+   - Bereken `accommodationExtrasTotal` via `calculateExtrasTotal(extras)` (bestaande helper uit `@/types/accommodationExtras`).
+   - Tel dit op bij `accommodationTotal` in `grandTotalInclVat`.
+   - Voeg per extra een eigen VAT-regel toe in `allVatLines` (extras hebben een eigen `vat_rate`, vaak 9% en soms 21%) — niet alles op één tarief gooien.
 
-- **"Verstuur naar klant"** → opent dialog met:
-  - Ontvanger (vooringevuld bewerkbaar)
-  - Onderwerp + bericht (vooringevuld bewerkbaar)
-  - Checkbox "Factuur ook registreren in administratie" (default aan)
-  - Bij submit: `generatePDF()` → base64 → roept edge function → bij checkbox: insert in `bureau_invoices`
+3. **UI-regel toevoegen** direct onder de logies-regel: een sub-blokje "Extra's" met per extra:
+   - Naam + eventueel hoeveelheid (`(2× per persoon)` of `(vaste prijs)`)
+   - Bedrag
+   - Kleine BTW-indicatie
+   
+   Met onderaan een subtotaal "Logies-extra's: €X,XX". Vergelijkbare opmaak als bestaande billing-lines onder activiteiten.
 
-**3. Snelstart-status badge**
+4. **Compact-variant** (sidebar): tel extras simpelweg op bij het Logies-bedrag, met een onderschrift "incl. extra's" als er extras zijn.
 
-In `FinancialOverviewCard` (projectdetail) en in de geregistreerde-facturen sectie van `AdminInvoicePreview`: per `bureau_invoices` rij een badge naast factuurnummer:
+5. **VAT-overzicht onderaan** klopt automatisch omdat extras in `allVatLines` worden meegenomen.
 
-| Status | Badge | Tooltip |
-|---|---|---|
-| `forwarded_to_accounting_at IS NULL` | grijs "Nog niet doorgestuurd" | "Klik 'Doorsturen' om naar Snelstart te sturen" |
-| `forwarded_to_accounting_at IS NOT NULL` | groen "Doorgestuurd naar Snelstart" met datum | "Doorgestuurd op {datum}" |
+### Resultaat
 
-De bestaande "Doorsturen" knop blijft ernaast staan voor niet-doorgestuurde facturen; voor reeds doorgestuurde facturen wordt de knop een subtiele "Opnieuw doorsturen" link (voor het geval er iets mis ging).
-
-De velden `forwarded_to_accounting_at` en `status='forwarded'` worden al gezet door de bestaande `forward-bureau-invoice` edge function — alleen de UI moet ze tonen.
-
-**4. Klantmail-status badge (bonus, gratis meegenomen)**
-
-Tweede badge op dezelfde rij:
-- `bureau_invoice_to_customer` event in `email_log` aanwezig met status `sent` voor deze factuur → groen "Naar klant verstuurd op {datum}"
-- Anders → grijs "Niet naar klant verstuurd"
-
-Vereist alleen een extra query in de FinancialOverviewCard die `email_log` filtert op `metadata->>'invoiceId'` per factuur.
-
-### Resultaat — workflow vanuit projectdetail
-
-1. Klik **"Factuur Maken"** → preview-pagina
-2. Vul nummer/datum aan, controleer regels
-3. Klik **"Verstuur naar klant"** → dialog → Verstuur (factuur wordt geregistreerd + gemaild)
-4. Terug op projectdetail zie je in Financieel Overzicht:
-   - 🟢 "Naar klant verstuurd 21-04-2026"
-   - ⚪ "Nog niet doorgestuurd" + knop "Doorsturen"
-5. Klik **"Doorsturen"** → Snelstart-mail vertrekt
-6. Badge wordt 🟢 "Doorgestuurd naar Snelstart 21-04-2026"
+- Klantportaal Kostenspecificatie = Admin Financieel Overzicht = Factuur-PDF — alle drie tonen dezelfde regels en hetzelfde eindtotaal.
+- Logies-extra's zijn voor de klant zichtbaar en transparant verantwoord.
+- BTW-breakdown blijft correct gesplitst per tarief.
 
 ### Niet in scope
-- Geen automatische Snelstart-doorsturing bij klantverzending (jouw expliciete keuze)
-- Geen wijziging in factuur-PDF lay-out
-- Geen webhook/bounce-tracking — alleen "verstuurd" status uit `email_log`
+- Geen wijziging aan `AccommodationQuoteItem` (toont extras al correct per offerte).
+- Geen wijziging aan admin- of factuurberekening (al goed).
+- Geen wijziging aan de partner-portal (geen kostenspecificatie aan partnerzijde — partners zien alleen hun eigen items en offertes).
 
