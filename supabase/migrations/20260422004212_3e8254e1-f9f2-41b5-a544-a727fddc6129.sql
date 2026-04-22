@@ -1,0 +1,2 @@
+UPDATE public.app_settings SET value = '"NL864565045B01"'::jsonb, updated_at = now() WHERE id = 'bureau_vat_number';
+UPDATE public.app_settings SET value = '"88285774"'::jsonb, updated_at = now() WHERE id = 'bureau_kvk_number';
