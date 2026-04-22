@@ -842,7 +842,7 @@ const AdminInvoicePreview = () => {
                           )}
 
                           {/* Coordination fee + levies + central surcharge */}
-                          {(totals.bureauFee > 0 || totals.touristTax > 0 || totals.natureContribution > 0 || totals.centralSurcharge > 0) && (
+                          {(totals.coordinationFee > 0 || totals.touristTax > 0 || totals.natureContribution > 0 || totals.centralSurcharge > 0) && (
                             <>
                               <tr>
                                 <td
@@ -853,15 +853,15 @@ const AdminInvoicePreview = () => {
                                   Coördinatie & bijdragen
                                 </td>
                               </tr>
-                              {totals.bureauFee > 0 && (
+                              {totals.coordinationFee > 0 && (
                                 <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                                   <td className="py-1.5 px-2">
                                     <p className="font-medium">Coördinatiekosten</p>
                                     <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
                                   </td>
                                   <td className="py-1.5 px-2 text-right">1</td>
-                                  <td className="py-1.5 px-2 text-right">{formatCurrency(totals.bureauFee)}</td>
-                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.bureauFee)}</td>
+                                  <td className="py-1.5 px-2 text-right">{formatCurrency(totals.coordinationFee)}</td>
+                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.coordinationFee)}</td>
                                 </tr>
                               )}
                               {totals.centralSurcharge > 0 && (
