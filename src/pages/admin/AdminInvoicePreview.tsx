@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
-import { jsPDF } from "jspdf";
+
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +34,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
+import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 
 interface ProgramRequest {
   id: string;
@@ -124,11 +125,20 @@ const AdminInvoicePreview = () => {
 
   // Bureau details from app_settings
   const companyName = getSetting<string>("bureau_company_name", "Bureau Vlieland");
+  const legalName = getSetting<string>("bureau_legal_name", "Bureau Vlieland B.V.");
   const kvkNumber = getSetting<string>("bureau_kvk_number", "");
   const vatNumber = getSetting<string>("bureau_vat_number", "");
-  const address = getSetting<string>("bureau_address", "");
+  const street = getSetting<string>("bureau_street", "");
+  const postalCode = getSetting<string>("bureau_postal_code", "");
+  const city = getSetting<string>("bureau_city", "");
+  const phone = getSetting<string>("bureau_phone", "");
+  const websiteSetting = getSetting<string>("bureau_website", "bureauvlieland.nl");
+  // Legacy single-line address (still rendered as fallback in HTML preview)
+  const address = getSetting<string>("bureau_address", "") ||
+    [street, [postalCode, city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const iban = getSetting<string>("bureau_iban", "");
   const adminEmail = getSetting<string>("bureau_admin_email", "administratie@bureauvlieland.nl");
+  const paymentTermDays = Number(getSetting<number | string>("bureau_payment_term_days", 14)) || 14;
 
   useEffect(() => {
     if (id) fetchData();
@@ -375,30 +385,230 @@ const AdminInvoicePreview = () => {
     };
   };
 
+  /**
+   * Build the PDF blob using the native invoice renderer.
+   * The HTML preview on screen is for read-only inspection — the
+   * downloaded/sent PDF is drawn natively for crisp, paginated A4 output.
+   */
   const buildPdfBlob = async (): Promise<Blob | null> => {
-    if (!pdfRef.current) return null;
+    if (!request) return null;
 
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const totalsLocal = calculateTotals();
+    const fmt = (n: number) =>
+      new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
-    await new Promise<void>((resolve) => {
-      (pdf as jsPDF & {
-        html: (source: HTMLElement, options: Record<string, unknown>) => void;
-      }).html(pdfRef.current as HTMLElement, {
-        margin: [10, 10, 12, 10],
-        autoPaging: "text",
-        width: 190,
-        windowWidth: pdfRef.current?.scrollWidth ?? 794,
-        html2canvas: {
-          scale: 0.8,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
+    // ── Build categorized line rows
+    const categories: InvoiceCategory[] = [];
+    const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
+
+    for (const cat of sortedCategories) {
+      const catItems = groupedByCategory[cat];
+      const catLabel = (categoryLabels as Record<string, string>)[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
+      const rows: InvoiceLineRow[] = [];
+
+      for (const item of catItems) {
+        const billingLines = linesByItem[item.id];
+        if (billingLines && billingLines.length > 0) {
+          const itemTotal = billingLines.reduce((s, b) => s + Number(b.amount_incl_vat), 0);
+          rows.push({
+            description: item.block_name,
+            subDescription: item.provider_name,
+            qty: "",
+            unitPrice: "",
+            amount: fmt(itemTotal),
+            bold: true,
+          });
+          for (const bl of billingLines) {
+            rows.push({
+              description: bl.description || "Regel",
+              qty: String(Number(bl.quantity)),
+              unitPrice: fmt(Number(bl.unit_price_excl_vat)),
+              unitPriceSuffix: `${bl.vat_rate}%`,
+              amount: fmt(Number(bl.amount_incl_vat)),
+              isSubRow: true,
+            });
+          }
+          continue;
+        }
+
+        const isPerPerson =
+          item.price_type === "per_person" || item.price_type === "per_person_per_day";
+        const isPerDay = item.price_type === "per_person_per_day";
+        const lineTotal = getItemTotal(item);
+        const effectivePeople = item.override_people ?? request.number_of_people ?? 1;
+
+        let unitPrice = getItemPrice(item);
+        let qty: string;
+        if (item.quoted_price != null) {
+          if (isPerDay) {
+            const divisor = effectivePeople * numberOfDays || 1;
+            unitPrice = item.quoted_price / divisor;
+            qty = `${effectivePeople}×${numberOfDays}d`;
+          } else if (isPerPerson) {
+            unitPrice = item.quoted_price / (effectivePeople || 1);
+            qty = String(effectivePeople);
+          } else {
+            unitPrice = item.quoted_price;
+            qty = "1";
+          }
+        } else {
+          qty = isPerPerson
+            ? isPerDay
+              ? `${effectivePeople}×${numberOfDays}d`
+              : String(effectivePeople)
+            : "1";
+        }
+
+        rows.push({
+          description: item.block_name,
+          subDescription: item.admin_price_notes || item.provider_name,
+          qty,
+          unitPrice: fmt(unitPrice),
+          unitPriceSuffix: isPerDay ? "p.p.p.d." : isPerPerson ? "p.p." : "",
+          amount: fmt(lineTotal),
+        });
+      }
+
+      if (rows.length > 0) categories.push({ label: catLabel, rows });
+    }
+
+    // Logies
+    if (accommodationQuote) {
+      const rows: InvoiceLineRow[] = [
+        {
+          description: accommodationQuote.accommodation_name,
+          subDescription: `${accommodationQuote.partner_name}${
+            accommodationNights > 0
+              ? ` • ${accommodationNights} ${accommodationNights === 1 ? "nacht" : "nachten"}`
+              : ""
+          }`,
+          qty: "1",
+          unitPrice: fmt(accommodationQuote.price_total),
+          amount: fmt(accommodationQuote.price_total),
         },
-        callback: () => resolve(),
+      ];
+      categories.push({ label: "Logies", rows });
+    }
+
+    // Logies-extra's
+    if (accommodationExtras.length > 0) {
+      const rows: InvoiceLineRow[] = accommodationExtras.map((extra) => {
+        const extraTotal = getExtraTotal(extra);
+        const isFixed = extra.pricing_type === "fixed";
+        return {
+          description: extra.name,
+          subDescription: extra.description ?? undefined,
+          qty: isFixed ? "1" : String(extra.quantity),
+          unitPrice: fmt(extra.unit_price),
+          unitPriceSuffix: isFixed ? "" : "p.p.",
+          amount: fmt(extraTotal),
+        };
       });
+      categories.push({ label: "Extra's bij logies", rows });
+    }
+
+    // Coördinatie & bijdragen
+    const coordRows: InvoiceLineRow[] = [];
+    if (totalsLocal.coordinationFee > 0) {
+      coordRows.push({
+        description: "Coördinatiekosten",
+        subDescription: `${totalsLocal.numberOfPeople} personen`,
+        qty: "1",
+        unitPrice: fmt(totalsLocal.coordinationFee),
+        amount: fmt(totalsLocal.coordinationFee),
+      });
+    }
+    if (totalsLocal.centralSurcharge > 0) {
+      const pp = totalsLocal.centralSurcharge / Math.max(totalsLocal.numberOfPeople, 1);
+      coordRows.push({
+        description: "Opslag centrale facturatie",
+        subDescription: `${totalsLocal.numberOfPeople} personen`,
+        qty: String(totalsLocal.numberOfPeople),
+        unitPrice: fmt(pp),
+        unitPriceSuffix: "p.p.",
+        amount: fmt(totalsLocal.centralSurcharge),
+      });
+    }
+    if (totalsLocal.touristTax > 0) {
+      const totalQty = totalsLocal.numberOfPeople * totalsLocal.numberOfDays;
+      const pp = totalsLocal.touristTax / Math.max(totalQty, 1);
+      coordRows.push({
+        description: "Toeristenbelasting",
+        subDescription: `${totalsLocal.numberOfPeople} pers. × ${totalsLocal.numberOfDays} ${
+          totalsLocal.numberOfDays === 1 ? "dag" : "dagen"
+        }`,
+        qty: String(totalQty),
+        unitPrice: fmt(pp),
+        unitPriceSuffix: "p.p.p.d.",
+        amount: fmt(totalsLocal.touristTax),
+      });
+    }
+    if (totalsLocal.natureContribution > 0) {
+      const pp = totalsLocal.natureContribution / Math.max(totalsLocal.numberOfPeople, 1);
+      coordRows.push({
+        description: "Natuurbijdrage",
+        subDescription: `${totalsLocal.numberOfPeople} personen`,
+        qty: String(totalsLocal.numberOfPeople),
+        unitPrice: fmt(pp),
+        unitPriceSuffix: "p.p.",
+        amount: fmt(totalsLocal.natureContribution),
+      });
+    }
+    if (coordRows.length > 0) {
+      categories.push({ label: "Coördinatie & bijdragen", rows: coordRows });
+    }
+
+    // ── Customer block
+    const billingNameLocal =
+      request.billing_company_name || request.customer_company || request.customer_name;
+    const contactName = request.billing_contact_name || request.customer_name;
+    const postalCity = [request.billing_address_postal, request.billing_address_city]
+      .filter(Boolean)
+      .join(" ");
+
+    const eventDates = request.selected_dates
+      .map((d) => format(new Date(d), "d MMM yyyy", { locale: nl }))
+      .join(" – ");
+
+    const blob = await renderInvoicePdf({
+      bureau: {
+        legalName: legalName || companyName,
+        street,
+        postalCode,
+        city,
+        phone,
+        email: adminEmail,
+        website: websiteSetting,
+        iban,
+        kvkNumber,
+        vatNumber,
+      },
+      customer: {
+        name: billingNameLocal,
+        contactName: contactName !== billingNameLocal ? contactName : undefined,
+        street: request.billing_address_street ?? undefined,
+        postalCity: postalCity || undefined,
+        vatNumber: request.billing_vat_number ?? undefined,
+        customerNumber: request.reference_number ?? undefined,
+      },
+      meta: {
+        invoiceNumber,
+        invoiceDate,
+        dueDate,
+        paymentTermDays,
+        deliveryDate: eventDates || undefined,
+      },
+      categories,
+      totals: {
+        totalExclVat: totalsLocal.totalExclVat,
+        totalVat: totalsLocal.totalVat,
+        totalInclVat: totalsLocal.totalInclVat,
+        vatLines: totalsLocal.vatLines,
+      },
+      notes: notes || undefined,
     });
 
-    return pdf.output("blob");
+    return blob;
   };
 
   const generatePDF = async () => {

@@ -17,6 +17,7 @@ import {
   AlertCircle,
   ToggleLeft,
   Bell,
+  Building2,
 } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { SETTING_CATEGORIES } from "@/types/appSettings";
@@ -214,6 +215,8 @@ export default function AdminSettings() {
     switch (category) {
       case "features":
         return <ToggleLeft className="h-5 w-5" />;
+      case "bureau":
+        return <Building2 className="h-5 w-5" />;
       case "pricing":
         return <Euro className="h-5 w-5" />;
       case "vat":
@@ -252,6 +255,7 @@ export default function AdminSettings() {
                   </CardTitle>
                   <CardDescription>
                     {categoryKey === "features" && "Schakel functies in of uit voor de publieke website"}
+                    {categoryKey === "bureau" && "Bedrijfsgegevens die op facturen, e-mails en in juridische documenten verschijnen"}
                     {categoryKey === "pricing" && "Coördinatiefee staffel gebaseerd op groepsgrootte"}
                     {categoryKey === "vat" && "BTW tarieven voor verschillende diensten"}
                     {categoryKey === "commission" && "Standaard commissie percentages voor partners"}
