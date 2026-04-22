@@ -8,6 +8,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { useQuoteExtras } from "@/hooks/useQuoteExtras";
+import { calculateExtraTotal } from "@/types/accommodationExtras";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -41,6 +43,9 @@ export const PriceSummaryCard = ({
   // Fetch definitive billing lines per item (admin-defined split-VAT lines + extras like koffie/thee)
   const itemIds = useMemo(() => items.map(i => i.id), [items]);
   const { linesByItem } = useItemBillingLinesBatch(itemIds);
+
+  // Fetch lodging extras (breakfast, lunch, diner, etc.) for selected accommodation
+  const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);
 
   // Fetch VAT rates per building block (fallback when no billing lines)
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
@@ -154,6 +159,13 @@ export const PriceSummaryCard = ({
     // Keep accommodation VAT aligned with admin FinancialOverviewCard and lodging invoicing flow.
     const accommodationVatRate = 9;
 
+    // Accommodation extras (breakfast, lunch, diner, etc.)
+    const extrasWithTotals = accommodationExtras.map((extra) => {
+      const total = calculateExtraTotal(extra);
+      return { extra, total };
+    });
+    const accommodationExtrasTotal = extrasWithTotals.reduce((s, e) => s + e.total, 0);
+
     // VAT breakdown — includes ALL priced items (confirmed + preliminary)
     const allVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
     const addVat = (amount: number, rate: number) => {
@@ -183,12 +195,16 @@ export const PriceSummaryCard = ({
     });
     addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
+    // Each extra has its own VAT rate (often 9% for F&B, 21% for services)
+    extrasWithTotals.forEach(({ extra, total }) => {
+      if (total > 0) addVat(total, Number(extra.vat_rate ?? 9));
+    });
     addZeroVat(touristTax + natureContribution);
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
     const itemsTotal = pricedLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
-    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
+    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + accommodationExtrasTotal + touristTax + natureContribution;
     const hasPreliminaryItems = orderLines.some(l => l.isPreliminary);
 
     return {
@@ -206,13 +222,15 @@ export const PriceSummaryCard = ({
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
       accommodationPartnerName: selectedAccommodationQuote?.partner?.name || "",
       hasAccommodation: !!selectedAccommodationQuote,
+      extrasWithTotals,
+      accommodationExtrasTotal,
       allVatLines,
       totalExclVat,
       totalVatAmount,
       grandTotalInclVat,
       hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
@@ -232,8 +250,13 @@ export const PriceSummaryCard = ({
         <div className="space-y-1.5 text-sm">
           {summary.hasAccommodation && (
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Logies</span>
-              <span>€{formatPrice(summary.accommodationTotal)}</span>
+              <span className="text-muted-foreground">
+                Logies
+                {summary.accommodationExtrasTotal > 0 && (
+                  <span className="text-xs ml-1 opacity-70">(incl. extra's)</span>
+                )}
+              </span>
+              <span>€{formatPrice(summary.accommodationTotal + summary.accommodationExtrasTotal)}</span>
             </div>
           )}
           {pricedActivityLines.length > 0 && (
@@ -306,6 +329,27 @@ export const PriceSummaryCard = ({
                 <p className="text-xs text-muted-foreground ml-6 mt-0.5">
                   {summary.accommodationPartnerName}
                 </p>
+              )}
+              {summary.extrasWithTotals.length > 0 && (
+                <div className="ml-6 mt-2 space-y-0.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Logies-extra's</p>
+                  {summary.extrasWithTotals.map(({ extra, total }) => (
+                    <div key={extra.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="truncate">
+                        {extra.name}
+                        {extra.pricing_type === "fixed"
+                          ? <span className="ml-1 opacity-70">(vaste prijs)</span>
+                          : extra.quantity > 1 && <span className="ml-1 opacity-70">({extra.quantity}× per persoon)</span>}
+                        <span className="ml-1 opacity-70">— BTW {Number(extra.vat_rate ?? 9)}%</span>
+                      </span>
+                      <span className="whitespace-nowrap ml-2">€{formatPrice(total)}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between text-xs font-medium pt-1">
+                    <span>Subtotaal logies-extra's</span>
+                    <span>€{formatPrice(summary.accommodationExtrasTotal)}</span>
+                  </div>
+                </div>
               )}
             </div>
           )}
