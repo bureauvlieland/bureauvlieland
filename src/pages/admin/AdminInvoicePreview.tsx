@@ -298,11 +298,11 @@ const AdminInvoicePreview = () => {
           items,
           appSettings: settings,
           selectedAccommodationTotal: accommodationQuote?.price_total ?? 0,
-          accommodationExtras,
+          accommodationExtras: accommodationExtras as any,
           linesByItem,
         })
       : {
-          bureauFee: 0,
+          coordinationFee: 0,
           touristTax: 0,
           natureContribution: 0,
           centralSurcharge: 0,
@@ -312,7 +312,6 @@ const AdminInvoicePreview = () => {
           programItemsTotal: 0,
           extraCostsTotal: 0,
           accommodationTotal: 0,
-          coordinationFee: 0,
         };
 
     const standardVatRate = Number(settings.default_vat_rate || 21);
