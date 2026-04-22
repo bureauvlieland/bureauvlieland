@@ -29,6 +29,19 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   bureau_central_surcharge_pp: 2.50,
   tourist_tax_pp_per_day: 2.58,
   nature_contribution_pp: 1.00,
+  // Bureau company details (defaults)
+  bureau_legal_name: "Bureau Vlieland B.V.",
+  bureau_company_name: "Bureau Vlieland",
+  bureau_street: "Sikkelduin 11",
+  bureau_postal_code: "8899 CG",
+  bureau_city: "Vlieland",
+  bureau_phone: "+31 562 700 208",
+  bureau_website: "bureauvlieland.nl",
+  bureau_admin_email: "administratie@bureauvlieland.nl",
+  bureau_iban: "NL68 INGB 0774 1221 37",
+  bureau_kvk_number: "",
+  bureau_vat_number: "",
+  bureau_payment_term_days: 14,
 };
 
 // ============================================
