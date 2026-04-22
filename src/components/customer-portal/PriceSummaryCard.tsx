@@ -44,6 +44,9 @@ export const PriceSummaryCard = ({
   const itemIds = useMemo(() => items.map(i => i.id), [items]);
   const { linesByItem } = useItemBillingLinesBatch(itemIds);
 
+  // Fetch lodging extras (breakfast, lunch, diner, etc.) for selected accommodation
+  const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);
+
   // Fetch VAT rates per building block (fallback when no billing lines)
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   useEffect(() => {
