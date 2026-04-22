@@ -215,6 +215,8 @@ export default function AdminSettings() {
     switch (category) {
       case "features":
         return <ToggleLeft className="h-5 w-5" />;
+      case "bureau":
+        return <Building2 className="h-5 w-5" />;
       case "pricing":
         return <Euro className="h-5 w-5" />;
       case "vat":
