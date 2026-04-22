@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
-import { jsPDF } from "jspdf";
+
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
