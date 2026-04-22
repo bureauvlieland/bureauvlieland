@@ -8,6 +8,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { useQuoteExtras } from "@/hooks/useQuoteExtras";
+import { calculateExtraTotal } from "@/types/accommodationExtras";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
