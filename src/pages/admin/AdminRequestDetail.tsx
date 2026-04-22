@@ -96,7 +96,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
-import { calculateProjectOutstandingAmount } from "@/lib/projectFinancials";
+import { calculateProjectGrandTotal, calculateProjectOutstandingAmount } from "@/lib/projectFinancials";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
@@ -117,6 +117,8 @@ import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
+import { useQuoteExtras } from "@/hooks/useQuoteExtras";
+import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, RefreshCw, CalendarIcon } from "lucide-react";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -272,6 +274,7 @@ const AdminRequestDetail = () => {
 
   // Selected accommodation quote for this request
   const [selectedAccommodationQuote, setSelectedAccommodationQuote] = useState<{
+    id: string;
     price_total: number;
     vat_rate: number;
     accommodation_name: string;
@@ -284,18 +287,21 @@ const AdminRequestDetail = () => {
     }
     supabase
       .from("accommodation_quotes")
-      .select("price_total, vat_rate, accommodation_name")
+      .select("id, price_total, vat_rate, accommodation_name")
       .eq("request_id", request.linked_accommodation_id)
       .eq("status", "selected")
       .maybeSingle()
       .then(({ data }) => {
         setSelectedAccommodationQuote(data ? {
+          id: data.id,
           price_total: data.price_total,
           vat_rate: data.vat_rate ?? 9,
           accommodation_name: data.accommodation_name,
         } : null);
       });
   }, [request?.linked_accommodation_id]);
+
+  const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);
 
   // Calculate bureau invoiced amount for profit summary (incl. coordination fee)
   const numberOfPeople = request?.number_of_people ?? 20;
@@ -313,18 +319,21 @@ const AdminRequestDetail = () => {
   const centralSurcharge = request?.invoicing_mode === "bureau_central"
     ? appSettings.bureau_central_surcharge_pp * numberOfPeople
     : 0;
-  const accommodationTotal = selectedAccommodationQuote?.price_total ?? 0;
+  const accommodationBaseTotal = selectedAccommodationQuote?.price_total ?? 0;
+  const accommodationExtrasTotal = calculateExtrasTotal(accommodationExtras);
+  const accommodationTotal = accommodationBaseTotal + accommodationExtrasTotal;
 
-  const bureauInvoicedAmount = (() => {
-    if (!request) return 0;
-    const programTotal = items
-      .filter((i) => i.status !== "cancelled" && i.day_index !== -1)
-      .reduce((sum, item) => sum + (centralGetItemLineTotal(item as any, request.number_of_people) ?? 0), 0);
-    const extraCosts = items
-      .filter((i) => i.day_index === -1)
-      .reduce((sum, i) => sum + (i.admin_price_override ?? 0), 0);
-    return programTotal + extraCosts + coordinationFeeForProfit + touristTax + natureContribution + centralSurcharge + accommodationTotal;
-  })();
+  const bureauInvoicedAmount = request ? calculateProjectGrandTotal({
+    items,
+    numberOfPeople: request.number_of_people,
+    numberOfDays,
+    coordinationFee: coordinationFeeForProfit,
+    touristTax,
+    natureContribution,
+    centralSurcharge,
+    accommodationTotal,
+    linesByItem: billingLinesByItem,
+  }) : 0;
 
   // Calculate expected partner costs from items (for when no purchase invoices exist yet)
   const expectedPartnerCosts = (() => {
@@ -1864,6 +1873,8 @@ const AdminRequestDetail = () => {
                   natureContribution={natureContribution}
                   centralSurcharge={centralSurcharge}
                   accommodationTotal={accommodationTotal}
+                  accommodationBaseTotal={accommodationBaseTotal}
+                  accommodationExtras={accommodationExtras}
                   accommodationName={selectedAccommodationQuote?.accommodation_name}
                   linesByItem={billingLinesByItem}
                 />

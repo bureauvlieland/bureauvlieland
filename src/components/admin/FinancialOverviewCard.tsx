@@ -13,6 +13,7 @@ import { getItemLineTotal as centralLineTotal, isPerPersonItem } from "@/lib/por
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 import type { ProgramItemBillingLine } from "@/types/programItemBillingLine";
+import { calculateExtraTotal, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
 
 interface FinancialItem {
   id: string;
@@ -41,6 +42,8 @@ interface FinancialOverviewCardProps {
   natureContribution?: number;
   centralSurcharge?: number;
   accommodationTotal?: number;
+  accommodationBaseTotal?: number;
+  accommodationExtras?: AccommodationQuoteExtra[];
   accommodationName?: string;
   linesByItem?: Record<string, ProgramItemBillingLine[]>;
 }
@@ -64,6 +67,8 @@ export const FinancialOverviewCard = ({
   natureContribution = 0,
   centralSurcharge = 0,
   accommodationTotal = 0,
+  accommodationBaseTotal,
+  accommodationExtras = [],
   accommodationName,
   linesByItem = {},
 }: FinancialOverviewCardProps) => {
@@ -82,6 +87,15 @@ export const FinancialOverviewCard = ({
 
   const coordinationFee = getCoordinationFee(numberOfPeople);
   const coordVatRate = getVatRate("standard");
+  const accommodationExtrasTotal = accommodationExtras.reduce(
+    (sum, extra) => sum + calculateExtraTotal(extra),
+    0,
+  );
+  const resolvedAccommodationBaseTotal = Math.max(
+    0,
+    accommodationBaseTotal ?? (accommodationTotal - accommodationExtrasTotal),
+  );
+  const accommodationGrandTotal = resolvedAccommodationBaseTotal + accommodationExtrasTotal;
 
   const formatCurrency = (amount: number) =>
     `€${amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -135,7 +149,7 @@ export const FinancialOverviewCard = ({
   const accommodationVatRate = 9;
 
   const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal
-    + touristTax + natureContribution + centralSurcharge + accommodationTotal;
+    + touristTax + natureContribution + centralSurcharge + accommodationGrandTotal;
 
   // Aggregate VAT per rate. For items with billing lines we sum exact excl/vat amounts (no rounding loss).
   const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
@@ -177,14 +191,25 @@ export const FinancialOverviewCard = ({
     }
   });
 
-  // Accommodation
-  if (accommodationTotal > 0) {
+  // Accommodation base
+  if (resolvedAccommodationBaseTotal > 0) {
     addToGroup(
       accommodationVatRate,
-      calculateExclVat(accommodationTotal, accommodationVatRate),
-      calculateVatAmount(accommodationTotal, accommodationVatRate),
+      calculateExclVat(resolvedAccommodationBaseTotal, accommodationVatRate),
+      calculateVatAmount(resolvedAccommodationBaseTotal, accommodationVatRate),
     );
   }
+
+  // Accommodation extras use their own configured VAT rates
+  accommodationExtras.forEach((extra) => {
+    const extraTotal = calculateExtraTotal(extra);
+    const extraVatRate = Number(extra.vat_rate ?? accommodationVatRate);
+    addToGroup(
+      extraVatRate,
+      calculateExclVat(extraTotal, extraVatRate),
+      calculateVatAmount(extraTotal, extraVatRate),
+    );
+  });
   // Tourist tax & nature contribution = 0% VAT
   if (touristTax + natureContribution > 0) {
     addToGroup(0, touristTax + natureContribution, 0);
@@ -314,14 +339,27 @@ export const FinancialOverviewCard = ({
             })}
 
             {/* Accommodation */}
-            {accommodationTotal > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="truncate max-w-[200px]">Logies{accommodationName ? `: ${accommodationName}` : ""}</span>
-                </div>
-                <span className="font-medium tabular-nums">{formatCurrency(accommodationTotal)}</span>
-              </div>
+            {(resolvedAccommodationBaseTotal > 0 || accommodationExtras.length > 0) && (
+              <>
+                {resolvedAccommodationBaseTotal > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="truncate max-w-[200px]">Logies{accommodationName ? `: ${accommodationName}` : ""}</span>
+                    </div>
+                    <span className="font-medium tabular-nums">{formatCurrency(resolvedAccommodationBaseTotal)}</span>
+                  </div>
+                )}
+                {accommodationExtras.map((extra) => (
+                  <div key={extra.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="truncate max-w-[200px]">Logies extra: {extra.name}</span>
+                    </div>
+                    <span className="font-medium tabular-nums">{formatCurrency(calculateExtraTotal(extra))}</span>
+                  </div>
+                ))}
+              </>
             )}
 
             {/* Tourist tax */}

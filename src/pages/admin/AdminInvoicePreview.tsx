@@ -4,7 +4,6 @@ import { Helmet } from "react-helmet";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +33,7 @@ import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
+import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
 
 interface ProgramRequest {
   id: string;
@@ -99,7 +99,7 @@ const AdminInvoicePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const { getSetting, getCoordinationFee } = useAppSettings();
+  const { getSetting, settings, isLoading: isAppSettingsLoading } = useAppSettings();
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
@@ -286,30 +286,42 @@ const AdminInvoicePreview = () => {
     if (item.block_id && vatRateMap[item.block_id] !== undefined) {
       return vatRateMap[item.block_id];
     }
-    return 21; // default
+    return Number(settings.default_vat_rate || 21);
   };
 
   const calculateTotals = () => {
     const numberOfPeople = request?.number_of_people || 0;
     const numberOfDays = Math.max(request?.selected_dates?.length || 0, 1);
-    const isBureauCentral = request?.invoicing_mode === "bureau_central";
+    const unified = request
+      ? calculateUnifiedInvoiceTotals({
+          request,
+          items,
+          appSettings: settings,
+          selectedAccommodationTotal: accommodationQuote?.price_total ?? 0,
+          accommodationExtras,
+          linesByItem,
+        })
+      : {
+          bureauFee: 0,
+          touristTax: 0,
+          natureContribution: 0,
+          centralSurcharge: 0,
+          grandTotalInclVat: 0,
+          invoicedTotal: 0,
+          outstanding: 0,
+          programItemsTotal: 0,
+          extraCostsTotal: 0,
+          accommodationTotal: 0,
+          coordinationFee: 0,
+        };
 
-    const bureauFee = getCoordinationFee(numberOfPeople);
-    const touristTaxPp = Number(getSetting("tourist_tax_pp_per_day", 2.58));
-    const natureContributionPp = Number(getSetting("nature_contribution_pp", 1.0));
-    const centralSurchargePp = Number(getSetting("bureau_central_surcharge_pp", 2.5));
-
-    const touristTax = touristTaxPp * numberOfPeople * numberOfDays;
-    const natureContribution = natureContributionPp * numberOfPeople;
-    const centralSurcharge = isBureauCentral ? centralSurchargePp * numberOfPeople : 0;
-
-    // Group amounts by VAT rate (incl. VAT, then split below)
+    const standardVatRate = Number(settings.default_vat_rate || 21);
     const vatGroups: Record<number, number> = {};
-    items.forEach(item => {
+
+    items.forEach((item) => {
       const lines = linesByItem[item.id];
       if (lines && lines.length > 0) {
-        // Use definitive billing lines (each with its own VAT rate)
-        lines.forEach(line => {
+        lines.forEach((line) => {
           const rate = Number(line.vat_rate);
           vatGroups[rate] = (vatGroups[rate] || 0) + Number(line.amount_incl_vat);
         });
@@ -319,25 +331,22 @@ const AdminInvoicePreview = () => {
         vatGroups[rate] = (vatGroups[rate] || 0) + total;
       }
     });
-    // Bureau fee + central surcharge are 21% (standard service VAT)
-    vatGroups[21] = (vatGroups[21] || 0) + bureauFee + centralSurcharge;
 
-    // Add accommodation quote
+    vatGroups[standardVatRate] = (vatGroups[standardVatRate] || 0) + unified.coordinationFee + unified.centralSurcharge;
+
     if (accommodationQuote) {
-      const rate = accommodationQuote.vat_rate;
-      vatGroups[rate] = (vatGroups[rate] || 0) + accommodationQuote.price_total;
+      const rate = Number(accommodationQuote.vat_rate || 9);
+      vatGroups[rate] = (vatGroups[rate] || 0) + Number(accommodationQuote.price_total || 0);
     }
 
-    // Add accommodation extras
-    accommodationExtras.forEach(extra => {
+    accommodationExtras.forEach((extra) => {
       const total = getExtraTotal(extra);
-      const rate = extra.vat_rate;
+      const rate = Number(extra.vat_rate || 9);
       vatGroups[rate] = (vatGroups[rate] || 0) + total;
     });
 
-    // Tourist tax & nature contribution = 0% VAT levies
-    if (touristTax + natureContribution > 0) {
-      vatGroups[0] = (vatGroups[0] || 0) + touristTax + natureContribution;
+    if (unified.touristTax + unified.natureContribution > 0) {
+      vatGroups[0] = (vatGroups[0] || 0) + unified.touristTax + unified.natureContribution;
     }
 
     let totalExclVat = 0;
@@ -355,52 +364,40 @@ const AdminInvoicePreview = () => {
         totalVat += vatAmount;
       });
 
-    const totalInclVat = totalExclVat + totalVat;
-
     return {
-      bureauFee,
-      touristTax,
-      natureContribution,
-      centralSurcharge,
-      isBureauCentral,
+      ...unified,
+      isBureauCentral: request?.invoicing_mode === "bureau_central",
       numberOfPeople,
       numberOfDays,
       totalExclVat,
       totalVat,
-      totalInclVat,
+      totalInclVat: unified.grandTotalInclVat,
       vatLines,
     };
   };
 
   const buildPdfBlob = async (): Promise<Blob | null> => {
     if (!pdfRef.current) return null;
-    const canvas = await html2canvas(pdfRef.current, {
-      scale: 3,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      windowWidth: pdfRef.current.scrollWidth,
-    });
 
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 10; // 10mm margin
-    const imgWidth = pageWidth - margin * 2;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = margin;
 
-    pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight - margin * 2;
-
-    while (heightLeft > 0) {
-      position = margin - (imgHeight - heightLeft);
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - margin * 2;
-    }
+    await new Promise<void>((resolve) => {
+      (pdf as jsPDF & {
+        html: (source: HTMLElement, options: Record<string, unknown>) => void;
+      }).html(pdfRef.current as HTMLElement, {
+        margin: [10, 10, 12, 10],
+        autoPaging: "text",
+        width: 190,
+        windowWidth: pdfRef.current?.scrollWidth ?? 794,
+        html2canvas: {
+          scale: 0.8,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        },
+        callback: () => resolve(),
+      });
+    });
 
     return pdf.output("blob");
   };
@@ -427,7 +424,7 @@ const AdminInvoicePreview = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isAppSettingsLoading) {
     return (
       <AdminLayout>
         <div className="p-6 space-y-6">
@@ -473,7 +470,7 @@ const AdminInvoicePreview = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={generatePDF} disabled={isGenerating}>
+              <Button variant="outline" onClick={generatePDF} disabled={isGenerating || isAppSettingsLoading}>
                 {isGenerating ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -481,7 +478,7 @@ const AdminInvoicePreview = () => {
                 )}
                 Download PDF
               </Button>
-              <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || !invoiceNumber}>
+              <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || isAppSettingsLoading || !invoiceNumber}>
                 <Mail className="h-4 w-4 mr-2" />
                 Verstuur naar klant
               </Button>
@@ -576,7 +573,7 @@ const AdminInvoicePreview = () => {
                   <div className="p-4 overflow-auto max-h-[900px]">
                     <div
                       ref={pdfRef}
-                      className="bg-white px-12 py-10 shadow-lg max-w-[210mm] mx-auto text-[11px] leading-snug"
+                      className="bg-white px-12 pt-10 pb-12 shadow-lg max-w-[210mm] mx-auto text-[11px] leading-snug"
                       style={{ fontFamily: "Arial, Helvetica, sans-serif", color: "#1a1a1a", fontVariantNumeric: "tabular-nums" }}
                     >
                       {/* Header: Company + Invoice title */}
