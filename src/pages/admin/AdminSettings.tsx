@@ -17,6 +17,7 @@ import {
   AlertCircle,
   ToggleLeft,
   Bell,
+  Building2,
 } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { SETTING_CATEGORIES } from "@/types/appSettings";
