@@ -330,6 +330,27 @@ export const PriceSummaryCard = ({
                   {summary.accommodationPartnerName}
                 </p>
               )}
+              {summary.extrasWithTotals.length > 0 && (
+                <div className="ml-6 mt-2 space-y-0.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Logies-extra's</p>
+                  {summary.extrasWithTotals.map(({ extra, total }) => (
+                    <div key={extra.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="truncate">
+                        {extra.name}
+                        {extra.pricing_type === "fixed"
+                          ? <span className="ml-1 opacity-70">(vaste prijs)</span>
+                          : extra.quantity > 1 && <span className="ml-1 opacity-70">({extra.quantity}× per persoon)</span>}
+                        <span className="ml-1 opacity-70">— BTW {Number(extra.vat_rate ?? 9)}%</span>
+                      </span>
+                      <span className="whitespace-nowrap ml-2">€{formatPrice(total)}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between text-xs font-medium pt-1">
+                    <span>Subtotaal logies-extra's</span>
+                    <span>€{formatPrice(summary.accommodationExtrasTotal)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
