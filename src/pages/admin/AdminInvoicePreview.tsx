@@ -125,11 +125,20 @@ const AdminInvoicePreview = () => {
 
   // Bureau details from app_settings
   const companyName = getSetting<string>("bureau_company_name", "Bureau Vlieland");
+  const legalName = getSetting<string>("bureau_legal_name", "Bureau Vlieland B.V.");
   const kvkNumber = getSetting<string>("bureau_kvk_number", "");
   const vatNumber = getSetting<string>("bureau_vat_number", "");
-  const address = getSetting<string>("bureau_address", "");
+  const street = getSetting<string>("bureau_street", "");
+  const postalCode = getSetting<string>("bureau_postal_code", "");
+  const city = getSetting<string>("bureau_city", "");
+  const phone = getSetting<string>("bureau_phone", "");
+  const websiteSetting = getSetting<string>("bureau_website", "bureauvlieland.nl");
+  // Legacy single-line address (still rendered as fallback in HTML preview)
+  const address = getSetting<string>("bureau_address", "") ||
+    [street, [postalCode, city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const iban = getSetting<string>("bureau_iban", "");
   const adminEmail = getSetting<string>("bureau_admin_email", "administratie@bureauvlieland.nl");
+  const paymentTermDays = Number(getSetting<number | string>("bureau_payment_term_days", 14)) || 14;
 
   useEffect(() => {
     if (id) fetchData();
