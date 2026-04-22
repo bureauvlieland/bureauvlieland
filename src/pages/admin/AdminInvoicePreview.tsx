@@ -34,6 +34,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
+import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 
 interface ProgramRequest {
   id: string;
