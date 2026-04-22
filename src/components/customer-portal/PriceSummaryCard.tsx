@@ -159,6 +159,13 @@ export const PriceSummaryCard = ({
     // Keep accommodation VAT aligned with admin FinancialOverviewCard and lodging invoicing flow.
     const accommodationVatRate = 9;
 
+    // Accommodation extras (breakfast, lunch, diner, etc.)
+    const extrasWithTotals = accommodationExtras.map((extra) => {
+      const total = calculateExtraTotal(extra);
+      return { extra, total };
+    });
+    const accommodationExtrasTotal = extrasWithTotals.reduce((s, e) => s + e.total, 0);
+
     // VAT breakdown — includes ALL priced items (confirmed + preliminary)
     const allVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
     const addVat = (amount: number, rate: number) => {
@@ -188,12 +195,16 @@ export const PriceSummaryCard = ({
     });
     addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
+    // Each extra has its own VAT rate (often 9% for F&B, 21% for services)
+    extrasWithTotals.forEach(({ extra, total }) => {
+      if (total > 0) addVat(total, Number(extra.vat_rate ?? 9));
+    });
     addZeroVat(touristTax + natureContribution);
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
     const itemsTotal = pricedLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
-    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + touristTax + natureContribution;
+    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + accommodationExtrasTotal + touristTax + natureContribution;
     const hasPreliminaryItems = orderLines.some(l => l.isPreliminary);
 
     return {
@@ -211,13 +222,15 @@ export const PriceSummaryCard = ({
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
       accommodationPartnerName: selectedAccommodationQuote?.partner?.name || "",
       hasAccommodation: !!selectedAccommodationQuote,
+      extrasWithTotals,
+      accommodationExtrasTotal,
       allVatLines,
       totalExclVat,
       totalVatAmount,
       grandTotalInclVat,
       hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
