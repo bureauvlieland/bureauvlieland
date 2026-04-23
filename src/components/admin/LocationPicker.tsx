@@ -23,6 +23,12 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
   const [isSearching, setIsSearching] = useState(false);
   const [_mapReady, setMapReady] = useState(false);
 
+  // Always-current refs so map click handler doesn't capture stale closures
+  const addressRef = useRef(address);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { addressRef.current = address; }, [address]);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
   // Initialize map
   useEffect(() => {
     let mounted = true;
@@ -53,7 +59,7 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
         markerRef.current = L.marker([lat, lng]).addTo(map);
       }
 
-      // Click to place marker
+      // Click to place marker — use refs to avoid stale closure
       map.on("click", (e: any) => {
         const { lat: clickLat, lng: clickLng } = e.latlng;
 
@@ -63,10 +69,10 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
           markerRef.current = L.marker([clickLat, clickLng]).addTo(map);
         }
 
-        onChange(
+        onChangeRef.current(
           Math.round(clickLat * 1000000) / 1000000,
           Math.round(clickLng * 1000000) / 1000000,
-          address
+          addressRef.current
         );
       });
 
@@ -86,6 +92,7 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Sync map view and marker when lat/lng props change (e.g. opening a different item)
   useEffect(() => {
