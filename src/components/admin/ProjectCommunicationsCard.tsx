@@ -136,7 +136,13 @@ export function ProjectCommunicationsCard({
               </Badge>
             )}
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {onOpenStatusEmail && (
+              <Button size="sm" variant="outline" onClick={onOpenStatusEmail}>
+                <Sparkles className="h-4 w-4 mr-1" />
+                Status update
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setEmailSheetOpen(true)}>
               <Send className="h-4 w-4 mr-1" />
               E-mail
