@@ -464,6 +464,99 @@ const AdminInvoicing = () => {
     );
   };
 
+  type LodgingItem = (typeof standaloneLodging)[number];
+
+  const LodgingCard = ({ item }: { item: LodgingItem }) => {
+    const customerLabel = item.customer_company || item.customer_name;
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-5">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <Hotel className="h-5 w-5 text-slate-600" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-slate-900 truncate">{customerLabel}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {item.selected_quote?.accommodation_name || "Geen geselecteerde offerte"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4" />
+                  {format(new Date(item.arrival_date), "d MMM", { locale: nl })} – {format(new Date(item.departure_date), "d MMM yyyy", { locale: nl })}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-4 w-4" />
+                  {item.number_of_guests} gasten
+                </span>
+              </div>
+            </div>
+            <div className="lg:text-right space-y-1">
+              <div className="text-xl font-bold text-slate-900">{formatCurrency(item.total)}</div>
+              {item.invoiced > 0 && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Gefactureerd: </span>
+                  <span className="font-medium text-green-600">{formatCurrency(item.invoiced)}</span>
+                </p>
+              )}
+              {item.outstanding > 0 && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Openstaand: </span>
+                  <span className="font-medium text-amber-600">{formatCurrency(item.outstanding)}</span>
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/admin/logies-aanvragen/${item.id}`} className="gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Bekijk
+              </Link>
+            </Button>
+            <div className="ml-auto">
+              <CompletionActions
+                entityType="accommodation"
+                entityId={item.id}
+                completionStatus={item.completion_status}
+                completedAt={item.completed_at}
+                outstanding={item.outstanding}
+                invalidateKeys={[["admin-invoicing-standalone-lodging"]]}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const LodgingSection = ({
+    title,
+    items,
+    empty,
+  }: {
+    title: string;
+    items: LodgingItem[];
+    empty: string;
+  }) => (
+    <div>
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+        {title} {items.length > 0 && <span className="text-foreground">({items.length})</span>}
+      </h3>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">{empty}</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => <LodgingCard key={item.id} item={item} />)}
+        </div>
+      )}
+    </div>
+  );
+
   // Summary stats
   const totalReadyAmount = readyRequests.reduce((sum, r) => {
     const totals = calculateInvoiceTotals(r);
