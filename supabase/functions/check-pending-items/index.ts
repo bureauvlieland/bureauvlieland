@@ -10,6 +10,9 @@ const DEFAULT_REMINDER_DAYS_PARTNER = 5;
 const DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE = 7;
 const DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST = 14;
 const DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY = 3;
+const DEFAULT_CUSTOMER_STATUS_EMAIL_PENDING_DAYS = 5;
+const DEFAULT_CUSTOMER_STATUS_EMAIL_STALE_DAYS = 5;
+const DEFAULT_CUSTOMER_INPUTS_WARNING_DAYS = 14;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,6 +35,9 @@ Deno.serve(async (req) => {
         "reminder_days_customer_quote",
         "reminder_days_customer_request",
         "reminder_email_enabled",
+        "customer_status_email_pending_days",
+        "customer_status_email_stale_days",
+        "customer_inputs_warning_days",
       ]);
 
     const settings: Record<string, any> = {};
@@ -43,6 +49,9 @@ Deno.serve(async (req) => {
     const customerQuoteDays = Number(settings["reminder_days_customer_quote"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
     const customerRequestDays = Number(settings["reminder_days_customer_request"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
     const partnerActivityDays = DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY;
+    const customerStatusEmailPendingDays = Number(settings["customer_status_email_pending_days"]) || DEFAULT_CUSTOMER_STATUS_EMAIL_PENDING_DAYS;
+    const customerStatusEmailStaleDays = Number(settings["customer_status_email_stale_days"]) || DEFAULT_CUSTOMER_STATUS_EMAIL_STALE_DAYS;
+    const customerInputsWarningDays = Number(settings["customer_inputs_warning_days"]) || DEFAULT_CUSTOMER_INPUTS_WARNING_DAYS;
     const reminderEmailEnabled = settings["reminder_email_enabled"] !== false;
 
     const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
@@ -823,6 +832,239 @@ Deno.serve(async (req) => {
             status: "todo",
             related_request_id: prog.id,
             auto_type: "quote_expiring_soon",
+            auto_entity_id: prog.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
+    // CHECK 10: Customer status email — Phase B
+    // (offerte_verstuurd > N dagen, geen klant-akkoord)
+    // =============================================
+    const customerStatusCutoff = new Date();
+    customerStatusCutoff.setDate(customerStatusCutoff.getDate() - customerStatusEmailPendingDays);
+
+    const { data: phaseBPrograms, error: phaseBError } = await supabase
+      .from("program_requests")
+      .select(`
+        id, customer_name, customer_company, quote_status, quote_sent_at,
+        cancelled_at, completion_status,
+        items:program_request_items(id, customer_approved_at, customer_accepted_at)
+      `)
+      .eq("status", "active")
+      .eq("quote_status", "offerte_verstuurd")
+      .is("cancelled_at", null)
+      .neq("completion_status", "completed")
+      .not("quote_sent_at", "is", null)
+      .lt("quote_sent_at", customerStatusCutoff.toISOString());
+
+    if (phaseBError) {
+      console.error("Error fetching phase B programs:", phaseBError);
+    } else {
+      console.log(`Found ${phaseBPrograms?.length || 0} phase-B programs for status email todos`);
+
+      for (const prog of phaseBPrograms || []) {
+        const items = (prog.items as any[]) || [];
+        const anyApproved = items.some(
+          (i) => i.customer_approved_at || i.customer_accepted_at,
+        );
+        if (anyApproved) continue;
+
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "customer_status_email_due")
+          .eq("auto_entity_id", prog.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const customerLabel = prog.customer_company || prog.customer_name;
+        const daysSince = Math.floor(
+          (Date.now() - new Date(prog.quote_sent_at!).getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `${customerLabel} heeft nog geen akkoord gegeven op offerte`,
+            description: `De offerte is ${daysSince} dagen geleden verstuurd zonder reactie. Overweeg een status-mail te sturen om de klant te herinneren aan akkoord, voorwaarden en facturatiegegevens.`,
+            priority: daysSince > customerStatusEmailPendingDays * 2 ? "high" : "normal",
+            status: "todo",
+            related_request_id: prog.id,
+            auto_type: "customer_status_email_due",
+            auto_entity_id: prog.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
+    // CHECK 11: Customer status update stale — Phase C
+    // (klant-akkoord ontvangen, maar > N dagen geen outbound mail)
+    // =============================================
+    const staleCutoff = new Date();
+    staleCutoff.setDate(staleCutoff.getDate() - customerStatusEmailStaleDays);
+
+    const { data: phaseCPrograms, error: phaseCError } = await supabase
+      .from("program_requests")
+      .select(`
+        id, customer_name, customer_company, customer_email, quote_status,
+        cancelled_at, completion_status,
+        items:program_request_items(id, status, customer_approved_at, customer_accepted_at, skip_partner_notification)
+      `)
+      .eq("status", "active")
+      .is("cancelled_at", null)
+      .neq("completion_status", "completed");
+
+    if (phaseCError) {
+      console.error("Error fetching phase C programs:", phaseCError);
+    } else {
+      for (const prog of phaseCPrograms || []) {
+        const items = (prog.items as any[]) || [];
+        // Phase C = at least one approved item that was/should be sent to a partner,
+        // and at least one item is still pending (not yet confirmed)
+        const inPhaseC =
+          items.some(
+            (i) =>
+              (i.customer_approved_at || i.customer_accepted_at) &&
+              !i.skip_partner_notification,
+          ) && items.some((i) => i.status === "pending");
+        if (!inPhaseC) continue;
+
+        // Check last outbound mail to the customer for this request
+        const { data: lastMail } = await supabase
+          .from("email_log")
+          .select("sent_at, created_at")
+          .eq("related_request_id", prog.id)
+          .eq("recipient_email", prog.customer_email)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const lastTs = lastMail?.sent_at || lastMail?.created_at;
+        if (lastTs && new Date(lastTs) > staleCutoff) continue;
+
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "customer_status_update_due")
+          .eq("auto_entity_id", prog.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const customerLabel = prog.customer_company || prog.customer_name;
+        const daysSince = lastTs
+          ? Math.floor((Date.now() - new Date(lastTs).getTime()) / (1000 * 60 * 60 * 24))
+          : customerStatusEmailStaleDays;
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `${customerLabel} heeft sinds ${daysSince} dagen geen update ontvangen`,
+            description: `Er staan nog onderdelen open bij partners en de klant heeft al ${daysSince} dagen geen status-update ontvangen. Overweeg een status-mail te sturen.`,
+            priority: "normal",
+            status: "todo",
+            related_request_id: prog.id,
+            auto_type: "customer_status_update_due",
+            auto_entity_id: prog.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
+    // CHECK 12: Customer inputs missing near event date
+    // (T-N dagen tot uitvoering, voorwaarden/facturatie/logies ontbreekt)
+    // =============================================
+    const warningCutoffDate = new Date();
+    warningCutoffDate.setDate(warningCutoffDate.getDate() + customerInputsWarningDays);
+    const warningCutoffStr = warningCutoffDate.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const { data: nearEventPrograms, error: nearEventError } = await supabase
+      .from("program_requests")
+      .select(`
+        id, customer_name, customer_company,
+        terms_accepted_at, billing_company_name,
+        selected_dates, linked_accommodation_id,
+        cancelled_at, completion_status, status
+      `)
+      .eq("status", "active")
+      .is("cancelled_at", null)
+      .neq("completion_status", "completed");
+
+    if (nearEventError) {
+      console.error("Error fetching near-event programs:", nearEventError);
+    } else {
+      for (const prog of nearEventPrograms || []) {
+        const dates = Array.isArray(prog.selected_dates)
+          ? (prog.selected_dates as string[])
+          : [];
+        if (dates.length === 0) continue;
+        const firstDate = String(dates[0]).slice(0, 10);
+        if (firstDate < todayStr || firstDate > warningCutoffStr) continue;
+
+        // Check selected accommodation if linked
+        let lodgingMissing = false;
+        if (prog.linked_accommodation_id) {
+          const { data: selectedQuote } = await supabase
+            .from("accommodation_quotes")
+            .select("id")
+            .eq("request_id", prog.linked_accommodation_id)
+            .eq("status", "selected")
+            .maybeSingle();
+          lodgingMissing = !selectedQuote;
+        }
+
+        const missing: string[] = [];
+        if (!prog.terms_accepted_at) missing.push("voorwaarden");
+        if (!prog.billing_company_name) missing.push("facturatiegegevens");
+        if (lodgingMissing) missing.push("logieskeuze");
+
+        if (missing.length === 0) continue;
+
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "customer_inputs_missing")
+          .eq("auto_entity_id", prog.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        const customerLabel = prog.customer_company || prog.customer_name;
+        const daysUntil = Math.ceil(
+          (new Date(firstDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        );
+
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `${customerLabel} mist nog: ${missing.join(", ")}`,
+            description: `De uitvoeringsdatum is over ${daysUntil} dag(en) (${firstDate}). De klant heeft nog niet aangeleverd: ${missing.join(", ")}. Overweeg een status-mail om dit te bespoedigen.`,
+            priority: daysUntil <= 7 ? "high" : "normal",
+            status: "todo",
+            due_date: firstDate,
+            related_request_id: prog.id,
+            auto_type: "customer_inputs_missing",
             auto_entity_id: prog.id,
           });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -231,6 +231,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 const AdminRequestDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramRequestItem[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -249,6 +250,22 @@ const AdminRequestDetail = () => {
   const [syncBlocksOpen, setSyncBlocksOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
+  const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
+
+  // Auto-open status-mail sheet when navigated from a todo with ?action=status-email
+  useEffect(() => {
+    if (searchParams.get("action") === "status-email") {
+      setStatusEmailOpen(true);
+      setHighlightStatusEmail(true);
+      // Clear the param so refresh doesn't reopen the sheet
+      const next = new URLSearchParams(searchParams);
+      next.delete("action");
+      setSearchParams(next, { replace: true });
+      // Stop highlighting after a few seconds
+      const t = setTimeout(() => setHighlightStatusEmail(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, setSearchParams]);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
@@ -2032,6 +2049,7 @@ const AdminRequestDetail = () => {
                 customerName={request.customer_name}
                 customerEmail={request.customer_email}
                 onOpenStatusEmail={() => setStatusEmailOpen(true)}
+                highlightStatusEmail={highlightStatusEmail}
                 partnerRecipients={
                   Array.from(
                     new Map(
