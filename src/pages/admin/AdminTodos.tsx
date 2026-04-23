@@ -620,6 +620,48 @@ const TakenTab = () => {
     return request.customer_company || request.customer_name;
   };
 
+  /**
+   * Determine the most relevant business-anchor for a todo so the age chip
+   * surfaces actionable deadline info instead of just todo creation age.
+   */
+  const getBusinessAnchor = (todo: Todo): { date: string; label: string; isDeadline?: boolean } | undefined => {
+    if (!todo.related_request_id) return undefined;
+    const anchor = anchorMap[todo.related_request_id];
+    if (!anchor) return undefined;
+
+    switch (todo.auto_type) {
+      // Quote expiry deadlines — show the upcoming deadline
+      case "quote_expiring_soon":
+      case "quote_pending_customer":
+        if (anchor.quote_valid_until) {
+          return { date: anchor.quote_valid_until, label: "Offerte", isDeadline: true };
+        }
+        if (anchor.quote_sent_at) {
+          return { date: anchor.quote_sent_at, label: "Offerte verstuurd" };
+        }
+        return undefined;
+
+      // Customer is sitting on a quote — show how long the quote has been open
+      case "customer_status_email_due":
+      case "customer_status_update_due":
+      case "request_no_response":
+        if (anchor.quote_sent_at) {
+          return { date: anchor.quote_sent_at, label: "Offerte staat open" };
+        }
+        return undefined;
+
+      // Quote ready to send — show project expiry as soft deadline
+      case "quote_ready_to_send":
+        if (anchor.expires_at) {
+          return { date: anchor.expires_at, label: "Aanvraag", isDeadline: true };
+        }
+        return undefined;
+
+      default:
+        return undefined;
+    }
+  };
+
   const renderTodoItem = (todo: Todo) => {
     const priority = priorityConfig[todo.priority as keyof typeof priorityConfig] || priorityConfig.normal;
     const _status = statusConfig[todo.status as keyof typeof statusConfig] || statusConfig.todo;
@@ -629,6 +671,7 @@ const TakenTab = () => {
     const isOverdue = todo.due_date && new Date(todo.due_date) < new Date() && todo.status !== "done";
     const isSnoozed = todo.snoozed_until && todo.snoozed_until > today;
     const actionConfig = todo.auto_type ? autoTypeActionConfig[todo.auto_type] : null;
+    const businessAnchor = getBusinessAnchor(todo);
 
     return (
       <div
