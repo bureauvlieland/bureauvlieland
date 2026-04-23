@@ -1,5 +1,5 @@
 // Central business constants and settings utilities
-import type { FeeTier, AppSettingsMap } from "@/types/appSettings";
+import type { FeeTier, AppSettingsMap, TodoAgeThreshold, TodoAgeThresholdsConfig } from "@/types/appSettings";
 
 // ============================================
 // FALLBACK VALUES (used when DB is unavailable)
@@ -42,7 +42,26 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
   bureau_kvk_number: "",
   bureau_vat_number: "",
   bureau_payment_term_days: 14,
+  todo_age_thresholds: {
+    default: { amber: 3, red: 7 },
+    byType: {},
+  },
 };
+
+/**
+ * Resolve the active threshold (amber/red days) for a given todo auto_type.
+ * Falls back to `default` when the type has no specific override.
+ */
+export function getTodoAgeThreshold(
+  autoType: string | null | undefined,
+  config: TodoAgeThresholdsConfig | undefined,
+): TodoAgeThreshold {
+  const cfg = config ?? FALLBACK_SETTINGS.todo_age_thresholds;
+  if (autoType && cfg.byType?.[autoType]) {
+    return cfg.byType[autoType];
+  }
+  return cfg.default;
+}
 
 // ============================================
 // UTILITY FUNCTIONS

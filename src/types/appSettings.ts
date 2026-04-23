@@ -7,6 +7,21 @@ export interface FeeTier {
 
 export type SettingValueType = "number" | "text" | "json" | "boolean";
 
+/** Threshold (in days) at which a todo's age chip switches from neutral → amber → red. */
+export interface TodoAgeThreshold {
+  /** Days from anchor at which color turns amber (warning). */
+  amber: number;
+  /** Days from anchor at which color turns red (critical). */
+  red: number;
+}
+
+/** Configurable color escalation drempels per todo type, with a global default. */
+export interface TodoAgeThresholdsConfig {
+  default: TodoAgeThreshold;
+  /** Optional overrides keyed by `auto_type`. Missing entries fall back to `default`. */
+  byType: Record<string, TodoAgeThreshold>;
+}
+
 export interface AppSetting {
   id: string;
   category: string;
@@ -47,6 +62,8 @@ export interface AppSettingsMap {
   bureau_kvk_number: string;
   bureau_vat_number: string;
   bureau_payment_term_days: number;
+  // Todo color escalation
+  todo_age_thresholds: TodoAgeThresholdsConfig;
 }
 
 // Setting categories for grouping in admin UI
