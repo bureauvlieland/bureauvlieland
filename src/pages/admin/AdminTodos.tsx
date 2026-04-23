@@ -317,6 +317,8 @@ const TakenTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  // Aanvullend op statusFilter: filtert op de tijdsdimensie (snoozed / actie nodig / actief)
+  const [timeFilter, setTimeFilter] = useState<"all" | "action" | "snoozed" | "scheduled">("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -587,11 +589,30 @@ const TakenTab = () => {
 
   // Filter: hide snoozed todos (unless showing all/done)
   const visibleTodos = useMemo(() => {
+    const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+
     return todos.filter((todo) => {
-      // Hide snoozed for active view
-      if (statusFilter === "active" && todo.snoozed_until && todo.snoozed_until > today) {
-        return false;
+      const isSnoozed = !!(todo.snoozed_until && todo.snoozed_until > today);
+      const isOverdue = !!(todo.due_date && todo.due_date < today && todo.status !== "done");
+      const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= in3Days && todo.status !== "done");
+
+      // Tijdsdimensie filter (overschrijft default snooze-verbergen voor "active")
+      if (timeFilter === "snoozed") {
+        if (!isSnoozed) return false;
+      } else if (timeFilter === "action") {
+        // Actie nodig: niet gesnoozed + overdue OF binnen 3 dagen deadline
+        if (isSnoozed) return false;
+        if (!isOverdue && !isDueSoon) return false;
+      } else if (timeFilter === "scheduled") {
+        // Lopend: open, niet gesnoozed, geen acute deadline
+        if (todo.status === "done") return false;
+        if (isSnoozed) return false;
+        if (isOverdue || isDueSoon) return false;
+      } else {
+        // "all" — gedraagt zich als voorheen: verberg snoozed bij actief-status
+        if (statusFilter === "active" && isSnoozed) return false;
       }
+
       // Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -599,7 +620,7 @@ const TakenTab = () => {
       }
       return true;
     });
-  }, [todos, searchQuery, statusFilter, today]);
+  }, [todos, searchQuery, statusFilter, timeFilter, today]);
 
   // Group by auto_type
   const groupedTodos = useMemo(() => {
@@ -999,6 +1020,18 @@ const TakenTab = () => {
                   <SelectItem value="high">Hoog</SelectItem>
                   <SelectItem value="normal">Normaal</SelectItem>
                   <SelectItem value="low">Laag</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as typeof timeFilter)}>
+                <SelectTrigger className="w-[180px]">
+                  <AlarmClock className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Weergave" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle weergaves</SelectItem>
+                  <SelectItem value="action">Actie nodig (overdue + ≤3 dagen)</SelectItem>
+                  <SelectItem value="scheduled">Lopend (geen acute deadline)</SelectItem>
+                  <SelectItem value="snoozed">Gesnoozed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
