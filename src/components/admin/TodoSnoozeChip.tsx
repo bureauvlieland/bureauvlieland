@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatDistanceToNow, differenceInDays, format } from "date-fns";
+import { differenceInDays, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Moon, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
