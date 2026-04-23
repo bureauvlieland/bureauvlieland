@@ -459,8 +459,8 @@ const AdminRequestDetail = () => {
     };
   }, [id]);
 
-  const fetchRequestData = async () => {
-    setIsLoading(true);
+  const fetchRequestData = async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setIsLoading(true);
     try {
       // Fetch request
       const { data: requestData, error: requestError } = await supabase
