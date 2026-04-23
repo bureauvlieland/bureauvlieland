@@ -1038,6 +1038,37 @@ const TakenTab = () => {
           </CardContent>
         </Card>
 
+        {/* Select-all bar — alleen tonen als er zichtbare todo's zijn */}
+        {!isLoading && visibleTodos.length > 0 && (() => {
+          const visibleIds = visibleTodos.map((t) => t.id);
+          const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+          const someSelected = visibleIds.some((id) => selectedIds.has(id));
+          const checkboxState: boolean | "indeterminate" = allSelected ? true : someSelected ? "indeterminate" : false;
+
+          return (
+            <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 border rounded-md">
+              <Checkbox
+                checked={checkboxState}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedIds(new Set([...selectedIds, ...visibleIds]));
+                  } else {
+                    const next = new Set(selectedIds);
+                    visibleIds.forEach((id) => next.delete(id));
+                    setSelectedIds(next);
+                  }
+                }}
+                aria-label="Selecteer alle zichtbare taken"
+              />
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} van ${visibleTodos.length} geselecteerd`
+                  : `Selecteer alle ${visibleTodos.length} zichtbare taken`}
+              </span>
+            </div>
+          );
+        })()}
+
         {/* Todo List */}
         {isLoading ? (
           <Card>
