@@ -46,7 +46,20 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
     default: { amber: 3, red: 7 },
     byType: {},
   },
+  todo_due_soon_days: 3,
 };
+
+/** Veilige clamp voor de "actie nodig" drempel: integer tussen 1 en 30 dagen. */
+export function getTodoDueSoonDays(value: number | undefined | null): number {
+  const fallback = FALLBACK_SETTINGS.todo_due_soon_days;
+  if (value === null || value === undefined) return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  const intVal = Math.round(n);
+  if (intVal < 1) return 1;
+  if (intVal > 30) return 30;
+  return intVal;
+}
 
 /**
  * Resolve the active threshold (amber/red days) for a given todo auto_type.

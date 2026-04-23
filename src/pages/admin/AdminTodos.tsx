@@ -82,7 +82,7 @@ import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { TodoAgeChip } from "@/components/admin/TodoAgeChip";
 import { TodoSnoozeChip } from "@/components/admin/TodoSnoozeChip";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { getTodoAgeThreshold } from "@/lib/appSettings";
+import { getTodoAgeThreshold, getTodoDueSoonDays } from "@/lib/appSettings";
 
 // ─── Types ───────────────────────────────────────────────────
 interface Todo {
@@ -702,19 +702,20 @@ const TakenTab = () => {
   };
 
   // Filter: hide snoozed todos (unless showing all/done)
+  const dueSoonDays = getTodoDueSoonDays(appSettings.todo_due_soon_days);
   const visibleTodos = useMemo(() => {
-    const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+    const inXDays = new Date(Date.now() + dueSoonDays * 86400000).toISOString().split("T")[0];
 
     return todos.filter((todo) => {
       const isSnoozed = !!(todo.snoozed_until && todo.snoozed_until > today);
       const isOverdue = !!(todo.due_date && todo.due_date < today && todo.status !== "done");
-      const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= in3Days && todo.status !== "done");
+      const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= inXDays && todo.status !== "done");
 
       // Tijdsdimensie filter (overschrijft default snooze-verbergen voor "active")
       if (timeFilter === "snoozed") {
         if (!isSnoozed) return false;
       } else if (timeFilter === "action") {
-        // Actie nodig: niet gesnoozed + overdue OF binnen 3 dagen deadline
+        // Actie nodig: niet gesnoozed + overdue OF binnen N dagen deadline (instelbaar)
         if (isSnoozed) return false;
         if (!isOverdue && !isDueSoon) return false;
       } else if (timeFilter === "scheduled") {
@@ -734,7 +735,7 @@ const TakenTab = () => {
       }
       return true;
     });
-  }, [todos, searchQuery, statusFilter, timeFilter, today]);
+  }, [todos, searchQuery, statusFilter, timeFilter, today, dueSoonDays]);
 
   // Group by auto_type
   const groupedTodos = useMemo(() => {
@@ -835,11 +836,11 @@ const TakenTab = () => {
     const linkedRequest = getLinkedRequestLabel(todo.related_request_id);
     const isOverdue = todo.due_date && new Date(todo.due_date) < new Date() && todo.status !== "done";
     const isSnoozed = todo.snoozed_until && todo.snoozed_until > today;
-    // Vervalt binnen 3 dagen (en nog niet overdue/done): visuele waarschuwing
+    // Vervalt binnen N dagen (instelbaar via app_settings.todo_due_soon_days): visuele waarschuwing
     const dueSoonCutoff = (() => {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() + 3);
+      d.setDate(d.getDate() + dueSoonDays);
       return d;
     })();
     const isDueSoon =
@@ -1199,7 +1200,7 @@ const TakenTab = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle weergaves</SelectItem>
-                  <SelectItem value="action">Actie nodig (overdue + ≤3 dagen)</SelectItem>
+                  <SelectItem value="action">Actie nodig (overdue + ≤{dueSoonDays} {dueSoonDays === 1 ? "dag" : "dagen"})</SelectItem>
                   <SelectItem value="scheduled">Lopend (geen acute deadline)</SelectItem>
                   <SelectItem value="snoozed">Gesnoozed</SelectItem>
                 </SelectContent>

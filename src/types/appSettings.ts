@@ -64,6 +64,8 @@ export interface AppSettingsMap {
   bureau_payment_term_days: number;
   // Todo color escalation
   todo_age_thresholds: TodoAgeThresholdsConfig;
+  /** Aantal dagen vóór deadline waarop een todo als "actie nodig" / due-soon wordt gemarkeerd. */
+  todo_due_soon_days: number;
 }
 
 // Setting categories for grouping in admin UI
