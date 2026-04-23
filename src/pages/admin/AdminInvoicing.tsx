@@ -26,7 +26,8 @@ import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/comp
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
-import { CheckCircle2, Mail } from "lucide-react";
+import { CheckCircle2, Mail, Hotel } from "lucide-react";
+import { CompletionActions } from "@/components/admin/CompletionActions";
 
 interface ProgramRequestWithItems {
   id: string;
