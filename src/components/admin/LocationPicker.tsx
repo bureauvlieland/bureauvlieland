@@ -129,11 +129,17 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
       setTimeout(() => {
         map.invalidateSize();
         if (hasCoords) {
-          map.setView([lat!, lng!], DEFAULT_ZOOM);
+          // Ensure marker exists and is positioned correctly
           if (markerRef.current) {
             markerRef.current.setLatLng([lat!, lng!]);
           } else {
             markerRef.current = L.marker([lat!, lng!]).addTo(map);
+          }
+          // Only recenter when the marker isn't already visible in the current view
+          // (avoids resetting zoom after every map click)
+          const bounds = map.getBounds();
+          if (!bounds.contains([lat!, lng!])) {
+            map.setView([lat!, lng!], DEFAULT_ZOOM);
           }
         } else {
           if (markerRef.current) {
