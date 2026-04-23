@@ -1414,15 +1414,15 @@ const TakenTab = () => {
           );
         })()}
 
-        {/* Select-all bar — alleen tonen als er zichtbare todo's zijn */}
-        {!isLoading && visibleTodos.length > 0 && (() => {
+        {/* Select-all bar — toon ook als er een actieve selectie of "alleen geselecteerde" toggle is */}
+        {!isLoading && (visibleTodos.length > 0 || selectedIds.size > 0) && (() => {
           const visibleIds = visibleTodos.map((t) => t.id);
           const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
           const someSelected = visibleIds.some((id) => selectedIds.has(id));
           const checkboxState: boolean | "indeterminate" = allSelected ? true : someSelected ? "indeterminate" : false;
 
           return (
-            <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 border rounded-md">
+            <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-muted/30 border rounded-md">
               <Checkbox
                 checked={checkboxState}
                 onCheckedChange={(checked) => {
@@ -1434,16 +1434,54 @@ const TakenTab = () => {
                     setSelectedIds(next);
                   }
                 }}
+                disabled={visibleIds.length === 0}
                 aria-label="Selecteer alle zichtbare taken"
               />
               <span className="text-xs text-muted-foreground">
                 {selectedIds.size > 0
-                  ? `${selectedIds.size} van ${visibleTodos.length} geselecteerd`
+                  ? `${selectedIds.size} van ${todos.length} geselecteerd`
                   : `Selecteer alle ${visibleTodos.length} zichtbare taken`}
               </span>
+
+              <div className="ml-auto flex items-center gap-3">
+                {/* Toggle: alleen geselecteerde tonen */}
+                <label
+                  className={`flex items-center gap-2 text-xs cursor-pointer rounded-md px-2 py-1 transition-colors ${
+                    showSelectedOnly ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                  } ${selectedIds.size === 0 && !showSelectedOnly ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={
+                    selectedIds.size === 0 && !showSelectedOnly
+                      ? "Selecteer eerst één of meer taken"
+                      : "Toon alleen geselecteerde taken"
+                  }
+                >
+                  <Checkbox
+                    checked={showSelectedOnly}
+                    onCheckedChange={(checked) => setShowSelectedOnly(!!checked)}
+                    disabled={selectedIds.size === 0 && !showSelectedOnly}
+                    aria-label="Toon alleen geselecteerde taken"
+                  />
+                  Alleen geselecteerde tonen
+                </label>
+
+                {selectedIds.size > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground"
+                    onClick={() => {
+                      setSelectedIds(new Set());
+                      setShowSelectedOnly(false);
+                    }}
+                  >
+                    Selectie wissen
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })()}
+
 
         {/* Todo List */}
         {isLoading ? (
