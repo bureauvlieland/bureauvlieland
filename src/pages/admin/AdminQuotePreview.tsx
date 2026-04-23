@@ -723,7 +723,14 @@ const AdminQuotePreview = () => {
                                       {item.preferred_time || "-"}
                                     </td>
                                     <td className="py-3">
-                                      <p className="font-medium text-sm">{item.block_name}</p>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <p className="font-medium text-sm">{item.block_name}</p>
+                                        {item.block_type !== "self_arranged" && (
+                                          <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">
+                                            {item.override_people ?? request.number_of_people} pax
+                                          </span>
+                                        )}
+                                      </div>
                                       {item.admin_price_notes ? (
                                         <p className="text-xs text-gray-500">
                                           {item.admin_price_notes}
