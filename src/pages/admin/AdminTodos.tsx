@@ -835,6 +835,22 @@ const TakenTab = () => {
     const linkedRequest = getLinkedRequestLabel(todo.related_request_id);
     const isOverdue = todo.due_date && new Date(todo.due_date) < new Date() && todo.status !== "done";
     const isSnoozed = todo.snoozed_until && todo.snoozed_until > today;
+    // Vervalt binnen 3 dagen (en nog niet overdue/done): visuele waarschuwing
+    const dueSoonCutoff = (() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 3);
+      return d;
+    })();
+    const isDueSoon =
+      !!todo.due_date &&
+      !isOverdue &&
+      todo.status !== "done" &&
+      new Date(todo.due_date) <= dueSoonCutoff;
+    const dueDateObj = todo.due_date ? new Date(todo.due_date) : null;
+    const dueDaysDiff = dueDateObj
+      ? Math.round((dueDateObj.getTime() - new Date(new Date().toDateString()).getTime()) / 86400000)
+      : null;
     const actionConfig = todo.auto_type ? autoTypeActionConfig[todo.auto_type] : null;
     const businessAnchor = getBusinessAnchor(todo);
 
