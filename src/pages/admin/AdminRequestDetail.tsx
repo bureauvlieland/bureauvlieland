@@ -346,75 +346,145 @@ const AdminRequestDetail = () => {
 
   const generateProgramStatusEmailBody = (): { subject: string; body: string } => {
     if (!request || !items) return { subject: "", body: "" };
-    
-    const sentItems = items.filter(i => 
-      i.block_type !== "self_arranged" && 
-      (i.skip_partner_notification === false || i.skip_partner_notification === null)
-    );
-    
-    const confirmed = sentItems.filter(i => i.status === "confirmed");
-    const unavailable = sentItems.filter(i => i.status === "unavailable");
-    const alternative = sentItems.filter(i => i.status === "alternative");
-    const pending = sentItems.filter(i => i.status === "pending");
-    
+
+    const ref = request.reference_number ? ` (${request.reference_number})` : "";
+    const refShort = request.reference_number ? ` ${request.reference_number}` : "";
     const dates = (request.selected_dates as string[]) || [];
-    const dateStr = dates.length > 0 
+    const dateStr = dates.length > 0
       ? dates.map(d => format(new Date(d), "d MMMM yyyy", { locale: nl })).join(" t/m ")
       : "nog niet bepaald";
-    
+    const portalUrl = `https://bureauvlieland.nl/mijn-programma/${request.customer_token}`;
+
+    // Determine phase
+    const quoteStatus = request.quote_status || "concept";
+    const anyCustomerApproved = items.some(i => i.customer_approved_at);
+    const anySentToPartner = items.some(i =>
+      i.block_type !== "self_arranged" &&
+      (i.skip_partner_notification === false || i.skip_partner_notification === null)
+    );
+
+    let phase: "A_concept" | "B_waiting_customer" | "C_partners_contacted" | "D_definitive";
+    if (quoteStatus === "definitief_bevestigd") {
+      phase = "D_definitive";
+    } else if (anyCustomerApproved && anySentToPartner) {
+      phase = "C_partners_contacted";
+    } else if (quoteStatus === "offerte_verstuurd") {
+      phase = "B_waiting_customer";
+    } else if (anyCustomerApproved || quoteStatus === "akkoord_ontvangen") {
+      phase = "C_partners_contacted";
+    } else {
+      phase = "A_concept";
+    }
+
+    // Action items the customer still needs to complete
+    const buildActionItems = (): string[] => {
+      const out: string[] = [];
+      if (phase === "B_waiting_customer" || quoteStatus === "offerte_verstuurd") {
+        out.push(`Bekijk de offerte en geef uw akkoord via het klantportaal`);
+      }
+      if (!request.terms_accepted_at && ["offerte_verstuurd", "akkoord_ontvangen"].includes(quoteStatus)) {
+        out.push("Accepteer de algemene voorwaarden");
+      }
+      if (!request.billing_company_name) {
+        out.push("Vul uw facturatiegegevens aan");
+      }
+      if (linkedAccommodation && linkedAccommodation.status !== "accepted") {
+        out.push("Beoordeel de logiesoffertes en maak een keuze");
+      }
+      return out;
+    };
+
     let body = `Beste ${request.customer_name},\n\n`;
-    body += `Hierbij een update over de stand van zaken van uw programma${request.reference_number ? ` (${request.reference_number})` : ""}.\n\n`;
-    body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
-    body += `Samenvatting:\n`;
-    body += `✅ ${confirmed.length} bevestigd\n`;
-    if (alternative.length > 0) body += `🔄 ${alternative.length} alternatief voorgesteld\n`;
-    if (unavailable.length > 0) body += `❌ ${unavailable.length} niet beschikbaar\n`;
-    if (pending.length > 0) body += `⏳ ${pending.length} in afwachting\n`;
-    body += `\n`;
-    
-    // Group by category
-    const categories = [...new Set(sentItems.map(i => i.block_category))];
-    for (const cat of categories) {
-      const catItems = sentItems.filter(i => i.block_category === cat);
-      body += `── ${cat} ──\n`;
-      for (const item of catItems) {
-        const statusLabel = item.status === "confirmed" ? "✅ Bevestigd" 
-          : item.status === "unavailable" ? "❌ Niet beschikbaar"
-          : item.status === "alternative" ? "🔄 Alternatief"
-          : "⏳ In afwachting";
-        body += `• ${item.block_name} (${item.provider_name}) — ${statusLabel}\n`;
+    let subject = `Status update programma${refShort} — Bureau Vlieland`;
+
+    // ─── Phase A: Concept ─────────────────────────────────────────────
+    if (phase === "A_concept") {
+      subject = `Update programma${refShort} — Bureau Vlieland`;
+      body += `Wij werken op dit moment aan de uitwerking van uw programma${ref}. Zodra de offerte gereed is ontvangt u deze van ons.\n\n`;
+      body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
+      const actions = buildActionItems();
+      if (actions.length > 0) {
+        body += `── Wat we alvast van u kunnen gebruiken ──\n`;
+        for (const a of actions) body += `📌 ${a}\n`;
+        body += `\n`;
       }
-      body += `\n`;
-    }
-    
-    // Actiepunten voor de klant
-    const actionItems: string[] = [];
-    if (!request.billing_company_name) {
-      actionItems.push("Vul uw facturatiegegevens in via het klantportaal");
-    }
-    if (!request.terms_accepted_at && request.quote_status && ["offerte_verstuurd", "akkoord_ontvangen"].includes(request.quote_status)) {
-      actionItems.push("Accepteer de voorwaarden om de boeking definitief te maken");
-    }
-    if (linkedAccommodation && linkedAccommodation.status !== "accepted") {
-      actionItems.push("Beoordeel de logiesoffertes en maak een keuze");
-    }
-    if (request.quote_status === "offerte_verstuurd") {
-      actionItems.push("Bekijk de offerte en geef akkoord");
+      body += `Heeft u tussentijds vragen? Neem gerust contact met ons op.\n`;
     }
 
-    if (actionItems.length > 0) {
-      body += `── Wat we nog van u nodig hebben ──\n`;
-      for (const item of actionItems) {
-        body += `📌 ${item}\n`;
+    // ─── Phase B: Quote sent, waiting on customer ─────────────────────
+    else if (phase === "B_waiting_customer") {
+      subject = `Uw offerte staat klaar — graag uw akkoord${refShort}`;
+      body += `Uw offerte staat klaar in het klantportaal. We wachten nu op uw akkoord voordat we de onderdelen definitief bij onze partners kunnen vastleggen.\n\n`;
+      body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
+
+      const actions = buildActionItems();
+      if (actions.length > 0) {
+        body += `── Wat we van u nodig hebben ──\n`;
+        for (const a of actions) body += `📌 ${a}\n`;
+        body += `\n`;
       }
-      body += `\n`;
+
+      body += `👉 Bekijk uw offerte en geef akkoord:\n${portalUrl}\n\n`;
+      body += `Zodra wij uw akkoord hebben ontvangen, benaderen wij direct de partners om de onderdelen vast te leggen. U ontvangt dan automatisch updates per onderdeel.\n\n`;
+      body += `Heeft u vragen over de offerte? Neem gerust contact met ons op.\n`;
     }
 
-    body += `Bekijk uw volledige programma via: https://bureauvlieland.nl/mijn-programma/${request.customer_token}\n\n`;
-    body += `Heeft u vragen? Neem gerust contact met ons op.\n`;
-    
-    const subject = `Status update programma${request.reference_number ? ` ${request.reference_number}` : ""} — Bureau Vlieland`;
-    
+    // ─── Phase C: Partners contacted ──────────────────────────────────
+    else if (phase === "C_partners_contacted") {
+      subject = `Status update programma${refShort} — Bureau Vlieland`;
+
+      const sentItems = items.filter(i =>
+        i.block_type !== "self_arranged" &&
+        (i.skip_partner_notification === false || i.skip_partner_notification === null)
+      );
+      const confirmed = sentItems.filter(i => i.status === "confirmed");
+      const unavailable = sentItems.filter(i => i.status === "unavailable");
+      const alternative = sentItems.filter(i => i.status === "alternative");
+      const pending = sentItems.filter(i => i.status === "pending");
+
+      body += `Hierbij een update over de stand van zaken van uw programma${ref}.\n\n`;
+      body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
+      body += `Samenvatting:\n`;
+      body += `✅ ${confirmed.length} bevestigd\n`;
+      if (alternative.length > 0) body += `🔄 ${alternative.length} alternatief voorgesteld\n`;
+      if (unavailable.length > 0) body += `❌ ${unavailable.length} niet beschikbaar\n`;
+      if (pending.length > 0) body += `⏳ ${pending.length} in afwachting bij partner\n`;
+      body += `\n`;
+
+      const categories = [...new Set(sentItems.map(i => i.block_category))];
+      for (const cat of categories) {
+        const catItems = sentItems.filter(i => i.block_category === cat);
+        body += `── ${cat} ──\n`;
+        for (const item of catItems) {
+          const statusLabel = item.status === "confirmed" ? "✅ Bevestigd"
+            : item.status === "unavailable" ? "❌ Niet beschikbaar"
+            : item.status === "alternative" ? "🔄 Alternatief"
+            : "⏳ In afwachting";
+          body += `• ${item.block_name} (${item.provider_name}) — ${statusLabel}\n`;
+        }
+        body += `\n`;
+      }
+
+      const actions = buildActionItems();
+      if (actions.length > 0) {
+        body += `── Wat we nog van u nodig hebben ──\n`;
+        for (const a of actions) body += `📌 ${a}\n`;
+        body += `\n`;
+      }
+
+      body += `Bekijk uw volledige programma via:\n${portalUrl}\n\n`;
+      body += `Heeft u vragen? Neem gerust contact met ons op.\n`;
+    }
+
+    // ─── Phase D: Definitive ──────────────────────────────────────────
+    else {
+      subject = `Programma definitief bevestigd${refShort} — Bureau Vlieland`;
+      body += `Uw programma${ref} is volledig bevestigd. Alle onderdelen zijn vastgelegd bij onze partners en u kunt zich verheugen op uw verblijf op Vlieland.\n\n`;
+      body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
+      body += `Bekijk uw definitieve programma via:\n${portalUrl}\n\n`;
+      body += `Mocht u nog vragen hebben, neem gerust contact met ons op.\n`;
+    }
+
     return { subject, body };
   };
 
