@@ -27,6 +27,7 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
+  Sparkles,
 } from "lucide-react";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
