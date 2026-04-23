@@ -760,6 +760,16 @@ const TakenTab = () => {
     const inXDays = new Date(Date.now() + dueSoonDays * 86400000).toISOString().split("T")[0];
 
     return todos.filter((todo) => {
+      // "Alleen geselecteerde" — overschrijft alle andere filters behalve search
+      if (showSelectedOnly) {
+        if (!selectedIds.has(todo.id)) return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          return todo.title.toLowerCase().includes(q) || todo.description?.toLowerCase().includes(q);
+        }
+        return true;
+      }
+
       const isSnoozed = !!(todo.snoozed_until && todo.snoozed_until > today);
       const isOverdue = !!(todo.due_date && todo.due_date < today && todo.status !== "done");
       const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= inXDays && todo.status !== "done");
@@ -788,7 +798,7 @@ const TakenTab = () => {
       }
       return true;
     });
-  }, [todos, searchQuery, statusFilter, timeFilter, today, dueSoonDays]);
+  }, [todos, searchQuery, statusFilter, timeFilter, today, dueSoonDays, showSelectedOnly, selectedIds]);
 
   // Group by auto_type
   const groupedTodos = useMemo(() => {
