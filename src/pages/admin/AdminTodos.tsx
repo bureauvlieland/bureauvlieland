@@ -607,14 +607,43 @@ const TakenTab = () => {
 
   /** Vraag bevestiging voor bulk snooze met preset N dagen. */
   const bulkSnoozeDays = (days: number) => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0) {
+      toast({ title: "Geen taken geselecteerd", variant: "destructive" });
+      return;
+    }
+    if (!ALLOWED_SNOOZE_DAYS.includes(days as (typeof ALLOWED_SNOOZE_DAYS)[number])) {
+      toast({
+        title: "Ongeldige snooze-duur",
+        description: `Kies een van: ${ALLOWED_SNOOZE_DAYS.join(", ")} dagen.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!computeSnoozeUntil(days)) {
+      toast({ title: "Ongeldige snooze-datum berekend", variant: "destructive" });
+      return;
+    }
     setBulkSnoozeConfirm({ days, ids: Array.from(selectedIds) });
   };
 
   /** Voer de bulk snooze daadwerkelijk uit na bevestiging. */
   const confirmBulkSnooze = () => {
     if (!bulkSnoozeConfirm) return;
-    const until = new Date(Date.now() + bulkSnoozeConfirm.days * 86400000).toISOString().split("T")[0];
+    if (bulkSnoozeConfirm.ids.length === 0) {
+      toast({ title: "Geen taken geselecteerd", variant: "destructive" });
+      setBulkSnoozeConfirm(null);
+      return;
+    }
+    const until = computeSnoozeUntil(bulkSnoozeConfirm.days);
+    if (!until) {
+      toast({
+        title: "Ongeldige snooze-duur",
+        description: "De snooze-datum kon niet worden berekend. Kies een geldige preset.",
+        variant: "destructive",
+      });
+      setBulkSnoozeConfirm(null);
+      return;
+    }
     bulkSnoozeMutation.mutate({ ids: bulkSnoozeConfirm.ids, until });
     setBulkSnoozeConfirm(null);
   };
