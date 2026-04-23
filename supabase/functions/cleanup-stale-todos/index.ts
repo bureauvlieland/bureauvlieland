@@ -242,6 +242,164 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 9. customer_status_email_due — quote no longer 'offerte_verstuurd', any item approved, or quote_sent_at cleared
+    const { data: customerStatusDueTodos } = await supabase
+      .from("admin_todos")
+      .select("id, related_request_id")
+      .eq("auto_type", "customer_status_email_due")
+      .neq("status", "done");
+
+    if (customerStatusDueTodos?.length) {
+      const reqIds = customerStatusDueTodos
+        .map((t: any) => t.related_request_id)
+        .filter(Boolean);
+      const { data: reqs } = await supabase
+        .from("program_requests")
+        .select("id, quote_status, cancelled_at, completion_status")
+        .in("id", reqIds);
+      const reqMap = new Map((reqs || []).map((r: any) => [r.id, r]));
+
+      // Items where customer approved
+      const { data: approvedItems } = await supabase
+        .from("program_request_items")
+        .select("request_id")
+        .in("request_id", reqIds)
+        .or("customer_approved_at.not.is.null,customer_accepted_at.not.is.null");
+      const approvedReqIds = new Set(
+        (approvedItems || []).map((i: any) => i.request_id),
+      );
+
+      const staleIds = customerStatusDueTodos
+        .filter((t: any) => {
+          const r: any = reqMap.get(t.related_request_id);
+          if (!r) return true;
+          if (r.cancelled_at) return true;
+          if (r.completion_status === "completed") return true;
+          if (r.quote_status !== "offerte_verstuurd") return true;
+          if (approvedReqIds.has(t.related_request_id)) return true;
+          return false;
+        })
+        .map((t: any) => t.id);
+
+      if (staleIds.length) {
+        await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: now })
+          .in("id", staleIds);
+        results.customer_status_email_due = staleIds.length;
+      }
+    }
+
+    // 10. customer_status_update_due — resolved when an outbound mail to the customer
+    // was sent after the todo was created
+    const { data: customerStatusUpdateTodos } = await supabase
+      .from("admin_todos")
+      .select("id, related_request_id, created_at")
+      .eq("auto_type", "customer_status_update_due")
+      .neq("status", "done");
+
+    if (customerStatusUpdateTodos?.length) {
+      const reqIds = customerStatusUpdateTodos
+        .map((t: any) => t.related_request_id)
+        .filter(Boolean);
+      const { data: reqs } = await supabase
+        .from("program_requests")
+        .select("id, customer_email, cancelled_at, completion_status")
+        .in("id", reqIds);
+      const reqMap = new Map((reqs || []).map((r: any) => [r.id, r]));
+
+      const staleIds: string[] = [];
+      for (const todo of customerStatusUpdateTodos) {
+        const r: any = reqMap.get(todo.related_request_id);
+        if (!r || r.cancelled_at || r.completion_status === "completed") {
+          staleIds.push(todo.id);
+          continue;
+        }
+        const { data: recentMail } = await supabase
+          .from("email_log")
+          .select("id")
+          .eq("related_request_id", todo.related_request_id)
+          .eq("recipient_email", r.customer_email)
+          .gte("created_at", todo.created_at)
+          .limit(1);
+        if (recentMail && recentMail.length > 0) staleIds.push(todo.id);
+      }
+      if (staleIds.length) {
+        await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: now })
+          .in("id", staleIds);
+        results.customer_status_update_due = staleIds.length;
+      }
+    }
+
+    // 11. customer_inputs_missing — resolved when all required inputs are present
+    const { data: customerInputsTodos } = await supabase
+      .from("admin_todos")
+      .select("id, related_request_id")
+      .eq("auto_type", "customer_inputs_missing")
+      .neq("status", "done");
+
+    if (customerInputsTodos?.length) {
+      const reqIds = customerInputsTodos
+        .map((t: any) => t.related_request_id)
+        .filter(Boolean);
+      const { data: reqs } = await supabase
+        .from("program_requests")
+        .select(
+          "id, terms_accepted_at, billing_company_name, linked_accommodation_id, cancelled_at, completion_status",
+        )
+        .in("id", reqIds);
+      const reqMap = new Map((reqs || []).map((r: any) => [r.id, r]));
+
+      // Lodging selected check
+      const linkedAccomIds = (reqs || [])
+        .map((r: any) => r.linked_accommodation_id)
+        .filter(Boolean);
+      const lodgingSelectedReqIds = new Set<string>();
+      if (linkedAccomIds.length) {
+        const { data: selectedQuotes } = await supabase
+          .from("accommodation_quotes")
+          .select("request_id")
+          .in("request_id", linkedAccomIds)
+          .eq("status", "selected");
+        const selectedAccomIds = new Set(
+          (selectedQuotes || []).map((q: any) => q.request_id),
+        );
+        for (const r of reqs || []) {
+          if (
+            (r as any).linked_accommodation_id &&
+            selectedAccomIds.has((r as any).linked_accommodation_id)
+          ) {
+            lodgingSelectedReqIds.add((r as any).id);
+          }
+        }
+      }
+
+      const staleIds = customerInputsTodos
+        .filter((t: any) => {
+          const r: any = reqMap.get(t.related_request_id);
+          if (!r) return true;
+          if (r.cancelled_at) return true;
+          if (r.completion_status === "completed") return true;
+          const lodgingMissing =
+            !!r.linked_accommodation_id &&
+            !lodgingSelectedReqIds.has(r.id);
+          const stillMissing =
+            !r.terms_accepted_at || !r.billing_company_name || lodgingMissing;
+          return !stillMissing;
+        })
+        .map((t: any) => t.id);
+
+      if (staleIds.length) {
+        await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: now })
+          .in("id", staleIds);
+        results.customer_inputs_missing = staleIds.length;
+      }
+    }
+
     const totalCleaned = Object.values(results).reduce((a, b) => a + b, 0);
 
     return new Response(
