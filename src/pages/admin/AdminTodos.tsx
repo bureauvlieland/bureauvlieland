@@ -702,13 +702,14 @@ const TakenTab = () => {
   };
 
   // Filter: hide snoozed todos (unless showing all/done)
+  const dueSoonDays = getTodoDueSoonDays(appSettings.todo_due_soon_days);
   const visibleTodos = useMemo(() => {
-    const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+    const inXDays = new Date(Date.now() + dueSoonDays * 86400000).toISOString().split("T")[0];
 
     return todos.filter((todo) => {
       const isSnoozed = !!(todo.snoozed_until && todo.snoozed_until > today);
       const isOverdue = !!(todo.due_date && todo.due_date < today && todo.status !== "done");
-      const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= in3Days && todo.status !== "done");
+      const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= inXDays && todo.status !== "done");
 
       // Tijdsdimensie filter (overschrijft default snooze-verbergen voor "active")
       if (timeFilter === "snoozed") {
