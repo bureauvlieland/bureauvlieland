@@ -560,6 +560,15 @@ const AdminInvoicing = () => {
                     </Badge>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="lodging" className="gap-2">
+                  <Hotel className="h-4 w-4" />
+                  Losse logies
+                  {standaloneLodging.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {standaloneLodging.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="completed" className="gap-2">
                   <CheckCircle className="h-4 w-4" />
                   Afgerond
@@ -602,6 +611,37 @@ const AdminInvoicing = () => {
                       partialRequests.map((request) => (
                         <RequestCard key={request.id} request={request} />
                       ))
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "lodging" && (
+                  <div className="space-y-6">
+                    {isLoadingLodging ? (
+                      <Skeleton className="h-48 w-full" />
+                    ) : standaloneLodging.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Hotel className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Geen losse logies-aanvragen</p>
+                      </div>
+                    ) : (
+                      <>
+                        <LodgingSection
+                          title="Klaar voor facturatie"
+                          items={lodgingReady}
+                          empty="Geen logies-aanvragen klaar voor facturatie"
+                        />
+                        <LodgingSection
+                          title="Gedeeltelijk gefactureerd"
+                          items={lodgingPartial}
+                          empty="Geen gedeeltelijk gefactureerde logies"
+                        />
+                        <LodgingSection
+                          title="Afgerond"
+                          items={lodgingCompleted}
+                          empty="Nog geen afgeronde logies-aanvragen"
+                        />
+                      </>
                     )}
                   </div>
                 )}
