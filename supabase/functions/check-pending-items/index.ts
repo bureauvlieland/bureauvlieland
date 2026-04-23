@@ -486,21 +486,50 @@ Deno.serve(async (req) => {
         }
 
         const customerName = req.customer_company || req.customer_name;
-        const daysSince = Math.floor(
-          (Date.now() - new Date(req.updated_at).getTime()) / (1000 * 60 * 60 * 24)
-        );
+
+        // Anchor on real customer/partner activity instead of mutable updated_at.
+        // updated_at fires on every admin edit (notes, prices) and would constantly reset.
+        const { data: lastOutbound } = await supabase
+          .from("email_log")
+          .select("created_at, sent_at")
+          .eq("related_request_id", req.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const { data: lastHistory } = await supabase
+          .from("program_request_history")
+          .select("created_at")
+          .eq("request_id", req.id)
+          .in("actor", ["customer", "partner"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const anchorCandidates: number[] = [new Date(req.updated_at).getTime()];
+        const lastMailTs = lastOutbound?.sent_at || lastOutbound?.created_at;
+        if (lastMailTs) anchorCandidates.push(new Date(lastMailTs).getTime());
+        if (lastHistory?.created_at) anchorCandidates.push(new Date(lastHistory.created_at).getTime());
+        const anchorTs = Math.max(...anchorCandidates);
+
+        // Skip if a real customer/partner interaction happened within the threshold
+        if (Date.now() - anchorTs < customerRequestDays * 24 * 60 * 60 * 1000) {
+          continue;
+        }
+
+        const daysSince = Math.floor((Date.now() - anchorTs) / (1000 * 60 * 60 * 24));
 
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
-            title: `Aanvraag ${customerName} is ${daysSince} dagen inactief`,
-            description: `Deze aanvraag is al ${daysSince} dagen niet bijgewerkt. Neem contact op met de klant om de voortgang te bespreken.`,
+            title: `Aanvraag ${customerName} is inactief`,
+            description: `Stand bij aanmaken: ${daysSince} dagen geen activiteit van/naar klant of partner. Zie kaart voor actuele leeftijd.`,
             priority: daysSince > customerRequestDays * 2 ? "high" : "normal",
             status: "todo",
             related_request_id: req.id,
             auto_type: "request_no_response",
             auto_entity_id: req.id,
           });
+
 
         if (!todoError) totalCreated++;
       }
@@ -826,14 +855,15 @@ Deno.serve(async (req) => {
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
-            title: `Offerte ${customerLabel} verloopt over ${daysLeft} dagen`,
-            description: `De offerte voor ${prog.customer_name} verloopt op ${prog.quote_valid_until}. Neem contact op met de klant.`,
+            title: `Offerte ${customerLabel} verloopt binnenkort`,
+            description: `Stand bij aanmaken: nog ${daysLeft} dag(en). Geldig tot ${prog.quote_valid_until}. Neem contact op met de klant.`,
             priority: "high",
             status: "todo",
             related_request_id: prog.id,
             auto_type: "quote_expiring_soon",
             auto_entity_id: prog.id,
           });
+
 
         if (!todoError) totalCreated++;
       }
@@ -893,14 +923,15 @@ Deno.serve(async (req) => {
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
-            title: `${customerLabel} heeft nog geen akkoord gegeven op offerte`,
-            description: `De offerte is ${daysSince} dagen geleden verstuurd zonder reactie. Overweeg een status-mail te sturen om de klant te herinneren aan akkoord, voorwaarden en facturatiegegevens.`,
+            title: `${customerLabel} heeft nog geen akkoord op offerte`,
+            description: `Stand bij aanmaken: offerte ${daysSince} dagen geleden verstuurd zonder reactie. Overweeg een status-mail om de klant te herinneren aan akkoord, voorwaarden en facturatiegegevens.`,
             priority: daysSince > customerStatusEmailPendingDays * 2 ? "high" : "normal",
             status: "todo",
             related_request_id: prog.id,
             auto_type: "customer_status_email_due",
             auto_entity_id: prog.id,
           });
+
 
         if (!todoError) totalCreated++;
       }
@@ -973,14 +1004,15 @@ Deno.serve(async (req) => {
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
-            title: `${customerLabel} heeft sinds ${daysSince} dagen geen update ontvangen`,
-            description: `Er staan nog onderdelen open bij partners en de klant heeft al ${daysSince} dagen geen status-update ontvangen. Overweeg een status-mail te sturen.`,
+            title: `${customerLabel} heeft geen recente status-update ontvangen`,
+            description: `Stand bij aanmaken: ${daysSince} dagen geen update naar de klant. Er staan nog onderdelen open bij partners. Overweeg een status-mail te sturen.`,
             priority: "normal",
             status: "todo",
             related_request_id: prog.id,
             auto_type: "customer_status_update_due",
             auto_entity_id: prog.id,
           });
+
 
         if (!todoError) totalCreated++;
       }
@@ -1059,7 +1091,7 @@ Deno.serve(async (req) => {
           .from("admin_todos")
           .insert({
             title: `${customerLabel} mist nog: ${missing.join(", ")}`,
-            description: `De uitvoeringsdatum is over ${daysUntil} dag(en) (${firstDate}). De klant heeft nog niet aangeleverd: ${missing.join(", ")}. Overweeg een status-mail om dit te bespoedigen.`,
+            description: `Uitvoeringsdatum: ${firstDate}. Stand bij aanmaken: nog ${daysUntil} dag(en). Niet aangeleverd: ${missing.join(", ")}. Overweeg een status-mail om dit te bespoedigen.`,
             priority: daysUntil <= 7 ? "high" : "normal",
             status: "todo",
             due_date: firstDate,
@@ -1067,6 +1099,7 @@ Deno.serve(async (req) => {
             auto_type: "customer_inputs_missing",
             auto_entity_id: prog.id,
           });
+
 
         if (!todoError) totalCreated++;
       }
