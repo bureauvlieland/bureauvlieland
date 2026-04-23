@@ -10,6 +10,9 @@ const DEFAULT_REMINDER_DAYS_PARTNER = 5;
 const DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE = 7;
 const DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST = 14;
 const DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY = 3;
+const DEFAULT_CUSTOMER_STATUS_EMAIL_PENDING_DAYS = 5;
+const DEFAULT_CUSTOMER_STATUS_EMAIL_STALE_DAYS = 5;
+const DEFAULT_CUSTOMER_INPUTS_WARNING_DAYS = 14;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,6 +35,9 @@ Deno.serve(async (req) => {
         "reminder_days_customer_quote",
         "reminder_days_customer_request",
         "reminder_email_enabled",
+        "customer_status_email_pending_days",
+        "customer_status_email_stale_days",
+        "customer_inputs_warning_days",
       ]);
 
     const settings: Record<string, any> = {};
@@ -43,6 +49,9 @@ Deno.serve(async (req) => {
     const customerQuoteDays = Number(settings["reminder_days_customer_quote"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_QUOTE;
     const customerRequestDays = Number(settings["reminder_days_customer_request"]) || DEFAULT_REMINDER_DAYS_CUSTOMER_REQUEST;
     const partnerActivityDays = DEFAULT_REMINDER_DAYS_PARTNER_ACTIVITY;
+    const customerStatusEmailPendingDays = Number(settings["customer_status_email_pending_days"]) || DEFAULT_CUSTOMER_STATUS_EMAIL_PENDING_DAYS;
+    const customerStatusEmailStaleDays = Number(settings["customer_status_email_stale_days"]) || DEFAULT_CUSTOMER_STATUS_EMAIL_STALE_DAYS;
+    const customerInputsWarningDays = Number(settings["customer_inputs_warning_days"]) || DEFAULT_CUSTOMER_INPUTS_WARNING_DAYS;
     const reminderEmailEnabled = settings["reminder_email_enabled"] !== false;
 
     const mailjetApiKey = Deno.env.get("MAILJET_API_KEY");
