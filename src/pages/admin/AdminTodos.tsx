@@ -95,6 +95,7 @@ interface Todo {
   auto_entity_id: string | null;
   snoozed_until: string | null;
   created_at: string;
+  updated_at: string;
   completed_at: string | null;
 }
 
