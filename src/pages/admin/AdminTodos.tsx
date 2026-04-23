@@ -218,6 +218,18 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
     linkLabel: "Bekijk logies",
   },
+  customer_status_email_due: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}?action=status-email` : "/admin/projecten",
+    linkLabel: "Stuur status-mail",
+  },
+  customer_status_update_due: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}?action=status-email` : "/admin/projecten",
+    linkLabel: "Stuur status-mail",
+  },
+  customer_inputs_missing: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}?action=status-email` : "/admin/projecten",
+    linkLabel: "Stuur herinnering",
+  },
 };
 
 // ─── Email Log Config ─────────────────────────────────────────
