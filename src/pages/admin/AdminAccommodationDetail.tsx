@@ -1089,8 +1089,28 @@ export default function AdminAccommodationDetail() {
 
                 <Separator className="my-2" />
 
+                {/* Completion actions (only for standalone lodging) */}
+                {!linkedProgram && request.status !== "cancelled" && (() => {
+                  const selectedQuote = quotes?.find((q) => q.status === "selected");
+                  const total = Number(selectedQuote?.price_total ?? 0);
+                  const invoiced = Number(selectedQuote?.invoiced_amount ?? 0);
+                  const outstanding = Math.max(0, total - invoiced);
+                  return (
+                    <CompletionActions
+                      entityType="accommodation"
+                      entityId={request.id}
+                      completionStatus={(request as any).completion_status ?? null}
+                      completedAt={(request as any).completed_at ?? null}
+                      outstanding={selectedQuote ? outstanding : 1}
+                      variant="full"
+                      size="sm"
+                      invalidateKeys={[["admin-accommodation-request", id], ["admin-accommodation-quotes", id]]}
+                    />
+                  );
+                })()}
+
                 {/* Status Email Button */}
-                {request.status !== "cancelled" && (
+                {request.status !== "cancelled" && (request as any).completion_status !== "fully_invoiced" && (
                   <Button
                     variant="outline"
                     size="sm"
