@@ -527,11 +527,21 @@ const TakenTab = () => {
     },
   });
 
-  /** Snooze selected todos by N days from today. */
+  // Bulk snooze confirmation: opens dialog with the requested preset
+  const [bulkSnoozeConfirm, setBulkSnoozeConfirm] = useState<{ days: number; ids: string[] } | null>(null);
+
+  /** Vraag bevestiging voor bulk snooze met preset N dagen. */
   const bulkSnoozeDays = (days: number) => {
     if (selectedIds.size === 0) return;
-    const until = new Date(Date.now() + days * 86400000).toISOString().split("T")[0];
-    bulkSnoozeMutation.mutate({ ids: Array.from(selectedIds), until });
+    setBulkSnoozeConfirm({ days, ids: Array.from(selectedIds) });
+  };
+
+  /** Voer de bulk snooze daadwerkelijk uit na bevestiging. */
+  const confirmBulkSnooze = () => {
+    if (!bulkSnoozeConfirm) return;
+    const until = new Date(Date.now() + bulkSnoozeConfirm.days * 86400000).toISOString().split("T")[0];
+    bulkSnoozeMutation.mutate({ ids: bulkSnoozeConfirm.ids, until });
+    setBulkSnoozeConfirm(null);
   };
 
   // Cleanup stale todos
