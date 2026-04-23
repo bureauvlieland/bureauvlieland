@@ -27,6 +27,7 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
+  Sparkles,
 } from "lucide-react";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
@@ -50,6 +51,7 @@ interface ProjectCommunicationsCardProps {
   customerName?: string;
   customerEmail?: string;
   partnerRecipients?: PartnerRecipient[];
+  onOpenStatusEmail?: () => void;
 }
 
 export function ProjectCommunicationsCard({
@@ -58,6 +60,7 @@ export function ProjectCommunicationsCard({
   customerName,
   customerEmail,
   partnerRecipients = [],
+  onOpenStatusEmail,
 }: ProjectCommunicationsCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
@@ -133,7 +136,13 @@ export function ProjectCommunicationsCard({
               </Badge>
             )}
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {onOpenStatusEmail && (
+              <Button size="sm" variant="outline" onClick={onOpenStatusEmail}>
+                <Sparkles className="h-4 w-4 mr-1" />
+                Status update
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setEmailSheetOpen(true)}>
               <Send className="h-4 w-4 mr-1" />
               E-mail
