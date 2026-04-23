@@ -52,6 +52,7 @@ interface ProjectCommunicationsCardProps {
   customerEmail?: string;
   partnerRecipients?: PartnerRecipient[];
   onOpenStatusEmail?: () => void;
+  highlightStatusEmail?: boolean;
 }
 
 export function ProjectCommunicationsCard({
@@ -61,6 +62,7 @@ export function ProjectCommunicationsCard({
   customerEmail,
   partnerRecipients = [],
   onOpenStatusEmail,
+  highlightStatusEmail = false,
 }: ProjectCommunicationsCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
@@ -138,7 +140,15 @@ export function ProjectCommunicationsCard({
           </CardTitle>
           <div className="flex gap-2 flex-wrap">
             {onOpenStatusEmail && (
-              <Button size="sm" variant="outline" onClick={onOpenStatusEmail}>
+              <Button
+                size="sm"
+                variant={highlightStatusEmail ? "default" : "outline"}
+                onClick={onOpenStatusEmail}
+                className={cn(
+                  highlightStatusEmail &&
+                    "ring-2 ring-primary ring-offset-2 animate-pulse"
+                )}
+              >
                 <Sparkles className="h-4 w-4 mr-1" />
                 Status update
               </Button>

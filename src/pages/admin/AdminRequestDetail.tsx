@@ -2049,6 +2049,7 @@ const AdminRequestDetail = () => {
                 customerName={request.customer_name}
                 customerEmail={request.customer_email}
                 onOpenStatusEmail={() => setStatusEmailOpen(true)}
+                highlightStatusEmail={highlightStatusEmail}
                 partnerRecipients={
                   Array.from(
                     new Map(
