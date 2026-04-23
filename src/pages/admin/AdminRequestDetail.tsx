@@ -81,6 +81,7 @@ import {
   type ItemQuoteStatus,
 } from "@/types/programRequest";
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
+import { NextStepBanner } from "@/components/admin/NextStepBanner";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
