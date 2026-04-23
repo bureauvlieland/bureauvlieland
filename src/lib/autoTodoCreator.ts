@@ -18,6 +18,7 @@ export type AutoTodoType =
   | "post_execution_invoice_check"
   | "accommodation_selected"
   | "new_request_received"
+  | "new_accommodation_request"
   | "quote_ready_to_send"
   | "send_items_to_partners"
   | "partner_status_update"
@@ -289,6 +290,11 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Nieuwe aanvraag",
     color: "text-blue-700",
     bgColor: "bg-blue-100",
+  },
+  new_accommodation_request: {
+    label: "Nieuwe logies-aanvraag",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
   },
   quote_ready_to_send: {
     label: "Offerte versturen",
