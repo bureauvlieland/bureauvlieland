@@ -1299,6 +1299,110 @@ const TakenTab = () => {
           </CardContent>
         </Card>
 
+        {/* Compacte samenvatting van actieve filters */}
+        {!isLoading && (() => {
+          const total = visibleTodos.length;
+          const open = visibleTodos.filter((t) => t.status !== "done").length;
+          const chips: { label: string; onClear?: () => void }[] = [];
+
+          if (searchQuery.trim()) {
+            chips.push({ label: `Zoek: "${searchQuery.trim()}"`, onClear: () => setSearchQuery("") });
+          }
+          if (statusFilter !== "active") {
+            const statusLabels: Record<string, string> = {
+              all: "Alles",
+              todo: "Te doen",
+              in_progress: "Bezig",
+              done: "Klaar",
+            };
+            chips.push({
+              label: statusLabels[statusFilter] ?? statusFilter,
+              onClear: () => setStatusFilter("active"),
+            });
+          }
+          if (priorityFilter !== "all") {
+            const priorityLabels: Record<string, string> = {
+              urgent: "Urgent",
+              high: "Hoog",
+              normal: "Normaal",
+              low: "Laag",
+            };
+            chips.push({
+              label: priorityLabels[priorityFilter] ?? priorityFilter,
+              onClear: () => setPriorityFilter("all"),
+            });
+          }
+          if (timeFilter !== "all") {
+            const timeLabels: Record<typeof timeFilter, string> = {
+              all: "",
+              action: "Actie nodig",
+              scheduled: "Lopend",
+              snoozed: "Gesnoozed",
+            };
+            chips.push({
+              label: timeLabels[timeFilter],
+              onClear: () => setTimeFilter("all"),
+            });
+          }
+
+          const hasFilters = chips.length > 0;
+          const summaryLabel =
+            chips.length > 0
+              ? chips.map((c) => c.label).join(" · ")
+              : statusFilter === "active"
+                ? "Actieve taken"
+                : "Alle taken";
+
+          return (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium text-foreground">
+                {total} {total === 1 ? "taak" : "taken"}
+                {open !== total && (
+                  <span className="ml-1 text-muted-foreground font-normal">
+                    ({open} open)
+                  </span>
+                )}
+                <span className="mx-1.5 text-muted-foreground">·</span>
+                <span className="text-muted-foreground font-normal">{summaryLabel}</span>
+              </span>
+              {chips.map((chip, idx) => (
+                <Badge
+                  key={`${chip.label}-${idx}`}
+                  variant="secondary"
+                  className="gap-1 font-normal"
+                >
+                  {chip.label}
+                  {chip.onClear && (
+                    <button
+                      type="button"
+                      onClick={chip.onClear}
+                      className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 focus:outline-none focus:ring-1 focus:ring-ring"
+                      aria-label={`Filter '${chip.label}' wissen`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </Badge>
+              ))}
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-muted-foreground"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("active");
+                    setPriorityFilter("all");
+                    setTimeFilter("all");
+                  }}
+                >
+                  Wis filters
+                </Button>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Select-all bar — alleen tonen als er zichtbare todo's zijn */}
         {!isLoading && visibleTodos.length > 0 && (() => {
           const visibleIds = visibleTodos.map((t) => t.id);
