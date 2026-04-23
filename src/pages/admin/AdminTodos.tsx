@@ -589,11 +589,31 @@ const TakenTab = () => {
 
   // Filter: hide snoozed todos (unless showing all/done)
   const visibleTodos = useMemo(() => {
+    const now = new Date();
+    const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+
     return todos.filter((todo) => {
-      // Hide snoozed for active view
-      if (statusFilter === "active" && todo.snoozed_until && todo.snoozed_until > today) {
-        return false;
+      const isSnoozed = !!(todo.snoozed_until && todo.snoozed_until > today);
+      const isOverdue = !!(todo.due_date && todo.due_date < today && todo.status !== "done");
+      const isDueSoon = !!(todo.due_date && todo.due_date >= today && todo.due_date <= in3Days && todo.status !== "done");
+
+      // Tijdsdimensie filter (overschrijft default snooze-verbergen voor "active")
+      if (timeFilter === "snoozed") {
+        if (!isSnoozed) return false;
+      } else if (timeFilter === "action") {
+        // Actie nodig: niet gesnoozed + overdue OF binnen 3 dagen deadline
+        if (isSnoozed) return false;
+        if (!isOverdue && !isDueSoon) return false;
+      } else if (timeFilter === "scheduled") {
+        // Lopend: open, niet gesnoozed, geen acute deadline
+        if (todo.status === "done") return false;
+        if (isSnoozed) return false;
+        if (isOverdue || isDueSoon) return false;
+      } else {
+        // "all" — gedraagt zich als voorheen: verberg snoozed bij actief-status
+        if (statusFilter === "active" && isSnoozed) return false;
       }
+
       // Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -601,7 +621,7 @@ const TakenTab = () => {
       }
       return true;
     });
-  }, [todos, searchQuery, statusFilter, today]);
+  }, [todos, searchQuery, statusFilter, timeFilter, today]);
 
   // Group by auto_type
   const groupedTodos = useMemo(() => {
