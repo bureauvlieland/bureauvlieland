@@ -252,8 +252,6 @@ const AdminRequestDetail = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [editingTimeItemId, setEditingTimeItemId] = useState<string | null>(null);
-  const [editingTimeValue, setEditingTimeValue] = useState("");
   const [sendPreview, setSendPreview] = useState<{
     partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
     bureauItemsList: { id: string; block_name: string }[];
