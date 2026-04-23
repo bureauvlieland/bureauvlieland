@@ -341,6 +341,9 @@ export type Database = {
           admin_notes: string | null
           arrival_date: string
           budget_range: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_status: string | null
           created_at: string
           customer_company: string | null
           customer_email: string
@@ -357,6 +360,7 @@ export type Database = {
           quotes_declined_count: number
           quotes_requested_count: number
           reference_number: string | null
+          reopened_reason: string | null
           room_count: number | null
           room_occupancy: string | null
           room_types: Json | null
@@ -370,6 +374,9 @@ export type Database = {
           admin_notes?: string | null
           arrival_date: string
           budget_range?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_status?: string | null
           created_at?: string
           customer_company?: string | null
           customer_email: string
@@ -386,6 +393,7 @@ export type Database = {
           quotes_declined_count?: number
           quotes_requested_count?: number
           reference_number?: string | null
+          reopened_reason?: string | null
           room_count?: number | null
           room_occupancy?: string | null
           room_types?: Json | null
@@ -399,6 +407,9 @@ export type Database = {
           admin_notes?: string | null
           arrival_date?: string
           budget_range?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_status?: string | null
           created_at?: string
           customer_company?: string | null
           customer_email?: string
@@ -415,6 +426,7 @@ export type Database = {
           quotes_declined_count?: number
           quotes_requested_count?: number
           reference_number?: string | null
+          reopened_reason?: string | null
           room_count?: number | null
           room_occupancy?: string | null
           room_types?: Json | null
@@ -1848,6 +1860,8 @@ export type Database = {
           billing_vat_number: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          completed_at: string | null
+          completed_by: string | null
           completion_status: string | null
           created_at: string
           customer_company: string | null
@@ -1871,6 +1885,7 @@ export type Database = {
           quote_status: string | null
           quote_valid_until: string | null
           reference_number: string | null
+          reopened_reason: string | null
           selected_dates: Json
           signature_id: string | null
           signature_ip: string | null
@@ -1894,6 +1909,8 @@ export type Database = {
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           completion_status?: string | null
           created_at?: string
           customer_company?: string | null
@@ -1917,6 +1934,7 @@ export type Database = {
           quote_status?: string | null
           quote_valid_until?: string | null
           reference_number?: string | null
+          reopened_reason?: string | null
           selected_dates?: Json
           signature_id?: string | null
           signature_ip?: string | null
@@ -1940,6 +1958,8 @@ export type Database = {
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           completion_status?: string | null
           created_at?: string
           customer_company?: string | null
@@ -1963,6 +1983,7 @@ export type Database = {
           quote_status?: string | null
           quote_valid_until?: string | null
           reference_number?: string | null
+          reopened_reason?: string | null
           selected_dates?: Json
           signature_id?: string | null
           signature_ip?: string | null
