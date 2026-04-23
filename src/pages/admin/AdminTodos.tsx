@@ -924,6 +924,49 @@ const TakenTab = () => {
           </div>
         </div>
 
+        {/* Eigen kolom voor deadline met visuele status (overdue / binnen 3 dagen) */}
+        <div className="shrink-0 w-28 hidden sm:flex justify-end">
+          {dueDateObj ? (
+            <div
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium border ${
+                isOverdue
+                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                  : isDueSoon
+                    ? "bg-sunset/10 text-sunset border-sunset/30"
+                    : "bg-muted text-muted-foreground border-transparent"
+              }`}
+              title={
+                isOverdue
+                  ? `Te laat sinds ${format(dueDateObj, "d MMMM yyyy", { locale: nl })}`
+                  : isDueSoon
+                    ? `Vervalt binnen ${dueDaysDiff} ${dueDaysDiff === 1 ? "dag" : "dagen"}`
+                    : `Deadline ${format(dueDateObj, "d MMMM yyyy", { locale: nl })}`
+              }
+            >
+              {isOverdue ? (
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+              ) : (
+                <Calendar className="h-3 w-3 shrink-0" />
+              )}
+              <span className="whitespace-nowrap">
+                {format(dueDateObj, "d MMM", { locale: nl })}
+              </span>
+              {isOverdue && dueDaysDiff !== null && (
+                <span className="whitespace-nowrap">
+                  ({Math.abs(dueDaysDiff)}d te laat)
+                </span>
+              )}
+              {isDueSoon && dueDaysDiff !== null && dueDaysDiff >= 0 && (
+                <span className="whitespace-nowrap">
+                  ({dueDaysDiff === 0 ? "vandaag" : `${dueDaysDiff}d`})
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-[11px] text-muted-foreground/50">—</span>
+          )}
+        </div>
+
         {actionConfig && todo.status !== "done" && (
           <Link to={actionConfig.getLink(todo)} className="shrink-0">
             <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px] px-2 whitespace-nowrap">
