@@ -82,7 +82,7 @@ import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { TodoAgeChip } from "@/components/admin/TodoAgeChip";
 import { TodoSnoozeChip } from "@/components/admin/TodoSnoozeChip";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { getTodoAgeThreshold } from "@/lib/appSettings";
+import { getTodoAgeThreshold, getTodoDueSoonDays } from "@/lib/appSettings";
 
 // ─── Types ───────────────────────────────────────────────────
 interface Todo {
