@@ -375,6 +375,7 @@ const TakenTab = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [snoozeDialogTodo, setSnoozeDialogTodo] = useState<Todo | null>(null);
   const [snoozeDate, setSnoozeDate] = useState("");
   const [formData, setFormData] = useState({
