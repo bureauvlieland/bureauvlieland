@@ -735,7 +735,7 @@ const TakenTab = () => {
       }
       return true;
     });
-  }, [todos, searchQuery, statusFilter, timeFilter, today]);
+  }, [todos, searchQuery, statusFilter, timeFilter, today, dueSoonDays]);
 
   // Group by auto_type
   const groupedTodos = useMemo(() => {
