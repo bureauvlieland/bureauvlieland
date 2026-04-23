@@ -60,6 +60,7 @@ export function ProjectCommunicationsCard({
   customerName,
   customerEmail,
   partnerRecipients = [],
+  onOpenStatusEmail,
 }: ProjectCommunicationsCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
