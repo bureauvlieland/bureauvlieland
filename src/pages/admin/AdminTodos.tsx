@@ -1323,6 +1323,48 @@ const TakenTab = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Bulk Snooze Confirmation Dialog */}
+      <Dialog open={!!bulkSnoozeConfirm} onOpenChange={(open) => !open && setBulkSnoozeConfirm(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk snooze bevestigen</DialogTitle>
+          </DialogHeader>
+          {bulkSnoozeConfirm && (
+            <div className="space-y-3 text-sm">
+              <p>
+                Je staat op het punt om <strong>{bulkSnoozeConfirm.ids.length}</strong> {bulkSnoozeConfirm.ids.length === 1 ? "taak" : "taken"} te snoozen voor{" "}
+                <strong>
+                  {bulkSnoozeConfirm.days === 1
+                    ? "1 dag"
+                    : bulkSnoozeConfirm.days === 7
+                      ? "1 week"
+                      : `${bulkSnoozeConfirm.days} dagen`}
+                </strong>.
+              </p>
+              <p className="text-muted-foreground">
+                Deze taken verschijnen weer op{" "}
+                <strong>
+                  {format(
+                    new Date(Date.now() + bulkSnoozeConfirm.days * 86400000),
+                    "EEEE d MMMM yyyy",
+                    { locale: nl },
+                  )}
+                </strong>.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkSnoozeConfirm(null)}>
+              Annuleren
+            </Button>
+            <Button onClick={confirmBulkSnooze} disabled={bulkSnoozeMutation.isPending}>
+              {bulkSnoozeMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              <AlarmClock className="h-4 w-4 mr-2" />
+              Snooze {bulkSnoozeConfirm?.ids.length}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Cleanup Confirmation Dialog */}
       <Dialog open={showCleanupConfirm} onOpenChange={setShowCleanupConfirm}>
         <DialogContent className="max-w-md">
