@@ -509,21 +509,71 @@ const TakenTab = () => {
 
   const bulkSnoozeMutation = useMutation({
     mutationFn: async ({ ids, until }: { ids: string[]; until: string }) => {
+      // Snapshot previous snoozed_until per id so we can undo later
+      const { data: previous, error: fetchError } = await supabase
+        .from("admin_todos")
+        .select("id, snoozed_until")
+        .in("id", ids);
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from("admin_todos")
         .update({ snoozed_until: until })
         .in("id", ids);
       if (error) throw error;
-      return ids.length;
+
+      return {
+        count: ids.length,
+        previous: (previous ?? []) as Array<{ id: string; snoozed_until: string | null }>,
+      };
+    },
+    onSuccess: ({ count, previous }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      setSelectedIds(new Set());
+      toast({
+        title: `${count} ${count === 1 ? "taak" : "taken"} gesnoozed`,
+        action: (
+          <ToastAction
+            altText="Ongedaan maken"
+            onClick={() => undoBulkSnoozeMutation.mutate(previous)}
+          >
+            Ongedaan maken
+          </ToastAction>
+        ),
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij snoozen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Restore previous snoozed_until values per todo (used by toast undo action)
+  const undoBulkSnoozeMutation = useMutation({
+    mutationFn: async (previous: Array<{ id: string; snoozed_until: string | null }>) => {
+      // Group by snoozed_until value to minimize number of update calls
+      const groups = new Map<string | null, string[]>();
+      for (const row of previous) {
+        const key = row.snoozed_until;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(row.id);
+      }
+      for (const [snoozedUntil, ids] of groups) {
+        const { error } = await supabase
+          .from("admin_todos")
+          .update({ snoozed_until: snoozedUntil })
+          .in("id", ids);
+        if (error) throw error;
+      }
+      return previous.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
       queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
-      setSelectedIds(new Set());
-      toast({ title: `${count} taken gesnoozed` });
+      toast({ title: `Snooze ongedaan gemaakt voor ${count} ${count === 1 ? "taak" : "taken"}` });
     },
     onError: (error) => {
-      toast({ title: "Fout bij snoozen", description: error.message, variant: "destructive" });
+      toast({ title: "Ongedaan maken mislukt", description: error.message, variant: "destructive" });
     },
   });
 
