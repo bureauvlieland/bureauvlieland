@@ -2031,6 +2031,7 @@ const AdminRequestDetail = () => {
                 accommodationId={request.linked_accommodation_id || undefined}
                 customerName={request.customer_name}
                 customerEmail={request.customer_email}
+                onOpenStatusEmail={() => setStatusEmailOpen(true)}
                 partnerRecipients={
                   Array.from(
                     new Map(
