@@ -89,166 +89,96 @@ async function invitePartner(
   origin: string
 ): Promise<InviteResult> {
   try {
-    // Skip if already has an account
     if (partner.auth_user_id) {
-      return {
-        partnerId: partner.id,
-        partnerName: partner.name,
-        success: false,
-        error: "Partner already has an account",
-      };
+      return { partnerId: partner.id, partnerName: partner.name, success: false, error: "Partner already has an account" };
     }
 
-    // Generate a readable temporary password
-    const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
-
-    // Create auth user
+    // Create auth user WITHOUT password — partner sets it via the recovery link.
     const { data: authUser, error: createError } = await adminClient.auth.admin.createUser({
       email: partner.email,
-      password: tempPassword,
       email_confirm: true,
-      user_metadata: {
-        partner_id: partner.id,
-        partner_name: partner.name,
-      },
+      user_metadata: { partner_id: partner.id, partner_name: partner.name },
     });
 
     if (createError) {
       console.error(`Error creating auth user for ${partner.name}:`, createError);
-      return {
-        partnerId: partner.id,
-        partnerName: partner.name,
-        success: false,
-        error: createError.message,
-      };
+      return { partnerId: partner.id, partnerName: partner.name, success: false, error: createError.message };
     }
 
-    // Link auth user to partner, set invited_at and store initial password
+    // Link auth user; never store a plaintext password.
     const { error: updateError } = await adminClient
       .from("partners")
-      .update({ 
-        auth_user_id: authUser.user.id,
-        invited_at: new Date().toISOString(),
-        initial_password: tempPassword,
-      })
+      .update({ auth_user_id: authUser.user.id, invited_at: new Date().toISOString() })
       .eq("id", partner.id);
+    if (updateError) console.error(`Error linking partner ${partner.name}:`, updateError);
 
-    if (updateError) {
-      console.error(`Error linking partner ${partner.name}:`, updateError);
-    }
-
-    // Add partner role
     const { error: roleError } = await adminClient
       .from("user_roles")
-      .insert({
-        user_id: authUser.user.id,
-        role: "partner",
-      });
+      .insert({ user_id: authUser.user.id, role: "partner" });
+    if (roleError) console.error(`Error adding partner role for ${partner.name}:`, roleError);
 
-    if (roleError) {
-      console.error(`Error adding partner role for ${partner.name}:`, roleError);
-    }
-
-    const loginLink = `${origin}/partner/login`;
     const portalLink = `${origin}/partner`;
+    const redirectTo = "https://bureauvlieland.nl/partner/reset-password";
 
-    // Send invitation email via Mailjet
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: "recovery",
+      email: partner.email,
+      options: { redirectTo },
+    });
+    if (linkError || !linkData?.properties?.action_link) {
+      console.error(`Failed to generate set-password link for ${partner.name}:`, linkError);
+      return { partnerId: partner.id, partnerName: partner.name, success: false, error: "Failed to generate set-password link" };
+    }
+    const setPasswordLink = linkData.properties.action_link;
+
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
-      // Check if we're in a preview environment
       const isPreview = origin.includes("lovable.app") || origin.includes("localhost");
       const recipientEmail = isPreview ? "erwin@bureauvlieland.nl" : partner.email;
       const subjectPrefix = isPreview ? "[TEST] " : "";
 
-      // Prepare template variables
-      const templateVariables = {
-        partner_name: sanitizeHtml(partner.name),
-        partner_email: partner.email,
-        partner_password: tempPassword,
-        login_link: loginLink,
-        partner_portal_link: portalLink,
-        commission_activity: String(partner.commission_percentage || 15),
-        commission_accommodation: String(partner.accommodation_commission_percentage || 10),
-      };
-
-      // Try to get template from database
-      const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
-
-      const emailHtml = template?.body || getFallbackInvitationHtml(partner.name, partner.email, tempPassword, loginLink, portalLink);
-      const emailSubject = `${subjectPrefix}${template?.subject || "Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek"}`;
+      const emailHtml = getInvitationHtml(partner.name, partner.email, setPasswordLink, portalLink);
+      const emailSubject = `${subjectPrefix}Welkom bij het Bureau Vlieland Partner Portaal — Stel uw wachtwoord in`;
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}` },
         body: JSON.stringify({
-          Messages: [
-            {
-              From: {
-                Email: "hallo@bureauvlieland.nl",
-                Name: "Bureau Vlieland",
-              },
-              To: [
-                {
-                  Email: recipientEmail,
-                  Name: partner.name,
-                },
-              ],
-              Subject: emailSubject,
-              HTMLPart: emailHtml,
-              TextPart: `
-Welkom ${partner.name}!
+          Messages: [{
+            From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+            To: [{ Email: recipientEmail, Name: partner.name }],
+            Subject: emailSubject,
+            HTMLPart: emailHtml,
+            TextPart:
+`Welkom ${partner.name}!
 
-U bent uitgenodigd om deel te nemen aan het Bureau Vlieland Partner Portaal.
+Activeer uw account voor het Bureau Vlieland Partner Portaal door eenmalig uw wachtwoord in te stellen via deze persoonlijke link:
+${setPasswordLink}
 
-Uw inloggegevens:
-- Emailadres: ${partner.email}
-- Wachtwoord: ${tempPassword}
-- Inloggen: ${loginLink}
-
-Wijzig uw wachtwoord na eerste login via Instellingen.
+Inloggen kan daarna op: ${portalLink}/login
 
 Vragen? Neem contact op via erwin@bureauvlieland.nl
 
 Met vriendelijke groet,
 Erwin Soolsma
-Bureau Vlieland
-              `,
-            },
-          ],
+Bureau Vlieland`,
+          }],
         }),
       });
 
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text();
         console.error(`Mailjet error for ${partner.name}:`, errorText);
-        return {
-          partnerId: partner.id,
-          partnerName: partner.name,
-          success: false,
-          error: "Failed to send invitation email",
-        };
-      } else {
-        console.log(`Invitation email sent to ${recipientEmail} for partner ${partner.name}`);
+        return { partnerId: partner.id, partnerName: partner.name, success: false, error: "Failed to send invitation email" };
       }
+      console.log(`Invitation email sent to ${recipientEmail} for partner ${partner.name}`);
     } else {
       console.warn("Mailjet credentials not configured, skipping email");
     }
 
-    return {
-      partnerId: partner.id,
-      partnerName: partner.name,
-      success: true,
-    };
+    return { partnerId: partner.id, partnerName: partner.name, success: true };
   } catch (err) {
     console.error(`Error inviting partner ${partner.name}:`, err);
-    return {
-      partnerId: partner.id,
-      partnerName: partner.name,
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
+    return { partnerId: partner.id, partnerName: partner.name, success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
 
