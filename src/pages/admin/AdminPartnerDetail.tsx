@@ -68,7 +68,7 @@ interface Partner {
   is_active: boolean;
   auth_user_id: string | null;
   password_set_at: string | null;
-  initial_password: string | null;
+  // initial_password is intentionally removed: plaintext passwords are no longer stored.
   partner_token: string;
   created_at: string;
   partner_type: string | null;
@@ -837,36 +837,17 @@ const AdminPartnerDetail = () => {
                             Wachtwoord beheer
                           </Label>
 
-                          {/* Show current password if available */}
-                          {partner.initial_password && (
-                            <div className="flex items-center gap-2">
-                              <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono">
-                                {partner.initial_password}
-                              </code>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(partner.initial_password!);
-                                  toast.success("Wachtwoord gekopieerd");
-                                }}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              {!partner.password_set_at && (
-                                <Badge variant="outline" className="text-xs">Tijdelijk</Badge>
-                              )}
-                            </div>
-                          )}
-
-                          {partner.password_set_at && !partner.initial_password && (
+                          {partner.password_set_at ? (
                             <p className="text-sm text-muted-foreground">
-                              Partner heeft een eigen wachtwoord ingesteld.
+                              Partner heeft een eigen wachtwoord ingesteld op{" "}
+                              {format(new Date(partner.password_set_at), "d MMM yyyy", { locale: nl })}.
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Partner heeft nog geen wachtwoord ingesteld. Stuur een nieuwe set-password link via de knop hieronder.
                             </p>
                           )}
 
-                          {/* Reset password button */}
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -882,15 +863,13 @@ const AdminPartnerDetail = () => {
                                   if (error) throw error;
                                   if (data?.error) throw new Error(data.error);
 
-                                  toast.success("Nieuw wachtwoord gegenereerd", {
-                                    description: `Wachtwoord: ${data.password}`,
+                                  toast.success("Set-password link verstuurd", {
+                                    description: `Er is een nieuwe activatielink gemaild naar ${partner.contact_email || partner.email}.`,
                                   });
-                                  navigator.clipboard.writeText(data.password);
-                                  toast.info("Wachtwoord gekopieerd naar klembord");
                                   fetchPartner();
                                 } catch (err) {
-                                  console.error("Error resetting password:", err);
-                                  toast.error("Fout bij resetten wachtwoord", {
+                                  console.error("Error sending set-password link:", err);
+                                  toast.error("Versturen mislukt", {
                                     description: err instanceof Error ? err.message : "Onbekende fout",
                                   });
                                 } finally {
@@ -898,13 +877,13 @@ const AdminPartnerDetail = () => {
                                 }
                               }}
                             >
-                              <RefreshCw className={`h-4 w-4 mr-2 ${isResettingPassword ? "animate-spin" : ""}`} />
-                              {isResettingPassword ? "Bezig..." : "Nieuw wachtwoord genereren"}
+                              <Key className={`h-4 w-4 mr-2 ${isResettingPassword ? "animate-pulse" : ""}`} />
+                              {isResettingPassword ? "Versturen..." : "Stuur set-password link"}
                             </Button>
                           </div>
 
                           <p className="text-xs text-muted-foreground">
-                            Genereert een nieuw tijdelijk wachtwoord en kopieert het naar je klembord.
+                            Verstuurt een nieuwe persoonlijke link naar de partner waarmee deze eenmalig zelf een wachtwoord instelt. Het oude wachtwoord blijft tot dan toe geldig.
                           </p>
                         </div>
                       )}
