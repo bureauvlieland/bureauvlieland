@@ -18,6 +18,7 @@ export type AutoTodoType =
   | "post_execution_invoice_check"
   | "accommodation_selected"
   | "new_request_received"
+  | "new_accommodation_request"
   | "quote_ready_to_send"
   | "send_items_to_partners"
   | "partner_status_update"
