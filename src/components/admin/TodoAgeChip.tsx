@@ -68,10 +68,10 @@ export const TodoAgeChip = ({ createdAt, businessAnchor, className }: TodoAgeChi
       businessText = `${businessAnchor.label} ${formatDistanceToNow(anchorDate, { locale: nl, addSuffix: false })}`;
       businessColor =
         ageDaysBusiness >= 7
-          ? "bg-red-50 text-red-700 border-red-200"
+          ? "bg-destructive/10 text-destructive border-destructive/20"
           : ageDaysBusiness >= 3
             ? "bg-amber-50 text-amber-700 border-amber-200"
-            : "bg-slate-50 text-slate-600 border-slate-200";
+            : "bg-muted text-muted-foreground border-muted";
     }
   }
 
