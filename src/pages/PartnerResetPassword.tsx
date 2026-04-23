@@ -11,9 +11,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Lock, CheckCircle, AlertTriangle } from "lucide-react";
 import { z } from "zod";
+import { strongPasswordSchema, PASSWORD_RULES_HINT } from "@/lib/passwordPolicy";
 
 const passwordSchema = z.object({
-  password: z.string().min(8, "Wachtwoord moet minimaal 8 tekens zijn"),
+  password: strongPasswordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Wachtwoorden komen niet overeen",
@@ -214,12 +215,14 @@ const PartnerResetPassword = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Minimaal 8 tekens"
+                  placeholder={`Minimaal ${12} tekens`}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
                   className={errors.password ? "border-destructive" : ""}
+                  autoComplete="new-password"
                 />
+                <p className="text-xs text-muted-foreground">{PASSWORD_RULES_HINT}</p>
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
