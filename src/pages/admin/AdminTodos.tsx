@@ -624,6 +624,7 @@ const TakenTab = () => {
             {todo.description && (
               <span className="line-clamp-1">{todo.description}</span>
             )}
+            <TodoAgeChip createdAt={todo.created_at} />
             {todo.due_date && (
               <span className={`flex items-center gap-0.5 shrink-0 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
                 <Calendar className="h-2.5 w-2.5" />
