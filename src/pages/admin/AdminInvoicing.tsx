@@ -184,6 +184,47 @@ const AdminInvoicing = () => {
   );
   const { linesByItem } = useItemBillingLinesBatch(allItemIds);
 
+  // Standalone logies (accommodation_requests without a linked program)
+  const { data: standaloneLodging = [], isLoading: isLoadingLodging } = useQuery({
+    queryKey: ["admin-invoicing-standalone-lodging"],
+    queryFn: async () => {
+      const { data: requests, error: reqErr } = await supabase
+        .from("accommodation_requests")
+        .select(
+          "id, reference_number, customer_name, customer_company, customer_email, number_of_guests, arrival_date, departure_date, status, completion_status, completed_at",
+        )
+        .is("linked_program_id", null)
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false });
+      if (reqErr) throw reqErr;
+      if (!requests || requests.length === 0) return [];
+
+      const ids = requests.map((r) => r.id);
+      const { data: selectedQuotes, error: qErr } = await supabase
+        .from("accommodation_quotes")
+        .select(
+          "id, request_id, accommodation_name, price_total, vat_rate, price_includes_vat, status, invoiced_amount",
+        )
+        .in("request_id", ids)
+        .eq("status", "selected");
+      if (qErr) throw qErr;
+
+      return requests.map((r) => {
+        const quote = selectedQuotes?.find((q) => q.request_id === r.id);
+        const total = Number(quote?.price_total ?? 0);
+        const invoiced = Number(quote?.invoiced_amount ?? 0);
+        const outstanding = Math.max(total - invoiced, 0);
+        return {
+          ...r,
+          selected_quote: quote ?? null,
+          total,
+          invoiced,
+          outstanding,
+        };
+      });
+    },
+  });
+
   // Filter requests by completion status
   const readyRequests = requests.filter(
     (r) => r.completion_status === "ready_for_invoice" || 
@@ -196,6 +237,16 @@ const AdminInvoicing = () => {
   
   const completedRequests = requests.filter(
     (r) => r.completion_status === "fully_invoiced"
+  );
+
+  const lodgingReady = standaloneLodging.filter(
+    (l) => !l.completion_status || l.completion_status === "ready_for_invoice" || l.completion_status === "in_progress"
+  );
+  const lodgingPartial = standaloneLodging.filter(
+    (l) => l.completion_status === "partially_invoiced"
+  );
+  const lodgingCompleted = standaloneLodging.filter(
+    (l) => l.completion_status === "fully_invoiced"
   );
 
   const handleOpenInvoiceDialog = (request: ProgramRequestWithItems) => {
