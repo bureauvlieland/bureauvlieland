@@ -51,6 +51,7 @@ interface ProjectCommunicationsCardProps {
   customerName?: string;
   customerEmail?: string;
   partnerRecipients?: PartnerRecipient[];
+  onOpenStatusEmail?: () => void;
 }
 
 export function ProjectCommunicationsCard({
