@@ -81,6 +81,7 @@ import {
   type ItemQuoteStatus,
 } from "@/types/programRequest";
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
+import { NextStepBanner } from "@/components/admin/NextStepBanner";
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
@@ -1327,86 +1328,59 @@ const AdminRequestDetail = () => {
             selectedDates={request.selected_dates as string[]}
           />
 
-          {/* Waiting for customer banner (offerte verstuurd, no customer approval yet) */}
-          {waitingForCustomerCount > 0 && readyToSendCount === 0 && (
-            <Card className="border-blue-300 bg-blue-50">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-blue-900">
-                      Offerte verstuurd — wacht op akkoord van klant
-                    </p>
-                    <p className="text-sm text-blue-700">
-                      {waitingForCustomerCount} {waitingForCustomerCount === 1 ? "onderdeel wacht" : "onderdelen wachten"} op klantakkoord voordat ze naar partners verstuurd kunnen worden.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Single consolidated "Volgende stap" banner — derived from lifecycle */}
+          <NextStepBanner
+            project={{
+              status: request.status,
+              quote_status: request.quote_status,
+              terms_accepted_at: request.terms_accepted_at,
+              billing_company_name: request.billing_company_name,
+              completion_status: request.completion_status,
+              cancelled_at: request.cancelled_at,
+              linked_accommodation_id: request.linked_accommodation_id,
+              hasSelectedAccommodation: !!selectedAccommodationQuote,
+            }}
+            items={items}
+            primaryAction={(() => {
+              if (!request.program_published_at && items.length > 0) {
+                return {
+                  label: isPublishing ? "Publiceren..." : "Publiceer naar klant",
+                  onClick: handlePublishProgram,
+                  loading: isPublishing,
+                  icon: <Send className="h-4 w-4 mr-2" />,
+                };
+              }
+              if (readyToSendCount > 0) {
+                return {
+                  label: "Bekijk & verstuur",
+                  onClick: handlePreviewSendToPartners,
+                  loading: isSendingToPartners,
+                  icon: <Send className="h-4 w-4 mr-2" />,
+                };
+              }
+              if (
+                waitingForCustomerCount > 0 ||
+                request.quote_status === "offerte_verstuurd"
+              ) {
+                return {
+                  label: "Stuur status-mail",
+                  onClick: () => setStatusEmailOpen(true),
+                  icon: <Mail className="h-4 w-4 mr-2" />,
+                };
+              }
+              return null;
+            })()}
+            detail={
+              !request.program_published_at && items.length > 0
+                ? "De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer als offerte."
+                : readyToSendCount > 0
+                ? `${readyToSendCount} ${readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen.`
+                : waitingForCustomerCount > 0
+                ? `${waitingForCustomerCount} ${waitingForCustomerCount === 1 ? "onderdeel wacht" : "onderdelen wachten"} op klantakkoord.`
+                : undefined
+            }
+          />
 
-          {/* Ready to send banner (customer approved, admin can send to partners) */}
-          {readyToSendCount > 0 && (
-            <Card className="border-amber-300 bg-amber-50">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <Send className="h-5 w-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-amber-900">
-                        {readyToSendCount} {readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen
-                      </p>
-                      <p className="text-sm text-amber-700">
-                        Verstuur wanneer gereed.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handlePreviewSendToPartners}
-                    disabled={isSendingToPartners}
-                    className="shrink-0"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Bekijk &amp; verstuur
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-
-
-
-
-          {/* Concept banner — program not yet published to customer */}
-          {!request.program_published_at && items.length > 0 && (
-            <Card className="border-blue-300 bg-blue-50">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-blue-900">
-                        Programma nog niet gepubliceerd als offerte
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer het programma om een offerte naar de klant te sturen.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handlePublishProgram}
-                    disabled={isPublishing}
-                    className="shrink-0"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {isPublishing ? "Publiceren..." : "Publiceer naar klant"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <Tabs defaultValue="activiteiten" className="space-y-4">
             <TabsList>

@@ -400,6 +400,102 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 12. customer_status_email_due / customer_status_update_due — resolve once admin sent a status-mail
+    for (const autoType of ["customer_status_email_due", "customer_status_update_due"]) {
+      const { data: openTodos } = await supabase
+        .from("admin_todos")
+        .select("id, related_request_id, created_at")
+        .eq("auto_type", autoType)
+        .neq("status", "done");
+      if (!openTodos?.length) continue;
+      const reqIds = openTodos.map((t: any) => t.related_request_id).filter(Boolean);
+      if (!reqIds.length) continue;
+      const { data: statusMails } = await supabase
+        .from("email_log")
+        .select("related_request_id, created_at")
+        .in("related_request_id", reqIds)
+        .in("email_type", ["project_status_update", "project_email"])
+        .order("created_at", { ascending: false });
+      const latestMailByReq = new Map<string, string>();
+      for (const m of statusMails || []) {
+        if (!latestMailByReq.has((m as any).related_request_id)) {
+          latestMailByReq.set((m as any).related_request_id, (m as any).created_at);
+        }
+      }
+      const staleIds = openTodos
+        .filter((t: any) => {
+          const mailTs = latestMailByReq.get(t.related_request_id);
+          return mailTs && new Date(mailTs) > new Date(t.created_at);
+        })
+        .map((t: any) => t.id);
+      if (staleIds.length) {
+        await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: now })
+          .in("id", staleIds);
+        results[`${autoType}_after_email`] = staleIds.length;
+      }
+    }
+
+    // 13. Auto-escalate priority for long-open status todos (no resolve yet)
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("id, value")
+      .in("id", ["customer_status_email_pending_days", "customer_status_email_stale_days"]);
+    const settingsMap: Record<string, number> = {};
+    for (const r of settingsRows || []) {
+      const n = Number((r as any).value);
+      if (!isNaN(n)) settingsMap[(r as any).id] = n;
+    }
+    const escalations: Array<{ type: string; days: number }> = [
+      { type: "customer_status_email_due", days: (settingsMap["customer_status_email_pending_days"] || 5) * 2 },
+      { type: "customer_status_update_due", days: (settingsMap["customer_status_email_stale_days"] || 5) * 2 },
+    ];
+    for (const e of escalations) {
+      const cutoff = new Date(Date.now() - e.days * 24 * 60 * 60 * 1000).toISOString();
+      const { data: escalated } = await supabase
+        .from("admin_todos")
+        .update({ priority: "high" })
+        .eq("auto_type", e.type)
+        .neq("status", "done")
+        .neq("priority", "high")
+        .neq("priority", "urgent")
+        .lt("created_at", cutoff)
+        .select("id");
+      if (escalated?.length) results[`${e.type}_escalated`] = escalated.length;
+    }
+
+    // 14. Generic dedup: collapse duplicate open todos with same auto_type + related_request_id
+    const { data: allOpen } = await supabase
+      .from("admin_todos")
+      .select("id, auto_type, related_request_id, created_at")
+      .neq("status", "done")
+      .not("auto_type", "is", null)
+      .not("related_request_id", "is", null);
+    if (allOpen?.length) {
+      const groups = new Map<string, Array<{ id: string; created_at: string }>>();
+      for (const t of allOpen) {
+        const key = `${(t as any).auto_type}::${(t as any).related_request_id}`;
+        const arr = groups.get(key) || [];
+        arr.push({ id: (t as any).id, created_at: (t as any).created_at });
+        groups.set(key, arr);
+      }
+      const dupIds: string[] = [];
+      for (const arr of groups.values()) {
+        if (arr.length < 2) continue;
+        // Keep newest, close older ones
+        arr.sort((a, b) => b.created_at.localeCompare(a.created_at));
+        for (let i = 1; i < arr.length; i++) dupIds.push(arr[i].id);
+      }
+      if (dupIds.length) {
+        await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: now })
+          .in("id", dupIds);
+        results.duplicate_todos = dupIds.length;
+      }
+    }
+
     const totalCleaned = Object.values(results).reduce((a, b) => a + b, 0);
 
     return new Response(
