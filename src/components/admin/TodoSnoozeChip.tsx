@@ -76,7 +76,7 @@ export const TodoSnoozeChip = ({ snoozedUntil, snoozedAt, className }: TodoSnooz
       {snoozeDurationText && (
         <span
           className={cn(
-            "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0 text-[10px] font-medium bg-slate-50 text-slate-600 border-slate-200",
+            "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0 text-[10px] font-medium bg-muted text-muted-foreground border-muted",
           )}
           title={snoozedAt ? `Gesnoozed op ${format(new Date(snoozedAt), "EEEE d MMMM yyyy", { locale: nl })}` : undefined}
         >
