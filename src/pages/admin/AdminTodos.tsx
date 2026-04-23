@@ -508,8 +508,32 @@ const TakenTab = () => {
     },
   });
 
+  // Toegestane snooze-presets in dagen. Wijzig hier om presets uit te breiden.
+  const ALLOWED_SNOOZE_DAYS = [1, 3, 7] as const;
+  const MAX_SNOOZE_DAYS = 365;
+
+  /** Valideer aantal dagen + bereken een geldige ISO-datum (YYYY-MM-DD) in de toekomst. */
+  const computeSnoozeUntil = (days: number): string | null => {
+    if (!Number.isInteger(days) || days <= 0 || days > MAX_SNOOZE_DAYS) return null;
+    const target = new Date(Date.now() + days * 86400000);
+    if (Number.isNaN(target.getTime())) return null;
+    const iso = target.toISOString().split("T")[0];
+    // Sanity-check: YYYY-MM-DD formaat
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+    return iso;
+  };
+
   const bulkSnoozeMutation = useMutation({
     mutationFn: async ({ ids, until }: { ids: string[]; until: string }) => {
+      // Defense-in-depth: valideer payload vóór database-update
+      if (!ids.length) throw new Error("Geen taken geselecteerd");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(until)) throw new Error("Ongeldige snooze-datum");
+      const untilDate = new Date(`${until}T00:00:00`);
+      if (Number.isNaN(untilDate.getTime())) throw new Error("Ongeldige snooze-datum");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (untilDate <= today) throw new Error("Snooze-datum moet in de toekomst liggen");
+
       // Snapshot previous snoozed_until per id so we can undo later
       const { data: previous, error: fetchError } = await supabase
         .from("admin_todos")
