@@ -29,10 +29,10 @@ export const TodoSnoozeChip = ({ snoozedUntil, snoozedAt, className }: TodoSnooz
   const now = new Date();
   const daysUntil = differenceInDays(snoozeEnd, now);
 
-  // Color based on urgency
+  // Color based on urgency - using semantic design tokens
   const colorClass =
     daysUntil < 0
-      ? "bg-red-50 text-red-700 border-red-200" // Overdue (shouldn't happen with filter)
+      ? "bg-destructive/10 text-destructive border-destructive/20" // Overdue
       : daysUntil === 0
         ? "bg-amber-50 text-amber-700 border-amber-200" // Returns today
         : daysUntil <= 2
