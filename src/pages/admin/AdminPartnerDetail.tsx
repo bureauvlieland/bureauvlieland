@@ -46,7 +46,7 @@ import {
   Users,
   ExternalLink,
   BedDouble,
-  Copy,
+  // Copy icon removed: tijdelijke wachtwoorden worden niet meer getoond
   Key,
 } from "lucide-react";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
