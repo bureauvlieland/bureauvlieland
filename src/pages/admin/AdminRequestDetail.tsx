@@ -1482,6 +1482,7 @@ const AdminRequestDetail = () => {
                                                   "h-8 w-[110px] tabular-nums text-sm",
                                                   isConfirmed && "border-green-500/50 text-green-700 font-medium",
                                                   isProposal && "border-orange-400/60 text-orange-700",
+                                                  !activeTime && "border-dashed border-muted-foreground/30 text-muted-foreground",
                                                 )}
                                                 onBlur={(e) => {
                                                   const val = e.target.value;
