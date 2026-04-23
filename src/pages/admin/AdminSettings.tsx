@@ -301,8 +301,8 @@ export default function AdminSettings() {
                             </p>
                           )}
                         </div>
-                        {/* Boolean settings don't need edit button - they use inline switch */}
-                        {setting.value_type !== "boolean" && (
+                        {/* Boolean settings + todo thresholds use inline controls — no generic edit button */}
+                        {setting.value_type !== "boolean" && setting.id !== "todo_age_thresholds" && (
                           <div className="flex gap-2">
                             {editingId === setting.id ? (
                               <>
