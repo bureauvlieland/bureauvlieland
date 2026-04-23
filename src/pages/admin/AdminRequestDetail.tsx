@@ -204,6 +204,10 @@ interface ProgramRequestItem {
   confirmed_time: string | null;
   proposed_time: string | null;
   duration: string | null;
+  // Location (optional, used by edit sheet)
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_address?: string | null;
 }
 
 interface HistoryEntry {
