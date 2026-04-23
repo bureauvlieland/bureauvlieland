@@ -69,6 +69,9 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
           markerRef.current = L.marker([clickLat, clickLng]).addTo(map);
         }
 
+        // Center map on click point so marker is always visible
+        map.panTo([clickLat, clickLng]);
+
         // Geocode to get address
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clickLat}&lon=${clickLng}&zoom=18&addressdetails=1`)
           .then(res => res.json())
