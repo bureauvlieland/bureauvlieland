@@ -291,6 +291,11 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-blue-700",
     bgColor: "bg-blue-100",
   },
+  new_accommodation_request: {
+    label: "Nieuwe logies-aanvraag",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
+  },
   quote_ready_to_send: {
     label: "Offerte versturen",
     color: "text-emerald-700",
