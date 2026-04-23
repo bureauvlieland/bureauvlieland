@@ -317,6 +317,8 @@ const TakenTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  // Aanvullend op statusFilter: filtert op de tijdsdimensie (snoozed / actie nodig / actief)
+  const [timeFilter, setTimeFilter] = useState<"all" | "action" | "snoozed" | "scheduled">("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
