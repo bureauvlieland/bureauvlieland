@@ -836,11 +836,11 @@ const TakenTab = () => {
     const linkedRequest = getLinkedRequestLabel(todo.related_request_id);
     const isOverdue = todo.due_date && new Date(todo.due_date) < new Date() && todo.status !== "done";
     const isSnoozed = todo.snoozed_until && todo.snoozed_until > today;
-    // Vervalt binnen 3 dagen (en nog niet overdue/done): visuele waarschuwing
+    // Vervalt binnen N dagen (instelbaar via app_settings.todo_due_soon_days): visuele waarschuwing
     const dueSoonCutoff = (() => {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() + 3);
+      d.setDate(d.getDate() + dueSoonDays);
       return d;
     })();
     const isDueSoon =
