@@ -589,7 +589,6 @@ const TakenTab = () => {
 
   // Filter: hide snoozed todos (unless showing all/done)
   const visibleTodos = useMemo(() => {
-    const now = new Date();
     const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
 
     return todos.filter((todo) => {
