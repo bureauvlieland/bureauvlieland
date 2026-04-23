@@ -505,6 +505,33 @@ const TakenTab = () => {
     },
   });
 
+  const bulkSnoozeMutation = useMutation({
+    mutationFn: async ({ ids, until }: { ids: string[]; until: string }) => {
+      const { error } = await supabase
+        .from("admin_todos")
+        .update({ snoozed_until: until })
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      setSelectedIds(new Set());
+      toast({ title: `${count} taken gesnoozed` });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij snoozen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  /** Snooze selected todos by N days from today. */
+  const bulkSnoozeDays = (days: number) => {
+    if (selectedIds.size === 0) return;
+    const until = new Date(Date.now() + days * 86400000).toISOString().split("T")[0];
+    bulkSnoozeMutation.mutate({ ids: Array.from(selectedIds), until });
+  };
+
   // Cleanup stale todos
   const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
   const cleanupMutation = useMutation({
