@@ -673,9 +673,36 @@ const TakenTab = () => {
               <Pencil className="h-4 w-4 mr-2" />
               Bewerken
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setSnoozeDialogTodo(todo); setSnoozeDate(""); }}>
+            <DropdownMenuItem
+              onClick={() => {
+                const d = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+                snoozeMutation.mutate({ id: todo.id, until: d });
+              }}
+            >
               <AlarmClock className="h-4 w-4 mr-2" />
-              Snooze
+              Snooze 1 dag
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const d = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+                snoozeMutation.mutate({ id: todo.id, until: d });
+              }}
+            >
+              <AlarmClock className="h-4 w-4 mr-2" />
+              Snooze 3 dagen
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const d = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+                snoozeMutation.mutate({ id: todo.id, until: d });
+              }}
+            >
+              <AlarmClock className="h-4 w-4 mr-2" />
+              Snooze 1 week
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setSnoozeDialogTodo(todo); setSnoozeDate(""); }}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Kies datum…
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
