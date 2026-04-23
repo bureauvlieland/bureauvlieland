@@ -1466,15 +1466,17 @@ const TakenTab = () => {
 
                 {selectedIds.size > 0 && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-7 px-2 text-xs text-muted-foreground"
+                    className="h-7 px-3 text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => {
                       setSelectedIds(new Set());
                       setShowSelectedOnly(false);
                     }}
+                    title={`Wis selectie van ${selectedIds.size} ${selectedIds.size === 1 ? "taak" : "taken"}`}
                   >
-                    Selectie wissen
+                    <X className="h-3.5 w-3.5" />
+                    Selectie wissen ({selectedIds.size})
                   </Button>
                 )}
               </div>
