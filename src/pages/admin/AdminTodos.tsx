@@ -708,14 +708,23 @@ const TakenTab = () => {
         key={todo.id}
         className={`flex items-center gap-2 py-2 px-3 hover:bg-slate-50 transition-colors ${
           todo.status === "done" ? "opacity-60" : ""
-        } ${isSnoozed ? "opacity-50" : ""}`}
+        } ${isSnoozed ? "opacity-50" : ""} ${selectedIds.has(todo.id) ? "bg-primary/5" : ""}`}
       >
+        <Checkbox
+          checked={selectedIds.has(todo.id)}
+          onCheckedChange={() => toggleSelect(todo.id)}
+          className="shrink-0"
+          aria-label="Selecteer voor bulkactie"
+          title="Selecteer voor bulkactie"
+        />
         <Checkbox
           checked={todo.status === "done"}
           onCheckedChange={(checked) => {
             toggleStatusMutation.mutate({ id: todo.id, newStatus: checked ? "done" : "todo" });
           }}
           className="shrink-0"
+          aria-label="Markeer als klaar"
+          title="Markeer als klaar"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
