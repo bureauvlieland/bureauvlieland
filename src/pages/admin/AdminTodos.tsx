@@ -715,7 +715,7 @@ const TakenTab = () => {
       if (timeFilter === "snoozed") {
         if (!isSnoozed) return false;
       } else if (timeFilter === "action") {
-        // Actie nodig: niet gesnoozed + overdue OF binnen 3 dagen deadline
+        // Actie nodig: niet gesnoozed + overdue OF binnen N dagen deadline (instelbaar)
         if (isSnoozed) return false;
         if (!isOverdue && !isDueSoon) return false;
       } else if (timeFilter === "scheduled") {
@@ -1200,7 +1200,7 @@ const TakenTab = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle weergaves</SelectItem>
-                  <SelectItem value="action">Actie nodig (overdue + ≤3 dagen)</SelectItem>
+                  <SelectItem value="action">Actie nodig (overdue + ≤{dueSoonDays} {dueSoonDays === 1 ? "dag" : "dagen"})</SelectItem>
                   <SelectItem value="scheduled">Lopend (geen acute deadline)</SelectItem>
                   <SelectItem value="snoozed">Gesnoozed</SelectItem>
                 </SelectContent>
