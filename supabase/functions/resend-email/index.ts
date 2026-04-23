@@ -1,7 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { getRenderedTemplate, sanitizeHtml, buildReplyTo, TemplateIds } from "../_shared/email-templates.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,142 +68,15 @@ Deno.serve(async (req) => {
       throw new Error("Email log niet gevonden");
     }
 
-    // Special-case: partner invitation resends must generate a new temp password.
-    // The generic resend-email flow relies on email_log.metadata for variable substitution,
-    // but partner invitations deliberately don't store credentials in metadata.
+    // Partner invitation emails contain one-time set-password links and cannot be replayed.
+    // Direct admins to the dedicated 'Stuur set-password link' action which generates a fresh link.
     if (emailLog.email_type === EmailTypes.PARTNER_INVITATION) {
-      if (!emailLog.related_partner_id) {
-        throw new Error("Deze email heeft geen gekoppelde partner");
-      }
-
-      const { data: partner, error: partnerError } = await supabase
-        .from("partners")
-        .select("*")
-        .eq("id", emailLog.related_partner_id)
-        .maybeSingle();
-
-      if (partnerError || !partner) {
-        throw new Error("Partner niet gevonden");
-      }
-
-      if (!partner.auth_user_id) {
-        throw new Error("Partner heeft nog geen account. Gebruik 'Partner uitnodigen'.");
-      }
-
-      if (partner.password_set_at) {
-        throw new Error("Partner heeft al geactiveerd. Gebruik 'Wachtwoord vergeten'.");
-      }
-
-      // Sync auth email with partner.email (prevents reset links/credentials going to an old auth email)
-      const { data: authUser } = await supabase.auth.admin.getUserById(partner.auth_user_id);
-      if (authUser?.user?.email !== partner.email) {
-        const { error: emailUpdateError } = await supabase.auth.admin.updateUserById(partner.auth_user_id, {
-          email: partner.email,
-          email_confirm: true,
-        });
-        if (emailUpdateError) {
-          throw new Error("Kon partner e-mailadres niet synchroniseren");
-        }
-      }
-
-      const tempPassword = "Vlieland-" + Math.floor(1000 + Math.random() * 9000);
-
-      const { error: updatePasswordError } = await supabase.auth.admin.updateUserById(partner.auth_user_id, {
-        password: tempPassword,
-      });
-      if (updatePasswordError) {
-        throw new Error("Kon tijdelijk wachtwoord niet instellen");
-      }
-
-      const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
-      const loginLink = `${origin}/partner/login`;
-      const portalLink = `${origin}/partner`;
-
-      await supabase
-        .from("partners")
-        .update({ invited_at: new Date().toISOString() })
-        .eq("id", partner.id);
-
-      const templateVariables = {
-        partner_name: sanitizeHtml(partner.name),
-        partner_email: partner.email,
-        partner_password: tempPassword,
-        login_link: loginLink,
-        partner_portal_link: portalLink,
-        commission_activity: String(partner.commission_percentage || 15),
-        commission_accommodation: String(partner.accommodation_commission_percentage || 10),
-      };
-
-      const template = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, templateVariables);
-      const subject = template?.subject || "Herinnering: Uw Bureau Vlieland Partner Portaal inloggegevens";
-      const bodyHtml =
-        template?.body ||
-        `<p>Beste ${sanitizeHtml(partner.name)},</p>
-         <p>Hierbij uw (nieuwe) inloggegevens voor het Bureau Vlieland Partner Portaal:</p>
-         <p><strong>Emailadres:</strong> ${sanitizeHtml(partner.email)}<br/>
-         <strong>Wachtwoord:</strong> ${sanitizeHtml(tempPassword)}</p>
-         <p><a href="${loginLink}">Inloggen op het Portaal</a></p>`;
-
-      const finalRecipient = recipient_email || partner.email;
-
-      const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
-        },
-        body: JSON.stringify({
-          Messages: [
-            {
-              From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: finalRecipient, Name: partner.name || finalRecipient }],
-              Subject: subject,
-              HTMLPart: bodyHtml,
-              TextPart: `Beste ${partner.name},\n\nUw (nieuwe) inloggegevens:\n- Emailadres: ${partner.email}\n- Wachtwoord: ${tempPassword}\n- Inloggen: ${loginLink}\n\nWijzig uw wachtwoord na eerste login via Instellingen.`,
-            },
-          ],
+      return new Response(
+        JSON.stringify({
+          error: "Partneruitnodigingen kunnen niet worden hergestuurd vanuit het log. Gebruik 'Stuur set-password link' op de partnerpagina — dat genereert een nieuwe persoonlijke link.",
         }),
-      });
-
-      const mailjetResult = await mailjetResponse.json();
-      const mailjetStatus = mailjetResult.Messages?.[0]?.Status;
-
-      if (mailjetStatus !== "success") {
-        const errorMessage = mailjetResult.Messages?.[0]?.Errors?.[0]?.ErrorMessage || "Mailjet error";
-
-        await logEmail({
-          email_type: EmailTypes.PARTNER_INVITATION,
-          subject,
-          recipient_email: finalRecipient,
-          recipient_name: partner.name || null,
-          related_partner_id: partner.id,
-          status: "failed",
-          error_message: errorMessage,
-          sent_by: "resend-email",
-          metadata: { original_email_id: email_log_id, resend: true },
-        });
-
-        throw new Error(errorMessage);
-      }
-
-      const messageId = mailjetResult.Messages?.[0]?.To?.[0]?.MessageID;
-
-      await logEmail({
-        email_type: EmailTypes.PARTNER_INVITATION,
-        subject,
-        recipient_email: finalRecipient,
-        recipient_name: partner.name || null,
-        related_partner_id: partner.id,
-        status: "sent",
-        mailjet_message_id: messageId?.toString(),
-        sent_by: "resend-email",
-        metadata: { original_email_id: email_log_id, resend: true },
-      });
-
-      return new Response(JSON.stringify({ success: true, message_id: messageId }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Fetch template for this email type
