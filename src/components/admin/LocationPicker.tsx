@@ -69,6 +69,9 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
           markerRef.current = L.marker([clickLat, clickLng]).addTo(map);
         }
 
+        // Center map on click point so marker is always visible
+        map.panTo([clickLat, clickLng]);
+
         // Geocode to get address
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clickLat}&lon=${clickLng}&zoom=18&addressdetails=1`)
           .then(res => res.json())
@@ -126,11 +129,17 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
       setTimeout(() => {
         map.invalidateSize();
         if (hasCoords) {
-          map.setView([lat!, lng!], DEFAULT_ZOOM);
+          // Ensure marker exists and is positioned correctly
           if (markerRef.current) {
             markerRef.current.setLatLng([lat!, lng!]);
           } else {
             markerRef.current = L.marker([lat!, lng!]).addTo(map);
+          }
+          // Only recenter when the marker isn't already visible in the current view
+          // (avoids resetting zoom after every map click)
+          const bounds = map.getBounds();
+          if (!bounds.contains([lat!, lng!])) {
+            map.setView([lat!, lng!], DEFAULT_ZOOM);
           }
         } else {
           if (markerRef.current) {
