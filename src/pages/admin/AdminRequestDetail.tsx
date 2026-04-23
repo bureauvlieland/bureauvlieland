@@ -527,7 +527,7 @@ const AdminRequestDetail = () => {
       console.error("Error fetching request:", error);
       toast.error("Fout bij ophalen aanvraag");
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) setIsLoading(false);
     }
   };
 
@@ -1467,7 +1467,7 @@ const AdminRequestDetail = () => {
                                             toast.error("Fout bij opslaan tijd");
                                           } else {
                                             toast.success(time ? `Tijd ${time} opgeslagen` : "Tijd verwijderd");
-                                            fetchRequestData();
+                                            fetchRequestData({ silent: true });
                                           }
                                         };
 
@@ -1581,7 +1581,7 @@ const AdminRequestDetail = () => {
                                                 toast.error("Fout bij opslaan deelnemers");
                                               } else {
                                                 toast.success("Deelnemers bijgewerkt");
-                                                fetchRequestData();
+                                                fetchRequestData({ silent: true });
                                               }
                                             }}
                                           />
