@@ -1053,19 +1053,22 @@ const TakenTab = () => {
                       <ChevronDown className="h-3 w-3 ml-1" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => bulkSnoozeDays(1)}>
-                      <AlarmClock className="h-4 w-4 mr-2" />
-                      Snooze 1 dag
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => bulkSnoozeDays(3)}>
-                      <AlarmClock className="h-4 w-4 mr-2" />
-                      Snooze 3 dagen
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => bulkSnoozeDays(7)}>
-                      <AlarmClock className="h-4 w-4 mr-2" />
-                      Snooze 1 week
-                    </DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="min-w-[220px]">
+                    {ALLOWED_SNOOZE_DAYS.map((days) => {
+                      const until = computeSnoozeUntil(days);
+                      const label = days === 1 ? "1 dag" : days === 7 ? "1 week" : `${days} dagen`;
+                      return (
+                        <DropdownMenuItem key={days} onClick={() => bulkSnoozeDays(days)}>
+                          <AlarmClock className="h-4 w-4 mr-2 shrink-0" />
+                          <span className="flex-1">Snooze {label}</span>
+                          {until && (
+                            <span className="ml-3 text-xs text-muted-foreground">
+                              {format(new Date(`${until}T00:00:00`), "EEE d MMM", { locale: nl })}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
