@@ -250,6 +250,22 @@ const AdminRequestDetail = () => {
   const [syncBlocksOpen, setSyncBlocksOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
+  const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
+
+  // Auto-open status-mail sheet when navigated from a todo with ?action=status-email
+  useEffect(() => {
+    if (searchParams.get("action") === "status-email") {
+      setStatusEmailOpen(true);
+      setHighlightStatusEmail(true);
+      // Clear the param so refresh doesn't reopen the sheet
+      const next = new URLSearchParams(searchParams);
+      next.delete("action");
+      setSearchParams(next, { replace: true });
+      // Stop highlighting after a few seconds
+      const t = setTimeout(() => setHighlightStatusEmail(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, setSearchParams]);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
