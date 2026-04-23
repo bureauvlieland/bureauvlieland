@@ -159,10 +159,17 @@ export const RegisterBureauInvoiceDialog = ({
         },
       });
 
-      // Update completion status
+      // Update completion status — auto-complete when nothing remains outstanding
+      const projectedOutstanding = (typeof suggestedAmount === "number" ? suggestedAmount : 0) - totalInclVat;
+      const nextStatus = projectedOutstanding <= 0.005 ? "fully_invoiced" : "partially_invoiced";
+      const updatePayload: Record<string, unknown> = { completion_status: nextStatus };
+      if (nextStatus === "fully_invoiced") {
+        updatePayload.completed_at = new Date().toISOString();
+        updatePayload.completed_by = session.session?.user.id ?? null;
+      }
       await supabase
         .from("program_requests")
-        .update({ completion_status: "partially_invoiced" })
+        .update(updatePayload)
         .eq("id", requestId);
 
       await logAdminActivity({

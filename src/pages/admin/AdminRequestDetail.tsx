@@ -86,6 +86,7 @@ import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard"
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
+import { CompletionActions } from "@/components/admin/CompletionActions";
 import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConflictBanner";
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
@@ -981,6 +982,16 @@ const AdminRequestDetail = () => {
                   {isQuoteMode && request.quote_status && (
                     <AdminQuoteStatusBadge status={request.quote_status} />
                   )}
+                </div>
+                <div className="mt-2">
+                  <CompletionActions
+                    entityType="program"
+                    entityId={request.id}
+                    completionStatus={request.completion_status}
+                    completedAt={(request as any).completed_at ?? null}
+                    outstanding={calculateOutstandingAmount()}
+                    variant="full"
+                  />
                 </div>
               </div>
             </div>
