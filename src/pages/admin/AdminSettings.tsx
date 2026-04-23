@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { SETTING_CATEGORIES } from "@/types/appSettings";
-import type { FeeTier, AppSetting } from "@/types/appSettings";
+import type { FeeTier, AppSetting, TodoAgeThresholdsConfig } from "@/types/appSettings";
 import { formatFeeTierRange } from "@/lib/appSettings";
+import { TodoThresholdsEditor } from "@/components/admin/TodoThresholdsEditor";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -114,6 +115,20 @@ export default function AdminSettings() {
 
   const renderSettingValue = (setting: AppSetting) => {
     const isEditing = editingId === setting.id;
+
+    // Special handling for todo age thresholds — uses dedicated inline editor
+    if (setting.id === "todo_age_thresholds") {
+      const cfg = setting.value as TodoAgeThresholdsConfig;
+      return (
+        <TodoThresholdsEditor
+          value={cfg}
+          isSaving={updateSetting.isPending}
+          onSave={(next) => {
+            updateSetting.mutate({ id: setting.id, value: next });
+          }}
+        />
+      );
+    }
 
     // Special handling for fee tiers
     if (setting.id === "coordination_fee_tiers") {
@@ -286,8 +301,8 @@ export default function AdminSettings() {
                             </p>
                           )}
                         </div>
-                        {/* Boolean settings don't need edit button - they use inline switch */}
-                        {setting.value_type !== "boolean" && (
+                        {/* Boolean settings + todo thresholds use inline controls — no generic edit button */}
+                        {setting.value_type !== "boolean" && setting.id !== "todo_age_thresholds" && (
                           <div className="flex gap-2">
                             {editingId === setting.id ? (
                               <>

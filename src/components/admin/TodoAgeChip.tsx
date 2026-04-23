@@ -3,10 +3,14 @@ import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Clock, AlarmClock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { TodoAgeThreshold } from "@/types/appSettings";
 
 /**
  * Live age chip — automatically refreshes every 60s so the displayed
  * "X days ago" text stays current without a page reload.
+ *
+ * Color escalation thresholds are configurable per todo type via
+ * the `todo_age_thresholds` app setting (admin → Instellingen).
  */
 
 interface TodoAgeChipProps {
@@ -20,10 +24,14 @@ interface TodoAgeChipProps {
     /** When true, treat as a deadline ("verloopt over X") instead of age ("X geleden") */
     isDeadline?: boolean;
   };
+  /** Configurable color escalation drempels (days). Defaults to 3/7 when omitted. */
+  thresholds?: TodoAgeThreshold;
   className?: string;
 }
 
-export const TodoAgeChip = ({ createdAt, businessAnchor, className }: TodoAgeChipProps) => {
+const DEFAULT_THRESHOLDS: TodoAgeThreshold = { amber: 3, red: 7 };
+
+export const TodoAgeChip = ({ createdAt, businessAnchor, thresholds, className }: TodoAgeChipProps) => {
   // Tick every 60s so labels stay live
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -31,12 +39,13 @@ export const TodoAgeChip = ({ createdAt, businessAnchor, className }: TodoAgeChi
     return () => clearInterval(id);
   }, []);
 
+  const t = thresholds ?? DEFAULT_THRESHOLDS;
   const ageDays = differenceInDays(new Date(), new Date(createdAt));
-  // Color escalation: 0-2 days neutral, 3-6 amber, 7+ red
+  // Color escalation: configurable per todo type
   const ageColor =
-    ageDays >= 7
+    ageDays >= t.red
       ? "bg-destructive/10 text-destructive border-destructive/20"
-      : ageDays >= 3
+      : ageDays >= t.amber
         ? "bg-amber-50 text-amber-700 border-amber-200"
         : "bg-muted text-muted-foreground border-muted";
 
@@ -67,9 +76,9 @@ export const TodoAgeChip = ({ createdAt, businessAnchor, className }: TodoAgeChi
       const ageDaysBusiness = -days;
       businessText = `${businessAnchor.label} ${formatDistanceToNow(anchorDate, { locale: nl, addSuffix: false })}`;
       businessColor =
-        ageDaysBusiness >= 7
+        ageDaysBusiness >= t.red
           ? "bg-destructive/10 text-destructive border-destructive/20"
-          : ageDaysBusiness >= 3
+          : ageDaysBusiness >= t.amber
             ? "bg-amber-50 text-amber-700 border-amber-200"
             : "bg-muted text-muted-foreground border-muted";
     }

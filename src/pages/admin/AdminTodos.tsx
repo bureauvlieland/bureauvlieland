@@ -80,6 +80,8 @@ import { autoTodoTypeConfig, type AutoTodoType } from "@/lib/autoTodoCreator";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { TodoAgeChip } from "@/components/admin/TodoAgeChip";
 import { TodoSnoozeChip } from "@/components/admin/TodoSnoozeChip";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { getTodoAgeThreshold } from "@/lib/appSettings";
 
 // ─── Types ───────────────────────────────────────────────────
 interface Todo {
@@ -310,6 +312,7 @@ type TakenView = "list" | "project";
 const TakenTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { settings: appSettings } = useAppSettings();
   const [viewMode, setViewMode] = useState<TakenView>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
@@ -704,7 +707,11 @@ const TakenTab = () => {
             {todo.description && (
               <span className="line-clamp-1">{todo.description}</span>
             )}
-            <TodoAgeChip createdAt={todo.created_at} businessAnchor={businessAnchor} />
+            <TodoAgeChip
+              createdAt={todo.created_at}
+              businessAnchor={businessAnchor}
+              thresholds={getTodoAgeThreshold(todo.auto_type, appSettings.todo_age_thresholds)}
+            />
             {todo.snoozed_until && todo.snoozed_until > today && (
               <TodoSnoozeChip snoozedUntil={todo.snoozed_until} snoozedAt={todo.updated_at} />
             )}
