@@ -382,6 +382,33 @@ const TakenTab = () => {
     },
   });
 
+  // Fetch business-anchor data (quote_sent_at, quote_valid_until) for every request referenced by a todo.
+  // This is used to enrich the age chip with deadline info that survives across cron-cycles.
+  const requestIdsForAnchors = useMemo(() => {
+    const ids = new Set<string>();
+    for (const t of todos) {
+      if (t.related_request_id) ids.add(t.related_request_id);
+    }
+    return Array.from(ids);
+  }, [todos]);
+
+  const { data: anchorMap = {} } = useQuery({
+    queryKey: ["admin-todos-anchor-data", requestIdsForAnchors],
+    enabled: requestIdsForAnchors.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("program_requests")
+        .select("id, quote_sent_at, quote_valid_until, expires_at")
+        .in("id", requestIdsForAnchors);
+      if (error) throw error;
+      const map: Record<string, RequestAnchorData> = {};
+      for (const r of data || []) {
+        map[r.id] = r as RequestAnchorData;
+      }
+      return map;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
       const payload = {
