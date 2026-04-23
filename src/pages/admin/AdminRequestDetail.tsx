@@ -440,7 +440,7 @@ const AdminRequestDetail = () => {
           table: 'program_request_items',
           filter: `request_id=eq.${id}`,
         },
-        () => fetchRequestData()
+        () => fetchRequestData({ silent: true })
       )
       .on(
         'postgres_changes',
@@ -450,7 +450,7 @@ const AdminRequestDetail = () => {
           table: 'program_requests',
           filter: `id=eq.${id}`,
         },
-        () => fetchRequestData()
+        () => fetchRequestData({ silent: true })
       )
       .subscribe();
 
