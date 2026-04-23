@@ -704,7 +704,7 @@ const TakenTab = () => {
             {todo.description && (
               <span className="line-clamp-1">{todo.description}</span>
             )}
-            <TodoAgeChip createdAt={todo.created_at} />
+            <TodoAgeChip createdAt={todo.created_at} businessAnchor={businessAnchor} />
             {todo.snoozed_until && todo.snoozed_until > today && (
               <TodoSnoozeChip snoozedUntil={todo.snoozed_until} snoozedAt={todo.updated_at} />
             )}
