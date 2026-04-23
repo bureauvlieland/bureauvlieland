@@ -65,7 +65,6 @@ import {
   Trash2,
   CalendarPlus,
   Check,
-  
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -562,6 +561,80 @@ const AdminRequestDetail = () => {
       toast.error("Fout bij annuleren aanvraag");
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleDuplicateItem = async (item: ProgramRequestItem) => {
+    try {
+      // Fetch the full row so we copy all columns (incl. fields not in our local interface)
+      const { data: fullItem, error: fetchError } = await supabase
+        .from("program_request_items")
+        .select("*")
+        .eq("id", item.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!fullItem) throw new Error("Item niet gevonden");
+
+      // Strip fields that should not be copied (identity, status, billing/quote state, timestamps)
+      const {
+        id: _id,
+        created_at: _created,
+        updated_at: _updated,
+        status_updated_at: _statusUpdated,
+        status_updated_by: _statusUpdatedBy,
+        version: _version,
+        // Workflow & quote state - reset to a fresh "pending" item
+        status: _status,
+        status_note: _statusNote,
+        item_quote_status: _itemQuoteStatus,
+        quoted_price: _quotedPrice,
+        quoted_at: _quotedAt,
+        quoted_notes: _quotedNotes,
+        confirmed_time: _confirmedTime,
+        proposed_date: _proposedDate,
+        proposed_time: _proposedTime,
+        customer_accepted_at: _custAccepted,
+        customer_approved_at: _custApproved,
+        customer_counter_at: _custCounterAt,
+        customer_counter_time: _custCounterTime,
+        customer_counter_note: _custCounterNote,
+        executed_at: _executedAt,
+        // Invoicing / commission state
+        invoiced_amount: _invAmount,
+        invoiced_date: _invDate,
+        invoiced_number: _invNumber,
+        invoiced_file_path: _invFile,
+        actual_invoiced_excl_vat: _invExcl,
+        commission_amount: _commAmount,
+        commission_invoiced_at: _commInvAt,
+        commission_status: _commStatus,
+        proforma_amount_excl_vat: _proAmount,
+        proforma_commission: _proComm,
+        proforma_deadline: _proDeadline,
+        proforma_sent_at: _proSent,
+        deviation_reason: _devReason,
+        final_billing_locked_at: _finalLocked,
+        ...rest
+      } = fullItem as Record<string, unknown>;
+
+      const insertPayload = {
+        ...rest,
+        status: "pending",
+        skip_partner_notification: true, // copy is a draft until admin sends it
+      };
+
+      const { error: insertError } = await supabase
+        .from("program_request_items")
+        .insert(insertPayload as never);
+
+      if (insertError) throw insertError;
+
+      toast.success("Onderdeel gedupliceerd");
+      await fetchRequestData({ silent: true });
+    } catch (error) {
+      console.error("Error duplicating item:", error);
+      toast.error("Fout bij dupliceren");
     }
   };
 
@@ -1617,6 +1690,15 @@ const AdminRequestDetail = () => {
                                             <Button
                                               variant="ghost"
                                               size="icon"
+                                              onClick={() => handleDuplicateItem(item)}
+                                              className="h-8 w-8"
+                                              title="Dupliceer onderdeel"
+                                            >
+                                              <Copy className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
                                               className="h-8 w-8 text-destructive hover:text-destructive"
                                               onClick={async () => {
                                                 const { error } = await supabase
@@ -1713,6 +1795,15 @@ const AdminRequestDetail = () => {
                                               className="h-8 w-8"
                                             >
                                               <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => handleDuplicateItem(item)}
+                                              className="h-8 w-8"
+                                              title="Dupliceer onderdeel"
+                                            >
+                                              <Copy className="h-4 w-4" />
                                             </Button>
                                             <Button
                                               variant="ghost"
