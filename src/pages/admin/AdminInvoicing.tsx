@@ -382,20 +382,31 @@ const AdminInvoicing = () => {
           )}
 
           {/* Actions */}
-          <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
-            <Button 
-              onClick={() => handleOpenInvoiceDialog(request)}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              {totals.invoicedTotal > 0 ? "Restant factureren" : "Factuur registreren"}
-            </Button>
+          <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-2">
+            {request.completion_status !== "fully_invoiced" && (
+              <Button
+                onClick={() => handleOpenInvoiceDialog(request)}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                {totals.invoicedTotal > 0 ? "Restant factureren" : "Factuur registreren"}
+              </Button>
+            )}
             <Button variant="outline" asChild>
               <Link to={`/admin/aanvragen/${request.id}`} className="gap-2">
                 <ExternalLink className="h-4 w-4" />
                 Bekijk aanvraag
               </Link>
             </Button>
+            <div className="ml-auto">
+              <CompletionActions
+                entityType="program"
+                entityId={request.id}
+                completionStatus={request.completion_status}
+                outstanding={totals.outstanding}
+                invalidateKeys={[["admin-invoicing-requests"]]}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
