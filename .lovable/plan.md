@@ -1,48 +1,87 @@
 
 
-## Status-mail verplaatsen + slimmer afgestemd op huidige stand
+## Mijn advies: niet volledig automatisch, wel slim getriggerd
 
-### Probleem
-Op de admin-projectpagina staat de knop **"Status update e-mail"** tussen de programma-actieknoppen, terwijl alle communicatie-acties op het tabblad **Communicatie** thuishoren. Daarnaast is de huidige tekst statisch: hij vermeldt enkel hoeveel onderdelen "in afwachting" zijn, terwijl in het screenshot de offerte wél is verstuurd maar de klant nog geen akkoord heeft gegeven — het bericht moet dán focussen op de actie van de klant (akkoord op offerte, voorwaarden, logies-keuze, facturatiegegevens).
+### Korte afweging
 
-### Wijzigingen
+Volledig automatisch elke X dagen status-mailen heeft serieuze nadelen voor jullie soort werk:
 
-**1. Knop verplaatsen (UI)**
-- **`src/pages/admin/AdminRequestDetail.tsx`** — knop "Status update e-mail" weghalen uit de programma-toolbar (rond regel 1374-1379).
-- De `SendProjectEmailSheet` zelf en de `statusEmailOpen` state laten staan (wordt nog steeds gebruikt voor de pre-fill).
-- Een nieuwe handler `handleOpenStatusEmail` (gewoon `setStatusEmailOpen(true)`) doorgeven aan `ProjectCommunicationsCard` via een nieuwe prop `onOpenStatusEmail`, zodat de bestaande sheet met de slimme template-content opent vanuit het Communicatie-tabblad.
+- **Bureau Vlieland is geen massaproces** — elk programma is maatwerk en de toon hoort persoonlijk te blijven. Een wekelijkse "robot-update" botst met de formele, persoonlijke stijl die jullie hanteren.
+- **Risico op ruis**: in fase B (wachten op klant-akkoord) is een herinnering nuttig, maar in fase C (partners benaderd) zou een automatische mail kunnen vertellen "10 in afwachting" terwijl jullie net een uur eerder telefonisch met de klant spraken.
+- **E-mailmoeheid**: klanten die te vaak status-updates krijgen, gaan ze negeren — juist als er écht actie nodig is.
+- **Reputatierisico**: een fout in de fase-logica = 50 klanten tegelijk een verkeerd bericht.
 
-**2. Communicatie-card uitbreiden**
-- **`src/components/admin/ProjectCommunicationsCard.tsx`** — naast de huidige knoppen "E-mail" en "Loggen" een derde primaire knop **"Status update"** (icoon `Sparkles` of `RefreshCw`) toevoegen die de status-mail opent met de slim-gegenereerde inhoud. Knop alleen tonen als `onOpenStatusEmail` prop is meegegeven (dus niet op logies-detail, waar nog geen status-template is).
+### Wat ik wél aanraad: **trigger-gebaseerd + admin houdt de regie**
 
-**3. Slimmere statusmail-content**
-Functie `generateProgramStatusEmailBody` in `AdminRequestDetail.tsx` herschrijven met een **fase-bewuste opbouw**, gebaseerd op `request.quote_status`, `customer_approved_at` per item, `terms_accepted_at`, `billing_company_name` en de logies-status. De fasen:
+Mijn voorstel is een **hybride model** in drie lagen, oplopend van "veilig" naar "automatisch":
 
-| Fase | Trigger | Toon van de mail |
-|---|---|---|
-| **A. Concept** | `quote_status` = `concept` of leeg, niets verstuurd | "We werken uw programma uit, geen actie nodig." |
-| **B. Offerte verstuurd, wacht op klant** ⬅ huidige situatie in screenshot | `quote_status = offerte_verstuurd` en geen `customer_approved_at` op items | **Hoofdboodschap: "We wachten op uw akkoord."** Geen partner-status tonen (want nog niets verstuurd), wél: openstaande offerte-link, voorwaarden, facturatie, logies-keuze. |
-| **C. Akkoord ontvangen, partners benaderd** | items met `customer_approved_at` én `skip_partner_notification = false` | Per-onderdeel partnerstatus tonen (huidige logica: bevestigd/alternatief/niet beschikbaar/in afwachting). |
-| **D. Definitief** | `quote_status = definitief_bevestigd` en alles confirmed | Korte bevestiging + verwijzing naar programma-overzicht. |
+---
 
-**Wat verandert concreet in de tekst**:
-- Begintekst (intro) wordt fase-afhankelijk in plaats van altijd "stand van zaken".
-- Per-onderdeel partnerstatus-blok (✅/❌/🔄/⏳) wordt **alleen getoond in fase C en D** (anders misleidend, want niets is naar partners gestuurd).
-- "Wat we nog van u nodig hebben"-blok wordt **prominenter** in fase A en B (bovenaan, met duidelijke call-to-action en rechtstreekse link naar het portaal).
-- Onderwerpregel past zich aan: 
-  - Fase B → `"Uw offerte staat klaar — graag uw akkoord (BV-XXXX)"`
-  - Fase C → `"Status update programma BV-XXXX"`
-  - Fase D → `"Programma definitief bevestigd — BV-XXXX"`
+### Laag 1 — Slimme herinneringen via admin-todo's (aanbevolen, snel te bouwen)
 
-### Acceptatiecriteria
-- Knop "Status update e-mail" verschijnt niet meer tussen de programma-knoppen, wél als primaire knop in de Communicatie-card.
-- In het scenario van het screenshot (offerte verstuurd, geen klant-akkoord) opent de mail met als hoofdboodschap dat de klant akkoord moet geven, **zonder** misleidende "10 in afwachting"-regel.
-- Zodra een klant akkoord heeft gegeven en partners zijn benaderd, toont dezelfde knop de huidige per-partner statusmail.
-- Onderwerpregel komt overeen met de fase.
-- Geen wijziging aan `SendProjectEmailSheet` — alleen de pre-fill (`defaultSubject` / `defaultBody`) is aangepast.
+Geen automatische mails naar klanten, maar wel automatische **herinneringen aan jullie** via het bestaande `admin_todos` systeem (zoals nu ook al gebeurt voor partner-reminders). Concreet:
+
+- **Trigger A**: Offerte staat 5 dagen verstuurd zonder klant-akkoord → admin-todo *"Klant X heeft nog geen akkoord gegeven — overweeg status-mail te sturen"* met directe link naar de status-mail-knop.
+- **Trigger B**: 3 dagen na laatste partner-bevestiging zonder vervolg-update → admin-todo *"Programma Y heeft sinds 3 dagen geen update — stuur status-mail"*.
+- **Trigger C**: Voorwaarden/facturatie/logies-keuze ontbreken bij naderende uitvoeringsdatum (T-14 dagen) → admin-todo *"Klant X mist nog: voorwaarden + logieskeuze"*.
+
+Drempels (5, 3, 14) komen uit `app_settings` zodat jullie ze kunnen bijstellen.
+
+**Voordeel**: jullie behouden volledige controle, kunnen de tekst nog tweaken, of besluiten te bellen i.p.v. mailen. De infrastructuur (`check-pending-items` edge function + `app_settings`-toggles) bestaat al.
+
+---
+
+### Laag 2 — Eén automatische "zachte" reminder in fase B (optioneel, opt-in per project)
+
+Eén gerichte uitzondering: als een offerte na **N dagen** (instelbaar, bv. 5) nog geen akkoord heeft, mag het systeem **één keer** automatisch de fase-B status-mail versturen. 
+
+- Per project een toggle `auto_status_reminder_enabled` (default: aan, maar handmatig uitzetbaar per project).
+- Maximaal **1× per project** — daarna pakt laag 1 het op via een admin-todo.
+- Logging in `email_log` met `email_type: "auto_status_reminder_phase_b"` zodat jullie in het Communicatie-dossier precies zien dat dit automatisch ging.
+- Globale kill-switch in `app_settings` (`auto_status_email_enabled`) zodat jullie het in één klik kunnen uitzetten.
+
+---
+
+### Laag 3 — Volledig automatisch (mijn advies: NIET doen)
+
+Periodieke automatische status-mails in fase C of D raad ik af. In fase C verandert de informatie continu (partners reageren los), waardoor automatische mails snel verouderd zijn. In fase D is het programma af — geen status nodig.
+
+---
+
+### Concreet implementatievoorstel
+
+**Aanbeveling**: start met **Laag 1** (trigger-gebaseerde admin-todo's). Dat geeft jullie 80% van de waarde zonder enig risico. Als jullie na een paar weken zien dat een specifieke trigger altijd leidt tot dezelfde mail-actie, kunnen we Laag 2 voor díe trigger aanzetten.
+
+#### Wijzigingen voor Laag 1
+
+1. **`supabase/functions/check-pending-items/index.ts`** uitbreiden met drie nieuwe checks:
+   - `customer_quote_pending` — `quote_status = offerte_verstuurd` + `> N dagen` + geen `customer_approved_at` op items → admin-todo `auto_type: "customer_status_email_due"`.
+   - `customer_status_stale` — laatste outbound mail > 5 dagen geleden + fase C met openstaande items → admin-todo `auto_type: "customer_status_update_due"`.
+   - `customer_missing_inputs_near_event` — uitvoeringsdatum < 14 dagen + voorwaarden/facturatie/logies ontbreken → admin-todo `auto_type: "customer_inputs_missing"`.
+
+2. **`app_settings`** uitbreiden met:
+   - `customer_status_email_pending_days` (default 5)
+   - `customer_status_email_stale_days` (default 5)
+   - `customer_inputs_warning_days` (default 14)
+
+3. **Admin-todo UI** — bestaande todo-lijst krijgt automatisch deze nieuwe types; bij klikken landt admin op de project-pagina met de juiste tab open. Bij `customer_status_email_due` direct de "Status update"-knop highlighten in de Communicatie-card (bv. via `?action=status-email` query-param).
+
+4. **`cleanup-stale-todos`** uitbreiden zodat deze drie nieuwe types automatisch resolven zodra de onderliggende voorwaarde is opgelost (klant geeft akkoord / mail is verstuurd / voorwaarden ingevuld).
+
+### Wat dit oplevert
+
+- Geen enkele automatische klant-mail (nul risico op verkeerde communicatie).
+- Jullie krijgen op het juiste moment een "tik op de schouder" met één klik door naar de juiste actie.
+- Hergebruikt 100% van de bestaande infrastructuur (cron, todos, app_settings, status-mail-knop).
+- Laag 2 is later in 1-2 uur toe te voegen als jullie comfortabel zijn met de triggers.
 
 ### Niet in scope
-- Geen wijziging aan logies-status-mail (`AdminAccommodationDetail`).
-- Geen wijziging aan de daadwerkelijke verzendlogica of e-maillogging.
-- Geen aanpassing aan `email_templates`-tabel (deze mail wordt vrij gegenereerd als project-e-mail, niet vanuit een opgeslagen template).
+
+- Geen wijziging aan de status-mail-tekst zelf (die is in vorige iteratie al fase-bewust gemaakt).
+- Geen wijziging aan partner-reminders (die werken al goed).
+- Geen extra UI buiten de bestaande todo-lijst.
+
+### Vraag aan jou
+
+Wil je dat ik begin met **alleen Laag 1** (admin-todo triggers, jij blijft de mail handmatig versturen), of meteen ook **Laag 2** voor de fase-B reminder erbij (1× automatisch akkoord-herinnering na 5 dagen)?
 
