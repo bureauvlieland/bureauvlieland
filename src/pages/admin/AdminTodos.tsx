@@ -902,13 +902,7 @@ const TakenTab = () => {
             {todo.snoozed_until && todo.snoozed_until > today && (
               <TodoSnoozeChip snoozedUntil={todo.snoozed_until} snoozedAt={todo.updated_at} />
             )}
-            {todo.due_date && (
-              <span className={`flex items-center gap-0.5 shrink-0 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
-                <Calendar className="h-2.5 w-2.5" />
-                {format(new Date(todo.due_date), "d MMM", { locale: nl })}
-                {isOverdue && " ⚠"}
-              </span>
-            )}
+            {/* due_date krijgt nu een eigen kolom rechts; hier niet meer inline tonen */}
             {linkedPartner && todo.related_partner_id && (
               <Link
                 to={`/admin/partners/${todo.related_partner_id}`}
