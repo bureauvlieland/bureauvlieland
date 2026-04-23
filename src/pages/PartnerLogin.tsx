@@ -11,10 +11,11 @@ import { Loader2, LogIn, Mail, Lock, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
+import { loginPasswordSchema } from "@/lib/passwordPolicy";
 
 const loginSchema = z.object({
   email: z.string().email("Vul een geldig emailadres in"),
-  password: z.string().min(6, "Wachtwoord moet minimaal 6 tekens zijn"),
+  password: loginPasswordSchema,
 });
 
 const PartnerLogin = () => {
