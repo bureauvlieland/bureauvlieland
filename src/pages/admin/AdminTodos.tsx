@@ -78,6 +78,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { autoTodoTypeConfig, type AutoTodoType } from "@/lib/autoTodoCreator";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
+import { TodoAgeChip } from "@/components/admin/TodoAgeChip";
 
 // ─── Types ───────────────────────────────────────────────────
 interface Todo {
@@ -623,6 +624,7 @@ const TakenTab = () => {
             {todo.description && (
               <span className="line-clamp-1">{todo.description}</span>
             )}
+            <TodoAgeChip createdAt={todo.created_at} />
             {todo.due_date && (
               <span className={`flex items-center gap-0.5 shrink-0 ${isOverdue ? "text-red-600 font-medium" : ""}`}>
                 <Calendar className="h-2.5 w-2.5" />
@@ -671,9 +673,36 @@ const TakenTab = () => {
               <Pencil className="h-4 w-4 mr-2" />
               Bewerken
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setSnoozeDialogTodo(todo); setSnoozeDate(""); }}>
+            <DropdownMenuItem
+              onClick={() => {
+                const d = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+                snoozeMutation.mutate({ id: todo.id, until: d });
+              }}
+            >
               <AlarmClock className="h-4 w-4 mr-2" />
-              Snooze
+              Snooze 1 dag
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const d = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
+                snoozeMutation.mutate({ id: todo.id, until: d });
+              }}
+            >
+              <AlarmClock className="h-4 w-4 mr-2" />
+              Snooze 3 dagen
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                const d = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+                snoozeMutation.mutate({ id: todo.id, until: d });
+              }}
+            >
+              <AlarmClock className="h-4 w-4 mr-2" />
+              Snooze 1 week
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setSnoozeDialogTodo(todo); setSnoozeDate(""); }}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Kies datum…
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
