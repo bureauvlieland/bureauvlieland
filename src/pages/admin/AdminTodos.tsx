@@ -314,12 +314,63 @@ const TakenTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { settings: appSettings } = useAppSettings();
-  const [viewMode, setViewMode] = useState<TakenView>("list");
+  // Persisted filter helpers — selectie blijft behouden na verversen
+  const FILTER_STORAGE_KEY = "admin-todos-filters-v1";
+  const readPersistedFilters = (): {
+    viewMode?: TakenView;
+    statusFilter?: string;
+    priorityFilter?: string;
+    timeFilter?: "all" | "action" | "snoozed" | "scheduled";
+  } => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(FILTER_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+  const persistedFilters = readPersistedFilters();
+  const allowedViewModes: TakenView[] = ["list", "project"];
+  const allowedStatus = ["active", "todo", "in_progress", "done", "all"];
+  const allowedPriority = ["all", "urgent", "high", "normal", "low"];
+  const allowedTime = ["all", "action", "snoozed", "scheduled"] as const;
+
+  const [viewMode, setViewMode] = useState<TakenView>(
+    allowedViewModes.includes(persistedFilters.viewMode as TakenView)
+      ? (persistedFilters.viewMode as TakenView)
+      : "list",
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("active");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(
+    allowedStatus.includes(persistedFilters.statusFilter ?? "")
+      ? (persistedFilters.statusFilter as string)
+      : "active",
+  );
+  const [priorityFilter, setPriorityFilter] = useState<string>(
+    allowedPriority.includes(persistedFilters.priorityFilter ?? "")
+      ? (persistedFilters.priorityFilter as string)
+      : "all",
+  );
   // Aanvullend op statusFilter: filtert op de tijdsdimensie (snoozed / actie nodig / actief)
-  const [timeFilter, setTimeFilter] = useState<"all" | "action" | "snoozed" | "scheduled">("all");
+  const [timeFilter, setTimeFilter] = useState<"all" | "action" | "snoozed" | "scheduled">(
+    (allowedTime as readonly string[]).includes(persistedFilters.timeFilter ?? "")
+      ? (persistedFilters.timeFilter as "all" | "action" | "snoozed" | "scheduled")
+      : "all",
+  );
+
+  // Persist filter changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        FILTER_STORAGE_KEY,
+        JSON.stringify({ viewMode, statusFilter, priorityFilter, timeFilter }),
+      );
+    } catch {
+      // ignore quota / privacy mode errors
+    }
+  }, [viewMode, statusFilter, priorityFilter, timeFilter]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
