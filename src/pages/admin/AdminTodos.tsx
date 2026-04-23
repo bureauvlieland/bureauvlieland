@@ -110,6 +110,14 @@ interface ProgramRequest {
   customer_company: string | null;
 }
 
+/** Business anchor data per request, used to enrich todo age chips with deadline info. */
+interface RequestAnchorData {
+  id: string;
+  quote_sent_at: string | null;
+  quote_valid_until: string | null;
+  expires_at: string | null;
+}
+
 // ─── Config ──────────────────────────────────────────────────
 const priorityConfig = {
   low: { label: "Laag", color: "bg-slate-100 text-slate-700", icon: Circle },
