@@ -79,6 +79,7 @@ import { Helmet } from "react-helmet";
 import { autoTodoTypeConfig, type AutoTodoType } from "@/lib/autoTodoCreator";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { TodoAgeChip } from "@/components/admin/TodoAgeChip";
+import { TodoSnoozeChip } from "@/components/admin/TodoSnoozeChip";
 
 // ─── Types ───────────────────────────────────────────────────
 interface Todo {
