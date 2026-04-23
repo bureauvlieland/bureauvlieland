@@ -1028,6 +1028,45 @@ const TakenTab = () => {
           </Link>
         )}
 
+        {/* Quick snooze presets — direct snoozen zonder menu */}
+        {todo.status !== "done" && !isSnoozed && (
+          <div className="hidden md:flex items-center gap-0.5 shrink-0 rounded-md border border-border bg-background p-0.5">
+            {ALLOWED_SNOOZE_DAYS.map((days) => {
+              const until = computeSnoozeUntil(days);
+              const label = days === 1 ? "1d" : days === 7 ? "1w" : `${days}d`;
+              const fullLabel =
+                days === 1 ? "1 dag" : days === 7 ? "1 week" : `${days} dagen`;
+              const dateHint = until
+                ? format(new Date(`${until}T00:00:00`), "EEE d MMM", { locale: nl })
+                : "";
+              return (
+                <Button
+                  key={days}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-1.5 text-[11px] font-medium gap-1"
+                  disabled={!until || snoozeMutation.isPending}
+                  title={`Snooze ${fullLabel}${dateHint ? ` — tot ${dateHint}` : ""}`}
+                  onClick={() => {
+                    if (!until) {
+                      toast({
+                        title: "Ongeldige snooze-datum",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    snoozeMutation.mutate({ id: todo.id, until });
+                  }}
+                >
+                  <AlarmClock className="h-3 w-3" />
+                  {label}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
