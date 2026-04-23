@@ -505,6 +505,33 @@ const TakenTab = () => {
     },
   });
 
+  const bulkSnoozeMutation = useMutation({
+    mutationFn: async ({ ids, until }: { ids: string[]; until: string }) => {
+      const { error } = await supabase
+        .from("admin_todos")
+        .update({ snoozed_until: until })
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      setSelectedIds(new Set());
+      toast({ title: `${count} taken gesnoozed` });
+    },
+    onError: (error) => {
+      toast({ title: "Fout bij snoozen", description: error.message, variant: "destructive" });
+    },
+  });
+
+  /** Snooze selected todos by N days from today. */
+  const bulkSnoozeDays = (days: number) => {
+    if (selectedIds.size === 0) return;
+    const until = new Date(Date.now() + days * 86400000).toISOString().split("T")[0];
+    bulkSnoozeMutation.mutate({ ids: Array.from(selectedIds), until });
+  };
+
   // Cleanup stale todos
   const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
   const cleanupMutation = useMutation({
@@ -681,14 +708,23 @@ const TakenTab = () => {
         key={todo.id}
         className={`flex items-center gap-2 py-2 px-3 hover:bg-slate-50 transition-colors ${
           todo.status === "done" ? "opacity-60" : ""
-        } ${isSnoozed ? "opacity-50" : ""}`}
+        } ${isSnoozed ? "opacity-50" : ""} ${selectedIds.has(todo.id) ? "bg-primary/5" : ""}`}
       >
+        <Checkbox
+          checked={selectedIds.has(todo.id)}
+          onCheckedChange={() => toggleSelect(todo.id)}
+          className="shrink-0"
+          aria-label="Selecteer voor bulkactie"
+          title="Selecteer voor bulkactie"
+        />
         <Checkbox
           checked={todo.status === "done"}
           onCheckedChange={(checked) => {
             toggleStatusMutation.mutate({ id: todo.id, newStatus: checked ? "done" : "todo" });
           }}
           className="shrink-0"
+          aria-label="Markeer als klaar"
+          title="Markeer als klaar"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -856,15 +892,55 @@ const TakenTab = () => {
               </Button>
             </div>
             {selectedIds.size > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => bulkDoneMutation.mutate(Array.from(selectedIds))}
-                disabled={bulkDoneMutation.isPending}
-              >
-                <CheckSquare className="h-4 w-4 mr-1" />
-                {selectedIds.size} afvinken
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bulkDoneMutation.mutate(Array.from(selectedIds))}
+                  disabled={bulkDoneMutation.isPending}
+                >
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  {selectedIds.size} afvinken
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={bulkSnoozeMutation.isPending}
+                    >
+                      {bulkSnoozeMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <AlarmClock className="h-4 w-4 mr-1" />
+                      )}
+                      {selectedIds.size} snoozen
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => bulkSnoozeDays(1)}>
+                      <AlarmClock className="h-4 w-4 mr-2" />
+                      Snooze 1 dag
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkSnoozeDays(3)}>
+                      <AlarmClock className="h-4 w-4 mr-2" />
+                      Snooze 3 dagen
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkSnoozeDays(7)}>
+                      <AlarmClock className="h-4 w-4 mr-2" />
+                      Snooze 1 week
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Deselecteer
+                </Button>
+              </>
             )}
             <Button
               size="sm"
