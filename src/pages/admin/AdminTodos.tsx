@@ -892,15 +892,55 @@ const TakenTab = () => {
               </Button>
             </div>
             {selectedIds.size > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => bulkDoneMutation.mutate(Array.from(selectedIds))}
-                disabled={bulkDoneMutation.isPending}
-              >
-                <CheckSquare className="h-4 w-4 mr-1" />
-                {selectedIds.size} afvinken
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bulkDoneMutation.mutate(Array.from(selectedIds))}
+                  disabled={bulkDoneMutation.isPending}
+                >
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  {selectedIds.size} afvinken
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={bulkSnoozeMutation.isPending}
+                    >
+                      {bulkSnoozeMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <AlarmClock className="h-4 w-4 mr-1" />
+                      )}
+                      {selectedIds.size} snoozen
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => bulkSnoozeDays(1)}>
+                      <AlarmClock className="h-4 w-4 mr-2" />
+                      Snooze 1 dag
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkSnoozeDays(3)}>
+                      <AlarmClock className="h-4 w-4 mr-2" />
+                      Snooze 3 dagen
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => bulkSnoozeDays(7)}>
+                      <AlarmClock className="h-4 w-4 mr-2" />
+                      Snooze 1 week
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Deselecteer
+                </Button>
+              </>
             )}
             <Button
               size="sm"
