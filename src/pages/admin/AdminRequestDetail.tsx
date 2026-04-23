@@ -204,6 +204,10 @@ interface ProgramRequestItem {
   confirmed_time: string | null;
   proposed_time: string | null;
   duration: string | null;
+  // Location (optional, used by edit sheet)
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_address?: string | null;
 }
 
 interface HistoryEntry {
@@ -252,8 +256,6 @@ const AdminRequestDetail = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [editingTimeItemId, setEditingTimeItemId] = useState<string | null>(null);
-  const [editingTimeValue, setEditingTimeValue] = useState("");
   const [sendPreview, setSendPreview] = useState<{
     partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
     bureauItemsList: { id: string; block_name: string }[];
@@ -1437,28 +1439,34 @@ const AdminRequestDetail = () => {
                                     <TableCell>
                                       {(() => {
                                         const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
-                                        if (!activeTime) return "-";
                                         const isConfirmed = !!item.confirmed_time;
                                         const isProposal = !item.confirmed_time && !!item.proposed_time;
                                         const showOriginal = (isConfirmed || isProposal) && item.preferred_time && activeTime !== item.preferred_time;
-                                        const isEditingTime = editingTimeItemId === item.id;
 
-                                        const handleConfirmTime = async (time: string) => {
+                                        const handleSaveTime = async (time: string | null) => {
+                                          const updatePayload: Record<string, unknown> = time
+                                            ? {
+                                                confirmed_time: time,
+                                                preferred_time: time,
+                                                status: item.status === "pending" ? "confirmed" : item.status,
+                                                status_note: `Tijd ${time} ingesteld door admin`,
+                                                status_updated_at: new Date().toISOString(),
+                                              }
+                                            : {
+                                                confirmed_time: null,
+                                                proposed_time: null,
+                                                preferred_time: null,
+                                                status_note: `Tijd verwijderd door admin`,
+                                                status_updated_at: new Date().toISOString(),
+                                              };
                                           const { error } = await supabase
                                             .from("program_request_items")
-                                            .update({
-                                              confirmed_time: time,
-                                              status: "confirmed",
-                                              status_note: `Tijd ${time} bevestigd door admin`,
-                                              status_updated_at: new Date().toISOString(),
-                                            })
+                                            .update(updatePayload)
                                             .eq("id", item.id);
                                           if (error) {
-                                            toast.error("Fout bij bevestigen tijd");
+                                            toast.error("Fout bij opslaan tijd");
                                           } else {
-                                            toast.success(`Tijd ${time} bevestigd`);
-                                            setEditingTimeItemId(null);
-                                            setEditingTimeValue("");
+                                            toast.success(time ? `Tijd ${time} opgeslagen` : "Tijd verwijderd");
                                             fetchRequestData();
                                           }
                                         };
@@ -1466,14 +1474,28 @@ const AdminRequestDetail = () => {
                                         return (
                                           <div className="space-y-0.5">
                                             <div className="flex items-center gap-1">
-                                              <span className={cn(
-                                                "font-medium",
-                                                isConfirmed && "text-green-700",
-                                                isProposal && "text-orange-600",
-                                              )}>
-                                                {activeTime}
-                                                {isProposal && <span className="text-xs ml-1">(voorstel)</span>}
-                                              </span>
+                                              <Input
+                                                type="time"
+                                                defaultValue={activeTime || ""}
+                                                key={`${item.id}-${activeTime || "empty"}`}
+                                                className={cn(
+                                                  "h-8 w-[110px] tabular-nums text-sm",
+                                                  isConfirmed && "border-green-500/50 text-green-700 font-medium",
+                                                  isProposal && "border-orange-400/60 text-orange-700",
+                                                )}
+                                                onBlur={(e) => {
+                                                  const val = e.target.value;
+                                                  if (val === (activeTime || "")) return;
+                                                  handleSaveTime(val || null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                                  if (e.key === "Escape") {
+                                                    (e.target as HTMLInputElement).value = activeTime || "";
+                                                    (e.target as HTMLInputElement).blur();
+                                                  }
+                                                }}
+                                              />
                                               {isProposal && (
                                                 <TooltipProvider>
                                                   <Tooltip>
@@ -1481,66 +1503,24 @@ const AdminRequestDetail = () => {
                                                       <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        onClick={() => handleConfirmTime(item.proposed_time!)}
+                                                        className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        onClick={() => handleSaveTime(item.proposed_time!)}
                                                       >
                                                         <Check className="h-3.5 w-3.5" />
                                                       </Button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent>Accepteer {item.proposed_time}</TooltipContent>
+                                                    <TooltipContent>Accepteer voorstel {item.proposed_time}</TooltipContent>
                                                   </Tooltip>
                                                 </TooltipProvider>
                                               )}
-                                              {!isConfirmed && (
-                                                <Popover open={isEditingTime} onOpenChange={(open) => {
-                                                  if (open) {
-                                                    setEditingTimeItemId(item.id);
-                                                    setEditingTimeValue(item.proposed_time || item.preferred_time || "");
-                                                  } else {
-                                                    setEditingTimeItemId(null);
-                                                    setEditingTimeValue("");
-                                                  }
-                                                }}>
-                                                  <TooltipProvider>
-                                                    <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                        <PopoverTrigger asChild>
-                                                          <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                                                          >
-                                                            <Clock className="h-3.5 w-3.5" />
-                                                          </Button>
-                                                        </PopoverTrigger>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent>Andere tijd instellen</TooltipContent>
-                                                    </Tooltip>
-                                                  </TooltipProvider>
-                                                  <PopoverContent className="w-48 p-3" align="start">
-                                                    <div className="space-y-2">
-                                                      <label className="text-xs font-medium">Bevestigde tijd</label>
-                                                      <Input
-                                                        type="time"
-                                                        value={editingTimeValue}
-                                                        onChange={(e) => setEditingTimeValue(e.target.value)}
-                                                        className="h-8"
-                                                      />
-                                                      <Button
-                                                        size="sm"
-                                                        className="w-full"
-                                                        disabled={!editingTimeValue}
-                                                        onClick={() => handleConfirmTime(editingTimeValue)}
-                                                      >
-                                                        Bevestigen
-                                                      </Button>
-                                                    </div>
-                                                  </PopoverContent>
-                                                </Popover>
-                                              )}
                                             </div>
+                                            {isProposal && (
+                                              <div className="text-[10px] text-orange-600 leading-tight">voorstel klant</div>
+                                            )}
                                             {showOriginal && (
-                                              <div className="text-xs text-muted-foreground line-through">{item.preferred_time}</div>
+                                              <div className="text-[10px] text-muted-foreground line-through leading-tight">
+                                                was: {item.preferred_time}
+                                              </div>
                                             )}
                                           </div>
                                         );
