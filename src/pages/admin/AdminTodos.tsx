@@ -1023,6 +1023,18 @@ const TakenTab = () => {
                   <SelectItem value="low">Laag</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as typeof timeFilter)}>
+                <SelectTrigger className="w-[180px]">
+                  <AlarmClock className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Weergave" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle weergaves</SelectItem>
+                  <SelectItem value="action">Actie nodig (overdue + ≤3 dagen)</SelectItem>
+                  <SelectItem value="scheduled">Lopend (geen acute deadline)</SelectItem>
+                  <SelectItem value="snoozed">Gesnoozed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
