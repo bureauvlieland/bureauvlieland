@@ -1334,8 +1334,7 @@ const TakenTab = () => {
             });
           }
           if (timeFilter !== "all") {
-            const timeLabels: Record<typeof timeFilter, string> = {
-              all: "",
+            const timeLabels: Record<Exclude<typeof timeFilter, "all">, string> = {
               action: "Actie nodig",
               scheduled: "Lopend",
               snoozed: "Gesnoozed",
