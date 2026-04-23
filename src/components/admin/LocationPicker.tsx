@@ -69,11 +69,27 @@ export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerPr
           markerRef.current = L.marker([clickLat, clickLng]).addTo(map);
         }
 
-        onChangeRef.current(
-          Math.round(clickLat * 1000000) / 1000000,
-          Math.round(clickLng * 1000000) / 1000000,
-          addressRef.current
-        );
+        // Geocode to get address
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clickLat}&lon=${clickLng}&zoom=18&addressdetails=1`)
+          .then(res => res.json())
+          .then(data => {
+            const addr = data?.display_name 
+              ? data.display_name.split(",").slice(0, 3).join(", ").trim()
+              : `${clickLat.toFixed(6)}, ${clickLng.toFixed(6)}`;
+            onChangeRef.current(
+              Math.round(clickLat * 1000000) / 1000000,
+              Math.round(clickLng * 1000000) / 1000000,
+              addr
+            );
+          })
+          .catch(() => {
+            // Fallback to coordinates if geocoding fails
+            onChangeRef.current(
+              Math.round(clickLat * 1000000) / 1000000,
+              Math.round(clickLng * 1000000) / 1000000,
+              `${clickLat.toFixed(6)}, ${clickLng.toFixed(6)}`
+            );
+          });
       });
 
       leafletMapRef.current = map;
