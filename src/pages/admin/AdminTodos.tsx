@@ -18,6 +18,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -387,6 +397,7 @@ const TakenTab = () => {
     related_request_id: "",
     related_partner_id: "",
   });
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -541,6 +552,32 @@ const TakenTab = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
       setSelectedIds(new Set());
       toast({ title: `${selectedIds.size} taken afgerond` });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("admin_todos")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      setSelectedIds(new Set());
+      setBulkDeleteConfirmOpen(false);
+      toast({ title: `${count} ${count === 1 ? "taak" : "taken"} verwijderd` });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Onbekende fout";
+      toast({
+        title: "Verwijderen mislukt",
+        description: message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -1228,6 +1265,20 @@ const TakenTab = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkDeleteConfirmOpen(true)}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                >
+                  {bulkDeleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  {selectedIds.size} verwijderen
+                </Button>
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedIds(new Set())}
@@ -1771,6 +1822,40 @@ const TakenTab = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedIds.size} {selectedIds.size === 1 ? "taak" : "taken"} verwijderen?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Deze actie kan niet ongedaan gemaakt worden. De geselecteerde taken worden permanent verwijderd.
+              Automatisch aangemaakte taken kunnen later opnieuw verschijnen als de onderliggende situatie nog bestaat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                bulkDeleteMutation.mutate(Array.from(selectedIds));
+              }}
+              disabled={bulkDeleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {bulkDeleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Cleanup Confirmation Dialog */}
       <Dialog open={showCleanupConfirm} onOpenChange={setShowCleanupConfirm}>
         <DialogContent className="max-w-md">
