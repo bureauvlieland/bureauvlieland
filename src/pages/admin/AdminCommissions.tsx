@@ -138,6 +138,7 @@ export default function AdminCommissions() {
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const isExpectedView = statusFilter === "expected";
 
