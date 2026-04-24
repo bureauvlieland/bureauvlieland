@@ -917,6 +917,166 @@ export type Database = {
           },
         ]
       }
+      commission_invoice_lines: {
+        Row: {
+          block_name: string
+          commission_amount: number
+          commission_percentage: number
+          created_at: string
+          customer_label: string | null
+          description: string | null
+          event_date: string | null
+          id: string
+          invoice_id: string
+          invoiced_amount_excl_vat: number
+          item_id: string | null
+          item_type: string
+          quote_id: string | null
+          reference_number: string | null
+          sort_order: number
+        }
+        Insert: {
+          block_name: string
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string
+          customer_label?: string | null
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          invoice_id: string
+          invoiced_amount_excl_vat?: number
+          item_id?: string | null
+          item_type: string
+          quote_id?: string | null
+          reference_number?: string | null
+          sort_order?: number
+        }
+        Update: {
+          block_name?: string
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string
+          customer_label?: string | null
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          invoice_id?: string
+          invoiced_amount_excl_vat?: number
+          item_id?: string | null
+          item_type?: string
+          quote_id?: string | null
+          reference_number?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "commission_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_invoices: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          forwarded_by: string | null
+          forwarded_to_accounting_at: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          partner_id: string
+          pdf_path: string | null
+          recipient_address_city: string | null
+          recipient_address_postal: string | null
+          recipient_address_street: string | null
+          recipient_email: string | null
+          recipient_kvk_number: string | null
+          recipient_name: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          forwarded_by?: string | null
+          forwarded_to_accounting_at?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          partner_id: string
+          pdf_path?: string | null
+          recipient_address_city?: string | null
+          recipient_address_postal?: string | null
+          recipient_address_street?: string | null
+          recipient_email?: string | null
+          recipient_kvk_number?: string | null
+          recipient_name: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          forwarded_by?: string | null
+          forwarded_to_accounting_at?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          partner_id?: string
+          pdf_path?: string | null
+          recipient_address_city?: string | null
+          recipient_address_postal?: string | null
+          recipient_address_street?: string | null
+          recipient_email?: string | null
+          recipient_kvk_number?: string | null
+          recipient_name?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_log: {
         Row: {
           created_at: string
