@@ -98,6 +98,8 @@ interface PartnerGroup {
   partner: CommissionItem["partner"];
   items: CommissionItem[];
   totalCommission: number;
+  pendingCount?: number;
+  pendingTotal?: number;
 }
 
 interface CommissionsResponse {
@@ -676,6 +678,30 @@ export default function AdminCommissions() {
                     </div>
                   </div>
                 </CardHeader>
+                {isExpectedView && (group.pendingCount ?? 0) > 0 && (
+                  <div className="mx-6 mb-3 flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2 text-amber-900">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>
+                        <strong>{group.pendingCount}</strong> commissie{group.pendingCount === 1 ? "" : "s"} van{" "}
+                        {group.partner?.name} (<strong>{formatCurrency(group.pendingTotal ?? 0)}</strong>) staat klaar onder "Te factureren".
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-amber-900 hover:bg-amber-100"
+                      onClick={() => {
+                        setPartnerFilter(group.partner?.id || null);
+                        setStatusFilter("pending");
+                        setSelectedItems(new Set());
+                      }}
+                    >
+                      Bekijken
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
                 <CardContent>
                   <Table>
                     <TableHeader>
