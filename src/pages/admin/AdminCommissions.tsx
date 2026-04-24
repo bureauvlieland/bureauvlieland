@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,8 @@ import {
   CalendarClock,
   TrendingUp,
   CalendarDays,
+  AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 
 interface CommissionItem {
