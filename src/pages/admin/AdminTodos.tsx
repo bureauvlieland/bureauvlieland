@@ -397,6 +397,7 @@ const TakenTab = () => {
     related_request_id: "",
     related_partner_id: "",
   });
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
