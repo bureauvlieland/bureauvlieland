@@ -76,6 +76,8 @@ const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
 const AdminEmailTemplates = lazy(() => import("./pages/admin/AdminEmailTemplates"));
 const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
+const AdminCommissionInvoiceCreate = lazy(() => import("./pages/admin/AdminCommissionInvoiceCreate"));
+const AdminCommissionInvoices = lazy(() => import("./pages/admin/AdminCommissionInvoices"));
 const AdminBuildingBlocks = lazy(() => import("./pages/admin/AdminBuildingBlocks"));
 const AdminInvoicing = lazy(() => import("./pages/admin/AdminInvoicing"));
 const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation"));
@@ -200,6 +202,8 @@ const App = () => {
             <Route path="/admin/berichten" element={<AdminMessages />} />
             <Route path="/admin/berichten/templates" element={<AdminEmailTemplates />} />
             <Route path="/admin/commissies" element={<AdminCommissions />} />
+            <Route path="/admin/commissies/factuur-maken" element={<AdminCommissionInvoiceCreate />} />
+            <Route path="/admin/commissies/facturen" element={<AdminCommissionInvoices />} />
             <Route path="/admin/facturatie" element={<AdminInvoicing />} />
             <Route path="/admin/inkoopfacturen" element={<AdminPurchaseInvoices />} />
             <Route path="/admin/inkoopfacturen/inbox" element={<AdminPurchaseInvoiceInbox />} />

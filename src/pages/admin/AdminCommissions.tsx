@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,8 @@ import {
   CalendarClock,
   TrendingUp,
   CalendarDays,
+  AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 
 interface CommissionItem {
@@ -95,6 +98,8 @@ interface PartnerGroup {
   partner: CommissionItem["partner"];
   items: CommissionItem[];
   totalCommission: number;
+  pendingCount?: number;
+  pendingTotal?: number;
 }
 
 interface CommissionsResponse {
@@ -135,6 +140,7 @@ export default function AdminCommissions() {
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const isExpectedView = statusFilter === "expected";
 
@@ -386,10 +392,16 @@ export default function AdminCommissions() {
               Beheer partner commissies en facturatie
             </p>
           </div>
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Vernieuwen
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/admin/commissies/facturen")}>
+              <FileText className="h-4 w-4 mr-2" />
+              Commissiefacturen
+            </Button>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Vernieuwen
+            </Button>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -558,10 +570,44 @@ export default function AdminCommissions() {
 
           <div className="flex gap-2">
             {statusFilter === "pending" && selectedItems.size > 0 && (
-              <Button onClick={handleMarkAsInvoiced}>
-                <Send className="h-4 w-4 mr-2" />
-                Markeer als gefactureerd ({selectedItems.size})
-              </Button>
+              <>
+                <Button
+                  onClick={() => {
+                    // Validate single partner
+                    const selected = Array.from(selectedItems);
+                    const partnerIds = new Set(
+                      selected
+                        .map((id) => data?.items.find((i) => i.id === id)?.provider_id)
+                        .filter(Boolean)
+                    );
+                    if (partnerIds.size > 1) {
+                      toast({
+                        title: "Eén partner per factuur",
+                        description: "Selecteer alleen items van dezelfde partner om een commissiefactuur te maken.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    const itemIds = selected
+                      .filter((id) => data?.items.find((i) => i.id === id)?.item_type === "activity")
+                      .join(",");
+                    const quoteIds = selected
+                      .filter((id) => data?.items.find((i) => i.id === id)?.item_type === "accommodation")
+                      .join(",");
+                    const params = new URLSearchParams();
+                    if (itemIds) params.set("itemIds", itemIds);
+                    if (quoteIds) params.set("quoteIds", quoteIds);
+                    navigate(`/admin/commissies/factuur-maken?${params.toString()}`);
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Commissiefactuur maken ({selectedItems.size})
+                </Button>
+                <Button onClick={handleMarkAsInvoiced} variant="outline" size="sm">
+                  <Send className="h-4 w-4 mr-2" />
+                  Snel markeren zonder PDF
+                </Button>
+              </>
             )}
             {statusFilter === "invoiced" && selectedItems.size > 0 && (
               <Button onClick={handleMarkAsPaid} variant="outline">
@@ -632,6 +678,30 @@ export default function AdminCommissions() {
                     </div>
                   </div>
                 </CardHeader>
+                {isExpectedView && (group.pendingCount ?? 0) > 0 && (
+                  <div className="mx-6 mb-3 flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2 text-amber-900">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>
+                        <strong>{group.pendingCount}</strong> commissie{group.pendingCount === 1 ? "" : "s"} van{" "}
+                        {group.partner?.name} (<strong>{formatCurrency(group.pendingTotal ?? 0)}</strong>) staat klaar onder "Te factureren".
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-amber-900 hover:bg-amber-100"
+                      onClick={() => {
+                        setPartnerFilter(group.partner?.id || null);
+                        setStatusFilter("pending");
+                        setSelectedItems(new Set());
+                      }}
+                    >
+                      Bekijken
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
                 <CardContent>
                   <Table>
                     <TableHeader>
