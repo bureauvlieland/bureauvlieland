@@ -390,10 +390,16 @@ export default function AdminCommissions() {
               Beheer partner commissies en facturatie
             </p>
           </div>
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Vernieuwen
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/admin/commissies/facturen")}>
+              <FileText className="h-4 w-4 mr-2" />
+              Commissiefacturen
+            </Button>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Vernieuwen
+            </Button>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -562,10 +568,44 @@ export default function AdminCommissions() {
 
           <div className="flex gap-2">
             {statusFilter === "pending" && selectedItems.size > 0 && (
-              <Button onClick={handleMarkAsInvoiced}>
-                <Send className="h-4 w-4 mr-2" />
-                Markeer als gefactureerd ({selectedItems.size})
-              </Button>
+              <>
+                <Button
+                  onClick={() => {
+                    // Validate single partner
+                    const selected = Array.from(selectedItems);
+                    const partnerIds = new Set(
+                      selected
+                        .map((id) => data?.items.find((i) => i.id === id)?.provider_id)
+                        .filter(Boolean)
+                    );
+                    if (partnerIds.size > 1) {
+                      toast({
+                        title: "Eén partner per factuur",
+                        description: "Selecteer alleen items van dezelfde partner om een commissiefactuur te maken.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    const itemIds = selected
+                      .filter((id) => data?.items.find((i) => i.id === id)?.item_type === "activity")
+                      .join(",");
+                    const quoteIds = selected
+                      .filter((id) => data?.items.find((i) => i.id === id)?.item_type === "accommodation")
+                      .join(",");
+                    const params = new URLSearchParams();
+                    if (itemIds) params.set("itemIds", itemIds);
+                    if (quoteIds) params.set("quoteIds", quoteIds);
+                    navigate(`/admin/commissies/factuur-maken?${params.toString()}`);
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Commissiefactuur maken ({selectedItems.size})
+                </Button>
+                <Button onClick={handleMarkAsInvoiced} variant="outline" size="sm">
+                  <Send className="h-4 w-4 mr-2" />
+                  Snel markeren zonder PDF
+                </Button>
+              </>
             )}
             {statusFilter === "invoiced" && selectedItems.size > 0 && (
               <Button onClick={handleMarkAsPaid} variant="outline">
