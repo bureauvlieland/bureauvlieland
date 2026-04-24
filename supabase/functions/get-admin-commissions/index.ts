@@ -280,10 +280,52 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── Per-partner pending hint: how many items already moved to "Te factureren"
+      const partnerIds = Object.keys(byPartnerMap);
+      const pendingByPartner: Record<string, { count: number; total: number }> = {};
+      if (partnerIds.length > 0) {
+        // Activities pending
+        const { data: pendingActivities } = await adminClient
+          .from("program_request_items")
+          .select("provider_id, commission_amount")
+          .in("provider_id", partnerIds)
+          .eq("commission_status", "pending")
+          .gt("commission_percentage", 0)
+          .not("invoiced_number", "is", null);
+        for (const row of pendingActivities || []) {
+          const pid = (row as any).provider_id;
+          if (!pendingByPartner[pid]) pendingByPartner[pid] = { count: 0, total: 0 };
+          pendingByPartner[pid].count += 1;
+          pendingByPartner[pid].total += parseFloat((row as any).commission_amount) || 0;
+        }
+        // Accommodations pending
+        const { data: pendingQuotes } = await adminClient
+          .from("accommodation_quotes")
+          .select("partner_id, commission_amount")
+          .in("partner_id", partnerIds)
+          .eq("commission_status", "pending")
+          .eq("status", "selected")
+          .gt("commission_percentage", 0)
+          .not("invoiced_number", "is", null);
+        for (const row of pendingQuotes || []) {
+          const pid = (row as any).partner_id;
+          if (!pendingByPartner[pid]) pendingByPartner[pid] = { count: 0, total: 0 };
+          pendingByPartner[pid].count += 1;
+          pendingByPartner[pid].total += parseFloat((row as any).commission_amount) || 0;
+        }
+      }
+
+      // Attach pending hint to each partner group
+      const enrichedByPartner = Object.entries(byPartnerMap).map(([pid, group]) => ({
+        ...group,
+        pendingCount: pendingByPartner[pid]?.count ?? 0,
+        pendingTotal: pendingByPartner[pid]?.total ?? 0,
+      }));
+
       return new Response(
         JSON.stringify({
           items: allItems,
-          byPartner: Object.values(byPartnerMap),
+          byPartner: enrichedByPartner,
           summary: {
             totalItems: allItems.length,
             totalCommission: totalExpectedCommission,
