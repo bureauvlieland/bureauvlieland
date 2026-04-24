@@ -1265,6 +1265,20 @@ const TakenTab = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBulkDeleteConfirmOpen(true)}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                >
+                  {bulkDeleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  {selectedIds.size} verwijderen
+                </Button>
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedIds(new Set())}
