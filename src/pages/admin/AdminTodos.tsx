@@ -554,6 +554,32 @@ const TakenTab = () => {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("admin_todos")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      setSelectedIds(new Set());
+      setBulkDeleteConfirmOpen(false);
+      toast({ title: `${count} ${count === 1 ? "taak" : "taken"} verwijderd` });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Onbekende fout";
+      toast({
+        title: "Verwijderen mislukt",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const snoozeMutation = useMutation({
     mutationFn: async ({ id, until }: { id: string; until: string }) => {
       const { error } = await supabase
