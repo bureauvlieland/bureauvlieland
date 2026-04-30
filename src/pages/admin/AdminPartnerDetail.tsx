@@ -146,6 +146,7 @@ const AdminPartnerDetail = () => {
     address_city: "",
     commission_percentage: 15,
     is_active: true,
+    is_public: false,
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
     map_tenant_slug: "",
