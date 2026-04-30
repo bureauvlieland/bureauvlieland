@@ -810,6 +810,22 @@ const AdminPartnerDetail = () => {
                     />
                   </div>
 
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Toon op publieke partners-pagina</Label>
+                      <p className="text-xs text-slate-500">
+                        Partner verschijnt in de openbare partner-directory (alleen niet-gevoelige velden)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.is_public}
+                      onCheckedChange={(checked) => handleChange("is_public", checked)}
+                      disabled={!formData.is_active}
+                    />
+                  </div>
+
                   {!isNew && partner && (
                     <>
                       <Separator />
