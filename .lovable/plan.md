@@ -1,62 +1,94 @@
-
-# Pre-sales communicatiehub op de projectpagina
-
 ## Doel
 
-Vanaf `/admin/projecten/:id` direct kunnen mailen en chatten met klant of betrokken partners — zonder verstopt achter een tab. Templates kiesbaar, per geadresseerde een eigen thread, antwoorden komen netjes terug via Mailjet inbound, en chatberichten triggeren een mailmelding aan de geadresseerde.
+Een publieke (anon) leesbron creëren met **uitsluitend niet-gevoelige partner-velden**, zonder de `partners` tabel zelf open te zetten. Dit voorkomt lekken van e-mail, telefoon, IBAN, KvK, `initial_password`, interne notities, enz.
 
-## Wat je krijgt
+## Bevindingen uit codebase-check
 
-### Op de projectdetailpagina
+Het door jou voorgestelde SQL-statement faalt in de huidige database:
 
-Communicatiekaart wordt verplaatst van de tab naar een vaste positie boven de tabs (volle breedte, altijd zichtbaar). Header van de kaart heeft 4 actieknoppen:
-- **"Mail klant"** — opent composer met klant prefilled
-- **"Mail partner..."** — dropdown met alle betrokken partners uit de programma-items
-- **"Chat openen"** — opent chat-sheet met de klant (en/of partner-keuze)
-- **"Notitie loggen"** — bestaande functionaliteit
+- Kolom `**is_public` bestaat niet** op `public.partners` → moet eerst toegevoegd worden.
+- Kolommen `**food_drink_subtype` en `accommodation_subtype` bestaan niet** als losse velden. Het schema gebruikt:
+  - `partner_type` (text) — bijv. `food_drink`, `accommodation`, `activity`
+  - `accommodation_types` (jsonb) — array van subtypes
+  - er is geen apart `food_drink_subtype` veld
+- `is_active` bestaat wel ✅
+- Overige velden (`name`, `partner_type`, `map_tenant_slug`, `image_url`, `about_text`, `website_url`, `location_description`) bestaan ✅
 
-In de tijdlijn:
-- **Thread-filter chips** bovenaan ("Alle • Klant • Partner X • ..."), afgeleid uit unieke `contact_email` waarden.
-- Per item een **"Beantwoorden"**-knop die de composer opent met juiste recipient + "Re: " subject prefix.
+## Stappen
 
-De tab "Communicatie" verdwijnt; "Geschiedenis" blijft als aparte tab.
+### 1. Schema-uitbreiding (migratie)
 
-### Verbeterde mail-composer
+- Voeg toe aan `partners`:
+  - `is_public boolean not null default false`
+- Backfill blijft `false` → admin kiest expliciet welke partners publiek getoond mogen worden (privacy-by-default).
 
-`SendProjectEmailSheet` krijgt:
-- **Template-select** met pre-sales templates (4 nieuwe: aanvraag opvolgen, verduidelijking wensen, voorstel komt eraan, partner-vraag) plus bestaande relevante.
-- Bij keuze: subject + body worden ingevuld via een nieuwe edge function `render-email-template` die variabelen automatisch aanvult (`customer_name`, `reference_number`, `number_of_people`, `portal_url`, `event_date`).
-- **Multi-recipient checkbox-lijst**: meerdere ontvangers in één keer mogelijk; per ontvanger gaat een aparte mail uit zodat thread-isolatie en `Reply-To: reply+REF@` per geadresseerde correct blijft.
+### 2. Publieke view
 
-### Chat → e-mailmelding aan klant
+Maak `public.partners_public` aan met `security_invoker = on` zodat RLS van de aanroeper geldt. De view selecteert alleen veilige, marketing-geschikte velden uit `partners` waar `is_active = true AND is_public = true`.
 
-`notify-new-chat-reply` wordt uitgebreid: voor klant-portal conversaties wordt het customer_token van het gekoppelde project (`request_id` of `accommodation_id`) opgezocht, zodat de mail naar de klant een geldige `https://bureauvlieland.nl/klant/{token}` link bevat.
+Whitelist velden:
 
-### Mailjet & inbound flow check
+- `id`, `name`, `partner_type`
+- `map_tenant_slug` (publieke MAP-koppeling, geen secret)
+- `image_url`, `gallery_images`
+- `about_text`, `highlight_features`
+- `website_url`
+- `location_description`, `location_lat`, `location_lng`
+- `accommodation_types` (jsonb met subtypes)
+- `accommodation_description`
 
-Ik heb je hierboven al een PowerShell-snippet gegeven om de Mailjet Parse-routes en MX-records van `reply.bureauvlieland.nl` te checken. Stuur de output door, dan valideer ik of de wildcard-route (`*@reply.bureauvlieland.nl` → `https://blhspuifehausilnzwio.supabase.co/functions/v1/inbound-email`) correct staat. `verify_jwt = false` voor `inbound-email` is al in `supabase/config.toml` aanwezig.
+Bewust **niet** opgenomen: `email`, `contact_email`, `phone`, `kvk_number`, `address_*`, `bank_*`, `commission_*`, `partner_token`, `auth_user_id`, `map_api_key`, `initial_password`, `booking_contact_*`, `availability_notes`, `reference_number`, `terms_*`, login-/timestamp-velden.
 
-## Technische details
+### 3. Toegang regelen via RLS op de basistabel
 
-**Database (één migratie)**
-- 4 nieuwe rijen in `email_templates` (presales_intake_followup, presales_clarification, presales_proposal_intro, presales_partner_question). RLS staat al INSERT toe voor admins, dus alleen rij-data toevoegen.
+Omdat de view met `security_invoker` draait, moet `anon` SELECT-rechten hebben op de **gewhiteliste rijen** in `partners`. We doen dit via een nauwsluitende RLS-policy:
 
-**Backend**
-- Nieuwe edge function `render-email-template` (admin-only, gebruikt bestaande `getRenderedTemplate` shared util, vult variabelen aan vanuit `program_requests` / `accommodation_requests`). Returns `{ subject, body (plaintext), html }`.
-- `notify-new-chat-reply` aanpassing: customer-portal pad bouwt `/klant/{customer_token}`-link i.p.v. generieke baseUrl.
+```
+create policy "Anon can read public partner directory (limited)"
+on public.partners
+for select
+to anon
+using (is_active = true and is_public = true);
+```
 
-**Frontend**
-- `src/pages/admin/AdminRequestDetail.tsx`: Communicatie-tab verwijderen, `ProjectCommunicationsCard` boven tabs renderen.
-- `src/components/admin/ProjectCommunicationsCard.tsx`: thread-filter chips, "Beantwoorden"-knop per item, chat-knop in toolbar, partner-dropdown.
-- `src/components/admin/SendProjectEmailSheet.tsx`: template-select, multi-recipient lijst, loop over recipients bij submit.
-- Nieuwe `src/components/admin/ProjectChatSheet.tsx`: hergebruikt `useAdminChat` met filter op `request_id`.
+Belangrijk: RLS-policies werken op rij-niveau, niet op kolom-niveau. Een anon die rechtstreeks `partners` queryt zou nog steeds álle kolommen van een publieke rij zien. Twee opties:
 
-## Uit scope (later)
+- **Optie A (aanbevolen, eenvoudig)**: REVOKE de directe SELECT op `public.partners` voor `anon`/`authenticated` op kolom-niveau, en GRANT alleen de whitelist kolommen. PostgREST respecteert dit en `partners_public` blijft werken via security invoker.
+- **Optie B (sterkste isolatie)**: Maak de view `security_definer` (eigenaar = aparte beperkte rol) en geef anon **geen enkele** rechten op `partners`. Dan kan anon uitsluitend de view bevragen. Dit wijkt af van Supabase-best-practice (definer views) maar geeft strikte kolom-afscherming.
 
-- Rich-text editor (v1 = plaintext + nieuwe regels).
-- Bijlagen vanuit composer (kan via storage-link patroon later).
-- Aparte inbox-pagina los van projecten.
+Voorstel: **Optie A**. We zetten kolom-grants restrictief en houden RLS op `partners` strikt (`is_active AND is_public`), zodat zelfs een directe query op `partners` door anon alleen publieke rijen + whitelist-kolommen teruggeeft.
 
-## Vraag
+### 4. Admin-UI: publiek vlag
 
-Geen vragen meer — eerder al akkoord op (1) altijd-zichtbare communicatiekaart, (2) multi-recipient = aparte mails per ontvanger, (3) Mailjet check via PowerShell.
+In de partner-beheer pagina:
+
+- Nieuwe toggle "Toon op publieke partners-pagina".
+- Schrijft naar `is_public`.
+- Standaard uit.
+- Zichtbaar voor admins; niet voor partner zelf (privacy-controle blijft bij bureau).
+
+### 5. Verificatie
+
+- Manuele test als anon: `select * from partners_public;` → alleen `is_active AND is_public` rijen, alleen whitelist kolommen.
+- Manuele test als anon: `select email from partners;` → moet falen / leeg zijn.
+- Manuele test als admin: ongewijzigd toegang.
+
+## Te wijzigen bestanden / artefacten
+
+- **Migratie**: kolom `is_public`, RLS-policy op `partners`, kolom-GRANTs, view `partners_public`.
+- **Admin partners-edit pagina** (frontend): toggle voor `is_public`.
+- **Memory** (`mem://infrastructure/security-and-rls-architecture-logic`): aanvulling dat `partners_public` view de enige publieke route is en `is_public` opt-in vlag is.
+
+## Open vragen voor jou
+
+1. **Welke velden moeten écht publiek zijn?** Het lijstje hierboven is mijn voorstel; wil je iets toevoegen (bv. partner_type-specifieke labels) of weghalen (bv. lat/lng)?   
+  
+We moeten nog onderschei maken in logies / activiteitenpartner?   
+
+2. **Is er al een publieke "Onze partners" pagina/route gepland**, of wordt deze view eerst alleen door de configurator/marketing-pagina's gebruikt? Dat bepaalt of we ook frontend-werk meenemen of alleen de datalaag.  
+
+  Lovable project: [https://lovable.dev/projects/cf02a7fd-e75a-45b9-85af-9fede68316d5](https://lovable.dev/projects/cf02a7fd-e75a-45b9-85af-9fede68316d5)  
+
+3. **Akkoord met privacy-by-default (`is_public = false`)?** Anders zet ik bestaande actieve partners standaard op `true`. True please. 
+
+Geef antwoord op deze 3 punten, dan zet ik na jouw goedkeuring de migratie en code-aanpassingen klaar.

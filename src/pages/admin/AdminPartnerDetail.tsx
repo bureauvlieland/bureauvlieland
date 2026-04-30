@@ -66,6 +66,7 @@ interface Partner {
   address_city: string | null;
   commission_percentage: number;
   is_active: boolean;
+  is_public: boolean;
   auth_user_id: string | null;
   password_set_at: string | null;
   // initial_password is intentionally removed: plaintext passwords are no longer stored.
@@ -145,6 +146,7 @@ const AdminPartnerDetail = () => {
     address_city: "",
     commission_percentage: 15,
     is_active: true,
+    is_public: false,
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
     map_tenant_slug: "",
@@ -198,6 +200,7 @@ const AdminPartnerDetail = () => {
         address_city: data.address_city || "",
         commission_percentage: data.commission_percentage,
         is_active: data.is_active,
+        is_public: (data as any).is_public ?? false,
         partner_type: data.partner_type || "activity_provider",
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
         map_tenant_slug: (data as any).map_tenant_slug || "",
@@ -349,6 +352,7 @@ const AdminPartnerDetail = () => {
           address_city: formData.address_city || null,
           commission_percentage: formData.commission_percentage,
           is_active: formData.is_active,
+          is_public: formData.is_public,
           partner_type: formData.partner_type,
           accommodation_commission_percentage:
             formData.partner_type === "accommodation" || formData.partner_type === "both"
@@ -400,6 +404,7 @@ const AdminPartnerDetail = () => {
             address_city: formData.address_city || null,
             commission_percentage: formData.commission_percentage,
             is_active: formData.is_active,
+            is_public: formData.is_public,
             partner_type: formData.partner_type,
             accommodation_commission_percentage:
               formData.partner_type === "accommodation" || formData.partner_type === "both"
@@ -802,6 +807,22 @@ const AdminPartnerDetail = () => {
                     <Switch
                       checked={formData.is_active}
                       onCheckedChange={(checked) => handleChange("is_active", checked)}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Toon op publieke partners-pagina</Label>
+                      <p className="text-xs text-slate-500">
+                        Partner verschijnt in de openbare partner-directory (alleen niet-gevoelige velden)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.is_public}
+                      onCheckedChange={(checked) => handleChange("is_public", checked)}
+                      disabled={!formData.is_active}
                     />
                   </div>
 
