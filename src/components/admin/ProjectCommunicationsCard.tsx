@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
   Plus,
@@ -28,10 +36,15 @@ import {
   ChevronUp,
   Zap,
   Sparkles,
+  Reply,
+  MessagesSquare,
+  Users,
+  User,
 } from "lucide-react";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
 import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
+import { ProjectChatSheet } from "./ProjectChatSheet";
 import {
   COMMUNICATION_TYPE_CONFIG,
   EMAIL_TYPE_LABELS,
@@ -55,6 +68,8 @@ interface ProjectCommunicationsCardProps {
   highlightStatusEmail?: boolean;
 }
 
+const ALL_THREADS = "__all__";
+
 export function ProjectCommunicationsCard({
   requestId,
   accommodationId,
@@ -66,9 +81,18 @@ export function ProjectCommunicationsCard({
 }: ProjectCommunicationsCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
+  const [chatSheetOpen, setChatSheetOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [activeThread, setActiveThread] = useState<string>(ALL_THREADS);
+
+  // Composer presets
+  const [composerDefaults, setComposerDefaults] = useState<{
+    subject?: string;
+    body?: string;
+    selectedEmails?: string[];
+  }>({});
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
@@ -85,6 +109,54 @@ export function ProjectCommunicationsCard({
     deleteCommunication,
     isDeleting,
   } = useProjectCommunications({ requestId, accommodationId });
+
+  // Build full recipient list (klant + alle partners)
+  const allRecipients = useMemo(() => {
+    const list = [
+      ...(customerEmail
+        ? [{
+            label: `Klant${customerName ? ` — ${customerName}` : ""}`,
+            email: customerEmail,
+            name: customerName || "",
+            type: "customer" as const,
+          }]
+        : []),
+      ...partnerRecipients.map((p) => ({
+        label: `Partner — ${p.name}`,
+        email: p.email,
+        name: p.name,
+        type: "partner" as const,
+        partnerId: p.partnerId,
+      })),
+    ];
+    return list;
+  }, [customerEmail, customerName, partnerRecipients]);
+
+  // Build unique thread chips from communication contact_email values
+  const threads = useMemo(() => {
+    const map = new Map<string, { email: string; label: string; count: number }>();
+    communications.forEach((c) => {
+      const email = (c.contact_email || "").toLowerCase().trim();
+      if (!email) return;
+      const existing = map.get(email);
+      if (existing) {
+        existing.count++;
+      } else {
+        // Try to find a friendly label
+        const recipient = allRecipients.find((r) => r.email.toLowerCase() === email);
+        const label = recipient?.label || c.contact_name || email;
+        map.set(email, { email, label, count: 1 });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [communications, allRecipients]);
+
+  const filteredCommunications = useMemo(() => {
+    if (activeThread === ALL_THREADS) return communications;
+    return communications.filter(
+      (c) => (c.contact_email || "").toLowerCase().trim() === activeThread
+    );
+  }, [communications, activeThread]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -121,47 +193,145 @@ export function ProjectCommunicationsCard({
     return EMAIL_TYPE_LABELS[emailType] || emailType;
   };
 
-  const displayCount = expanded ? communications.length : 5;
-  const visibleCommunications = communications.slice(0, displayCount);
-  const hasMore = communications.length > 5;
+  const displayCount = expanded ? filteredCommunications.length : 5;
+  const visibleCommunications = filteredCommunications.slice(0, displayCount);
+  const hasMore = filteredCommunications.length > 5;
+
+  // Helpers to open composer with presets
+  const openCustomerEmail = () => {
+    setComposerDefaults({
+      selectedEmails: customerEmail ? [customerEmail] : [],
+    });
+    setEmailSheetOpen(true);
+  };
+  const openPartnerEmail = (email: string) => {
+    setComposerDefaults({ selectedEmails: [email] });
+    setEmailSheetOpen(true);
+  };
+  const openReply = (comm: any) => {
+    const replyTo = comm.contact_email;
+    if (!replyTo) {
+      toast.error("Geen e-mailadres bekend voor dit bericht");
+      return;
+    }
+    const subject = comm.subject
+      ? comm.subject.toLowerCase().startsWith("re:")
+        ? comm.subject
+        : `Re: ${comm.subject}`
+      : "";
+    setComposerDefaults({ selectedEmails: [replyTo], subject });
+    setEmailSheetOpen(true);
+  };
 
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-muted-foreground" />
-            Communicatie
-            {communications.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {communications.length}
-              </Badge>
-            )}
-          </CardTitle>
-          <div className="flex gap-2 flex-wrap">
-            {onOpenStatusEmail && (
+        <CardHeader className="space-y-3 pb-3">
+          <div className="flex flex-row items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              Communicatie
+              {communications.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {communications.length}
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex gap-2 flex-wrap">
+              {onOpenStatusEmail && (
+                <Button
+                  size="sm"
+                  variant={highlightStatusEmail ? "default" : "outline"}
+                  onClick={onOpenStatusEmail}
+                  className={cn(
+                    highlightStatusEmail &&
+                      "ring-2 ring-primary ring-offset-2 animate-pulse"
+                  )}
+                >
+                  <Sparkles className="h-4 w-4 mr-1" />
+                  Status update
+                </Button>
+              )}
+
+              {customerEmail && (
+                <Button size="sm" variant="default" onClick={openCustomerEmail}>
+                  <Mail className="h-4 w-4 mr-1" />
+                  Mail klant
+                </Button>
+              )}
+
+              {partnerRecipients.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Users className="h-4 w-4 mr-1" />
+                      Mail partner
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>Betrokken partners</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {partnerRecipients.map((p) => (
+                      <DropdownMenuItem
+                        key={p.partnerId}
+                        onClick={() => openPartnerEmail(p.email)}
+                      >
+                        <User className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{p.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {requestId && customerEmail && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setChatSheetOpen(true)}
+                  title="Chat met de klant in de klantenomgeving"
+                >
+                  <MessagesSquare className="h-4 w-4 mr-1" />
+                  Chat
+                </Button>
+              )}
+
+              <Button size="sm" variant="ghost" onClick={() => setSheetOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Loggen
+              </Button>
+            </div>
+          </div>
+
+          {/* Thread filter chips */}
+          {threads.length > 1 && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <span className="text-xs text-muted-foreground mr-1">Thread:</span>
               <Button
                 size="sm"
-                variant={highlightStatusEmail ? "default" : "outline"}
-                onClick={onOpenStatusEmail}
-                className={cn(
-                  highlightStatusEmail &&
-                    "ring-2 ring-primary ring-offset-2 animate-pulse"
-                )}
+                variant={activeThread === ALL_THREADS ? "secondary" : "ghost"}
+                className="h-7 text-xs"
+                onClick={() => setActiveThread(ALL_THREADS)}
               >
-                <Sparkles className="h-4 w-4 mr-1" />
-                Status update
+                Alle ({communications.length})
               </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={() => setEmailSheetOpen(true)}>
-              <Send className="h-4 w-4 mr-1" />
-              E-mail
-            </Button>
-            <Button size="sm" onClick={() => setSheetOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Loggen
-            </Button>
-          </div>
+              {threads.map((t) => (
+                <Button
+                  key={t.email}
+                  size="sm"
+                  variant={activeThread === t.email ? "secondary" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setActiveThread(t.email)}
+                >
+                  {t.label} ({t.count})
+                </Button>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -169,12 +339,16 @@ export function ProjectCommunicationsCard({
               <Skeleton className="h-16 w-full" />
               <Skeleton className="h-16 w-full" />
             </div>
-          ) : communications.length === 0 ? (
+          ) : filteredCommunications.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nog geen communicatie gelogd</p>
+              <p className="text-sm">
+                {activeThread === ALL_THREADS
+                  ? "Nog geen communicatie gelogd"
+                  : "Geen berichten in deze thread"}
+              </p>
               <p className="text-xs mt-1">
-                Voeg emails, telefoongesprekken of notities toe
+                Mail of chat met de klant of een partner via de knoppen hierboven.
               </p>
             </div>
           ) : (
@@ -183,6 +357,7 @@ export function ProjectCommunicationsCard({
                 const config = COMMUNICATION_TYPE_CONFIG[comm.communication_type as CommunicationType];
                 const isFromEmailLog = comm.source === "email_log";
                 const emailTypeLabel = isFromEmailLog ? getEmailTypeLabel(comm.email_type) : null;
+                const canReply = !!comm.contact_email;
 
                 return (
                   <div
@@ -248,16 +423,30 @@ export function ProjectCommunicationsCard({
                           </>
                         )}
                       </div>
-                      {!isFromEmailLog && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleteId(comm.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canReply && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => openReply(comm)}
+                            title="Beantwoorden"
+                          >
+                            <Reply className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {!isFromEmailLog && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setDeleteId(comm.id)}
+                            title="Verwijderen"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -278,7 +467,7 @@ export function ProjectCommunicationsCard({
                   ) : (
                     <>
                       <ChevronDown className="h-4 w-4 mr-1" />
-                      Toon alle {communications.length} berichten
+                      Toon alle {filteredCommunications.length} berichten
                     </>
                   )}
                 </Button>
@@ -299,25 +488,27 @@ export function ProjectCommunicationsCard({
 
       <SendProjectEmailSheet
         open={emailSheetOpen}
-        onOpenChange={setEmailSheetOpen}
+        onOpenChange={(o) => {
+          setEmailSheetOpen(o);
+          if (!o) setComposerDefaults({});
+        }}
         requestId={requestId}
         accommodationId={accommodationId}
-        recipients={[
-          ...(customerEmail ? [{
-            label: `Klant: ${customerName || ""}`,
-            email: customerEmail,
-            name: customerName || "",
-            type: "customer" as const,
-          }] : []),
-          ...partnerRecipients.map((p) => ({
-            label: `Partner: ${p.name}`,
-            email: p.email,
-            name: p.name,
-            type: "partner" as const,
-            partnerId: p.partnerId,
-          })),
-        ]}
+        recipients={allRecipients}
+        defaultSubject={composerDefaults.subject}
+        defaultBody={composerDefaults.body}
+        defaultSelectedEmails={composerDefaults.selectedEmails}
       />
+
+      {requestId && (
+        <ProjectChatSheet
+          open={chatSheetOpen}
+          onOpenChange={setChatSheetOpen}
+          requestId={requestId}
+          customerName={customerName}
+          customerEmail={customerEmail}
+        />
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

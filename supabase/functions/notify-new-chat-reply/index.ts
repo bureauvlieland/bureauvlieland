@@ -103,6 +103,31 @@ Deno.serve(async (req) => {
       portalLink = `${baseUrl}/programma/${conv.source_token}?chat=open`;
     } else if (conv.source === "partner_portal") {
       portalLink = `${baseUrl}/partner/dashboard`;
+    } else if (conv.request_id) {
+      // Admin-initiated chat from a project — resolve customer_token and link to klant portal
+      const { data: pr } = await supabase
+        .from("program_requests")
+        .select("customer_token, reference_number")
+        .eq("id", conv.request_id)
+        .maybeSingle();
+      if (pr?.customer_token) {
+        portalLink = `${baseUrl}/programma/${pr.customer_token}?chat=open`;
+      }
+      if (pr?.reference_number) {
+        emailSubject = `Nieuw bericht over uw aanvraag ${pr.reference_number}`;
+      }
+    } else if (conv.accommodation_id) {
+      const { data: ar } = await supabase
+        .from("accommodation_requests")
+        .select("customer_token, reference_number")
+        .eq("id", conv.accommodation_id)
+        .maybeSingle();
+      if (ar?.customer_token) {
+        portalLink = `${baseUrl}/logies/${ar.customer_token}?chat=open`;
+      }
+      if (ar?.reference_number) {
+        emailSubject = `Nieuw bericht over uw logiesaanvraag ${ar.reference_number}`;
+      }
     }
 
     // Try DB template
