@@ -327,6 +327,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accommodation_quotes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accommodation_quotes_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
@@ -542,6 +549,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "admin_todos_related_partner_id_fkey"
+            columns: ["related_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "admin_todos_related_request_id_fkey"
             columns: ["related_request_id"]
             isOneToOne: false
@@ -719,6 +733,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_blocks_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1075,6 +1096,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "commission_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       email_log: {
@@ -1264,6 +1292,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "map_bookings_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_extra_presets: {
@@ -1318,6 +1353,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_extra_presets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1462,6 +1504,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "partner_purchase_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "partner_purchase_invoices_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
@@ -1533,6 +1582,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_room_types_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_unavailability: {
@@ -1571,6 +1627,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_unavailability_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partners: {
@@ -1598,6 +1661,7 @@ export type Database = {
           image_url: string | null
           invited_at: string | null
           is_active: boolean
+          is_public: boolean
           kvk_number: string | null
           last_login_at: string | null
           location_description: string | null
@@ -1641,6 +1705,7 @@ export type Database = {
           image_url?: string | null
           invited_at?: string | null
           is_active?: boolean
+          is_public?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
           location_description?: string | null
@@ -1684,6 +1749,7 @@ export type Database = {
           image_url?: string | null
           invited_at?: string | null
           is_active?: boolean
+          is_public?: boolean
           kvk_number?: string | null
           last_login_at?: string | null
           location_description?: string | null
@@ -2503,7 +2569,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      partners_public: {
+        Row: {
+          about_text: string | null
+          accommodation_description: string | null
+          accommodation_types: Json | null
+          gallery_images: Json | null
+          highlight_features: Json | null
+          id: string | null
+          image_url: string | null
+          location_description: string | null
+          location_lat: number | null
+          location_lng: number | null
+          map_tenant_slug: string | null
+          name: string | null
+          partner_type: string | null
+          website_url: string | null
+        }
+        Insert: {
+          about_text?: string | null
+          accommodation_description?: string | null
+          accommodation_types?: Json | null
+          gallery_images?: Json | null
+          highlight_features?: Json | null
+          id?: string | null
+          image_url?: string | null
+          location_description?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          map_tenant_slug?: string | null
+          name?: string | null
+          partner_type?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          about_text?: string | null
+          accommodation_description?: string | null
+          accommodation_types?: Json | null
+          gallery_images?: Json | null
+          highlight_features?: Json | null
+          id?: string | null
+          image_url?: string | null
+          location_description?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          map_tenant_slug?: string | null
+          name?: string | null
+          partner_type?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_invoicing_mode_for_accommodation: {
