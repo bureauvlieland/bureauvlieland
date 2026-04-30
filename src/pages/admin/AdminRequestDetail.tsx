@@ -1393,11 +1393,29 @@ const AdminRequestDetail = () => {
           />
 
 
+          {/* Communicatie-hub: altijd zichtbaar boven de tabs voor pre-sales en lopende correspondentie */}
+          <ProjectCommunicationsCard
+            requestId={request.id}
+            accommodationId={request.linked_accommodation_id || undefined}
+            customerName={request.customer_name}
+            customerEmail={request.customer_email}
+            onOpenStatusEmail={() => setStatusEmailOpen(true)}
+            highlightStatusEmail={highlightStatusEmail}
+            partnerRecipients={
+              Array.from(
+                new Map(
+                  items
+                    .filter((i) => i.provider_email && i.provider_id)
+                    .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
+                ).values()
+              )
+            }
+          />
+
           <Tabs defaultValue="activiteiten" className="space-y-4">
             <TabsList>
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
               <TabsTrigger value="financien">Financiën</TabsTrigger>
-              <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
               <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
             </TabsList>
 
@@ -2027,25 +2045,7 @@ const AdminRequestDetail = () => {
             </TabsContent>
 
             {/* Tab: Communicatie */}
-            <TabsContent value="communicatie">
-              <ProjectCommunicationsCard
-                requestId={request.id}
-                accommodationId={request.linked_accommodation_id || undefined}
-                customerName={request.customer_name}
-                customerEmail={request.customer_email}
-                onOpenStatusEmail={() => setStatusEmailOpen(true)}
-                highlightStatusEmail={highlightStatusEmail}
-                partnerRecipients={
-                  Array.from(
-                    new Map(
-                      items
-                        .filter((i) => i.provider_email && i.provider_id)
-                        .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
-                    ).values()
-      )
-                }
-              />
-            </TabsContent>
+            {/* Tab "Communicatie" verwijderd — kaart staat nu permanent boven de tabs */}
 
             {/* Tab: Geschiedenis */}
             <TabsContent value="geschiedenis">
