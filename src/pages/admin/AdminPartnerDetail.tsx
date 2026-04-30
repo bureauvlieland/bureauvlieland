@@ -404,6 +404,7 @@ const AdminPartnerDetail = () => {
             address_city: formData.address_city || null,
             commission_percentage: formData.commission_percentage,
             is_active: formData.is_active,
+            is_public: formData.is_public,
             partner_type: formData.partner_type,
             accommodation_commission_percentage:
               formData.partner_type === "accommodation" || formData.partner_type === "both"
