@@ -66,6 +66,7 @@ interface Partner {
   address_city: string | null;
   commission_percentage: number;
   is_active: boolean;
+  is_public: boolean;
   auth_user_id: string | null;
   password_set_at: string | null;
   // initial_password is intentionally removed: plaintext passwords are no longer stored.
