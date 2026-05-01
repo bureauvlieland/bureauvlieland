@@ -18,7 +18,7 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
 import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
@@ -87,7 +87,16 @@ export const CustomerProgramItem = ({
     && !item.customer_accepted_at
     && !item.customer_approved_at
     && (isQuoteMode ? isQuoteItemAwaitingCustomerApproval(item) : true);
-  
+
+  // Bureau Vlieland heeft de prijs aangepast nadat de klant al akkoord had gegeven —
+  // de DB-trigger reset customer_approved_at, dus de klant moet opnieuw bevestigen.
+  // We tonen dit met een aparte amber banner én een pill in de header.
+  const customerApprovedTs = item.customer_approved_at ? new Date(item.customer_approved_at).getTime() : 0;
+  const adminPriceUpdatedTs = item.admin_price_override_updated_at ? new Date(item.admin_price_override_updated_at).getTime() : 0;
+  const priceChangedSinceApproval = adminPriceUpdatedTs > 0 && customerApprovedTs > 0 && adminPriceUpdatedTs > customerApprovedTs;
+  const priceChangeNeedsAttention = !isSelfArranged
+    && (priceChangedSinceApproval || (needsCustomerAction && adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
+
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
     new Date(item.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
@@ -141,6 +150,12 @@ export const CustomerProgramItem = ({
                     isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : 
                     undefined
                   } />
+                )}
+                {priceChangeNeedsAttention && (
+                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Prijs gewijzigd
+                  </Badge>
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -252,8 +267,18 @@ export const CustomerProgramItem = ({
             </div>
           )}
 
+          {/* Banner: prijs is door Bureau Vlieland aangepast — klant moet opnieuw akkoord geven */}
+          {priceChangeNeedsAttention && !readOnly && (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                De prijs van dit onderdeel is door Bureau Vlieland aangepast. Bekijk de nieuwe prijs hieronder en geef opnieuw uw akkoord.
+              </span>
+            </div>
+          )}
+
           {/* Action hint for items needing customer approval */}
-          {needsCustomerAction && !readOnly && (
+          {needsCustomerAction && !readOnly && !priceChangeNeedsAttention && (
             <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm text-blue-700 dark:text-blue-300">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
