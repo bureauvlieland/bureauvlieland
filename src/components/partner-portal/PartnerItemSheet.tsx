@@ -1114,12 +1114,24 @@ export const PartnerItemSheet = ({
               </div>
             )}
 
-            {/* Accepted: Mark as executed */}
+            {/* Accepted: Mark as executed (geblokkeerd zolang er een open prijswijziging is) */}
             {(item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number && (
-              <Button onClick={handleMarkExecuted} className="w-full" variant="secondary" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                Markeer als uitgevoerd
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleMarkExecuted}
+                  className="w-full"
+                  variant="secondary"
+                  disabled={isSubmitting || hasOpenAdminPriceChange}
+                >
+                  {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+                  Markeer als uitgevoerd
+                </Button>
+                {hasOpenAdminPriceChange && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 text-center">
+                    Reageer eerst op de nieuwe prijs van Bureau Vlieland.
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Executed: Register invoice */}
