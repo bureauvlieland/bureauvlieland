@@ -252,8 +252,9 @@ export const PartnerItemSheet = ({
       if (item.preferred_time) setProposedTime(item.preferred_time);
       // Pre-fill price from admin override if available
       if (item.admin_price_override && !quotedPrice) {
-        const priceValue = item.price_type === "per_person" 
-          ? item.admin_price_override * request.number_of_people 
+        const effectivePeople = item.override_people ?? request.number_of_people;
+        const priceValue = (item.price_type === "per_person" || item.price_type === "per_person_per_day")
+          ? item.admin_price_override * effectivePeople
           : item.admin_price_override;
         setQuotedPrice(priceValue.toFixed(2).replace(".", ","));
       }
@@ -431,31 +432,48 @@ export const PartnerItemSheet = ({
           )}
 
           {/* Admin price override - expected price */}
-          {item.admin_price_override !== null && item.admin_price_override !== undefined && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Verwachte prijs</h3>
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Euro className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-lg">
-                      €{(item.price_type === "per_person" || item.price_type === "per_person_per_day")
-                        ? (item.admin_price_override * request.number_of_people).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        : item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      }
-                    </span>
+          {item.admin_price_override !== null && item.admin_price_override !== undefined && (() => {
+            const effectivePeople = item.override_people ?? request.number_of_people;
+            const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+            const totalPrice = isPerPerson
+              ? item.admin_price_override * effectivePeople
+              : item.admin_price_override;
+            const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+            const isOpenChange = !!item.admin_price_override_updated_at &&
+              (!ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime()) &&
+              !!item.quoted_price; // alleen tonen als er al een eerdere bevestiging was
+            return (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    {isOpenChange ? "Nieuwe prijs van Bureau Vlieland" : "Verwachte prijs"}
+                  </h3>
+                  {isOpenChange && (
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
+                      <p className="text-sm text-amber-800 dark:text-amber-300">
+                        Bureau Vlieland heeft de prijs aangepast. Bevestig de nieuwe prijs of pas hem aan via je reactie.
+                      </p>
+                    </div>
+                  )}
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-lg">
+                        €{totalPrice.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isPerPerson
+                        ? `€${item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."} × ${effectivePeople} personen${item.override_people && item.override_people !== request.number_of_people ? " (afwijkend aantal voor dit onderdeel)" : ""}`
+                        : "Totaalprijs"
+                      } · Bevestig of pas aan bij je reactie.
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {(item.price_type === "per_person" || item.price_type === "per_person_per_day")
-                      ? `€${item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."} × ${request.number_of_people} personen`
-                      : "Totaalprijs"
-                    } · Bevestig of pas aan bij uw reactie.
-                  </p>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
 
           {/* Price indication (from configurator) */}
           {item.price_indication && !item.admin_price_override && (

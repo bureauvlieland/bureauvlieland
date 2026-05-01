@@ -17,6 +17,73 @@ export function getEffectivePeople(
   return item.override_people ?? programPeople;
 }
 
+/**
+ * Single source of truth for the per-person UNIT price shown on every portal
+ * (admin, partner, customer). Always derived from the same hierarchy:
+ *   1. quoted_price (group total) ÷ effective people  → wins when present
+ *   2. admin_price_override (already a unit price for per_person variants)
+ *   3. null when nothing is known yet
+ */
+export function getDisplayUnitPrice(
+  item: {
+    quoted_price?: number | null;
+    admin_price_override?: number | null;
+    price_type?: string | null;
+    override_people?: number | null;
+  },
+  programPeople: number,
+): number | null {
+  const effectivePeople = getEffectivePeople(item, programPeople);
+  if (item.quoted_price != null) {
+    if (isPerPersonItem(item) && effectivePeople > 0) {
+      return item.quoted_price / effectivePeople;
+    }
+    return item.quoted_price;
+  }
+  if (item.admin_price_override != null) {
+    return item.admin_price_override;
+  }
+  return null;
+}
+
+/**
+ * Single source of truth for the GROUP total of one item.
+ * Identical to getItemLineTotal but exposed under a clearer name so callers in
+ * partner/admin code do not reach for raw fields.
+ */
+export function getDisplayLineTotal(
+  item: {
+    quoted_price?: number | null;
+    admin_price_override?: number | null;
+    price_type?: string | null;
+    override_people?: number | null;
+  },
+  programPeople: number,
+  numberOfDays: number = 1,
+): number | null {
+  if (item.quoted_price != null) return item.quoted_price;
+  if (item.admin_price_override != null) {
+    const effectivePeople = getEffectivePeople(item, programPeople);
+    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
+    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+    return item.admin_price_override * personMultiplier * dayMultiplier;
+  }
+  return null;
+}
+
+/** Whether the admin has a newer price-override than the last partner confirmation. */
+export function hasOpenAdminPriceChange(item: {
+  admin_price_override_updated_at?: string | null;
+  partner_price_change_acknowledged_at?: string | null;
+  quoted_at?: string | null;
+  admin_price_override?: number | null;
+}): boolean {
+  if (item.admin_price_override == null || !item.admin_price_override_updated_at) return false;
+  const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+  if (!ack) return true;
+  return new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();
+}
+
 /** Whether this item should be multiplied by number of people */
 export function isPerPersonItem(item: { price_type?: string | null }): boolean {
   return !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";

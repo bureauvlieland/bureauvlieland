@@ -1883,6 +1883,7 @@ export type Database = {
           actual_invoiced_excl_vat: number | null
           admin_price_notes: string | null
           admin_price_override: number | null
+          admin_price_override_updated_at: string | null
           block_category: string
           block_id: string | null
           block_name: string
@@ -1916,6 +1917,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           override_people: number | null
+          partner_price_change_acknowledged_at: string | null
           preferred_time: string | null
           price_indication: string | null
           price_type: string | null
@@ -1944,6 +1946,7 @@ export type Database = {
           actual_invoiced_excl_vat?: number | null
           admin_price_notes?: string | null
           admin_price_override?: number | null
+          admin_price_override_updated_at?: string | null
           block_category: string
           block_id?: string | null
           block_name: string
@@ -1977,6 +1980,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           override_people?: number | null
+          partner_price_change_acknowledged_at?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
@@ -2005,6 +2009,7 @@ export type Database = {
           actual_invoiced_excl_vat?: number | null
           admin_price_notes?: string | null
           admin_price_override?: number | null
+          admin_price_override_updated_at?: string | null
           block_category?: string
           block_id?: string | null
           block_name?: string
@@ -2038,6 +2043,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           override_people?: number | null
+          partner_price_change_acknowledged_at?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
