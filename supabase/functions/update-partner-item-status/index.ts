@@ -291,6 +291,7 @@ Deno.serve(async (req) => {
       updateData.quoted_price = quotedPrice;
       updateData.quoted_at = new Date().toISOString();
       updateData.quoted_notes = quotedNotes || null;
+      updateData.partner_price_change_acknowledged_at = new Date().toISOString();
       // Store proposed time as the confirmed time for this proposal
       updateData.proposed_time = proposedTime || null;
       updateData.proposed_date = proposedDate || null;
@@ -304,6 +305,7 @@ Deno.serve(async (req) => {
         updateData.quoted_price = quotedPrice;
         updateData.quoted_at = new Date().toISOString();
         updateData.quoted_notes = quotedNotes || null;
+        updateData.partner_price_change_acknowledged_at = new Date().toISOString();
       }
     }
 
