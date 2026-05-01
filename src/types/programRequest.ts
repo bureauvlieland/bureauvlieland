@@ -327,6 +327,12 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
   const customerApproved = relevantItems.filter(i => !!i.customer_approved_at).length;
   // Aantal items dat de admin nog niet heeft uitgestuurd naar partners
   const awaitingPartnerSend = relevantItems.filter(i => i.skip_partner_notification === true && !isItemTrulyConfirmed(i)).length;
+  // Aantal items waarvoor de admin de prijs heeft aangepast en de klant opnieuw moet akkoord geven
+  const priceChanged = relevantItems.filter(i => {
+    if (!i.admin_price_override_updated_at) return false;
+    if (!i.customer_approved_at) return false;
+    return new Date(i.admin_price_override_updated_at).getTime() > new Date(i.customer_approved_at).getTime();
+  }).length;
 
   return {
     total,
@@ -338,6 +344,7 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
     counter_proposed,
     customerApproved,
     awaitingPartnerSend,
+    priceChanged,
     progress: total > 0 ? Math.round((confirmed / total) * 100) : 0,
   };
 }
