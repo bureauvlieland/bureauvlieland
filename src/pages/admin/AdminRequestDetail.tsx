@@ -1993,6 +1993,84 @@ const AdminRequestDetail = () => {
 
             {/* Tab: Financiën */}
             <TabsContent value="financien" className="space-y-6">
+              {/* Prijscontrole — items met openstaande admin-prijswijziging of inconsistentie */}
+              {(() => {
+                const programPeople = request?.number_of_people || 0;
+                const numberOfDays = Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1;
+                const flagged = items
+                  .filter((it: any) => it.status !== "cancelled" && it.day_index !== -1)
+                  .map((it: any) => {
+                    const computed = getDisplayLineTotal(it as any, programPeople, numberOfDays);
+                    const quoted = it.quoted_price != null ? Number(it.quoted_price) : null;
+                    const delta = computed != null && quoted != null ? Math.abs(quoted - computed) : 0;
+                    const openChange = hasOpenAdminPriceChange(it as any);
+                    const inconsistent = quoted != null && computed != null && delta > 0.01 && it.admin_price_override != null;
+                    return { it, computed, quoted, delta, openChange, inconsistent };
+                  })
+                  .filter((row) => row.openChange || row.inconsistent);
+
+                if (flagged.length === 0) return null;
+
+                const handleSync = async (itemId: string, computed: number | null) => {
+                  if (computed == null) return;
+                  try {
+                    const { error } = await supabase
+                      .from("program_request_items")
+                      .update({
+                        quoted_price: computed,
+                        admin_price_override_updated_at: new Date().toISOString(),
+                      })
+                      .eq("id", itemId);
+                    if (error) throw error;
+                    toast.success("quoted_price gesynchroniseerd met admin-prijs");
+                    fetchRequestData();
+                  } catch (err) {
+                    console.error("sync price failed", err);
+                    toast.error("Kon prijs niet synchroniseren");
+                  }
+                };
+
+                return (
+                  <Card className="border-amber-300 dark:border-amber-800">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                        <AlertTriangle className="h-5 w-5" />
+                        Prijscontrole
+                      </CardTitle>
+                      <CardDescription>
+                        Onderdelen met een openstaande prijswijziging of een verschil tussen
+                        de berekende en de gequoteerde prijs. Gebruik 'Synchroniseer' om
+                        <code className="mx-1">quoted_price</code> gelijk te zetten aan de
+                        berekende waarde.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {flagged.map(({ it, computed, quoted, delta, openChange, inconsistent }) => (
+                        <div key={it.id} className="flex items-center justify-between gap-3 p-3 rounded-md border bg-amber-50/50 dark:bg-amber-950/20">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{it.block_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {openChange && <span className="mr-2">Wacht op nieuwe bevestiging</span>}
+                              {inconsistent && (
+                                <span>
+                                  Berekend: €{(computed ?? 0).toFixed(2)} · Gequoteerd: €{(quoted ?? 0).toFixed(2)} · Δ €{delta.toFixed(2)}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          {inconsistent && (
+                            <Button size="sm" variant="outline" onClick={() => handleSync(it.id, computed)}>
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                              Synchroniseer
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
               {/* Overige kosten section */}
               {items.filter(item => item.day_index === -1).length > 0 && (
                 <Card>
