@@ -984,6 +984,18 @@ const AdminRequestDetail = () => {
             console.error("Could not notify partner of price change:", notifyErr);
           }
         }
+
+        // Notificeer ook de klant wanneer deze al eerder akkoord had gegeven —
+        // de DB-trigger reset customer_approved_at, dus de klant moet opnieuw bevestigen.
+        if (hadCustomerApproval && price !== null) {
+          try {
+            await supabase.functions.invoke("notify-customer-price-change", {
+              body: { item_id: itemId, origin: window.location.origin },
+            });
+          } catch (notifyErr) {
+            console.error("Could not notify customer of price change:", notifyErr);
+          }
+        }
       }
 
       toast.success(
