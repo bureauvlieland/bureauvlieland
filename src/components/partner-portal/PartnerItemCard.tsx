@@ -161,23 +161,38 @@ export const PartnerItemCard = ({
         {request.invoicing_mode === "bureau_central" && (
           <BureauCentralBadge variant="compact" />
         )}
-        {/* Admin price override - expected price */}
-        {item.admin_price_override !== null && item.admin_price_override !== undefined && !item.quoted_price && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
-            <span className="text-muted-foreground">Verwachte prijs:</span>{" "}
-            <span className="font-medium">
-              €{(item.price_type === "per_person" || item.price_type === "per_person_per_day")
-                ? (item.admin_price_override * request.number_of_people).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              }
-            </span>
-            {(item.price_type === "per_person" || item.price_type === "per_person_per_day") && (
-              <span className="text-xs text-muted-foreground ml-1">
-                (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."})
+        {/* Admin price override - expected price (only when not yet confirmed) */}
+        {item.admin_price_override !== null && item.admin_price_override !== undefined && !item.quoted_price && (() => {
+          const effectivePeople = item.override_people ?? request.number_of_people;
+          const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+          const total = isPerPerson ? item.admin_price_override * effectivePeople : item.admin_price_override;
+          return (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+              <span className="text-muted-foreground">Verwachte prijs:</span>{" "}
+              <span className="font-medium">
+                €{total.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-            )}
-          </div>
-        )}
+              {isPerPerson && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."} × {effectivePeople})
+                </span>
+              )}
+            </div>
+          );
+        })()}
+        {/* Open price change banner — admin changed price after partner already confirmed */}
+        {item.admin_price_override !== null && item.admin_price_override !== undefined && item.quoted_price && item.admin_price_override_updated_at && (() => {
+          const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+          const isOpenChange = !ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();
+          if (!isOpenChange) return null;
+          return (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-sm">
+              <span className="font-medium text-amber-800 dark:text-amber-300">
+                Bureau Vlieland heeft een nieuwe prijs voorgesteld — bekijk en bevestig.
+              </span>
+            </div>
+          );
+        })()}
         {item.price_indication && !item.admin_price_override && !item.quoted_price && (
           <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 text-sm">
             <span className="text-muted-foreground">Indicatieve prijs (klant zag):</span>{" "}
