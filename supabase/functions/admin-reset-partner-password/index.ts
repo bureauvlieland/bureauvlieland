@@ -1,7 +1,7 @@
 // Admin "reset password": send the partner a fresh one-time set-password link.
 // No plaintext password is generated or stored anywhere.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml } from "../_shared/email-templates.ts";
+import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
