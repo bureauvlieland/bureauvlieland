@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
         Messages: [
           {
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-            To: [{ Email: trimmedEmail, Name: partner.name }],
+            To: [{ Email: getRecipientEmail(trimmedEmail, origin), Name: partner.name }],
             Subject: emailSubject,
             HTMLPart: htmlBody,
           },
