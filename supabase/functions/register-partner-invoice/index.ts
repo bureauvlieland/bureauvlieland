@@ -310,7 +310,8 @@ Deno.serve(async (req) => {
       getRecipientEmail("erwin@bureauvlieland.nl", origin),
       "Bureau Vlieland",
       `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
-      bureauEmailHtml
+      bureauEmailHtml,
+      item.program_requests?.reference_number || null
     );
 
     return new Response(
