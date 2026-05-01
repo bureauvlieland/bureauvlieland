@@ -181,10 +181,12 @@ export function getPortalBaseUrl(origin?: string): string {
 }
 
 /**
- * Check if we're in test mode (not production)
+ * Check if we're in test mode (preview/dev), based on the request origin.
+ * Cron-triggered functions (no origin) are treated as PRODUCTION to avoid
+ * misrouting reminder emails to the test address on the live DB.
  */
 export function isTestMode(origin?: string): boolean {
-  if (!origin) return true;
+  if (!origin) return false;
   return !origin.includes("bureauvlieland.nl") && !origin.includes("bureauvlieland.lovable.app");
 }
 
