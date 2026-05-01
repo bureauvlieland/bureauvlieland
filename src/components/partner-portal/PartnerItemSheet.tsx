@@ -156,6 +156,69 @@ export const PartnerItemSheet = ({
   // Can respond if pending, alternative, or counter_proposed status
   const canRespond = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
 
+  // ===== Open admin price change detection =====
+  const effectivePeopleForItem = item.override_people ?? request.number_of_people;
+  const isPerPersonPriceType = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+  const adminTotal = item.admin_price_override != null
+    ? (isPerPersonPriceType ? item.admin_price_override * effectivePeopleForItem : item.admin_price_override)
+    : null;
+  const _ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+  const hasOpenAdminPriceChange =
+    item.admin_price_override != null &&
+    !!item.admin_price_override_updated_at &&
+    !!item.quoted_price && // alleen relevant als er al eerder een bevestigde prijs was
+    (!_ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(_ack).getTime());
+  // Partner mag akkoord/tegenvoorstel doen zolang er nog geen factuur is en het item niet geannuleerd is
+  const canAcknowledgePriceChange =
+    hasOpenAdminPriceChange &&
+    !item.invoiced_number &&
+    item.status !== "cancelled" &&
+    item.status !== "executed";
+
+  const formatEur = (n: number) =>
+    n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleAcceptNewAdminPrice = async () => {
+    if (adminTotal == null) return;
+    setIsSubmitting(true);
+    const ok = await onStatusUpdate(
+      "acknowledge_price_change",
+      undefined,
+      adminTotal,
+      "Akkoord met prijswijziging Bureau Vlieland",
+      undefined,
+      undefined,
+    );
+    setIsSubmitting(false);
+    if (ok) onClose();
+  };
+
+  const handleSubmitPriceCounter = async () => {
+    setPriceCounterError("");
+    const normalized = priceCounterValue.replace(",", ".").trim();
+    const parsed = parseFloat(normalized);
+    if (!normalized || isNaN(parsed) || parsed <= 0) {
+      setPriceCounterError("Vul een geldige prijs in (groter dan 0).");
+      return;
+    }
+    setIsSubmitting(true);
+    const ok = await onStatusUpdate(
+      "acknowledge_price_change",
+      undefined,
+      parsed,
+      priceCounterNotes || undefined,
+      undefined,
+      undefined,
+    );
+    setIsSubmitting(false);
+    if (ok) {
+      setShowPriceCounterForm(false);
+      setPriceCounterValue("");
+      setPriceCounterNotes("");
+      onClose();
+    }
+  };
+
   const handleSubmitResponse = async () => {
     // Validate based on response type
     let hasError = false;
