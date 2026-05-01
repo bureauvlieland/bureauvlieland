@@ -88,17 +88,12 @@ export const CustomerProgramItem = ({
     && !item.customer_approved_at
     && (isQuoteMode ? isQuoteItemAwaitingCustomerApproval(item) : true);
 
-  // Bureau Vlieland heeft de prijs aangepast nadat de klant al akkoord had gegeven.
-  // De klant moet opnieuw bevestigen. We tonen dit met een aparte amber banner én een pill.
-  const hasOpenAdminPriceChange = !isSelfArranged
-    && !!item.admin_price_override_updated_at
-    && !!item.customer_approved_at === false // approval is reset by trigger, but we double-check via timestamp
-    && !!item.admin_price_override_updated_at;
+  // Bureau Vlieland heeft de prijs aangepast nadat de klant al akkoord had gegeven —
+  // de DB-trigger reset customer_approved_at, dus de klant moet opnieuw bevestigen.
+  // We tonen dit met een aparte amber banner én een pill in de header.
   const customerApprovedTs = item.customer_approved_at ? new Date(item.customer_approved_at).getTime() : 0;
   const adminPriceUpdatedTs = item.admin_price_override_updated_at ? new Date(item.admin_price_override_updated_at).getTime() : 0;
-  const priceChangedSinceApproval = adminPriceUpdatedTs > 0
-    && customerApprovedTs > 0
-    && adminPriceUpdatedTs > customerApprovedTs;
+  const priceChangedSinceApproval = adminPriceUpdatedTs > 0 && customerApprovedTs > 0 && adminPriceUpdatedTs > customerApprovedTs;
   const priceChangeNeedsAttention = !isSelfArranged
     && (priceChangedSinceApproval || (needsCustomerAction && adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
 
