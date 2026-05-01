@@ -288,3 +288,148 @@ export function buildReplyTo(referenceNumber: string | null | undefined): { Emai
     Name: SENDER_NAME,
   };
 }
+
+// ============================================================
+// Email visual harmonization (Phase 3)
+// Standard HTML skeleton, header (logo) and footer (app_settings)
+// ============================================================
+
+const LOGO_URL = "https://bureauvlieland.nl/email-logo.png";
+const BRAND_COLOR = "#0F4C5C"; // Bureau Vlieland deep teal
+const BRAND_ACCENT = "#E36414"; // warm accent
+
+interface BrandingSettings {
+  company_name: string;
+  address: string;
+  phone: string;
+  admin_email: string;
+  kvk: string;
+  iban: string;
+}
+
+let cachedBranding: BrandingSettings | null = null;
+
+async function getBrandingSettings(supabase: any): Promise<BrandingSettings> {
+  if (cachedBranding) return cachedBranding;
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("id, value")
+      .in("id", [
+        "bureau_company_name",
+        "bureau_address",
+        "bureau_phone",
+        "bureau_admin_email",
+        "bureau_kvk_number",
+        "bureau_iban",
+      ]);
+    const map: Record<string, string> = {};
+    for (const row of data || []) {
+      map[row.id] = typeof row.value === "string" ? row.value : JSON.stringify(row.value);
+    }
+    cachedBranding = {
+      company_name: map.bureau_company_name || "Bureau Vlieland B.V.",
+      address: map.bureau_address || "",
+      phone: map.bureau_phone || "+31 562 700 208",
+      admin_email: map.bureau_admin_email || "administratie@bureauvlieland.nl",
+      kvk: map.bureau_kvk_number || "",
+      iban: map.bureau_iban || "",
+    };
+    return cachedBranding;
+  } catch (err) {
+    console.error("Failed to load branding settings", err);
+    return {
+      company_name: "Bureau Vlieland B.V.",
+      address: "",
+      phone: "+31 562 700 208",
+      admin_email: "administratie@bureauvlieland.nl",
+      kvk: "",
+      iban: "",
+    };
+  }
+}
+
+/**
+ * Strip outer document chrome (DOCTYPE/html/head/body) so we can re-wrap
+ * with our standard skeleton. Preserves inner body content.
+ */
+function extractInnerContent(html: string): string {
+  let content = html.trim();
+  // Already wrapped by us? Mark via comment.
+  if (content.includes("<!--BV_WRAPPED-->")) return content;
+
+  const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch) {
+    content = bodyMatch[1].trim();
+  } else {
+    // Strip stray DOCTYPE/html/head if present without body tag
+    content = content
+      .replace(/<!DOCTYPE[^>]*>/i, "")
+      .replace(/<\/?html[^>]*>/gi, "")
+      .replace(/<head[\s\S]*?<\/head>/i, "")
+      .replace(/<meta[^>]*>/gi, "")
+      .replace(/<title[\s\S]*?<\/title>/i, "")
+      .trim();
+  }
+  // Strip any pre-existing top-level outer wrapper div with max-width that
+  // mimics our old skeleton, to avoid double padding. Keep content intact.
+  return content;
+}
+
+/**
+ * Wrap rendered email body in branded HTML skeleton.
+ * - Header with logo on brand color
+ * - Content area on white with comfortable padding
+ * - Footer with company info from app_settings
+ */
+export async function wrapEmailHtml(innerHtml: string, supabase: any): Promise<string> {
+  const branding = await getBrandingSettings(supabase);
+  const inner = extractInnerContent(innerHtml);
+
+  const footerLines: string[] = [];
+  footerLines.push(`<strong>${branding.company_name}</strong>`);
+  if (branding.address) footerLines.push(branding.address);
+  const contactBits = [branding.phone, branding.admin_email].filter(Boolean).join(" &middot; ");
+  if (contactBits) footerLines.push(contactBits);
+  const legalBits = [
+    branding.kvk ? `KvK ${branding.kvk}` : "",
+    branding.iban ? `IBAN ${branding.iban}` : "",
+  ].filter(Boolean).join(" &middot; ");
+  if (legalBits) footerLines.push(legalBits);
+
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bureau Vlieland</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color:#1a1a1a;">
+<!--BV_WRAPPED-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4; padding:24px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <tr>
+          <td style="background-color:${BRAND_COLOR}; padding:20px 32px; text-align:left;">
+            <img src="${LOGO_URL}" alt="Bureau Vlieland" width="160" style="display:block; max-width:160px; height:auto; border:0;">
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px; font-size:15px; line-height:1.6; color:#1a1a1a;">
+            ${inner}
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#fafafa; border-top:3px solid ${BRAND_ACCENT}; padding:20px 32px; font-size:12px; line-height:1.5; color:#666666;">
+            ${footerLines.map(l => `<div style="margin-bottom:2px;">${l}</div>`).join("")}
+            <div style="margin-top:10px; color:#999999;">Deze e-mail is automatisch verzonden via het Bureau Vlieland systeem.</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+}
