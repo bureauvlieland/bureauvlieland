@@ -142,6 +142,25 @@ const cases: Case[] = [
       assertEq(getDisplayLineTotal(after, 10), 250, "klant ziet €250");
     },
   },
+  {
+    name: "Doeksen-case: open admin-prijswijziging — klant blijft oude quoted_price zien tot partner bevestigt",
+    run: () => {
+      // Reproduceert exact het echte scenario: quoted_price=503.58, override=570.60 (total)
+      const item = {
+        quoted_price: 503.58,
+        admin_price_override: 570.60,
+        price_type: "total" as const,
+        override_people: 30,
+        admin_price_override_updated_at: "2026-05-01T13:13:00Z",
+        partner_price_change_acknowledged_at: "2026-05-01T12:11:00Z",
+        quoted_at: "2026-05-01T12:11:00Z",
+      };
+      // Klantportaal blijft de bevestigde partnerprijs tonen
+      assertEq(getDisplayLineTotal(item, 30), 503.58, "klant ziet bevestigde prijs");
+      // Maar admin/partner zien een open prijswijziging
+      assertEq(hasOpenAdminPriceChange(item), true, "open admin-wijziging gedetecteerd");
+    },
+  },
 ];
 
 export function runPortalPricingConsistencyChecks(): { passed: number; failed: number } {
