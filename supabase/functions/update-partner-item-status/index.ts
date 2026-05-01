@@ -346,7 +346,9 @@ Deno.serve(async (req) => {
     }
 
     // Log to history
-    const historyNotes = status === "confirmed" && quotedPrice
+    const historyNotes = isPriceAck && quotedPrice
+      ? `Partner heeft prijswijziging beantwoord — nieuwe prijs €${quotedPrice.toFixed(2)}${quotedNotes ? ` (${quotedNotes})` : ""}`
+      : status === "confirmed" && quotedPrice
       ? `Partner heeft bevestigd voor €${quotedPrice.toFixed(2)}${quotedNotes ? ` - ${quotedNotes}` : ""}`
       : status === "executed"
       ? `Partner heeft gemarkeerd als uitgevoerd`
@@ -355,11 +357,11 @@ Deno.serve(async (req) => {
     await supabase.from("program_request_history").insert({
       request_id: item.request_id,
       item_id: itemId,
-      action: "status_changed",
+      action: isPriceAck ? "price_change_acknowledged" : "status_changed",
       actor: "partner",
       actor_name: partner.name,
-      old_value: { status: oldStatus },
-      new_value: { status, status_note: statusNote, quoted_price: quotedPrice, quoted_notes: quotedNotes },
+      old_value: { status: oldStatus, quoted_price: item.quoted_price },
+      new_value: { status: isPriceAck ? item.status : status, status_note: statusNote, quoted_price: quotedPrice, quoted_notes: quotedNotes },
       notes: historyNotes,
     });
 
