@@ -88,7 +88,9 @@ Deno.serve(async (req) => {
       reset_link: actionLink,
     });
 
-    const emailSubject = template?.subject || "Wachtwoord resetten — Bureau Vlieland Partner Portal";
+    const origin = req.headers.get("origin") || undefined;
+    const subjectPrefix = getSubjectPrefix(origin);
+    const emailSubject = `${subjectPrefix}${template?.subject || "Wachtwoord resetten — Bureau Vlieland Partner Portal"}`;
     const htmlBody = template?.body || `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
