@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -36,6 +37,10 @@ import {
   Home,
   Tent,
   HelpCircle,
+  Archive,
+  CheckCircle2,
+  XCircle,
+  Inbox,
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
@@ -63,17 +68,22 @@ const TYPE_LABELS: Record<string, string> = {
   no_preference: "Geen voorkeur",
 };
 
+type ViewMode = "active" | "archive";
+type ArchiveFilter = "all" | "realised" | "cancelled";
+
 export default function AdminAccommodation() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [view, setView] = useState<ViewMode>("active");
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilter>("all");
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["admin-accommodation-requests"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accommodation_requests")
-        .select("*, linked_program_id")
+        .select("*, linked_program_id, completion_status, completed_at")
         .order("arrival_date", { ascending: true });
 
       if (error) throw error;
@@ -81,19 +91,19 @@ export default function AdminAccommodation() {
     },
   });
 
-  // Fetch linked program invoicing modes
+  // Fetch linked program invoicing modes + completion status
   const programIds = requests?.filter(r => r.linked_program_id).map(r => r.linked_program_id!) || [];
   const { data: linkedPrograms } = useQuery({
-    queryKey: ["admin-accommodation-program-modes", programIds],
+    queryKey: ["admin-accommodation-program-info", programIds],
     queryFn: async () => {
       if (programIds.length === 0) return {};
       const { data, error } = await supabase
         .from("program_requests")
-        .select("id, invoicing_mode")
+        .select("id, invoicing_mode, completion_status")
         .in("id", programIds);
       if (error) throw error;
-      const map: Record<string, string> = {};
-      data?.forEach(p => { map[p.id] = p.invoicing_mode; });
+      const map: Record<string, { invoicing_mode: string; completion_status: string | null }> = {};
+      data?.forEach(p => { map[p.id] = { invoicing_mode: p.invoicing_mode, completion_status: p.completion_status }; });
       return map;
     },
     enabled: programIds.length > 0,
@@ -108,31 +118,60 @@ export default function AdminAccommodation() {
 
       if (error) throw error;
 
-      // Count quotes per request
       const counts: Record<string, { total: number; submitted: number; declined: number; pending: number; withdrawn: number }> = {};
       data?.forEach((quote) => {
         if (!counts[quote.request_id]) {
           counts[quote.request_id] = { total: 0, submitted: 0, declined: 0, pending: 0, withdrawn: 0 };
         }
         counts[quote.request_id].total++;
-        if (quote.status === "submitted") {
-          counts[quote.request_id].submitted++;
-        }
-        if (quote.status === "declined") {
-          counts[quote.request_id].declined++;
-        }
-        if (quote.status === "pending" || quote.status === "requested") {
-          counts[quote.request_id].pending++;
-        }
-        if (quote.status === "withdrawn") {
-          counts[quote.request_id].withdrawn++;
-        }
+        if (quote.status === "submitted") counts[quote.request_id].submitted++;
+        if (quote.status === "declined") counts[quote.request_id].declined++;
+        if (quote.status === "pending" || quote.status === "requested") counts[quote.request_id].pending++;
+        if (quote.status === "withdrawn") counts[quote.request_id].withdrawn++;
       });
       return counts;
     },
   });
 
-  const filteredRequests = requests?.filter((request) => {
+  // Determine if a request counts as "realised" (fully invoiced) — own status OR linked program
+  const isRealised = (r: any) => {
+    if (r.completion_status === "fully_invoiced") return true;
+    if (r.linked_program_id) {
+      const prog = linkedPrograms?.[r.linked_program_id];
+      if (prog?.completion_status === "fully_invoiced") return true;
+    }
+    return false;
+  };
+
+  const isCancelled = (r: any) => r.status === "cancelled" || r.status === "expired";
+
+  // Split requests into active vs archive buckets
+  const { activeRequests, archiveRequests, realisedCount, cancelledCount } = useMemo(() => {
+    const active: any[] = [];
+    const archive: any[] = [];
+    let realised = 0;
+    let cancelled = 0;
+    requests?.forEach((r) => {
+      const realisedFlag = isRealised(r);
+      const cancelledFlag = isCancelled(r);
+      if (realisedFlag) realised++;
+      if (cancelledFlag && !realisedFlag) cancelled++;
+      if (realisedFlag || cancelledFlag) {
+        archive.push({ ...r, _realised: realisedFlag, _cancelled: cancelledFlag });
+      } else {
+        active.push(r);
+      }
+    });
+    return { activeRequests: active, archiveRequests: archive, realisedCount: realised, cancelledCount: cancelled };
+  }, [requests, linkedPrograms]);
+
+  const baseList = view === "active" ? activeRequests : archiveRequests.filter((r) => {
+    if (archiveFilter === "realised") return r._realised;
+    if (archiveFilter === "cancelled") return r._cancelled && !r._realised;
+    return true;
+  });
+
+  const filteredRequests = baseList.filter((request) => {
     const matchesSearch =
       request.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,79 +183,64 @@ export default function AdminAccommodation() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const stats = {
-    total: requests?.length || 0,
-    new: requests?.filter((r) => r.status === "submitted").length || 0,
-    processing: requests?.filter((r) => r.status === "processing").length || 0,
-    quoted: requests?.filter((r) => r.status === "quoted").length || 0,
+  const activeStats = {
+    total: activeRequests.length,
+    new: activeRequests.filter((r) => r.status === "submitted").length,
+    processing: activeRequests.filter((r) => r.status === "processing").length,
+    quoted: activeRequests.filter((r) => r.status === "quoted").length,
   };
 
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Logies Aanvragen</h1>
             <p className="text-slate-600">Beheer accommodatie aanvragen en offertes</p>
           </div>
+          <Tabs value={view} onValueChange={(v) => { setView(v as ViewMode); setStatusFilter("all"); }}>
+            <TabsList>
+              <TabsTrigger value="active" className="gap-2">
+                <Inbox className="h-4 w-4" />
+                Actief
+                <Badge variant="secondary" className="ml-1">{activeRequests.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="archive" className="gap-2">
+                <Archive className="h-4 w-4" />
+                Archief
+                <Badge variant="secondary" className="ml-1">{archiveRequests.length}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-slate-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-slate-600">Totaal</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.new}</p>
-                  <p className="text-sm text-slate-600">Nieuw</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.processing}</p>
-                  <p className="text-sm text-slate-600">In behandeling</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.quoted}</p>
-                  <p className="text-sm text-slate-600">Offertes verstuurd</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {view === "active" ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard icon={<Building2 className="h-5 w-5 text-slate-600" />} bg="bg-slate-100" value={activeStats.total} label="Totaal actief" />
+            <StatCard icon={<Building2 className="h-5 w-5 text-amber-600" />} bg="bg-amber-100" value={activeStats.new} label="Nieuw" />
+            <StatCard icon={<Building2 className="h-5 w-5 text-blue-600" />} bg="bg-blue-100" value={activeStats.processing} label="In behandeling" />
+            <StatCard icon={<Building2 className="h-5 w-5 text-green-600" />} bg="bg-green-100" value={activeStats.quoted} label="Offertes verstuurd" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <StatCard icon={<Archive className="h-5 w-5 text-slate-600" />} bg="bg-slate-100" value={archiveRequests.length} label="Totaal in archief" />
+            <StatCard icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />} bg="bg-emerald-100" value={realisedCount} label="Gerealiseerd" />
+            <StatCard icon={<XCircle className="h-5 w-5 text-red-600" />} bg="bg-red-100" value={cancelledCount} label="Geannuleerd / Verlopen" />
+          </div>
+        )}
+
+        {/* Archive sub-filter */}
+        {view === "archive" && (
+          <Tabs value={archiveFilter} onValueChange={(v) => setArchiveFilter(v as ArchiveFilter)}>
+            <TabsList>
+              <TabsTrigger value="all">Alles ({archiveRequests.length})</TabsTrigger>
+              <TabsTrigger value="realised">Gerealiseerd ({realisedCount})</TabsTrigger>
+              <TabsTrigger value="cancelled">Geannuleerd ({cancelledCount})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
         {/* Filters */}
         <Card>
@@ -243,11 +267,20 @@ export default function AdminAccommodation() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle statussen</SelectItem>
-                  <SelectItem value="submitted">Nieuw</SelectItem>
-                  <SelectItem value="processing">In behandeling</SelectItem>
-                  <SelectItem value="quoted">Offertes verstuurd</SelectItem>
-                  <SelectItem value="accepted">Geaccepteerd</SelectItem>
-                  <SelectItem value="cancelled">Geannuleerd</SelectItem>
+                  {view === "active" ? (
+                    <>
+                      <SelectItem value="submitted">Nieuw</SelectItem>
+                      <SelectItem value="processing">In behandeling</SelectItem>
+                      <SelectItem value="quoted">Offertes verstuurd</SelectItem>
+                      <SelectItem value="accepted">Geaccepteerd</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="accepted">Geaccepteerd</SelectItem>
+                      <SelectItem value="cancelled">Geannuleerd</SelectItem>
+                      <SelectItem value="expired">Verlopen</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -278,9 +311,19 @@ export default function AdminAccommodation() {
               </div>
             ) : filteredRequests?.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
-                <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Geen aanvragen gevonden</p>
-                <p className="text-sm">Pas de filters aan of wacht op nieuwe aanvragen</p>
+                {view === "active" ? (
+                  <>
+                    <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">Geen actieve aanvragen</p>
+                    <p className="text-sm">Alle aanvragen zijn afgerond of geannuleerd. Bekijk het archief.</p>
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">Archief is leeg</p>
+                    <p className="text-sm">Er zijn nog geen afgeronde of geannuleerde aanvragen.</p>
+                  </>
+                )}
               </div>
             ) : (
               <Table>
@@ -300,6 +343,7 @@ export default function AdminAccommodation() {
                 <TableBody>
                   {filteredRequests?.map((request) => {
                     const quoteInfo = quoteCounts?.[request.id];
+                    const realised = isRealised(request);
                     const statusConfig = STATUS_CONFIG[request.status] || STATUS_CONFIG.submitted;
 
                     return (
@@ -322,7 +366,7 @@ export default function AdminAccommodation() {
                             if (!request.linked_program_id) {
                               return <Badge variant="outline" className="text-xs">Zelfstandig</Badge>;
                             }
-                            const mode = linkedPrograms?.[request.linked_program_id];
+                            const mode = linkedPrograms?.[request.linked_program_id]?.invoicing_mode;
                             if (mode === "bureau_central") {
                               return <Badge className="text-xs bg-purple-100 text-purple-800">Maatwerk</Badge>;
                             }
@@ -371,7 +415,15 @@ export default function AdminAccommodation() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={statusConfig.variant} className={statusConfig.className}>{statusConfig.label}</Badge>
+                          {realised ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200" variant="outline">
+                              Gerealiseerd
+                            </Badge>
+                          ) : (
+                            <Badge variant={statusConfig.variant} className={statusConfig.className}>
+                              {statusConfig.label}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
@@ -391,5 +443,21 @@ export default function AdminAccommodation() {
         </Card>
       </div>
     </AdminLayout>
+  );
+}
+
+function StatCard({ icon, bg, value, label }: { icon: React.ReactNode; bg: string; value: number; label: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 ${bg} rounded-lg`}>{icon}</div>
+          <div>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-sm text-slate-600">{label}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
