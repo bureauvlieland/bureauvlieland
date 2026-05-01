@@ -41,6 +41,7 @@ export const AdminQuotePriceEditor = ({
   priceType = "per_person",
   onSave,
   disabled = false,
+  hasOpenAdminPriceChange = false,
 }: AdminQuotePriceEditorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editPrice, setEditPrice] = useState<string>(
@@ -51,13 +52,32 @@ export const AdminQuotePriceEditor = ({
   const [isSaving, setIsSaving] = useState(false);
 
   // originalPrice = quoted_price (definitieve partnerprijs, IS het groepstotaal)
-  // overridePrice = admin_price_override (schatting, eenheidsprijs)
+  // overridePrice = admin_price_override (eenheidsprijs of totaal afhankelijk van priceType)
   const hasQuotedPrice = originalPrice !== null;
   const hasOverride = overridePrice !== null;
-  // Effective display: quoted_price wins (it's the confirmed partner price)
-  const displayPrice = originalPrice ?? overridePrice;
-  // Show the override as struck-through secondary when quoted_price supersedes it
-  const showPreviousEstimate = hasQuotedPrice && hasOverride;
+
+  // Effectief totaal van de admin-override (rekening houdend met price_type / personen / dagen)
+  const overrideTotal = overridePrice !== null
+    ? (priceType === "per_person"
+        ? overridePrice * numberOfPeople
+        : priceType === "per_person_per_day"
+          ? overridePrice * numberOfPeople * numberOfDays
+          : overridePrice)
+    : null;
+
+  // Welke prijs is leidend?
+  // - Open admin-prijswijziging → admin-override is de nieuwe geldende prijs.
+  //   quoted_price wordt dan getoond als doorgehaald (verouderde partnerbevestiging).
+  // - Anders → quoted_price wint (bevestigde partnerprijs).
+  const overrideIsLeading = hasOpenAdminPriceChange && hasOverride;
+  const displayPrice = overrideIsLeading
+    ? overrideTotal
+    : (originalPrice ?? overrideTotal);
+  // Toon de andere prijs als doorgehaalde context.
+  const showStruckThrough = overrideIsLeading
+    ? hasQuotedPrice // override leidend → toon oude quoted_price doorgehaald
+    : (hasQuotedPrice && hasOverride); // quoted leidend → toon eerdere schatting doorgehaald
+  const struckPrice = overrideIsLeading ? originalPrice : overrideTotal;
 
   const handleOpen = (open: boolean) => {
     if (open) {
