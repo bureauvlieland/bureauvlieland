@@ -277,6 +277,9 @@ export interface ProgramRequestItem {
   external_url: string | null;
   // Per-item participant override (null = use program total)
   override_people: number | null;
+  // Admin-driven price-change tracking (synced with portalPricing.hasOpenAdminPriceChange)
+  admin_price_override_updated_at?: string | null;
+  partner_price_change_acknowledged_at?: string | null;
   // Location fields
   location_lat?: number | null;
   location_lng?: number | null;
