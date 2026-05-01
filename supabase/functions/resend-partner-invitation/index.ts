@@ -150,7 +150,8 @@ Deno.serve(async (req) => {
     let emailSent = false;
     let emailError: string | null = null;
     let mailjetMessageId: string | null = null;
-    const subject = "Herinnering: Activeer uw Bureau Vlieland Partner Portaal account";
+    const subjectPrefix = getSubjectPrefix(req.headers.get("origin") || undefined);
+    const subject = `${subjectPrefix}Herinnering: Activeer uw Bureau Vlieland Partner Portaal account`;
 
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
       const emailHtml = getInvitationHtml(partner.name, partner.email, setPasswordLink, portalLink);
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           Messages: [{
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-            To: [{ Email: partner.email, Name: partner.name }],
+            To: [{ Email: getRecipientEmail(partner.email, req.headers.get("origin") || undefined), Name: partner.name }],
             Subject: subject,
             HTMLPart: emailHtml,
             TextPart:
