@@ -916,13 +916,36 @@ const AdminRequestDetail = () => {
 
   const handleItemPriceUpdate = async (itemId: string, price: number | null, notes: string, newPriceType?: "per_person" | "per_person_per_day" | "total") => {
     try {
-      const updateData: Record<string, unknown> = { 
+      const currentItem = items.find((i) => i.id === itemId);
+      const previousOverride = currentItem?.admin_price_override ?? null;
+      const previousNotes = currentItem?.admin_price_notes ?? null;
+      const previousPriceType = currentItem?.price_type ?? null;
+      const hadPartnerQuote = currentItem?.quoted_price != null;
+      const hadCustomerApproval = !!currentItem?.customer_approved_at;
+      const isExternalPartner = currentItem ? currentItem.provider_id !== "bureau" : false;
+
+      const priceChanged = previousOverride !== price;
+      const priceTypeChanged = !!newPriceType && previousPriceType !== newPriceType;
+      const meaningfulChange = priceChanged || priceTypeChanged;
+
+      const updateData: Record<string, unknown> = {
         admin_price_override: price,
         admin_price_notes: notes || null,
       };
       if (newPriceType) {
         updateData.price_type = newPriceType;
       }
+      if (meaningfulChange) {
+        updateData.admin_price_override_updated_at = new Date().toISOString();
+        // Open opnieuw voor partner-bevestiging — partner moet de nieuwe prijs accorderen
+        updateData.partner_price_change_acknowledged_at = null;
+        // Klant moet opnieuw akkoord geven als er al akkoord was én er een actieve partnerprijs lag
+        if (hadCustomerApproval && hadPartnerQuote) {
+          updateData.customer_approved_at = null;
+          updateData.item_quote_status = "in_afstemming";
+        }
+      }
+
       const { error } = await supabase
         .from("program_request_items")
         .update(updateData)
@@ -936,7 +959,38 @@ const AdminRequestDetail = () => {
         await resolveAutoTodo("bureau_item_pricing", itemId);
       }
 
-      toast.success("Prijs bijgewerkt");
+      if (meaningfulChange) {
+        // Log audit
+        await supabase.from("program_request_history").insert({
+          request_id: request!.id,
+          item_id: itemId,
+          action: "admin_changed_price",
+          actor: "admin",
+          actor_name: "Admin",
+          old_value: { admin_price_override: previousOverride, admin_price_notes: previousNotes, price_type: previousPriceType },
+          new_value: { admin_price_override: price, admin_price_notes: notes || null, price_type: newPriceType ?? previousPriceType },
+          notes: hadPartnerQuote
+            ? "Prijs aangepast na eerdere partnerbevestiging — partner en klant moeten opnieuw bevestigen."
+            : null,
+        });
+
+        // Notificeer externe partner alleen wanneer er al eerder contact was over deze prijs
+        if (isExternalPartner && hadPartnerQuote && price !== null) {
+          try {
+            await supabase.functions.invoke("notify-partner-price-change", {
+              body: { item_id: itemId, origin: window.location.origin },
+            });
+          } catch (notifyErr) {
+            console.error("Could not notify partner of price change:", notifyErr);
+          }
+        }
+      }
+
+      toast.success(
+        meaningfulChange && hadCustomerApproval && hadPartnerQuote
+          ? "Prijs bijgewerkt — klant en partner moeten opnieuw bevestigen"
+          : "Prijs bijgewerkt"
+      );
       fetchRequestData();
     } catch (error) {
       console.error("Error updating item price:", error);
