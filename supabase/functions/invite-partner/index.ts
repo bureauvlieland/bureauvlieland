@@ -1,6 +1,6 @@
 // Invite a partner: create auth user without password and send a one-time set-password link.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml } from "../_shared/email-templates.ts";
+import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
