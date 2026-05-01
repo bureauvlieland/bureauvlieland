@@ -272,8 +272,18 @@ export const CustomerProgramItem = ({
             </div>
           )}
 
+          {/* Banner: prijs is door Bureau Vlieland aangepast — klant moet opnieuw akkoord geven */}
+          {priceChangeNeedsAttention && !readOnly && (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                De prijs van dit onderdeel is door Bureau Vlieland aangepast. Bekijk de nieuwe prijs hieronder en geef opnieuw uw akkoord.
+              </span>
+            </div>
+          )}
+
           {/* Action hint for items needing customer approval */}
-          {needsCustomerAction && !readOnly && (
+          {needsCustomerAction && !readOnly && !priceChangeNeedsAttention && (
             <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm text-blue-700 dark:text-blue-300">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
