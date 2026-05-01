@@ -50,7 +50,10 @@ export interface PartnerItem {
   confirmed_time: string | null; // Final confirmed time after customer acceptance
   // Admin price override (set by admin, visible to partner as expected price)
   admin_price_override: number | null;
-  price_type: string | null; // "per_person" | "total"
+  admin_price_override_updated_at?: string | null;
+  partner_price_change_acknowledged_at?: string | null;
+  override_people?: number | null;
+  price_type: string | null; // "per_person" | "total" | "per_person_per_day"
   // Quoted price fields (set when partner confirms)
   quoted_price: number | null;
   quoted_at: string | null;
