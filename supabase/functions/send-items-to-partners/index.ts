@@ -6,6 +6,7 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
