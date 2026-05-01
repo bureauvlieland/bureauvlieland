@@ -890,7 +890,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
 
   const statusSummary = program
     ? calculateStatusSummary(program.items)
-    : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, counter_proposed: 0, customerApproved: 0, progress: 0 };
+    : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, counter_proposed: 0, customerApproved: 0, awaitingPartnerSend: 0, progress: 0 };
 
   // Accommodation summary
   const accommodationSummary: AccommodationSummary = {

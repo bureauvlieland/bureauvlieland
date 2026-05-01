@@ -78,7 +78,15 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
-  const needsCustomerAction = !isSelfArranged && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && !item.customer_approved_at;
+  // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
+  // ALS er ook daadwerkelijk een Akkoord-knop verschijnt. In quote-mode geldt dat
+  // alleen wanneer het item via de offerteflow op klantgoedkeuring wacht; in legacy-modus
+  // (geen quote) volstaat de "confirmed/alternative + nog niet geaccepteerd"-check.
+  const needsCustomerAction = !isSelfArranged
+    && (item.status === "confirmed" || item.status === "alternative")
+    && !item.customer_accepted_at
+    && !item.customer_approved_at
+    && (isQuoteMode ? isQuoteItemAwaitingCustomerApproval(item) : true);
   
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
