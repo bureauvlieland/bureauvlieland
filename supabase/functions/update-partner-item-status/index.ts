@@ -19,7 +19,8 @@ const sendEmailViaMailjet = async (
   to: string,
   toName: string,
   subject: string,
-  htmlContent: string
+  htmlContent: string,
+  referenceNumber?: string | null
 ) => {
   const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
   const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -30,6 +31,7 @@ const sendEmailViaMailjet = async (
   }
 
   const credentials = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
+  const replyTo = buildReplyTo(referenceNumber);
 
   try {
     const response = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -46,6 +48,7 @@ const sendEmailViaMailjet = async (
               Name: "Bureau Vlieland",
             },
             To: [{ Email: to, Name: toName }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: htmlContent,
           },
