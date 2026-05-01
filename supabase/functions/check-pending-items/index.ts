@@ -130,8 +130,8 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             Messages: [{
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: opts.recipientEmail, Name: opts.recipientName }],
-              Subject: subject,
+              To: [{ Email: getRecipientEmail(opts.recipientEmail, req.headers.get("origin") || undefined), Name: opts.recipientName }],
+              Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
               HTMLPart: body,
             }],
           }),
