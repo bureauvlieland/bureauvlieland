@@ -358,7 +358,7 @@ Deno.serve(async (req) => {
 
       // Create partner_status_update todo for admin to review
       const statusLabel = status === "confirmed" ? "bevestigd" : status === "unavailable" ? "niet beschikbaar" : "alternatief voorgesteld";
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       
       const { data: existingStatusTodo } = await supabase
         .from("admin_todos")
@@ -385,7 +385,7 @@ Deno.serve(async (req) => {
 
     // Check if this is a response to a counter-proposal and send customer notification
     if (oldStatus === "counter_proposed" && (status === "confirmed" || status === "alternative" || status === "unavailable")) {
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
       // Status-specific configuration
@@ -621,7 +621,7 @@ Deno.serve(async (req) => {
 
     const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
     if (validEmailStatuses.includes(status)) {
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
       // Determine template ID based on status
