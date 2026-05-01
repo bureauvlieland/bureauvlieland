@@ -2341,10 +2341,18 @@ const AdminRequestDetail = () => {
             <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Annuleren</Button>
             <Button
               onClick={handleConfirmSendToPartners}
-              disabled={isSendingToPartners || !sendPreview?.partners.length}
+              disabled={
+                isSendingToPartners ||
+                ((sendPreview?.partners.length || 0) === 0 &&
+                  (sendPreview?.bureauItemsList?.length || 0) === 0)
+              }
             >
               <Send className="h-4 w-4 mr-2" />
-              {isSendingToPartners ? "Versturen..." : `Verstuur naar ${sendPreview?.partners.length || 0} partner(s)`}
+              {isSendingToPartners
+                ? "Versturen..."
+                : (sendPreview?.partners.length || 0) > 0
+                  ? `Verstuur naar ${sendPreview!.partners.length} partner(s)`
+                  : `Geef ${sendPreview?.bureauItemsList?.length || 0} bureau-onderdeel(en) vrij`}
             </Button>
           </DialogFooter>
         </DialogContent>
