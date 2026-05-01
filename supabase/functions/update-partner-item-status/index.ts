@@ -486,7 +486,8 @@ Deno.serve(async (req) => {
         counterResponseRecipient,
         programRequest.customer_name,
         `${counterSubjectPrefix}${emailSubject}`,
-        emailBody
+        emailBody,
+        programRequest.reference_number
       );
       
       if (emailSent) {
