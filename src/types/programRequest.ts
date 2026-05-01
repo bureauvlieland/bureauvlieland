@@ -300,18 +300,31 @@ export interface ProgramRequestWithItems extends ProgramRequest {
   items: ProgramRequestItem[];
 }
 
+// Helper: een onderdeel telt pas als "echt bevestigd" wanneer het zowel
+// operationeel bevestigd is (status confirmed/alternative) ALS daadwerkelijk
+// naar de partner verstuurd is (skip_partner_notification=false), of wanneer
+// de offertestatus expliciet op 'bevestigd' staat. Dit voorkomt misleidende
+// "Bevestigd"-meldingen voor items die nog in concept staan.
+const isItemTrulyConfirmed = (i: ProgramRequestItem): boolean => {
+  if (i.status !== "confirmed" && i.status !== "alternative") return false;
+  if (i.item_quote_status === "bevestigd") return true;
+  return i.skip_partner_notification === false;
+};
+
 // Helper to calculate status summary
 export function calculateStatusSummary(items: ProgramRequestItem[]) {
   const relevantItems = items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled");
   const total = relevantItems.length;
-  const confirmed = items.filter(i => i.status === "confirmed").length;
+  const confirmed = relevantItems.filter(isItemTrulyConfirmed).length;
   const pending = items.filter(i => i.status === "pending").length;
-  const alternative = items.filter(i => i.status === "alternative").length;
+  const alternative = items.filter(i => i.status === "alternative" && !isItemTrulyConfirmed(i)).length;
   const unavailable = items.filter(i => i.status === "unavailable").length;
   const cancelled = items.filter(i => i.status === "cancelled").length;
   const counter_proposed = items.filter(i => i.status === "counter_proposed").length;
   const customerApproved = relevantItems.filter(i => !!i.customer_approved_at).length;
-  
+  // Aantal items dat de admin nog niet heeft uitgestuurd naar partners
+  const awaitingPartnerSend = relevantItems.filter(i => i.skip_partner_notification === true && !isItemTrulyConfirmed(i)).length;
+
   return {
     total,
     confirmed,
@@ -321,6 +334,7 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
     cancelled,
     counter_proposed,
     customerApproved,
+    awaitingPartnerSend,
     progress: total > 0 ? Math.round((confirmed / total) * 100) : 0,
   };
 }
