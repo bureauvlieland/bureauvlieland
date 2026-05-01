@@ -93,6 +93,11 @@ export const PartnerItemSheet = ({
   const [noteError, setNoteError] = useState("");
   const [timeError, setTimeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Mini-flow voor "tegenvoorstel" op een admin-prijswijziging
+  const [showPriceCounterForm, setShowPriceCounterForm] = useState(false);
+  const [priceCounterValue, setPriceCounterValue] = useState("");
+  const [priceCounterNotes, setPriceCounterNotes] = useState("");
+  const [priceCounterError, setPriceCounterError] = useState("");
 
   // Calculate blocked time slots from sibling items on same day (includes other partners)
   const blockedTimeSlots = useMemo(() => {
