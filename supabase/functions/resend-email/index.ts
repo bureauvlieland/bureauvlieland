@@ -132,11 +132,11 @@ Deno.serve(async (req) => {
             },
             To: [
               {
-                Email: finalRecipient,
+                Email: getRecipientEmail(finalRecipient, req.headers.get("origin") || undefined),
                 Name: emailLog.recipient_name || finalRecipient,
               },
             ],
-            Subject: subject,
+            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
             HTMLPart: bodyHtml,
           },
         ],
