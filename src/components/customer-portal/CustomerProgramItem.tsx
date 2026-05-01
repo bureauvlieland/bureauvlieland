@@ -156,6 +156,12 @@ export const CustomerProgramItem = ({
                     undefined
                   } />
                 )}
+                {priceChangeNeedsAttention && (
+                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Prijs gewijzigd
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isSelfArranged ? "Zelf te boeken en betalen" : item.provider_name}
