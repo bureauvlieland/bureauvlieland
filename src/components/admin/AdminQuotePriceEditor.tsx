@@ -128,8 +128,11 @@ export const AdminQuotePriceEditor = ({
 
   const priceTypeLabel = priceType === "per_person_per_day" ? "p.p.p.d." : priceType === "per_person" ? "p.p." : "totaal";
 
-  // For quoted_price: it's already a group total, so label differs
-  const displayLabel = hasQuotedPrice ? "totaal" : priceTypeLabel;
+  // Label voor de leidende prijs:
+  // - quoted_price IS het groepstotaal → "totaal"
+  // - admin_price_override is een eenheidsprijs (per_person/p.p.p.d.) of totaal
+  const leadingIsQuoted = !overrideIsLeading && hasQuotedPrice;
+  const displayLabel = leadingIsQuoted || overrideIsLeading ? "totaal" : priceTypeLabel;
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpen}>
@@ -139,8 +142,9 @@ export const AdminQuotePriceEditor = ({
           size="sm"
           className={cn(
             "h-auto p-1.5 gap-1.5 font-normal",
-            hasQuotedPrice && "text-emerald-700 dark:text-emerald-400",
-            !hasQuotedPrice && hasOverride && "text-amber-700 dark:text-amber-400"
+            overrideIsLeading && "text-amber-700 dark:text-amber-400",
+            !overrideIsLeading && hasQuotedPrice && "text-emerald-700 dark:text-emerald-400",
+            !overrideIsLeading && !hasQuotedPrice && hasOverride && "text-amber-700 dark:text-amber-400"
           )}
           disabled={disabled}
         >
@@ -149,16 +153,23 @@ export const AdminQuotePriceEditor = ({
               {formatPrice(displayPrice)}
               {displayPrice !== null && ` ${displayLabel}`}
             </span>
-            {hasQuotedPrice && (
+            {overrideIsLeading && (
+              <span className="text-xs text-amber-600 dark:text-amber-500">
+                Nieuwe prijs (wacht op partner)
+              </span>
+            )}
+            {!overrideIsLeading && hasQuotedPrice && (
               <span className="text-xs text-emerald-600 dark:text-emerald-500">Partnerprijs</span>
             )}
-            {!hasQuotedPrice && hasOverride && (
+            {!overrideIsLeading && !hasQuotedPrice && hasOverride && (
               <span className="text-xs text-amber-600 dark:text-amber-500">(schatting)</span>
             )}
-            {showPreviousEstimate && (
+            {showStruckThrough && struckPrice !== null && (
               <span className="text-xs text-muted-foreground line-through">
-                {formatPrice(overridePrice)}
-                {` ${priceTypeLabel}`}
+                {formatPrice(struckPrice)}
+                {overrideIsLeading
+                  ? ` totaal · oude partnerprijs`
+                  : ` ${priceTypeLabel}`}
               </span>
             )}
           </div>
