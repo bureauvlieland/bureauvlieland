@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
             Messages: [{
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
               To: [{ Email: getRecipientEmail(partnerEmail, origin), Name: partner.name }],
+              ...(buildReplyTo(accRequest.reference_number) ? { ReplyTo: buildReplyTo(accRequest.reference_number) } : {}),
               Subject: subject,
               HTMLPart: emailBody,
             }],
