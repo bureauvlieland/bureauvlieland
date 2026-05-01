@@ -34,7 +34,10 @@ export async function getRenderedTemplate(
 
     // Replace all {{variable}} placeholders with actual values
     const subject = replaceVariables(template.subject, variables);
-    const body = replaceVariables(template.body_html, variables);
+    const renderedBody = replaceVariables(template.body_html, variables);
+
+    // Wrap in standard branded skeleton (header + footer from app_settings)
+    const body = await wrapEmailHtml(renderedBody, supabase);
 
     return { subject, body };
   } catch (err) {
