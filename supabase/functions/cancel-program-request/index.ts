@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: `${subjectPrefix}${accTemplate?.subject || "Logiesaanvraag geannuleerd — ${program.reference_number || \"\"}"}`,
+        Subject: `${subjectPrefix}${accTemplate?.subject || `Logiesaanvraag geannuleerd — ${program.reference_number || ""}`}`,
         HTMLPart: accTemplate?.body || `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>
