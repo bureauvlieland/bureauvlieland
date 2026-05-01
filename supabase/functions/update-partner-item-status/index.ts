@@ -671,7 +671,8 @@ Deno.serve(async (req) => {
         getRecipientEmail(programRequest.customer_email, origin),
         programRequest.customer_name,
         `${statusSubjectPrefix}${emailSubject}`,
-        emailHtml
+        emailHtml,
+        programRequest.reference_number
       );
 
       if (!emailSent) {
