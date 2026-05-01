@@ -121,7 +121,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle } from "lucide-react";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 
 
