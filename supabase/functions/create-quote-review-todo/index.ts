@@ -187,6 +187,7 @@ Deno.serve(async (req) => {
               {
                 From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
                 To: [{ Email: recipientEmail, Name: "Bureau Vlieland" }],
+                ...(buildReplyTo(request.reference_number) ? { ReplyTo: buildReplyTo(request.reference_number) } : {}),
                 Subject: subject,
                 HTMLPart: body,
               },
