@@ -184,8 +184,8 @@ Deno.serve(async (req) => {
         Messages: [
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-            To: [{ Email: recipientEmail, Name: recipientName }],
-            Subject: finalSubject,
+            To: [{ Email: getRecipientEmail(recipientEmail, req.headers.get("origin") || undefined), Name: recipientName }],
+            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${finalSubject}`,
             HTMLPart: htmlBody,
           },
         ],
