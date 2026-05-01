@@ -93,6 +93,11 @@ export const PartnerItemSheet = ({
   const [noteError, setNoteError] = useState("");
   const [timeError, setTimeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Mini-flow voor "tegenvoorstel" op een admin-prijswijziging
+  const [showPriceCounterForm, setShowPriceCounterForm] = useState(false);
+  const [priceCounterValue, setPriceCounterValue] = useState("");
+  const [priceCounterNotes, setPriceCounterNotes] = useState("");
+  const [priceCounterError, setPriceCounterError] = useState("");
 
   // Calculate blocked time slots from sibling items on same day (includes other partners)
   const blockedTimeSlots = useMemo(() => {
@@ -150,6 +155,69 @@ export const PartnerItemSheet = ({
 
   // Can respond if pending, alternative, or counter_proposed status
   const canRespond = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
+
+  // ===== Open admin price change detection =====
+  const effectivePeopleForItem = item.override_people ?? request.number_of_people;
+  const isPerPersonPriceType = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+  const adminTotal = item.admin_price_override != null
+    ? (isPerPersonPriceType ? item.admin_price_override * effectivePeopleForItem : item.admin_price_override)
+    : null;
+  const _ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+  const hasOpenAdminPriceChange =
+    item.admin_price_override != null &&
+    !!item.admin_price_override_updated_at &&
+    !!item.quoted_price && // alleen relevant als er al eerder een bevestigde prijs was
+    (!_ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(_ack).getTime());
+  // Partner mag akkoord/tegenvoorstel doen zolang er nog geen factuur is en het item niet geannuleerd is
+  const canAcknowledgePriceChange =
+    hasOpenAdminPriceChange &&
+    !item.invoiced_number &&
+    item.status !== "cancelled" &&
+    item.status !== "executed";
+
+  const formatEur = (n: number) =>
+    n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleAcceptNewAdminPrice = async () => {
+    if (adminTotal == null) return;
+    setIsSubmitting(true);
+    const ok = await onStatusUpdate(
+      "acknowledge_price_change",
+      undefined,
+      adminTotal,
+      "Akkoord met prijswijziging Bureau Vlieland",
+      undefined,
+      undefined,
+    );
+    setIsSubmitting(false);
+    if (ok) onClose();
+  };
+
+  const handleSubmitPriceCounter = async () => {
+    setPriceCounterError("");
+    const normalized = priceCounterValue.replace(",", ".").trim();
+    const parsed = parseFloat(normalized);
+    if (!normalized || isNaN(parsed) || parsed <= 0) {
+      setPriceCounterError("Vul een geldige prijs in (groter dan 0).");
+      return;
+    }
+    setIsSubmitting(true);
+    const ok = await onStatusUpdate(
+      "acknowledge_price_change",
+      undefined,
+      parsed,
+      priceCounterNotes || undefined,
+      undefined,
+      undefined,
+    );
+    setIsSubmitting(false);
+    if (ok) {
+      setShowPriceCounterForm(false);
+      setPriceCounterValue("");
+      setPriceCounterNotes("");
+      onClose();
+    }
+  };
 
   const handleSubmitResponse = async () => {
     // Validate based on response type
@@ -470,6 +538,106 @@ export const PartnerItemSheet = ({
                       } · Bevestig of pas aan bij je reactie.
                     </p>
                   </div>
+
+                  {/* Actie-knoppen voor open prijswijziging */}
+                  {canAcknowledgePriceChange && !showPriceCounterForm && adminTotal != null && (
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <Button
+                        onClick={handleAcceptNewAdminPrice}
+                        disabled={isSubmitting}
+                        className="flex-1"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                        )}
+                        Bevestig nieuwe prijs (€{formatEur(adminTotal)})
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowPriceCounterForm(true);
+                          setPriceCounterValue(adminTotal.toFixed(2).replace(".", ","));
+                        }}
+                        disabled={isSubmitting}
+                        className="flex-1"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Eigen prijs voorstellen
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Mini-form voor eigen tegenprijs */}
+                  {canAcknowledgePriceChange && showPriceCounterForm && (
+                    <div className="border rounded-lg p-3 space-y-3 bg-background">
+                      <div className="space-y-2">
+                        <Label htmlFor="priceCounterValue" className="flex items-center gap-1">
+                          <Euro className="h-4 w-4" />
+                          Jouw totaalprijs (incl. BTW) *
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                          <Input
+                            id="priceCounterValue"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={priceCounterValue}
+                            onChange={(e) => {
+                              setPriceCounterValue(e.target.value);
+                              setPriceCounterError("");
+                            }}
+                            className={cn("pl-7", priceCounterError && "border-destructive")}
+                          />
+                        </div>
+                        {priceCounterError && (
+                          <p className="text-sm text-destructive">{priceCounterError}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Totaalprijs voor {effectivePeopleForItem} personen.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="priceCounterNotes">Toelichting (optioneel)</Label>
+                        <Textarea
+                          id="priceCounterNotes"
+                          placeholder="Bijv. 'Inclusief extra materiaal' of een korte uitleg waarom je een ander bedrag hanteert."
+                          value={priceCounterNotes}
+                          onChange={(e) => setPriceCounterNotes(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSubmitPriceCounter}
+                          disabled={isSubmitting}
+                          className="flex-1"
+                        >
+                          {isSubmitting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Voorstel versturen
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowPriceCounterForm(false);
+                            setPriceCounterError("");
+                          }}
+                          disabled={isSubmitting}
+                        >
+                          Annuleren
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Bureau Vlieland ontvangt je voorstel en koppelt terug bij de klant.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             );
@@ -946,12 +1114,24 @@ export const PartnerItemSheet = ({
               </div>
             )}
 
-            {/* Accepted: Mark as executed */}
+            {/* Accepted: Mark as executed (geblokkeerd zolang er een open prijswijziging is) */}
             {(item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number && (
-              <Button onClick={handleMarkExecuted} className="w-full" variant="secondary" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                Markeer als uitgevoerd
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleMarkExecuted}
+                  className="w-full"
+                  variant="secondary"
+                  disabled={isSubmitting || hasOpenAdminPriceChange}
+                >
+                  {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+                  Markeer als uitgevoerd
+                </Button>
+                {hasOpenAdminPriceChange && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 text-center">
+                    Reageer eerst op de nieuwe prijs van Bureau Vlieland.
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Executed: Register invoice */}

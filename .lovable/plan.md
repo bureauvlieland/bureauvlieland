@@ -1,100 +1,47 @@
-## Wat is er nog open
+## Probleem
 
-In de vorige rondes zijn de database-velden, de gecentraliseerde prijslogica, de admin-workflow en de partner-banners afgerond. Twee onderdelen staan nog open:
+Wanneer een onderdeel al door de partner is bevestigd (`status = "confirmed"`, `quoted_price` gevuld) en Bureau Vlieland past daarna de prijs aan via `admin_price_override`, ziet de partner wél de amber-banner *"Bureau Vlieland heeft de prijs aangepast. Bevestig de nieuwe prijs of pas hem aan via je reactie"*, maar er is **geen reactieknop**: `canRespond` staat alleen open voor `pending`, `alternative` en `counter_proposed`. De enige beschikbare knop is "Markeer als uitgevoerd". De partner kan dus niets doen.
 
-1. **Klantportaal-UI cues** als de admin een prijs aanpast nadat de klant al akkoord had gegeven (de `customer_approved_at` wordt al gereset, maar er is nog geen visuele uitleg waarom een onderdeel ineens weer "Actie vereist" is).
-2. **Geautomatiseerde QA-check** die controleert of admin-, partner- en klantweergave hetzelfde totaalbedrag laten zien per onderdeel — zodat de Trattoria Oliva-discrepantie (€48,95 vs €44,50) niet meer onopgemerkt kan terugkomen.
+Daarnaast wordt `partner_price_change_acknowledged_at` nu alleen automatisch gezet door de edge function `update-partner-item-status` zodra de partner een nieuwe `quoted_price` indient — dat kan niet vanuit een al bevestigd item.
 
----
+## Oplossing
 
-## Deel 1 — Klantportaal: visuele cue bij prijswijziging
+Een dedicated mini-flow "Reageren op prijswijziging" voor confirmed items met een open admin-prijswijziging. Twee acties:
 
-### 1a. Helper toevoegen aan `src/lib/portalPricing.ts`
+1. **Akkoord met nieuwe prijs** → `quoted_price` wordt overschreven met het admin-totaal (override × effectivePeople voor per-person, of override zelf voor fixed) en `partner_price_change_acknowledged_at = now()`. Status blijft `confirmed`. Een notitie kan optioneel worden meegegeven.
+2. **Tegenvoorstel doen** → opent dezelfde response-form als nu bij counter_proposed: partner geeft eigen `quoted_price` + toelichting op. Status blijft `confirmed`, alleen prijs en `partner_price_change_acknowledged_at` worden bijgewerkt. Optioneel: het item kan terug naar `in_afstemming` gaan zodat klant en bureau het zien.
 
-Nieuwe functie `hasOpenAdminPriceChange(item)`:
-- `true` als `admin_price_override_updated_at` nieuwer is dan `customer_approved_at` én er eerder al een `customer_approved_at` was, óf
-- `true` als `admin_price_override_updated_at` is gezet en `item_quote_status === 'in_afstemming'` ná een eerdere bevestiging.
+## Wijzigingen
 
-### 1b. Banner in `CustomerProgramItem.tsx`
+### 1. `src/components/partner-portal/PartnerItemSheet.tsx`
+- Nieuwe afgeleide variabele `hasOpenAdminPriceChange` (al berekend op regel 441-444 — extraheren naar één const bovenin).
+- Nieuwe variabele `canAcknowledgePriceChange = hasOpenAdminPriceChange && item.status === "confirmed" && !item.executed_at`.
+- Nieuwe sectie onder de amber-banner met twee knoppen:
+  - `Bevestig nieuwe prijs (€XXX,XX)` — primaire knop.
+  - `Eigen prijs voorstellen` — secundaire knop, opent een mini-form (alleen prijsveld + toelichting), submit hergebruikt onderstaande edge function.
+- `handleMarkExecuted` blokkeren zolang `canAcknowledgePriceChange` true is, zodat een partner niet per ongeluk uitvoert vóór akkoord op de nieuwe prijs.
 
-Boven de bestaande "Beschikbaar / klik op akkoord"-banner:
-- Amber/oranje banner met tekst:
-  > "De prijs van dit onderdeel is door Bureau Vlieland aangepast. Bekijk de nieuwe prijs en geef opnieuw uw akkoord."
-- Toont oude prijs (doorgestreept) versus nieuwe prijs als beide te bepalen zijn (`quoted_price` snapshot uit history, anders alleen nieuwe prijs).
-- Banner verdwijnt zodra klant opnieuw akkoord geeft (`customer_approved_at > admin_price_override_updated_at`).
+### 2. `supabase/functions/update-partner-item-status/index.ts`
+- Nieuwe action `acknowledge_price_change` toevoegen die:
+  - `quoted_price` zet op het meegestuurde nieuwe totaal (of `admin_price_override × effectivePeople` als de partner gewoon "akkoord" klikt).
+  - `partner_price_change_acknowledged_at = now()`.
+  - `quoted_at = now()` ververst (zodat de admin-page ziet dat de partner heeft gereageerd).
+  - Optionele `quoted_notes` opslaat.
+  - Status onveranderd laat (`confirmed`).
+  - Logt in `email_log` / `program_communications` zodat het zichtbaar is in het project-dossier.
+- Bestaande logica voor `partner_price_change_acknowledged_at` (regels 294 / 308) blijft werken voor de pending-flow.
 
-### 1c. Status-pill in `CustomerProgramItem.tsx`
+### 3. Notificatie naar Bureau Vlieland
+- Nieuwe edge function `notify-bureau-price-acknowledged` (klein) die een interne mail stuurt naar `hallo@bureauvlieland.nl` met onderwerp *"Partner heeft prijswijziging beantwoord — {block_name} ({reference})"* en de inhoud (akkoord vs tegenvoorstel + bedrag + notitie). Triggered vanuit de UI na succesvolle acknowledge-call.
 
-Naast de bestaande badges een extra pill "Prijs gewijzigd" als `hasOpenAdminPriceChange` true is, zodat de klant ook in de samenvatting/header van het programma direct ziet welke onderdelen heroverweging vragen.
+### 4. Klantportaal-doorwerking
+- Geen extra werk nodig: `quoted_price` wordt opnieuw geschreven, dus `getDisplayLineTotal` toont automatisch de juiste waarde, en `hasOpenAdminPriceChange` op klantzijde wordt false zodra `quoted_at` weer voorbij `admin_price_override_updated_at` ligt — exact dezelfde tijdstempel-vergelijking.
 
-### 1d. Aggregatie in `useCustomerProgram.ts` / `programRequest.ts`
+### 5. QA
+- Bestaande Vitest-suite uitbreiden met een case "partner accepteert nieuwe admin-prijs → quoted_price = admin_total, ack >= override_updated_at, hasOpenAdminPriceChange = false".
 
-`calculateStatusSummary` krijgt een extra teller `priceChangedCount`. Wordt gebruikt door de status-tegels boven het programma ("X onderdelen wachten op nieuw akkoord vanwege prijsaanpassing").
+## Impact
 
-### 1e. E-mail aan klant bij prijswijziging
-
-Edge function `notify-customer-price-change` (analoog aan de partner-variant uit de vorige ronde):
-- Trigger: admin bevestigt in de "prijs forceren / voorstellen"-dialog dat de klant geïnformeerd moet worden.
-- Korte mail in formele "u"-stijl met link naar het klantportaal en uitleg dat de prijs is bijgewerkt.
-- Logging in `email_log` zodat dossier compleet blijft.
-
----
-
-## Deel 2 — Geautomatiseerde QA-check op prijsconsistentie
-
-Doel: voorkomen dat admin / partner / klant ooit nog verschillende totalen tonen voor hetzelfde item.
-
-### 2a. Vitest-suite `src/lib/__tests__/portalPricing.consistency.test.ts`
-
-Per itemconfiguratie (per_person, per_person_per_day, on_request, fixed) controleren dat:
-- `getDisplayUnitPrice` × `getEffectivePeople` × dagen == `getItemLineTotal`
-- `quoted_price` (groepstotaal) altijd wint van `admin_price_override` (unit price)
-- `override_people` overschrijft `programPeople` zowel in unit als line total
-- Een `admin_price_override` van €X bij Y personen levert in alle drie de helpers hetzelfde groepstotaal.
-
-Dekt expliciet de Trattoria-case: zelfde item, ander `override_people`-veld → unit-prijzen verschillen, maar groepstotaal blijft gelijk.
-
-### 2b. Database-side QA-view `vw_item_price_consistency`
-
-Migratie die een view aanmaakt die per item berekent:
-- `admin_total` = afgeleid via dezelfde regels als `portalPricing.ts`
-- `quoted_total` = `quoted_price` indien gezet
-- `delta` = absoluut verschil
-
-In de admin-omgeving wordt deze view niet zichtbaar gebruikt, maar wel in:
-
-### 2c. Admin-tab "Prijscontrole" (lichtgewicht)
-
-In `AdminRequestDetail.tsx` een kleine sectie onder "Financiën":
-- Lijst items waar `delta > 0.01` of waar `hasOpenAdminPriceChange` true is.
-- Met directe knop "Synchroniseer naar quoted_price" (zet `quoted_price` gelijk aan berekend totaal en stempel `admin_price_override_updated_at`).
-
-### 2d. CI-vriendelijke run
-
-`bunx vitest run src/lib/__tests__/portalPricing.consistency.test.ts` — geen extra config nodig; integreert met de bestaande build/test-pijplijn.
-
----
-
-## Bestanden die gewijzigd / aangemaakt worden
-
-```text
-src/lib/portalPricing.ts                              (helper toevoegen)
-src/lib/__tests__/portalPricing.consistency.test.ts   (nieuw)
-src/components/customer-portal/CustomerProgramItem.tsx (banner + pill)
-src/hooks/useCustomerProgram.ts                       (priceChangedCount)
-src/types/programRequest.ts                           (StatusSummary uitbreiden)
-src/pages/admin/AdminRequestDetail.tsx                (Prijscontrole-sectie)
-supabase/migrations/<nieuw>.sql                       (vw_item_price_consistency)
-supabase/functions/notify-customer-price-change/index.ts (nieuw)
-```
-
-Geen breaking changes; alle nieuwe velden zijn additief.
-
----
-
-## Verificatie na implementatie
-
-1. Project `BV-2603-0003` openen in klantportaal → onderdelen waar de admin de prijs heeft aangepast tonen amber banner + "Prijs gewijzigd"-pill.
-2. Klant geeft opnieuw akkoord → banner en pill verdwijnen.
-3. Trattoria Oliva-onderdeel: admin / partner / klant tonen exact hetzelfde groepstotaal (Vitest-check + visuele controle).
-4. `bunx vitest run src/lib/__tests__/portalPricing.consistency.test.ts` slaagt.
+- Partner kan eindelijk reageren op prijswijzigingen zonder dat een admin het item terug op pending hoeft te zetten.
+- Klant ziet automatisch de bijgewerkte prijs in het portaal zodra de partner akkoord geeft.
+- Geen schemawijzigingen nodig — alle benodigde velden bestaan al.

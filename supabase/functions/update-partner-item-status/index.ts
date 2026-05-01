@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const validStatuses = ["confirmed", "unavailable", "executed", "alternative"];
+    const validStatuses = ["confirmed", "unavailable", "executed", "alternative", "acknowledge_price_change"];
     if (!validStatuses.includes(status)) {
       return new Response(
         JSON.stringify({ error: "Invalid status" }),
@@ -220,6 +220,7 @@ Deno.serve(async (req) => {
 
     // Require price for confirmed status, require note for alternative status
     // Require proposed time for both confirmed and alternative
+    // (acknowledge_price_change skips this — the time was already confirmed earlier)
     if ((status === "confirmed" || status === "alternative") && !proposedTime) {
       return new Response(
         JSON.stringify({ error: "Proposed time is required when confirming or proposing alternative" }),
@@ -277,9 +278,12 @@ Deno.serve(async (req) => {
 
     const oldStatus = item.status;
 
+    const isPriceAck = status === "acknowledge_price_change";
+
     // Update item
     const updateData: Record<string, unknown> = {
-      status,
+      // Bij price-ack laten we de huidige status (bv. "confirmed") staan.
+      status: isPriceAck ? item.status : status,
       status_note: statusNote || null,
       status_updated_at: new Date().toISOString(),
       status_updated_by: partner.name,
@@ -309,6 +313,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (isPriceAck) {
+      // Bevestiging van of tegenvoorstel op een admin-prijswijziging.
+      // quotedPrice MOET door de UI meegegeven zijn (admin-totaal of partner-eigen prijs).
+      if (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0) {
+        return new Response(
+          JSON.stringify({ error: "Quoted price is required for price acknowledgement" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      updateData.quoted_price = quotedPrice;
+      updateData.quoted_at = new Date().toISOString();
+      updateData.quoted_notes = quotedNotes || null;
+      updateData.partner_price_change_acknowledged_at = new Date().toISOString();
+    }
+
     if (status === "executed") {
       updateData.executed_at = new Date().toISOString();
     }
@@ -327,7 +346,9 @@ Deno.serve(async (req) => {
     }
 
     // Log to history
-    const historyNotes = status === "confirmed" && quotedPrice
+    const historyNotes = isPriceAck && quotedPrice
+      ? `Partner heeft prijswijziging beantwoord — nieuwe prijs €${quotedPrice.toFixed(2)}${quotedNotes ? ` (${quotedNotes})` : ""}`
+      : status === "confirmed" && quotedPrice
       ? `Partner heeft bevestigd voor €${quotedPrice.toFixed(2)}${quotedNotes ? ` - ${quotedNotes}` : ""}`
       : status === "executed"
       ? `Partner heeft gemarkeerd als uitgevoerd`
@@ -336,11 +357,11 @@ Deno.serve(async (req) => {
     await supabase.from("program_request_history").insert({
       request_id: item.request_id,
       item_id: itemId,
-      action: "status_changed",
+      action: isPriceAck ? "price_change_acknowledged" : "status_changed",
       actor: "partner",
       actor_name: partner.name,
-      old_value: { status: oldStatus },
-      new_value: { status, status_note: statusNote, quoted_price: quotedPrice, quoted_notes: quotedNotes },
+      old_value: { status: oldStatus, quoted_price: item.quoted_price },
+      new_value: { status: isPriceAck ? item.status : status, status_note: statusNote, quoted_price: quotedPrice, quoted_notes: quotedNotes },
       notes: historyNotes,
     });
 

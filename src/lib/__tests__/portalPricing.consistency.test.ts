@@ -115,6 +115,33 @@ const cases: Case[] = [
       }), false, "ack newer");
     },
   },
+  {
+    name: "Partner accepteert nieuwe admin-prijs → quoted_price = admin-totaal en banner sluit",
+    run: () => {
+      // Initieel: admin override €25 p.p., 10 personen, oude bevestigde prijs €200
+      const before = {
+        quoted_price: 200,
+        admin_price_override: 25,
+        price_type: "per_person" as const,
+        override_people: null,
+        admin_price_override_updated_at: "2026-05-01T12:00:00Z",
+        partner_price_change_acknowledged_at: null as string | null,
+        quoted_at: "2026-04-20T09:00:00Z",
+      };
+      assertEq(hasOpenAdminPriceChange(before), true, "open vóór ack");
+      // Partner klikt 'Bevestig nieuwe prijs' → UI berekent admin × people
+      const adminTotal = before.admin_price_override * 10;
+      assertEq(adminTotal, 250, "berekend admin-totaal");
+      // Resultaat: quoted_price wordt overschreven, ack=now
+      const after = {
+        ...before,
+        quoted_price: adminTotal,
+        partner_price_change_acknowledged_at: "2026-05-01T13:00:00Z",
+      };
+      assertEq(hasOpenAdminPriceChange(after), false, "ack sluit banner");
+      assertEq(getDisplayLineTotal(after, 10), 250, "klant ziet €250");
+    },
+  },
 ];
 
 export function runPortalPricingConsistencyChecks(): { passed: number; failed: number } {
