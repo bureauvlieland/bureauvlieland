@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
     // Get current item state
     const { data: item, error: itemError } = await supabase
       .from("program_request_items")
-      .select("*, program_requests!inner(customer_name, customer_email, customer_token)")
+      .select("*, program_requests!inner(customer_name, customer_email, customer_token, reference_number)")
       .eq("id", itemId)
       .eq("provider_id", partner.id)
       .single();
