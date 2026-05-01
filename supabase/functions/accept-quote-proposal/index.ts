@@ -433,6 +433,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
                 Name: program.customer_name,
               },
             ],
+            ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
             Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
             HTMLPart: customerEmailHtml,
           },
