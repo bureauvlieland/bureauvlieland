@@ -1,6 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +14,8 @@ async function sendEmailNotification(
   to: string,
   toName: string,
   subject: string,
-  htmlContent: string
+  htmlContent: string,
+  referenceNumber?: string | null
 ) {
   if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
     console.error("Mailjet credentials not configured");
@@ -22,6 +23,7 @@ async function sendEmailNotification(
   }
 
   try {
+    const replyTo = buildReplyTo(referenceNumber);
     const response = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
@@ -36,6 +38,7 @@ async function sendEmailNotification(
               Name: "Bureau Vlieland",
             },
             To: [{ Email: to, Name: toName }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: htmlContent,
           },
@@ -307,7 +310,8 @@ Deno.serve(async (req) => {
       getRecipientEmail("erwin@bureauvlieland.nl", origin),
       "Bureau Vlieland",
       `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
-      bureauEmailHtml
+      bureauEmailHtml,
+      item.program_requests?.reference_number || null
     );
 
     return new Response(

@@ -7,6 +7,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   formatCurrencyNL,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -186,6 +187,7 @@ Deno.serve(async (req) => {
               {
                 From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
                 To: [{ Email: recipientEmail, Name: "Bureau Vlieland" }],
+                ...(buildReplyTo(request.reference_number) ? { ReplyTo: buildReplyTo(request.reference_number) } : {}),
                 Subject: subject,
                 HTMLPart: body,
               },

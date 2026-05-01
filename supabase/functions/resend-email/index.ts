@@ -1,6 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 
 
 const corsHeaders = {
@@ -131,11 +132,11 @@ Deno.serve(async (req) => {
             },
             To: [
               {
-                Email: finalRecipient,
+                Email: getRecipientEmail(finalRecipient, req.headers.get("origin") || undefined),
                 Name: emailLog.recipient_name || finalRecipient,
               },
             ],
-            Subject: subject,
+            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
             HTMLPart: bodyHtml,
           },
         ],

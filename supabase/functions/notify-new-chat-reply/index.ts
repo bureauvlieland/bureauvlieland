@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
-import { getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, TemplateIds, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -184,8 +184,8 @@ Deno.serve(async (req) => {
         Messages: [
           {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-            To: [{ Email: recipientEmail, Name: recipientName }],
-            Subject: finalSubject,
+            To: [{ Email: getRecipientEmail(recipientEmail, req.headers.get("origin") || undefined), Name: recipientName }],
+            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${finalSubject}`,
             HTMLPart: htmlBody,
           },
         ],

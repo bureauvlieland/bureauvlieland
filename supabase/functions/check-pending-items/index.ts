@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -129,8 +130,8 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             Messages: [{
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: opts.recipientEmail, Name: opts.recipientName }],
-              Subject: subject,
+              To: [{ Email: getRecipientEmail(opts.recipientEmail, req.headers.get("origin") || undefined), Name: opts.recipientName }],
+              Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
               HTMLPart: body,
             }],
           }),
@@ -640,8 +641,8 @@ Deno.serve(async (req) => {
                 body: JSON.stringify({
                   Messages: [{
                     From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-                    To: [{ Email: partnerEmail, Name: partnerName }],
-                    Subject: subject,
+                    To: [{ Email: getRecipientEmail(partnerEmail, req.headers.get("origin") || undefined), Name: partnerName }],
+                    Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
                     HTMLPart: body,
                   }],
                 }),

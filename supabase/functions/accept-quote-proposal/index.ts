@@ -7,6 +7,7 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -432,6 +433,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
                 Name: program.customer_name,
               },
             ],
+            ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
             Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
             HTMLPart: customerEmailHtml,
           },
@@ -588,6 +590,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             Name: group.partnerName,
           },
         ],
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
         Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
         HTMLPart: emailHtml,
       });

@@ -6,6 +6,7 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -293,6 +294,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       emailMessages.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: recipientEmail, Name: group.partnerName }],
+        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
         Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
         HTMLPart: emailHtml,
       });

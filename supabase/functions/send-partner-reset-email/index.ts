@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { SENDER_EMAIL, SENDER_NAME, getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
+import { SENDER_EMAIL, SENDER_NAME, getRenderedTemplate, TemplateIds, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -88,7 +88,9 @@ Deno.serve(async (req) => {
       reset_link: actionLink,
     });
 
-    const emailSubject = template?.subject || "Wachtwoord resetten — Bureau Vlieland Partner Portal";
+    const origin = req.headers.get("origin") || undefined;
+    const subjectPrefix = getSubjectPrefix(origin);
+    const emailSubject = `${subjectPrefix}${template?.subject || "Wachtwoord resetten — Bureau Vlieland Partner Portal"}`;
     const htmlBody = template?.body || `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
@@ -122,7 +124,7 @@ Deno.serve(async (req) => {
         Messages: [
           {
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-            To: [{ Email: trimmedEmail, Name: partner.name }],
+            To: [{ Email: getRecipientEmail(trimmedEmail, origin), Name: partner.name }],
             Subject: emailSubject,
             HTMLPart: htmlBody,
           },

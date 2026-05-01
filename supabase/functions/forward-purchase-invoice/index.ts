@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -156,12 +156,15 @@ Deno.serve(async (req) => {
     `;
 
     const emailSubject = `${getSubjectPrefix(origin)}Inkoopfactuur: ${invoice.partners.name} - ${invoice.invoice_number}`;
+    const refNum = invoice.program_requests?.reference_number || null;
+    const replyTo = buildReplyTo(refNum);
     const emailMessage: any = {
       From: {
         Email: "hallo@bureauvlieland.nl",
         Name: "Bureau Vlieland Admin",
       },
       To: [{ Email: getRecipientEmail(snelstartEmail, origin), Name: "Boekhouding" }],
+      ...(replyTo ? { ReplyTo: replyTo } : {}),
       Subject: emailSubject,
       HTMLPart: htmlContent,
     };

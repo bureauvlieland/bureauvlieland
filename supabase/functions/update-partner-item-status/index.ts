@@ -6,6 +6,7 @@ import {
   formatCurrencyNL,
   getRecipientEmail,
   getSubjectPrefix,
+  buildReplyTo,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -18,7 +19,8 @@ const sendEmailViaMailjet = async (
   to: string,
   toName: string,
   subject: string,
-  htmlContent: string
+  htmlContent: string,
+  referenceNumber?: string | null
 ) => {
   const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
   const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -29,6 +31,7 @@ const sendEmailViaMailjet = async (
   }
 
   const credentials = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
+  const replyTo = buildReplyTo(referenceNumber);
 
   try {
     const response = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -45,6 +48,7 @@ const sendEmailViaMailjet = async (
               Name: "Bureau Vlieland",
             },
             To: [{ Email: to, Name: toName }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: htmlContent,
           },
@@ -259,7 +263,7 @@ Deno.serve(async (req) => {
     // Get current item state
     const { data: item, error: itemError } = await supabase
       .from("program_request_items")
-      .select("*, program_requests!inner(customer_name, customer_email, customer_token)")
+      .select("*, program_requests!inner(customer_name, customer_email, customer_token, reference_number)")
       .eq("id", itemId)
       .eq("provider_id", partner.id)
       .single();
@@ -354,7 +358,7 @@ Deno.serve(async (req) => {
 
       // Create partner_status_update todo for admin to review
       const statusLabel = status === "confirmed" ? "bevestigd" : status === "unavailable" ? "niet beschikbaar" : "alternatief voorgesteld";
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       
       const { data: existingStatusTodo } = await supabase
         .from("admin_todos")
@@ -381,7 +385,7 @@ Deno.serve(async (req) => {
 
     // Check if this is a response to a counter-proposal and send customer notification
     if (oldStatus === "counter_proposed" && (status === "confirmed" || status === "alternative" || status === "unavailable")) {
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
       // Status-specific configuration
@@ -482,7 +486,8 @@ Deno.serve(async (req) => {
         counterResponseRecipient,
         programRequest.customer_name,
         `${counterSubjectPrefix}${emailSubject}`,
-        emailBody
+        emailBody,
+        programRequest.reference_number
       );
       
       if (emailSent) {
@@ -617,7 +622,7 @@ Deno.serve(async (req) => {
 
     const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
     if (validEmailStatuses.includes(status)) {
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string };
+      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
       // Determine template ID based on status
@@ -666,7 +671,8 @@ Deno.serve(async (req) => {
         getRecipientEmail(programRequest.customer_email, origin),
         programRequest.customer_name,
         `${statusSubjectPrefix}${emailSubject}`,
-        emailHtml
+        emailHtml,
+        programRequest.reference_number
       );
 
       if (!emailSent) {

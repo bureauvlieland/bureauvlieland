@@ -1,7 +1,7 @@
 // Admin "reset password": send the partner a fresh one-time set-password link.
 // No plaintext password is generated or stored anywhere.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml } from "../_shared/email-templates.ts";
+import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
@@ -107,8 +107,11 @@ Deno.serve(async (req) => {
       .update({ password_set_at: null, invited_at: new Date().toISOString() })
       .eq("id", partnerId);
 
-    const recipientEmail = partner.contact_email || partner.email;
-    const subject = "Nieuwe link om uw wachtwoord in te stellen — Bureau Vlieland Partner Portaal";
+    const origin = req.headers.get("origin") || undefined;
+    const subjectPrefix = getSubjectPrefix(origin);
+    const originalRecipient = partner.contact_email || partner.email;
+    const recipientEmail = getRecipientEmail(originalRecipient, origin);
+    const subject = `${subjectPrefix}Nieuwe link om uw wachtwoord in te stellen — Bureau Vlieland Partner Portaal`;
 
     let emailSent = false;
     let emailError: string | null = null;

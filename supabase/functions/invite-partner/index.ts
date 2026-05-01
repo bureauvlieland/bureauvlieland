@@ -1,6 +1,6 @@
 // Invite a partner: create auth user without password and send a one-time set-password link.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml } from "../_shared/email-templates.ts";
+import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -250,7 +250,9 @@ Deno.serve(async (req) => {
 
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
       const emailHtml = getInvitationHtml(partner.name, partner.email, setPasswordLink, portalLink);
-      const emailSubject = "Welkom bij het Bureau Vlieland Partner Portaal — Stel uw wachtwoord in";
+      const subjectPrefix = getSubjectPrefix(origin);
+      const emailSubject = `${subjectPrefix}Welkom bij het Bureau Vlieland Partner Portaal — Stel uw wachtwoord in`;
+      const recipient = getRecipientEmail(partner.email, origin);
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -262,7 +264,7 @@ Deno.serve(async (req) => {
           Messages: [
             {
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: partner.email, Name: partner.name }],
+              To: [{ Email: recipient, Name: partner.name }],
               Subject: emailSubject,
               HTMLPart: emailHtml,
               TextPart:
