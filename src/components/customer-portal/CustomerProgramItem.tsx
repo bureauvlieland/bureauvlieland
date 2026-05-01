@@ -18,7 +18,7 @@ import {
 import { ItemStatusBadge } from "./ItemStatusBadge";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info } from "lucide-react";
+import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
 import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
