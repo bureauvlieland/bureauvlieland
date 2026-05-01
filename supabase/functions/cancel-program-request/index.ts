@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: `${subjectPrefix}${partnerTemplate?.subject || "Aanvraag geannuleerd — ${program.reference_number || \"\"}"}`,
+        Subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
         HTMLPart: htmlContent,
       });
     }
