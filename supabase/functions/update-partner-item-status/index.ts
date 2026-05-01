@@ -278,9 +278,12 @@ Deno.serve(async (req) => {
 
     const oldStatus = item.status;
 
+    const isPriceAck = status === "acknowledge_price_change";
+
     // Update item
     const updateData: Record<string, unknown> = {
-      status,
+      // Bij price-ack laten we de huidige status (bv. "confirmed") staan.
+      status: isPriceAck ? item.status : status,
       status_note: statusNote || null,
       status_updated_at: new Date().toISOString(),
       status_updated_by: partner.name,
@@ -308,6 +311,21 @@ Deno.serve(async (req) => {
         updateData.quoted_notes = quotedNotes || null;
         updateData.partner_price_change_acknowledged_at = new Date().toISOString();
       }
+    }
+
+    if (isPriceAck) {
+      // Bevestiging van of tegenvoorstel op een admin-prijswijziging.
+      // quotedPrice MOET door de UI meegegeven zijn (admin-totaal of partner-eigen prijs).
+      if (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0) {
+        return new Response(
+          JSON.stringify({ error: "Quoted price is required for price acknowledgement" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      updateData.quoted_price = quotedPrice;
+      updateData.quoted_at = new Date().toISOString();
+      updateData.quoted_notes = quotedNotes || null;
+      updateData.partner_price_change_acknowledged_at = new Date().toISOString();
     }
 
     if (status === "executed") {
