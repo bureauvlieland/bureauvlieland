@@ -1,6 +1,6 @@
 // Resend partner invitation: regenerate a one-time set-password link, no plaintext password is created or stored.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml } from "../_shared/email-templates.ts";
+import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
