@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const validStatuses = ["confirmed", "unavailable", "executed", "alternative"];
+    const validStatuses = ["confirmed", "unavailable", "executed", "alternative", "acknowledge_price_change"];
     if (!validStatuses.includes(status)) {
       return new Response(
         JSON.stringify({ error: "Invalid status" }),
@@ -220,6 +220,7 @@ Deno.serve(async (req) => {
 
     // Require price for confirmed status, require note for alternative status
     // Require proposed time for both confirmed and alternative
+    // (acknowledge_price_change skips this — the time was already confirmed earlier)
     if ((status === "confirmed" || status === "alternative") && !proposedTime) {
       return new Response(
         JSON.stringify({ error: "Proposed time is required when confirming or proposing alternative" }),
