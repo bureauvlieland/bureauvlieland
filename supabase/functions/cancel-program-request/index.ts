@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: partnerTemplate?.subject || `${subjectPrefix}Aanvraag geannuleerd — ${program.reference_number || ""}`,
+        Subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
         HTMLPart: htmlContent,
       });
     }
@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
         ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: accTemplate?.subject || `${subjectPrefix}Logiesaanvraag geannuleerd — ${program.reference_number || ""}`,
+        Subject: `${subjectPrefix}${accTemplate?.subject || `Logiesaanvraag geannuleerd — ${program.reference_number || ""}`}`,
         HTMLPart: accTemplate?.body || `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>
@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: program.customer_email, Name: program.customer_name }],
       ...(replyTo ? { ReplyTo: replyTo } : {}),
-      Subject: customerTemplate?.subject || `${subjectPrefix}Bevestiging: Uw aanvraag is geannuleerd`,
+      Subject: `${subjectPrefix}${customerTemplate?.subject || "Bevestiging: Uw aanvraag is geannuleerd"}`,
       HTMLPart: customerTemplate?.body || `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
