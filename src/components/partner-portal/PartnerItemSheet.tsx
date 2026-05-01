@@ -252,8 +252,9 @@ export const PartnerItemSheet = ({
       if (item.preferred_time) setProposedTime(item.preferred_time);
       // Pre-fill price from admin override if available
       if (item.admin_price_override && !quotedPrice) {
-        const priceValue = item.price_type === "per_person" 
-          ? item.admin_price_override * request.number_of_people 
+        const effectivePeople = item.override_people ?? request.number_of_people;
+        const priceValue = (item.price_type === "per_person" || item.price_type === "per_person_per_day")
+          ? item.admin_price_override * effectivePeople
           : item.admin_price_override;
         setQuotedPrice(priceValue.toFixed(2).replace(".", ","));
       }
