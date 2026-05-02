@@ -78,24 +78,24 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
-  // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
-  // ALS er ook daadwerkelijk een Akkoord-knop verschijnt. In quote-mode geldt dat
-  // alleen wanneer het item via de offerteflow op klantgoedkeuring wacht; in legacy-modus
-  // (geen quote) volstaat de "confirmed/alternative + nog niet geaccepteerd"-check.
-  const needsCustomerAction = !isSelfArranged
-    && (item.status === "confirmed" || item.status === "alternative")
-    && !item.customer_accepted_at
-    && !item.customer_approved_at
-    && (isQuoteMode ? isQuoteItemAwaitingCustomerApproval(item) : true);
-
-  // Bureau Vlieland heeft de prijs aangepast nadat de klant al akkoord had gegeven —
-  // de DB-trigger reset customer_approved_at, dus de klant moet opnieuw bevestigen.
-  // We tonen dit met een aparte amber banner én een pill in de header.
+  // Bureau Vlieland heeft de prijs aangepast nadat de klant al goedkeurde —
+  // ook al heeft de DB-trigger customer_approved_at niet altijd gereset, we behandelen
+  // dit als een open situatie waarop de klant opnieuw moet bevestigen.
   const customerApprovedTs = item.customer_approved_at ? new Date(item.customer_approved_at).getTime() : 0;
   const adminPriceUpdatedTs = item.admin_price_override_updated_at ? new Date(item.admin_price_override_updated_at).getTime() : 0;
   const priceChangedSinceApproval = adminPriceUpdatedTs > 0 && customerApprovedTs > 0 && adminPriceUpdatedTs > customerApprovedTs;
   const priceChangeNeedsAttention = !isSelfArranged
-    && (priceChangedSinceApproval || (needsCustomerAction && adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
+    && (priceChangedSinceApproval || (adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
+
+  // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
+  // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
+  // opnieuw akkoord op moet geven. In quote-mode laten we de strikte item_quote_status
+  // check vallen omdat status=confirmed/alternative al voldoende signaleert dat de
+  // partner heeft gereageerd of dat het item via de offerte is bevestigd.
+  const needsCustomerAction = !isSelfArranged
+    && (item.status === "confirmed" || item.status === "alternative")
+    && (!item.customer_approved_at || priceChangeNeedsAttention)
+    && !item.customer_accepted_at;
 
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
