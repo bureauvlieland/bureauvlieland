@@ -1038,8 +1038,10 @@ const AdminProjectsContent = () => {
                             </CollapsibleContent>
                           </>
                         </Collapsible>
-                      );
-                    })
+                        );
+                        return rows;
+                      });
+                    })()
                   )}
                 </TableBody>
               </Table>
