@@ -373,6 +373,14 @@ const ItemCard = ({
                 <span className="hidden sm:inline">Wacht op AV</span>
               </div>
             )}
+            {item.priceChangePending && (
+              <Badge
+                variant="outline"
+                className="font-normal border-0 text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/50"
+              >
+                Nieuwe prijs
+              </Badge>
+            )}
             <Badge
               variant="outline"
               className={cn(
