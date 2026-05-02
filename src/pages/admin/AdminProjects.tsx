@@ -38,7 +38,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, differenceInDays } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { format, differenceInDays, startOfDay, endOfWeek, endOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   Search,
@@ -62,6 +64,8 @@ import {
   Trash2,
   ChevronDown,
   AlertCircle,
+  Flame,
+  AlertTriangle,
 } from "lucide-react";
 import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
 import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
@@ -202,10 +206,82 @@ function getReadinessScore(project: Project): { done: number; total: number; per
   return { done, total, percentage: total > 0 ? Math.round((done / total) * 100) : 0 };
 }
 
+// Earliest scheduled date of a project (for sorting + overdue check + grouping)
+function getEarliestProjectDate(p: Project): Date | null {
+  const candidates: Date[] = [];
+  if (p.accommodation_arrival) candidates.push(new Date(p.accommodation_arrival));
+  if (p.selected_dates?.length) candidates.push(new Date(p.selected_dates[0]));
+  if (!candidates.length) return null;
+  return new Date(Math.min(...candidates.map((d) => d.getTime())));
+}
+
+// Project counts as "needs action" when something is waiting on the bureau
+function projectNeedsAction(project: Project): boolean {
+  const derived = getDerivedStatus(project);
+  if (derived === "geannuleerd" || derived === "afgerond") return false;
+
+  // Items approved by customer but not yet sent to partner
+  if (project.items_not_sent > 0) return true;
+
+  // Lodging deadline within 3 days for any pending quote
+  const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
+  if (earliestDeadline) {
+    const days = differenceInDays(earliestDeadline, new Date());
+    if (days < 3) return true;
+  }
+
+  // Stuck "offerte verstuurd" for > 7 days
+  if (derived === "offerte_verstuurd") {
+    const ageDays = differenceInDays(new Date(), new Date(project.created_at));
+    if (ageDays > 7) return true;
+  }
+
+  // Past event date but project not yet ready for invoicing → forgotten
+  const earliest = getEarliestProjectDate(project);
+  if (earliest && earliest.getTime() < startOfDay(new Date()).getTime()) {
+    if (derived !== "facturatie") return true;
+  }
+
+  return false;
+}
+
+function isOverdue(project: Project): boolean {
+  const derived = getDerivedStatus(project);
+  if (derived === "facturatie" || derived === "afgerond" || derived === "geannuleerd") return false;
+  const earliest = getEarliestProjectDate(project);
+  if (!earliest) return false;
+  return earliest.getTime() < startOfDay(new Date()).getTime();
+}
+
+type TimeBucket = "overdue" | "this_week" | "this_month" | "later" | "no_date";
+
+function getTimeBucket(project: Project): TimeBucket {
+  const earliest = getEarliestProjectDate(project);
+  if (!earliest) return "no_date";
+  const now = new Date();
+  const today = startOfDay(now);
+  if (earliest.getTime() < today.getTime()) return "overdue";
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  if (earliest.getTime() <= weekEnd.getTime()) return "this_week";
+  const monthEnd = endOfMonth(now);
+  if (earliest.getTime() <= monthEnd.getTime()) return "this_month";
+  return "later";
+}
+
+const TIME_BUCKET_LABEL: Record<TimeBucket, string> = {
+  overdue: "Datum verstreken (nog open)",
+  this_week: "Deze week",
+  this_month: "Deze maand",
+  later: "Later",
+  no_date: "Zonder datum",
+};
+
 const AdminProjectsContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [showArchive, setShowArchive] = useState(false);
+  const [actionOnly, setActionOnly] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteAccommodation, setDeleteAccommodation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -396,6 +472,24 @@ const AdminProjectsContent = () => {
     },
   });
 
+  // Counts per derived status across ALL projects (used for funnel + dropdown labels)
+  const allStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (projects || []).forEach((p) => {
+      const s = getDerivedStatus(p);
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
+  }, [projects]);
+
+  // stageCounts excludes geannuleerd (rendered separately as muted row)
+  const stageCounts = useMemo(() => {
+    const { geannuleerd: _ignored, ...rest } = allStatusCounts;
+    return rest;
+  }, [allStatusCounts]);
+
+  const cancelledCount = allStatusCounts.geannuleerd ?? 0;
+
   const filteredProjects = useMemo(() => {
     return (projects || []).filter((project) => {
       const query = searchQuery.toLowerCase();
@@ -406,27 +500,32 @@ const AdminProjectsContent = () => {
         (project.program_ref?.toLowerCase().includes(query) ?? false) ||
         (project.accommodation_ref?.toLowerCase().includes(query) ?? false);
 
+      const derived = getDerivedStatus(project);
+
       let matchesStatus = statusFilter === "all";
       if (!matchesStatus) {
-        const derived = getDerivedStatus(project);
         matchesStatus = derived === statusFilter;
       }
 
       const matchesType = typeFilter === "all" || project.type === typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [projects, searchQuery, statusFilter, typeFilter]);
+      // Hide afgerond + geannuleerd by default unless:
+      // - the user toggled "Toon archief", or
+      // - the status filter is explicitly set to one of those two
+      const isArchived = derived === "afgerond" || derived === "geannuleerd";
+      const explicitArchiveFilter = statusFilter === "afgerond" || statusFilter === "geannuleerd";
+      const matchesArchive = !isArchived || showArchive || explicitArchiveFilter;
 
-  const stageCounts = useMemo(() => {
-    const all = projects || [];
-    const counts: Record<string, number> = {};
-    all.forEach((p) => {
-      const s = getDerivedStatus(p);
-      if (s !== "geannuleerd") counts[s] = (counts[s] || 0) + 1;
+      const matchesAction = !actionOnly || projectNeedsAction(project);
+
+      return matchesSearch && matchesStatus && matchesType && matchesArchive && matchesAction;
     });
-    return counts;
-  }, [projects]);
+  }, [projects, searchQuery, statusFilter, typeFilter, showArchive, actionOnly]);
+
+  const actionNeededTotal = useMemo(
+    () => (projects || []).filter(projectNeedsAction).length,
+    [projects],
+  );
 
   if (isLoading) {
     return (
@@ -445,7 +544,9 @@ const AdminProjectsContent = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Klantprojecten</h1>
-          <p className="text-slate-600">Centraal overzicht van alle klantopdrachten (logies + activiteiten)</p>
+          <p className="text-slate-600">
+            Actieve klantopdrachten — afgeronde en geannuleerde projecten zijn standaard verborgen.
+          </p>
         </div>
         <Link to="/admin/programma-nieuw">
           <Button>
@@ -458,12 +559,13 @@ const AdminProjectsContent = () => {
       {/* Pipeline Funnel */}
       <PipelineFunnel
         stageCounts={stageCounts}
-        activeStage={statusFilter !== "all" && statusFilter !== "geannuleerd" ? statusFilter : null}
-        onStageClick={(key) => setStatusFilter(prev => prev === key ? "all" : key)}
+        cancelledCount={cancelledCount}
+        activeStage={statusFilter !== "all" ? statusFilter : null}
+        onStageClick={(key) => setStatusFilter((prev) => (prev === key ? "all" : key))}
       />
 
       {/* Filters */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-4 flex-wrap items-center">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -485,20 +587,45 @@ const AdminProjectsContent = () => {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-56">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle statussen</SelectItem>
-            <SelectItem value="concept">Concept</SelectItem>
-            <SelectItem value="offerte_verstuurd">Offerte verstuurd</SelectItem>
-            <SelectItem value="akkoord_ontvangen">Akkoord ontvangen</SelectItem>
-            <SelectItem value="av_getekend">AV getekend</SelectItem>
-            <SelectItem value="facturatie">Facturatie</SelectItem>
-            <SelectItem value="afgerond">Afgerond</SelectItem>
-            <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
+            <SelectItem value="concept">Concept ({allStatusCounts.concept ?? 0})</SelectItem>
+            <SelectItem value="offerte_verstuurd">Offerte verstuurd ({allStatusCounts.offerte_verstuurd ?? 0})</SelectItem>
+            <SelectItem value="akkoord_ontvangen">Akkoord ontvangen ({allStatusCounts.akkoord_ontvangen ?? 0})</SelectItem>
+            <SelectItem value="av_getekend">AV getekend ({allStatusCounts.av_getekend ?? 0})</SelectItem>
+            <SelectItem value="facturatie">Facturatie ({allStatusCounts.facturatie ?? 0})</SelectItem>
+            <SelectItem value="afgerond">Afgerond ({allStatusCounts.afgerond ?? 0})</SelectItem>
+            <SelectItem value="geannuleerd">Geannuleerd ({allStatusCounts.geannuleerd ?? 0})</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button
+          variant={actionOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActionOnly((v) => !v)}
+          className="gap-1.5"
+        >
+          <Flame className="h-4 w-4" />
+          Actiepunten
+          {actionNeededTotal > 0 && (
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              {actionNeededTotal}
+            </Badge>
+          )}
+        </Button>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Switch id="show-archive" checked={showArchive} onCheckedChange={setShowArchive} />
+          <Label htmlFor="show-archive" className="text-sm cursor-pointer">
+            Toon archief
+            <span className="text-xs text-muted-foreground ml-1">
+              (afgerond + geannuleerd)
+            </span>
+          </Label>
+        </div>
       </div>
 
       {/* View tabs */}
@@ -549,22 +676,47 @@ const AdminProjectsContent = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredProjects.map((project) => {
-                      const derived = getDerivedStatus(project);
-                      const statusConfig = DERIVED_STATUS_CONFIG[derived];
-                      const readiness = getReadinessScore(project);
-                      const isExpanded = expandedRows.has(project.id);
-                      const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
-                      const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
-                      const daysUntilDeadline = earliestDeadline ? differenceInDays(earliestDeadline, new Date()) : null;
+                    (() => {
+                      let lastBucket: TimeBucket | null = null;
+                      return filteredProjects.flatMap((project) => {
+                        const derived = getDerivedStatus(project);
+                        const statusConfig = DERIVED_STATUS_CONFIG[derived];
+                        const readiness = getReadinessScore(project);
+                        const isExpanded = expandedRows.has(project.id);
+                        const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
+                        const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
+                        const daysUntilDeadline = earliestDeadline ? differenceInDays(earliestDeadline, new Date()) : null;
+                        const overdue = isOverdue(project);
+                        const bucket = getTimeBucket(project);
+                        const showBucketHeader = bucket !== lastBucket;
+                        lastBucket = bucket;
 
-                      return (
+                        const rows: React.ReactNode[] = [];
+                        if (showBucketHeader) {
+                          rows.push(
+                            <TableRow key={`bucket-${bucket}-${project.id}`} className="hover:bg-transparent">
+                              <TableCell colSpan={11} className="bg-muted/40 py-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  {TIME_BUCKET_LABEL[bucket]}
+                                </span>
+                              </TableCell>
+                            </TableRow>,
+                          );
+                        }
+
+                        rows.push(
                         <Collapsible key={project.id} open={isExpanded} onOpenChange={() => toggleRow(project.id)} asChild>
                           <>
                             <CollapsibleTrigger asChild>
-                              <TableRow className={cn("cursor-pointer", hasDetails && "hover:bg-muted/50")}>
+                              <TableRow className={cn(
+                                "cursor-pointer",
+                                hasDetails && "hover:bg-muted/50",
+                                overdue && "bg-red-50/40 hover:bg-red-50/70 border-l-2 border-l-red-400",
+                              )}>
                                 <TableCell className="px-2">
-                                  {hasDetails && (
+                                  {overdue ? (
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                  ) : hasDetails && (
                                     <ChevronDown className={cn(
                                       "h-4 w-4 text-muted-foreground transition-transform",
                                       isExpanded && "rotate-180"
@@ -886,8 +1038,10 @@ const AdminProjectsContent = () => {
                             </CollapsibleContent>
                           </>
                         </Collapsible>
-                      );
-                    })
+                        );
+                        return rows;
+                      });
+                    })()
                   )}
                 </TableBody>
               </Table>

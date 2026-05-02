@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Send, FileCheck, CheckCircle2, Receipt } from "lucide-react";
+import { FileText, Send, FileCheck, CheckCircle2, Receipt, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FunnelStage {
@@ -20,6 +20,8 @@ interface PipelineFunnelProps {
   activeStage?: string | null;
   /** Called when a stage bar is clicked */
   onStageClick?: (stageKey: string) => void;
+  /** Optional cancelled count, shown as separate muted row (does not add to total) */
+  cancelledCount?: number;
 }
 
 const STAGE_DEFS = [
@@ -31,7 +33,7 @@ const STAGE_DEFS = [
   { key: "afgerond", label: "Afgerond", icon: <CheckCircle2 className="h-4 w-4" />, color: "text-emerald-700", bgColor: "bg-emerald-100", activeRing: "ring-emerald-400" },
 ];
 
-export const PipelineFunnel = ({ stageCounts, activeStage, onStageClick }: PipelineFunnelProps) => {
+export const PipelineFunnel = ({ stageCounts, activeStage, onStageClick, cancelledCount = 0 }: PipelineFunnelProps) => {
   const stages: FunnelStage[] = useMemo(() => {
     return STAGE_DEFS.map((def) => ({
       ...def,
@@ -39,14 +41,24 @@ export const PipelineFunnel = ({ stageCounts, activeStage, onStageClick }: Pipel
     }));
   }, [stageCounts]);
 
-  const totalProjects = stages.reduce((s, st) => s + st.count, 0);
+  // Active = everything except afgerond + cancelled (which are "afgesloten")
+  const activeProjects = stages
+    .filter((s) => s.key !== "afgerond")
+    .reduce((s, st) => s + st.count, 0);
   const maxCount = Math.max(...stages.map((s) => s.count), 1);
+
+  const isCancelledActive = activeStage === "geannuleerd";
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Pipeline</CardTitle>
-        <CardDescription className="text-xs">{totalProjects} actieve projecten per fase</CardDescription>
+        <CardDescription className="text-xs">
+          {activeProjects} actieve projecten per fase
+          {cancelledCount > 0 && (
+            <span className="text-muted-foreground"> · {cancelledCount} geannuleerd</span>
+          )}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {stages.map((stage) => {
@@ -85,6 +97,38 @@ export const PipelineFunnel = ({ stageCounts, activeStage, onStageClick }: Pipel
             </button>
           );
         })}
+
+        {cancelledCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onStageClick?.("geannuleerd")}
+            className={cn(
+              "flex items-center gap-3 w-full text-left rounded-md transition-all border-t pt-2 mt-1",
+              onStageClick && "cursor-pointer hover:bg-muted/40",
+              isCancelledActive && "ring-2 ring-offset-1 ring-red-300",
+            )}
+            disabled={!onStageClick}
+            title="Toon geannuleerde projecten (telt niet mee in actieve pipeline)"
+          >
+            <div className="flex items-center gap-1.5 w-32 flex-shrink-0">
+              <span className="text-red-600"><XCircle className="h-4 w-4" /></span>
+              <span className={cn(
+                "text-xs text-muted-foreground transition-colors",
+                isCancelledActive && "text-foreground font-medium",
+              )}>
+                Geannuleerd
+              </span>
+            </div>
+            <div className="flex-1 h-6 bg-muted/40 rounded-md overflow-hidden">
+              <div
+                className="h-full rounded-md flex items-center px-2 bg-red-50"
+                style={{ width: `${Math.max((cancelledCount / maxCount) * 100, 8)}%` }}
+              >
+                <span className="text-xs font-bold text-red-700">{cancelledCount}</span>
+              </div>
+            </div>
+          </button>
+        )}
       </CardContent>
     </Card>
   );

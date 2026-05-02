@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
+import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -85,6 +86,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const isCollapsed = state === "collapsed";
   const { data: todoCount = 0 } = useOpenTodoCount();
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
+  const { data: invoicingCount = 0 } = useInvoicingReadyCount();
 
   const menuSections: MenuSection[] = [
     {
@@ -111,7 +113,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       label: "Financiën",
       items: [
         { title: "Financieel", url: "/admin/financieel", icon: BarChart3 },
-        { title: "Facturatie", url: "/admin/facturatie", icon: Euro },
+        { title: "Facturatie", url: "/admin/facturatie", icon: Euro, badge: invoicingCount },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
         { title: "Inkoop-inbox", url: "/admin/inkoopfacturen/inbox", icon: Inbox, badge: inboxCount },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
