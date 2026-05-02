@@ -342,45 +342,30 @@ export const CustomerProgramItem = ({
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
             <div className="mt-3 flex flex-wrap gap-2 justify-end">
-              {/* Per-item akkoord for quote mode items that are part of the sent quote */}
-              {isQuoteMode && isQuoteItemAwaitingCustomerApproval(item) && onApproveQuoteItem && (
+              {/* Per-item akkoord — voor zowel quote- als legacy-mode */}
+              {needsCustomerAction && (isQuoteMode ? !!onApproveQuoteItem : !!onAccept) && (
                 <Button
                   onClick={async () => {
-                    setLocalApproving(true);
-                    await onApproveQuoteItem();
-                    setLocalApproving(false);
+                    if (isQuoteMode && onApproveQuoteItem) {
+                      setLocalApproving(true);
+                      await onApproveQuoteItem();
+                      setLocalApproving(false);
+                    } else if (onAccept) {
+                      setLocalAccepting(true);
+                      await onAccept();
+                      setLocalAccepting(false);
+                    }
                   }}
-                  disabled={localApproving}
+                  disabled={localApproving || localAccepting || isAccepting}
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {localApproving ? (
+                  {(localApproving || localAccepting) ? (
                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
                   ) : (
                     <Check className="h-4 w-4 mr-1.5" />
                   )}
-                  Akkoord
-                </Button>
-              )}
-
-              {/* Akkoord - for confirmed/alternative items not yet accepted */}
-              {!isQuoteMode && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
-                <Button
-                  onClick={async () => {
-                    setLocalAccepting(true);
-                    await onAccept();
-                    setLocalAccepting(false);
-                  }}
-                  disabled={localAccepting || isAccepting}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {localAccepting ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 mr-1.5" />
-                  )}
-                  Akkoord
+                  {priceChangeNeedsAttention ? "Akkoord met nieuwe prijs" : "Akkoord"}
                 </Button>
               )}
 
