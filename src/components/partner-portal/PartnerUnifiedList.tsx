@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
+import { hasOpenAdminPriceChange } from "@/lib/portalPricing";
 
 export interface UnifiedListItem {
   id: string;
