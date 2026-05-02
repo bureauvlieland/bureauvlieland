@@ -676,22 +676,47 @@ const AdminProjectsContent = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredProjects.map((project) => {
-                      const derived = getDerivedStatus(project);
-                      const statusConfig = DERIVED_STATUS_CONFIG[derived];
-                      const readiness = getReadinessScore(project);
-                      const isExpanded = expandedRows.has(project.id);
-                      const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
-                      const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
-                      const daysUntilDeadline = earliestDeadline ? differenceInDays(earliestDeadline, new Date()) : null;
+                    (() => {
+                      let lastBucket: TimeBucket | null = null;
+                      return filteredProjects.flatMap((project) => {
+                        const derived = getDerivedStatus(project);
+                        const statusConfig = DERIVED_STATUS_CONFIG[derived];
+                        const readiness = getReadinessScore(project);
+                        const isExpanded = expandedRows.has(project.id);
+                        const hasDetails = project.accommodation_quotes.length > 0 || project.item_details.length > 0;
+                        const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
+                        const daysUntilDeadline = earliestDeadline ? differenceInDays(earliestDeadline, new Date()) : null;
+                        const overdue = isOverdue(project);
+                        const bucket = getTimeBucket(project);
+                        const showBucketHeader = bucket !== lastBucket;
+                        lastBucket = bucket;
 
-                      return (
+                        const rows: React.ReactNode[] = [];
+                        if (showBucketHeader) {
+                          rows.push(
+                            <TableRow key={`bucket-${bucket}-${project.id}`} className="hover:bg-transparent">
+                              <TableCell colSpan={11} className="bg-muted/40 py-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  {TIME_BUCKET_LABEL[bucket]}
+                                </span>
+                              </TableCell>
+                            </TableRow>,
+                          );
+                        }
+
+                        rows.push(
                         <Collapsible key={project.id} open={isExpanded} onOpenChange={() => toggleRow(project.id)} asChild>
                           <>
                             <CollapsibleTrigger asChild>
-                              <TableRow className={cn("cursor-pointer", hasDetails && "hover:bg-muted/50")}>
+                              <TableRow className={cn(
+                                "cursor-pointer",
+                                hasDetails && "hover:bg-muted/50",
+                                overdue && "bg-red-50/40 hover:bg-red-50/70 border-l-2 border-l-red-400",
+                              )}>
                                 <TableCell className="px-2">
-                                  {hasDetails && (
+                                  {overdue ? (
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                  ) : hasDetails && (
                                     <ChevronDown className={cn(
                                       "h-4 w-4 text-muted-foreground transition-transform",
                                       isExpanded && "rotate-180"
