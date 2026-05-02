@@ -544,7 +544,9 @@ const AdminProjectsContent = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Klantprojecten</h1>
-          <p className="text-slate-600">Centraal overzicht van alle klantopdrachten (logies + activiteiten)</p>
+          <p className="text-slate-600">
+            Actieve klantopdrachten — afgeronde en geannuleerde projecten zijn standaard verborgen.
+          </p>
         </div>
         <Link to="/admin/programma-nieuw">
           <Button>
@@ -557,12 +559,13 @@ const AdminProjectsContent = () => {
       {/* Pipeline Funnel */}
       <PipelineFunnel
         stageCounts={stageCounts}
-        activeStage={statusFilter !== "all" && statusFilter !== "geannuleerd" ? statusFilter : null}
-        onStageClick={(key) => setStatusFilter(prev => prev === key ? "all" : key)}
+        cancelledCount={cancelledCount}
+        activeStage={statusFilter !== "all" ? statusFilter : null}
+        onStageClick={(key) => setStatusFilter((prev) => (prev === key ? "all" : key))}
       />
 
       {/* Filters */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-4 flex-wrap items-center">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -584,20 +587,45 @@ const AdminProjectsContent = () => {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-56">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle statussen</SelectItem>
-            <SelectItem value="concept">Concept</SelectItem>
-            <SelectItem value="offerte_verstuurd">Offerte verstuurd</SelectItem>
-            <SelectItem value="akkoord_ontvangen">Akkoord ontvangen</SelectItem>
-            <SelectItem value="av_getekend">AV getekend</SelectItem>
-            <SelectItem value="facturatie">Facturatie</SelectItem>
-            <SelectItem value="afgerond">Afgerond</SelectItem>
-            <SelectItem value="geannuleerd">Geannuleerd</SelectItem>
+            <SelectItem value="concept">Concept ({allStatusCounts.concept ?? 0})</SelectItem>
+            <SelectItem value="offerte_verstuurd">Offerte verstuurd ({allStatusCounts.offerte_verstuurd ?? 0})</SelectItem>
+            <SelectItem value="akkoord_ontvangen">Akkoord ontvangen ({allStatusCounts.akkoord_ontvangen ?? 0})</SelectItem>
+            <SelectItem value="av_getekend">AV getekend ({allStatusCounts.av_getekend ?? 0})</SelectItem>
+            <SelectItem value="facturatie">Facturatie ({allStatusCounts.facturatie ?? 0})</SelectItem>
+            <SelectItem value="afgerond">Afgerond ({allStatusCounts.afgerond ?? 0})</SelectItem>
+            <SelectItem value="geannuleerd">Geannuleerd ({allStatusCounts.geannuleerd ?? 0})</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button
+          variant={actionOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActionOnly((v) => !v)}
+          className="gap-1.5"
+        >
+          <Flame className="h-4 w-4" />
+          Actiepunten
+          {actionNeededTotal > 0 && (
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              {actionNeededTotal}
+            </Badge>
+          )}
+        </Button>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Switch id="show-archive" checked={showArchive} onCheckedChange={setShowArchive} />
+          <Label htmlFor="show-archive" className="text-sm cursor-pointer">
+            Toon archief
+            <span className="text-xs text-muted-foreground ml-1">
+              (afgerond + geannuleerd)
+            </span>
+          </Label>
+        </div>
       </div>
 
       {/* View tabs */}
