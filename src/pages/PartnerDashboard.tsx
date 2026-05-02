@@ -609,25 +609,29 @@ const PartnerDashboardContent = () => {
     .reduce((sum, i) => sum + (i.commission_amount || 0), 0);
 
   // Tab counts for badges
-  const actionCount = pendingTotal + toInvoiceCount;
-  
-  // In progress: confirmed/alternative/submitted (not accepted, not expired)
+  // Items met openstaande admin-prijswijziging vragen ook om partneractie.
+  const priceChangePendingCount = data.items.filter(itemHasOpenPriceChange).length;
+  const actionCount = pendingTotal + toInvoiceCount + priceChangePendingCount;
+
+  // In progress: confirmed/alternative/submitted (not accepted, not expired) — exclude price-change-pending (those move to "Actie nodig")
   const inProgressCount =
     data.items.filter((i) => {
-      return ["confirmed", "alternative"].includes(i.status) && !i.customer_accepted_at && !i.customer_approved_at;
+      return ["confirmed", "alternative"].includes(i.status) &&
+        !i.customer_accepted_at && !i.customer_approved_at &&
+        !itemHasOpenPriceChange(i);
     }).length +
     accommodationQuotes.filter((q) => q.status === "submitted").length;
 
   // Expired count
   const expiredCount = accommodationQuotes.filter((q) => q.status === "expired").length;
 
-  // Accepted/Akkoord count (not invoiceable)
+  // Accepted/Akkoord count (not invoiceable, not awaiting price ack)
   const acceptedCount =
     data.items.filter((i) => {
       const effectiveStatus = getEffectiveStatus(i);
       const canInvoice = (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
         !i.invoiced_number && i.program_requests.terms_accepted_at;
-      return ["accepted", "selected"].includes(effectiveStatus) && !canInvoice;
+      return ["accepted", "selected"].includes(effectiveStatus) && !canInvoice && !itemHasOpenPriceChange(i);
     }).length +
     accommodationQuotes.filter((q) => q.status === "selected").length;
 
