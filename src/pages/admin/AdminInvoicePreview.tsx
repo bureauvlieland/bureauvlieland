@@ -1255,6 +1255,19 @@ const AdminInvoicePreview = () => {
         onGeneratePdf={buildPdfBlob}
         onSent={() => navigate(`/admin/projecten/${request.id}`)}
       />
+
+      <ForwardBureauInvoiceDialog
+        invoice={forwardInvoice}
+        onGeneratePdf={buildPdfBlob}
+        onClose={() => {
+          setForwardInvoice(null);
+          // Strip the action params from the URL so it doesn't reopen on refresh
+          const next = new URLSearchParams(searchParams);
+          next.delete("action");
+          next.delete("invoiceId");
+          setSearchParams(next, { replace: true });
+        }}
+      />
     </>
   );
 };
