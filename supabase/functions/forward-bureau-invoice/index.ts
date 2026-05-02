@@ -247,7 +247,11 @@ Deno.serve(async (req) => {
       sent_at: new Date().toISOString(),
       sent_by: user.id,
       related_request_id: invoice.request_id,
-      metadata: { invoiceId: invoice.id, invoiceType: invoice.invoice_type },
+      metadata: {
+        invoiceId: invoice.id,
+        invoiceType: invoice.invoice_type,
+        hasAttachment: Boolean(pdfBase64),
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {
