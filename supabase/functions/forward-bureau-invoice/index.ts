@@ -171,6 +171,23 @@ Deno.serve(async (req) => {
     const emailSubject = `${getSubjectPrefix(origin)}Verkoopfactuur: ${customerLabel} - ${invoice.invoice_number}`;
     const refNum = invoice.program_requests?.reference_number || null;
     const replyTo = buildReplyTo(refNum);
+    if (!pdfBase64) {
+      console.warn(
+        `[forward-bureau-invoice] No PDF attachment provided for invoice ${invoice.invoice_number}. ` +
+          `Snelstart's mailbox requires a PDF/UBL/PNG/JPG attachment to process the invoice.`
+      );
+    }
+
+    const attachments = pdfBase64
+      ? [
+          {
+            ContentType: "application/pdf",
+            Filename: pdfFilename || `Factuur-${invoice.invoice_number}.pdf`,
+            Base64Content: pdfBase64,
+          },
+        ]
+      : undefined;
+
     const emailMessage: any = {
       From: {
         Email: "hallo@bureauvlieland.nl",
@@ -180,6 +197,7 @@ Deno.serve(async (req) => {
       ...(replyTo ? { ReplyTo: replyTo } : {}),
       Subject: emailSubject,
       HTMLPart: htmlContent,
+      ...(attachments ? { Attachments: attachments } : {}),
     };
 
     if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
