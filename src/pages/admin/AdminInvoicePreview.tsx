@@ -103,6 +103,7 @@ const formatCurrency = (amount: number) =>
 const AdminInvoicePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { getSetting, settings, isLoading: isAppSettingsLoading } = useAppSettings();
 
@@ -112,6 +113,7 @@ const AdminInvoicePreview = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
 
   // Load billing lines per item (definitive lines override quoted_price)
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
