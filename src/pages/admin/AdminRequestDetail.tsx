@@ -2004,7 +2004,7 @@ const AdminRequestDetail = () => {
                     const computed = getDisplayLineTotal(it as any, programPeople, numberOfDays);
                     const quoted = it.quoted_price != null ? Number(it.quoted_price) : null;
                     const delta = computed != null && quoted != null ? Math.abs(quoted - computed) : 0;
-                    const openChange = hasOpenAdminPriceChange(it as any);
+                    const openChange = hasOpenAdminPriceChange(it as any, it.override_people ?? programPeople, numberOfDays);
                     const inconsistent = quoted != null && computed != null && delta > 0.01 && it.admin_price_override != null;
                     return { it, computed, quoted, delta, openChange, inconsistent };
                   })
