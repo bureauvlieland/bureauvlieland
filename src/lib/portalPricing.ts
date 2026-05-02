@@ -17,23 +17,47 @@ export function getEffectivePeople(
   return item.override_people ?? programPeople;
 }
 
+type PricingItem = {
+  quoted_price?: number | null;
+  admin_price_override?: number | null;
+  admin_price_override_updated_at?: string | null;
+  partner_price_change_acknowledged_at?: string | null;
+  quoted_at?: string | null;
+  price_type?: string | null;
+  override_people?: number | null;
+};
+
+/**
+ * When the admin has issued a NEW price after the last partner ack (or after
+ * the original quote), that price is leading on every customer-facing surface
+ * — even before the partner acknowledges. Otherwise the partner's
+ * `quoted_price` (= group total) wins.
+ */
+function adminOverrideIsLeading(item: PricingItem): boolean {
+  return hasOpenAdminPriceChange(item);
+}
+
 /**
  * Single source of truth for the per-person UNIT price shown on every portal
- * (admin, partner, customer). Always derived from the same hierarchy:
- *   1. quoted_price (group total) ÷ effective people  → wins when present
- *   2. admin_price_override (already a unit price for per_person variants)
- *   3. null when nothing is known yet
+ * (admin, partner, customer). Hierarchy:
+ *   1. open admin override (price_type=total → ÷ people for unit)  → wins
+ *   2. quoted_price (group total) ÷ effective people
+ *   3. admin_price_override (already a unit price for per_person variants)
+ *   4. null when nothing is known yet
  */
 export function getDisplayUnitPrice(
-  item: {
-    quoted_price?: number | null;
-    admin_price_override?: number | null;
-    price_type?: string | null;
-    override_people?: number | null;
-  },
+  item: PricingItem,
   programPeople: number,
 ): number | null {
   const effectivePeople = getEffectivePeople(item, programPeople);
+  if (adminOverrideIsLeading(item)) {
+    // admin_price_override is always present here
+    if (isPerPersonItem(item)) {
+      return item.admin_price_override!;
+    }
+    // total → derive per-person view if multiple people
+    return effectivePeople > 0 ? item.admin_price_override! / effectivePeople : item.admin_price_override!;
+  }
   if (item.quoted_price != null) {
     if (isPerPersonItem(item) && effectivePeople > 0) {
       return item.quoted_price / effectivePeople;
@@ -48,19 +72,18 @@ export function getDisplayUnitPrice(
 
 /**
  * Single source of truth for the GROUP total of one item.
- * Identical to getItemLineTotal but exposed under a clearer name so callers in
- * partner/admin code do not reach for raw fields.
  */
 export function getDisplayLineTotal(
-  item: {
-    quoted_price?: number | null;
-    admin_price_override?: number | null;
-    price_type?: string | null;
-    override_people?: number | null;
-  },
+  item: PricingItem,
   programPeople: number,
   numberOfDays: number = 1,
 ): number | null {
+  if (adminOverrideIsLeading(item)) {
+    const effectivePeople = getEffectivePeople(item, programPeople);
+    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
+    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+    return item.admin_price_override! * personMultiplier * dayMultiplier;
+  }
   if (item.quoted_price != null) return item.quoted_price;
   if (item.admin_price_override != null) {
     const effectivePeople = getEffectivePeople(item, programPeople);
