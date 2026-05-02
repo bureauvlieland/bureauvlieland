@@ -54,7 +54,7 @@ export function getDisplayUnitPrice(
   programPeople: number,
 ): number | null {
   const effectivePeople = getEffectivePeople(item, programPeople);
-  if (adminOverrideIsLeading(item)) {
+  if (adminOverrideIsLeading(item, programPeople)) {
     // admin_price_override is always present here
     if (isPerPersonItem(item)) {
       return item.admin_price_override!;
