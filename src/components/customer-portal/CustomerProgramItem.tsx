@@ -27,6 +27,7 @@ import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
+import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
