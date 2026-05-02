@@ -135,7 +135,18 @@ export const PartnerUnifiedList = ({
       const awaitingTerms = hasCustomerAccepted && 
         !i.invoiced_number && 
         !i.program_requests.terms_accepted_at;
-      
+
+      // Open admin price change → partner needs to acknowledge new price.
+      // Only relevant when partner has previously quoted (quoted_price set) and item not finalised.
+      const effPeople = i.override_people ?? i.program_requests.number_of_people ?? 1;
+      const numDays = Array.isArray(i.program_requests.selected_dates) ? i.program_requests.selected_dates.length : 1;
+      const priceChangePending =
+        !!i.quoted_price &&
+        !i.invoiced_number &&
+        i.status !== "cancelled" &&
+        i.status !== "executed" &&
+        hasOpenAdminPriceChange(i as any, effPeople, numDays);
+
       return {
         id: i.id,
         type: "activity" as const,
@@ -143,7 +154,7 @@ export const PartnerUnifiedList = ({
         customer: i.program_requests.customer_company || i.program_requests.customer_name,
         date: activityDate,
         status: effectiveStatus,
-        urgencyScore: getUrgencyScore(effectiveStatus, canInvoice),
+        urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
         peopleCount: i.program_requests.number_of_people,
         isNew: isNewItem(i),
         isModified: isModifiedByCustomer(i),
@@ -151,6 +162,7 @@ export const PartnerUnifiedList = ({
         canInvoice,
         awaitingTerms,
         isRecentlyCancelled: i.status === "cancelled" && isRecentlyUpdated(i.updated_at),
+        priceChangePending,
         originalItem: i,
       };
     }),
