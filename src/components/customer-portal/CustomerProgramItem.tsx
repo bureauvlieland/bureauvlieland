@@ -217,12 +217,21 @@ export const CustomerProgramItem = ({
                 <span className="truncate">{item.location_address}</span>
               </span>
             )}
-            {/* Show quoted price if available (confirmed by partner), otherwise show price indication - hide for self_arranged */}
-            {!isSelfArranged && (
-              item.quoted_price ? (
+            {/* Show effective price (admin override wins on open changes), otherwise indication */}
+            {!isSelfArranged && (() => {
+              const effectivePeople = item.override_people ?? numberOfPeople ?? 1;
+              const lineTotal = getDisplayLineTotal(item, effectivePeople);
+              const unitPrice = getDisplayUnitPrice(item, effectivePeople);
+              if (lineTotal == null) {
+                return item.price_indication ? (
+                  <span className="font-medium text-foreground">{item.price_indication}</span>
+                ) : null;
+              }
+              const showPerPerson = isPerPersonItem(item) && unitPrice !== null && unitPrice !== lineTotal;
+              return (
                 <span className="font-semibold text-green-700 dark:text-green-500">
-                  €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  {!item.price_type || item.price_type === "per_person" ? (
+                  €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {showPerPerson ? (
                     <span className="font-normal text-xs ml-1">p.p.</span>
                   ) : item.price_type === "total" ? (
                     <span className="font-normal text-xs ml-1">totaal</span>
@@ -231,12 +240,8 @@ export const CustomerProgramItem = ({
                     <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
                   )}
                 </span>
-              ) : item.price_indication && (
-                <span className="font-medium text-foreground">
-                  {item.price_indication}
-                </span>
-              )
-            )}
+              );
+            })()}
             {/* Show admin price notes if available */}
             {!isSelfArranged && item.admin_price_notes && (
               <span className="text-xs text-muted-foreground">
@@ -246,12 +251,17 @@ export const CustomerProgramItem = ({
           </div>
 
           {/* Inline VAT breakdown */}
-          {!isSelfArranged && item.quoted_price && vatRate !== undefined && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-              <span>Excl. BTW: €{(item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              <span>BTW ({vatRate}%): €{(item.quoted_price - item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-          )}
+          {!isSelfArranged && vatRate !== undefined && (() => {
+            const total = getDisplayLineTotal(item, item.override_people ?? numberOfPeople ?? 1);
+            if (total == null) return null;
+            const exclVat = total / (1 + vatRate / 100);
+            return (
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span>Excl. BTW: €{exclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span>BTW ({vatRate}%): €{(total - exclVat).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            );
+          })()}
 
           {/* External booking link for self-arranged items */}
           {isSelfArranged && item.external_url && (
