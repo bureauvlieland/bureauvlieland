@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
-import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -108,9 +108,11 @@ export const PriceSummaryCard = ({
         };
       }
 
-      const hasOpenChange = hasOpenAdminPriceChange(item);
-      const hasQuotedPrice = item.quoted_price != null && !hasOpenChange;
-      const isPreliminary = !hasQuotedPrice && item.admin_price_override != null;
+      // "(voorlopig)" = er is nog géén door de partner bevestigde groepsprijs.
+      // Open admin-prijswijzigingen worden apart gesignaleerd via de "Prijs gewijzigd"-
+      // badge op het item zelf — niet via dit label.
+      const hasQuotedPrice = item.quoted_price != null;
+      const isPreliminary = item.quoted_price == null && item.admin_price_override != null;
 
       const effectivePeople = getEffectivePeople(item, numberOfPeople);
       const ppMultiplier = isPerPersonItem(item) ? effectivePeople : 1;

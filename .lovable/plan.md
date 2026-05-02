@@ -1,47 +1,61 @@
 ## Probleem
 
-Wanneer een onderdeel al door de partner is bevestigd (`status = "confirmed"`, `quoted_price` gevuld) en Bureau Vlieland past daarna de prijs aan via `admin_price_override`, ziet de partner wél de amber-banner *"Bureau Vlieland heeft de prijs aangepast. Bevestig de nieuwe prijs of pas hem aan via je reactie"*, maar er is **geen reactieknop**: `canRespond` staat alleen open voor `pending`, `alternative` en `counter_proposed`. De enige beschikbare knop is "Markeer als uitgevoerd". De partner kan dus niets doen.
+**1. "Prijs gewijzigd" / amber banner staat bij álle items**
+In `CustomerProgramItem.tsx` (regel 87-89) wordt `priceChangeNeedsAttention` berekend op basis van een ruwe vergelijking tussen `admin_price_override_updated_at` en `customer_approved_at`. Daardoor:
+- triggert het ook als de admin het veld ooit heeft aangeraakt zónder werkelijke prijswijziging,
+- triggert het ook als de partner de wijziging al heeft geaccepteerd (= `quoted_price` is gelijk aan `admin_price_override`-totaal),
+- triggert het ook nadat de klant het al opnieuw heeft geaccordeerd in een eerdere ronde.
 
-Daarnaast wordt `partner_price_change_acknowledged_at` nu alleen automatisch gezet door de edge function `update-partner-item-status` zodra de partner een nieuwe `quoted_price` indient — dat kan niet vanuit een al bevestigd item.
+In de screenshot zie je "Strandspektakel" met badge **Prijs gewijzigd** + amber banner + groene check "U hebt akkoord gegeven op dit voorstel" — drie tegenstrijdige signalen tegelijk.
+
+**2. Banner zegt "Bekijk de nieuwe prijs hieronder"**
+De prijs staat juist in de header bóven de banner. Tekst klopt niet meer met de UI-volgorde.
+
+**3. "(voorlopig)" verschijnt onlogisch in kostenspecificatie**
+In `PriceSummaryCard.tsx` regel 111-113:
+```ts
+const hasOpenChange = hasOpenAdminPriceChange(item);
+const hasQuotedPrice = item.quoted_price != null && !hasOpenChange;
+const isPreliminary = !hasQuotedPrice && item.admin_price_override != null;
+```
+Hierdoor krijgt élk item met een openstaande admin-prijswijziging het label **(voorlopig)**, ook als de partner al een definitieve `quoted_price` had. Dat is verwarrend: vanuit de klant gezien is de admin-prijs juist leidend (zie eerder vastgelegde regel) — niet "voorlopig". Echt voorlopig hoort alleen te zijn: er is *nog nooit* een door de partner bevestigde prijs geweest.
 
 ## Oplossing
 
-Een dedicated mini-flow "Reageren op prijswijziging" voor confirmed items met een open admin-prijswijziging. Twee acties:
+### A. `priceChangeNeedsAttention` herijken op één bron van waarheid
+In `src/components/customer-portal/CustomerProgramItem.tsx`:
+- Vervang de eigen tijdstempel-vergelijking door `hasOpenAdminPriceChange(item)` uit `@/lib/portalPricing`. Dat is dezelfde helper die `getDisplayLineTotal/UnitPrice` gebruiken om admin-overschrijving leidend te maken — zo zijn signaal en weergave gegarandeerd consistent.
+- Resultaat: badge **Prijs gewijzigd**, amber banner én knop-label "Akkoord met nieuwe prijs" verschijnen alleen als er werkelijk een onbevestigde admin-wijziging openstaat.
 
-1. **Akkoord met nieuwe prijs** → `quoted_price` wordt overschreven met het admin-totaal (override × effectivePeople voor per-person, of override zelf voor fixed) en `partner_price_change_acknowledged_at = now()`. Status blijft `confirmed`. Een notitie kan optioneel worden meegegeven.
-2. **Tegenvoorstel doen** → opent dezelfde response-form als nu bij counter_proposed: partner geeft eigen `quoted_price` + toelichting op. Status blijft `confirmed`, alleen prijs en `partner_price_change_acknowledged_at` worden bijgewerkt. Optioneel: het item kan terug naar `in_afstemming` gaan zodat klant en bureau het zien.
+### B. Bannertekst corrigeren
+- Verwijder "hieronder" → nieuwe tekst:
+  > "De prijs van dit onderdeel is door Bureau Vlieland aangepast. Geef opnieuw uw akkoord op de nieuwe prijs."
+- De prijs staat al duidelijk in de header (groen) plus de excl. BTW-regel daaronder; geen extra UI-aanpassing nodig.
 
-## Wijzigingen
+### C. "(voorlopig)" beperken tot écht voorlopige items
+In `src/components/customer-portal/PriceSummaryCard.tsx`:
+- `isPreliminary` betekent voortaan: "er is nog geen door de partner bevestigde groepsprijs (`quoted_price == null`) — admin heeft een richtprijs ingevuld". Dus:
+  ```ts
+  const isPreliminary = item.quoted_price == null && item.admin_price_override != null;
+  ```
+- De aparte logica voor open admin-wijzigingen blijft via `getDisplayLineTotal` (die toont automatisch het admin-totaal). Alleen het label "(voorlopig)" verdwijnt voor items waar wél een eerder bevestigde `quoted_price` bestond.
+- Bijwerken van de "Pending notice" (regel 479-492): `hasPreliminaryItems` blijft werken volgens deze nieuwe definitie.
 
-### 1. `src/components/partner-portal/PartnerItemSheet.tsx`
-- Nieuwe afgeleide variabele `hasOpenAdminPriceChange` (al berekend op regel 441-444 — extraheren naar één const bovenin).
-- Nieuwe variabele `canAcknowledgePriceChange = hasOpenAdminPriceChange && item.status === "confirmed" && !item.executed_at`.
-- Nieuwe sectie onder de amber-banner met twee knoppen:
-  - `Bevestig nieuwe prijs (€XXX,XX)` — primaire knop.
-  - `Eigen prijs voorstellen` — secundaire knop, opent een mini-form (alleen prijsveld + toelichting), submit hergebruikt onderstaande edge function.
-- `handleMarkExecuted` blokkeren zolang `canAcknowledgePriceChange` true is, zodat een partner niet per ongeluk uitvoert vóór akkoord op de nieuwe prijs.
+### D. QA-uitbreiding
+Aan `src/lib/__tests__/portalPricing.consistency.test.ts` toevoegen:
+1. Item met `quoted_price` + `admin_price_override` waar `partner_price_change_acknowledged_at >= admin_price_override_updated_at` ⇒ `hasOpenAdminPriceChange = false` ⇒ in UI géén "Prijs gewijzigd"-state.
+2. Item zonder `quoted_price`, met `admin_price_override` ⇒ "voorlopig" terecht.
+3. Item met `quoted_price` + open admin-wijziging ⇒ admin-totaal wint in display, maar item is **niet** "voorlopig".
 
-### 2. `supabase/functions/update-partner-item-status/index.ts`
-- Nieuwe action `acknowledge_price_change` toevoegen die:
-  - `quoted_price` zet op het meegestuurde nieuwe totaal (of `admin_price_override × effectivePeople` als de partner gewoon "akkoord" klikt).
-  - `partner_price_change_acknowledged_at = now()`.
-  - `quoted_at = now()` ververst (zodat de admin-page ziet dat de partner heeft gereageerd).
-  - Optionele `quoted_notes` opslaat.
-  - Status onveranderd laat (`confirmed`).
-  - Logt in `email_log` / `program_communications` zodat het zichtbaar is in het project-dossier.
-- Bestaande logica voor `partner_price_change_acknowledged_at` (regels 294 / 308) blijft werken voor de pending-flow.
+(De tests zelf raken alleen `portalPricing` helpers; voor de UI-conditie volstaat documentatie van de nieuwe regel in de testcase-naam.)
 
-### 3. Notificatie naar Bureau Vlieland
-- Nieuwe edge function `notify-bureau-price-acknowledged` (klein) die een interne mail stuurt naar `hallo@bureauvlieland.nl` met onderwerp *"Partner heeft prijswijziging beantwoord — {block_name} ({reference})"* en de inhoud (akkoord vs tegenvoorstel + bedrag + notitie). Triggered vanuit de UI na succesvolle acknowledge-call.
+### E. Memory-update
+[Pricing Rules](mem://business/pricing-and-vat-rules) aanvullen:
+- Banner "Prijs gewijzigd" en label "(voorlopig)" zijn twee verschillende signalen:
+  - **Prijs gewijzigd** ⇔ `hasOpenAdminPriceChange()` (open admin-update wachtend op klant/partner ack).
+  - **(voorlopig)** ⇔ er is nog geen door de partner bevestigde `quoted_price`.
 
-### 4. Klantportaal-doorwerking
-- Geen extra werk nodig: `quoted_price` wordt opnieuw geschreven, dus `getDisplayLineTotal` toont automatisch de juiste waarde, en `hasOpenAdminPriceChange` op klantzijde wordt false zodra `quoted_at` weer voorbij `admin_price_override_updated_at` ligt — exact dezelfde tijdstempel-vergelijking.
-
-### 5. QA
-- Bestaande Vitest-suite uitbreiden met een case "partner accepteert nieuwe admin-prijs → quoted_price = admin_total, ack >= override_updated_at, hasOpenAdminPriceChange = false".
-
-## Impact
-
-- Partner kan eindelijk reageren op prijswijzigingen zonder dat een admin het item terug op pending hoeft te zetten.
-- Klant ziet automatisch de bijgewerkte prijs in het portaal zodra de partner akkoord geeft.
-- Geen schemawijzigingen nodig — alle benodigde velden bestaan al.
+## Niet in scope
+- Geen DB-wijzigingen.
+- Geen wijzigingen aan partner-portaal of admin-overrides.
+- Geen wijziging aan totaalberekening (admin-override blijft leidend voor klanttotalen).
