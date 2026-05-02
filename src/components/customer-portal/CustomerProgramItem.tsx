@@ -27,6 +27,7 @@ import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
+import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -78,24 +79,24 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
-  // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
-  // ALS er ook daadwerkelijk een Akkoord-knop verschijnt. In quote-mode geldt dat
-  // alleen wanneer het item via de offerteflow op klantgoedkeuring wacht; in legacy-modus
-  // (geen quote) volstaat de "confirmed/alternative + nog niet geaccepteerd"-check.
-  const needsCustomerAction = !isSelfArranged
-    && (item.status === "confirmed" || item.status === "alternative")
-    && !item.customer_accepted_at
-    && !item.customer_approved_at
-    && (isQuoteMode ? isQuoteItemAwaitingCustomerApproval(item) : true);
-
-  // Bureau Vlieland heeft de prijs aangepast nadat de klant al akkoord had gegeven —
-  // de DB-trigger reset customer_approved_at, dus de klant moet opnieuw bevestigen.
-  // We tonen dit met een aparte amber banner én een pill in de header.
+  // Bureau Vlieland heeft de prijs aangepast nadat de klant al goedkeurde —
+  // ook al heeft de DB-trigger customer_approved_at niet altijd gereset, we behandelen
+  // dit als een open situatie waarop de klant opnieuw moet bevestigen.
   const customerApprovedTs = item.customer_approved_at ? new Date(item.customer_approved_at).getTime() : 0;
   const adminPriceUpdatedTs = item.admin_price_override_updated_at ? new Date(item.admin_price_override_updated_at).getTime() : 0;
   const priceChangedSinceApproval = adminPriceUpdatedTs > 0 && customerApprovedTs > 0 && adminPriceUpdatedTs > customerApprovedTs;
   const priceChangeNeedsAttention = !isSelfArranged
-    && (priceChangedSinceApproval || (needsCustomerAction && adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
+    && (priceChangedSinceApproval || (adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
+
+  // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
+  // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
+  // opnieuw akkoord op moet geven. In quote-mode laten we de strikte item_quote_status
+  // check vallen omdat status=confirmed/alternative al voldoende signaleert dat de
+  // partner heeft gereageerd of dat het item via de offerte is bevestigd.
+  const needsCustomerAction = !isSelfArranged
+    && (item.status === "confirmed" || item.status === "alternative")
+    && (!item.customer_approved_at || priceChangeNeedsAttention)
+    && !item.customer_accepted_at;
 
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
@@ -216,12 +217,21 @@ export const CustomerProgramItem = ({
                 <span className="truncate">{item.location_address}</span>
               </span>
             )}
-            {/* Show quoted price if available (confirmed by partner), otherwise show price indication - hide for self_arranged */}
-            {!isSelfArranged && (
-              item.quoted_price ? (
+            {/* Show effective price (admin override wins on open changes), otherwise indication */}
+            {!isSelfArranged && (() => {
+              const effectivePeople = item.override_people ?? numberOfPeople ?? 1;
+              const lineTotal = getDisplayLineTotal(item, effectivePeople);
+              const unitPrice = getDisplayUnitPrice(item, effectivePeople);
+              if (lineTotal == null) {
+                return item.price_indication ? (
+                  <span className="font-medium text-foreground">{item.price_indication}</span>
+                ) : null;
+              }
+              const showPerPerson = isPerPersonItem(item) && unitPrice !== null && unitPrice !== lineTotal;
+              return (
                 <span className="font-semibold text-green-700 dark:text-green-500">
-                  €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  {!item.price_type || item.price_type === "per_person" ? (
+                  €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {showPerPerson ? (
                     <span className="font-normal text-xs ml-1">p.p.</span>
                   ) : item.price_type === "total" ? (
                     <span className="font-normal text-xs ml-1">totaal</span>
@@ -230,12 +240,8 @@ export const CustomerProgramItem = ({
                     <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
                   )}
                 </span>
-              ) : item.price_indication && (
-                <span className="font-medium text-foreground">
-                  {item.price_indication}
-                </span>
-              )
-            )}
+              );
+            })()}
             {/* Show admin price notes if available */}
             {!isSelfArranged && item.admin_price_notes && (
               <span className="text-xs text-muted-foreground">
@@ -245,12 +251,17 @@ export const CustomerProgramItem = ({
           </div>
 
           {/* Inline VAT breakdown */}
-          {!isSelfArranged && item.quoted_price && vatRate !== undefined && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-              <span>Excl. BTW: €{(item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              <span>BTW ({vatRate}%): €{(item.quoted_price - item.quoted_price / (1 + vatRate / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-          )}
+          {!isSelfArranged && vatRate !== undefined && (() => {
+            const total = getDisplayLineTotal(item, item.override_people ?? numberOfPeople ?? 1);
+            if (total == null) return null;
+            const exclVat = total / (1 + vatRate / 100);
+            return (
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span>Excl. BTW: €{exclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span>BTW ({vatRate}%): €{(total - exclVat).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            );
+          })()}
 
           {/* External booking link for self-arranged items */}
           {isSelfArranged && item.external_url && (
@@ -342,45 +353,30 @@ export const CustomerProgramItem = ({
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
             <div className="mt-3 flex flex-wrap gap-2 justify-end">
-              {/* Per-item akkoord for quote mode items that are part of the sent quote */}
-              {isQuoteMode && isQuoteItemAwaitingCustomerApproval(item) && onApproveQuoteItem && (
+              {/* Per-item akkoord — voor zowel quote- als legacy-mode */}
+              {needsCustomerAction && (isQuoteMode ? !!onApproveQuoteItem : !!onAccept) && (
                 <Button
                   onClick={async () => {
-                    setLocalApproving(true);
-                    await onApproveQuoteItem();
-                    setLocalApproving(false);
+                    if (isQuoteMode && onApproveQuoteItem) {
+                      setLocalApproving(true);
+                      await onApproveQuoteItem();
+                      setLocalApproving(false);
+                    } else if (onAccept) {
+                      setLocalAccepting(true);
+                      await onAccept();
+                      setLocalAccepting(false);
+                    }
                   }}
-                  disabled={localApproving}
+                  disabled={localApproving || localAccepting || isAccepting}
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {localApproving ? (
+                  {(localApproving || localAccepting) ? (
                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
                   ) : (
                     <Check className="h-4 w-4 mr-1.5" />
                   )}
-                  Akkoord
-                </Button>
-              )}
-
-              {/* Akkoord - for confirmed/alternative items not yet accepted */}
-              {!isQuoteMode && (item.status === "confirmed" || item.status === "alternative") && !item.customer_accepted_at && onAccept && (
-                <Button
-                  onClick={async () => {
-                    setLocalAccepting(true);
-                    await onAccept();
-                    setLocalAccepting(false);
-                  }}
-                  disabled={localAccepting || isAccepting}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {localAccepting ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 mr-1.5" />
-                  )}
-                  Akkoord
+                  {priceChangeNeedsAttention ? "Akkoord met nieuwe prijs" : "Akkoord"}
                 </Button>
               )}
 

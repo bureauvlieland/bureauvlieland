@@ -143,9 +143,8 @@ const cases: Case[] = [
     },
   },
   {
-    name: "Doeksen-case: open admin-prijswijziging — klant blijft oude quoted_price zien tot partner bevestigt",
+    name: "Doeksen-case (total): open admin-prijswijziging — klant ziet ONMIDDELLIJK de nieuwe admin-prijs",
     run: () => {
-      // Reproduceert exact het echte scenario: quoted_price=503.58, override=570.60 (total)
       const item = {
         quoted_price: 503.58,
         admin_price_override: 570.60,
@@ -155,10 +154,29 @@ const cases: Case[] = [
         partner_price_change_acknowledged_at: "2026-05-01T12:11:00Z",
         quoted_at: "2026-05-01T12:11:00Z",
       };
-      // Klantportaal blijft de bevestigde partnerprijs tonen
-      assertEq(getDisplayLineTotal(item, 30), 503.58, "klant ziet bevestigde prijs");
-      // Maar admin/partner zien een open prijswijziging
       assertEq(hasOpenAdminPriceChange(item), true, "open admin-wijziging gedetecteerd");
+      assertEq(getDisplayLineTotal(item, 30), 570.60, "klant ziet nieuwe admin-prijs (totaal)");
+    },
+  },
+  {
+    name: "Italiaanse dining (per_person): open admin override toont 44.50 × 30 = 1335",
+    run: () => {
+      const item = {
+        quoted_price: 1468.50, // oude bevestigde prijs (48.95 p.p.)
+        admin_price_override: 44.50,
+        price_type: "per_person" as const,
+        override_people: 30,
+        admin_price_override_updated_at: "2026-05-01T12:31:36Z",
+        partner_price_change_acknowledged_at: "2026-05-01T12:31:36Z",
+        quoted_at: "2026-05-01T12:31:36Z",
+      };
+      // ack timestamp == update timestamp ⇒ NIET open meer
+      assertEq(hasOpenAdminPriceChange(item), false, "ack == update → niet open");
+      // Maar als de admin daarna opnieuw aanpast:
+      const reopened = { ...item, admin_price_override_updated_at: "2026-05-01T13:00:00Z" };
+      assertEq(hasOpenAdminPriceChange(reopened), true, "her-update → open");
+      assertEq(getDisplayUnitPrice(reopened, 30), 44.50, "unit = admin override");
+      assertEq(getDisplayLineTotal(reopened, 30), 44.50 * 30, "totaal = 44.50 × 30");
     },
   },
 ];
