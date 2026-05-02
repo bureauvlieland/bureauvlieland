@@ -191,16 +191,19 @@ export const PartnerUnifiedList = ({
         return (
           item.status === "pending" ||
           item.status === "counter_proposed" ||
-          item.canInvoice === true
+          item.canInvoice === true ||
+          item.priceChangePending === true
         );
       case "in_progress":
         return ["confirmed", "alternative", "submitted"].includes(item.status) &&
-          !item.canInvoice;
+          !item.canInvoice &&
+          !item.priceChangePending;
       case "expired":
         return item.status === "expired";
       case "accepted":
         return ["accepted", "selected"].includes(item.status) &&
-          !item.canInvoice;
+          !item.canInvoice &&
+          !item.priceChangePending;
       case "completed":
         return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed"].includes(item.status) &&
           !item.canInvoice;
