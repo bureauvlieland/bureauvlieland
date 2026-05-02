@@ -150,6 +150,46 @@ const AdminInvoicePreview = () => {
     if (id) fetchData();
   }, [id]);
 
+  // Auto-open the forward-to-accounting dialog when navigated here with
+  // ?action=forward&invoiceId=... (from AdminInvoicing or AdminRequestDetail).
+  // We need the invoice's data to populate the dialog; fetch it on demand.
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const invoiceId = searchParams.get("invoiceId");
+    if (action !== "forward" || !invoiceId || !request) return;
+    if (forwardInvoice?.id === invoiceId) return;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("bureau_invoices")
+        .select("id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description")
+        .eq("id", invoiceId)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("Factuur niet gevonden");
+        return;
+      }
+      setForwardInvoice({
+        id: data.id,
+        invoice_number: data.invoice_number,
+        invoice_date: data.invoice_date,
+        amount_excl_vat: Number(data.amount_excl_vat),
+        vat_amount: Number(data.vat_amount),
+        amount_incl_vat:
+          data.amount_incl_vat != null
+            ? Number(data.amount_incl_vat)
+            : Number(data.amount_excl_vat) + Number(data.vat_amount),
+        invoice_type: data.invoice_type,
+        description: data.description,
+        customer_label: request.billing_company_name || request.customer_company || request.customer_name,
+        reference_number: request.reference_number,
+      });
+      // Make sure the rendered invoice number matches the one we're forwarding
+      setInvoiceNumber(data.invoice_number);
+      if (data.invoice_date) setInvoiceDate(new Date(data.invoice_date));
+    })();
+  }, [searchParams, request, forwardInvoice?.id]);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
