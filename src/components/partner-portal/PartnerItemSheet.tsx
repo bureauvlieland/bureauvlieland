@@ -159,16 +159,16 @@ export const PartnerItemSheet = ({
 
   // ===== Open admin price change detection =====
   const effectivePeopleForItem = item.override_people ?? request.number_of_people;
+  const numberOfDaysForItem = Array.isArray(request.selected_dates) ? request.selected_dates.length : 1;
   const isPerPersonPriceType = item.price_type === "per_person" || item.price_type === "per_person_per_day";
   const adminTotal = item.admin_price_override != null
     ? (isPerPersonPriceType ? item.admin_price_override * effectivePeopleForItem : item.admin_price_override)
     : null;
-  const _ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+  // Helper checkt zowel timestamp als materieel bedragverschil — pure timestamp-aanrakingen
+  // (bv. "Synchroniseer"-knop) tellen niet als open wijziging.
   const hasOpenAdminPriceChange =
-    item.admin_price_override != null &&
-    !!item.admin_price_override_updated_at &&
     !!item.quoted_price && // alleen relevant als er al eerder een bevestigde prijs was
-    (!_ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(_ack).getTime());
+    detectOpenAdminPriceChange(item as any, effectivePeopleForItem, numberOfDaysForItem);
   // Partner mag akkoord/tegenvoorstel doen zolang er nog geen factuur is en het item niet geannuleerd is
   const canAcknowledgePriceChange =
     hasOpenAdminPriceChange &&
