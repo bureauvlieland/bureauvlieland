@@ -82,7 +82,14 @@ export const CustomerProgramItem = ({
   // Eén bron van waarheid: hasOpenAdminPriceChange() — admin heeft een prijs gezet
   // die nieuwer is dan de laatste partner-acknowledge (of dan quoted_at). Alleen dan
   // tonen we de "Prijs gewijzigd"-badge, amber banner, en knop "Akkoord met nieuwe prijs".
-  const priceChangeNeedsAttention = !isSelfArranged && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
+  // Belangrijk: zodra de klant al akkoord heeft gegeven (customer_accepted_at), is een
+  // latere admin-prijscorrectie een INTERNE actie tussen bureau en partner. De klant
+  // hoeft daar niet opnieuw op te reageren — anders krijg je een verwarrende melding
+  // zonder bijbehorende knop.
+  const priceChangeNeedsAttention =
+    !isSelfArranged
+    && !item.customer_accepted_at
+    && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
 
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
