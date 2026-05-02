@@ -179,6 +179,41 @@ const cases: Case[] = [
       assertEq(getDisplayLineTotal(reopened, 30), 44.50 * 30, "totaal = 44.50 × 30");
     },
   },
+  {
+    name: "Strandspektakel-case: admin-totaal == quoted_price → géén open wijziging (timestamp-only telt niet)",
+    run: () => {
+      // Synchroniseer-knop heeft admin_price_override_updated_at op nu gezet, maar
+      // admin_price_override × people = exact quoted_price. Dat mag GEEN actie triggeren.
+      const item = {
+        quoted_price: 1072.50,
+        admin_price_override: 32.50,
+        price_type: "per_person" as const,
+        override_people: 33,
+        admin_price_override_updated_at: "2026-05-02T10:00:00Z",
+        partner_price_change_acknowledged_at: null as string | null,
+        quoted_at: "2026-05-01T09:00:00Z",
+      };
+      // Zonder context (legacy) → timestamp wint → true (backward compat)
+      assertEq(hasOpenAdminPriceChange(item), true, "legacy timestamp-only blijft true");
+      // Met context → bedragen identiek → false
+      assertEq(hasOpenAdminPriceChange(item, 33, 1), false, "amount-check sluit non-change uit");
+    },
+  },
+  {
+    name: "Echte prijswijziging blijft gedetecteerd ondanks amount-check",
+    run: () => {
+      const item = {
+        quoted_price: 1072.50,
+        admin_price_override: 33.00, // 33 × 33 = 1089 ≠ 1072.50
+        price_type: "per_person" as const,
+        override_people: 33,
+        admin_price_override_updated_at: "2026-05-02T10:00:00Z",
+        partner_price_change_acknowledged_at: null as string | null,
+        quoted_at: "2026-05-01T09:00:00Z",
+      };
+      assertEq(hasOpenAdminPriceChange(item, 33, 1), true, "echt verschil → open");
+    },
+  },
 ];
 
 export function runPortalPricingConsistencyChecks(): { passed: number; failed: number } {

@@ -33,8 +33,12 @@ type PricingItem = {
  * — even before the partner acknowledges. Otherwise the partner's
  * `quoted_price` (= group total) wins.
  */
-function adminOverrideIsLeading(item: PricingItem): boolean {
-  return hasOpenAdminPriceChange(item);
+function adminOverrideIsLeading(
+  item: PricingItem,
+  programPeople?: number,
+  numberOfDays: number = 1,
+): boolean {
+  return hasOpenAdminPriceChange(item, programPeople, numberOfDays);
 }
 
 /**
@@ -50,7 +54,7 @@ export function getDisplayUnitPrice(
   programPeople: number,
 ): number | null {
   const effectivePeople = getEffectivePeople(item, programPeople);
-  if (adminOverrideIsLeading(item)) {
+  if (adminOverrideIsLeading(item, programPeople)) {
     // admin_price_override is always present here
     if (isPerPersonItem(item)) {
       return item.admin_price_override!;
@@ -78,7 +82,7 @@ export function getDisplayLineTotal(
   programPeople: number,
   numberOfDays: number = 1,
 ): number | null {
-  if (adminOverrideIsLeading(item)) {
+  if (adminOverrideIsLeading(item, programPeople, numberOfDays)) {
     const effectivePeople = getEffectivePeople(item, programPeople);
     const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
     const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
@@ -94,17 +98,48 @@ export function getDisplayLineTotal(
   return null;
 }
 
-/** Whether the admin has a newer price-override than the last partner confirmation. */
-export function hasOpenAdminPriceChange(item: {
-  admin_price_override_updated_at?: string | null;
-  partner_price_change_acknowledged_at?: string | null;
-  quoted_at?: string | null;
-  admin_price_override?: number | null;
-}): boolean {
+/**
+ * Whether the admin has a newer price-override than the last partner confirmation
+ * AND the resulting effective total materially differs from `quoted_price`.
+ *
+ * When `programPeople` (and optionally `numberOfDays`) is provided, the helper
+ * computes the effective admin total and compares it to `quoted_price`. If they
+ * are within €0.01, there is no real open change — even when timestamps suggest
+ * otherwise (e.g. after a "Synchroniseer"-action that only refreshed the
+ * timestamp). Without these args we fall back to pure timestamp comparison
+ * (legacy behavior, kept for backwards compatibility).
+ */
+export function hasOpenAdminPriceChange(
+  item: {
+    admin_price_override_updated_at?: string | null;
+    partner_price_change_acknowledged_at?: string | null;
+    quoted_at?: string | null;
+    admin_price_override?: number | null;
+    quoted_price?: number | null;
+    price_type?: string | null;
+    override_people?: number | null;
+  },
+  programPeople?: number,
+  numberOfDays: number = 1,
+): boolean {
   if (item.admin_price_override == null || !item.admin_price_override_updated_at) return false;
   const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
-  if (!ack) return true;
-  return new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();
+  const timestampOpen = !ack
+    ? true
+    : new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();
+  if (!timestampOpen) return false;
+
+  // Materiele bedragvergelijking — alleen mogelijk wanneer caller people-context geeft
+  // én er een quoted_price is om tegen af te zetten.
+  if (programPeople != null && item.quoted_price != null) {
+    const effectivePeople = getEffectivePeople(item, programPeople);
+    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
+    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+    const adminTotal = item.admin_price_override * personMultiplier * dayMultiplier;
+    if (Math.abs(adminTotal - item.quoted_price) <= 0.01) return false;
+  }
+
+  return true;
 }
 
 /** Whether this item should be multiplied by number of people */

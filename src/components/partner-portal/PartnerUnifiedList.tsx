@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
+import { hasOpenAdminPriceChange } from "@/lib/portalPricing";
 
 export interface UnifiedListItem {
   id: string;
@@ -36,6 +37,7 @@ export interface UnifiedListItem {
   awaitingTerms?: boolean;
   isRecentlyCancelled?: boolean;
   isRecentlyRejected?: boolean;
+  priceChangePending?: boolean;
   originalItem: PartnerItem | PartnerAccommodationQuote;
 }
 
@@ -133,7 +135,18 @@ export const PartnerUnifiedList = ({
       const awaitingTerms = hasCustomerAccepted && 
         !i.invoiced_number && 
         !i.program_requests.terms_accepted_at;
-      
+
+      // Open admin price change → partner needs to acknowledge new price.
+      // Only relevant when partner has previously quoted (quoted_price set) and item not finalised.
+      const effPeople = i.override_people ?? i.program_requests.number_of_people ?? 1;
+      const numDays = Array.isArray(i.program_requests.selected_dates) ? i.program_requests.selected_dates.length : 1;
+      const priceChangePending =
+        !!i.quoted_price &&
+        !i.invoiced_number &&
+        i.status !== "cancelled" &&
+        i.status !== "executed" &&
+        hasOpenAdminPriceChange(i as any, effPeople, numDays);
+
       return {
         id: i.id,
         type: "activity" as const,
@@ -141,7 +154,7 @@ export const PartnerUnifiedList = ({
         customer: i.program_requests.customer_company || i.program_requests.customer_name,
         date: activityDate,
         status: effectiveStatus,
-        urgencyScore: getUrgencyScore(effectiveStatus, canInvoice),
+        urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
         peopleCount: i.program_requests.number_of_people,
         isNew: isNewItem(i),
         isModified: isModifiedByCustomer(i),
@@ -149,6 +162,7 @@ export const PartnerUnifiedList = ({
         canInvoice,
         awaitingTerms,
         isRecentlyCancelled: i.status === "cancelled" && isRecentlyUpdated(i.updated_at),
+        priceChangePending,
         originalItem: i,
       };
     }),
@@ -177,16 +191,19 @@ export const PartnerUnifiedList = ({
         return (
           item.status === "pending" ||
           item.status === "counter_proposed" ||
-          item.canInvoice === true
+          item.canInvoice === true ||
+          item.priceChangePending === true
         );
       case "in_progress":
         return ["confirmed", "alternative", "submitted"].includes(item.status) &&
-          !item.canInvoice;
+          !item.canInvoice &&
+          !item.priceChangePending;
       case "expired":
         return item.status === "expired";
       case "accepted":
         return ["accepted", "selected"].includes(item.status) &&
-          !item.canInvoice;
+          !item.canInvoice &&
+          !item.priceChangePending;
       case "completed":
         return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed"].includes(item.status) &&
           !item.canInvoice;
@@ -355,6 +372,14 @@ const ItemCard = ({
                 <FileSignature className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Wacht op AV</span>
               </div>
+            )}
+            {item.priceChangePending && (
+              <Badge
+                variant="outline"
+                className="font-normal border-0 text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/50"
+              >
+                Nieuwe prijs
+              </Badge>
             )}
             <Badge
               variant="outline"

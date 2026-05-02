@@ -1817,7 +1817,7 @@ const AdminRequestDetail = () => {
                                               priceNotes={item.admin_price_notes}
                                               numberOfPeople={item.override_people ?? request.number_of_people}
                                               priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
-                                              hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any)}
+                                              hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1)}
                                               onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                             />
                                             <AdminItemBillingLinesEditor
@@ -2004,7 +2004,7 @@ const AdminRequestDetail = () => {
                     const computed = getDisplayLineTotal(it as any, programPeople, numberOfDays);
                     const quoted = it.quoted_price != null ? Number(it.quoted_price) : null;
                     const delta = computed != null && quoted != null ? Math.abs(quoted - computed) : 0;
-                    const openChange = hasOpenAdminPriceChange(it as any);
+                    const openChange = hasOpenAdminPriceChange(it as any, it.override_people ?? programPeople, numberOfDays);
                     const inconsistent = quoted != null && computed != null && delta > 0.01 && it.admin_price_override != null;
                     return { it, computed, quoted, delta, openChange, inconsistent };
                   })
