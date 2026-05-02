@@ -33,8 +33,12 @@ type PricingItem = {
  * — even before the partner acknowledges. Otherwise the partner's
  * `quoted_price` (= group total) wins.
  */
-function adminOverrideIsLeading(item: PricingItem): boolean {
-  return hasOpenAdminPriceChange(item);
+function adminOverrideIsLeading(
+  item: PricingItem,
+  programPeople?: number,
+  numberOfDays: number = 1,
+): boolean {
+  return hasOpenAdminPriceChange(item, programPeople, numberOfDays);
 }
 
 /**
