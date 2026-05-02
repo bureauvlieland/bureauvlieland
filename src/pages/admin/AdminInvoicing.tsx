@@ -20,9 +20,8 @@ import {
   Calendar,
   Building2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
-import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
