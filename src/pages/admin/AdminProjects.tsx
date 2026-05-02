@@ -38,7 +38,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, differenceInDays } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { format, differenceInDays, startOfDay, endOfWeek, endOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   Search,
@@ -62,6 +64,8 @@ import {
   Trash2,
   ChevronDown,
   AlertCircle,
+  Flame,
+  AlertTriangle,
 } from "lucide-react";
 import { ProjectGanttChart } from "@/components/admin/ProjectGanttChart";
 import { ProjectCalendarView } from "@/components/admin/ProjectCalendarView";
