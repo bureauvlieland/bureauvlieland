@@ -18,6 +18,14 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+import { hasOpenAdminPriceChange } from "@/lib/portalPricing";
+
+const itemHasOpenPriceChange = (i: PartnerItem): boolean => {
+  if (!i.quoted_price || i.invoiced_number || i.status === "cancelled" || i.status === "executed") return false;
+  const effPeople = i.override_people ?? i.program_requests.number_of_people ?? 1;
+  const numDays = Array.isArray(i.program_requests.selected_dates) ? i.program_requests.selected_dates.length : 1;
+  return hasOpenAdminPriceChange(i as any, effPeople, numDays);
+};
 
 const PartnerDashboardContent = () => {
   const navigate = useNavigate();
