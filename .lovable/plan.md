@@ -1,72 +1,44 @@
-## Wat is er aan de hand bij BV-2603-0003
+## Probleem
 
-Audit trail van bv. **Overtocht Harlingen → Vlieland** (item `eeda0c72…`):
+De e-mails naar `bureauvlieland@boekhouding.nl` (Snelstart inbox) komen wél aan in Mailjet (status `sent` in `email_log`), maar Snelstart verwerkt ze niet. Reden: **de mail bevat alleen een HTML-overzicht en géén factuurbestand**. Snelstart's mailbox vereist een bijlage in PDF/UBL/PNG/JPG-formaat — zonder bijlage is er niets te verwerken en wordt de mail genegeerd.
 
-```
-12:11:30  partner Bureau Vlieland bevestigt voor €503,58   → quoted_price=503,58
-12:31:34  klant Milou geeft akkoord                         → customer_approved_at gezet
-13:13:06  admin past prijs aan naar €570,60                 → admin_price_override gezet
-                                                              (GEEN nieuwe history-regel,
-                                                               GEEN partner-acknowledge)
-```
-
-En bij **Strand BBQ** (item `2eb885d5…`):
-
-```
-2026-03-19  partner Zuiver Traiteur bevestigt €1.300       → quoted_price=1300
-2026-03-24  klant geeft akkoord                            → customer_approved_at
-2026-03-30  admin past prijs aan naar €30 p.p. (×29 = €870) → admin_price_override
-            (verschil van €430 t.o.v. quoted_price → "open" change)
-```
-
-### De daadwerkelijke bug
-
-`hasOpenAdminPriceChange()` is technisch correct: er ligt een nieuwere admin-prijs die nog niet door de partner is geacknowledged én die materieel afwijkt van `quoted_price`. Dus de banner "Prijs gewijzigd, geef opnieuw uw akkoord" verschijnt.
-
-Maar:
-
-1. **De klant kan niets doen.** `needsCustomerAction` checkt o.a. `!item.customer_accepted_at`. Op deze items is `customer_accepted_at` al gezet (gebeurt tegelijk met `customer_approved_at` per de centrale workflow-regel). Dus de "Akkoord met nieuwe prijs"-knop wordt nooit gerenderd.
-2. **De boodschap is misleidend.** De prijswijziging is niet door de partner doorgegeven; het is een interne admin-correctie die nog niet via de partner is "geofficialiseerd". De klant heeft akkoord gegeven op de prijs die de partner had bevestigd — en zolang niemand die prijs publiekelijk wijzigt richting de klant is er feitelijk geen herbevestiging nodig.
-3. **Bij Strand BBQ is de admin-override eigenlijk een correctie omlaag** (€1.300 → €870). Geen reden om de klant lastig te vallen.
-
-Kort: een **interne admin-prijscorrectie** zou nooit als "klant moet opnieuw akkoord geven" mogen lekken naar het klantportaal als de klant al akkoord heeft gegeven en `customer_accepted_at` is gezet. Dat is bureau-werk, geen klantactie.
+Ter referentie: de mail "Factuur naar klant" (`send-bureau-invoice-to-customer`) stuurt wél een PDF mee — vandaar dat de klant kon betalen. De forward-functie naar Snelstart doet dat niet.
 
 ## Oplossing
 
-### 1. `priceChangeNeedsAttention` strenger maken in het klantportaal
+De PDF (zoals reeds gegenereerd in `AdminInvoicePreview.tsx` via `buildPdfBlob`) als bijlage meesturen bij de doorstuur-mail naar Snelstart, op exact dezelfde manier als bij `send-bureau-invoice-to-customer`.
 
-In `src/components/customer-portal/CustomerProgramItem.tsx`:
+### Wijzigingen
 
-```ts
-const priceChangeNeedsAttention =
-  !isSelfArranged
-  && !item.customer_accepted_at        // ← NIEUW: geaccepteerd = geen klantactie meer
-  && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
-```
+1. **`ForwardBureauInvoiceDialog.tsx`** — dialoog accepteert geen `invoiceId` meer alleen, maar krijgt ook een PDF-renderer prop (`onGeneratePdf: () => Promise<Blob>`). Bij klikken op "Doorsturen":
+   - Genereer PDF → converteer naar base64
+   - Roep `forward-bureau-invoice` aan met `{ invoiceId, pdfBase64, pdfFilename }`
 
-Effect: zodra `customer_accepted_at` is gezet, verdwijnen de "Prijs gewijzigd"-badge én de amber banner. De interne admin-correctie blijft bestaan in de back-office, maar de klant ziet alleen "U hebt akkoord gegeven op dit voorstel".
+2. **`AdminInvoicePreview.tsx`** — geef de bestaande `buildPdfBlob` door aan de Forward-dialoog (al beschikbaar; nu ook doorgeven).
 
-Hetzelfde geldt voor `PriceSummaryCard.tsx` — daar dezelfde guard toevoegen zodat de samenvattingstotalen niet onnodig de "wijziging"-styling krijgen.
+3. **`AdminRequestDetail.tsx`** (regel 2284 e.v.) — hier wordt de dialoog ook aangeroepen zonder PDF-context. Twee opties:
+   - **Voorkeur:** vervang de directe inline-render door een redirect/link naar `AdminInvoicePreview` waar de PDF al gerenderd kan worden, of
+   - **Pragmatischer:** importeer `renderInvoicePdf` + bouw daar lokaal de PDF (vereist alle factuurdata; complexer)
+   - **Beste praktische keuze:** maak forward vanuit `AdminRequestDetail` alleen mogelijk via "Open factuur" → daar staat de Forward-knop met PDF-context. Verberg/disable de directe Forward-knop in `AdminRequestDetail` óf laat deze de gebruiker doorsturen naar de InvoicePreview pagina.
 
-### 2. `needsCustomerAction` consistent houden
+4. **`forward-bureau-invoice/index.ts` (edge function)** — accepteer optionele `pdfBase64` + `pdfFilename` in body, voeg ze toe aan `emailMessage.Attachments` (zelfde patroon als `send-bureau-invoice-to-customer` regel 214-218):
+   ```ts
+   ...(body.pdfBase64 ? { Attachments: [{
+     ContentType: "application/pdf",
+     Filename: body.pdfFilename || `Factuur-${invoice.invoice_number}.pdf`,
+     Base64Content: body.pdfBase64,
+   }]} : {})
+   ```
+   De PDF blijft optioneel (backwards compatible) maar in de praktijk verplicht voor Snelstart-acceptatie. Voeg een log/warning toe als er geen PDF meegegeven wordt.
 
-Diezelfde guard verwijdert tegelijk de inconsistentie (badge zegt "actie nodig" maar er is geen knop, want `customer_accepted_at` blokkeert de knop). Niet langer nodig om de knop-conditie te verruimen.
+5. **Onderwerp aanpassen**: kort, herkenbaar voor Snelstart, bv. `Verkoopfactuur ${invoice_number} — ${customer}` (al goed), maar mail-body mag korter — Snelstart leest toch de bijlage.
 
-### 3. Admin-zijde — signaleren dat de partner nog moet bijtekenen
+6. **Twee niet-afgeleverde berichten opnieuw versturen**: na de fix de gebruiker informeren dat hij voor factuur **FV-BV-2602-0006-001** opnieuw op "Doorsturen" moet klikken zodat Snelstart hem nu mét bijlage ontvangt.
 
-Aan de admin/partner-kant blijft `hasOpenAdminPriceChange()` precies wat het nu is. Daar is het terecht een actiepunt: de **partner** moet de nieuwe prijs bevestigen, niet de klant. Dat staat al goed in de bestaande `PartnerItemCard` / admin-detail.
+### Optionele verbetering (later)
 
-Optioneel klein verbeterpunt (als losse vervolgactie, niet nu):
-- Wanneer admin een prijs aanpast nádat de klant al akkoord heeft gegeven, een waarschuwing tonen in admin: *"Klant heeft al akkoord gegeven op €X — wil je de klant opnieuw om akkoord vragen of dit intern verwerken?"* met twee knoppen: "Vraag klant opnieuw akkoord" (reset `customer_approved_at`/`customer_accepted_at`) of "Alleen interne correctie" (huidige gedrag).
+Genereer ook een **UBL e-factuur** (XML) als tweede bijlage. Snelstart kan UBL automatisch volledig boeken (factuurregels, BTW, debiteur). Dit is een aparte uitbreiding en valt buiten deze fix.
 
-### 4. Tests
+## Samenvatting
 
-In `src/lib/__tests__/portalPricing.consistency.test.ts` een case toevoegen: item met `customer_accepted_at` gezet + open admin override → klantportaal toont géén actie/banner; admin/partner-zijde toont nog wel het price-change signaal.
-
-## Bestanden
-
-- `src/components/customer-portal/CustomerProgramItem.tsx` — guard toevoegen aan `priceChangeNeedsAttention`
-- `src/components/customer-portal/PriceSummaryCard.tsx` — zelfde guard bij summary
-- `src/lib/__tests__/portalPricing.consistency.test.ts` — extra testcase
-
-Geen DB-migratie nodig, geen wijziging in `portalPricing.ts` zelf (logica blijft bruikbaar voor admin/partner).
+De forward-mail naar Snelstart bevat geen bijlage; daarom doet Snelstart er niets mee. Fix: PDF-bijlage meesturen (zelfde patroon als de klant-factuurmail). Backwards compatible op de edge function, dialoog krijgt PDF-renderer prop, AdminInvoicePreview geeft die door.

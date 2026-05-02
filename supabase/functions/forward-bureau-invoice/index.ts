@@ -58,7 +58,12 @@ Deno.serve(async (req) => {
     }
 
     const reqBody = await req.json();
-    const { invoiceId } = reqBody;
+    const { invoiceId, pdfBase64, pdfFilename } = reqBody as {
+      invoiceId?: string;
+      pdfBase64?: string;
+      pdfFilename?: string;
+      origin?: string;
+    };
     const origin = reqBody.origin || req.headers.get("origin") || "";
 
     if (!invoiceId) {
@@ -166,6 +171,23 @@ Deno.serve(async (req) => {
     const emailSubject = `${getSubjectPrefix(origin)}Verkoopfactuur: ${customerLabel} - ${invoice.invoice_number}`;
     const refNum = invoice.program_requests?.reference_number || null;
     const replyTo = buildReplyTo(refNum);
+    if (!pdfBase64) {
+      console.warn(
+        `[forward-bureau-invoice] No PDF attachment provided for invoice ${invoice.invoice_number}. ` +
+          `Snelstart's mailbox requires a PDF/UBL/PNG/JPG attachment to process the invoice.`
+      );
+    }
+
+    const attachments = pdfBase64
+      ? [
+          {
+            ContentType: "application/pdf",
+            Filename: pdfFilename || `Factuur-${invoice.invoice_number}.pdf`,
+            Base64Content: pdfBase64,
+          },
+        ]
+      : undefined;
+
     const emailMessage: any = {
       From: {
         Email: "hallo@bureauvlieland.nl",
@@ -175,6 +197,7 @@ Deno.serve(async (req) => {
       ...(replyTo ? { ReplyTo: replyTo } : {}),
       Subject: emailSubject,
       HTMLPart: htmlContent,
+      ...(attachments ? { Attachments: attachments } : {}),
     };
 
     if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
@@ -224,7 +247,11 @@ Deno.serve(async (req) => {
       sent_at: new Date().toISOString(),
       sent_by: user.id,
       related_request_id: invoice.request_id,
-      metadata: { invoiceId: invoice.id, invoiceType: invoice.invoice_type },
+      metadata: {
+        invoiceId: invoice.id,
+        invoiceType: invoice.invoice_type,
+        hasAttachment: Boolean(pdfBase64),
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {

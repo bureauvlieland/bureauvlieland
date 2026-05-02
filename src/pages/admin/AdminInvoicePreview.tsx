@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -33,6 +33,10 @@ import { categoryLabels } from "@/types/buildingBlock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
+import {
+  ForwardBureauInvoiceDialog,
+  type BureauInvoiceForForward,
+} from "@/components/admin/ForwardBureauInvoiceDialog";
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 
@@ -99,6 +103,7 @@ const formatCurrency = (amount: number) =>
 const AdminInvoicePreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { getSetting, settings, isLoading: isAppSettingsLoading } = useAppSettings();
 
@@ -108,6 +113,7 @@ const AdminInvoicePreview = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
 
   // Load billing lines per item (definitive lines override quoted_price)
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
@@ -143,6 +149,46 @@ const AdminInvoicePreview = () => {
   useEffect(() => {
     if (id) fetchData();
   }, [id]);
+
+  // Auto-open the forward-to-accounting dialog when navigated here with
+  // ?action=forward&invoiceId=... (from AdminInvoicing or AdminRequestDetail).
+  // We need the invoice's data to populate the dialog; fetch it on demand.
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const invoiceId = searchParams.get("invoiceId");
+    if (action !== "forward" || !invoiceId || !request) return;
+    if (forwardInvoice?.id === invoiceId) return;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("bureau_invoices")
+        .select("id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description")
+        .eq("id", invoiceId)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("Factuur niet gevonden");
+        return;
+      }
+      setForwardInvoice({
+        id: data.id,
+        invoice_number: data.invoice_number,
+        invoice_date: data.invoice_date,
+        amount_excl_vat: Number(data.amount_excl_vat),
+        vat_amount: Number(data.vat_amount),
+        amount_incl_vat:
+          data.amount_incl_vat != null
+            ? Number(data.amount_incl_vat)
+            : Number(data.amount_excl_vat) + Number(data.vat_amount),
+        invoice_type: data.invoice_type,
+        description: data.description,
+        customer_label: request.billing_company_name || request.customer_company || request.customer_name,
+        reference_number: request.reference_number,
+      });
+      // Make sure the rendered invoice number matches the one we're forwarding
+      setInvoiceNumber(data.invoice_number);
+      if (data.invoice_date) setInvoiceDate(new Date(data.invoice_date));
+    })();
+  }, [searchParams, request, forwardInvoice?.id]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -1208,6 +1254,19 @@ const AdminInvoicePreview = () => {
         description={notes}
         onGeneratePdf={buildPdfBlob}
         onSent={() => navigate(`/admin/projecten/${request.id}`)}
+      />
+
+      <ForwardBureauInvoiceDialog
+        invoice={forwardInvoice}
+        onGeneratePdf={buildPdfBlob}
+        onClose={() => {
+          setForwardInvoice(null);
+          // Strip the action params from the URL so it doesn't reopen on refresh
+          const next = new URLSearchParams(searchParams);
+          next.delete("action");
+          next.delete("invoiceId");
+          setSearchParams(next, { replace: true });
+        }}
       />
     </>
   );

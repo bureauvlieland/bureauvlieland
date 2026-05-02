@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Mail, Loader2 } from "lucide-react";
+import { Mail, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,10 +32,34 @@ export interface BureauInvoiceForForward {
 
 interface ForwardBureauInvoiceDialogProps {
   invoice: BureauInvoiceForForward | null;
+  /**
+   * Genereert de factuur-PDF die als bijlage wordt meegestuurd.
+   * Snelstart vereist een bijlage (PDF/UBL/PNG/JPG) — zonder bijlage
+   * verwerkt Snelstart de mail niet. Daarom is deze prop verplicht
+   * vanuit elke aanroeper.
+   */
+  onGeneratePdf: () => Promise<Blob | null>;
   onClose: () => void;
 }
 
-export function ForwardBureauInvoiceDialog({ invoice, onClose }: ForwardBureauInvoiceDialogProps) {
+const blobToBase64 = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // strip "data:application/pdf;base64," prefix
+      const base64 = result.split(",")[1] ?? "";
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+export function ForwardBureauInvoiceDialog({
+  invoice,
+  onGeneratePdf,
+  onClose,
+}: ForwardBureauInvoiceDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const { getSetting } = useAppSettings();
@@ -47,15 +71,29 @@ export function ForwardBureauInvoiceDialog({ invoice, onClose }: ForwardBureauIn
 
     setIsSubmitting(true);
     try {
+      // Genereer de PDF lokaal (zelfde renderer als bij verzending naar klant)
+      const pdfBlob = await onGeneratePdf();
+      if (!pdfBlob) {
+        toast.error("Kon factuur-PDF niet genereren");
+        return;
+      }
+
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      const pdfFilename = `Factuur-${invoice.invoice_number}.pdf`;
+
       const { error } = await supabase.functions.invoke("forward-bureau-invoice", {
-        body: { invoiceId: invoice.id },
+        body: {
+          invoiceId: invoice.id,
+          pdfBase64,
+          pdfFilename,
+        },
       });
 
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["admin-invoicing-requests"] });
       queryClient.invalidateQueries({ queryKey: ["bureau-invoices"] });
-      toast.success("Verkoopfactuur doorgestuurd naar boekhouding");
+      toast.success("Verkoopfactuur (incl. PDF-bijlage) doorgestuurd naar boekhouding");
       onClose();
     } catch (error) {
       console.error("Error forwarding bureau invoice:", error);
@@ -81,7 +119,7 @@ export function ForwardBureauInvoiceDialog({ invoice, onClose }: ForwardBureauIn
             Verkoopfactuur doorsturen
           </DialogTitle>
           <DialogDescription>
-            De volgende factuurgegevens worden doorgestuurd naar:
+            De factuur wordt als PDF-bijlage doorgestuurd naar:
             <span className="block font-medium text-foreground mt-1">
               📧 {snelstartEmail}
             </span>
@@ -133,6 +171,14 @@ export function ForwardBureauInvoiceDialog({ invoice, onClose }: ForwardBureauIn
               <span className="text-right max-w-[200px] truncate">{invoice.description}</span>
             </div>
           )}
+        </div>
+
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>
+            Snelstart verwerkt alleen e-mails met een PDF/UBL/PNG/JPG bijlage. De factuur-PDF
+            wordt automatisch gegenereerd en meegestuurd.
+          </span>
         </div>
 
         <DialogFooter>

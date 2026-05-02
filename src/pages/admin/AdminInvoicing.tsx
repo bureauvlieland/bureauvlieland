@@ -20,9 +20,8 @@ import {
   Calendar,
   Building2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
-import { ForwardBureauInvoiceDialog, type BureauInvoiceForForward } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
@@ -91,7 +90,7 @@ const AdminInvoicing = () => {
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
+  const navigate = useNavigate();
 
   // Calculate invoice totals using the same full project logic as the admin financial overview
   const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
@@ -407,19 +406,9 @@ const AdminInvoicing = () => {
                         variant="outline"
                         className="gap-2"
                         onClick={() =>
-                          setForwardInvoice({
-                            id: inv.id,
-                            invoice_number: inv.invoice_number,
-                            invoice_date: inv.invoice_date,
-                            amount_excl_vat: inv.amount_excl_vat,
-                            vat_amount: inv.vat_amount,
-                            amount_incl_vat: inv.amount_incl_vat ?? totalIncl,
-                            invoice_type: inv.invoice_type,
-                            description: inv.description,
-                            customer_label:
-                              request.customer_company || request.customer_name,
-                            reference_number: request.reference_number ?? null,
-                          })
+                          navigate(
+                            `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
+                          )
                         }
                       >
                         <Mail className="h-3.5 w-3.5" />
@@ -769,12 +758,6 @@ const AdminInvoicing = () => {
           onSuccess={handleInvoiceSuccess}
         />
       )}
-
-      {/* Forward to accounting dialog */}
-      <ForwardBureauInvoiceDialog
-        invoice={forwardInvoice}
-        onClose={() => setForwardInvoice(null)}
-      />
     </AdminLayout>
   );
 };
