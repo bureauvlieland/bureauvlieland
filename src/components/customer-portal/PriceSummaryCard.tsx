@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
-import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
