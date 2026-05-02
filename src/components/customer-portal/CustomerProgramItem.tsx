@@ -27,7 +27,7 @@ import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem } from "@/lib/portalPricing";
+import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -79,14 +79,10 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
-  // Bureau Vlieland heeft de prijs aangepast nadat de klant al goedkeurde —
-  // ook al heeft de DB-trigger customer_approved_at niet altijd gereset, we behandelen
-  // dit als een open situatie waarop de klant opnieuw moet bevestigen.
-  const customerApprovedTs = item.customer_approved_at ? new Date(item.customer_approved_at).getTime() : 0;
-  const adminPriceUpdatedTs = item.admin_price_override_updated_at ? new Date(item.admin_price_override_updated_at).getTime() : 0;
-  const priceChangedSinceApproval = adminPriceUpdatedTs > 0 && customerApprovedTs > 0 && adminPriceUpdatedTs > customerApprovedTs;
-  const priceChangeNeedsAttention = !isSelfArranged
-    && (priceChangedSinceApproval || (adminPriceUpdatedTs > 0 && customerApprovedTs === 0 && !!item.quoted_at));
+  // Eén bron van waarheid: hasOpenAdminPriceChange() — admin heeft een prijs gezet
+  // die nieuwer is dan de laatste partner-acknowledge (of dan quoted_at). Alleen dan
+  // tonen we de "Prijs gewijzigd"-badge, amber banner, en knop "Akkoord met nieuwe prijs".
+  const priceChangeNeedsAttention = !isSelfArranged && hasOpenAdminPriceChange(item);
 
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
@@ -283,7 +279,7 @@ export const CustomerProgramItem = ({
             <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
-                De prijs van dit onderdeel is door Bureau Vlieland aangepast. Bekijk de nieuwe prijs hieronder en geef opnieuw uw akkoord.
+                De prijs van dit onderdeel is door Bureau Vlieland aangepast. Geef opnieuw uw akkoord op de nieuwe prijs.
               </span>
             </div>
           )}
