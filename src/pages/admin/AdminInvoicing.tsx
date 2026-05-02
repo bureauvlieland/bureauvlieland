@@ -758,5 +758,8 @@ const AdminInvoicing = () => {
           onSuccess={handleInvoiceSuccess}
         />
       )}
+    </AdminLayout>
+  );
+};
 
 export default AdminInvoicing;
