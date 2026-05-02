@@ -108,26 +108,18 @@ export const PriceSummaryCard = ({
         };
       }
 
-      const hasQuotedPrice = item.quoted_price != null;
+      const hasOpenChange = hasOpenAdminPriceChange(item);
+      const hasQuotedPrice = item.quoted_price != null && !hasOpenChange;
       const isPreliminary = !hasQuotedPrice && item.admin_price_override != null;
 
-      // quoted_price = group total (never multiply)
-      // admin_price_override = unit price (multiply for per_person)
-      const ppMultiplier = (!item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day") ? (item.override_people ?? numberOfPeople) : 1;
-      const dayMultiplier = item.price_type === "per_person_per_day" ? numberOfDays : 1;
+      const effectivePeople = getEffectivePeople(item, numberOfPeople);
+      const ppMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
+      const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
 
-      let effectivePrice: number | null = null;
-      let unitPrice: number | null = null;
+      const effectivePrice = getDisplayLineTotal(item, numberOfPeople, numberOfDays);
+      const unitPrice = getDisplayUnitPrice(item, numberOfPeople);
 
-      if (hasQuotedPrice) {
-        effectivePrice = item.quoted_price!;
-        unitPrice = ppMultiplier > 1 ? item.quoted_price! / (item.override_people ?? numberOfPeople) : item.quoted_price!;
-      } else if (isPreliminary) {
-        unitPrice = item.admin_price_override!;
-        effectivePrice = unitPrice * ppMultiplier * dayMultiplier;
-      }
-
-      const isPerDay = item.price_type === "per_person_per_day";
+      const isPerDay = isPerDayItem(item);
       return {
         item,
         hasQuotedPrice,
