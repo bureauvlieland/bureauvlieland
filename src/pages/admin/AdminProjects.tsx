@@ -206,10 +206,82 @@ function getReadinessScore(project: Project): { done: number; total: number; per
   return { done, total, percentage: total > 0 ? Math.round((done / total) * 100) : 0 };
 }
 
+// Earliest scheduled date of a project (for sorting + overdue check + grouping)
+function getEarliestProjectDate(p: Project): Date | null {
+  const candidates: Date[] = [];
+  if (p.accommodation_arrival) candidates.push(new Date(p.accommodation_arrival));
+  if (p.selected_dates?.length) candidates.push(new Date(p.selected_dates[0]));
+  if (!candidates.length) return null;
+  return new Date(Math.min(...candidates.map((d) => d.getTime())));
+}
+
+// Project counts as "needs action" when something is waiting on the bureau
+function projectNeedsAction(project: Project): boolean {
+  const derived = getDerivedStatus(project);
+  if (derived === "geannuleerd" || derived === "afgerond") return false;
+
+  // Items approved by customer but not yet sent to partner
+  if (project.items_not_sent > 0) return true;
+
+  // Lodging deadline within 3 days for any pending quote
+  const earliestDeadline = getEarliestDeadline(project.accommodation_quotes);
+  if (earliestDeadline) {
+    const days = differenceInDays(earliestDeadline, new Date());
+    if (days < 3) return true;
+  }
+
+  // Stuck "offerte verstuurd" for > 7 days
+  if (derived === "offerte_verstuurd") {
+    const ageDays = differenceInDays(new Date(), new Date(project.created_at));
+    if (ageDays > 7) return true;
+  }
+
+  // Past event date but project not yet ready for invoicing → forgotten
+  const earliest = getEarliestProjectDate(project);
+  if (earliest && earliest.getTime() < startOfDay(new Date()).getTime()) {
+    if (derived !== "facturatie") return true;
+  }
+
+  return false;
+}
+
+function isOverdue(project: Project): boolean {
+  const derived = getDerivedStatus(project);
+  if (derived === "facturatie" || derived === "afgerond" || derived === "geannuleerd") return false;
+  const earliest = getEarliestProjectDate(project);
+  if (!earliest) return false;
+  return earliest.getTime() < startOfDay(new Date()).getTime();
+}
+
+type TimeBucket = "overdue" | "this_week" | "this_month" | "later" | "no_date";
+
+function getTimeBucket(project: Project): TimeBucket {
+  const earliest = getEarliestProjectDate(project);
+  if (!earliest) return "no_date";
+  const now = new Date();
+  const today = startOfDay(now);
+  if (earliest.getTime() < today.getTime()) return "overdue";
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  if (earliest.getTime() <= weekEnd.getTime()) return "this_week";
+  const monthEnd = endOfMonth(now);
+  if (earliest.getTime() <= monthEnd.getTime()) return "this_month";
+  return "later";
+}
+
+const TIME_BUCKET_LABEL: Record<TimeBucket, string> = {
+  overdue: "Datum verstreken (nog open)",
+  this_week: "Deze week",
+  this_month: "Deze maand",
+  later: "Later",
+  no_date: "Zonder datum",
+};
+
 const AdminProjectsContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [showArchive, setShowArchive] = useState(false);
+  const [actionOnly, setActionOnly] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteAccommodation, setDeleteAccommodation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
