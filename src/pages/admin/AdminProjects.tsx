@@ -472,6 +472,24 @@ const AdminProjectsContent = () => {
     },
   });
 
+  // Counts per derived status across ALL projects (used for funnel + dropdown labels)
+  const allStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (projects || []).forEach((p) => {
+      const s = getDerivedStatus(p);
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
+  }, [projects]);
+
+  // stageCounts excludes geannuleerd (rendered separately as muted row)
+  const stageCounts = useMemo(() => {
+    const { geannuleerd: _ignored, ...rest } = allStatusCounts;
+    return rest;
+  }, [allStatusCounts]);
+
+  const cancelledCount = allStatusCounts.geannuleerd ?? 0;
+
   const filteredProjects = useMemo(() => {
     return (projects || []).filter((project) => {
       const query = searchQuery.toLowerCase();
@@ -482,27 +500,32 @@ const AdminProjectsContent = () => {
         (project.program_ref?.toLowerCase().includes(query) ?? false) ||
         (project.accommodation_ref?.toLowerCase().includes(query) ?? false);
 
+      const derived = getDerivedStatus(project);
+
       let matchesStatus = statusFilter === "all";
       if (!matchesStatus) {
-        const derived = getDerivedStatus(project);
         matchesStatus = derived === statusFilter;
       }
 
       const matchesType = typeFilter === "all" || project.type === typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [projects, searchQuery, statusFilter, typeFilter]);
+      // Hide afgerond + geannuleerd by default unless:
+      // - the user toggled "Toon archief", or
+      // - the status filter is explicitly set to one of those two
+      const isArchived = derived === "afgerond" || derived === "geannuleerd";
+      const explicitArchiveFilter = statusFilter === "afgerond" || statusFilter === "geannuleerd";
+      const matchesArchive = !isArchived || showArchive || explicitArchiveFilter;
 
-  const stageCounts = useMemo(() => {
-    const all = projects || [];
-    const counts: Record<string, number> = {};
-    all.forEach((p) => {
-      const s = getDerivedStatus(p);
-      if (s !== "geannuleerd") counts[s] = (counts[s] || 0) + 1;
+      const matchesAction = !actionOnly || projectNeedsAction(project);
+
+      return matchesSearch && matchesStatus && matchesType && matchesArchive && matchesAction;
     });
-    return counts;
-  }, [projects]);
+  }, [projects, searchQuery, statusFilter, typeFilter, showArchive, actionOnly]);
+
+  const actionNeededTotal = useMemo(
+    () => (projects || []).filter(projectNeedsAction).length,
+    [projects],
+  );
 
   if (isLoading) {
     return (
