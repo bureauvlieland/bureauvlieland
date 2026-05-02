@@ -82,7 +82,7 @@ export function getDisplayLineTotal(
   programPeople: number,
   numberOfDays: number = 1,
 ): number | null {
-  if (adminOverrideIsLeading(item)) {
+  if (adminOverrideIsLeading(item, programPeople, numberOfDays)) {
     const effectivePeople = getEffectivePeople(item, programPeople);
     const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
     const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
