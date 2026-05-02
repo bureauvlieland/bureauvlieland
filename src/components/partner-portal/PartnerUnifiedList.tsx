@@ -37,6 +37,7 @@ export interface UnifiedListItem {
   awaitingTerms?: boolean;
   isRecentlyCancelled?: boolean;
   isRecentlyRejected?: boolean;
+  priceChangePending?: boolean;
   originalItem: PartnerItem | PartnerAccommodationQuote;
 }
 
