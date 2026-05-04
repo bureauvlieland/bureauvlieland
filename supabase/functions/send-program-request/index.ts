@@ -262,7 +262,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await sendEmailViaMailjet([
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
-        To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin van der Most" }],
+        To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin Soolsma" }],
         Subject: bureauTemplate?.subject ? bureauSubject : `${subjectPrefix}${bureauSubject}`,
         HTMLPart: bureauEmailHtml,
       },

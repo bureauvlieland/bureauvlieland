@@ -211,7 +211,7 @@ const handler = async (req: Request): Promise<Response> => {
         To: [
           {
             Email: getRecipientEmail("erwin@bureauvlieland.nl", origin),
-            Name: "Erwin van der Most"
+            Name: "Erwin Soolsma"
           }
         ],
         Subject: bureauSubject,
