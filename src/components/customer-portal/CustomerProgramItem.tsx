@@ -228,7 +228,8 @@ export const CustomerProgramItem = ({
             {/* Show effective price (admin override wins on open changes), otherwise indication */}
             {!isSelfArranged && (() => {
               const effectivePeople = item.override_people ?? numberOfPeople ?? 1;
-              const lineTotal = getDisplayLineTotal(item, effectivePeople);
+              const numberOfDays = Math.max(selectedDates?.length ?? 1, 1);
+              const lineTotal = getDisplayLineTotal(item, effectivePeople, numberOfDays);
               const unitPrice = getDisplayUnitPrice(item, effectivePeople);
               if (lineTotal == null) {
                 return item.price_indication ? (
@@ -244,10 +245,12 @@ export const CustomerProgramItem = ({
                 )}>
                   €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   {showPerPerson ? (
-                    <span className="font-normal text-xs ml-1">p.p.</span>
-                  ) : item.price_type === "total" ? (
+                    <span className="font-normal text-xs ml-1">
+                      {item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."}
+                    </span>
+                  ) : (
                     <span className="font-normal text-xs ml-1">totaal</span>
-                  ) : null}
+                  )}
                   {vatRate !== undefined && (
                     <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
                   )}
@@ -267,7 +270,7 @@ export const CustomerProgramItem = ({
 
           {/* Inline VAT breakdown */}
           {!isSelfArranged && vatRate !== undefined && (() => {
-            const total = getDisplayLineTotal(item, item.override_people ?? numberOfPeople ?? 1);
+            const total = getDisplayLineTotal(item, item.override_people ?? numberOfPeople ?? 1, Math.max(selectedDates?.length ?? 1, 1));
             if (total == null) return null;
             const exclVat = total / (1 + vatRate / 100);
             return (
