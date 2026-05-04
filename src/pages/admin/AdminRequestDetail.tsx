@@ -300,6 +300,8 @@ const AdminRequestDetail = () => {
     price_total: number;
     vat_rate: number;
     accommodation_name: string;
+    customer_terms_accepted_at: string | null;
+    customer_signature_name: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -309,7 +311,7 @@ const AdminRequestDetail = () => {
     }
     supabase
       .from("accommodation_quotes")
-      .select("id, price_total, vat_rate, accommodation_name")
+      .select("id, price_total, vat_rate, accommodation_name, customer_terms_accepted_at, customer_signature_name")
       .eq("request_id", request.linked_accommodation_id)
       .eq("status", "selected")
       .maybeSingle()
@@ -319,6 +321,8 @@ const AdminRequestDetail = () => {
           price_total: data.price_total,
           vat_rate: data.vat_rate ?? 9,
           accommodation_name: data.accommodation_name,
+          customer_terms_accepted_at: (data as any).customer_terms_accepted_at ?? null,
+          customer_signature_name: (data as any).customer_signature_name ?? null,
         } : null);
       });
   }, [request?.linked_accommodation_id]);
