@@ -310,23 +310,23 @@ Deno.serve(async (req) => {
     // Detect whether this is a reply within an existing customer ↔ partner thread
     let audience: "admin" | "customer_partner" = "admin";
     if (accommodationId && contactEmail) {
-      const { data: matchingQuote } = await supabase
+      const lower = contactEmail.toLowerCase();
+      const { data: quotesOnAcc } = await supabase
         .from("accommodation_quotes")
-        .select("partner_id, partners!inner(email, contact_email)")
-        .eq("request_id", accommodationId)
-        .or(`email.eq.${contactEmail},contact_email.eq.${contactEmail}`, { foreignTable: "partners" })
-        .limit(1)
-        .maybeSingle();
-
-      if (matchingQuote) {
+        .select("partner:partners(email, contact_email)")
+        .eq("request_id", accommodationId);
+      const senderIsPartner = (quotesOnAcc || []).some((q: any) => {
+        const p = q.partner;
+        if (!p) return false;
+        return [p.email, p.contact_email].filter(Boolean).map((e: string) => e.toLowerCase()).includes(lower);
+      });
+      if (senderIsPartner) {
         const { count } = await supabase
           .from("project_communications")
           .select("id", { count: "exact", head: true })
           .eq("accommodation_id", accommodationId)
           .eq("audience", "customer_partner");
-        if ((count || 0) > 0) {
-          audience = "customer_partner";
-        }
+        if ((count || 0) > 0) audience = "customer_partner";
       }
     }
 
