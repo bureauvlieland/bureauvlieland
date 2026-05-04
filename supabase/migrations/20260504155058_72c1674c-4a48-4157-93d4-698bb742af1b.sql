@@ -1,0 +1,2 @@
+ALTER TABLE public.program_request_items DROP CONSTRAINT IF EXISTS program_request_items_quote_status_check;
+ALTER TABLE public.program_request_items ADD CONSTRAINT program_request_items_quote_status_check CHECK (item_quote_status IS NULL OR item_quote_status = ANY (ARRAY['concept'::text, 'offerte_verstuurd'::text, 'in_afstemming'::text, 'bevestigd'::text, 'optioneel'::text]));

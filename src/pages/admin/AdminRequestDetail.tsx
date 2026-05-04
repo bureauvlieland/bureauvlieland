@@ -942,7 +942,7 @@ const AdminRequestDetail = () => {
         // Klant moet opnieuw akkoord geven als er al akkoord was én er een actieve partnerprijs lag
         if (hadCustomerApproval && hadPartnerQuote) {
           updateData.customer_approved_at = null;
-          updateData.item_quote_status = "in_afstemming";
+          updateData.item_quote_status = "offerte_verstuurd";
         }
       }
 
@@ -1640,6 +1640,11 @@ const AdminRequestDetail = () => {
                                 const statusInfo = itemStatusConfig[item.status];
                                 const hasCustomerApproval = !!(item.customer_accepted_at || item.customer_approved_at);
                                 const showWaitingForCustomer = (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification && !hasCustomerApproval;
+                                const numDaysForItem = Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1;
+                                const priceChangeWaitingCustomer =
+                                  !item.customer_accepted_at &&
+                                  (item.status === "confirmed" || item.status === "alternative") &&
+                                  hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, numDaysForItem);
                                 return (
                                   <TableRow key={item.id} className="group">
                                     <TableCell>
@@ -1779,6 +1784,16 @@ const AdminRequestDetail = () => {
                                                 </Tooltip>
                                               </TooltipProvider>
                                             )}
+                                            {priceChangeWaitingCustomer && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Wacht op klantakkoord nieuwe prijs</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
                                           </div>
                                         </TableCell>
                                         <TableCell>
@@ -1901,6 +1916,16 @@ const AdminRequestDetail = () => {
                                                     <Clock className="h-4 w-4 text-amber-500 shrink-0" />
                                                   </TooltipTrigger>
                                                   <TooltipContent>Wacht op klant</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                            {priceChangeWaitingCustomer && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Wacht op klantakkoord nieuwe prijs</TooltipContent>
                                                 </Tooltip>
                                               </TooltipProvider>
                                             )}
