@@ -203,18 +203,85 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 5. Release bureau items (no email, just update status)
-    if (bureauItems.length > 0) {
-      const bureauItemIds = bureauItems.map(i => i.id);
+    // 5. Release bureau items.
+    //    Bureau-items zijn intern (aanbieder = Bureau Vlieland zelf), dus zodra
+    //    de klant akkoord heeft gegeven en we 'versturen', zetten we ze direct
+    //    op bevestigd — same same als de externe partner-bevestigingsstap.
+    //
+    //    Uitzondering: bootovertochten (Doeksen). Die moeten nog handmatig
+    //    geboekt worden bij de rederij vóór ze definitief bevestigd zijn.
+    //    Die laten we op 'pending' staan en triggeren we als todo.
+    const isFerryItem = (i: ProgramItem) => {
+      const name = (i.block_name || "").toLowerCase();
+      return name.includes("overtocht") || name.includes("doeksen");
+    };
+    const bureauFerryItems = bureauItems.filter(isFerryItem);
+    const bureauAutoConfirmItems = bureauItems.filter(i => !isFerryItem(i));
+    const nowIso = new Date().toISOString();
+
+    if (bureauAutoConfirmItems.length > 0) {
+      const ids = bureauAutoConfirmItems.map(i => i.id);
+      await supabase
+        .from("program_request_items")
+        .update({
+          skip_partner_notification: false,
+          status: "confirmed",
+          item_quote_status: "bevestigd",
+          customer_approved_at: nowIso,
+          status_updated_at: nowIso,
+        })
+        .in("id", ids)
+        .is("customer_approved_at", null);
+
+      // Voor items die al een customer_approved_at hadden, alleen status doorzetten
+      await supabase
+        .from("program_request_items")
+        .update({
+          skip_partner_notification: false,
+          status: "confirmed",
+          item_quote_status: "bevestigd",
+          status_updated_at: nowIso,
+        })
+        .in("id", ids)
+        .not("customer_approved_at", "is", null);
+
+      console.log(`Auto-confirmed ${bureauAutoConfirmItems.length} bureau item(s)`);
+    }
+
+    if (bureauFerryItems.length > 0) {
+      const ids = bureauFerryItems.map(i => i.id);
       await supabase
         .from("program_request_items")
         .update({
           skip_partner_notification: false,
           status: "pending",
-          status_updated_at: new Date().toISOString(),
+          status_updated_at: nowIso,
         })
-        .in("id", bureauItemIds);
-      console.log(`Released ${bureauItems.length} bureau item(s) without email`);
+        .in("id", ids);
+      console.log(`Released ${bureauFerryItems.length} ferry item(s) — pending booking`);
+
+      // Maak per overtocht-item een todo aan om tickets te boeken bij Doeksen.
+      const customerLabelForFerry = program.customer_company || program.customer_name;
+      for (const fi of bureauFerryItems) {
+        const { data: existing } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "book_ferry_tickets")
+          .eq("auto_entity_id", fi.id)
+          .neq("status", "done")
+          .maybeSingle();
+        if (!existing) {
+          await supabase.from("admin_todos").insert({
+            title: `Boot boeken: "${fi.block_name}" voor ${customerLabelForFerry}`,
+            description: `Boek de overtocht bij Rederij Doeksen en vul de definitieve prijs in op het programmaonderdeel.`,
+            priority: "normal",
+            status: "todo",
+            related_request_id: program.id,
+            auto_type: "book_ferry_tickets",
+            auto_entity_id: fi.id,
+          });
+        }
+      }
     }
 
     // 6. Send only partner items via email
