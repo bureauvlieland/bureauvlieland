@@ -1,29 +1,45 @@
-# Admin item-status syncen met klant-portal bij prijswijziging
+## Wat gaat er mis?
 
-## Probleem
-Bij **BV-2603-0003 → Italiaanse shared dining**:
-- **Klant-portal**: "Akkoord nodig — nieuwe prijs (wacht op klant)"
-- **Admin**: dropdown staat op *In afstemming* (= wacht op partner) en de status-badge toont *Wacht op partner*
+Bij **BV-2603-0003** klikt de klant op "Akkoord" bij de overtocht Vlieland → Harlingen (16:50, dag 1), maar krijgt de melding **"Dit onderdeel kan nog niet geaccordeerd worden"**.
 
-Oorzaak: toen de admin de prijs aanpaste na klant-akkoord, werd `item_quote_status` op `"in_afstemming"` gezet (logica uit periode vóór de nieuwe `offerte_verstuurd` tussenstatus). Daardoor leest de admin-kolom "wacht op partner", terwijl de klant juist nog akkoord moet geven op de nieuwe prijs.
+### Root cause
 
-Daarnaast ontbreekt in de admin tabel-rij een zichtbaar signaal "open prijswijziging — wacht op klant".
+Het programma als geheel staat op `quote_status = akkoord_ontvangen` (klant heeft het hoofdvoorstel al geaccepteerd). Maar twee individuele items hebben nog `item_quote_status = "concept"`:
 
-## Wijzigingen
+| Item | Day | Tijd | item_quote_status |
+|---|---|---|---|
+| Overtocht Harlingen → Vlieland | 1 | 09:05 | **concept** |
+| Overtocht Vlieland → Harlingen | 1 | 16:50 | **concept** |
 
-### 1. `src/pages/admin/AdminRequestDetail.tsx` — `handleItemPriceUpdate` (regel 945)
-Bij betekenisvolle prijswijziging waarbij de klant opnieuw akkoord moet geven: zet `item_quote_status` op `"offerte_verstuurd"` in plaats van `"in_afstemming"`. De status `offerte_verstuurd` = "wacht op klant-akkoord" (nieuwe semantiek uit vorige iteratie).
+Het zijn beide ferry-items (block_type `bureau`) die kennelijk later zijn toegevoegd/ververst en nooit door `send-quote-offer` zijn opgepakt, dus hun status bleef op `concept` staan.
 
-### 2. Visuele indicator in quote-mode tabel (regel 1762-1781)
-Naast `hasCustomerApproval` (groen vinkje) en `showWaitingForCustomer` (klok) ook een tooltip/icoon tonen wanneer `hasOpenAdminPriceChange(item, ...)` true is — bijv. een oranje `AlertCircle` met tooltip *"Wacht op klantakkoord nieuwe prijs"*. Dit geldt voor zowel de quote-mode kolom (regel 1762) als de classic-mode kolom (regel 1887).
+De edge function `approve-quote-item` accepteert alleen `["offerte_verstuurd", "in_afstemming", "bevestigd"]` — `concept` valt daarbuiten en geeft daarom de foutmelding. De UI toont echter wel de "Akkoord" knop omdat het programma globaal al akkoord is en het item op `confirmed` staat — vandaar de mismatch tussen wat de klant ziet en wat de backend toelaat.
 
-### 3. Eenmalige data-correctie (BV-2603-0003)
-Voor het concrete item `0466f3fa-4b33-4923-9dbd-b8703ae75006`:
-- `item_quote_status` van `in_afstemming` → `offerte_verstuurd`
-- `status` blijft `confirmed` (partnerprijs is bevestigd; wachten is op klant)
+## Plan
 
-Optioneel breder herstel: alle items waar `customer_approved_at IS NULL` AND `item_quote_status = 'in_afstemming'` AND er een open admin price change is (`admin_price_override_updated_at > partner_price_change_acknowledged_at`) en `status = 'confirmed'` — zelfde update.
+### 1. `approve-quote-item` toleranter maken
+Wanneer het programma al op `akkoord_ontvangen` of `definitief_bevestigd` staat, moeten ook items met `item_quote_status = "concept"` goedgekeurd kunnen worden. Per-item akkoord op een al-geaccepteerd programma mag nooit blokkeren op een interne status-stap die overgeslagen is.
 
-## Niet nodig
-- Geen wijziging aan de klant-portal (toont al correct).
-- Geen wijziging aan edge functions: `approve-quote-item` accepteert sinds vorige iteratie ook `offerte_verstuurd` als geldige uitgangswaarde.
+Aanpassing in de validatie (regel 175):
+```ts
+const allowedItemStatuses = ["offerte_verstuurd", "in_afstemming", "bevestigd"];
+const programIsAccepted = ["akkoord_ontvangen", "definitief_bevestigd"].includes(program.quote_status);
+if (
+  !allowedItemStatuses.includes(item.item_quote_status || "") &&
+  !(programIsAccepted && item.item_quote_status === "concept")
+) {
+  return 400 "Dit onderdeel kan nog niet geaccordeerd worden";
+}
+```
+
+In de update-payload zetten we `item_quote_status` dan ook meteen naar `in_afstemming` zodat het item niet meer op `concept` blijft hangen.
+
+### 2. Data correctie BV-2603-0003
+De twee ferry-items (`5fa639f0-…` en `7d49cd63-…`) migreren we van `concept` → `offerte_verstuurd`, zodat ze direct via de normale weg goedgekeurd kunnen worden.
+
+### 3. Preventie bij nieuwe items
+Onderzoeken waar ferry-items na akkoord nog op `concept` worden gezet (waarschijnlijk in de ferry-refresh / admin-add flow). Daar moet, als het programma al `akkoord_ontvangen` is, het nieuwe item meteen op `offerte_verstuurd` worden gezet zodat de klant het kan akkorderen zonder backend-wisseltrucs. Dit komt erbij als een tweede commit na het lokaliseren van de exacte schrijflocatie.
+
+## Resultaat
+- Klant kan de overtocht-items in BV-2603-0003 direct akkorderen.
+- Toekomstige later-toegevoegde items in een al-geaccepteerd programma blokkeren de klant niet meer.
