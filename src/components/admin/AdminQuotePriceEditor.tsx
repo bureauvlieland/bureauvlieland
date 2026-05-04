@@ -90,9 +90,28 @@ export const AdminQuotePriceEditor = ({
   };
 
   const handleSave = async () => {
+    const trimmed = editPrice.trim();
+    const priceValue = trimmed === "" ? null : parseFloat(trimmed.replace(",", "."));
+
+    if (trimmed !== "" && (Number.isNaN(priceValue!) || priceValue! < 0)) {
+      toast.error("Voer een geldig bedrag in (≥ 0).");
+      return;
+    }
+    if (priceValue !== null && priceValue > 100000) {
+      toast.error("Bedrag lijkt onrealistisch hoog (> €100.000). Controleer de invoer.");
+      return;
+    }
+    if (priceValue !== null && editPriceType !== "total" && numberOfPeople < 1) {
+      toast.error("Aantal personen ontbreekt — kan totaal niet berekenen.");
+      return;
+    }
+    if (priceValue !== null && editPriceType === "per_person_per_day" && numberOfDays < 1) {
+      toast.error("Aantal dagen ontbreekt — kan totaal niet berekenen.");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const priceValue = editPrice ? parseFloat(editPrice) : null;
       await onSave(priceValue, editNotes, editPriceType);
       setIsOpen(false);
     } finally {
