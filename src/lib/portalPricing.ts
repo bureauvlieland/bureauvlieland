@@ -158,6 +158,26 @@ export function isPerDayItem(item: { price_type?: string | null }): boolean {
 }
 
 /**
+ * Single source of truth for "hoeveel dagen telt dit programma".
+ * Geeft altijd minimaal 1 terug — een leeg of ontbrekend `selected_dates`
+ * mag nooit een p.p.p.d.-totaal naar €0 reduceren.
+ * Accepteert zowel een Date[]/string[] als een hele request met `selected_dates`.
+ */
+export function getNumberOfDays(
+  source:
+    | { selected_dates?: unknown }
+    | unknown[]
+    | null
+    | undefined,
+): number {
+  if (Array.isArray(source)) return Math.max(source.length, 1);
+  if (source && typeof source === "object" && Array.isArray((source as { selected_dates?: unknown[] }).selected_dates)) {
+    return Math.max((source as { selected_dates: unknown[] }).selected_dates.length, 1);
+  }
+  return 1;
+}
+
+/**
  * Get the unit price for display (e.g. "€30,00 p.p.")
  * For quoted_price items this is the per-person breakdown.
  * For admin_price_override items this is the raw override value.
