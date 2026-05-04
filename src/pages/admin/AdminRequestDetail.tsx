@@ -1838,6 +1838,7 @@ const AdminRequestDetail = () => {
                                               overridePrice={item.admin_price_override}
                                               priceNotes={item.admin_price_notes}
                                               numberOfPeople={item.override_people ?? request.number_of_people}
+                                              numberOfDays={Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1}
                                               priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
                                               hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1)}
                                               onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
