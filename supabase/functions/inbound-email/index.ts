@@ -307,12 +307,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Detect whether this is a reply within an existing customer ↔ partner thread
+    let audience: "admin" | "customer_partner" = "admin";
+    if (accommodationId && contactEmail) {
+      const { data: matchingQuote } = await supabase
+        .from("accommodation_quotes")
+        .select("partner_id, partners!inner(email, contact_email)")
+        .eq("request_id", accommodationId)
+        .or(`email.eq.${contactEmail},contact_email.eq.${contactEmail}`, { foreignTable: "partners" })
+        .limit(1)
+        .maybeSingle();
+
+      if (matchingQuote) {
+        const { count } = await supabase
+          .from("project_communications")
+          .select("id", { count: "exact", head: true })
+          .eq("accommodation_id", accommodationId)
+          .eq("audience", "customer_partner");
+        if ((count || 0) > 0) {
+          audience = "customer_partner";
+        }
+      }
+    }
+
     // Save as project communication
     const { error: insertError } = await supabase.from("project_communications").insert({
       request_id: requestId,
       accommodation_id: accommodationId,
       communication_type: "email_in",
       direction: "inbound",
+      audience,
       subject: subject || null,
       content: truncatedContent,
       contact_name: contactName || null,
