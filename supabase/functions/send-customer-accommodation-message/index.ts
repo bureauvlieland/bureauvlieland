@@ -178,7 +178,9 @@ Deno.serve(async (req) => {
             <p style="margin: 0 0 8px; font-weight: 600; color: #1e3a5f;">${sanitizeHtml(subject)}</p>
             <p style="margin: 0;">${sanitizedMessage}</p>
           </div>
-          <p style="font-size: 14px; color: #666;">U kunt direct antwoorden op deze e-mail.</p>
+          <p style="font-size: 14px; color: #666; padding: 12px; background: #fef9e7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+            <strong>Antwoord direct op deze e-mail</strong> — uw bericht komt automatisch terecht bij ${senderLabel} en wordt gelogd in uw partner-dashboard onder "Berichten met klant".
+          </p>
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;">
         <div style="padding: 16px 24px; color: #666; font-size: 13px; background: #f8fafc;">
@@ -247,17 +249,19 @@ Deno.serve(async (req) => {
       metadata: { message_preview: message.substring(0, 200) },
     });
 
-    // Log as project communication
+    // Log as project communication (customer ↔ partner thread)
     await supabase.from("project_communications").insert({
       request_id: programRequest.id,
       accommodation_id: accRequest.id,
       communication_type: "email_out",
       direction: "outbound",
+      audience: "customer_partner",
       subject,
       content: message,
       contact_name: partner.name,
       contact_email: recipientEmail,
       communication_date: new Date().toISOString(),
+      metadata: { sender: "customer", sender_email: programRequest.customer_email },
     });
 
     console.log("Customer accommodation message sent to", recipientEmail);
