@@ -65,6 +65,7 @@ import {
   Trash2,
   CalendarPlus,
   Check,
+  ShieldCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -300,6 +301,8 @@ const AdminRequestDetail = () => {
     price_total: number;
     vat_rate: number;
     accommodation_name: string;
+    customer_terms_accepted_at: string | null;
+    customer_signature_name: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -309,7 +312,7 @@ const AdminRequestDetail = () => {
     }
     supabase
       .from("accommodation_quotes")
-      .select("id, price_total, vat_rate, accommodation_name")
+      .select("id, price_total, vat_rate, accommodation_name, customer_terms_accepted_at, customer_signature_name")
       .eq("request_id", request.linked_accommodation_id)
       .eq("status", "selected")
       .maybeSingle()
@@ -319,6 +322,8 @@ const AdminRequestDetail = () => {
           price_total: data.price_total,
           vat_rate: data.vat_rate ?? 9,
           accommodation_name: data.accommodation_name,
+          customer_terms_accepted_at: (data as any).customer_terms_accepted_at ?? null,
+          customer_signature_name: (data as any).customer_signature_name ?? null,
         } : null);
       });
   }, [request?.linked_accommodation_id]);
@@ -1369,6 +1374,20 @@ const AdminRequestDetail = () => {
                       </Link>
                     </Button>
                   </div>
+                  {selectedAccommodationQuote?.customer_terms_accepted_at && (
+                    <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Deel-akkoord vastgelegd
+                      </div>
+                      <div className="mt-0.5 text-emerald-800">
+                        {format(new Date(selectedAccommodationQuote.customer_terms_accepted_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
+                        {selectedAccommodationQuote.customer_signature_name && (
+                          <> · ondertekend door <span className="font-medium">{selectedAccommodationQuote.customer_signature_name}</span></>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
