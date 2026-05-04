@@ -139,7 +139,7 @@ export const PartnerUnifiedList = ({
       // Open admin price change → partner needs to acknowledge new price.
       // Only relevant when partner has previously quoted (quoted_price set) and item not finalised.
       const effPeople = i.override_people ?? i.program_requests.number_of_people ?? 1;
-      const numDays = Array.isArray(i.program_requests.selected_dates) ? i.program_requests.selected_dates.length : 1;
+      const numDays = getNumberOfDays(i.program_requests.selected_dates);
       const priceChangePending =
         !!i.quoted_price &&
         !i.invoiced_number &&
