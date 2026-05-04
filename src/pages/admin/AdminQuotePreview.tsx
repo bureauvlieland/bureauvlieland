@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import type { BuildingBlock } from "@/types/buildingBlock";
+import { getDisplayLineTotal, getNumberOfDays, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 
 
 interface ProgramRequest {
@@ -751,10 +752,8 @@ const AdminQuotePreview = () => {
                                         <span className="text-xs text-gray-400 italic">Op aanvraag</span>
                                       ) : (
                                         <>
-                                          {formatCurrency(getItemPrice(item))}
-                                          <span className="text-xs text-gray-400 ml-1">
-                                            {item.price_type === 'per_person_per_day' ? 'p.p.p.d.' : item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
-                                          </span>
+                                          {formatCurrency(getDisplayLineTotal(item as any, item.override_people ?? request.number_of_people ?? 1, getNumberOfDays(request.selected_dates)) ?? 0)}
+                                          <span className="text-xs text-gray-400 ml-1">totaal</span>
                                         </>
                                       )}
                                     </td>
