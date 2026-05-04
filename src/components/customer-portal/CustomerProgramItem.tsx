@@ -245,10 +245,12 @@ export const CustomerProgramItem = ({
                 )}>
                   €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   {showPerPerson ? (
-                    <span className="font-normal text-xs ml-1">p.p.</span>
-                  ) : item.price_type === "total" ? (
+                    <span className="font-normal text-xs ml-1">
+                      {item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."}
+                    </span>
+                  ) : (
                     <span className="font-normal text-xs ml-1">totaal</span>
-                  ) : null}
+                  )}
                   {vatRate !== undefined && (
                     <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
                   )}
