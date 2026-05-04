@@ -17,6 +17,7 @@ export type QuoteStatus =
 // Item quote status for individual building blocks in quote mode
 export type ItemQuoteStatus =
   | "concept"
+  | "offerte_verstuurd"
   | "in_afstemming"
   | "bevestigd"
   | "optioneel";
@@ -89,6 +90,13 @@ export const itemQuoteStatusConfig: Record<ItemQuoteStatus, QuoteStatusInfo> = {
     icon: "FileEdit",
     description: "Nog niet bevestigd",
   },
+  offerte_verstuurd: {
+    label: "Offerte verstuurd",
+    color: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-950/50",
+    icon: "Send",
+    description: "Wacht op klant-akkoord",
+  },
   in_afstemming: {
     label: "In afstemming",
     color: "text-amber-700 dark:text-amber-400",
@@ -115,6 +123,7 @@ export const itemQuoteStatusConfig: Record<ItemQuoteStatus, QuoteStatusInfo> = {
 // Customer-facing labels (hide internal terminology)
 export const customerItemQuoteStatusLabels: Record<ItemQuoteStatus, string> = {
   concept: "Onder voorbehoud",
+  offerte_verstuurd: "Onder voorbehoud",
   in_afstemming: "Onder voorbehoud",
   bevestigd: "Bevestigd",
   optioneel: "Optioneel",

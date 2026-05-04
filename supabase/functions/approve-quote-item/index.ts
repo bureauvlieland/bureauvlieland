@@ -172,7 +172,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 5. Validate item state
-    if (!["in_afstemming", "bevestigd"].includes(item.item_quote_status || "")) {
+    if (!["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(item.item_quote_status || "")) {
       return new Response(
         JSON.stringify({ error: "Dit onderdeel kan nog niet geaccordeerd worden" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -230,7 +230,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .neq("status", "cancelled");
 
       const approvableItems = (allItems || []).filter((i: any) =>
-        ["in_afstemming", "bevestigd"].includes(i.item_quote_status)
+        ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status)
       );
       const allApproved = approvableItems.length > 0 && approvableItems.every((i: any) => i.customer_approved_at);
 
@@ -364,7 +364,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .neq("status", "cancelled");
 
     const approvableItems = (allItems || []).filter((i: any) =>
-      ["in_afstemming", "bevestigd"].includes(i.item_quote_status)
+      ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status)
     );
     const allApproved = approvableItems.length > 0 && approvableItems.every((i: any) => i.customer_approved_at);
 

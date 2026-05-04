@@ -1,42 +1,48 @@
+# Tussenstatus toevoegen op programma-onderdelen
+
 ## Probleem
+In de admin programma-detail (kolom **Offerte-status** per onderdeel) gaat een item nu rechtstreeks van **Concept** → **In afstemming**. Maar "In afstemming" suggereert dat de partner al benaderd is, terwijl in werkelijkheid de offerte alleen naar de klant is verstuurd en we wachten op klant-akkoord. Pas ná klant-akkoord wordt de partner benaderd.
 
-Bureau Vlieland-onderdelen (provider_id = `bureau`, bv. boot, fietsen, eigen begeleiding) worden in de huidige workflow anders behandeld dan partner-onderdelen:
+We hebben dus een tussenstatus nodig: **Offerte verstuurd** (= wacht op klant-akkoord).
 
-- **Bij klant-akkoord op het voorstel** (`accept-quote-proposal`): bureau-items krijgen wel `customer_approved_at`, maar blijven verder hangen op hun originele status.
-- **Bij "versturen naar partners"** (`send-items-to-partners`): bureau-items worden alleen "vrijgegeven" (`skip_partner_notification = false`, `status = pending`). Er is geen externe partij die ze ooit gaat bevestigen, dus ze blijven oneindig in `pending` staan in de klantportal.
+## Oplossing
+Een vierde waarde toevoegen aan `ItemQuoteStatus`: `"offerte_verstuurd"`, gepositioneerd tussen `concept` en `in_afstemming`.
 
-De wens: bureau-items moeten "same same" meelopen — zodra de klant akkoord geeft én items naar de aanbieders gaan, mag het bureau-onderdeel meteen op **goedgekeurd / bevestigd** staan, want de aanbieder ervan is Bureau Vlieland zelf.
+### Status-flow (na deze wijziging)
 
-## Aanpak
+```text
+concept            → admin werkt aan voorstel
+offerte_verstuurd  → offerte naar klant, wacht op klant-akkoord     ← NIEUW
+in_afstemming      → klant akkoord, aanvraag bij partner loopt
+bevestigd          → partner heeft bevestigd
+```
 
-Eén kleine aanpassing in de edge function `send-items-to-partners`: bij het vrijgeven van bureau-items meteen doorzetten naar de bevestigde eindstatus in plaats van `pending`.
+## Wijzigingen
 
-### Wijzigingen
+### 1. Type & labels — `src/types/programRequest.ts`
+- `ItemQuoteStatus` uitbreiden met `"offerte_verstuurd"`.
+- `itemQuoteStatusConfig.offerte_verstuurd`: label "Offerte verstuurd", blauw (zelfde tint als project-level `offerte_verstuurd`), icon `Send`.
+- `customerItemQuoteStatusLabels.offerte_verstuurd`: "Onder voorbehoud" (klant ziet geen interne term).
 
-`**supabase/functions/send-items-to-partners/index.ts**`
+### 2. Edge function `send-quote-offer` (regel 283-288)
+Bij versturen van de offerte: items met status `concept` of `in_afstemming` zetten op **`offerte_verstuurd`** (i.p.v. direct op `in_afstemming` zoals nu).
 
-- In stap 5 (release bureau items) update zetten naar:
-  - `skip_partner_notification = false`
-  - `status = 'confirmed'`
-  - `item_quote_status = 'bevestigd'`
-  - `customer_approved_at = now()` (als nog niet gezet — vangnet voor admin-flow waar customer approval misschien niet via portal liep)
-  - `status_updated_at = now()`
-- History-regel iets aanpassen: "X bureau-item(s) automatisch bevestigd (interne aanbieder)".
-- De bestaande `bureau_item_pricing` todo-creatie blijft staan zodat ontbrekende prijzen nog steeds opgepakt worden.
+### 3. Edge function `accept-quote-proposal` (regel 365-370)
+Bij klant-akkoord op het hele voorstel: items met status `concept`, `offerte_verstuurd` of `in_afstemming` zetten op `in_afstemming`. Dit is het moment waarop we daadwerkelijk naar partners gaan.
 
-De `guard_item_status_consistency` trigger staat dit toe omdat `skip_partner_notification` in dezelfde update naar `false` gaat.
+### 4. Edge function `approve-quote-item` (regel 175, 233, 367)
+De checks `["in_afstemming", "bevestigd"].includes(...)` uitbreiden met `"offerte_verstuurd"`, zodat per-item klant-akkoord ook werkt vóórdat de partner-aanvraag uitstaat.
 
-### Geen wijzigingen nodig in
+### 5. Lifecycle — `src/lib/lifecycle.ts` (regel 301)
+`offerte_verstuurd` net als `concept`/`in_afstemming` behandelen (nog niet bevestigd door partner).
 
-- `accept-quote-proposal`: zet al correct `customer_approved_at` op alle items (ook bureau).
-- Customer portal UI: toont automatisch de juiste status zodra `status = 'confirmed'`.
+### 6. Admin UI — `AdminItemQuoteStatusSelect`
+De nieuwe optie tonen in de dropdown tussen Concept en In afstemming. Bestaande items met item_quote_status `null` of legacy waarden blijven werken.
 
-## Eénmalige data-correctie
+### 7. Klant-portal
+Geen wijziging in gedrag — `customerItemQuoteStatusLabels` mapt naar "Onder voorbehoud", consistent met de eerder doorgevoerde "less is more"-aanpak (geen badge bij `pending` items).
 
-Bestaande projecten waar bureau-items al "vrijgegeven" zijn maar nog op `pending` staan zonder externe partner (provider_id = `bureau`, skip_partner_notification = false, status = pending) eenmalig bijwerken naar `confirmed` / `bevestigd` zodat de klantportal voor lopende projecten ook klopt.
-
-## Test
-
-Na deploy: één bestaand project openen waar bureau-items in pending staan, "verstuur naar partners" opnieuw triggeren is niet nodig — de eenmalige data-correctie pakt ze. Voor nieuwe projecten: end-to-end klantakkoord → verstuur → bureau-items staan direct op groen in de klantportal.  
-  
-Voor wat betreft de bootovertochten moet ik nog wel een aanvraag krijgen om de boottickets te boeken en de definitieve prijs hiervan op te geven. Dus ik moet als partner ook deze programma onderdelen krijgen net zoals alle andere partners. 
+## Niet nodig
+- Geen DB-migratie: kolom is `text`, geen enum.
+- Geen wijziging op project-level `quote_status` (`offerte_verstuurd` bestaat daar al).
+- Geen backfill: bestaande items met `in_afstemming` blijven correct (project staat dan al op `akkoord_ontvangen`).
