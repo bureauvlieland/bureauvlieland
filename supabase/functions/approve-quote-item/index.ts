@@ -172,7 +172,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 5. Validate item state
-    if (!["in_afstemming", "bevestigd"].includes(item.item_quote_status || "")) {
+    if (!["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(item.item_quote_status || "")) {
       return new Response(
         JSON.stringify({ error: "Dit onderdeel kan nog niet geaccordeerd worden" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
