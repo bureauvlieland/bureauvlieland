@@ -1,66 +1,108 @@
-## Fix: foutieve "Prijs gewijzigd" / "Geef opnieuw uw akkoord" banner
+# Klant-akkoord op de klantpagina: bug + workflow opnieuw ontwerpen
 
-### Wat de klant ziet
-Bij de Zeehondentocht in BV-2602-0004 staat een amber waarschuwing:
-> ⚠️ Prijs gewijzigd
-> ⚠️ De prijs van dit onderdeel is door Bureau Vlieland aangepast. Geef opnieuw uw akkoord op de nieuwe prijs.
+## Wat is er aan de hand?
 
-### Wat er werkelijk aan de hand is (database)
-Voor beide Zeehondentocht-items van BV-2602-0004:
-- `admin_price_override = 32.50`, `admin_price_override_updated_at = 01-04-2026` (initiële prijs)
-- `quoted_price = NULL`, `quoted_at = NULL` (er is **nooit** een eerdere prijs geweest)
-- `partner_price_change_acknowledged_at = NULL`
-- `customer_approved_at = NULL`, `customer_accepted_at = NULL`
-- `status = pending`, `skip_partner_notification = true` (nog niet eens naar partner gestuurd)
+Drie problemen, allemaal veroorzaakt door dezelfde architectuur-keuze (akkoord-knop afhankelijk van `program_type === "quote"`).
 
-Dit is dus **de eerste prijs** voor dit onderdeel — geen wijziging.
+### 1. Bug: BV-2602-0004 toont géén akkoord-knop
+- BV-2602-0004 staat op `program_type = "quote"` en `quote_status = "offerte_verstuurd"` — dat zou de akkoord-kaart (`AcceptQuoteProposalCard`) moeten tonen.
+- De kaart wordt wél gemonteerd, maar er is **geen `quote_pdf_path`** in de database. De klant ziet dus de knop "Akkoord, start reserveringen" zonder bijbehorende offerte/PDF om te beoordelen → onlogisch en daarom blijkbaar nooit ingedrukt.
+- Bovendien zegt de status-checklist *"Wachten op aanbieders (0/11 bevestigd)"* terwijl er feitelijk wordt gewacht op de klant. De screenshot bevestigt dit.
 
-### Bug (twee samenhangende oorzaken)
+### 2. Bug: alle "self_service" en "maatwerk" projecten missen de akkoord-kaart volledig
+- Audit van alle lopende projecten met `quote_status = "offerte_verstuurd"`:
 
-**1. `hasOpenAdminPriceChange()` in `src/lib/portalPricing.ts`** geeft een false-positive:
-```ts
-const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;  // null
-const timestampOpen = !ack ? true : ...;                                  // → true
-// daarna: bedragvergelijking wordt overgeslagen want quoted_price = null
-return true;
+| Referentie | program_type | Quote PDF? | Akkoord mogelijk? |
+|---|---|---|---|
+| BV-2602-0002 | quote | ja | ja (knop zichtbaar) |
+| BV-2602-0003 | quote | nee | knop zichtbaar maar geen PDF |
+| **BV-2602-0004** | **quote** | **nee** | **knop zichtbaar maar geen PDF** |
+| BV-2603-0007 | quote | ja | ja |
+| BV-2604-0004 | quote | nee | knop maar geen PDF |
+| BV-2603-0016 | self_service | ja | **nee — kaart rendert niet** |
+| BV-2603-0018 | self_service | ja | **nee** |
+| BV-2604-0003 | self_service | ja | **nee** |
+| BV-2604-0006 | self_service | ja | **nee** |
+| BV-2603-0003 | maatwerk_zakelijk | nee | **nee — kaart rendert niet** |
+
+Bij `self_service` en `maatwerk_*` is in de admin keurig een offerte-PDF gegenereerd en `quote_status = offerte_verstuurd` gezet, maar `AcceptQuoteProposalCard` blokkeert op regel 22 (`if (program.program_type !== "quote") return null;`). Resultaat: klant kan nooit akkoord geven, partners worden nooit aangevraagd, project zit muurvast.
+
+### 3. Toon en zwaarte van het akkoord
+Huidige tekst op de knop: *"Akkoord, start reserveringen"* + *"Door akkoord te gaan bevestigt u de prijs en details"*. Dat klopt niet bij de daadwerkelijke flow:
+- Op dit moment is het slechts een **programmavoorstel met voorlopige prijzen**.
+- Pas ná dit akkoord vragen we de partners om beschikbaarheid; daarna komen er definitieve bevestigingen of tegenvoorstellen, en pas helemaal aan het eind tekent de klant de **AV**.
+- De huidige formulering doet de klant aarzelen ("ik zit er aan vast") en is ook strikt genomen onjuist (er is nog geen partnerbevestiging).
+
+## Voorstel: drie reparaties + workflow-herijking
+
+### A. Fix de bug — akkoord-kaart altijd tonen bij offerte_verstuurd
+Verwijder de `program_type === "quote"`-check uit `AcceptQuoteProposalCard`. Toon de kaart bij **élk** project waar:
+- `quote_status === "offerte_verstuurd"` EN
+- `terms_accepted_at IS NULL` (anders is het project verder in de flow) EN
+- er minstens één niet-geannuleerd, niet-bureau item is.
+
+Dit dekt `quote`, `self_service`, `maatwerk_zakelijk`, `maatwerk_familie`, etc. in één klap.
+
+### B. Toon de PDF-offerte prominent op de klantpagina
+- `get-customer-program` levert `quote_pdf_url` al aan (signed URL, 1u geldig). Op desktop staat er nu alleen een onopvallend knopje (zie `DesktopProgramView.tsx:319`).
+- Nieuwe **"Offerte"-card** bovenaan de programma-tab tonen wanneer `quote_pdf_url` aanwezig is: titel "Uw offerte", subtitle "Verzonden op {datum}, geldig tot {datum}", grote knop **"Offerte bekijken (PDF)"** + secundaire knop **"Downloaden"**.
+- Geen PDF? Dan toont de kaart i.p.v. PDF-knop een nette tekst: *"Bekijk hieronder het programmavoorstel met indicatieve prijzen."*
+
+### C. Herformuleer het akkoord — laagdrempelig
+Pas tekst en framing van `AcceptQuoteProposalCard` aan. Concept:
+
 ```
-De functie behandelt elke initiële admin-prijs als een "wijziging", ook als er nooit een vorige prijs was om tegen af te zetten en de partner het ook nog nooit heeft gezien.
-
-**2. `CustomerProgramItem.tsx` toont badge + amber banner los van item-status.** De banner staat los van `needsCustomerAction` (die wel filtert op `status confirmed/alternative`), dus ook bij `pending` items waar de klant geen akkoord-knop heeft, krijgt hij toch de amber waarschuwing — een melding zonder bijbehorende actie.
-
-### Voorgestelde fix
-
-**A. `src/lib/portalPricing.ts` — `hasOpenAdminPriceChange`**
-
-Voeg vroege exit toe: als er géén ack-moment is (`partner_price_change_acknowledged_at` én `quoted_at` zijn beide NULL) **én** geen `quoted_price` om tegen af te zetten, dan is dit per definitie een initiële prijsstelling, geen wijziging:
-
-```ts
-if (!ack && item.quoted_price == null) return false;
+┌─────────────────────────────────────────────────────┐
+│  Programmavoorstel met indicatieve prijzen          │
+│  ───                                                │
+│  Dit is een voorstel — nog géén definitieve boeking. │
+│  Geeft u akkoord, dan vragen wij voor u bij elke    │
+│  aanbieder beschikbaarheid en bevestiging op.       │
+│  U beslist later definitief, na de AV-ondertekening.│
+│                                                     │
+│  Wat gebeurt er na uw akkoord?                      │
+│  1. Wij benaderen alle aanbieders                   │
+│  2. U ziet hier per onderdeel de bevestiging        │
+│  3. Pas bij ondertekenen AV is alles definitief     │
+│                                                     │
+│  [ Bekijk offerte (PDF) ]   [ Akkoord, vraag aan ] │
+│                                                     │
+│  Niet bindend — u kunt nog altijd wijzigen          │
+└─────────────────────────────────────────────────────┘
 ```
 
-Effect: voor onze Zeehondentocht (en alle items die nog nooit door een partner gequoteerd zijn) verdwijnt de "Prijs gewijzigd"-status. Zodra de partner ooit `quoted_price` invult of `quoted_at` zet, gaat de normale logica weer aan: een latere admin-aanpassing die afwijkt van die quote toont alsnog de banner.
+- Knop-tekst: **"Akkoord — vraag beschikbaarheid op"** (i.p.v. "start reserveringen").
+- Disclaimer onder de knop: *"Niet-bindend voorstel. Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden."*
+- Bij `quote_valid_until` blijft de "Geldig tot"-badge zichtbaar.
 
-**B. (Optioneel, defensief) `CustomerProgramItem.tsx`**
+### D. Fix de status-checklist labels
+In `StatusSummary.tsx` (variant `checklist`):
+- Zolang `quote_status === "offerte_verstuurd"` en `terms_accepted_at` leeg is, label "Programma" wordt: **"Wachten op uw akkoord ({n} onderdelen)"** met blauw/info-icoon, niet "Wachten op aanbieders".
+- Pas wanneer `quote_status` op `akkoord_ontvangen` staat schakelt het label door naar **"Wachten op aanbieders"**.
+- "Uw akkoord"-rij: bij `offerte_verstuurd` zonder per-item-akkoord tonen als één enkele actie: "Voorstel beoordelen" → "Voorstel akkoord ✓".
 
-Banner & badge alleen tonen wanneer item-status ook akkoord-actie toelaat:
-```ts
-const priceChangeNeedsAttention =
-  !isSelfArranged
-  && !item.customer_accepted_at
-  && (item.status === "confirmed" || item.status === "alternative")
-  && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
-```
-Zo voorkomen we dat een toekomstige edge-case alsnog een waarschuwing zonder akkoord-knop toont op `pending` items.
+### E. Eenmalige actie: 4 vastgelopen projecten
+Voor BV-2602-0003, BV-2602-0004, BV-2604-0004, BV-2603-0003 ontbreekt een PDF. Twee opties:
+1. **Admin notify**: maak een admin-todo "Offerte-PDF ontbreekt — alsnog genereren en versturen" voor deze 4 projecten.
+2. **Niets doen**: na fix A kan de klant ook zónder PDF akkoord geven (kaart toont dan beschrijvende tekst i.p.v. PDF-knop). Workflow loopt door.
 
-### Bestanden
+Voorkeur: **beide** — fix in code + admin-todo zodat Bureau bewust kan kiezen alsnog een PDF te sturen.
 
-- `src/lib/portalPricing.ts` — vroege return in `hasOpenAdminPriceChange`
-- `src/components/customer-portal/CustomerProgramItem.tsx` — extra status-filter op `priceChangeNeedsAttention`
+## Technische impact
 
-### Side-effects / regressie-check
+- `src/components/customer-portal/AcceptQuoteProposalCard.tsx` — herschrijf condities + UI.
+- `src/components/customer-portal/StatusSummary.tsx` — labels/iconen voor "Programma"-rij contextueel maken.
+- Nieuwe `src/components/customer-portal/QuotePdfCard.tsx` — prominente PDF-presentatie.
+- `src/components/customer-portal/DesktopProgramView.tsx` + `MobileProgramView.tsx` — `QuotePdfCard` integreren bovenaan, oude inline-knop weghalen, condities voor `AcceptQuoteProposalCard` aanpassen.
+- Eenmalig SQL/edge-function: 4 admin-todos aanmaken voor de PDF-loze projecten (insert-only via migratie).
+- Geen DB-schema wijzigingen.
 
-- `getDisplayUnitPrice` blijft ongewijzigd: admin override blijft de getoonde prijs.
-- Andere portals (admin, partner) gebruiken dezelfde helper. Voor partner-portal betekent dit dat een initiële admin-prijs op een nog niet gequoteerd item geen "prijs gewijzigd" badge meer geeft — dat is gewenst gedrag (partner heeft niets gewijzigd).
-- Items waar de partner ooit een `quoted_price` had en admin daarna corrigeert, blijven gewoon de banner tonen.
+## Wat ik daarna ga bouwen (in build mode)
 
-Mag ik deze twee aanpassingen doorvoeren?
+1. AcceptQuoteProposalCard herschrijven (fix A + tekst C).
+2. QuotePdfCard maken en integreren (B).
+3. StatusSummary labels herzien (D).
+4. Admin-todos aanmaken voor de 4 PDF-loze projecten (E).
+5. Visueel verifiëren via klantportaal-token van BV-2602-0004 en BV-2603-0016 (een `quote`- en een `self_service`-project).
+
+Goed om door te gaan?
