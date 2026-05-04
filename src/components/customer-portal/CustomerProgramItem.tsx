@@ -236,8 +236,12 @@ export const CustomerProgramItem = ({
                 ) : null;
               }
               const showPerPerson = isPerPersonItem(item) && unitPrice !== null && unitPrice !== lineTotal;
+              const isProvisional = item.status === "pending";
               return (
-                <span className="font-semibold text-green-700 dark:text-green-500">
+                <span className={cn(
+                  "font-semibold",
+                  isProvisional ? "text-foreground" : "text-green-700 dark:text-green-500"
+                )}>
                   €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   {showPerPerson ? (
                     <span className="font-normal text-xs ml-1">p.p.</span>
@@ -246,6 +250,9 @@ export const CustomerProgramItem = ({
                   ) : null}
                   {vatRate !== undefined && (
                     <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
+                  )}
+                  {isProvisional && (
+                    <span className="font-normal text-xs text-muted-foreground ml-1">· voorlopig</span>
                   )}
                 </span>
               );
