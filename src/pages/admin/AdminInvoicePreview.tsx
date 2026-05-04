@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { categoryLabels } from "@/types/buildingBlock";
+import { getDisplayLineTotal, getNumberOfDays } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
