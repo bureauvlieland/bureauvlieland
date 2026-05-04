@@ -512,7 +512,7 @@ Deno.serve(async (req) => {
 
       const customerEmail = getRecipientEmail(request.customer_email, origin);
       if (customerEmail) {
-        const customerHtml = customerTemplate?.body || `
+        let customerHtml = customerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #1e3a5f;">Je logies is bevestigd!</h1>
             <p>Beste ${sanitizeHtml(request.customer_name)},</p>
@@ -536,19 +536,22 @@ Deno.serve(async (req) => {
               <a href="${portalLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk je programma →</a>
             </p>
 
-            ${!adminOverride ? `
-            <div style="margin-top: 24px; padding: 16px; background-color: #fff7ed; border-left: 4px solid #f59e0b; border-radius: 4px;">
-              <p style="margin: 0 0 8px 0;"><strong>Bevestiging voorwaarden</strong></p>
-              <p style="margin: 0; font-size: 14px; color: #1f2937;">U heeft op ${formatDateNL(acceptedAtIso)} digitaal akkoord gegeven op de bemiddelingsvoorwaarden van Bureau Vlieland en de voorwaarden van ${sanitizeHtml(quote.partner?.name || quote.accommodation_name)} (handtekening: <strong>${sanitizeHtml(trimmedSignature)}</strong>). Vanaf dit moment zijn de annuleringsvoorwaarden van de logies van toepassing.</p>
-            </div>
-            ` : ""}
-
             <p style="margin-top: 24px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
             <p style="color: #666; font-size: 12px; margin-top: 40px;">
               Dit bericht is verzonden door Bureau Vlieland.
             </p>
           </div>
         `;
+
+        // Garandeer dat het deel-akkoord-blok altijd in de mail staat,
+        // ook als het DB-template de variabele (nog) niet bevat.
+        if (termsAcceptedBlock && !customerHtml.includes(trimmedSignature)) {
+          if (customerHtml.includes("</body>")) {
+            customerHtml = customerHtml.replace("</body>", `${termsAcceptedBlock}</body>`);
+          } else {
+            customerHtml = `${customerHtml}${termsAcceptedBlock}`;
+          }
+        }
 
         try {
           await fetch("https://api.mailjet.com/v3.1/send", {
