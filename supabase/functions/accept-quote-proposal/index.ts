@@ -396,7 +396,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .eq("skip_partner_notification", true)
         .is("customer_approved_at", null)
         .neq("status", "cancelled")
-        .in("item_quote_status", ["in_afstemming", "bevestigd"])
+        .in("item_quote_status", ["offerte_verstuurd", "in_afstemming", "bevestigd"])
         .select("id");
 
       if (approveItemsError) {
