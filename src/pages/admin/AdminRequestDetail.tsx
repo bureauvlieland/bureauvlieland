@@ -2004,9 +2004,16 @@ const AdminRequestDetail = () => {
                     const delta = computed != null && quoted != null ? Math.abs(quoted - computed) : 0;
                     const openChange = hasOpenAdminPriceChange(it as any, it.override_people ?? programPeople, numberOfDays);
                     const inconsistent = quoted != null && computed != null && delta > 0.01 && it.admin_price_override != null;
-                    return { it, computed, quoted, delta, openChange, inconsistent };
+                    // Verberg items waar de klant al akkoord heeft gegeven NA de laatste admin-prijswijziging
+                    // — die zijn feitelijk afgehandeld; quoted_price wordt automatisch bijgewerkt door
+                    // approve-quote-item / accept-quote-proposal.
+                    const customerSettled = !!it.customer_accepted_at
+                      && it.admin_price_override_updated_at
+                      && new Date(it.customer_accepted_at).getTime() >=
+                         new Date(it.admin_price_override_updated_at).getTime();
+                    return { it, computed, quoted, delta, openChange, inconsistent, customerSettled };
                   })
-                  .filter((row) => row.openChange || row.inconsistent);
+                  .filter((row) => (row.openChange || row.inconsistent) && !row.customerSettled);
 
                 if (flagged.length === 0) return null;
 
