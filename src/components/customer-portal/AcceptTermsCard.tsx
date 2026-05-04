@@ -172,6 +172,10 @@ export const AcceptTermsCard = ({
   
   const showUvhTerms = hasCateringItems || accommodationUsesDefaultTerms;
 
+  // Deel-akkoord op logies-voorwaarden (juridisch ankerpunt op moment van selectie)
+  const lodgingPartialAcceptedAt = selectedQuote?.customer_terms_accepted_at || null;
+  const lodgingSignatureName = selectedQuote?.customer_signature_name || null;
+
   return (
     <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
       <CardContent className="p-6">
