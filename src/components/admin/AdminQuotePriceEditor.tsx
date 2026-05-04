@@ -80,6 +80,16 @@ export const AdminQuotePriceEditor = ({
     : (hasQuotedPrice && hasOverride); // quoted leidend → toon eerdere schatting doorgehaald
   const struckPrice = overrideIsLeading ? originalPrice : overrideTotal;
 
+  // Mismatch-waarschuwing: partner heeft een quoted_price bevestigd die niet overeenkomt
+  // met admin_price_override × personen × dagen, terwijl er géén open prijswijziging loopt.
+  // Dit duidt op een handmatig ingevoerde inconsistentie die de admin moet checken.
+  const mismatch =
+    !overrideIsLeading &&
+    hasQuotedPrice &&
+    hasOverride &&
+    overrideTotal !== null &&
+    Math.abs((originalPrice ?? 0) - overrideTotal) > 0.5;
+
   const handleOpen = (open: boolean) => {
     if (open) {
       setEditPrice(overridePrice?.toString() || "");
