@@ -228,7 +228,8 @@ export const CustomerProgramItem = ({
             {/* Show effective price (admin override wins on open changes), otherwise indication */}
             {!isSelfArranged && (() => {
               const effectivePeople = item.override_people ?? numberOfPeople ?? 1;
-              const lineTotal = getDisplayLineTotal(item, effectivePeople);
+              const numberOfDays = Math.max(selectedDates?.length ?? 1, 1);
+              const lineTotal = getDisplayLineTotal(item, effectivePeople, numberOfDays);
               const unitPrice = getDisplayUnitPrice(item, effectivePeople);
               if (lineTotal == null) {
                 return item.price_indication ? (
