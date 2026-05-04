@@ -212,16 +212,25 @@ export const EditProgramDetailsDialog = ({
           </div>
 
           {/* Warning when changes detected */}
-          {(hasDateChanges || hasPeopleChanges) && (
+          {(hasDateChanges || hasPeopleChanges) && hasActiveAccommodation && (
+            <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200 space-y-2">
+                <p className="font-medium">Gevolgen voor uw logies</p>
+                {hasDateChanges && (
+                  <p>De accommodatie ontvangt automatisch een bericht en bevestigt of de nieuwe data nog beschikbaar zijn. Tot die bevestiging staat uw boeking weer op 'in behandeling'.</p>
+                )}
+                {hasPeopleChanges && (
+                  <p>De accommodatie past het aantal kamers/gasten aan en stuurt een bijgewerkte prijsopgave. Uw boeking staat weer op 'in behandeling' tot deze opnieuw is bevestigd.</p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          {(hasDateChanges || hasPeopleChanges) && !hasActiveAccommodation && (
             <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">
-                {hasDateChanges && hasPeopleChanges 
-                  ? `Bij wijziging van datum en aantal worden alle aanbieders opnieuw gecontacteerd voor beschikbaarheid.${hasActiveAccommodation ? " Ook de logiesaanbieders worden geïnformeerd." : ""}`
-                  : hasDateChanges 
-                    ? `Bij datumwijziging worden alle aanbieders opnieuw gecontacteerd voor beschikbaarheid.${hasActiveAccommodation ? " Ook de logiesaanbieders worden geïnformeerd." : ""}`
-                    : "De aanbieders worden op de hoogte gesteld van het gewijzigde aantal personen."
-                }
+                De aanbieders worden op de hoogte gesteld van de wijziging.
               </AlertDescription>
             </Alert>
           )}

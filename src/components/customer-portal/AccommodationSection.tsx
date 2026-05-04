@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Pencil,
-  Mail,
   AlertTriangle,
   Info,
 } from "lucide-react";
@@ -23,6 +22,7 @@ import type { AccommodationRequest, AccommodationQuote } from "@/types/accommoda
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
+import { AccommodationMessageThread } from "./AccommodationMessageThread";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -250,18 +250,7 @@ export const AccommodationSection = ({
                 className="w-full sm:w-auto"
               >
                 <Pencil className="h-4 w-4 mr-2" />
-                Gegevens wijzigen
-              </Button>
-            )}
-            {customerToken && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setContactDialogOpen(true)}
-                className="w-full sm:w-auto"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Neem contact op met {selectedQuote.accommodation_name}
+                Datum, aantal personen of doel wijzigen
               </Button>
             )}
           </div>
@@ -269,12 +258,10 @@ export const AccommodationSection = ({
       </Card>
 
       {customerToken && (
-        <ContactAccommodationDialog
-          open={contactDialogOpen}
-          onOpenChange={setContactDialogOpen}
-          accommodationName={selectedQuote.accommodation_name}
-          quoteId={selectedQuote.id}
+        <AccommodationMessageThread
           customerToken={customerToken}
+          quoteId={selectedQuote.id}
+          accommodationName={selectedQuote.accommodation_name}
           isBureauCentral={isBureauCentral}
         />
       )}
