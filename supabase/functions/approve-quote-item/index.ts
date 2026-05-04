@@ -193,6 +193,34 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // 6. Update the item
     const approvalTimestamp = new Date().toISOString();
+
+    // Detecteer openstaande admin-prijswijziging: als die er ligt op het moment dat de klant
+    // akkoord geeft, dan is dat OOK akkoord op de nieuwe prijs. Persisteer naar quoted_price
+    // zodat dit niet meer in de admin Prijscontrole verschijnt.
+    const programPeople = Number(program.number_of_people || 0);
+    const numberOfDays = Array.isArray(program.selected_dates) ? program.selected_dates.length : 1;
+    const effectivePeople = item.override_people ?? programPeople;
+    const priceType = item.price_type || "per_person";
+    const isPerPerson = !priceType || priceType === "per_person" || priceType === "on_request" || priceType === "per_person_per_day";
+    const isPerDay = priceType === "per_person_per_day";
+    let acceptedPriceTotal: number | null = null;
+    if (item.admin_price_override != null && item.admin_price_override_updated_at) {
+      const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+      const overrideIsNewer = !ack
+        || new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();
+      if (overrideIsNewer) {
+        const personMultiplier = isPerPerson ? effectivePeople : 1;
+        const dayMultiplier = isPerDay ? numberOfDays : 1;
+        acceptedPriceTotal = Number(item.admin_price_override) * personMultiplier * dayMultiplier;
+      }
+    }
+    const priceSyncPayload = acceptedPriceTotal != null
+      ? {
+          quoted_price: acceptedPriceTotal,
+          partner_price_change_acknowledged_at: approvalTimestamp,
+        }
+      : {};
+
     const updatePayload = admin_override
       ? {
           customer_approved_at: approvalTimestamp,
@@ -201,12 +229,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
           status: "pending",
           status_updated_at: approvalTimestamp,
           updated_at: approvalTimestamp,
+          ...priceSyncPayload,
         }
       : {
           customer_approved_at: approvalTimestamp,
           customer_accepted_at: approvalTimestamp,
           updated_at: approvalTimestamp,
           ...(isLateConceptItem ? { item_quote_status: "in_afstemming" } : {}),
+          ...priceSyncPayload,
         };
 
     const { error: updateError } = await supabase
