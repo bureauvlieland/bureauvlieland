@@ -230,7 +230,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .neq("status", "cancelled");
 
       const approvableItems = (allItems || []).filter((i: any) =>
-        ["in_afstemming", "bevestigd"].includes(i.item_quote_status)
+        ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status)
       );
       const allApproved = approvableItems.length > 0 && approvableItems.every((i: any) => i.customer_approved_at);
 
