@@ -36,6 +36,7 @@ import {
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
+import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
 import { usePartnerRoomTypes } from "@/hooks/usePartnerRoomTypes";
 
 interface AccommodationRequest {
@@ -484,6 +485,15 @@ export const PartnerAccommodationQuoteSheet = ({
           </Card>
 
           {/* Status message for closed quotes */}
+          {existingQuote?.status === "selected" && existingQuote?.id && (
+            <PartnerCustomerMessagesPanel
+              quoteId={existingQuote.id}
+              accommodationRequestId={request.id}
+              customerLabel={request.customer_company || request.customer_name}
+              accommodationName={existingQuote.accommodation_name || ""}
+            />
+          )}
+
           {existingQuote?.status === "selected" && (
             <div className="space-y-3">
               <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg space-y-2">
