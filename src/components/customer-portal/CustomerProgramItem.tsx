@@ -142,17 +142,21 @@ export const CustomerProgramItem = ({
                     <ExternalLink className="h-3.5 w-3.5" />
                     Zelf te regelen
                   </Badge>
-                ) : isQuoteMode && item.customer_approved_at ? (
+                ) : item.status === "pending" ? (
+                  // Less is more: tijdens "wachten op aanbieders" tonen we geen
+                  // statuschip per onderdeel. De globale voortgang in de sidebar
+                  // ("X van Y bevestigd") vertelt het verhaal al. Pas zodra de
+                  // partner reageert verschijnt er weer een badge.
+                  null
+                ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
                   <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
                     <Check className="h-3.5 w-3.5" />
-                    Goedgekeurd
+                    Bevestigd
                   </Badge>
                 ) : (
                   <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={
                     needsCustomerAction && item.status === "confirmed" ? "Beschikbaar" :
                     needsCustomerAction && item.status === "alternative" ? "Alternatief voorstel" :
-                    readOnly && item.status === "pending" ? "In behandeling" : 
-                    isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : 
                     undefined
                   } />
                 )}
