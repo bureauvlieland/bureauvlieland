@@ -211,6 +211,12 @@ export const AdminQuotePriceEditor = ({
                   : ` ${priceTypeLabel}`}
               </span>
             )}
+            {mismatch && overrideTotal !== null && (
+              <span className="flex items-center gap-1 text-[11px] text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                Partner: {formatPrice(originalPrice)} ≠ berekening: {formatPrice(overrideTotal)}
+              </span>
+            )}
           </div>
           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
