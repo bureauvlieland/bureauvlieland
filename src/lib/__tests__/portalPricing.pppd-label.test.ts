@@ -84,7 +84,7 @@ const cases: Array<{ name: string; run: () => void }> = [
       // de regel als runtime-invariant: indien isPerDayItem true is, moet het
       // label dat naast het *totaal* getoond wordt 'totaal' zijn (niet de unit).
       const item = { price_type: "per_person_per_day" };
-      const labelNaastTotaal = "totaal";
+      const labelNaastTotaal: string = "totaal";
       assert(!(isPerDayItem(item) && labelNaastTotaal === "p.p.p.d."), "p.p.p.d. nooit naast totaal");
     },
   },
@@ -103,7 +103,7 @@ for (const c of cases) {
 
 if (failed > 0) {
   console.error(`\n${failed} test(s) failed`);
-  process.exit(1);
+  (globalThis as { process?: { exit: (n: number) => void } }).process?.exit(1);
 } else {
   console.log(`\nAll ${cases.length} test(s) passed`);
 }
