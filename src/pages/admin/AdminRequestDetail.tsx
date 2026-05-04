@@ -942,7 +942,7 @@ const AdminRequestDetail = () => {
         // Klant moet opnieuw akkoord geven als er al akkoord was én er een actieve partnerprijs lag
         if (hadCustomerApproval && hadPartnerQuote) {
           updateData.customer_approved_at = null;
-          updateData.item_quote_status = "in_afstemming";
+          updateData.item_quote_status = "offerte_verstuurd";
         }
       }
 

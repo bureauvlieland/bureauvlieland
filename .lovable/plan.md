@@ -1,48 +1,29 @@
-# Tussenstatus toevoegen op programma-onderdelen
+# Admin item-status syncen met klant-portal bij prijswijziging
 
 ## Probleem
-In de admin programma-detail (kolom **Offerte-status** per onderdeel) gaat een item nu rechtstreeks van **Concept** → **In afstemming**. Maar "In afstemming" suggereert dat de partner al benaderd is, terwijl in werkelijkheid de offerte alleen naar de klant is verstuurd en we wachten op klant-akkoord. Pas ná klant-akkoord wordt de partner benaderd.
+Bij **BV-2603-0003 → Italiaanse shared dining**:
+- **Klant-portal**: "Akkoord nodig — nieuwe prijs (wacht op klant)"
+- **Admin**: dropdown staat op *In afstemming* (= wacht op partner) en de status-badge toont *Wacht op partner*
 
-We hebben dus een tussenstatus nodig: **Offerte verstuurd** (= wacht op klant-akkoord).
+Oorzaak: toen de admin de prijs aanpaste na klant-akkoord, werd `item_quote_status` op `"in_afstemming"` gezet (logica uit periode vóór de nieuwe `offerte_verstuurd` tussenstatus). Daardoor leest de admin-kolom "wacht op partner", terwijl de klant juist nog akkoord moet geven op de nieuwe prijs.
 
-## Oplossing
-Een vierde waarde toevoegen aan `ItemQuoteStatus`: `"offerte_verstuurd"`, gepositioneerd tussen `concept` en `in_afstemming`.
-
-### Status-flow (na deze wijziging)
-
-```text
-concept            → admin werkt aan voorstel
-offerte_verstuurd  → offerte naar klant, wacht op klant-akkoord     ← NIEUW
-in_afstemming      → klant akkoord, aanvraag bij partner loopt
-bevestigd          → partner heeft bevestigd
-```
+Daarnaast ontbreekt in de admin tabel-rij een zichtbaar signaal "open prijswijziging — wacht op klant".
 
 ## Wijzigingen
 
-### 1. Type & labels — `src/types/programRequest.ts`
-- `ItemQuoteStatus` uitbreiden met `"offerte_verstuurd"`.
-- `itemQuoteStatusConfig.offerte_verstuurd`: label "Offerte verstuurd", blauw (zelfde tint als project-level `offerte_verstuurd`), icon `Send`.
-- `customerItemQuoteStatusLabels.offerte_verstuurd`: "Onder voorbehoud" (klant ziet geen interne term).
+### 1. `src/pages/admin/AdminRequestDetail.tsx` — `handleItemPriceUpdate` (regel 945)
+Bij betekenisvolle prijswijziging waarbij de klant opnieuw akkoord moet geven: zet `item_quote_status` op `"offerte_verstuurd"` in plaats van `"in_afstemming"`. De status `offerte_verstuurd` = "wacht op klant-akkoord" (nieuwe semantiek uit vorige iteratie).
 
-### 2. Edge function `send-quote-offer` (regel 283-288)
-Bij versturen van de offerte: items met status `concept` of `in_afstemming` zetten op **`offerte_verstuurd`** (i.p.v. direct op `in_afstemming` zoals nu).
+### 2. Visuele indicator in quote-mode tabel (regel 1762-1781)
+Naast `hasCustomerApproval` (groen vinkje) en `showWaitingForCustomer` (klok) ook een tooltip/icoon tonen wanneer `hasOpenAdminPriceChange(item, ...)` true is — bijv. een oranje `AlertCircle` met tooltip *"Wacht op klantakkoord nieuwe prijs"*. Dit geldt voor zowel de quote-mode kolom (regel 1762) als de classic-mode kolom (regel 1887).
 
-### 3. Edge function `accept-quote-proposal` (regel 365-370)
-Bij klant-akkoord op het hele voorstel: items met status `concept`, `offerte_verstuurd` of `in_afstemming` zetten op `in_afstemming`. Dit is het moment waarop we daadwerkelijk naar partners gaan.
+### 3. Eenmalige data-correctie (BV-2603-0003)
+Voor het concrete item `0466f3fa-4b33-4923-9dbd-b8703ae75006`:
+- `item_quote_status` van `in_afstemming` → `offerte_verstuurd`
+- `status` blijft `confirmed` (partnerprijs is bevestigd; wachten is op klant)
 
-### 4. Edge function `approve-quote-item` (regel 175, 233, 367)
-De checks `["in_afstemming", "bevestigd"].includes(...)` uitbreiden met `"offerte_verstuurd"`, zodat per-item klant-akkoord ook werkt vóórdat de partner-aanvraag uitstaat.
-
-### 5. Lifecycle — `src/lib/lifecycle.ts` (regel 301)
-`offerte_verstuurd` net als `concept`/`in_afstemming` behandelen (nog niet bevestigd door partner).
-
-### 6. Admin UI — `AdminItemQuoteStatusSelect`
-De nieuwe optie tonen in de dropdown tussen Concept en In afstemming. Bestaande items met item_quote_status `null` of legacy waarden blijven werken.
-
-### 7. Klant-portal
-Geen wijziging in gedrag — `customerItemQuoteStatusLabels` mapt naar "Onder voorbehoud", consistent met de eerder doorgevoerde "less is more"-aanpak (geen badge bij `pending` items).
+Optioneel breder herstel: alle items waar `customer_approved_at IS NULL` AND `item_quote_status = 'in_afstemming'` AND er een open admin price change is (`admin_price_override_updated_at > partner_price_change_acknowledged_at`) en `status = 'confirmed'` — zelfde update.
 
 ## Niet nodig
-- Geen DB-migratie: kolom is `text`, geen enum.
-- Geen wijziging op project-level `quote_status` (`offerte_verstuurd` bestaat daar al).
-- Geen backfill: bestaande items met `in_afstemming` blijven correct (project staat dan al op `akkoord_ontvangen`).
+- Geen wijziging aan de klant-portal (toont al correct).
+- Geen wijziging aan edge functions: `approve-quote-item` accepteert sinds vorige iteratie ook `offerte_verstuurd` als geldige uitgangswaarde.
