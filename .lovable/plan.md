@@ -1,108 +1,94 @@
-# Klant-akkoord op de klantpagina: bug + workflow opnieuw ontwerpen
+# Klant-akkoord op programmavoorstel: bug fix + workflow herijken
 
-## Wat is er aan de hand?
+## Wat blijkt na nader onderzoek
 
-Drie problemen, allemaal veroorzaakt door dezelfde architectuur-keuze (akkoord-knop afhankelijk van `program_type === "quote"`).
+De vorige analyse moet bijgesteld. **`AcceptQuoteProposalCard` wordt nergens gemount**; de echte akkoord-knop zit in `ProgramIntroCard`. De knop verschijnt alleen wanneer `hasQuoteItemsAwaitingCustomerApproval(items) === true`, en die helper eist:
 
-### 1. Bug: BV-2602-0004 toont géén akkoord-knop
-- BV-2602-0004 staat op `program_type = "quote"` en `quote_status = "offerte_verstuurd"` — dat zou de akkoord-kaart (`AcceptQuoteProposalCard`) moeten tonen.
-- De kaart wordt wél gemonteerd, maar er is **geen `quote_pdf_path`** in de database. De klant ziet dus de knop "Akkoord, start reserveringen" zonder bijbehorende offerte/PDF om te beoordelen → onlogisch en daarom blijkbaar nooit ingedrukt.
-- Bovendien zegt de status-checklist *"Wachten op aanbieders (0/11 bevestigd)"* terwijl er feitelijk wordt gewacht op de klant. De screenshot bevestigt dit.
-
-### 2. Bug: alle "self_service" en "maatwerk" projecten missen de akkoord-kaart volledig
-- Audit van alle lopende projecten met `quote_status = "offerte_verstuurd"`:
-
-| Referentie | program_type | Quote PDF? | Akkoord mogelijk? |
-|---|---|---|---|
-| BV-2602-0002 | quote | ja | ja (knop zichtbaar) |
-| BV-2602-0003 | quote | nee | knop zichtbaar maar geen PDF |
-| **BV-2602-0004** | **quote** | **nee** | **knop zichtbaar maar geen PDF** |
-| BV-2603-0007 | quote | ja | ja |
-| BV-2604-0004 | quote | nee | knop maar geen PDF |
-| BV-2603-0016 | self_service | ja | **nee — kaart rendert niet** |
-| BV-2603-0018 | self_service | ja | **nee** |
-| BV-2604-0003 | self_service | ja | **nee** |
-| BV-2604-0006 | self_service | ja | **nee** |
-| BV-2603-0003 | maatwerk_zakelijk | nee | **nee — kaart rendert niet** |
-
-Bij `self_service` en `maatwerk_*` is in de admin keurig een offerte-PDF gegenereerd en `quote_status = offerte_verstuurd` gezet, maar `AcceptQuoteProposalCard` blokkeert op regel 22 (`if (program.program_type !== "quote") return null;`). Resultaat: klant kan nooit akkoord geven, partners worden nooit aangevraagd, project zit muurvast.
-
-### 3. Toon en zwaarte van het akkoord
-Huidige tekst op de knop: *"Akkoord, start reserveringen"* + *"Door akkoord te gaan bevestigt u de prijs en details"*. Dat klopt niet bij de daadwerkelijke flow:
-- Op dit moment is het slechts een **programmavoorstel met voorlopige prijzen**.
-- Pas ná dit akkoord vragen we de partners om beschikbaarheid; daarna komen er definitieve bevestigingen of tegenvoorstellen, en pas helemaal aan het eind tekent de klant de **AV**.
-- De huidige formulering doet de klant aarzelen ("ik zit er aan vast") en is ook strikt genomen onjuist (er is nog geen partnerbevestiging).
-
-## Voorstel: drie reparaties + workflow-herijking
-
-### A. Fix de bug — akkoord-kaart altijd tonen bij offerte_verstuurd
-Verwijder de `program_type === "quote"`-check uit `AcceptQuoteProposalCard`. Toon de kaart bij **élk** project waar:
-- `quote_status === "offerte_verstuurd"` EN
-- `terms_accepted_at IS NULL` (anders is het project verder in de flow) EN
-- er minstens één niet-geannuleerd, niet-bureau item is.
-
-Dit dekt `quote`, `self_service`, `maatwerk_zakelijk`, `maatwerk_familie`, etc. in één klap.
-
-### B. Toon de PDF-offerte prominent op de klantpagina
-- `get-customer-program` levert `quote_pdf_url` al aan (signed URL, 1u geldig). Op desktop staat er nu alleen een onopvallend knopje (zie `DesktopProgramView.tsx:319`).
-- Nieuwe **"Offerte"-card** bovenaan de programma-tab tonen wanneer `quote_pdf_url` aanwezig is: titel "Uw offerte", subtitle "Verzonden op {datum}, geldig tot {datum}", grote knop **"Offerte bekijken (PDF)"** + secundaire knop **"Downloaden"**.
-- Geen PDF? Dan toont de kaart i.p.v. PDF-knop een nette tekst: *"Bekijk hieronder het programmavoorstel met indicatieve prijzen."*
-
-### C. Herformuleer het akkoord — laagdrempelig
-Pas tekst en framing van `AcceptQuoteProposalCard` aan. Concept:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  Programmavoorstel met indicatieve prijzen          │
-│  ───                                                │
-│  Dit is een voorstel — nog géén definitieve boeking. │
-│  Geeft u akkoord, dan vragen wij voor u bij elke    │
-│  aanbieder beschikbaarheid en bevestiging op.       │
-│  U beslist later definitief, na de AV-ondertekening.│
-│                                                     │
-│  Wat gebeurt er na uw akkoord?                      │
-│  1. Wij benaderen alle aanbieders                   │
-│  2. U ziet hier per onderdeel de bevestiging        │
-│  3. Pas bij ondertekenen AV is alles definitief     │
-│                                                     │
-│  [ Bekijk offerte (PDF) ]   [ Akkoord, vraag aan ] │
-│                                                     │
-│  Niet bindend — u kunt nog altijd wijzigen          │
-└─────────────────────────────────────────────────────┘
+```ts
+item.status === "confirmed" || item.status === "alternative"
+&& item.item_quote_status in ("in_afstemming","bevestigd")
 ```
 
-- Knop-tekst: **"Akkoord — vraag beschikbaarheid op"** (i.p.v. "start reserveringen").
-- Disclaimer onder de knop: *"Niet-bindend voorstel. Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden."*
-- Bij `quote_valid_until` blijft de "Geldig tot"-badge zichtbaar.
+Met andere woorden: **de klant kan pas akkoord geven nádat een partner het item bevestigd heeft**. Maar bij projecten in fase `offerte_verstuurd` zijn er nog géén partners benaderd (skip_partner_notification staat op true tot de klant akkoord is). Resultaat → eeuwige patstelling.
 
-### D. Fix de status-checklist labels
-In `StatusSummary.tsx` (variant `checklist`):
-- Zolang `quote_status === "offerte_verstuurd"` en `terms_accepted_at` leeg is, label "Programma" wordt: **"Wachten op uw akkoord ({n} onderdelen)"** met blauw/info-icoon, niet "Wachten op aanbieders".
-- Pas wanneer `quote_status` op `akkoord_ontvangen` staat schakelt het label door naar **"Wachten op aanbieders"**.
-- "Uw akkoord"-rij: bij `offerte_verstuurd` zonder per-item-akkoord tonen als één enkele actie: "Voorstel beoordelen" → "Voorstel akkoord ✓".
+DB-bevestiging (10 actieve projecten met `quote_status=offerte_verstuurd`):
 
-### E. Eenmalige actie: 4 vastgelopen projecten
-Voor BV-2602-0003, BV-2602-0004, BV-2604-0004, BV-2603-0003 ontbreekt een PDF. Twee opties:
-1. **Admin notify**: maak een admin-todo "Offerte-PDF ontbreekt — alsnog genereren en versturen" voor deze 4 projecten.
-2. **Niets doen**: na fix A kan de klant ook zónder PDF akkoord geven (kaart toont dan beschrijvende tekst i.p.v. PDF-knop). Workflow loopt door.
+| Referentie | Items actief | Approvable | Pending | Klant kan akkoord? |
+|---|---|---|---|---|
+| BV-2602-0002 | 11 | 0 | 11 | **nee** |
+| BV-2602-0003 | 20 | 0 | 20 | **nee** |
+| BV-2602-0004 | 11 | 0 | 11 | **nee** ← screenshot |
+| BV-2603-0007 | 10 | 0 | 10 | **nee** |
+| BV-2603-0016 | 11 | 0 | 11 | **nee** |
+| BV-2603-0018 | 7 | 0 | 7 | **nee** |
+| BV-2604-0003 | 15 | 0 | 15 | **nee** |
+| BV-2604-0004 | 13 | 0 | 13 | **nee** |
+| BV-2604-0006 | 6 | 0 | 5 + 1 reeds approved | gedeeltelijk |
+| BV-2603-0003 | 10 | 1 | 0 | ja (reeds 7 approved) |
 
-Voorkeur: **beide** — fix in code + admin-todo zodat Bureau bewust kan kiezen alsnog een PDF te sturen.
+→ De huidige logica **werkt voor geen enkel project in de "offerte verstuurd"-fase**. Klanten zien een verklarende tekst maar geen knop.
 
-## Technische impact
+## Wat ik ga doen
 
-- `src/components/customer-portal/AcceptQuoteProposalCard.tsx` — herschrijf condities + UI.
-- `src/components/customer-portal/StatusSummary.tsx` — labels/iconen voor "Programma"-rij contextueel maken.
-- Nieuwe `src/components/customer-portal/QuotePdfCard.tsx` — prominente PDF-presentatie.
-- `src/components/customer-portal/DesktopProgramView.tsx` + `MobileProgramView.tsx` — `QuotePdfCard` integreren bovenaan, oude inline-knop weghalen, condities voor `AcceptQuoteProposalCard` aanpassen.
-- Eenmalig SQL/edge-function: 4 admin-todos aanmaken voor de PDF-loze projecten (insert-only via migratie).
-- Geen DB-schema wijzigingen.
+### Reparatie 1 — `customerQuoteApproval.ts` in lijn met de bedoelde workflow
 
-## Wat ik daarna ga bouwen (in build mode)
+De bedoelde flow is: voorstel → **klant-akkoord op voorstel** → partners benaderen → partner bevestiging → AV-akkoord → definitief. Het klant-akkoord op een voorstel is een **niet-bindende handtekening op het programma met indicatieve prijzen**, niet pas mogelijk ná partnerbevestiging.
 
-1. AcceptQuoteProposalCard herschrijven (fix A + tekst C).
-2. QuotePdfCard maken en integreren (B).
-3. StatusSummary labels herzien (D).
-4. Admin-todos aanmaken voor de 4 PDF-loze projecten (E).
-5. Visueel verifiëren via klantportaal-token van BV-2602-0004 en BV-2603-0016 (een `quote`- en een `self_service`-project).
+```ts
+// Nieuwe regel: een item is "klaar voor klant-akkoord" als
+// - niet geannuleerd
+// - klant heeft nog geen akkoord gegeven
+// - partner heeft het nog niet onhaalbaar gemaakt (status != cancelled)
+// pending/confirmed/alternative — allemaal goed
+export const isQuoteItemAwaitingCustomerApproval = (item) => {
+  if (item.status === "cancelled") return false;
+  if (item.customer_approved_at) return false;
+  if (item.block_type === "self_arranged") return false;
+  return true;
+};
+```
 
-Goed om door te gaan?
+Effect: alle 10 projecten krijgen direct een werkende akkoord-knop in `ProgramIntroCard`.
+
+### Reparatie 2 — `ProgramIntroCard` herformuleren tot "voorstel met indicatieve prijzen"
+
+Tekst en knop versoepelen om de zwaarte weg te nemen. Concept:
+
+- Titel/intro: *"Hieronder vindt u uw programmavoorstel met indicatieve prijzen. Dit is nog géén definitieve boeking — geeft u akkoord, dan vragen wij voor u beschikbaarheid op bij elke aanbieder. U beslist later definitief, na ondertekening van de algemene voorwaarden."*
+- Driestappen-uitleg: 1) Wij benaderen alle aanbieders, 2) U ziet hier per onderdeel de bevestiging, 3) Pas bij ondertekenen AV is alles definitief.
+- Checkbox-tekst: *"Ik ga akkoord met dit voorstel"* (i.p.v. "Ik ben akkoord met alle resterende onderdelen").
+- Knop: **"Akkoord — vraag beschikbaarheid op"** (i.p.v. "Alle resterende akkoord geven").
+- Subtekst: *"Niet-bindend. Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden."*
+- "Geldig tot"-badge blijft.
+
+### Reparatie 3 — `StatusSummary.tsx` checklist labels kloppend maken
+
+Zolang `quote_status === "offerte_verstuurd"` en de klant nog geen akkoord heeft gegeven:
+- "Programma"-rij: label wordt **"Wachten op uw akkoord ({n} onderdelen)"** met info-icoon, niet meer "Wachten op aanbieders".
+- "Uw akkoord"-rij: label wordt **"Voorstel beoordelen"** → na akkoord: **"Voorstel akkoord ✓"**.
+
+Pas zodra `quote_status === "akkoord_ontvangen"` switcht "Programma" naar **"Wachten op aanbieders ({confirmed}/{total} bevestigd)"**.
+
+### Reparatie 4 — Offerte-PDF prominenter
+
+Op desktop staat `Bekijk offerte` nu als kleine outline-knop tussen drie andere icoontjes. Dat blijft, maar binnen `ProgramIntroCard` (de paarse kaart bovenaan) komt er een primaire knop **"Bekijk offerte (PDF)"** naast de akkoord-knop, zichtbaar wanneer `program.quote_pdf_url` bestaat. Klant heeft de offerte dan letterlijk binnen handbereik bij de akkoord-knop.
+
+### Eenmalige actie — admin-todos voor 4 PDF-loze projecten
+
+BV-2602-0003, BV-2602-0004, BV-2604-0004, BV-2603-0003 hebben `quote_pdf_path = NULL` terwijl ze al wel als `offerte_verstuurd` zijn gemarkeerd. Ik voeg via migratie een admin-todo toe per project: *"Offerte-PDF ontbreekt — alsnog genereren en versturen aan klant"* met priority `high`, `auto_type='missing_quote_pdf'`, `auto_entity_id=request_id`.
+
+## Bestanden
+
+- `src/lib/customerQuoteApproval.ts` — versoepelde regel
+- `src/components/customer-portal/ProgramIntroCard.tsx` — tekst + PDF-knop + button-label
+- `src/components/customer-portal/StatusSummary.tsx` — checklist labels contextueel
+- `supabase/migrations/...` — INSERT 4 admin_todos
+
+## Verificatie
+
+Na de wijzigingen open ik in de preview het klantportaal van BV-2602-0004 (`token=KSHU9ndXD5Ey`) en BV-2603-0016 (`token=hYNagEhaymRh`) en controleer dat:
+1. de akkoord-knop verschijnt,
+2. de checklist "Wachten op uw akkoord" toont i.p.v. "Wachten op aanbieders",
+3. (alleen 0016) de PDF-knop staat naast de akkoord-knop.
+
+Ik ga nu door met de implementatie.

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Loader2, Clock, AlertTriangle, Sparkles } from "lucide-react";
+import { CheckCircle, Loader2, Clock, AlertTriangle, Sparkles, FileText } from "lucide-react";
 import { EmptyCartTips } from "@/components/configurator/EmptyCartTips";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -19,6 +19,7 @@ interface ProgramIntroCardProps {
   hasUnapprovedItems?: boolean;
   programPublishedAt?: string | null;
   allConfirmed?: boolean;
+  quotePdfUrl?: string | null;
 }
 
 export const ProgramIntroCard = ({
@@ -32,6 +33,7 @@ export const ProgramIntroCard = ({
   hasUnapprovedItems,
   programPublishedAt,
   allConfirmed = false,
+  quotePdfUrl,
 }: ProgramIntroCardProps) => {
   const isPublished = !!programPublishedAt;
   const [isLoading, setIsLoading] = useState(false);
@@ -102,28 +104,39 @@ export const ProgramIntroCard = ({
     );
   }
 
-  // Quote awaiting approval
+  // Quote awaiting approval — niet-bindend voorstel
   if (isAwaitingApproval) {
     return (
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-5 space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm text-foreground leading-relaxed">
-              Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld. U kunt per onderdeel akkoord geven, of alle resterende onderdelen in één keer accorderen.
-            </p>
-            <p className="text-sm text-foreground leading-relaxed">
-              Na uw akkoord verwerkt Bureau Vlieland de geselecteerde onderdelen en zet de aanvragen daarna uit naar de aanbieders.
-            </p>
-            <p className="text-sm text-foreground leading-relaxed">
-              Wilt u wijzigingen aanbrengen? Neem gerust contact op met Bureau Vlieland.
-            </p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-base font-semibold text-foreground">
+                Programmavoorstel met indicatieve prijzen
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld.
+                Dit is nog géén definitieve boeking.
+              </p>
+            </div>
+
+            <div className="rounded-md bg-background/60 border border-primary/10 p-3 text-sm space-y-1.5">
+              <p className="font-medium text-foreground">Wat gebeurt er na uw akkoord?</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                <li>Wij vragen voor u beschikbaarheid op bij elke aanbieder.</li>
+                <li>U ziet hier per onderdeel de bevestiging of een alternatief.</li>
+                <li>Pas bij ondertekening van de algemene voorwaarden is alles definitief.</li>
+              </ol>
+            </div>
+
             {validUntil && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                Geldig tot {format(validUntil, "d MMMM yyyy", { locale: nl })}
+                Voorstel geldig tot {format(validUntil, "d MMMM yyyy", { locale: nl })}
               </p>
             )}
           </div>
+
           {hasUnapprovedItems && (
             <>
               <div className="flex items-center gap-2 pt-1">
@@ -133,12 +146,11 @@ export const ProgramIntroCard = ({
                   onCheckedChange={(v) => setIsChecked(!!v)}
                 />
                 <Label htmlFor="akkoord-checkbox" className="text-sm cursor-pointer">
-                  Ik ben akkoord met alle resterende onderdelen
+                  Ik ga akkoord met dit voorstel
                 </Label>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <Button
-                  variant="outline"
                   onClick={handleAccept}
                   disabled={isLoading || !isChecked}
                   className="whitespace-nowrap"
@@ -151,14 +163,24 @@ export const ProgramIntroCard = ({
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Alle resterende akkoord geven
+                      Akkoord — vraag beschikbaarheid op
                     </>
                   )}
                 </Button>
-                <span className="text-xs text-muted-foreground">
-                  Bureau Vlieland verwerkt deze daarna richting de leveranciers
-                </span>
+                {quotePdfUrl && (
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(quotePdfUrl, "_blank")}
+                    className="whitespace-nowrap"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Bekijk offerte (PDF)
+                  </Button>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Niet-bindend. Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden.
+              </p>
             </>
           )}
         </CardContent>
