@@ -142,17 +142,21 @@ export const CustomerProgramItem = ({
                     <ExternalLink className="h-3.5 w-3.5" />
                     Zelf te regelen
                   </Badge>
-                ) : isQuoteMode && item.customer_approved_at ? (
+                ) : item.status === "pending" ? (
+                  // Less is more: tijdens "wachten op aanbieders" tonen we geen
+                  // statuschip per onderdeel. De globale voortgang in de sidebar
+                  // ("X van Y bevestigd") vertelt het verhaal al. Pas zodra de
+                  // partner reageert verschijnt er weer een badge.
+                  null
+                ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
                   <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
                     <Check className="h-3.5 w-3.5" />
-                    Goedgekeurd
+                    Bevestigd
                   </Badge>
                 ) : (
                   <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={
                     needsCustomerAction && item.status === "confirmed" ? "Beschikbaar" :
                     needsCustomerAction && item.status === "alternative" ? "Alternatief voorstel" :
-                    readOnly && item.status === "pending" ? "In behandeling" : 
-                    isPreApproval && item.status === "pending" && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "In voorbereiding" : 
                     undefined
                   } />
                 )}
@@ -232,8 +236,12 @@ export const CustomerProgramItem = ({
                 ) : null;
               }
               const showPerPerson = isPerPersonItem(item) && unitPrice !== null && unitPrice !== lineTotal;
+              const isProvisional = item.status === "pending";
               return (
-                <span className="font-semibold text-green-700 dark:text-green-500">
+                <span className={cn(
+                  "font-semibold",
+                  isProvisional ? "text-foreground" : "text-green-700 dark:text-green-500"
+                )}>
                   €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   {showPerPerson ? (
                     <span className="font-normal text-xs ml-1">p.p.</span>
@@ -242,6 +250,9 @@ export const CustomerProgramItem = ({
                   ) : null}
                   {vatRate !== undefined && (
                     <span className="font-normal text-xs text-muted-foreground ml-1">({vatRate}% BTW)</span>
+                  )}
+                  {isProvisional && (
+                    <span className="font-normal text-xs text-muted-foreground ml-1">· voorlopig</span>
                   )}
                 </span>
               );
