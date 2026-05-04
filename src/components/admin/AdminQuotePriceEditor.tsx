@@ -152,6 +152,16 @@ export const AdminQuotePriceEditor = ({
               {formatPrice(displayPrice)}
               {displayPrice !== null && ` ${displayLabel}`}
             </span>
+            {hasOverride && priceType !== "total" && overridePrice !== null && (
+              <span className="text-[11px] text-muted-foreground">
+                {formatPrice(overridePrice)}
+                {priceType === "per_person_per_day"
+                  ? ` × ${numberOfPeople}p × ${numberOfDays}d`
+                  : ` × ${numberOfPeople}p`}
+                {" = "}
+                {formatPrice(overrideTotal)}
+              </span>
+            )}
             {overrideIsLeading && (
               <span className="text-xs text-amber-600 dark:text-amber-500">
                 Nieuwe prijs (wacht op partner)
