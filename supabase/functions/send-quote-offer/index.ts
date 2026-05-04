@@ -279,13 +279,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
         console.error("Error updating program request status:", updateError);
       }
 
-      // Auto-set active items to "bevestigd" so customer can approve them
+      // Mark active items as 'offerte_verstuurd' so klant ziet status "wacht op klant-akkoord"
       const { error: itemsUpdateError } = await supabase
         .from("program_request_items")
-        .update({ item_quote_status: "in_afstemming" })
+        .update({ item_quote_status: "offerte_verstuurd" })
         .eq("request_id", requestId)
         .neq("status", "cancelled")
-        .in("item_quote_status", ["concept", "in_afstemming"]);
+        .in("item_quote_status", ["concept", "offerte_verstuurd", "in_afstemming"]);
 
       if (itemsUpdateError) {
         console.error("Error updating item quote statuses:", itemsUpdateError);
