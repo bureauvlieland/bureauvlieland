@@ -1919,6 +1919,16 @@ const AdminRequestDetail = () => {
                                                 </Tooltip>
                                               </TooltipProvider>
                                             )}
+                                            {priceChangeWaitingCustomer && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger>
+                                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>Wacht op klantakkoord nieuwe prijs</TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
                                           </div>
                                           {item.status_note && (
                                             <p className="text-xs text-muted-foreground mt-1">{item.status_note}</p>
