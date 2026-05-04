@@ -619,6 +619,9 @@ const AdminRequestDetail = () => {
       } else {
         setLinkedAccommodation(null);
       }
+
+      // Sync the "send items to partners" auto-todo with current state
+      if (id) ensureSendItemsTodo(id);
     } catch (error) {
       console.error("Error fetching request:", error);
       toast.error("Fout bij ophalen aanvraag");
