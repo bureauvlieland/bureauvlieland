@@ -1763,7 +1763,7 @@ const AdminRequestDetail = () => {
                                         <TableCell>
                                           <ItemDisplayStatusBadge
                                             audience="admin"
-                                            status={deriveItemDisplayStatus(item, {
+                                            status={deriveItemDisplayStatus(item as any, {
                                               programPeople: request.number_of_people,
                                               numberOfDays: numDaysForItem,
                                             })}
