@@ -12,6 +12,7 @@ import {
   CheckCircle,
   HelpCircle,
   Loader2,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +25,7 @@ const iconMap = {
   MessageCircle,
   CheckCircle,
   HelpCircle,
+  Send,
 };
 
 interface AdminItemQuoteStatusSelectProps {
