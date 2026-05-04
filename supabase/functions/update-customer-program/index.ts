@@ -652,13 +652,38 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update item with customer_accepted_at
+      // Update item with customer_accepted_at — én sync quoted_price wanneer er
+      // een openstaande admin-prijswijziging ligt op het moment van akkoord.
+      const acceptedAt = new Date().toISOString();
+      const programPeople = Number(program.number_of_people || 0);
+      const numberOfDays = Array.isArray(program.selected_dates) ? program.selected_dates.length : 1;
+      const effectivePeople = item.override_people ?? programPeople;
+      const priceType = item.price_type || "per_person";
+      const isPerPerson = !priceType || priceType === "per_person" || priceType === "on_request" || priceType === "per_person_per_day";
+      const isPerDay = priceType === "per_person_per_day";
+      let acceptedPriceTotal: number | null = null;
+      if (item.admin_price_override != null && item.admin_price_override_updated_at) {
+        const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+        const overrideIsNewer = !ack
+          || new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();
+        if (overrideIsNewer) {
+          const personMultiplier = isPerPerson ? effectivePeople : 1;
+          const dayMultiplier = isPerDay ? numberOfDays : 1;
+          acceptedPriceTotal = Number(item.admin_price_override) * personMultiplier * dayMultiplier;
+        }
+      }
       await supabase
         .from("program_request_items")
         .update({
           status: "accepted",
-          customer_accepted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          customer_accepted_at: acceptedAt,
+          updated_at: acceptedAt,
+          ...(acceptedPriceTotal != null
+            ? {
+                quoted_price: acceptedPriceTotal,
+                partner_price_change_acknowledged_at: acceptedAt,
+              }
+            : {}),
         })
         .eq("id", acceptItemId);
 

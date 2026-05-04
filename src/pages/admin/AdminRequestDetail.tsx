@@ -106,7 +106,9 @@ import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet"
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
-import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOpenAdminPriceChange, isPerPersonItem, isPerDayItem, getEffectivePeople } from "@/lib/portalPricing";
+import { deriveItemDisplayStatus } from "@/lib/itemStatus";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { isBureauItem } from "@/lib/projectWorkflow";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
@@ -1759,42 +1761,13 @@ const AdminRequestDetail = () => {
                                     {isQuoteMode ? (
                                       <>
                                         <TableCell>
-                                          <div className="flex items-center gap-1.5">
-                                            <AdminItemQuoteStatusSelect
-                                              status={item.item_quote_status}
-                                              onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
-                                            />
-                                            {hasCustomerApproval && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Klant akkoord</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            {showWaitingForCustomer && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <Clock className="h-4 w-4 text-amber-500 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Wacht op klant</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            {priceChangeWaitingCustomer && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Wacht op klantakkoord nieuwe prijs</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                          </div>
+                                          <ItemDisplayStatusBadge
+                                            audience="admin"
+                                            status={deriveItemDisplayStatus(item as any, {
+                                              programPeople: request.number_of_people,
+                                              numberOfDays: numDaysForItem,
+                                            })}
+                                          />
                                         </TableCell>
                                         <TableCell>
                                           <input
@@ -2031,9 +2004,16 @@ const AdminRequestDetail = () => {
                     const delta = computed != null && quoted != null ? Math.abs(quoted - computed) : 0;
                     const openChange = hasOpenAdminPriceChange(it as any, it.override_people ?? programPeople, numberOfDays);
                     const inconsistent = quoted != null && computed != null && delta > 0.01 && it.admin_price_override != null;
-                    return { it, computed, quoted, delta, openChange, inconsistent };
+                    // Verberg items waar de klant al akkoord heeft gegeven NA de laatste admin-prijswijziging
+                    // — die zijn feitelijk afgehandeld; quoted_price wordt automatisch bijgewerkt door
+                    // approve-quote-item / accept-quote-proposal.
+                    const customerSettled = !!it.customer_accepted_at
+                      && it.admin_price_override_updated_at
+                      && new Date(it.customer_accepted_at).getTime() >=
+                         new Date(it.admin_price_override_updated_at).getTime();
+                    return { it, computed, quoted, delta, openChange, inconsistent, customerSettled };
                   })
-                  .filter((row) => row.openChange || row.inconsistent);
+                  .filter((row) => (row.openChange || row.inconsistent) && !row.customerSettled);
 
                 if (flagged.length === 0) return null;
 
