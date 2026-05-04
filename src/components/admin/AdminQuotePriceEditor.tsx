@@ -15,8 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface AdminQuotePriceEditorProps {
   originalPrice: number | null;
@@ -79,6 +80,16 @@ export const AdminQuotePriceEditor = ({
     : (hasQuotedPrice && hasOverride); // quoted leidend → toon eerdere schatting doorgehaald
   const struckPrice = overrideIsLeading ? originalPrice : overrideTotal;
 
+  // Mismatch-waarschuwing: partner heeft een quoted_price bevestigd die niet overeenkomt
+  // met admin_price_override × personen × dagen, terwijl er géén open prijswijziging loopt.
+  // Dit duidt op een handmatig ingevoerde inconsistentie die de admin moet checken.
+  const mismatch =
+    !overrideIsLeading &&
+    hasQuotedPrice &&
+    hasOverride &&
+    overrideTotal !== null &&
+    Math.abs((originalPrice ?? 0) - overrideTotal) > 0.5;
+
   const handleOpen = (open: boolean) => {
     if (open) {
       setEditPrice(overridePrice?.toString() || "");
@@ -89,9 +100,28 @@ export const AdminQuotePriceEditor = ({
   };
 
   const handleSave = async () => {
+    const trimmed = editPrice.trim();
+    const priceValue = trimmed === "" ? null : parseFloat(trimmed.replace(",", "."));
+
+    if (trimmed !== "" && (Number.isNaN(priceValue!) || priceValue! < 0)) {
+      toast.error("Voer een geldig bedrag in (≥ 0).");
+      return;
+    }
+    if (priceValue !== null && priceValue > 100000) {
+      toast.error("Bedrag lijkt onrealistisch hoog (> €100.000). Controleer de invoer.");
+      return;
+    }
+    if (priceValue !== null && editPriceType !== "total" && numberOfPeople < 1) {
+      toast.error("Aantal personen ontbreekt — kan totaal niet berekenen.");
+      return;
+    }
+    if (priceValue !== null && editPriceType === "per_person_per_day" && numberOfDays < 1) {
+      toast.error("Aantal dagen ontbreekt — kan totaal niet berekenen.");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const priceValue = editPrice ? parseFloat(editPrice) : null;
       await onSave(priceValue, editNotes, editPriceType);
       setIsOpen(false);
     } finally {
@@ -181,6 +211,12 @@ export const AdminQuotePriceEditor = ({
                   : ` ${priceTypeLabel}`}
               </span>
             )}
+            {mismatch && overrideTotal !== null && (
+              <span className="flex items-center gap-1 text-[11px] text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                Partner: {formatPrice(originalPrice)} ≠ berekening: {formatPrice(overrideTotal)}
+              </span>
+            )}
           </div>
           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
@@ -196,6 +232,18 @@ export const AdminQuotePriceEditor = ({
               </p>
             )}
           </div>
+
+          {mismatch && overrideTotal !== null && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <strong>Inconsistente prijs.</strong> De partner heeft {formatPrice(originalPrice)} bevestigd,
+                maar de berekening ({formatPrice(overridePrice)}
+                {priceType === "per_person_per_day" ? ` × ${numberOfPeople}p × ${numberOfDays}d` : ` × ${numberOfPeople}p`})
+                = {formatPrice(overrideTotal)}. Pas de prijs of het type aan om dit gelijk te trekken.
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="price-type">Prijsconfiguratie</Label>
