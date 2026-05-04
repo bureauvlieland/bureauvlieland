@@ -108,7 +108,7 @@ import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet"
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
 import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
-import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOpenAdminPriceChange, isPerPersonItem, isPerDayItem, getEffectivePeople } from "@/lib/portalPricing";
+import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOpenAdminPriceChange, isPerPersonItem, isPerDayItem, getEffectivePeople, getNumberOfDays } from "@/lib/portalPricing";
 import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -1676,7 +1676,7 @@ const AdminRequestDetail = () => {
                                 const statusInfo = itemStatusConfig[item.status];
                                 const hasCustomerApproval = !!(item.customer_accepted_at || item.customer_approved_at);
                                 const showWaitingForCustomer = (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification && !hasCustomerApproval;
-                                const numDaysForItem = Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1;
+                                const numDaysForItem = getNumberOfDays(request?.selected_dates);
                                 const priceChangeWaitingCustomer =
                                   !item.customer_accepted_at &&
                                   (item.status === "confirmed" || item.status === "alternative") &&
@@ -1838,9 +1838,9 @@ const AdminRequestDetail = () => {
                                               overridePrice={item.admin_price_override}
                                               priceNotes={item.admin_price_notes}
                                               numberOfPeople={item.override_people ?? request.number_of_people}
-                                              numberOfDays={Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1}
+                                              numberOfDays={getNumberOfDays(request?.selected_dates)}
                                               priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
-                                              hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1)}
+                                              hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, getNumberOfDays(request?.selected_dates))}
                                               onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                             />
                                             <AdminItemBillingLinesEditor
@@ -2030,7 +2030,7 @@ const AdminRequestDetail = () => {
               {/* Prijscontrole — items met openstaande admin-prijswijziging of inconsistentie */}
               {(() => {
                 const programPeople = request?.number_of_people || 0;
-                const numberOfDays = Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1;
+                const numberOfDays = getNumberOfDays(request?.selected_dates);
                 const flagged = items
                   .filter((it: any) => it.status !== "cancelled" && it.day_index !== -1)
                   .map((it: any) => {
