@@ -123,6 +123,7 @@ export const itemQuoteStatusConfig: Record<ItemQuoteStatus, QuoteStatusInfo> = {
 // Customer-facing labels (hide internal terminology)
 export const customerItemQuoteStatusLabels: Record<ItemQuoteStatus, string> = {
   concept: "Onder voorbehoud",
+  offerte_verstuurd: "Onder voorbehoud",
   in_afstemming: "Onder voorbehoud",
   bevestigd: "Bevestigd",
   optioneel: "Optioneel",
