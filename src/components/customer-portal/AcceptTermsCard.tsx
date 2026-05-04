@@ -22,6 +22,8 @@ interface AccommodationQuote {
   id: string;
   partner_id: string;
   status: string;
+  customer_terms_accepted_at?: string | null;
+  customer_signature_name?: string | null;
 }
 
 interface AcceptTermsCardProps {
