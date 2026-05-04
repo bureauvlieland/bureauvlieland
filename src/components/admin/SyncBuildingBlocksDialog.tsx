@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -22,16 +22,17 @@ interface SyncField {
   enabled: boolean;
 }
 
-interface ItemDiff {
+interface ItemRow {
   itemId: string;
   itemName: string;
   blockId: string;
   hasQuotedPrice: boolean;
-  changes: {
+  rows: {
     field: string;
     fieldLabel: string;
     oldValue: string | null;
     newValue: string | null;
+    isChanged: boolean;
   }[];
 }
 
@@ -67,7 +68,8 @@ export function SyncBuildingBlocksDialog({
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [fields, setFields] = useState<SyncField[]>(SYNC_FIELDS.map(f => ({ ...f })));
-  const [diffs, setDiffs] = useState<ItemDiff[]>([]);
+  const [items, setItems] = useState<ItemRow[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
@@ -78,8 +80,7 @@ export function SyncBuildingBlocksDialog({
   const loadDiffs = async () => {
     setLoading(true);
     try {
-      // Fetch items with a block_id
-      const { data: items, error: itemsErr } = await supabase
+      const { data: itemsData, error: itemsErr } = await supabase
         .from("program_request_items")
         .select("id, block_id, block_name, block_category, admin_price_override, price_type, duration, location_lat, location_lng, location_address, external_url, quoted_price, status")
         .eq("request_id", requestId)
@@ -87,13 +88,14 @@ export function SyncBuildingBlocksDialog({
         .neq("status", "cancelled");
 
       if (itemsErr) throw itemsErr;
-      if (!items?.length) {
-        setDiffs([]);
+      if (!itemsData?.length) {
+        setItems([]);
+        setSelectedItemIds(new Set());
         setLoading(false);
         return;
       }
 
-      const blockIds = [...new Set(items.map(i => i.block_id!))];
+      const blockIds = [...new Set(itemsData.map(i => i.block_id!))];
       const { data: blocks, error: blocksErr } = await supabase
         .from("building_blocks")
         .select("id, name, category, price_adult, price_type, duration, location_lat, location_lng, location_address, external_url")
@@ -103,14 +105,13 @@ export function SyncBuildingBlocksDialog({
 
       const blockMap = new Map(blocks?.map(b => [b.id, b]) || []);
 
-      const itemDiffs: ItemDiff[] = [];
-      for (const item of items) {
+      const itemRows: ItemRow[] = [];
+      const defaultSelected = new Set<string>();
+
+      for (const item of itemsData) {
         const block = blockMap.get(item.block_id!);
         if (!block) continue;
 
-        const changes: ItemDiff["changes"] = [];
-
-        // Map block fields to item fields
         const fieldMap: Record<string, { itemVal: unknown; blockVal: unknown }> = {
           admin_price_override: { itemVal: item.admin_price_override, blockVal: block.price_adult },
           price_type: { itemVal: item.price_type, blockVal: block.price_type },
@@ -121,34 +122,34 @@ export function SyncBuildingBlocksDialog({
           external_url: { itemVal: item.external_url, blockVal: block.external_url },
         };
 
-        for (const field of SYNC_FIELDS) {
+        const rows = SYNC_FIELDS.map(field => {
           const mapping = fieldMap[field.key];
-          if (!mapping) continue;
-          const oldStr = mapping.itemVal == null ? null : String(mapping.itemVal);
-          const newStr = mapping.blockVal == null ? null : String(mapping.blockVal);
-          if (oldStr !== newStr) {
-            changes.push({
-              field: field.key,
-              fieldLabel: field.label,
-              oldValue: formatValue(field.key, mapping.itemVal),
-              newValue: formatValue(field.key, mapping.blockVal),
-            });
-          }
-        }
+          const oldStr = mapping?.itemVal == null ? null : String(mapping.itemVal);
+          const newStr = mapping?.blockVal == null ? null : String(mapping.blockVal);
+          return {
+            field: field.key,
+            fieldLabel: field.label,
+            oldValue: formatValue(field.key, mapping?.itemVal),
+            newValue: formatValue(field.key, mapping?.blockVal),
+            isChanged: oldStr !== newStr,
+          };
+        });
 
-        // Also track location lat/lng silently (sync when address syncs)
-        if (changes.length > 0) {
-          itemDiffs.push({
-            itemId: item.id,
-            itemName: item.block_name,
-            blockId: item.block_id!,
-            hasQuotedPrice: item.quoted_price != null,
-            changes,
-          });
-        }
+        const hasChanges = rows.some(r => r.isChanged);
+
+        itemRows.push({
+          itemId: item.id,
+          itemName: item.block_name,
+          blockId: item.block_id!,
+          hasQuotedPrice: item.quoted_price != null,
+          rows,
+        });
+
+        if (hasChanges) defaultSelected.add(item.id);
       }
 
-      setDiffs(itemDiffs);
+      setItems(itemRows);
+      setSelectedItemIds(defaultSelected);
     } catch (err) {
       console.error("Error loading diffs:", err);
       toast.error("Kon bouwsteendata niet laden");
@@ -157,13 +158,48 @@ export function SyncBuildingBlocksDialog({
     }
   };
 
+  const toggleField = (key: string) => {
+    setFields(prev => prev.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f));
+  };
+
+  const toggleItem = (id: string) => {
+    setSelectedItemIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedItemIds(new Set(items.map(i => i.itemId)));
+  const selectChangedOnly = () =>
+    setSelectedItemIds(new Set(items.filter(i => i.rows.some(r => r.isChanged)).map(i => i.itemId)));
+  const selectNone = () => setSelectedItemIds(new Set());
+
+  const enabledFieldKeys = useMemo(
+    () => new Set(fields.filter(f => f.enabled).map(f => f.key)),
+    [fields]
+  );
+
+  const effectiveCount = useMemo(() => {
+    let count = 0;
+    for (const item of items) {
+      if (!selectedItemIds.has(item.itemId)) continue;
+      const hasEffectiveField = item.rows.some(r => {
+        if (!enabledFieldKeys.has(r.field)) return false;
+        if (r.field === "admin_price_override" && item.hasQuotedPrice) return false;
+        return true;
+      });
+      if (hasEffectiveField) count++;
+    }
+    return count;
+  }, [items, selectedItemIds, enabledFieldKeys]);
+
+  const changedItemsCount = items.filter(i => i.rows.some(r => r.isChanged)).length;
+
   const handleSync = async () => {
     setSyncing(true);
-    const enabledKeys = new Set(fields.filter(f => f.enabled).map(f => f.key));
-
     try {
-      // Fetch full block data for updates
-      const blockIds = [...new Set(diffs.map(d => d.blockId))];
+      const blockIds = [...new Set(items.filter(i => selectedItemIds.has(i.itemId)).map(i => i.blockId))];
       const { data: blocks } = await supabase
         .from("building_blocks")
         .select("id, name, category, price_adult, price_type, duration, location_lat, location_lng, location_address, external_url")
@@ -172,21 +208,19 @@ export function SyncBuildingBlocksDialog({
       const blockMap = new Map(blocks?.map(b => [b.id, b]) || []);
       let updated = 0;
 
-      for (const diff of diffs) {
-        // Skip items with quoted_price when syncing price
-        const relevantChanges = diff.changes.filter(c => enabledKeys.has(c.field));
-        if (relevantChanges.length === 0) continue;
+      for (const item of items) {
+        if (!selectedItemIds.has(item.itemId)) continue;
 
-        const block = blockMap.get(diff.blockId);
+        const block = blockMap.get(item.blockId);
         if (!block) continue;
 
         const updateData: Record<string, unknown> = {};
 
-        for (const change of relevantChanges) {
-          // Skip price sync for items with quoted_price
-          if (change.field === "admin_price_override" && diff.hasQuotedPrice) continue;
+        for (const field of fields) {
+          if (!field.enabled) continue;
+          if (field.key === "admin_price_override" && item.hasQuotedPrice) continue;
 
-          switch (change.field) {
+          switch (field.key) {
             case "admin_price_override":
               updateData.admin_price_override = block.price_adult;
               break;
@@ -217,10 +251,10 @@ export function SyncBuildingBlocksDialog({
           const { error } = await supabase
             .from("program_request_items")
             .update(updateData)
-            .eq("id", diff.itemId);
+            .eq("id", item.itemId);
 
           if (error) {
-            console.error(`Error updating item ${diff.itemId}:`, error);
+            console.error(`Error updating item ${item.itemId}:`, error);
           } else {
             updated++;
           }
@@ -238,15 +272,6 @@ export function SyncBuildingBlocksDialog({
     }
   };
 
-  const toggleField = (key: string) => {
-    setFields(prev => prev.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f));
-  };
-
-  const applicableDiffs = diffs.filter(d => {
-    const enabledKeys = new Set(fields.filter(f => f.enabled).map(f => f.key));
-    return d.changes.some(c => enabledKeys.has(c.field));
-  });
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
@@ -257,14 +282,15 @@ export function SyncBuildingBlocksDialog({
           </DialogTitle>
           <DialogDescription>
             Werk programma-onderdelen bij met actuele prijzen, locaties en gegevens uit de bouwstenen.
+            Vink per onderdeel aan wat overschreven moet worden — ook als het al gelijk is.
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="py-8 text-center text-muted-foreground">Bezig met vergelijken...</div>
-        ) : diffs.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
-            Alle onderdelen zijn al up-to-date met de bouwstenen.
+            Geen onderdelen gekoppeld aan bouwstenen.
           </div>
         ) : (
           <>
@@ -281,43 +307,71 @@ export function SyncBuildingBlocksDialog({
               ))}
             </div>
 
-            {/* Diffs list */}
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
-                {diffs.map(diff => {
-                  const enabledKeys = new Set(fields.filter(f => f.enabled).map(f => f.key));
-                  const visibleChanges = diff.changes.filter(c => enabledKeys.has(c.field));
-                  if (visibleChanges.length === 0) return null;
+            {/* Summary + bulk select */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
+              <span>
+                {changedItemsCount} van {items.length} onderdelen heeft wijzigingen t.o.v. de bouwstenen.
+              </span>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={selectAll}>Alles</Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={selectChangedOnly}>Alleen wijzigingen</Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={selectNone}>Geen</Button>
+              </div>
+            </div>
 
-                  return (
-                    <div key={diff.itemId} className="rounded-lg border p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{diff.itemName}</span>
-                        {diff.hasQuotedPrice && (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            Partnerprijs behouden
-                          </Badge>
+            {/* Items list */}
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
+              {items.map(item => {
+                const checked = selectedItemIds.has(item.itemId);
+                const visibleRows = item.rows.filter(r => enabledFieldKeys.has(r.field));
+                const itemHasChanges = item.rows.some(r => r.isChanged);
+
+                return (
+                  <div
+                    key={item.itemId}
+                    className={cn(
+                      "rounded-lg border p-3 space-y-2 transition-opacity",
+                      !checked && "opacity-60"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                        <Checkbox checked={checked} onCheckedChange={() => toggleItem(item.itemId)} />
+                        <span className="font-medium text-sm truncate">{item.itemName}</span>
+                        {!itemHasChanges && (
+                          <Badge variant="secondary" className="text-xs">Up-to-date</Badge>
                         )}
-                      </div>
-                      <div className="space-y-1">
-                        {visibleChanges.map(change => {
-                          const skipped = change.field === "admin_price_override" && diff.hasQuotedPrice;
-                          return (
-                            <div
-                              key={change.field}
-                              className={cn("flex items-center gap-2 text-xs", skipped && "opacity-40 line-through")}
-                            >
-                              <span className="text-muted-foreground w-24 shrink-0">{change.fieldLabel}</span>
-                              <span className="text-destructive">{change.oldValue}</span>
-                              <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              <span className="text-primary font-medium">{change.newValue}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      </label>
+                      {item.hasQuotedPrice && (
+                        <Badge variant="outline" className="text-xs gap-1 shrink-0">
+                          <AlertCircle className="h-3 w-3" />
+                          Partnerprijs behouden
+                        </Badge>
+                      )}
                     </div>
-                  );
-                })}
+                    <div className="space-y-1 pl-6">
+                      {visibleRows.map(row => {
+                        const skipped = row.field === "admin_price_override" && item.hasQuotedPrice;
+                        return (
+                          <div
+                            key={row.field}
+                            className={cn(
+                              "flex items-center gap-2 text-xs",
+                              skipped && "opacity-40 line-through",
+                              !row.isChanged && "text-muted-foreground"
+                            )}
+                          >
+                            <span className="text-muted-foreground w-24 shrink-0">{row.fieldLabel}</span>
+                            <span className={row.isChanged ? "text-destructive" : ""}>{row.oldValue}</span>
+                            <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                            <span className={row.isChanged ? "text-primary font-medium" : ""}>{row.newValue}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
@@ -328,9 +382,9 @@ export function SyncBuildingBlocksDialog({
           </Button>
           <Button
             onClick={handleSync}
-            disabled={syncing || loading || applicableDiffs.length === 0}
+            disabled={syncing || loading || effectiveCount === 0}
           >
-            {syncing ? "Bezig..." : `Synchroniseer ${applicableDiffs.length} onderdelen`}
+            {syncing ? "Bezig..." : `Synchroniseer ${effectiveCount} onderdelen`}
           </Button>
         </DialogFooter>
       </DialogContent>
