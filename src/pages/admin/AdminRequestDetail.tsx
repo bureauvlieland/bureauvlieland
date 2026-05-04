@@ -1708,11 +1708,13 @@ const AdminRequestDetail = () => {
                                         const showOriginal = (isConfirmed || isProposal) && item.preferred_time && activeTime !== item.preferred_time;
 
                                         const handleSaveTime = async (time: string | null) => {
+                                          // Belangrijk: een tijdwijziging mag de partner-workflow status NIET muteren.
+                                          // De DB-trigger guard_item_status_consistency blokkeert anders pending->confirmed
+                                          // wanneer skip_partner_notification=true en er nog geen klant-akkoord is.
                                           const updatePayload: Record<string, unknown> = time
                                             ? {
                                                 confirmed_time: time,
                                                 preferred_time: time,
-                                                status: item.status === "pending" ? "confirmed" : item.status,
                                                 status_note: `Tijd ${time} ingesteld door admin`,
                                                 status_updated_at: new Date().toISOString(),
                                               }
@@ -1728,7 +1730,8 @@ const AdminRequestDetail = () => {
                                             .update(updatePayload)
                                             .eq("id", item.id);
                                           if (error) {
-                                            toast.error("Fout bij opslaan tijd");
+                                            console.error("Fout bij opslaan tijd:", error);
+                                            toast.error(`Fout bij opslaan tijd: ${error.message}`);
                                           } else {
                                             toast.success(time ? `Tijd ${time} opgeslagen` : "Tijd verwijderd");
                                             fetchRequestData({ silent: true });
