@@ -2030,7 +2030,7 @@ const AdminRequestDetail = () => {
               {/* Prijscontrole — items met openstaande admin-prijswijziging of inconsistentie */}
               {(() => {
                 const programPeople = request?.number_of_people || 0;
-                const numberOfDays = Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1;
+                const numberOfDays = getNumberOfDays(request?.selected_dates);
                 const flagged = items
                   .filter((it: any) => it.status !== "cancelled" && it.day_index !== -1)
                   .map((it: any) => {
