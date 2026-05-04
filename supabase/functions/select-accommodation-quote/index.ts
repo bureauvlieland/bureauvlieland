@@ -205,15 +205,29 @@ Deno.serve(async (req) => {
     const commissionPercentage = partner?.accommodation_commission_percentage || 10;
     const commissionAmount = (grandTotal * commissionPercentage) / 100;
 
-    // Update the selected quote with commission data
+    // Capture client IP for audit (customer flow only)
+    const clientIp = !adminOverride
+      ? (req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        || req.headers.get("cf-connecting-ip")
+        || null)
+      : null;
+    const acceptedAtIso = new Date().toISOString();
+    const trimmedSignature = (signatureName || "").trim();
+
+    // Update the selected quote with commission data + terms acceptance
     const { error: updateQuoteError } = await supabase
       .from("accommodation_quotes")
       .update({
         status: "selected",
-        selected_at: new Date().toISOString(),
+        selected_at: acceptedAtIso,
         commission_percentage: commissionPercentage,
         commission_amount: commissionAmount,
         commission_status: "pending",
+        ...(adminOverride ? {} : {
+          customer_terms_accepted_at: acceptedAtIso,
+          customer_signature_name: trimmedSignature,
+          customer_terms_ip: clientIp,
+        }),
       })
       .eq("id", quoteId);
 
@@ -223,6 +237,55 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Commission calculated for quote ${quoteId}: ${commissionPercentage}% = €${commissionAmount.toFixed(2)}`);
+
+    // Log accepted terms snapshot per voorwaardenset (juridisch dossier).
+    // Alleen bij customer flow met deel-akkoord — admin override slaat dit over.
+    if (!adminOverride && request.linked_program_id) {
+      const partnerFull = quote.partner || {} as any;
+      const usesCustom = !!partnerFull.terms_pdf_path && partnerFull.uses_default_terms === false;
+      const partnerName = partnerFull.name || quote.accommodation_name;
+      const versionTag = acceptedAtIso;
+      const termsRows: Array<Record<string, unknown>> = [
+        {
+          request_id: request.linked_program_id,
+          partner_id: quote.partner_id,
+          partner_name: partnerName,
+          terms_type: "bureau_vlieland",
+          terms_version: versionTag,
+          terms_pdf_path: null,
+          accepted_at: acceptedAtIso,
+        },
+        {
+          request_id: request.linked_program_id,
+          partner_id: quote.partner_id,
+          partner_name: partnerName,
+          terms_type: usesCustom ? "partner_custom" : "partner_default",
+          terms_version: versionTag,
+          terms_pdf_path: usesCustom ? partnerFull.terms_pdf_path : null,
+          accepted_at: acceptedAtIso,
+        },
+      ];
+      if (!usesCustom) {
+        termsRows.push({
+          request_id: request.linked_program_id,
+          partner_id: quote.partner_id,
+          partner_name: partnerName,
+          terms_type: "uvh_2024",
+          terms_version: versionTag,
+          terms_pdf_path: null,
+          accepted_at: acceptedAtIso,
+        });
+      }
+      const { error: termsLogError } = await supabase
+        .from("accepted_terms_log")
+        .insert(termsRows);
+      if (termsLogError) {
+        console.error("Failed to log accepted terms:", termsLogError);
+        // Niet fataal: quote-selectie blijft geldig; admin ziet ontbreken in audit.
+      } else {
+        console.log(`Logged ${termsRows.length} terms acceptances for quote ${quoteId} by "${trimmedSignature}"`);
+      }
+    }
 
     // Reject other quotes for this request
     const { error: rejectError } = await supabase
