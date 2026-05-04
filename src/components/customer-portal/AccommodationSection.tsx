@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Pencil,
-  Mail,
   AlertTriangle,
   Info,
 } from "lucide-react";
