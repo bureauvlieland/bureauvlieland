@@ -14,7 +14,7 @@ interface UseAccommodationQuotesReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  selectQuote: (quoteId: string) => Promise<boolean>;
+  selectQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
   quotesSummary: QuotesSummary;
 }
 
