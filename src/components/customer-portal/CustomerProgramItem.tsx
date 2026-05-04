@@ -268,7 +268,7 @@ export const CustomerProgramItem = ({
 
           {/* Inline VAT breakdown */}
           {!isSelfArranged && vatRate !== undefined && (() => {
-            const total = getDisplayLineTotal(item, item.override_people ?? numberOfPeople ?? 1);
+            const total = getDisplayLineTotal(item, item.override_people ?? numberOfPeople ?? 1, Math.max(selectedDates?.length ?? 1, 1));
             if (total == null) return null;
             const exclVat = total / (1 + vatRate / 100);
             return (
