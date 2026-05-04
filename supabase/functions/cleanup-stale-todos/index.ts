@@ -215,7 +215,65 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 8. accommodation_selected but quote already selected
+    // 7b. Backfill send_items_to_partners for active projects that have items
+    // ready to send but no open todo yet (vangnet voor legacy + concept).
+    try {
+      const { data: activeProjects } = await supabase
+        .from("program_requests")
+        .select("id, customer_name, customer_company, quote_status")
+        .neq("status", "cancelled")
+        .is("cancelled_at", null);
+
+      let createdCount = 0;
+      for (const project of activeProjects || []) {
+        const { data: items } = await supabase
+          .from("program_request_items")
+          .select("status, skip_partner_notification, customer_approved_at, provider_id, day_index")
+          .eq("request_id", project.id);
+
+        if (!items?.length) continue;
+
+        const overallApproved =
+          project.quote_status === "akkoord_ontvangen" ||
+          project.quote_status === "definitief_bevestigd";
+
+        let ready = 0;
+        for (const it of items as any[]) {
+          if (it.status === "cancelled") continue;
+          if (it.day_index === -1 && it.provider_id === "bureau") continue;
+          if (it.skip_partner_notification === false) continue; // already sent
+          if (it.customer_approved_at || overallApproved) ready++;
+          else if (project.quote_status !== "offerte_verstuurd") ready++; // concept
+        }
+        if (ready === 0) continue;
+
+        const { data: existing } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "send_items_to_partners")
+          .eq("auto_entity_id", project.id)
+          .neq("status", "done")
+          .maybeSingle();
+        if (existing) continue;
+
+        const label = project.customer_company || project.customer_name;
+        await supabase.from("admin_todos").insert({
+          title: `Stuur onderdelen naar partners — ${label}`,
+          description: `${ready} ${ready === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar de betrokken partners te sturen.`,
+          priority: overallApproved ? "high" : "normal",
+          status: "todo",
+          related_request_id: project.id,
+          auto_type: "send_items_to_partners",
+          auto_entity_id: project.id,
+        });
+        createdCount++;
+      }
+      if (createdCount) {
+        (results as any).send_items_to_partners_created = createdCount;
+      }
+    } catch (err) {
+      console.error("Backfill send_items_to_partners failed", err);
+    }
     const { data: accomSelectedTodos } = await supabase
       .from("admin_todos")
       .select("id, auto_entity_id")
