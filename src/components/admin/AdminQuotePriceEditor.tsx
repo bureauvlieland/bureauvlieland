@@ -130,9 +130,8 @@ export const AdminQuotePriceEditor = ({
 
   // Label voor de leidende prijs:
   // - quoted_price IS het groepstotaal → "totaal"
-  // - admin_price_override is een eenheidsprijs (per_person/p.p.p.d.) of totaal
-  const leadingIsQuoted = !overrideIsLeading && hasQuotedPrice;
-  const displayLabel = leadingIsQuoted || overrideIsLeading ? "totaal" : priceTypeLabel;
+  // - admin_price_override toont altijd het uitgerekende groepstotaal (overrideTotal) → "totaal"
+  const displayLabel = "totaal";
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpen}>
