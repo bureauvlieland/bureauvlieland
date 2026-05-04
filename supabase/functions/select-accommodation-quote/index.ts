@@ -477,6 +477,13 @@ Deno.serve(async (req) => {
       const accommodationAddress = [partnerData.address_street, partnerData.address_postal, partnerData.address_city]
         .filter(Boolean).join(", ");
 
+      const termsAcceptedLine = (!adminOverride && trimmedSignature)
+        ? `U heeft op ${formatDateNL(acceptedAtIso)} digitaal akkoord gegeven op de bemiddelingsvoorwaarden van Bureau Vlieland en de voorwaarden van ${sanitizeHtml(quote.partner?.name || quote.accommodation_name)} (handtekening: ${sanitizeHtml(trimmedSignature)}). Vanaf dit moment zijn de annuleringsvoorwaarden van de logies van toepassing.`
+        : "";
+      const termsAcceptedBlock = termsAcceptedLine
+        ? `<div style="margin-top: 24px; padding: 16px; background-color: #fff7ed; border-left: 4px solid #f59e0b; border-radius: 4px;"><p style="margin: 0 0 8px 0;"><strong>Bevestiging voorwaarden</strong></p><p style="margin: 0; font-size: 14px; color: #1f2937;">${termsAcceptedLine}</p></div>`
+        : "";
+
       const customerTemplateVariables: Record<string, string> = {
         customer_name: sanitizeHtml(request.customer_name),
         accommodation_name: sanitizeHtml(quote.accommodation_name),
@@ -494,6 +501,11 @@ Deno.serve(async (req) => {
         accommodation_address: accommodationAddress || "",
         accommodation_phone: partnerData.booking_phone || partnerData.phone || "",
         partner_description: sanitizeHtml(partnerData.accommodation_description || partnerData.about_text || ""),
+        terms_accepted_at: !adminOverride ? formatDateNL(acceptedAtIso) : "",
+        terms_signature_name: !adminOverride ? sanitizeHtml(trimmedSignature) : "",
+        terms_partner_name: sanitizeHtml(quote.partner?.name || quote.accommodation_name),
+        terms_accepted_line: termsAcceptedLine,
+        terms_accepted_block: termsAcceptedBlock,
       };
 
       const customerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables);
