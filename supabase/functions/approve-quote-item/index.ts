@@ -206,6 +206,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           customer_approved_at: approvalTimestamp,
           customer_accepted_at: approvalTimestamp,
           updated_at: approvalTimestamp,
+          ...(isLateConceptItem ? { item_quote_status: "in_afstemming" } : {}),
         };
 
     const { error: updateError } = await supabase
