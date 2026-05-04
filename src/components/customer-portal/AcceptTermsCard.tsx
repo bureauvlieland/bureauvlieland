@@ -305,6 +305,17 @@ export const AcceptTermsCard = ({
               </ul>
             </div>
 
+            {lodgingPartialAcceptedAt && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-100/60 dark:bg-green-900/30 text-green-900 dark:text-green-100 text-sm">
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <p>
+                  De voorwaarden voor uw logies zijn al door u geaccepteerd op{" "}
+                  {new Date(lodgingPartialAcceptedAt).toLocaleDateString("nl-NL")}
+                  {lodgingSignatureName ? ` (${lodgingSignatureName})` : ""}. Met deze ondertekening bevestigt u uw volledige programma.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <Checkbox
