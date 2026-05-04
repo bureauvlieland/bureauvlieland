@@ -20,6 +20,8 @@ interface SelectQuoteRequest {
   token: string;
   quoteId: string;
   adminOverride?: boolean;
+  signatureName?: string;
+  acceptedTerms?: boolean;
 }
 
 Deno.serve(async (req) => {
