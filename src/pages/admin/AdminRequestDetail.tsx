@@ -1388,6 +1388,17 @@ const AdminRequestDetail = () => {
                       </div>
                     </div>
                   )}
+                  {selectedAccommodationQuote && !selectedAccommodationQuote.customer_terms_accepted_at && (
+                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Geen deel-akkoord vastgelegd (legacy)
+                      </div>
+                      <div className="mt-0.5 text-amber-800">
+                        Deze logies is geselecteerd vóór het deel-akkoord werd geïntroduceerd. Bevestig de voorwaarden bij het eindakkoord of vraag de klant het opnieuw te bevestigen.
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
