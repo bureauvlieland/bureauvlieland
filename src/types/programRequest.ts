@@ -90,6 +90,13 @@ export const itemQuoteStatusConfig: Record<ItemQuoteStatus, QuoteStatusInfo> = {
     icon: "FileEdit",
     description: "Nog niet bevestigd",
   },
+  offerte_verstuurd: {
+    label: "Offerte verstuurd",
+    color: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-950/50",
+    icon: "Send",
+    description: "Wacht op klant-akkoord",
+  },
   in_afstemming: {
     label: "In afstemming",
     color: "text-amber-700 dark:text-amber-400",
