@@ -1640,6 +1640,11 @@ const AdminRequestDetail = () => {
                                 const statusInfo = itemStatusConfig[item.status];
                                 const hasCustomerApproval = !!(item.customer_accepted_at || item.customer_approved_at);
                                 const showWaitingForCustomer = (item.status === "confirmed" || item.status === "alternative") && !item.skip_partner_notification && !hasCustomerApproval;
+                                const numDaysForItem = Array.isArray(request?.selected_dates) ? request!.selected_dates.length : 1;
+                                const priceChangeWaitingCustomer =
+                                  !item.customer_accepted_at &&
+                                  (item.status === "confirmed" || item.status === "alternative") &&
+                                  hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, numDaysForItem);
                                 return (
                                   <TableRow key={item.id} className="group">
                                     <TableCell>
