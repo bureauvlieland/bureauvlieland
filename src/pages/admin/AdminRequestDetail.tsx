@@ -74,6 +74,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+import { ensureSendItemsTodo } from "@/lib/sendItemsTodo";
 import { 
   itemStatusConfig, 
   type ItemStatus, 
