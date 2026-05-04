@@ -523,8 +523,15 @@ Deno.serve(async (req) => {
             <p style="margin-top: 24px;">
               <a href="${portalLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk je programma →</a>
             </p>
-            
-            <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+
+            ${!adminOverride ? `
+            <div style="margin-top: 24px; padding: 16px; background-color: #fff7ed; border-left: 4px solid #f59e0b; border-radius: 4px;">
+              <p style="margin: 0 0 8px 0;"><strong>Bevestiging voorwaarden</strong></p>
+              <p style="margin: 0; font-size: 14px; color: #1f2937;">U heeft op ${formatDateNL(acceptedAtIso)} digitaal akkoord gegeven op de bemiddelingsvoorwaarden van Bureau Vlieland en de voorwaarden van ${sanitizeHtml(quote.partner?.name || quote.accommodation_name)} (handtekening: <strong>${sanitizeHtml(trimmedSignature)}</strong>). Vanaf dit moment zijn de annuleringsvoorwaarden van de logies van toepassing.</p>
+            </div>
+            ` : ""}
+
+            <p style="margin-top: 24px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
             <p style="color: #666; font-size: 12px; margin-top: 40px;">
               Dit bericht is verzonden door Bureau Vlieland.
             </p>
