@@ -45,7 +45,7 @@ import {
   minutesToTime,
   type PartnerConflictItem 
 } from "@/lib/timeUtils";
-import { hasOpenAdminPriceChange as detectOpenAdminPriceChange } from "@/lib/portalPricing";
+import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
