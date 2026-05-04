@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import type { BuildingBlock } from "@/types/buildingBlock";
+import { getDisplayLineTotal, getNumberOfDays, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 
 
 interface ProgramRequest {
@@ -282,15 +283,11 @@ const AdminQuotePreview = () => {
     return item.admin_price_override ?? item.quoted_price ?? 0;
   };
 
-  /** Group total: quoted_price is already group total, admin_price_override needs multiplier */
+  /** Group total: single source of truth via portalPricing.getDisplayLineTotal */
   const getItemTotal = (item: ProgramItem) => {
-    if (item.quoted_price != null) return item.quoted_price;
-    const unit = item.admin_price_override ?? 0;
-    const effectivePeople = item.override_people ?? request?.number_of_people ?? 1;
-    const isPerPerson = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
-    const personMult = isPerPerson ? effectivePeople : 1;
-    const dayMult = item.price_type === "per_person_per_day" ? (request?.selected_dates?.length || 1) : 1;
-    return unit * personMult * dayMult;
+    const people = item.override_people ?? request?.number_of_people ?? 1;
+    const days = getNumberOfDays(request?.selected_dates);
+    return getDisplayLineTotal(item as any, people, days) ?? 0;
   };
 
 
@@ -751,10 +748,8 @@ const AdminQuotePreview = () => {
                                         <span className="text-xs text-gray-400 italic">Op aanvraag</span>
                                       ) : (
                                         <>
-                                          {formatCurrency(getItemPrice(item))}
-                                          <span className="text-xs text-gray-400 ml-1">
-                                            {item.price_type === 'per_person_per_day' ? 'p.p.p.d.' : item.price_type === 'per_person' ? 'p.p.' : 'totaal'}
-                                          </span>
+                                          {formatCurrency(getDisplayLineTotal(item as any, item.override_people ?? request.number_of_people ?? 1, getNumberOfDays(request.selected_dates)) ?? 0)}
+                                          <span className="text-xs text-gray-400 ml-1">totaal</span>
                                         </>
                                       )}
                                     </td>

@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { categoryLabels } from "@/types/buildingBlock";
+import { getDisplayLineTotal, getNumberOfDays } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
@@ -307,15 +308,9 @@ const AdminInvoicePreview = () => {
     item.admin_price_override ?? item.quoted_price ?? 0;
 
   const getItemTotal = (item: ProgramItem) => {
-    // quoted_price = already a group total, never multiply
-    if (item.quoted_price != null) return item.quoted_price;
-    // admin_price_override = unit price, multiply for per_person
-    const unitPrice = item.admin_price_override ?? 0;
-    const effectivePeople = item.override_people ?? request?.number_of_people ?? 1;
-    const isPerPerson = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
-    const personMult = isPerPerson ? effectivePeople : 1;
-    const dayMult = item.price_type === "per_person_per_day" ? (request?.selected_dates?.length || 1) : 1;
-    return unitPrice * personMult * dayMult;
+    const people = item.override_people ?? request?.number_of_people ?? 1;
+    const days = getNumberOfDays(request?.selected_dates);
+    return getDisplayLineTotal(item as any, people, days) ?? 0;
   };
 
   const getExtraTotal = (extra: AccommodationExtraData) => {
