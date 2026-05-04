@@ -367,7 +367,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       })
       .eq("request_id", program.id)
       .neq("status", "cancelled")
-      .in("item_quote_status", ["concept", "in_afstemming"]);
+      .in("item_quote_status", ["concept", "offerte_verstuurd", "in_afstemming"]);
 
     if (updateQuoteStatusError) {
       console.error("Error updating item quote statuses:", updateQuoteStatusError);
