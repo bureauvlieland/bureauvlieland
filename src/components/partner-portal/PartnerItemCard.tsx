@@ -184,7 +184,7 @@ export const PartnerItemCard = ({
         {/* Open price change banner — admin changed price after partner already confirmed */}
         {item.admin_price_override !== null && item.admin_price_override !== undefined && item.quoted_price && item.admin_price_override_updated_at && (() => {
           const effPeople = item.override_people ?? request?.number_of_people ?? 1;
-          const numDays = Array.isArray(request?.selected_dates) ? request.selected_dates.length : 1;
+          const numDays = getNumberOfDays(request?.selected_dates);
           if (!detectOpenAdminPriceChange(item as any, effPeople, numDays)) return null;
           return (
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-sm">
