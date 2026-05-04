@@ -124,6 +124,11 @@ export function hasOpenAdminPriceChange(
 ): boolean {
   if (item.admin_price_override == null || !item.admin_price_override_updated_at) return false;
   const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
+
+  // Geen eerder ack-moment EN geen eerdere quoted_price om tegen af te zetten:
+  // dit is per definitie de eerste prijsstelling door admin, geen wijziging.
+  if (!ack && item.quoted_price == null) return false;
+
   const timestampOpen = !ack
     ? true
     : new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime();

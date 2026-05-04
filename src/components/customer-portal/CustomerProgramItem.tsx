@@ -89,6 +89,7 @@ export const CustomerProgramItem = ({
   const priceChangeNeedsAttention =
     !isSelfArranged
     && !item.customer_accepted_at
+    && (item.status === "confirmed" || item.status === "alternative")
     && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
 
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is

@@ -1,109 +1,66 @@
-## Audit programma BV-2602-0004 (4Dotnet — Jeannette van Spil)
+## Fix: foutieve "Prijs gewijzigd" / "Geef opnieuw uw akkoord" banner
 
-### 1. Huidige database-staat
+### Wat de klant ziet
+Bij de Zeehondentocht in BV-2602-0004 staat een amber waarschuwing:
+> ⚠️ Prijs gewijzigd
+> ⚠️ De prijs van dit onderdeel is door Bureau Vlieland aangepast. Geef opnieuw uw akkoord op de nieuwe prijs.
 
-**Programma**
+### Wat er werkelijk aan de hand is (database)
+Voor beide Zeehondentocht-items van BV-2602-0004:
+- `admin_price_override = 32.50`, `admin_price_override_updated_at = 01-04-2026` (initiële prijs)
+- `quoted_price = NULL`, `quoted_at = NULL` (er is **nooit** een eerdere prijs geweest)
+- `partner_price_change_acknowledged_at = NULL`
+- `customer_approved_at = NULL`, `customer_accepted_at = NULL`
+- `status = pending`, `skip_partner_notification = true` (nog niet eens naar partner gestuurd)
 
-- `quote_status`: `offerte_verstuurd` (offerte 3x naar klant verstuurd, laatste 01-04-2026)
-- `status`: `active`, `completion_status`: `in_progress`
-- `terms_accepted_at`: NULL (nog geen voorwaarden geaccepteerd — klopt: klant heeft nog niet getekend)
-- 60 personen, 25-27 september 2026, `bureau_central`
+Dit is dus **de eerste prijs** voor dit onderdeel — geen wijziging.
 
-**Items (11 stuks, allemaal day_index ≥ 0)**
+### Bug (twee samenhangende oorzaken)
 
-- Alle items: `status = pending`, `item_quote_status = in_afstemming`, `customer_approved_at = NULL`
-- Géén bureau-extras (day_index = -1)
-- `skip_partner_notification`:
-  - `false` (3 items, dus al "verstuurd"-flag): Overtocht heen, Vrije tijd, Overtocht terug — allemaal `provider_id = bureau` (interne ferry/dummy items)
-  - `true` (8 items): alle echte partneractiviteiten (Zuiver, Vlieland Outdoor Center, Zeehondentocht, Vliehors Expres, Grillmaster) → nog NIET naar partners gestuurd
-
-### 2. Geconstateerde problemen met meldingen
-
-**Probleem 1 — "Aanvraag wordt beoordeeld / verstuurd naar aanbieders"**  
-In `ActionRequiredCard.tsx` is logica:
-
+**1. `hasOpenAdminPriceChange()` in `src/lib/portalPricing.ts`** geeft een false-positive:
+```ts
+const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;  // null
+const timestampOpen = !ack ? true : ...;                                  // → true
+// daarna: bedragvergelijking wordt overgeslagen want quoted_price = null
+return true;
 ```
-if (statusSummary.pending > 0 && !isQuotePreApproval) { ... }
+De functie behandelt elke initiële admin-prijs als een "wijziging", ook als er nooit een vorige prijs was om tegen af te zetten en de partner het ook nog nooit heeft gezien.
+
+**2. `CustomerProgramItem.tsx` toont badge + amber banner los van item-status.** De banner staat los van `needsCustomerAction` (die wel filtert op `status confirmed/alternative`), dus ook bij `pending` items waar de klant geen akkoord-knop heeft, krijgt hij toch de amber waarschuwing — een melding zonder bijbehorende actie.
+
+### Voorgestelde fix
+
+**A. `src/lib/portalPricing.ts` — `hasOpenAdminPriceChange`**
+
+Voeg vroege exit toe: als er géén ack-moment is (`partner_price_change_acknowledged_at` én `quoted_at` zijn beide NULL) **én** geen `quoted_price` om tegen af te zetten, dan is dit per definitie een initiële prijsstelling, geen wijziging:
+
+```ts
+if (!ack && item.quoted_price == null) return false;
 ```
 
-`isQuotePreApproval = quote_status ∈ ['concept','in_afstemming','offerte_verstuurd']` → hier `true`, dus correct geen "verstuurd naar aanbieders"-melding op klantportaal. ✓
+Effect: voor onze Zeehondentocht (en alle items die nog nooit door een partner gequoteerd zijn) verdwijnt de "Prijs gewijzigd"-status. Zodra de partner ooit `quoted_price` invult of `quoted_at` zet, gaat de normale logica weer aan: een latere admin-aanpassing die afwijkt van die quote toont alsnog de banner.
 
-Maar elders (admin / `RequestCompletionStatus`) wordt geteld:
+**B. (Optioneel, defensief) `CustomerProgramItem.tsx`**
 
-- `nonCancelledItems = items.filter(i => i.status !== 'cancelled')` → 11
-- `confirmedItems = ... status === 'confirmed'` → 0
-- Resultaat: **"Partners bevestigd (0/11)"** — dat klopt feitelijk maar is misleidend, want de offerte is nog niet door de klant geaccepteerd, dus aanvragen staan nog niet bij partners uit. Het lijkt nu of partners niets doen, terwijl we wachten op de klant.
+Banner & badge alleen tonen wanneer item-status ook akkoord-actie toelaat:
+```ts
+const priceChangeNeedsAttention =
+  !isSelfArranged
+  && !item.customer_accepted_at
+  && (item.status === "confirmed" || item.status === "alternative")
+  && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
+```
+Zo voorkomen we dat een toekomstige edge-case alsnog een waarschuwing zonder akkoord-knop toont op `pending` items.
 
-**Probleem 2 — `item_quote_status = in_afstemming` op alle items**  
-Volgens de Quote Delivery memory transitioneert dit naar `in_afstemming` zodra offerte gegenereerd wordt. Echter:
+### Bestanden
 
-- 3 ferry/bureau items hebben `skip_partner_notification = false` — alsof ze al "verstuurd" zijn
-- 8 partner-items hebben `skip_partner_notification = true` — nog niet verstuurd
+- `src/lib/portalPricing.ts` — vroege return in `hasOpenAdminPriceChange`
+- `src/components/customer-portal/CustomerProgramItem.tsx` — extra status-filter op `priceChangeNeedsAttention`
 
-Dit is correct (interne items hoeven nooit verstuurd), maar de UI leest `skip_partner_notification = false` ook voor bureau-items als "verstuurd" → in `getItemSendPhase()` (projectWorkflow.ts) komt dit in de `verstuurd`-bucket, terwijl er geen partner is om naar te versturen.
+### Side-effects / regressie-check
 
-**Probleem 3 — Offerte 3x verstuurd, geen reactie**  
-Email log toont:
+- `getDisplayUnitPrice` blijft ongewijzigd: admin override blijft de getoonde prijs.
+- Andere portals (admin, partner) gebruiken dezelfde helper. Voor partner-portal betekent dit dat een initiële admin-prijs op een nog niet gequoteerd item geen "prijs gewijzigd" badge meer geeft — dat is gewenst gedrag (partner heeft niets gewijzigd).
+- Items waar de partner ooit een `quoted_price` had en admin daarna corrigeert, blijven gewoon de banner tonen.
 
-- 16-02 → klant
-- 17-02 → testmails
-- 17-02 → [neefje@gmail.com](mailto:neefje@gmail.com) (ander adres?)
-- 01-04 → klant (laatste)
-
-`quote_status` staat nog op `offerte_verstuurd` sinds 01-04-2026 (>30 dagen). Géén herinnering verstuurd in `email_log` te zien. Volgens de Reminder System memory zou er na 5 dagen een herinnering moeten komen. **Mogelijk werkt de quote-reminder hier niet.**
-
-**Probleem 4 — Status van bureau ferry-items**  
-De drie ferry/vrije-tijd items met `provider_id = bureau` en `skip_partner_notification = false` staan op `pending` + `item_quote_status = in_afstemming`. Bureau-items hoeven nooit door een partner bevestigd te worden. In de meldingenlogica zouden deze automatisch op `confirmed` moeten staan zodra de offerte uitgaat (of in elk geval niet als "openstaand bij partner" geteld worden).
-
-### 3. Concreet wat NIET klopt aan de meldingen
-
-
-| Melding                              | Werkelijkheid                                                | Probleem                                                  |
-| ------------------------------------ | ------------------------------------------------------------ | --------------------------------------------------------- |
-| "Partners bevestigd (0/11)" in admin | Wacht op klant-akkoord, partners zijn nog niet aangeschreven | Misleidend: noemer telt items die nog niet verstuurd zijn |
-| Geen reminder uitgestuurd            | Offerte staat 33+ dagen open                                 | Reminder-systeem lijkt niet te draaien voor deze offerte  |
-| Bureau-ferry items als "openstaand"  | Bureau regelt zelf                                           | Zouden niet in de partnerteller moeten zitten             |
-
-
-### 4. Voorgesteld plan voor fix
-
-**A. Fix telling in `RequestCompletionStatus.tsx**` (admin-zijde)
-
-- Sluit items met `provider_id = 'bureau'` of `skip_partner_notification = true` uit van de partnerteller wanneer er nog geen klant-akkoord is. 
-- Tel `executed` mee als bevestigd (was vorige audit BV-0006).
-- Toon expliciet sub-status: "Wacht op klant-akkoord (offerte verstuurd N dagen geleden)" wanneer `quote_status = offerte_verstuurd` en alle items nog `pending`.
-
-**B. Fix `getItemSendPhase()` in `projectWorkflow.ts**`
-
-- Bureau-items met `provider_id = 'bureau'` (ongeacht day_index) moeten `niet_van_toepassing` of `verstuurd` retourneren — niet `verstuurd` als ze nog `pending` zijn want dat suggereert dat een externe partner moet reageren.
-
-**C. Onderzoeken reminder-flow**
-
-- Verifiëren waarom voor BV-0004 geen `quote_reminder_customer` mail in `email_log` staat sinds 01-04. Mogelijk:
-  - cron job `send-quote-reminders` faalt
-  - `last_reminder_sent_at` veld ontbreekt of wordt niet bijgewerkt
-  - Filter sluit deze offerte uit
-- Eerst edge function logs van `send-quote-reminders` (of vergelijkbaar) bekijken voordat we wijzigen.
-
-**D. Meldingen-UI op admin-projectpagina**
-
-- Voeg expliciete contextregel toe: "Offerte verstuurd op DD-MM, X dagen geleden, geen reactie" met knop "Stuur herinnering nu".
-
-### 5. Bestanden die mogelijk wijzigen
-
-- `src/components/admin/RequestCompletionStatus.tsx` — interface uitbreiden met `provider_id` + `skip_partner_notification`, telling aanpassen
-- `src/pages/admin/AdminRequestDetail.tsx` — items met meer velden doorgeven, eventuele extra "wacht op klant"-banner
-- `src/lib/projectWorkflow.ts` — `getItemSendPhase` voor bureau-items
-- `supabase/functions/send-quote-reminders/` (of gelijke naam) — reminder-bug onderzoeken
-
-### Vraag
-
-Twee dingen graag bevestigen voordat ik doorzet:
-
-1. **Scope**: Wil je dat ik beide aanpak (UI-tellingen + reminder-onderzoek), of alleen de UI-meldingen voor nu? 
-
-Ui meldingen alleen. 
-
-1. **Bureau ferry-items** (Overtocht heen/terug, Vrije tijd): mogen die in de meldingen-telling als "automatisch geregeld" weergegeven worden (groen vinkje) zodra de offerte uitstaat, of alleen als de klant heeft getekend?
-
-Als de klant heeft getekend.
+Mag ik deze twee aanpassingen doorvoeren?
