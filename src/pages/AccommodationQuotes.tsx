@@ -79,11 +79,11 @@ export default function AccommodationQuotes() {
     setIsRefreshing(false);
   };
 
-  const handleSelectQuote = async () => {
+  const handleSelectQuote = async (signatureName: string, acceptedTerms: boolean) => {
     if (!selectedQuoteForConfirm) return;
 
     setIsSelecting(true);
-    const success = await selectQuote(selectedQuoteForConfirm.id);
+    const success = await selectQuote(selectedQuoteForConfirm.id, signatureName, acceptedTerms);
     setIsSelecting(false);
 
     if (success) {
