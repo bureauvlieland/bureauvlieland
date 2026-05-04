@@ -283,15 +283,11 @@ const AdminQuotePreview = () => {
     return item.admin_price_override ?? item.quoted_price ?? 0;
   };
 
-  /** Group total: quoted_price is already group total, admin_price_override needs multiplier */
+  /** Group total: single source of truth via portalPricing.getDisplayLineTotal */
   const getItemTotal = (item: ProgramItem) => {
-    if (item.quoted_price != null) return item.quoted_price;
-    const unit = item.admin_price_override ?? 0;
-    const effectivePeople = item.override_people ?? request?.number_of_people ?? 1;
-    const isPerPerson = !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
-    const personMult = isPerPerson ? effectivePeople : 1;
-    const dayMult = item.price_type === "per_person_per_day" ? (request?.selected_dates?.length || 1) : 1;
-    return unit * personMult * dayMult;
+    const people = item.override_people ?? request?.number_of_people ?? 1;
+    const days = getNumberOfDays(request?.selected_dates);
+    return getDisplayLineTotal(item as any, people, days) ?? 0;
   };
 
 
