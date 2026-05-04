@@ -1761,42 +1761,13 @@ const AdminRequestDetail = () => {
                                     {isQuoteMode ? (
                                       <>
                                         <TableCell>
-                                          <div className="flex items-center gap-1.5">
-                                            <AdminItemQuoteStatusSelect
-                                              status={item.item_quote_status}
-                                              onStatusChange={(newStatus) => handleItemQuoteStatusChange(item.id, newStatus)}
-                                            />
-                                            {hasCustomerApproval && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Klant akkoord</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            {showWaitingForCustomer && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <Clock className="h-4 w-4 text-amber-500 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Wacht op klant</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            {priceChangeWaitingCustomer && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Wacht op klantakkoord nieuwe prijs</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                          </div>
+                                          <ItemDisplayStatusBadge
+                                            audience="admin"
+                                            status={deriveItemDisplayStatus(item, {
+                                              programPeople: request.number_of_people,
+                                              numberOfDays: numDaysForItem,
+                                            })}
+                                          />
                                         </TableCell>
                                         <TableCell>
                                           <input
