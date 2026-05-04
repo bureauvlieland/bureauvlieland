@@ -233,6 +233,18 @@ export const AdminQuotePriceEditor = ({
             )}
           </div>
 
+          {mismatch && overrideTotal !== null && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <strong>Inconsistente prijs.</strong> De partner heeft {formatPrice(originalPrice)} bevestigd,
+                maar de berekening ({formatPrice(overridePrice)}
+                {priceType === "per_person_per_day" ? ` × ${numberOfPeople}p × ${numberOfDays}d` : ` × ${numberOfPeople}p`})
+                = {formatPrice(overrideTotal)}. Pas de prijs of het type aan om dit gelijk te trekken.
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="price-type">Prijsconfiguratie</Label>
             <Select value={editPriceType} onValueChange={(v) => setEditPriceType(v as "per_person" | "per_person_per_day" | "total")}>
