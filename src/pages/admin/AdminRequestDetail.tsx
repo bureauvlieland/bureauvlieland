@@ -2160,6 +2160,7 @@ const AdminRequestDetail = () => {
                   termsAcceptedAt={request.terms_accepted_at}
                   items={items}
                   outstandingAmount={calculateOutstandingAmount()}
+                  quoteStatus={request.quote_status}
                 />
                 <FinancialOverviewCard
                   requestId={request.id}
