@@ -34,7 +34,18 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token, quoteId, adminOverride }: SelectQuoteRequest = await req.json();
+    const { token, quoteId, adminOverride, signatureName, acceptedTerms }: SelectQuoteRequest = await req.json();
+
+    // Customer flow vereist deel-akkoord op voorwaarden bij selectie (juridisch ankerpunt logies)
+    if (!adminOverride) {
+      const trimmedSig = (signatureName || "").trim();
+      if (!acceptedTerms || trimmedSig.length < 2) {
+        return new Response(
+          JSON.stringify({ error: "Akkoord op voorwaarden en digitale handtekening zijn verplicht." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Admin override: validate auth
     if (adminOverride) {
