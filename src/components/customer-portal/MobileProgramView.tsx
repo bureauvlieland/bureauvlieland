@@ -258,6 +258,7 @@ export const MobileProgramView = ({
             hasUnapprovedItems={hasUnapprovedItems}
             programPublishedAt={program.program_published_at}
             allConfirmed={allConfirmed}
+            quotePdfUrl={(program as any).quote_pdf_url}
           />
         </>
       )}

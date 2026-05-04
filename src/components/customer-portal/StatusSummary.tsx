@@ -94,29 +94,47 @@ export const StatusSummary = ({
             </div>
           )}
 
-          {/* Programma */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-0.5">Programma</p>
-            <StatusItem
-              icon={activitiesConfirmed 
-                ? <CheckCircle className="h-4 w-4 text-green-600" />
+          {/* Programma — labels passen zich aan op fase */}
+          {(() => {
+            const isAwaitingCustomerApproval =
+              quoteStatus === "offerte_verstuurd" &&
+              customerApprovedCount < customerApprovableCount;
+
+            const programIcon = activitiesConfirmed
+              ? <CheckCircle className="h-4 w-4 text-green-600" />
+              : isAwaitingCustomerApproval
+                ? <Clock className="h-4 w-4 text-primary" />
                 : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus))
                   ? <Clock className="h-4 w-4 text-muted-foreground" />
-                  : alternative > 0 
+                  : alternative > 0
                     ? <AlertCircle className="h-4 w-4 text-amber-500" />
-                    : <Clock className="h-4 w-4 text-amber-500" />
-              }
-              label={activitiesConfirmed
-                ? `Bevestigd (${total}/${total})`
+                    : <Clock className="h-4 w-4 text-amber-500" />;
+
+            const programLabel = activitiesConfirmed
+              ? `Bevestigd (${total}/${total})`
+              : isAwaitingCustomerApproval
+                ? `Wachten op uw akkoord (${total} onderdelen)`
                 : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus))
                   ? `In voorbereiding (${total} onderdelen)`
                   : alternative > 0
                     ? `Alternatief bekijken (${confirmed}/${total})`
-                    : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`
-              }
-              color={activitiesConfirmed ? "green" : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus)) ? "muted" : "amber"}
-            />
-          </div>
+                    : `Wachten op aanbieders (${confirmed}/${total} bevestigd)`;
+
+            const programColor: "green" | "amber" | "muted" = activitiesConfirmed
+              ? "green"
+              : isAwaitingCustomerApproval
+                ? "muted"
+                : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus))
+                  ? "muted"
+                  : "amber";
+
+            return (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-0.5">Programma</p>
+                <StatusItem icon={programIcon} label={programLabel} color={programColor} />
+              </div>
+            );
+          })()}
 
           {/* Klant akkoord — alleen tonen bij offerte_verstuurd of akkoord_ontvangen */}
           {customerApprovableCount > 0 && quoteStatus && ["offerte_verstuurd", "akkoord_ontvangen"].includes(quoteStatus) && (
@@ -128,8 +146,10 @@ export const StatusSummary = ({
                   : <Circle className="h-4 w-4 text-muted-foreground" />
                 }
                 label={customerApprovedCount >= customerApprovableCount
-                  ? `Alle onderdelen geaccordeerd`
-                  : `${customerApprovedCount} van ${customerApprovableCount} geaccordeerd`
+                  ? quoteStatus === "offerte_verstuurd" ? "Voorstel akkoord" : "Alle onderdelen geaccordeerd"
+                  : quoteStatus === "offerte_verstuurd"
+                    ? "Voorstel beoordelen"
+                    : `${customerApprovedCount} van ${customerApprovableCount} geaccordeerd`
                 }
                 color={customerApprovedCount >= customerApprovableCount ? "green" : "muted"}
               />
