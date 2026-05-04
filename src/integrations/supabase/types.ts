@@ -2332,6 +2332,7 @@ export type Database = {
       project_communications: {
         Row: {
           accommodation_id: string | null
+          audience: string
           communication_date: string | null
           communication_type: string
           contact_email: string | null
@@ -2349,6 +2350,7 @@ export type Database = {
         }
         Insert: {
           accommodation_id?: string | null
+          audience?: string
           communication_date?: string | null
           communication_type?: string
           contact_email?: string | null
@@ -2366,6 +2368,7 @@ export type Database = {
         }
         Update: {
           accommodation_id?: string | null
+          audience?: string
           communication_date?: string | null
           communication_type?: string
           contact_email?: string | null
