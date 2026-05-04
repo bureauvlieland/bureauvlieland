@@ -22,6 +22,8 @@ interface AccommodationQuote {
   id: string;
   partner_id: string;
   status: string;
+  customer_terms_accepted_at?: string | null;
+  customer_signature_name?: string | null;
 }
 
 interface AcceptTermsCardProps {
@@ -170,6 +172,10 @@ export const AcceptTermsCard = ({
   
   const showUvhTerms = hasCateringItems || accommodationUsesDefaultTerms;
 
+  // Deel-akkoord op logies-voorwaarden (juridisch ankerpunt op moment van selectie)
+  const lodgingPartialAcceptedAt = selectedQuote?.customer_terms_accepted_at || null;
+  const lodgingSignatureName = selectedQuote?.customer_signature_name || null;
+
   return (
     <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
       <CardContent className="p-6">
@@ -298,6 +304,17 @@ export const AcceptTermsCard = ({
                 })()}
               </ul>
             </div>
+
+            {lodgingPartialAcceptedAt && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-100/60 dark:bg-green-900/30 text-green-900 dark:text-green-100 text-sm">
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <p>
+                  De voorwaarden voor uw logies zijn al door u geaccepteerd op{" "}
+                  {new Date(lodgingPartialAcceptedAt).toLocaleDateString("nl-NL")}
+                  {lodgingSignatureName ? ` (${lodgingSignatureName})` : ""}. Met deze ondertekening bevestigt u uw volledige programma.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="flex items-start gap-3">

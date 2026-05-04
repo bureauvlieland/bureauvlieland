@@ -14,7 +14,7 @@ interface UseAccommodationQuotesReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  selectQuote: (quoteId: string) => Promise<boolean>;
+  selectQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
   quotesSummary: QuotesSummary;
 }
 
@@ -146,12 +146,12 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
     fetchData();
   }, [fetchData]);
 
-  const selectQuote = async (quoteId: string): Promise<boolean> => {
+  const selectQuote = async (quoteId: string, signatureName: string, acceptedTerms: boolean): Promise<boolean> => {
     if (!token) return false;
 
     try {
       const response = await supabase.functions.invoke('select-accommodation-quote', {
-        body: { token, quoteId },
+        body: { token, quoteId, signatureName, acceptedTerms },
       });
 
       if (response.error) {

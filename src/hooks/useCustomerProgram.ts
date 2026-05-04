@@ -236,6 +236,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
               submitted_at: q.submitted_at,
               selected_at: q.selected_at,
               partner_notes: q.partner_notes,
+              customer_terms_accepted_at: q.customer_terms_accepted_at,
+              customer_signature_name: q.customer_signature_name,
               quote_attachment_path: q.quote_attachment_path,
               quote_attachment_filename: q.quote_attachment_filename,
               quote_external_url: q.quote_external_url,

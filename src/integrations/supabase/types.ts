@@ -201,6 +201,9 @@ export type Database = {
           commission_status: string | null
           conditions: string | null
           created_at: string
+          customer_signature_name: string | null
+          customer_terms_accepted_at: string | null
+          customer_terms_ip: string | null
           description: string | null
           deviation_reason: string | null
           forwarded_at: string | null
@@ -243,6 +246,9 @@ export type Database = {
           commission_status?: string | null
           conditions?: string | null
           created_at?: string
+          customer_signature_name?: string | null
+          customer_terms_accepted_at?: string | null
+          customer_terms_ip?: string | null
           description?: string | null
           deviation_reason?: string | null
           forwarded_at?: string | null
@@ -285,6 +291,9 @@ export type Database = {
           commission_status?: string | null
           conditions?: string | null
           created_at?: string
+          customer_signature_name?: string | null
+          customer_terms_accepted_at?: string | null
+          customer_terms_ip?: string | null
           description?: string | null
           deviation_reason?: string | null
           forwarded_at?: string | null
