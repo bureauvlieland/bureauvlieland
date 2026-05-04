@@ -17,6 +17,7 @@ export type QuoteStatus =
 // Item quote status for individual building blocks in quote mode
 export type ItemQuoteStatus =
   | "concept"
+  | "offerte_verstuurd"
   | "in_afstemming"
   | "bevestigd"
   | "optioneel";
