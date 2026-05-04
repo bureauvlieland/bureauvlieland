@@ -172,7 +172,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 5. Validate item state
-    if (!["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(item.item_quote_status || "")) {
+    // Items in 'concept' kunnen ook geaccordeerd worden als het programma al akkoord/bevestigd is
+    // (bijv. bij later toegevoegde ferry/bike items na hoofdakkoord).
+    const allowedItemStatuses = ["offerte_verstuurd", "in_afstemming", "bevestigd"];
+    const programIsAccepted = ["akkoord_ontvangen", "definitief_bevestigd"].includes(program.quote_status);
+    const isLateConceptItem = programIsAccepted && item.item_quote_status === "concept";
+    if (!allowedItemStatuses.includes(item.item_quote_status || "") && !isLateConceptItem) {
       return new Response(
         JSON.stringify({ error: "Dit onderdeel kan nog niet geaccordeerd worden" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
