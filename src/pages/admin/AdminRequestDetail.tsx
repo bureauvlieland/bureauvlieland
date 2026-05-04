@@ -1374,6 +1374,20 @@ const AdminRequestDetail = () => {
                       </Link>
                     </Button>
                   </div>
+                  {selectedAccommodationQuote?.customer_terms_accepted_at && (
+                    <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Deel-akkoord vastgelegd
+                      </div>
+                      <div className="mt-0.5 text-emerald-800">
+                        {format(new Date(selectedAccommodationQuote.customer_terms_accepted_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
+                        {selectedAccommodationQuote.customer_signature_name && (
+                          <> · ondertekend door <span className="font-medium">{selectedAccommodationQuote.customer_signature_name}</span></>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
