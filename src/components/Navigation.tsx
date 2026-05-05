@@ -89,8 +89,10 @@ export const Navigation = () => {
         />
       </button>
       {openDropdown === key && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-card border border-border rounded-lg shadow-lg z-50">
-          <Content onNavigate={() => setOpenDropdown(null)} />
+        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="bg-card border border-border rounded-lg shadow-2xl ring-1 ring-black/5 overflow-hidden">
+            <Content onNavigate={() => setOpenDropdown(null)} />
+          </div>
         </div>
       )}
     </div>
