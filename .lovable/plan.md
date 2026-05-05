@@ -1,135 +1,41 @@
 ## Doel
 
-Hoofdnavigatie inrichten op conversie (naar offerte/programma samenstellen), terminologie consistent maken, en zorgen dat élke publieke pagina ergens vindbaar is — in nav, footer, of via een nieuwe sitemap-pagina.
+Op `/activiteiten-boeken`:
+1. Activiteiten met dezelfde naam + dezelfde aanbieder + dezelfde dag bundelen tot één kaart, met alle vertrektijden in één rij.
+2. De "Boeken"-knop opent niet langer de interne `MapBookingDialog`, maar stuurt de bezoeker direct door naar de boekingspagina van die activiteit op MijnActiviteitenPlanner (de "aanbieder eigen" pagina).
 
-## 1. Inventarisatie publieke pagina's
+## Wijzigingen
 
-**In huidige nav/footer aanwezig:** `/`, `/logies-vlieland`, `/voorbeeldprogrammas`, `/bouwstenen`, `/partners`, `/over-ons`, `/contact`, `/samenwerken`, `/catering`, `/evenementen`, `/programma-samenstellen`, `/algemene-voorwaarden`, alle B2B/B2C-landings (`/bedrijfsuitje-vlieland`, `/teamuitje-vlieland`, `/meerdaags-bedrijfsuitje-vlieland`, `/heisessie-vlieland`, `/zakelijk-evenement-vlieland`, `/incentive-reis-vlieland`, `/trouwen-op-vlieland`, `/groepsweekend-vlieland`, `/jubileum-vlieland`, `/familieweekend-vlieland`).
+### 1. `src/pages/ActiviteitenBoeken.tsx` — bundeling
 
-**Nu nergens gelinkt (gaten):**
+In de `grouped`-memo activiteiten per dag verder groeperen op `ActivityTypeId + _partnerId`. Per groep:
+- alle `Departure`-tijden verzamelen (gesorteerd, uniek)
+- gecombineerde `RemainingSlots` (som)
+- representatieve activiteit voor titel/prijs/afbeelding/aanbieder
+- lijst van `{ id, time, slotsLeft }` voor de tijdblokken
 
-- `/diensten` — staat in sitemap.xml, maar geen nav-link
-- `/voor-wie` — alleen in sitemap.xml
-- `/bedrijfsuitje-ideeen-vlieland` — alleen in sitemap.xml
-- `/programmamodules` — duplicaat-route van Voorbeeldprogrammas
-- `/activiteiten-boeken` — geen link
-- `/logies-aanvragen` — alleen vanuit logies-flow
-- `/offerte` — geen link
-- `/binnenkort` — coming-soon, prima zo
+De map ziet er dan uit als `Map<dateKey, Map<groupKey, BundledActivity>>`.
 
-**Routes om op te ruimen (in App.tsx):** `/programmamodules` opheffen of redirecten naar `/voorbeeldprogrammas` (duplicaat). `/diensten` houden voor SEO maar als secundair.
+### 2. `src/components/map/MapActivityCard.tsx` — tijden tonen + directe link
 
-## 2. Nieuwe hoofdnavigatie (conversiegericht)
+- Prop uitbreiden met optionele `times?: { id: number; time: string; slotsLeft: number }[]`.
+- Wanneer `times` aanwezig is en >1: de single `Clock`-regel vervangen door een rij badges/chips met alle tijden (bijv. `09:30`, `11:00`, `14:30`), elke chip toont aantal plekken via tooltip/title.
+- Boekingsknop wordt een `<a>` (Button met `asChild`) naar:
+  ```
+  https://boeking.mijnactiviteitenplanner.nl/{partnerSlug}/{activityTypeSlug}/list
+  ```
+  met `target="_blank" rel="noopener"`.
+  - `activityTypeSlug` = slugify(`ActivityTypeName`) (lowercase, diakrieten weg, spaties → `-`, niet-alfanumeriek weg). Dit komt overeen met het gebruikte patroon in `src/pages/Evenementen.tsx` (`/activiteiten-vlieland/bockbiertocht/list`).
+  - Fallback wanneer slug onbekend: `https://boeking.mijnactiviteitenplanner.nl/{partnerSlug}`.
 
-```text
-[Logo]   Programma's ▾   Logies   Inspiratie ▾   Over ons   [📞 0562 700 208]   [▶ Stel uw programma samen]
-```
+### 3. `MapBookingDialog` afkoppelen op deze pagina
 
-**Programma's (mega-dropdown, 2 kolommen):**
+`bookingActivity`-state, `onBook`-handler en `<MapBookingDialog />` uit `ActiviteitenBoeken.tsx` verwijderen — boeken gaat nu volledig via externe link. Component zelf blijft bestaan voor andere gebruikers (bv. partner-detailpagina).
 
-- Kolom "Begin hier" (grote knoppen):
-  - Stel zelf samen → `/programma-samenstellen`
-  - Kies een voorbeeldprogramma → `/voorbeeldprogrammas`
-  - Programma op maat → `/programma-samenstellen?mode=maatwerk`
-- Kolom "Verken het aanbod":
-  - Alle bouwstenen → `/bouwstenen`
-  - Catering → `/catering`
-  - Evenementen → `/evenementen`
-  - Activiteiten boeken → `/activiteiten-boeken`
+### 4. Helper
 
-**Logies** (single link) → `/logies-vlieland`  
-  
-`ES: Logies veranderen in Overnachten`
+Kleine `slugify`-helper inlinen in `MapActivityCard.tsx` (geen extra dependency).
 
-**Inspiratie ▾ (dropdown — voorheen "Ons aanbod", nu staf/SEO i.p.v. hoofdaanbod):**
+## Geen DB- of edge-function-wijzigingen
 
-- Voor bedrijven (subkop):
-  - Bedrijfsuitje · Meerdaags bedrijfsuitje · Teambuilding · Heisessie · Zakelijk evenement · Incentive reis · Bedrijfsuitje ideeën
-- Voor privé (subkop):
-  - Trouwen · Groepsweekend · Jubileum · Familieweekend
-- Onderaan: "Alle voorbeelden bekijken" → `/voor-wie`  
-  
-Dit onderdeel slaat dan toch nergens op? Inspiratie en dan toon je eigenlijk voor wie. Inspiratie zit meer in de voorbeeldprogramma's. Ik denk dat dit naar de foot moet of "voor wie"   
-
-
-**Over ons ▾:**
-
-- Over Bureau Vlieland → `/over-ons`
-- Onze werkwijze → `/diensten`
-- Aangesloten partners → `/partners`
-- Contact → `/contact`
-
-**Rechts in header:** telefoonnummer (klikbaar) + primary CTA-knop **"Stel uw programma samen"** (één term, vervangt huidige "Vraag uw offerte aan").   
-  
-ES: Wat mij betreft geen focus op het telefoonnummer, want dat neem ik 9 van de 10 keer niet op. 
-
-**Mobiel:** dezelfde structuur in accordion-vorm; CTA-knop bovenaan het sheet.
-
-## 3. Terminologie-consistentie
-
-Eén CTA-term overal: **"Stel zelf uw programma samen"** (header, hero, FinalCTA, footer-kolom "Direct aan de slag", Diensten-pagina). Verwijder varianten "Vraag uw offerte aan" / "Stel uw offerte samen" / "Vraag een offerteaan". Secundaire CTA blijft **"Programma op maat"** voor de maatwerk-route.
-
-Footer-link "Stel uw offerte samen" → "Stel uw programma samen". Diensten-pagina "Liever maatwerk?" → "Programma op maat".
-
-## 4. Nieuwe footer (compacter, 4 kolommen)
-
-```text
-Kolom 1: Bureau Vlieland       Kolom 2: Begin hier           Kolom 3: Inspiratie         Kolom 4: Online boeken
-- Logo + pitch                 - Stel uw programma samen     - Bedrijfsuitje             - Materiaalbeheer & verhuur
-- Adres / tel / mail           - Programma op maat           - Teambuilding              - Fietsverhuur
-- Social icons                 - Voorbeeldprogramma's        - Heisessie                 - Losse activiteiten
-                               - Bouwstenen                  - Zakelijk evenement        - Café Boven
-                               - Logies                      - Incentive reis            - Oliva Vlieland
-                               - Catering                    - Trouwen op Vlieland
-                               - Evenementen                 - Groepsweekend
-                                                             - Jubileum
-                                                             - Familieweekend
-                                                             - Bedrijfsuitje ideeën
-
-Onderaan (utility-rij):
-Over ons · Onze werkwijze · Partners · Samenwerken · Contact · Sitemap · Algemene voorwaarden · Partner login
-© 2026 · Wadden-ambassadeur badge · NORISK
-```
-
-Verwijdert duplicaat "Stel uw offerte samen", brengt álle pagina's terug, en groepeert per intent (handelen / inspireren / extern boeken).
-
-## 5. Nieuwe pagina: `/sitemap`
-
-HTML-sitemap voor bezoekers (los van `public/sitemap.xml` voor crawlers). Eenvoudige pagina met gegroepeerde links naar elke publieke route — gelinkt vanuit footer en 404-pagina. Gegroepeerd als:
-
-- Start (Home, Programma samenstellen, Programma op maat, Contact)
-- Programma's (Voorbeeldprogramma's, Bouwstenen, Catering, Evenementen, Activiteiten boeken)
-- Logies (Logies Vlieland, Logies aanvragen)
-- Voor bedrijven (alle B2B-landings)
-- Voor privé (alle B2C-landings)
-- Over ons (Over, Werkwijze, Voor wie, Partners, Samenwerken)
-- Juridisch (Algemene voorwaarden, Partnervoorwaarden)
-- Partner & Admin (Partner login)
-
-## 6. Opruimen routes & bestanden
-
-- `/programmamodules` → 301-style `<Navigate to="/voorbeeldprogrammas" replace />` in `App.tsx`.
-- `public/sitemap.xml` aanvullen met de ontbrekende publieke URL's (`/voor-wie`, `/bedrijfsuitje-ideeen-vlieland`, `/activiteiten-boeken`, `/sitemap`).
-- `Diensten.tsx` CTA-tekst harmoniseren.
-
-## Technische details
-
-**Bestanden te wijzigen:**
-
-- `src/components/Navigation.tsx` — nieuwe topnav-structuur (Programma's-mega vervangt "Ons aanbod"; "Programma's" dropdown weg; Inspiratie + Over ons toegevoegd; CTA-knop tekst).
-- `src/components/navigation/MegaDropdown.tsx` — herstructureren naar twee mega-dropdowns: `ProgrammasMega` (begin hier + verken aanbod) en `InspiratieMega` (B2B/B2C landings, "Alle voorbeelden" → `/voor-wie`). Of houd één component met variant-prop.
-- `src/components/navigation/MobileNav.tsx` — accordion-secties spiegelen aan nieuwe nav.
-- `src/components/Footer.tsx` — herindeling naar 4 nieuwe kolommen + utility-rij met sitemap-link.
-- `src/components/home/FinalCTA.tsx`, `src/components/home/HeroEditorial.tsx`, `src/pages/Diensten.tsx` — CTA-tekst uniformeren.
-- `src/pages/Sitemap.tsx` — nieuwe pagina (eenvoudig, met `Helmet`, `Navigation`, `Footer`, gegroepeerde lijsten).
-- `src/App.tsx` — route `/sitemap` toevoegen; `/programmamodules` → Navigate redirect.
-- `public/sitemap.xml` — toevoegen ontbrekende URL's.
-
-**Geen DB-wijzigingen.** Geen breaking change voor bestaande URL's (behalve `/programmamodules` dat redirect).
-
-## Eindplaatje
-
-- Eén duidelijke conversie-CTA in de header, zichtbaar op elke pagina.
-- "Programma's" is het zwaartepunt — daar wonen de drie tracks (zelf / voorbeeld / op maat).
-- "Inspiratie" vangt alle SEO-landingspagina's zonder ze als hoofdaanbod te framen.
-- Footer + nieuwe `/sitemap` zorgen dat geen enkele publieke pagina meer "wees" is.
+Alleen front-end aanpassingen; MAP-API en `useAllMapActivities` blijven ongewijzigd.
