@@ -14,7 +14,7 @@ const sections: SitemapSection[] = [
     links: [
       { label: "Home", href: "/" },
       { label: "Stel zelf uw programma samen", href: "/programma-samenstellen" },
-      { label: "Programma op maat", href: "/programma-samenstellen?mode=maatwerk" },
+      { label: "Programma op maat", href: "/programma-op-maat" },
       { label: "Contact", href: "/contact" },
     ],
   },

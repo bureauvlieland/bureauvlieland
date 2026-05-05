@@ -76,7 +76,7 @@ const Diensten = () => {
                   Stel uw programma samen
                 </Button>
               </Link>
-              <Link to="/programma-samenstellen?mode=maatwerk">
+              <Link to="/programma-op-maat">
                 <Button size="lg" variant="heroOutline">
                   Liever maatwerk?
                 </Button>

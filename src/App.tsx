@@ -42,6 +42,7 @@ const GroepsweekendVlieland = lazy(() => import("./pages/GroepsweekendVlieland")
 const JubileumVlieland = lazy(() => import("./pages/JubileumVlieland"));
 const FamilieweekendVlieland = lazy(() => import("./pages/FamilieweekendVlieland"));
 const ProgrammaSamenstellen = lazy(() => import("./pages/ProgrammaSamenstellen"));
+const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
 const SharedProgram = lazy(() => import("./pages/SharedProgram"));
 const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
 const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
@@ -145,6 +146,11 @@ const App = () => {
             <Route path="/programma-samenstellen" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <ProgrammaSamenstellen />
+              </FeatureGate>
+            } />
+            <Route path="/programma-op-maat" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <ProgrammaOpMaat />
               </FeatureGate>
             } />
             <Route path="/logies-vlieland" element={<LogiesVlieland />} />
