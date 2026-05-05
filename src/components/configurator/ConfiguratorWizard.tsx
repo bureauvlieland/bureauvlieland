@@ -174,62 +174,93 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-              Waar mogen we u mee helpen?
+              Hoe wilt u uw programma samenstellen?
             </h2>
             <p className="text-muted-foreground">
-              Kies hoe u uw programma op Vlieland wilt samenstellen
+              Kies de manier die bij u past — alles is vrijblijvend
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
-            {/* Laten regelen */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            {/* Programma op maat (laten regelen) */}
             <Card
-              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-primary/30"
               onClick={() => handleTrackSelect("laten_regelen")}
             >
               <div className="aspect-[4/3] overflow-hidden">
                 <img
                   src={teamBeach}
-                  alt="Bureau Vlieland regelt uw programma"
+                  alt="Bureau Vlieland stelt uw programma samen"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+              <div className="absolute top-3 left-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider bg-primary text-primary-foreground px-2 py-1 rounded-sm">
+                  Aanbevolen
+                </span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
                   </div>
-                  <h3 className="font-display font-bold text-xl">Laten regelen</h3>
+                  <h3 className="font-display font-bold text-base">Programma op maat</h3>
                 </div>
-                <p className="text-sm text-white/90 leading-relaxed">
-                  Bureau Vlieland stelt een programma op maat voor u samen. U vertelt ons wat u zoekt, wij doen de rest.
+                <p className="text-xs text-white/90 leading-relaxed">
+                  Bureau Vlieland stelt het samen. U laat uw wensen achter, wij doen de rest.
                 </p>
               </div>
             </Card>
 
-            {/* Zelf regelen */}
+            {/* Voorbeeldprogramma kiezen */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
+              onClick={() => handleTrackSelect("voorbeeld")}
+            >
+              <div className="aspect-[4/3] overflow-hidden">
+                <img
+                  src={dunesGroupImg}
+                  alt="Kies een voorbeeldprogramma"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center">
+                    <Check className="h-3.5 w-3.5 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-base">Voorbeeldprogramma</h3>
+                </div>
+                <p className="text-xs text-white/90 leading-relaxed">
+                  Kies een kant-en-klaar programma en pas het naar wens aan.
+                </p>
+              </div>
+            </Card>
+
+            {/* Zelf samenstellen */}
             <Card
               className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
               onClick={() => handleTrackSelect("zelf_regelen")}
             >
               <div className="aspect-[4/3] overflow-hidden">
                 <img
-                  src={dunesGroupImg}
+                  src={teamBeach}
                   alt="Stel zelf uw programma samen"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                    <Wrench className="h-4 w-4 text-accent-foreground" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-foreground flex items-center justify-center">
+                    <Wrench className="h-3.5 w-3.5 text-background" />
                   </div>
-                  <h3 className="font-display font-bold text-xl">Zelf regelen</h3>
+                  <h3 className="font-display font-bold text-base">Zelf samenstellen</h3>
                 </div>
-                <p className="text-sm text-white/90 leading-relaxed">
-                  Stel zelf uw programma samen uit ons aanbod van activiteiten, catering en vervoer.
+                <p className="text-xs text-white/90 leading-relaxed">
+                  Blader door alle bouwstenen en bouw zelf uw programma.
                 </p>
               </div>
             </Card>
