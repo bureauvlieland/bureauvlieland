@@ -58,7 +58,7 @@ export const AboutErwin = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2 text-primary">•</span>
-                  <span>Bestuurslid / voorzitter Ondernemersvereniging Vlieland</span>
+                  <span>Vertegenwoordiger Ondernemersvereniging Vlieland</span>
                 </li>
               </ul>
             </div>
