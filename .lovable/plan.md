@@ -1,31 +1,31 @@
 ## Doel
-Bij elke "Natuurbijdrage"-vermelding (factuur, offerte/PDF, klantportal, sidebar) een korte, vriendelijke uitleg tonen zodat klanten begrijpen waar het bedrag heen gaat.
+Subtiel maar consistent communiceren dat Bureau Vlieland trotse ambassadeur is van Waddenzee Werelderfgoed. Versterkt het duurzaamheidsverhaal en past natuurlijk bij de natuurbijdrage-uitleg.
 
-## Voorgestelde tekst
-**Korte versie (onder labels op factuur/regels):**
-> "Bijdrage natuurbeheer Staatsbosbeheer"
+## Aanpak — herbruikbare badge-component
+Eén nieuwe component `src/components/WaddenAmbassadeurBadge.tsx` met varianten (`compact` / `stacked` / `icon`) en optionele info-popover. Logo komt uit `src/assets/ambassadeur-waddenzee-werelderfgoed.png` (geüpload bestand wordt gekopieerd).
 
-**Uitgebreide versie (sidebar / informatieblok):**
-> "Evenementenbureaus op Vlieland dragen € {bedrag} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied."
+### Popover-tekst
+> "Het ambassadeursprogramma Waddenzee Werelderfgoed is een initiatief van het ministerie van LNV, naar voorbeeld uit Duitsland en Denemarken. Het verbindt organisaties in het Nederlandse waddengebied die kennis hebben van de Werelderfgoed-status én duurzaam ondernemen."
 
-Bedrag wordt dynamisch ingevuld op basis van `appSettings.nature_contribution_pp`.
+Met link naar `waddenzeewerelderfgoed.nl/ambassadeurs`.
 
-## Wijzigingen
+## Plaatsingen (3 stuks, subtiel)
 
-### 1. `src/components/customer-portal/ProgramSidebar.tsx` (regel ~118)
-Bestaande tekst vervangen door de uitgebreide versie hierboven (de huidige tekst "per deelnemer wordt een bijdrage afgedragen…" wordt vervangen door de meer uitleggende variant met "evenementenbureaus op Vlieland dragen … af").
+### 1. Footer website — `src/components/Footer.tsx`
+Onderaan de bottom-bar (naast © + Algemene Voorwaarden) een kleine `compact` badge met info-popover. Zichtbaar op alle pagina's, niet opdringerig.
 
-### 2. `src/pages/admin/AdminInvoicePreview.tsx`
-- **PDF-factuurregel** (regel ~589–596): `subDescription` wordt `"Bijdrage natuurbeheer Staatsbosbeheer · {N} personen"`.
-- **Schermweergave** (regel ~1146–1158): kleine subregel onder "Natuurbijdrage": `"Bijdrage natuurbeheer Staatsbosbeheer"`.
+### 2. Klantportal sidebar — `src/components/customer-portal/ProgramSidebar.tsx`
+Direct onder het bestaande "Toeristenbelasting / Natuurbijdrage"-blok een dunne scheidslijn + `compact` badge. Versterkt het verhaal: "wij dragen bij aan natuurbeheer én zijn ambassadeur".
 
-### 3. `src/components/customer-portal/PriceSummaryCard.tsx`
-- Detailregel (regel ~412–418): label + kleine subtekst `"Bijdrage natuurbeheer Staatsbosbeheer"`.
-- Compacte regel (regel ~267–270): subtekst onder label.
-
-### 4. `src/components/admin/FinancialOverviewCard.tsx` & `src/pages/admin/AdminInvoicing.tsx`
-Optioneel kleine tooltip/sub-regel met dezelfde korte uitleg voor consistentie.
+### 3. Offerte & factuur PDF — `src/pages/admin/AdminInvoicePreview.tsx` (en analoog `AdminQuotePreview.tsx` indien identieke footer)
+Klein logo (`icon` variant, ~40px) onderaan de PDF-footer naast de bedrijfsgegevens / KvK-regel. Geen popover (PDF), maar wél de tekst "Trotse ambassadeur Waddenzee Werelderfgoed" eronder.
 
 ## Niet in scope
-- Geen wijziging aan bedragen, BTW (blijft 0%) of berekeningen.
-- Hardcoded NL-tekst; geen aparte instelling. Wil je het later via Instellingen kunnen aanpassen, dan voeg ik een `nature_contribution_description` setting toe.
+- Geen aparte landingspagina of uitgebreid blok op Over Ons (kan later).
+- Geen wijziging aan e-mailtemplates (kan in vervolgstap; ferry/bevestigingsmails behouden hun huidige opmaak).
+- Geen instelling om het uit te zetten — staat altijd aan zolang Bureau Vlieland ambassadeur is.
+
+## Bestanden
+- **Nieuw**: `src/assets/ambassadeur-waddenzee-werelderfgoed.png` (kopie van upload)
+- **Nieuw**: `src/components/WaddenAmbassadeurBadge.tsx`
+- **Bewerken**: `src/components/Footer.tsx`, `src/components/customer-portal/ProgramSidebar.tsx`, `src/pages/admin/AdminInvoicePreview.tsx`

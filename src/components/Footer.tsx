@@ -1,5 +1,6 @@
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
+import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 
 export const Footer = () => {
   return (
@@ -201,7 +202,10 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-border">
+        <div className="pt-8 border-t border-border space-y-6">
+          <div className="flex justify-center sm:justify-start">
+            <WaddenAmbassadeurBadge variant="compact" />
+          </div>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} Bureau Vlieland. Alle rechten voorbehouden.</p>
             <div className="flex flex-col sm:flex-row items-center gap-4">

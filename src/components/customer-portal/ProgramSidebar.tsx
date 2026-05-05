@@ -2,6 +2,7 @@ import { StatusSummary } from "./StatusSummary";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
+import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
 import { cn } from "@/lib/utils";
@@ -123,6 +124,10 @@ export const ProgramSidebar = ({
         </div>
       </div>
 
+      {/* Wadden Werelderfgoed ambassadeur */}
+      <div className="flex justify-center pt-1">
+        <WaddenAmbassadeurBadge variant="compact" />
+      </div>
 
       {/* Horeca advertenties */}
       <div className="space-y-3">

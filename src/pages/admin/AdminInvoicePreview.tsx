@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import ambassadeurLogo from "@/assets/ambassadeur-waddenzee-werelderfgoed.png";
 import { toast } from "sonner";
 import { categoryLabels } from "@/types/buildingBlock";
 import { getDisplayLineTotal, getNumberOfDays } from "@/lib/portalPricing";
@@ -1224,6 +1225,10 @@ const AdminInvoicePreview = () => {
                             <p>{adminEmail}</p>
                             <p>Tel: 0562 700 208</p>
                           </div>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-gray-100">
+                          <img src={ambassadeurLogo} alt="" className="h-8 w-auto object-contain" />
+                          <span className="text-[8px] text-gray-500">Trotse ambassadeur Waddenzee Werelderfgoed</span>
                         </div>
                       </div>
                     </div>
