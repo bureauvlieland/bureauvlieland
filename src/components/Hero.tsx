@@ -52,7 +52,7 @@ export const Hero = () => {
             Bureau Vlieland organiseert eendaagse en meerdaagse programma's, teamdagen en events voor groepen op Vlieland.
           </p>
           <p className="text-sm sm:text-base text-primary-foreground/80 mb-8 max-w-xl">
-            Onder leiding van Erwin Soolsma combineren we professionele inhoud met lokale regie, gidsen en catering.
+            Onder leiding van Erwin Soolsma combineren we professionele programma-ontwikkeling met de beste lokale gidsen, koks en hoteliers.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button

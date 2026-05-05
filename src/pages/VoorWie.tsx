@@ -29,11 +29,11 @@ const VoorWie = () => {
         <title>Voor Wie – Bureau Vlieland | Bedrijven, Teams & Organisaties</title>
         <meta 
           name="description" 
-          content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en professionele regie centraal stellen. Van MT tot projectgroep." 
+          content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en één aanspreekpunt centraal stellen. Van MT tot projectgroep." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/voor-wie" />
         <meta property="og:title" content="Voor Wie – Bureau Vlieland" />
-        <meta property="og:description" content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en professionele regie centraal stellen." />
+        <meta property="og:description" content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en één aanspreekpunt centraal stellen." />
         <meta property="og:url" content="https://bureauvlieland.nl/voor-wie" />
       </Helmet>
       <Navigation />
@@ -67,7 +67,7 @@ const VoorWie = () => {
               Voor wie
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Groepen die kwaliteit en professionele regie centraal stellen
+              Groepen die kwaliteit en één aanspreekpunt centraal stellen
             </p>
           </div>
         </section>

@@ -16,8 +16,8 @@ export const ForWho = () => {
               Voor wie wij werken
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              We werken voor groepen die begrijpen dat een goede dag of een goed weekend op Vlieland ontstaat door regie,
-              ervaring en lokale kennis. Groepen waarbij kwaliteit centraal staat.
+              We werken voor groepen die begrijpen dat een goede dag of een goed weekend op Vlieland ontstaat door
+              goede voorbereiding, ervaring en de juiste lokale partners. Groepen waarbij kwaliteit centraal staat.
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export const ForWho = () => {
                     </div>
                     <div>
                       <h4 className="font-semibold text-foreground mb-1">Volledige ontzorging</h4>
-                      <p className="text-sm text-muted-foreground">Eén regiepartij voor programma, begeleiding én catering</p>
+                      <p className="text-sm text-muted-foreground">Eén partij, één factuur — programma, begeleiding én catering geregeld</p>
                     </div>
                   </div>
                   
@@ -73,7 +73,7 @@ export const ForWho = () => {
                     </div>
                     <div>
                       <h4 className="font-semibold text-foreground mb-1">Kwaliteitsbewust</h4>
-                      <p className="text-sm text-muted-foreground">Een realistisch budget waarin professionele regie past</p>
+                      <p className="text-sm text-muted-foreground">Een realistisch budget waarin lokale kwaliteit past</p>
                     </div>
                   </div>
                 </div>

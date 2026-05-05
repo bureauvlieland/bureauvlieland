@@ -218,7 +218,7 @@ const TeamuitjeVlieland = () => {
               <div className="grid lg:grid-cols-2 gap-12 items-center">
                 <div>
                   <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                    Lokale regie, korte lijnen
+                    Lokale specialist, korte lijnen
                   </h2>
                   <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
                     Als lokale organisatie weten wij wat werkt op Vlieland. Geen standaard 
