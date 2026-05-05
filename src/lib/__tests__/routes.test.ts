@@ -49,15 +49,29 @@ function extractRoutes() {
 
 function extractLinks() {
   const files = walk(SRC);
-  const links: Array<{ file: string; to: string }> = [];
+  const links: Array<{ file: string; to: string; kind: string }> = [];
+
+  // Match: <Link to="/..."> and <Link to={"/..."}>
   const linkRe = /<Link\b[^>]*\bto=\{?["'`]([^"'`{}\n]+)["'`]\}?/g;
+  // Match: <a href="/..."> (intern only — must start with "/")
+  const aRe = /<a\b[^>]*\bhref=\{?["'`](\/[^"'`{}\n]*)["'`]\}?/g;
+  // Match: object literal entries like { href: "/..." } / { link: "/..." } / { to: "/..." }
+  const objRe = /\b(?:href|link|to|path)\s*:\s*["'`](\/[^"'`{}\n]*)["'`]/g;
+
   for (const f of files) {
+    if (f.endsWith(".test.ts") || f.endsWith(".test.tsx")) continue;
     const src = readFileSync(f, "utf8");
-    let m: RegExpExecArray | null;
-    while ((m = linkRe.exec(src))) {
-      const path = m[1].split("?")[0].split("#")[0];
-      if (!path.startsWith("/")) continue;
-      links.push({ file: f, to: path });
+    for (const re of [linkRe, aRe, objRe]) {
+      let m: RegExpExecArray | null;
+      const kind = re === linkRe ? "Link" : re === aRe ? "anchor" : "obj";
+      while ((m = re.exec(src))) {
+        const path = m[1].split("?")[0].split("#")[0];
+        if (!path.startsWith("/")) continue;
+        // ignore raw asset / api paths
+        if (path.startsWith("/api/") || path.startsWith("/assets/")) continue;
+        if (/\.[a-z0-9]{2,5}$/i.test(path)) continue;
+        links.push({ file: f, to: path, kind });
+      }
     }
   }
   return links;
