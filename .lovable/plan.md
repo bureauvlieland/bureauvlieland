@@ -1,31 +1,53 @@
 ## Doel
-Subtiel maar consistent communiceren dat Bureau Vlieland trotse ambassadeur is van Waddenzee Werelderfgoed. Versterkt het duurzaamheidsverhaal en past natuurlijk bij de natuurbijdrage-uitleg.
 
-## Aanpak — herbruikbare badge-component
-Eén nieuwe component `src/components/WaddenAmbassadeurBadge.tsx` met varianten (`compact` / `stacked` / `icon`) en optionele info-popover. Logo komt uit `src/assets/ambassadeur-waddenzee-werelderfgoed.png` (geüpload bestand wordt gekopieerd).
+Eénmalig een Word-draaiboek (.docx) genereren voor project **BV-2604-0002** (Stedelijk Gymnasium Haarlem, schoolkamp Vlieland 19–22 mei 2026, 166 personen) dat je naar je partners kunt sturen. Dit is een **scriptmatige export**, geen feature in de app — sneller en preciezer voor deze eenmalige vraag.
 
-### Popover-tekst
-> "Het ambassadeursprogramma Waddenzee Werelderfgoed is een initiatief van het ministerie van LNV, naar voorbeeld uit Duitsland en Denemarken. Het verbindt organisaties in het Nederlandse waddengebied die kennis hebben van de Werelderfgoed-status én duurzaam ondernemen."
+## Aanpak
 
-Met link naar `waddenzeewerelderfgoed.nl/ambassadeurs`.
+Ik draai een Node-script (gebruikt `docx` library, conform de DOCX-skill) dat alle data uit de database én het volledige Vlielandboekje combineert tot één Word-document met centraal draaiboek + losse partner-bijlagen.
 
-## Plaatsingen (3 stuks, subtiel)
+## Inhoud van het document
 
-### 1. Footer website — `src/components/Footer.tsx`
-Onderaan de bottom-bar (naast © + Algemene Voorwaarden) een kleine `compact` badge met info-popover. Zichtbaar op alle pagina's, niet opdringerig.
+**Voorblad**
+- Titel: "Draaiboek Vlielandreis Klas 4 — Stedelijk Gymnasium Haarlem"
+- Project BV-2604-0002, 19–22 mei 2026, 166 personen
+- Bureau Vlieland branding + Wadden Werelderfgoed-ambassadeur logo
 
-### 2. Klantportal sidebar — `src/components/customer-portal/ProgramSidebar.tsx`
-Direct onder het bestaande "Toeristenbelasting / Natuurbijdrage"-blok een dunne scheidslijn + `compact` badge. Versterkt het verhaal: "wij dragen bij aan natuurbeheer én zijn ambassadeur".
+**Deel 1 — Algemeen draaiboek (voor alle partners)**
+- Klant- & contactgegevens (Ineke Haeck / SGH)
+- Groepsverdeling: Stortemelk (4A/4E/4F, 83 pers.) / Lange Paal (4B/4C/4D, 83 pers.)
+- Logistiek overzicht: ferry heen/terug, fietsen, bagage, materiaal
+- Volledig dagprogramma uit het boekje (di t/m vr) — inclusief tijden, locaties, ontbijtcorvee, workshops
+- Theater Odyssee / A Midsummer Night's Dream uitleg
+- Paklijst en huisregels (uit boekje)
+- Noodcontact
 
-### 3. Offerte & factuur PDF — `src/pages/admin/AdminInvoicePreview.tsx` (en analoog `AdminQuotePreview.tsx` indien identieke footer)
-Klein logo (`icon` variant, ~40px) onderaan de PDF-footer naast de bedrijfsgegevens / KvK-regel. Geen popover (PDF), maar wél de tekst "Trotse ambassadeur Waddenzee Werelderfgoed" eronder.
+**Deel 2 — Partner-bijlagen** (één pagina/sectie per partner, met page-break)
+Op basis van de items in de offerte zijn dit feitelijk bureau-interne leveranciers, dus ik genereer bijlagen per logische rol:
 
-## Niet in scope
-- Geen aparte landingspagina of uitgebreid blok op Over Ons (kan later).
-- Geen wijziging aan e-mailtemplates (kan in vervolgstap; ferry/bevestigingsmails behouden hun huidige opmaak).
-- Geen instelling om het uit te zetten — staat altijd aan zolang Bureau Vlieland ambassadeur is.
+- **Bijlage A — Camping Stortemelk**: aankomst, aantal staplaatsen (66 + 2 legertent), Apollo-tenten, kooktent, zaalhuur Bolder (2 avonden), opslagcontainer, kampvuur, eindafrekening via Bureau Vlieland
+- **Bijlage B — Natuurkampeerterrein Lange Paal**: 83 personen, verblijf begeleiders, 8 damesfietsen, eindschoonmaak
+- **Bijlage C — Rederij Doeksen**: heen 14:00 di 19/5, retour 12:00 vr 22/5, 166 pax + bagagevervoer (live ferry-tijden bevestigen)
+- **Bijlage D — Fietsverhuur**: 75 schoolreisfietsen + 8 damesfietsen, ophaal di 16:30, retour vr 10:30
+- **Bijlage E — Catering**: 3 vegetarische avondmaaltijden × 166 pers., locaties, allergieën navragen
+- **Bijlage F — Vlieland Outdoor Center (VOC)**: Strandspektakel + Lasergame/Discgolf, programma woensdag & donderdag, rotatie-schema klassen
+- **Bijlage G — Workshopbegeleiders (intern SGH-team)**: workshop-overzicht met begeleider + benodigdheden uit het boekje (Bunker, Vogelbingo, Bootcamp, Hardlooptraining, Duik in geschiedenis etc.)
+- **Bijlage H — Materiaal & overig**: kampvuurhout, kartonnen decorstukken (13 fietsdozen), waterkokers, koffievoorzieningen, geluidsbox
 
-## Bestanden
-- **Nieuw**: `src/assets/ambassadeur-waddenzee-werelderfgoed.png` (kopie van upload)
-- **Nieuw**: `src/components/WaddenAmbassadeurBadge.tsx`
-- **Bewerken**: `src/components/Footer.tsx`, `src/components/customer-portal/ProgramSidebar.tsx`, `src/pages/admin/AdminInvoicePreview.tsx`
+Elke bijlage opent met: contactpersoon Bureau Vlieland, project-ref BV-2604-0002, datum, en een korte takenlijst voor die partner.
+
+## Stijl
+
+- Word-document, A4, professionele opmaak
+- Brand-kleuren Bureau Vlieland (uit codebase ophalen)
+- Leesbare typografie, duidelijke hoofdstukken, tabellen voor dagprogramma's
+- Paginanummers en kop/voettekst met projectnummer
+- Output: `/mnt/documents/Draaiboek_BV-2604-0002_Vlielandreis_SGH.docx`
+
+## Wat ik niet doe
+
+- Geen wijzigingen in de app/codebase
+- Geen e-mail versturen — je krijgt alleen het bestand om te downloaden
+- Geen prijzen vermelden (financieel zit in de offerte/factuur, niet in een operationeel draaiboek)
+
+Na goedkeuring lever ik het Word-bestand. Wil je achteraf nog iets wijzigen, dan maak ik een v2.
