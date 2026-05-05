@@ -524,15 +524,6 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
           inspirationMode={false}
         />
       )}
-                  else setStep(4);
-                }
-              : handleTemplateLoaded
-          }
-          onStartEmpty={handleStartEmpty}
-          onBack={handleBack}
-          inspirationMode={track === "laten_regelen"}
-        />
-      )}
 
       {/* Step 3: Accommodation (laten regelen, multi-day only) */}
       {step === 3 && track === "laten_regelen" && (
