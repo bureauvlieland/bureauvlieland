@@ -50,8 +50,7 @@ export const ErwinManifesto = () => {
 
             <blockquote className="font-display font-light text-primary-foreground leading-[1.05] text-[clamp(1.75rem,3.5vw,3rem)] mb-10">
               <span className="text-sunset font-normal italic">"</span>
-              Een goede dag op Vlieland is
-              <span className="italic"> geregeld</span>, niet toevallig. Boot op tijd, eten op tafel, gids die zijn vak verstaat. Wij regelen het, één factuur achteraf — klaar.
+              Vlieland is <span className="italic">klein</span>, en dat is precies de kracht. Wij weten wie je moet hebben voor een goede maaltijd, een mooie tocht, een bijzondere plek. Jullie vertellen wat je zoekt, wij zetten het in gang met de mensen die we al jaren kennen. Eén factuur achteraf — verder hoeven jullie nergens aan te denken.
               <span className="text-sunset font-normal italic">"</span>
             </blockquote>
 
