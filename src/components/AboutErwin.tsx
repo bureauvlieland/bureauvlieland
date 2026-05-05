@@ -46,7 +46,7 @@ export const AboutErwin = () => {
               <ul className="space-y-3 text-sm text-foreground">
                 <li className="flex items-start">
                   <span className="mr-2 text-primary">•</span>
-                  <span>Oprichter en manager van lokale krant <a href="https://www.geitenbode.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">De Geitenbode</a></span>
+                  <span>Oprichter en bestuurslid van lokale krant <a href="https://www.geitenbode.nl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">De Geitenbode</a></span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2 text-primary">•</span>
