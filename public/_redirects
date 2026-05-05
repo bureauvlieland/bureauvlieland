@@ -2,8 +2,6 @@
 # Alle oude URLs redirecten naar de nieuwe URLs
 
 /contact/                                    /#contact                301
-/voorbeeldprogrammas/                        /bouwstenen              301
-/voorbeeldprogrammas                         /bouwstenen              301
 /programmas/                                 /samenwerken             301
 /programmas                                  /samenwerken             301
 /duurzame-zakenevents/                       /samenwerken             301

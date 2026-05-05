@@ -10,8 +10,7 @@ const getRedirectDestination = (pathname: string): string | null => {
   if (path === '/contact') return '/contact';
   if (path === '/offerteformulier') return '/contact';
   
-  // Voorbeeldprogrammas & diensten
-  if (path === '/voorbeeldprogrammas') return '/bouwstenen';
+  // Diensten
   if (path === '/duurzame-zakenevents') return '/samenwerken';
   if (path === '/activiteiten') return '/bouwstenen';
   if (path === '/catering-op-vlieland') return '/catering';
