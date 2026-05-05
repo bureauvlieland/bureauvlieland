@@ -408,8 +408,8 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         </div>
       )}
 
-      {/* Step 2 for "Zelf regelen": People + Dates only */}
-      {step === 2 && track === "zelf_regelen" && (
+      {/* Step 2 for "Zelf samenstellen" + "Voorbeeldprogramma": People + Dates only */}
+      {step === 2 && (track === "zelf_regelen" || track === "voorbeeld") && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-6">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
@@ -513,16 +513,17 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         </div>
       )}
 
-      {/* Step 2.5: Template Selection */}
-      {step === 2.5 && (
+      {/* Step 2.5: Template Selection (voorbeeld track only) */}
+      {step === 2.5 && track === "voorbeeld" && (
         <TemplateSelector
           durationDays={data.selectedDates.length}
           numberOfPeople={data.numberOfPeople}
-          onSelectTemplate={
-            track === "laten_regelen"
-              ? (template) => {
-                  setTemplateInspiration(template.name);
-                  if (isMultiDay) setStep(3);
+          onSelectTemplate={handleTemplateLoaded}
+          onStartEmpty={handleStartEmpty}
+          onBack={handleBack}
+          inspirationMode={false}
+        />
+      )}
                   else setStep(4);
                 }
               : handleTemplateLoaded
