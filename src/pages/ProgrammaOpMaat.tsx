@@ -102,57 +102,81 @@ const ProgrammaOpMaat = () => {
     setIsSubmitting(true);
     try {
       const token = generateCustomerToken();
-      const startDate = selectedDates[0];
-      const endDate = selectedDates[selectedDates.length - 1];
+      const isoDates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
+      const formattedDates = selectedDates.map((d) => format(d, "EEEE d MMMM yyyy", { locale: nl }));
 
-      const { data, error } = await supabase
+      const { data: requestData, error: insertError } = await supabase
         .from("program_requests")
         .insert({
+          customer_token: token,
           customer_name: formData.name,
           customer_email: formData.email,
           customer_phone: formData.phone,
-          company_name: formData.company || null,
+          customer_company: formData.company || null,
           number_of_people: numberOfPeople,
-          start_date: format(startDate, "yyyy-MM-dd"),
-          end_date: format(endDate, "yyyy-MM-dd"),
+          selected_dates: isoDates,
+          general_notes: formData.wishes || null,
           program_type: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
-          wants_accommodation: wantsAccommodation,
-          customer_notes: formData.wishes || null,
-          customer_token: token,
-          status: "new",
-          entry_page: getEntryPage(),
+          program_description: `Maatwerk ${programType}${wantsAccommodation ? " — logies gewenst" : ""}`,
+          invoicing_mode: "bureau_central",
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
+      await supabase.from("program_request_history").insert({
+        request_id: requestData.id,
+        action: "created",
+        actor: "customer",
+        actor_name: formData.name,
+        new_value: {
+          type: "maatwerk",
+          program_type: programType,
+          wants_accommodation: wantsAccommodation,
+          source: "programma-op-maat-page",
+        },
+      });
+
+      await supabase.functions.invoke("send-program-request", {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          notes: formData.wishes,
+          numberOfPeople,
+          selectedDate: formattedDates[0],
+          selectedDates: formattedDates,
+          numberOfDays: selectedDates.length,
+          bureauFee: 0,
+          blocks: [],
+          customerToken: token,
+          origin: window.location.origin,
+        },
+      });
+
+      const entryPage = getEntryPage();
       trackProgramRequestSubmitted({
         value: 0,
         numberOfPeople,
         numberOfDays: selectedDates.length,
         eventType: `maatwerk_${programType}`,
-        entryPage: getEntryPage() || undefined,
+        entryPage: entryPage?.path || "direct",
+        utmSource: entryPage?.utm_source,
+        utmMedium: entryPage?.utm_medium,
+        utmCampaign: entryPage?.utm_campaign,
         items: [],
       });
 
       setCustomerToken(token);
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
-
-      // Fire-and-forget admin notification
-      try {
-        await supabase.functions.invoke("notify-admin-new-request", {
-          body: { requestId: data.id },
-        });
-      } catch (notifyErr) {
-        console.warn("Admin notification failed:", notifyErr);
-      }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error submitting maatwerk:", err);
       toast({
         title: "Aanvraag niet verzonden",
-        description: "Er ging iets mis. Probeer het opnieuw of bel ons op 0562 700 208.",
+        description: err?.message || "Er ging iets mis. Probeer het opnieuw of bel ons op 0562 700 208.",
         variant: "destructive",
       });
     } finally {
