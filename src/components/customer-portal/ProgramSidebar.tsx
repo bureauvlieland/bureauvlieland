@@ -124,6 +124,10 @@ export const ProgramSidebar = ({
         </div>
       </div>
 
+      {/* Wadden Werelderfgoed ambassadeur */}
+      <div className="flex justify-center pt-1">
+        <WaddenAmbassadeurBadge variant="compact" />
+      </div>
 
       {/* Horeca advertenties */}
       <div className="space-y-3">
