@@ -42,12 +42,16 @@ const ActiviteitenBoeken = () => {
   const filtered = useMemo<EnrichedActivity[]>(() => {
     if (!activities) return [];
     const q = search.toLowerCase();
-    return (activities as EnrichedActivity[]).filter(
-      (a) =>
+    const now = Date.now();
+    return (activities as EnrichedActivity[]).filter((a) => {
+      const departure = new Date(a.Departure).getTime();
+      if (!isNaN(departure) && departure <= now) return false;
+      return (
         a.ActivityTypeName?.toLowerCase().includes(q) ||
         a._partnerName?.toLowerCase().includes(q) ||
         a.Description?.toLowerCase().includes(q)
-    );
+      );
+    });
   }, [activities, search]);
 
   // Group by date, then bundle by activity type + partner
