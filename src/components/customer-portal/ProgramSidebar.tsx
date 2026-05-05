@@ -2,6 +2,7 @@ import { StatusSummary } from "./StatusSummary";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
+import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
 import { cn } from "@/lib/utils";
