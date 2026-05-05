@@ -98,13 +98,13 @@ export const HeroEditorial = () => {
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Link to="/voorbeeldprogrammas">
+            <Link to="/programma-op-maat">
               <Button
                 size="lg"
                 variant="outline"
                 className="bg-transparent border-sand/40 text-sand hover:bg-sand/10 hover:text-primary-foreground text-base px-8 h-14 rounded-sm backdrop-blur-sm"
               >
-                Bekijk voorbeeldprogramma's
+                Programma op maat
               </Button>
             </Link>
           </motion.div>
