@@ -48,6 +48,7 @@ const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
 const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
 const AccommodationQuotes = lazy(() => import("./pages/AccommodationQuotes"));
 const ActiviteitenBoeken = lazy(() => import("./pages/ActiviteitenBoeken"));
+const Sitemap = lazy(() => import("./pages/Sitemap"));
 
 // Lazy-loaded partner pages
 const PartnerPortal = lazy(() => import("./pages/PartnerPortal"));
@@ -119,7 +120,8 @@ const App = () => {
             <Route path="/voor-wie" element={<VoorWie />} />
             <Route path="/samenwerken" element={<Programmas />} />
             <Route path="/bouwstenen" element={<Bouwstenen />} />
-            <Route path="/programmamodules" element={<Voorbeeldprogrammas />} />
+            <Route path="/programmamodules" element={<Navigate to="/voorbeeldprogrammas" replace />} />
+            <Route path="/sitemap" element={<Sitemap />} />
             <Route path="/voorbeeldprogrammas" element={<VoorbeeldprogrammaOverzicht />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/catering" element={<Catering />} />

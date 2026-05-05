@@ -138,6 +138,25 @@
     <priority>0.7</priority>
   </url>
 
+  <url>
+    <loc>https://bureauvlieland.nl/bedrijfsuitje-ideeen-vlieland</loc>
+    <lastmod>2026-05-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/activiteiten-boeken</loc>
+    <lastmod>2026-05-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/sitemap</loc>
+    <lastmod>2026-05-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
   <!-- Ondersteunende pagina's -->
   <url>
     <loc>https://bureauvlieland.nl/catering</loc>
