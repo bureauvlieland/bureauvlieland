@@ -29,7 +29,7 @@ import type { ProgramTemplate } from "@/types/programTemplate";
 
 export type ProgramType = "zakelijk" | "prive" | "los";
 
-type Track = "laten_regelen" | "zelf_regelen";
+type Track = "laten_regelen" | "voorbeeld" | "zelf_regelen";
 
 interface WizardData {
   programType: ProgramType | null;
@@ -100,18 +100,18 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
   // --- Navigation ---
   const handleNext = () => {
     if (track === "zelf_regelen") {
-      if (step === 2) setStep(2.5); // template selection
-      else if (step === 2.5) {
+      if (step === 2) {
         // start empty for zelf regelen
         onComplete({ ...data, wantsAccommodation: false });
       }
+    } else if (track === "voorbeeld") {
+      if (step === 2) setStep(2.5); // template selection -> loads into builder
     } else if (track === "laten_regelen") {
-      if (step === 2) setStep(2.5); // templates as inspiration
-      else if (step === 2.5) {
-        // Go to accommodation question or intake
+      // No template step — go straight to accommodation question (multi-day) or intake
+      if (step === 2) {
         if (isMultiDay) setStep(3);
-        else setStep(4); // skip accommodation, go to intake
-      } else if (step === 3) setStep(4); // accommodation -> intake
+        else setStep(4);
+      } else if (step === 3) setStep(4);
     }
   };
 
@@ -120,21 +120,16 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
       setTrack(null);
       setStep(1);
     } else if (step === 2.5) setStep(2);
-    else if (step === 3) setStep(2.5);
+    else if (step === 3) setStep(2);
     else if (step === 4) {
       if (isMultiDay) setStep(3);
-      else setStep(2.5);
+      else setStep(2);
     }
   };
 
   const handleStartEmpty = () => {
-    if (track === "zelf_regelen") {
-      onComplete({ ...data, wantsAccommodation: false });
-    } else {
-      // "Laten regelen" - skip templates, go to accommodation or intake
-      if (isMultiDay) setStep(3);
-      else setStep(4);
-    }
+    // Only relevant for "voorbeeld" track — skip choosing a template, go to empty builder
+    onComplete({ ...data, wantsAccommodation: false });
   };
 
   // Progress
