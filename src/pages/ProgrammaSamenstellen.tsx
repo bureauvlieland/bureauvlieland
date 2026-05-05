@@ -158,10 +158,10 @@ const ProgrammaSamenstellen = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Stel uw offerte samen | Bureau Vlieland</title>
+        <title>Stel zelf uw programma samen | Bureau Vlieland</title>
         <meta name="description" content="Stel uw programma op Vlieland samen en vraag vrijblijvend een offerte aan. Kies activiteiten, catering en vervoer voor uw groep." />
         <link rel="canonical" href="https://bureauvlieland.nl/programma-samenstellen" />
-        <meta property="og:title" content="Stel uw offerte samen | Bureau Vlieland" />
+        <meta property="og:title" content="Stel zelf uw programma samen | Bureau Vlieland" />
         <meta property="og:description" content="Stel uw programma op Vlieland samen en vraag vrijblijvend een offerte aan." />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
         <meta property="og:url" content="https://bureauvlieland.nl/programma-samenstellen" />
@@ -181,7 +181,7 @@ const ProgrammaSamenstellen = () => {
             </div>
             <div className="relative z-10 text-center text-primary-foreground px-4 max-w-4xl">
               <h1 className="text-4xl md:text-5xl font-display font-bold mb-3">
-                {phase === "basics" ? "Welkom bij Bureau Vlieland" : "Stel uw offerte samen"}
+                {phase === "basics" ? "Welkom bij Bureau Vlieland" : "Stel zelf uw programma samen"}
               </h1>
               <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
                 {phase === "basics"

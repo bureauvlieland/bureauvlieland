@@ -283,7 +283,7 @@ const Partners = () => {
               Wij combineren het beste van onze partners tot één samenhangend programma — u heeft slechts één aanspreekpunt.
             </p>
             <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <a href="/programma-samenstellen">Vraag uw offerte aan</a>
+              <a href="/programma-samenstellen">Stel zelf uw programma samen</a>
             </Button>
           </div>
         </section>

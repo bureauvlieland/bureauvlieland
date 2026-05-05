@@ -1,32 +1,32 @@
 import { Button } from "@/components/ui/button";
-import { Menu, ChevronDown, Phone } from "lucide-react";
+import { Menu, ChevronDown } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { MegaDropdown, navItems } from "./navigation/MegaDropdown";
+import {
+  ProgrammasMega,
+  VoorWieMega,
+  OverOnsDropdown,
+  navItems,
+} from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
 
-const programmasItems = [
-  { label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" },
-  { label: "Bouwstenen", href: "/bouwstenen" },
-  { label: "Aangesloten partners", href: "/partners" },
+const programmasHrefs = [
+  "/programma-samenstellen",
+  "/voorbeeldprogrammas",
+  "/bouwstenen",
+  "/catering",
+  "/evenementen",
+  "/activiteiten-boeken",
 ];
 
-// All hrefs covered by the MegaDropdown
-const megaDropdownHrefs = [
+const voorWieHrefs = [
   ...navItems.voorBedrijvenItems.map((i) => i.href),
   ...navItems.voorPriveItems.map((i) => i.href),
-  ...navItems.extraItems.map((i) => i.href),
 ];
 
-const programmasHrefs = programmasItems.map((i) => i.href);
+const overOnsHrefs = navItems.overOnsItems.map((i) => i.href);
 
 function useNavItemClass(hrefs: string[]) {
   const { pathname } = useLocation();
@@ -44,29 +44,57 @@ function useSingleNavClass(href: string) {
     : "text-sm text-muted-foreground hover:text-foreground transition-colors";
 }
 
+type DropdownKey = "programmas" | "voorwie" | "overons" | null;
+
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMegaOpen, setIsMegaOpen] = useState(false);
-  const megaRef = useRef<HTMLDivElement>(null);
+  const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const megaClass = useNavItemClass(megaDropdownHrefs);
-  const logiesClass = useSingleNavClass("/logies-vlieland");
   const programmasClass = useNavItemClass(programmasHrefs);
-  const overOnsClass = useSingleNavClass("/over-ons");
-  const contactClass = useSingleNavClass("/contact");
+  const overnachtenClass = useSingleNavClass("/logies-vlieland");
+  const voorWieClass = useNavItemClass(voorWieHrefs);
+  const overOnsClass = useNavItemClass(overOnsHrefs);
 
-  const openMega = useCallback(() => {
+  const open = useCallback((key: Exclude<DropdownKey, null>) => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    setIsMegaOpen(true);
+    setOpenDropdown(key);
   }, []);
 
-  const closeMega = useCallback(() => {
-    closeTimer.current = setTimeout(() => setIsMegaOpen(false), 150);
+  const close = useCallback(() => {
+    closeTimer.current = setTimeout(() => setOpenDropdown(null), 150);
   }, []);
+
+  const renderDropdown = (
+    key: Exclude<DropdownKey, null>,
+    label: string,
+    className: string,
+    Content: React.ComponentType<{ onNavigate?: () => void }>,
+  ) => (
+    <div
+      className="relative"
+      onMouseEnter={() => open(key)}
+      onMouseLeave={close}
+    >
+      <button
+        onClick={() => setOpenDropdown(openDropdown === key ? null : key)}
+        className={`${className} flex items-center gap-1`}
+      >
+        {label}
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${openDropdown === key ? "rotate-180" : ""}`}
+        />
+      </button>
+      {openDropdown === key && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-card border border-border rounded-lg shadow-lg z-50">
+          <Content onNavigate={() => setOpenDropdown(null)} />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -82,67 +110,16 @@ export const Navigation = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-4">
-              {/* Ons aanbod - Mega Dropdown (hover) */}
-              <div
-                ref={megaRef}
-                className="relative"
-                onMouseEnter={openMega}
-                onMouseLeave={closeMega}
-              >
-                <button
-                  onClick={() => setIsMegaOpen((v) => !v)}
-                  className={`${megaClass} flex items-center gap-1`}
-                >
-                  Ons aanbod
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isMegaOpen ? "rotate-180" : ""}`} />
-                </button>
-                {isMegaOpen && (
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-card border border-border rounded-lg shadow-lg z-50">
-                    <MegaDropdown onNavigate={() => setIsMegaOpen(false)} />
-                  </div>
-                )}
-              </div>
+            <div className="hidden lg:flex items-center gap-5">
+              {renderDropdown("programmas", "Programma's", programmasClass, ProgrammasMega)}
 
-              {/* Logies */}
-              <Link to="/logies-vlieland" className={logiesClass}>
-                Logies
+              <Link to="/logies-vlieland" className={overnachtenClass}>
+                Overnachten
               </Link>
 
-              {/* Programma's Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`${programmasClass} flex items-center gap-1`}>
-                  Programma's <ChevronDown className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-card border-border min-w-[200px]">
-                  {programmasItems.map((item) => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link to={item.href} className="cursor-pointer">
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {renderDropdown("voorwie", "Voor wie", voorWieClass, VoorWieMega)}
 
-              {/* Over ons */}
-              <Link to="/over-ons" className={overOnsClass}>
-                Over ons
-              </Link>
-
-              {/* Contact */}
-              <Link to="/contact" className={contactClass}>
-                Contact
-              </Link>
-
-              {/* Phone link */}
-              <a
-                href="tel:0562700208"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-              >
-                <Phone className="h-4 w-4" />
-                <span className="hidden xl:inline">0562 700 208</span>
-              </a>
+              {renderDropdown("overons", "Over ons", overOnsClass, OverOnsDropdown)}
 
               {/* CTA */}
               <Link to="/programma-samenstellen">
@@ -151,7 +128,7 @@ export const Navigation = () => {
                   size="sm"
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  Vraag uw offerte aan
+                  Stel zelf uw programma samen
                 </Button>
               </Link>
             </div>
