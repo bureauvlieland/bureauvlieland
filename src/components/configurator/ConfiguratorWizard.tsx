@@ -135,15 +135,20 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
   // Progress
   const getProgressSteps = () => {
     if (track === "laten_regelen") {
-      const steps = isMultiDay ? 4 : 3;
+      const steps = isMultiDay ? 3 : 2;
       let current = 1;
       if (step >= 2) current = 2;
-      if (step >= 2.5) current = isMultiDay ? 2 : 2;
       if (step >= 3) current = 3;
       if (step >= 4) current = steps;
       return { total: steps, current };
     }
-    // zelf regelen or choosing
+    if (track === "voorbeeld") {
+      let current = 1;
+      if (step >= 2) current = 2;
+      if (step >= 2.5) current = 3;
+      return { total: 3, current };
+    }
+    // zelf regelen
     let current = 1;
     if (step >= 2) current = 2;
     return { total: 2, current };
