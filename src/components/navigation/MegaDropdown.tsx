@@ -72,12 +72,12 @@ const overOnsItems: NavItem[] = [
 
 export const ProgrammasMega = ({ onNavigate }: MegaDropdownProps) => {
   return (
-    <div className="grid grid-cols-[1.2fr_1fr] gap-6 p-6 min-w-[600px]">
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+    <div className="grid grid-cols-[1.4fr_1fr] gap-0 w-[680px] overflow-hidden rounded-lg">
+      <div className="bg-card p-6">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-4">
           Begin hier
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {beginHier.map((item) => {
             const Icon = item.icon;
             return (
@@ -85,43 +85,44 @@ export const ProgrammasMega = ({ onNavigate }: MegaDropdownProps) => {
                 key={item.href}
                 to={item.href}
                 onClick={onNavigate}
-                className="group flex items-start gap-3 rounded-md p-3 transition-colors hover:bg-accent hover:text-accent-foreground border border-transparent hover:border-border"
+                className="group flex items-start gap-3 rounded-lg p-3 transition-all duration-150 hover:bg-primary/5 hover:translate-x-0.5"
               >
                 {Icon && (
-                  <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                     <Icon className="h-4 w-4" />
                   </span>
                 )}
-                <span className="flex-1">
-                  <span className="block text-sm font-semibold text-foreground">
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-foreground leading-tight">
                     {item.label}
                   </span>
                   {item.description && (
-                    <span className="block text-xs text-muted-foreground">
+                    <span className="block text-xs text-muted-foreground mt-0.5">
                       {item.description}
                     </span>
                   )}
                 </span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                <ArrowRight className="h-4 w-4 mt-1 text-muted-foreground translate-x-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
               </Link>
             );
           })}
         </div>
       </div>
 
-      <div className="border-l border-border pl-6">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+      <div className="bg-muted/40 p-6 border-l border-border">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-4">
           Verken het aanbod
         </h3>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {verkenItems.map((item) => (
             <Link
               key={item.href}
               to={item.href}
               onClick={onNavigate}
-              className="block rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="group flex items-center justify-between rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
             >
-              {item.label}
+              <span>{item.label}</span>
+              <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </Link>
           ))}
         </div>
