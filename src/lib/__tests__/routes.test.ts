@@ -7,6 +7,7 @@
  * Run: `bun run src/lib/__tests__/routes.test.ts`
  * Exit code 1 on failure.
  */
+// @ts-nocheck
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, resolve } from "path";
 
