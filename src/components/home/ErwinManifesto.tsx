@@ -50,9 +50,8 @@ export const ErwinManifesto = () => {
 
             <blockquote className="font-display font-light text-primary-foreground leading-[1.05] text-[clamp(1.75rem,3.5vw,3rem)] mb-10">
               <span className="text-sunset font-normal italic">"</span>
-              Een eilanddag slaagt als de
-              <span className="italic"> details</span> kloppen: de smaak van de catering, het tijdstip
-              van de boot, de gids die zijn verhaal kent. Wij zorgen dat alles vanuit één hand klopt — de eilanders doen de rest.
+              Een goede dag op Vlieland is
+              <span className="italic"> geregeld</span>, niet toevallig. Boot op tijd, eten op tafel, gids die zijn vak verstaat. Wij regelen het, één factuur achteraf — klaar.
               <span className="text-sunset font-normal italic">"</span>
             </blockquote>
 
