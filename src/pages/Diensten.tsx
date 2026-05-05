@@ -13,10 +13,10 @@ const Diensten = () => {
   return (
     <div className="min-h-screen">
        <Helmet>
-        <title>Onze diensten – Bureau Vlieland | Programma, regie & catering</title>
-        <meta name="description" content="Bureau Vlieland verzorgt complete programma's voor teams en organisaties op Vlieland: van inhoudelijke sessies tot catering en lokale begeleiding." />
+        <title>Onze diensten – Bureau Vlieland | Programma, boekingen & catering</title>
+        <meta name="description" content="Bureau Vlieland ontwikkelt programma's en boekt alle eilandpartners voor uw groep op Vlieland. Eén partij, één factuur — van inhoud tot catering." />
         <link rel="canonical" href="https://bureauvlieland.nl/diensten" />
-        <meta property="og:title" content="Onze diensten – Bureau Vlieland | Programma, regie & catering" />
+        <meta property="og:title" content="Onze diensten – Bureau Vlieland | Programma, boekingen & catering" />
         <meta property="og:description" content="Bureau Vlieland verzorgt complete programma's voor teams en organisaties op Vlieland: van inhoudelijke sessies tot catering en lokale begeleiding." />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
         <meta property="og:url" content="https://bureauvlieland.nl/diensten" />
@@ -53,7 +53,7 @@ const Diensten = () => {
               Onze diensten
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Eén partij voor programma, regie en uitvoering op Vlieland
+              Eén partij voor programma-ontwikkeling, boekingen en catering — één factuur
             </p>
           </div>
         </section>

@@ -14,14 +14,14 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Bureau Vlieland – Professionele evenementen en teamuitjes op Vlieland</title>
+        <title>Bureau Vlieland – Lokale specialist voor groepsprogramma's op Vlieland</title>
         <meta
           name="description"
-          content="Bureau Vlieland organiseert professionele bedrijfsuitjes, teamdagen en evenementen op Vlieland. Maatwerkprogramma's met lokale regie en catering."
+          content="Bureau Vlieland is uw lokale specialist voor groepsbezoek aan Vlieland: één partij, één factuur. Wij ontwikkelen het programma en boeken alle eilandpartners."
         />
         <link rel="canonical" href="https://bureauvlieland.nl" />
-        <meta property="og:title" content="Bureau Vlieland – Professionele evenementen op Vlieland" />
-        <meta property="og:description" content="Organiseer uw teamdag, bedrijfsuitje of evenement op Vlieland met Bureau Vlieland. Professionele regie, lokale expertise." />
+        <meta property="og:title" content="Bureau Vlieland – Lokale specialist voor Vlieland" />
+        <meta property="og:description" content="Uw lokale specialist voor groepsprogramma's op Vlieland. Eén partij, één factuur — wij regelen alles met de eilanders." />
         <meta property="og:url" content="https://bureauvlieland.nl" />
         <meta property="og:type" content="website" />
       </Helmet>

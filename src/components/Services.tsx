@@ -4,10 +4,10 @@ import { Calendar, Users, Utensils, CheckCircle2 } from "lucide-react";
 
 const services = [
   {
-    pill: "Programma & regie",
+    pill: "Programma & boekingen",
     icon: Calendar,
-    title: "Eén aanspreekpunt, volledig ontzorgd",
-    description: "Waar activiteitenaanbieders losse onderdelen leveren, regelen wij het complete plaatje. Van planning tot uitvoering – jullie hebben één contactpersoon die alles coördineert.",
+    title: "Eén partij, één factuur",
+    description: "Waar activiteitenaanbieders losse onderdelen leveren, ontwikkelen wij het complete programma en boeken we alle eilandpartners voor u. U krijgt één aanspreekpunt en één factuur.",
     items: [
       "Eendaagse en meerdaagse programma's op maat",
       "Coördinatie van alle betrokken partijen op het eiland",
@@ -18,8 +18,8 @@ const services = [
   {
     pill: "Samenwerking",
     icon: Users,
-    title: "Jullie regie, onze uitvoering",
-    description: "Of je nu een bureau, trainer of organisator bent: wij verzorgen de lokale uitvoering op Vlieland. Jullie houden de regie over het programma, wij regelen alles op het eiland.",
+    title: "Jullie inhoud, onze lokale uitvoering",
+    description: "Of je nu een bureau, trainer of organisator bent: wij verzorgen de lokale boekingen en logistiek op Vlieland. Jullie blijven inhoudelijk eigenaar, wij regelen alles met de eilanders.",
     items: [
       "Lokale partner voor bureaus en organisatoren",
       "White-label uitvoering onder jullie vlag",

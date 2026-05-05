@@ -56,8 +56,8 @@ export const FinalCTA = () => {
 
             <div className="mt-16 pt-10 border-t border-border flex flex-wrap justify-center gap-x-10 gap-y-4 text-xs uppercase tracking-[0.25em] text-muted-foreground">
               <span>· Maatwerk</span>
-              <span>· Lokale regie</span>
-              <span>· Eén aanspreekpunt</span>
+              <span>· Lokale specialist</span>
+              <span>· Eén factuur</span>
               <span>· Vrijblijvende offerte</span>
             </div>
           </motion.div>

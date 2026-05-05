@@ -50,9 +50,9 @@ export const ErwinManifesto = () => {
 
             <blockquote className="font-display font-light text-primary-foreground leading-[1.05] text-[clamp(1.75rem,3.5vw,3rem)] mb-10">
               <span className="text-sunset font-normal italic">"</span>
-              Wij geloven dat een eilanddag pas slaagt als de
-              <span className="italic"> details</span> kloppen. De smaak van de catering, het tijdstip
-              van de boot, de gids die zijn verhaal kent — dát is regie.
+              Een eilanddag slaagt als de
+              <span className="italic"> details</span> kloppen: de smaak van de catering, het tijdstip
+              van de boot, de gids die zijn verhaal kent. Wij zorgen dat alles vanuit één hand klopt — de eilanders doen de rest.
               <span className="text-sunset font-normal italic">"</span>
             </blockquote>
 
@@ -60,11 +60,11 @@ export const ErwinManifesto = () => {
               {[
                 {
                   k: "Lokaal",
-                  v: "Wij wonen, werken en leven op Vlieland. Geen bemiddeling — directe lijnen.",
+                  v: "Wij wonen op Vlieland en werken al jaren met dezelfde gidsen, koks en hoteliers.",
                 },
                 {
-                  k: "Eén regie",
-                  v: "Van eerste contact tot eindafrekening: één aanspreekpunt voor alles.",
+                  k: "Eén factuur",
+                  v: "Van eerste contact tot eindafrekening: één aanspreekpunt voor alles wat u op Vlieland boekt.",
                 },
                 {
                   k: "Op maat",
