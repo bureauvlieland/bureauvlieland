@@ -211,7 +211,7 @@ const Bouwstenen = () => {
             </p>
             <Link to="/programma-samenstellen">
               <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                Vraag uw offerte aan
+                Stel zelf uw programma samen
               </Button>
             </Link>
           </div>

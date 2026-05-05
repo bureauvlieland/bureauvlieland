@@ -202,7 +202,7 @@ const VoorbeeldprogrammaOverzicht = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/programma-samenstellen">
                 <Button variant="heroPrimary" size="lg" className="text-lg px-8 w-full sm:w-auto">
-                  Vraag uw offerte aan
+                  Stel zelf uw programma samen
                 </Button>
               </Link>
               <Link to="/contact">
