@@ -1,14 +1,31 @@
-# Transparante prijsopbouw in onderdeel-label
+## Doel
+Bij elke "Natuurbijdrage"-vermelding (factuur, offerte/PDF, klantportal, sidebar) een korte, vriendelijke uitleg tonen zodat klanten begrijpen waar het bedrag heen gaat.
 
-## Probleem
-Onder het bedrag van een onderdeel staat nu alleen het totaal (bv. "€ 3.600,00 totaal"). Niet direct te verifiëren waar dat bedrag vandaan komt — vooral bij `per_person_per_day` waar prijs × personen × dagen meespeelt.
+## Voorgestelde tekst
+**Korte versie (onder labels op factuur/regels):**
+> "Bijdrage natuurbeheer Staatsbosbeheer"
 
-## Oplossing — `src/components/admin/AdminQuotePriceEditor.tsx`
-Voeg in de trigger-button (onder de hoofdprijs) een extra regel toe die de berekening expliciet maakt, alléén wanneer er een eenheidsprijs (admin override) bekend is en het type níét "totaal" is:
+**Uitgebreide versie (sidebar / informatieblok):**
+> "Evenementenbureaus op Vlieland dragen € {bedrag} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied."
 
-- `per_person_per_day`: `€ 12,00 × 150p × 2d = € 3.600,00`
-- `per_person`: `€ 16,16 × 150p = € 2.424,00`
+Bedrag wordt dynamisch ingevuld op basis van `appSettings.nature_contribution_pp`.
 
-Styling: `text-[11px] text-muted-foreground`, direct onder de hoofdregel. Geen popover-wijziging (die toont al een "Totaal: …"-regel bij invoer).
+## Wijzigingen
 
-Niet voor `quoted_price` zonder override en niet voor `total`-prijstype (daar is geen breakdown zinvol). Geen DB-, edge- of API-wijzigingen.
+### 1. `src/components/customer-portal/ProgramSidebar.tsx` (regel ~118)
+Bestaande tekst vervangen door de uitgebreide versie hierboven (de huidige tekst "per deelnemer wordt een bijdrage afgedragen…" wordt vervangen door de meer uitleggende variant met "evenementenbureaus op Vlieland dragen … af").
+
+### 2. `src/pages/admin/AdminInvoicePreview.tsx`
+- **PDF-factuurregel** (regel ~589–596): `subDescription` wordt `"Bijdrage natuurbeheer Staatsbosbeheer · {N} personen"`.
+- **Schermweergave** (regel ~1146–1158): kleine subregel onder "Natuurbijdrage": `"Bijdrage natuurbeheer Staatsbosbeheer"`.
+
+### 3. `src/components/customer-portal/PriceSummaryCard.tsx`
+- Detailregel (regel ~412–418): label + kleine subtekst `"Bijdrage natuurbeheer Staatsbosbeheer"`.
+- Compacte regel (regel ~267–270): subtekst onder label.
+
+### 4. `src/components/admin/FinancialOverviewCard.tsx` & `src/pages/admin/AdminInvoicing.tsx`
+Optioneel kleine tooltip/sub-regel met dezelfde korte uitleg voor consistentie.
+
+## Niet in scope
+- Geen wijziging aan bedragen, BTW (blijft 0%) of berekeningen.
+- Hardcoded NL-tekst; geen aparte instelling. Wil je het later via Instellingen kunnen aanpassen, dan voeg ik een `nature_contribution_description` setting toe.

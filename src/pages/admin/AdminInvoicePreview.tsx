@@ -588,7 +588,7 @@ const AdminInvoicePreview = () => {
       const pp = totalsLocal.natureContribution / Math.max(totalsLocal.numberOfPeople, 1);
       coordRows.push({
         description: "Natuurbijdrage",
-        subDescription: `${totalsLocal.numberOfPeople} personen`,
+        subDescription: `Bijdrage natuurbeheer Staatsbosbeheer · ${totalsLocal.numberOfPeople} personen`,
         qty: String(totalsLocal.numberOfPeople),
         unitPrice: fmt(pp),
         unitPriceSuffix: "p.p.",
@@ -1147,7 +1147,7 @@ const AdminInvoicePreview = () => {
                                 <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                                   <td className="py-1.5 px-2">
                                     <p className="font-medium">Natuurbijdrage</p>
-                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
+                                    <p className="text-[9px] text-gray-400">Bijdrage natuurbeheer Staatsbosbeheer · {totals.numberOfPeople} personen</p>
                                   </td>
                                   <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
                                   <td className="py-1.5 px-2 text-right">

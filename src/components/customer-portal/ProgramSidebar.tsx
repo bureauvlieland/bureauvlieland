@@ -117,7 +117,7 @@ export const ProgramSidebar = ({
           <div>
             <p className="text-sm font-medium">Natuurbijdrage</p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              €{appSettings.nature_contribution_pp.toFixed(2).replace('.', ',')} p.p. — per deelnemer wordt een bijdrage afgedragen aan Staatsbosbeheer voor het behoud van de natuur op Vlieland.
+              Evenementenbureaus op Vlieland dragen €{appSettings.nature_contribution_pp.toFixed(2).replace('.', ',')} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied.
             </p>
           </div>
         </div>

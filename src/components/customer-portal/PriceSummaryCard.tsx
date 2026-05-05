@@ -412,9 +412,10 @@ export const PriceSummaryCard = ({
           {/* Nature contribution line */}
           <div className="py-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm">Natuurbijdrage Staatsbosbeheer ({numberOfPeople} pers.)</span>
+              <span className="text-sm">Natuurbijdrage ({numberOfPeople} pers.)</span>
               <span className="text-sm whitespace-nowrap">€{formatPrice(summary.natureContribution)}</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Bijdrage natuurbeheer Staatsbosbeheer</p>
           </div>
 
           {/* Coordination fee line */}
