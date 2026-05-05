@@ -30,7 +30,7 @@ const beginHier: NavItem[] = [
   },
   {
     label: "Programma op maat",
-    href: "/programma-samenstellen?mode=maatwerk",
+    href: "/programma-op-maat",
     description: "Wij stellen het voor u samen",
     icon: MessageSquareHeart,
   },

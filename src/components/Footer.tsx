@@ -68,7 +68,7 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/programma-samenstellen?mode=maatwerk" className="hover:text-primary transition-colors">
+                <Link to="/programma-op-maat" className="hover:text-primary transition-colors">
                   Programma op maat
                 </Link>
               </li>
