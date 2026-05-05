@@ -1,72 +1,67 @@
 ## Wat ik ga doen
 
-Twee acties op basis van je input + de oude offerte (sept 2025 → mei 2026):
+### 1. Draaiboek v4 genereren (`Draaiboek_BV-2604-0002_Vlielandreis_SGH_v4.docx`)
 
-### 1. Bunkermuseum Vlieland aanmaken als partner (database)
+Nieuwe versie met de volgende correcties en toevoegingen op v3:
 
-Nieuwe partner toevoegen via migratie:
-- **Naam:** Bunkermuseum Vlieland
-- **E-mail (notificaties):** info@bunkermuseumvlieland.nl
-- **Telefoon:** +31 6 45113566
-- **Status:** actief, conform bestaande partner-conventies (geen auth-account, alleen contact)
+**Aantallen geactualiseerd (uit Magister 26-08-2025):**
+- 4A: 26 (17 J / 9 M) — mentor I. Haeck
+- 4B: 24 — mentor L. Wijting
+- 4C: 27 (17 J / 10 M) — mentor D. Canale
+- 4D: 24 (9 J / 15 M) — mentor M. Boesveldt-Delwel
+- 4E: 24 (12 J / 12 M) — mentor L. de Boer
+- 4F: 25 — mentor N. van den Berg
+- **Totaal: 151 leerlingen + 16 begeleiders = 167 personen**
+- Bijlage met klassenlijsten per klas opnemen (uit PDF)
 
-### 2. Draaiboek v2 genereren (`Draaiboek_BV-2604-0002_Vlielandreis_SGH_v2.docx`)
+**Contactenblok corrigeren:**
+- **Erwin Soolsma**: alleen voorbereiding (NIET aanwezig op Vlieland)
+- **Karla Moust** (06 53671665): aanspreekpunt Bureau Vlieland tijdens verblijf én hoofd receptie Stortemelk
 
-Nieuwe versie naast v1, met deze toevoegingen/correcties:
+**Catering verdeeld over twee campings:**
+- Maaltijden splitsen: ~deel Stortemelk / ~deel Lange Paal naar verhouding leerlingen per camping (op basis van indeling — markeren als "n.t.b. door school" als verdeling onbekend)
+- Per camping eigen aantallen vermelden in cateringblok
 
-**Contactenblok vooraan (vervangt huidige noodcontact):**
-- Voorbereiding: **Erwin Soolsma — 06 49913085**
-- Tijdens verblijf / noodgevallen: **Karla Moust — 06 53671665**
+**Vrijdagboot:**
+- Vertrek Vlieland **vrijdag 22 mei 11:50** (was eerder ander tijdstip)
+- Tijdlijn dag 4 hierop aanpassen: ontbijt → afbreken → bagage → boot 11:50
 
-**Logistiek dag 1 (di 19 mei) verfijnd:**
-- Veerboot vertrek Harlingen **14:05**, aankomst Vlieland **15:45**
-- Fietsen uitreiken **±16:00**
-- Lange Paal-groep: **op de fiets** naar camping
-- Stortemelk-groep: **lopend** naar camping
+**Materiaalcontainer (NIEUW — Bijlage opnemen):**
+- Plaatsing door **Arthur Wolfswinkel — 06 22929677** op Stortemelk
+- In overleg met Angela Zijnge
+- Bestemd voor o.a. instrumenten
+- Plaatsing **dinsdag 19 mei** (aankomstdag), ophalen **vrijdag 22 mei**
+- Aparte partner-versie voor Arthur (e-mail: nschenkel@home.nl)
 
-**Bagagevervoer (Bijlage opnemen):**
-- Contact: **Rogier Rispens — 06 51360578**
-- Twee bagagekarren in Harlingen klaarzetten (één Stortemelk / één Lange Paal), met **brief erop** ter herkenning
+**Apollotenten:**
+- Verdeeld over Stortemelk én Lange Paal (was alleen Stortemelk in v3)
+- Aantallen per camping markeren n.t.b. door school
 
-**Tenten — verantwoordelijken (Stortemelk + Lange Paal):**
-- Vervoer, opzetten en afbreken door Stortemelk-medewerkers
-- Verantwoordelijke: **Angela Zijnge — 06 51928977**
-- Coördinator groepen Stortemelk: **Karin Kwant — 06 86868622**
+**Open vragen aan school (apart sectie "Vragen aan SGH" vooraan):**
+1. Doet school zelf de boodschappen? (Poiesz voor Lange Paal, Spar Kampwinkel voor Stortemelk?)
+2. Waar is de kooktent op Stortemelk voor bedoeld?
+3. Neemt Peter Hooft zelf contact op met het Bunkermuseum?
+4. Definitieve verdeling leerlingen Stortemelk / Lange Paal?
+5. Last-minute uitvallers — boottickets annuleren tot welke deadline?
 
-**Legertenten + brandhout:**
-- Geleverd door **Fietsverhuur Jan van Vlieland — Klaas Houter — 06 53949984**
-- Plaatsing **maandag 18 mei** (dag voor aankomst), zowel Lange Paal als Stortemelk
-- Brandhout wordt tegelijk afgeleverd
+### 2. Partner-versies genereren (losse bijlagen)
 
-**Stortemelk zaalhuur:** Grote zaal Bolder op **dinsdagavond 19 mei + donderdagavond 21 mei** (uit oude offerte: 2 avonden — vertaald naar mei-data)
+Nieuwe losse partner-draaiboeken naast de algemene v4:
+- `Draaiboek_partner_Arthur-Wolfswinkel_v1.docx` (materiaalcontainer)
+- Bestaande partner-bijlagen (Stortemelk, Lange Paal, Bagagevervoer, Jan van Vlieland, Bunkermuseum) updaten met nieuwe aantallen + vrijdagboot 11:50
 
-**Bunkermuseum als nieuwe bijlage:**
-- Eigen partner-sectie met contactgegevens
-- Operationele instructies voor hun bezoek-onderdeel in het programma
+### 3. Klassenlijsten als bijlage
 
-**Aanvullingen uit de oude offerte (sept→mei vertaald):**
-Detailcijfers die in v1 ontbraken:
-- 75 schoolfietsen + 12 damesfietsen + **2 e-bikes + 2 elektrische bakfietsen** (v1 had alleen 75+8)
-- **66 Apollo-tenten + 2 legertenten** (preciezer)
-- 99 staplaatsen Stortemelk (33 tenten × 3 nachten)
-- Kooktent op Stortemelk: woensdag + donderdag
-- Materiaal: koffiezet, koelkasten, waterkokers, geluidset, kartonhandling, inzet auto's
-- VOC: afhuur + 2x personeel (1 strand / 1 bos), 3 ochtenden
-- Catering: 498 vegetarische avondmaaltijden (3× 166)
-
-**Behoud uit v1:**
-- Branding + Wadden-ambassadeur
-- Volledige overname Vlielandboekje (programma, paklijst, huisregels, workshops)
-- Klantgegevens SGH zichtbaar
-- Geen prijzen (operationeel doc)
+Volledige klassenlijsten 4A-4F (namen, M/V) integreren als Bijlage Z in het draaiboek voor begeleiders.
 
 ## Output
 
-- Migratie voor Bunkermuseum-partner (1 INSERT met de juiste velden uit `partners`-tabel)
-- `/mnt/documents/Draaiboek_BV-2604-0002_Vlielandreis_SGH_v2.docx`
-- v1 blijft beschikbaar ter vergelijking
+- `/mnt/documents/Draaiboek_BV-2604-0002_Vlielandreis_SGH_v4.docx` (algemeen)
+- `/mnt/documents/Draaiboek_partner_Arthur-Wolfswinkel_v1.docx`
+- v3 blijft beschikbaar ter vergelijking
 
 ## Wat ik niet doe
 
-- Geen wijziging aan de offerte/projectdata in de database (alleen nieuwe partner aanmaken)
-- Geen e-mail naar Bunkermuseum — alleen aanmaken
+- Geen nieuwe partner aanmaken voor Arthur Wolfswinkel in de database (hij is een losse leverancier — alleen draaiboek-versie). Zeg even als je hem wél als formele partner wilt registreren.
+- Geen mailings versturen — documenten alleen genereren
+- Geen wijziging aan project-data of offerte in de database
