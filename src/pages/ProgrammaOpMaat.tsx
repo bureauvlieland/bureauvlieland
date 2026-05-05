@@ -128,10 +128,12 @@ const ProgrammaOpMaat = () => {
       if (error) throw error;
 
       trackProgramRequestSubmitted({
-        type: "maatwerk",
-        people: numberOfPeople,
-        days: selectedDates.length,
+        value: 0,
+        numberOfPeople,
+        numberOfDays: selectedDates.length,
         eventType: `maatwerk_${programType}`,
+        entryPage: getEntryPage() || undefined,
+        items: [],
       });
 
       setCustomerToken(token);
