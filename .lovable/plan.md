@@ -1,67 +1,100 @@
-## Wat ik ga doen
 
-### 1. Draaiboek v4 genereren (`Draaiboek_BV-2604-0002_Vlielandreis_SGH_v4.docx`)
+## 1. Homepage knop "Bekijk alle bouwstenen" verwijst verkeerd
 
-Nieuwe versie met de volgende correcties en toevoegingen op v3:
+In `src/components/home/ActivitiesShowcase.tsx` (regel 121) linkt de knop naar `/programma-samenstellen` (= configurator/programma maken). Dit hoort onder de sectie "· 02 — Bouwstenen", dus de knop moet naar de bouwstenen-overzichtspagina.
 
-**Aantallen geactualiseerd (uit Magister 26-08-2025):**
-- 4A: 26 (17 J / 9 M) — mentor I. Haeck
-- 4B: 24 — mentor L. Wijting
-- 4C: 27 (17 J / 10 M) — mentor D. Canale
-- 4D: 24 (9 J / 15 M) — mentor M. Boesveldt-Delwel
-- 4E: 24 (12 J / 12 M) — mentor L. de Boer
-- 4F: 25 — mentor N. van den Berg
-- **Totaal: 151 leerlingen + 16 begeleiders = 167 personen**
-- Bijlage met klassenlijsten per klas opnemen (uit PDF)
+**Wijziging:** `<Link to="/programma-samenstellen">` → `<Link to="/bouwstenen">`.
 
-**Contactenblok corrigeren:**
-- **Erwin Soolsma**: alleen voorbereiding (NIET aanwezig op Vlieland)
-- **Karla Moust** (06 53671665): aanspreekpunt Bureau Vlieland tijdens verblijf én hoofd receptie Stortemelk
+---
 
-**Catering verdeeld over twee campings:**
-- Maaltijden splitsen: ~deel Stortemelk / ~deel Lange Paal naar verhouding leerlingen per camping (op basis van indeling — markeren als "n.t.b. door school" als verdeling onbekend)
-- Per camping eigen aantallen vermelden in cateringblok
+## 2. Maatwerk als volwaardige derde keuze
 
-**Vrijdagboot:**
-- Vertrek Vlieland **vrijdag 22 mei 11:50** (was eerder ander tijdstip)
-- Tijdlijn dag 4 hierop aanpassen: ontbijt → afbreken → bagage → boot 11:50
+### Huidige situatie
+De configurator-wizard heeft twee tracks:
+- **Laten regelen** → toont eerst voorbeeldprogramma's als "inspiratie", dan een maatwerk intake-formulier
+- **Zelf regelen** → leidt naar de bouwer
 
-**Materiaalcontainer (NIEUW — Bijlage opnemen):**
-- Plaatsing door **Arthur Wolfswinkel — 06 22929677** op Stortemelk
-- In overleg met Angela Zijnge
-- Bestemd voor o.a. instrumenten
-- Plaatsing **dinsdag 19 mei** (aankomstdag), ophalen **vrijdag 22 mei**
-- Aparte partner-versie voor Arthur (e-mail: nschenkel@home.nl)
+De gebruiker wil dat klanten direct kunnen kiezen voor "laat Bureau Vlieland het samenstellen" zonder verplicht eerst door templates of de bouwer te moeten. Dat is technisch al deels aanwezig (`MaatwerkIntakeForm` maakt een `program_request` aan met type `maatwerk_zakelijk` / `maatwerk_prive` + customer_token, dus er ontstaat automatisch een contact + project waar je in admin mee verder kunt).
 
-**Apollotenten:**
-- Verdeeld over Stortemelk én Lange Paal (was alleen Stortemelk in v3)
-- Aantallen per camping markeren n.t.b. door school
+### Wijzigingen
 
-**Open vragen aan school (apart sectie "Vragen aan SGH" vooraan):**
-1. Doet school zelf de boodschappen? (Poiesz voor Lange Paal, Spar Kampwinkel voor Stortemelk?)
-2. Waar is de kooktent op Stortemelk voor bedoeld?
-3. Neemt Peter Hooft zelf contact op met het Bunkermuseum?
-4. Definitieve verdeling leerlingen Stortemelk / Lange Paal?
-5. Last-minute uitvallers — boottickets annuleren tot welke deadline?
+**A. Wizard herstructureren naar 3 duidelijke tracks** (`src/components/configurator/ConfiguratorWizard.tsx`):
 
-### 2. Partner-versies genereren (losse bijlagen)
+```
+Stap 1 — Hoe wilt u uw programma samenstellen?
+ ┌─────────────────────┬─────────────────────┬─────────────────────┐
+ │  Bureau Vlieland    │  Voorbeeld-         │  Zelf samenstellen  │
+ │  stelt het samen    │  programma kiezen   │                     │
+ │  (aanbevolen)       │                     │                     │
+ │  → korte intake     │  → kies template    │  → open bouwer      │
+ └─────────────────────┴─────────────────────┴─────────────────────┘
+```
 
-Nieuwe losse partner-draaiboeken naast de algemene v4:
-- `Draaiboek_partner_Arthur-Wolfswinkel_v1.docx` (materiaalcontainer)
-- Bestaande partner-bijlagen (Stortemelk, Lange Paal, Bagagevervoer, Jan van Vlieland, Bunkermuseum) updaten met nieuwe aantallen + vrijdagboot 11:50
+- Track **`laten_regelen`** wordt: gelegenheid + personen + datum(s) → direct naar `MaatwerkIntakeForm` (geen verplichte template-tussenstap meer; templates blijven optioneel als "inspiratie" in een later stadium of via de andere track).
+- Track **`template`**: gelegenheid + personen + datum(s) → template kiezen → laadt template in bouwer.
+- Track **`zelf_regelen`**: personen + datum(s) → lege bouwer.
 
-### 3. Klassenlijsten als bijlage
+**B. Skip-knop "Sla over en stel zelf samen"** in de template-stap blijft bestaan zodat de twee laatste tracks onderling switchbaar blijven.
 
-Volledige klassenlijsten 4A-4F (namen, M/V) integreren als Bijlage Z in het draaiboek voor begeleiders.
+**C. Backend / admin** — geen wijziging nodig: `MaatwerkIntakeForm` schrijft al naar `program_requests` (type maatwerk + bureau_central invoicing) en stuurt mail via `send-program-request` edge function. In admin verschijnt het direct als nieuwe aanvraag in `/admin/projecten` waar je het programma verder kunt invullen.
 
-## Output
+**D. Homepage CTA** — `HeroEditorial` en `FinalCTA` knoppen "Stel uw programma samen" blijven naar `/programma-samenstellen` wijzen; daar landt de gebruiker nu in de 3-keuze stap.
 
-- `/mnt/documents/Draaiboek_BV-2604-0002_Vlielandreis_SGH_v4.docx` (algemeen)
-- `/mnt/documents/Draaiboek_partner_Arthur-Wolfswinkel_v1.docx`
-- v3 blijft beschikbaar ter vergelijking
+**E. Ongebruikte component opruimen:** `src/components/configurator/EntryChoice.tsx` wordt nergens geïmporteerd → verwijderen om dubbele logica te voorkomen.
 
-## Wat ik niet doe
+---
 
-- Geen nieuwe partner aanmaken voor Arthur Wolfswinkel in de database (hij is een losse leverancier — alleen draaiboek-versie). Zeg even als je hem wél als formele partner wilt registreren.
-- Geen mailings versturen — documenten alleen genereren
-- Geen wijziging aan project-data of offerte in de database
+## 3. Terminologie consistent maken
+
+Inventarisatie van termen die nu door elkaar gebruikt worden:
+
+| Concept | Huidige varianten | Voorstel (één term) |
+|---|---|---|
+| Programma laten maken door BV | "Laten regelen", "Maatwerk", "Op maat", "Maatwerk aanvragen" | **"Programma op maat"** (knoppen) / **"Bureau Vlieland stelt het samen"** (uitleg) |
+| Klant bouwt zelf | "Zelf regelen", "Stel zelf samen", "Zelf samenstellen" | **"Zelf samenstellen"** |
+| Voorbeeld kiezen | "Voorbeeldprogramma", "Template", "Start met een voorbeeld" | **"Voorbeeldprogramma"** |
+| Losse onderdelen | "Bouwstenen", "Activiteiten", "Onderdelen" | **"Bouwstenen"** (interne/configurator), **"Activiteiten"** (publieke marketing) — bestaande split houden |
+| Hoofd-CTA | "Stel uw programma samen", "Programma samenstellen", "Programma maken" | **"Stel uw programma samen"** |
+
+**Bestanden die worden geharmoniseerd:**
+- `Footer.tsx` (regel 164–165): "Maatwerk aanvragen" → "Programma op maat"
+- `ConfiguratorWizard.tsx` track-labels en kopteksten
+- `HeroEditorial.tsx`, `FinalCTA.tsx`: één CTA-tekst
+- `Navigation.tsx` / `MegaDropdown.tsx`: check op afwijkende termen
+- `EntryChoice.tsx`: vervalt (zie 2E)
+
+---
+
+## 4. Voorbeeldprogramma's: duplicaten opruimen
+
+Analyse van de 10 gepubliceerde templates:
+
+**Echte duplicaten (3 dagen):**
+- **"Complete Eilandervaring"** en **"Eilandbeleving Compleet"** — zelfde duur, ~80% overlap in bouwstenen (Borrel, Café Boven, Fortuna, Italiaans, Vrije tijd, Zeehondentocht, Fietstocht). Namen zijn praktisch synoniemen.
+- **"Ontspannen Eilandweekend"** (3d) overlapt sterk met bovenstaande.
+
+**Voorstel:**
+- Behouden: **Eilandbeleving Compleet** (heeft Strandspektakel + Grillmaster, breedst).
+- Depubliceren (`is_published = false`): **Complete Eilandervaring** en **Ontspannen Eilandweekend** (data blijft bewaard, kan in admin worden hersteld).
+
+**Variant-paren — behouden (intentioneel):**
+- "Wellness & Natuur" (2d) ↔ "Wellness & Natuur (3 dagen)" — duidelijke duurvariant.
+- "Actieve Eilanddag" / "Chill Eilanddag" / "Eilanddag Compleet" — drie sferen voor dagprogramma, geen duplicaat.
+- "Avontuur & Ontspanning" (2d) en "Culinaire Ontdekking" (2d) — eigen profiel.
+
+Wijziging via migratie: `UPDATE program_templates SET is_published = false WHERE id IN ('complete-eilandervaring','relax-and-enjoy-vlieland');`
+
+---
+
+## Technische wijzigingen samengevat
+
+| Bestand | Wijziging |
+|---|---|
+| `src/components/home/ActivitiesShowcase.tsx` | Knop linkt naar `/bouwstenen` |
+| `src/components/configurator/ConfiguratorWizard.tsx` | 3-tracks; maatwerk direct na intake-stap |
+| `src/components/configurator/EntryChoice.tsx` | Verwijderen (ongebruikt) |
+| `src/components/Footer.tsx` | Term "Maatwerk aanvragen" → "Programma op maat" |
+| `src/components/home/HeroEditorial.tsx`, `FinalCTA.tsx` | CTA-tekst uniformeren |
+| Migratie | Twee 3-daagse templates depubliceren |
+
+Geen DB-schema-wijzigingen, geen nieuwe edge functions.

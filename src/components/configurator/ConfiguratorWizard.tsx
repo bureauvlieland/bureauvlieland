@@ -29,7 +29,7 @@ import type { ProgramTemplate } from "@/types/programTemplate";
 
 export type ProgramType = "zakelijk" | "prive" | "los";
 
-type Track = "laten_regelen" | "zelf_regelen";
+type Track = "laten_regelen" | "voorbeeld" | "zelf_regelen";
 
 interface WizardData {
   programType: ProgramType | null;
@@ -55,7 +55,7 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
     wantsAccommodation: initialData?.wantsAccommodation ?? null,
     selectedTemplate: null,
   });
-  const [templateInspiration, setTemplateInspiration] = useState<string | null>(null);
+  const [templateInspiration] = useState<string | null>(null);
   const [pendingTemplate, setPendingTemplate] = useState<ProgramTemplate | null>(null);
 
   const { data: fullTemplate } = useTemplateWithItems(pendingTemplate?.id || null);
@@ -100,18 +100,18 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
   // --- Navigation ---
   const handleNext = () => {
     if (track === "zelf_regelen") {
-      if (step === 2) setStep(2.5); // template selection
-      else if (step === 2.5) {
+      if (step === 2) {
         // start empty for zelf regelen
         onComplete({ ...data, wantsAccommodation: false });
       }
+    } else if (track === "voorbeeld") {
+      if (step === 2) setStep(2.5); // template selection -> loads into builder
     } else if (track === "laten_regelen") {
-      if (step === 2) setStep(2.5); // templates as inspiration
-      else if (step === 2.5) {
-        // Go to accommodation question or intake
+      // No template step — go straight to accommodation question (multi-day) or intake
+      if (step === 2) {
         if (isMultiDay) setStep(3);
-        else setStep(4); // skip accommodation, go to intake
-      } else if (step === 3) setStep(4); // accommodation -> intake
+        else setStep(4);
+      } else if (step === 3) setStep(4);
     }
   };
 
@@ -120,35 +120,35 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
       setTrack(null);
       setStep(1);
     } else if (step === 2.5) setStep(2);
-    else if (step === 3) setStep(2.5);
+    else if (step === 3) setStep(2);
     else if (step === 4) {
       if (isMultiDay) setStep(3);
-      else setStep(2.5);
+      else setStep(2);
     }
   };
 
   const handleStartEmpty = () => {
-    if (track === "zelf_regelen") {
-      onComplete({ ...data, wantsAccommodation: false });
-    } else {
-      // "Laten regelen" - skip templates, go to accommodation or intake
-      if (isMultiDay) setStep(3);
-      else setStep(4);
-    }
+    // Only relevant for "voorbeeld" track — skip choosing a template, go to empty builder
+    onComplete({ ...data, wantsAccommodation: false });
   };
 
   // Progress
   const getProgressSteps = () => {
     if (track === "laten_regelen") {
-      const steps = isMultiDay ? 4 : 3;
+      const steps = isMultiDay ? 3 : 2;
       let current = 1;
       if (step >= 2) current = 2;
-      if (step >= 2.5) current = isMultiDay ? 2 : 2;
       if (step >= 3) current = 3;
       if (step >= 4) current = steps;
       return { total: steps, current };
     }
-    // zelf regelen or choosing
+    if (track === "voorbeeld") {
+      let current = 1;
+      if (step >= 2) current = 2;
+      if (step >= 2.5) current = 3;
+      return { total: 3, current };
+    }
+    // zelf regelen
     let current = 1;
     if (step >= 2) current = 2;
     return { total: 2, current };
@@ -179,62 +179,93 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-              Waar mogen we u mee helpen?
+              Hoe wilt u uw programma samenstellen?
             </h2>
             <p className="text-muted-foreground">
-              Kies hoe u uw programma op Vlieland wilt samenstellen
+              Kies de manier die bij u past — alles is vrijblijvend
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
-            {/* Laten regelen */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            {/* Programma op maat (laten regelen) */}
             <Card
-              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-primary/30"
               onClick={() => handleTrackSelect("laten_regelen")}
             >
               <div className="aspect-[4/3] overflow-hidden">
                 <img
                   src={teamBeach}
-                  alt="Bureau Vlieland regelt uw programma"
+                  alt="Bureau Vlieland stelt uw programma samen"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+              <div className="absolute top-3 left-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider bg-primary text-primary-foreground px-2 py-1 rounded-sm">
+                  Aanbevolen
+                </span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
                   </div>
-                  <h3 className="font-display font-bold text-xl">Laten regelen</h3>
+                  <h3 className="font-display font-bold text-base">Programma op maat</h3>
                 </div>
-                <p className="text-sm text-white/90 leading-relaxed">
-                  Bureau Vlieland stelt een programma op maat voor u samen. U vertelt ons wat u zoekt, wij doen de rest.
+                <p className="text-xs text-white/90 leading-relaxed">
+                  Bureau Vlieland stelt het samen. U laat uw wensen achter, wij doen de rest.
                 </p>
               </div>
             </Card>
 
-            {/* Zelf regelen */}
+            {/* Voorbeeldprogramma kiezen */}
+            <Card
+              className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
+              onClick={() => handleTrackSelect("voorbeeld")}
+            >
+              <div className="aspect-[4/3] overflow-hidden">
+                <img
+                  src={dunesGroupImg}
+                  alt="Kies een voorbeeldprogramma"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center">
+                    <Check className="h-3.5 w-3.5 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-display font-bold text-base">Voorbeeldprogramma</h3>
+                </div>
+                <p className="text-xs text-white/90 leading-relaxed">
+                  Kies een kant-en-klaar programma en pas het naar wens aan.
+                </p>
+              </div>
+            </Card>
+
+            {/* Zelf samenstellen */}
             <Card
               className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/50 border-2 border-transparent"
               onClick={() => handleTrackSelect("zelf_regelen")}
             >
               <div className="aspect-[4/3] overflow-hidden">
                 <img
-                  src={dunesGroupImg}
+                  src={teamBeach}
                   alt="Stel zelf uw programma samen"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                    <Wrench className="h-4 w-4 text-accent-foreground" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-foreground flex items-center justify-center">
+                    <Wrench className="h-3.5 w-3.5 text-background" />
                   </div>
-                  <h3 className="font-display font-bold text-xl">Zelf regelen</h3>
+                  <h3 className="font-display font-bold text-base">Zelf samenstellen</h3>
                 </div>
-                <p className="text-sm text-white/90 leading-relaxed">
-                  Stel zelf uw programma samen uit ons aanbod van activiteiten, catering en vervoer.
+                <p className="text-xs text-white/90 leading-relaxed">
+                  Blader door alle bouwstenen en bouw zelf uw programma.
                 </p>
               </div>
             </Card>
@@ -377,8 +408,8 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         </div>
       )}
 
-      {/* Step 2 for "Zelf regelen": People + Dates only */}
-      {step === 2 && track === "zelf_regelen" && (
+      {/* Step 2 for "Zelf samenstellen" + "Voorbeeldprogramma": People + Dates only */}
+      {step === 2 && (track === "zelf_regelen" || track === "voorbeeld") && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="text-center mb-6">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
@@ -482,23 +513,15 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
         </div>
       )}
 
-      {/* Step 2.5: Template Selection */}
-      {step === 2.5 && (
+      {/* Step 2.5: Template Selection (voorbeeld track only) */}
+      {step === 2.5 && track === "voorbeeld" && (
         <TemplateSelector
           durationDays={data.selectedDates.length}
           numberOfPeople={data.numberOfPeople}
-          onSelectTemplate={
-            track === "laten_regelen"
-              ? (template) => {
-                  setTemplateInspiration(template.name);
-                  if (isMultiDay) setStep(3);
-                  else setStep(4);
-                }
-              : handleTemplateLoaded
-          }
+          onSelectTemplate={handleTemplateLoaded}
           onStartEmpty={handleStartEmpty}
           onBack={handleBack}
-          inspirationMode={track === "laten_regelen"}
+          inspirationMode={false}
         />
       )}
 

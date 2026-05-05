@@ -118,7 +118,7 @@ export const ActivitiesShowcase = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <Link to="/programma-samenstellen">
+          <Link to="/bouwstenen">
             <Button
               size="lg"
               variant="outline"

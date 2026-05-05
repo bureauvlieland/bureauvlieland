@@ -162,7 +162,7 @@ export const Footer = () => {
               </li>
               <li>
                 <Link to="/programma-samenstellen?mode=maatwerk" className="hover:text-primary transition-colors">
-                  Maatwerk aanvragen
+                  Programma op maat
                 </Link>
               </li>
             </ul>
