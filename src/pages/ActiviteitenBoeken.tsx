@@ -7,19 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapActivityCard } from "@/components/map/MapActivityCard";
-import { MapBookingDialog } from "@/components/map/MapBookingDialog";
+import { MapActivityCard, type BundledTime } from "@/components/map/MapActivityCard";
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
 import { Search, CalendarDays, Ticket } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 
+type EnrichedActivity = MapActivity & {
+  _partnerId?: string;
+  _partnerName?: string;
+  _partnerSlug?: string;
+  _image?: string | null;
+};
+
+interface BundledActivity {
+  representative: EnrichedActivity;
+  times: BundledTime[];
+  totalSlotsLeft: number;
+}
+
 const ActiviteitenBoeken = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [search, setSearch] = useState("");
-  const [bookingActivity, setBookingActivity] = useState<
-    (MapActivity & { _partnerId?: string; _partnerSlug?: string; _partnerName?: string }) | null
-  >(null);
 
   const dateStart = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
@@ -30,26 +39,64 @@ const ActiviteitenBoeken = () => {
 
   const { data: activities, isLoading } = useAllMapActivities(dateStart, dateEnd);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<EnrichedActivity[]>(() => {
     if (!activities) return [];
     const q = search.toLowerCase();
-    return activities.filter(
-      (a: any) =>
+    return (activities as EnrichedActivity[]).filter(
+      (a) =>
         a.ActivityTypeName?.toLowerCase().includes(q) ||
         a._partnerName?.toLowerCase().includes(q) ||
         a.Description?.toLowerCase().includes(q)
     );
   }, [activities, search]);
 
-  // Group by date
-  const grouped = useMemo(() => {
-    const map = new Map<string, typeof filtered>();
+  // Group by date, then bundle by activity type + partner
+  const grouped = useMemo<Array<[string, BundledActivity[]]>>(() => {
+    const byDate = new Map<string, Map<string, BundledActivity>>();
+
     for (const a of filtered) {
-      const key = format(new Date(a.Departure), "yyyy-MM-dd");
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(a);
+      const dateKey = format(new Date(a.Departure), "yyyy-MM-dd");
+      const groupKey = `${a.ActivityTypeId}::${a._partnerId ?? "unknown"}`;
+
+      if (!byDate.has(dateKey)) byDate.set(dateKey, new Map());
+      const dayBundles = byDate.get(dateKey)!;
+
+      const time: BundledTime = {
+        id: a.Id,
+        time: format(new Date(a.Departure), "HH:mm"),
+        slotsLeft: a.RemainingSlots,
+      };
+
+      const existing = dayBundles.get(groupKey);
+      if (existing) {
+        existing.times.push(time);
+        existing.totalSlotsLeft += a.RemainingSlots;
+        // Keep earliest as representative
+        if (new Date(a.Departure) < new Date(existing.representative.Departure)) {
+          existing.representative = a;
+        }
+      } else {
+        dayBundles.set(groupKey, {
+          representative: a,
+          times: [time],
+          totalSlotsLeft: a.RemainingSlots,
+        });
+      }
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+    // Sort times within each bundle, sort bundles by earliest time, sort dates
+    return Array.from(byDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateKey, bundles]) => {
+        const list = Array.from(bundles.values()).map((b) => ({
+          ...b,
+          times: b.times.sort((x, y) => x.time.localeCompare(y.time)),
+        }));
+        list.sort((x, y) =>
+          (x.times[0]?.time ?? "").localeCompare(y.times[0]?.time ?? "")
+        );
+        return [dateKey, list] as [string, BundledActivity[]];
+      });
   }, [filtered]);
 
   return (
@@ -77,7 +124,7 @@ const ActiviteitenBoeken = () => {
               </h1>
               <p className="text-muted-foreground text-lg">
                 Ontdek en boek direct beschikbare activiteiten bij onze partners.
-                Alle prijzen zijn inclusief coördinatie door Bureau Vlieland.
+                U boekt rechtstreeks bij de aanbieder.
               </p>
             </div>
           </div>
@@ -144,17 +191,18 @@ const ActiviteitenBoeken = () => {
                   </CardContent>
                 </Card>
               ) : (
-                grouped.map(([dateKey, items]) => (
+                grouped.map(([dateKey, bundles]) => (
                   <div key={dateKey}>
                     <h2 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-1">
                       {format(new Date(dateKey), "EEEE d MMMM yyyy", { locale: nl })}
                     </h2>
                     <div className="space-y-3">
-                      {items.map((activity: any) => (
+                      {bundles.map((bundle) => (
                         <MapActivityCard
-                          key={`${activity.Id}-${activity.Departure}`}
-                          activity={activity}
-                          onBook={setBookingActivity}
+                          key={`${bundle.representative.ActivityTypeId}-${bundle.representative._partnerId}-${dateKey}`}
+                          activity={bundle.representative}
+                          times={bundle.times}
+                          totalSlotsLeft={bundle.totalSlotsLeft}
                           showPartner
                         />
                       ))}
@@ -168,12 +216,6 @@ const ActiviteitenBoeken = () => {
       </main>
 
       <Footer />
-
-      <MapBookingDialog
-        activity={bookingActivity}
-        open={!!bookingActivity}
-        onOpenChange={(open) => !open && setBookingActivity(null)}
-      />
     </>
   );
 };
