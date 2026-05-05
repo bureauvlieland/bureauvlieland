@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, ExternalLink } from "lucide-react";
 import vuurtorenloopImage from "@/assets/vuurtorenloop.jpg";
 import amuseTourImage from "@/assets/amuse-tour.jpg";
-import bockbiertochtImage from "@/assets/bockbiertocht2.jpg";
-import stappenHappenImage from "@/assets/stappen-en-happen.jpg";
 import { Link } from "react-router-dom";
 
 const Evenementen = () => {
@@ -47,7 +45,7 @@ const Evenementen = () => {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1">
               <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-                <span className="text-sm font-semibold text-primary">19 april 2026</span>
+                <span className="text-sm font-semibold text-primary">18 april 2027</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
                 Vuurtorenloop Vlieland
@@ -61,7 +59,7 @@ const Evenementen = () => {
                   <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-foreground">Datum</p>
-                    <p className="text-muted-foreground">Zondag 19 april 2026</p>
+                    <p className="text-muted-foreground">Zondag 18 april 2027</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -160,143 +158,6 @@ const Evenementen = () => {
                 >
                   <Button variant="default" className="w-full sm:w-auto">
                     Meer informatie <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
-                <Link to="/contact">
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    Organiseer met Bureau Vlieland
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Bockbiertocht Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1">
-              <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-                <span className="text-sm font-semibold text-primary">Herfstvakantie t/m eind december</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Bockbiertocht Vlieland
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                <strong>Bierliefhebbers opgelet!</strong> Dit najaar nodigen we je uit voor een smaakvolle 
-                ontdekkingstocht langs de gezelligste horecagelegenheden van Vlieland: de Bockbiertocht!
-              </p>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Periode</p>
-                    <p className="text-muted-foreground">Herfstvakantie t/m eind december</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Locaties</p>
-                    <p className="text-muted-foreground">8 horecagelegenheden op Vlieland</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-muted-foreground mb-8">
-                Met de speciale stempelkaart ga je op pad om bij acht unieke locaties een heerlijk 15 cl. 
-                proefglaasje bockbier te proeven. Of je nu de hele route in één keer loopt of de tocht 
-                verspreidt over meerdere dagen, jij bepaalt de volgorde en het tempo. De perfecte manier 
-                om Vlieland in de herfst te beleven!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://boeking.mijnactiviteitenplanner.nl/activiteiten-vlieland/bockbiertocht/list" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-block"
-                >
-                  <Button variant="default" className="w-full sm:w-auto">
-                    Boek tickets <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
-                <Link to="/contact">
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    Organiseer met Bureau Vlieland
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <img
-                src={bockbiertochtImage}
-                alt="Bockbiertocht - gezellige biertour op Vlieland"
-                className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stappen & Happen Section */}
-      <section className="py-20 bg-accent-soft/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <img
-                src={stappenHappenImage}
-                alt="Stappen & Happen - culinaire wandelroute op Vlieland"
-                className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
-                loading="lazy"
-              />
-            </div>
-            <div>
-              <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-                <span className="text-sm font-semibold text-primary">Donderdag & Zondag in de herfst</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Stappen & Happen
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Zin in een heerlijke herfstwandeling gecombineerd met culinaire verwennerij? 
-                Ontdek <strong>Stappen & Happen</strong>, dé smakelijke wandelroute door Vlieland!
-              </p>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Wanneer</p>
-                    <p className="text-muted-foreground">Route A op donderdag, Route B op zondag</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Route</p>
-                    <p className="text-muted-foreground">4 horecazaken op Vlieland</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-muted-foreground mb-8">
-                Tijdens deze unieke ervaring wandel je een prachtige route langs vier gezellige horecazaken, 
-                waar je telkens wordt verrast met een heerlijk gerecht in proeverijformaat. Geniet van de 
-                sfeervolle herfst op Vlieland, proef de culinaire creaties van lokale chefs en beleef een 
-                middag vol gezelligheid en smaak.
-              </p>
-              <p className="text-muted-foreground mb-8 font-semibold">
-                Stappen & Happen is ook als groepsactiviteit te boeken!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://boeking.mijnactiviteitenplanner.nl/activiteiten-vlieland/stappen-en-happen/list" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-block"
-                >
-                  <Button variant="default" className="w-full sm:w-auto">
-                    Boek tickets <ExternalLink className="ml-2 h-4 w-4" />
                   </Button>
                 </a>
                 <Link to="/contact">
