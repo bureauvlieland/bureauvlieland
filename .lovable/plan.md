@@ -1,53 +1,72 @@
-## Doel
+## Wat ik ga doen
 
-Eénmalig een Word-draaiboek (.docx) genereren voor project **BV-2604-0002** (Stedelijk Gymnasium Haarlem, schoolkamp Vlieland 19–22 mei 2026, 166 personen) dat je naar je partners kunt sturen. Dit is een **scriptmatige export**, geen feature in de app — sneller en preciezer voor deze eenmalige vraag.
+Twee acties op basis van je input + de oude offerte (sept 2025 → mei 2026):
 
-## Aanpak
+### 1. Bunkermuseum Vlieland aanmaken als partner (database)
 
-Ik draai een Node-script (gebruikt `docx` library, conform de DOCX-skill) dat alle data uit de database én het volledige Vlielandboekje combineert tot één Word-document met centraal draaiboek + losse partner-bijlagen.
+Nieuwe partner toevoegen via migratie:
+- **Naam:** Bunkermuseum Vlieland
+- **E-mail (notificaties):** info@bunkermuseumvlieland.nl
+- **Telefoon:** +31 6 45113566
+- **Status:** actief, conform bestaande partner-conventies (geen auth-account, alleen contact)
 
-## Inhoud van het document
+### 2. Draaiboek v2 genereren (`Draaiboek_BV-2604-0002_Vlielandreis_SGH_v2.docx`)
 
-**Voorblad**
-- Titel: "Draaiboek Vlielandreis Klas 4 — Stedelijk Gymnasium Haarlem"
-- Project BV-2604-0002, 19–22 mei 2026, 166 personen
-- Bureau Vlieland branding + Wadden Werelderfgoed-ambassadeur logo
+Nieuwe versie naast v1, met deze toevoegingen/correcties:
 
-**Deel 1 — Algemeen draaiboek (voor alle partners)**
-- Klant- & contactgegevens (Ineke Haeck / SGH)
-- Groepsverdeling: Stortemelk (4A/4E/4F, 83 pers.) / Lange Paal (4B/4C/4D, 83 pers.)
-- Logistiek overzicht: ferry heen/terug, fietsen, bagage, materiaal
-- Volledig dagprogramma uit het boekje (di t/m vr) — inclusief tijden, locaties, ontbijtcorvee, workshops
-- Theater Odyssee / A Midsummer Night's Dream uitleg
-- Paklijst en huisregels (uit boekje)
-- Noodcontact
+**Contactenblok vooraan (vervangt huidige noodcontact):**
+- Voorbereiding: **Erwin Soolsma — 06 49913085**
+- Tijdens verblijf / noodgevallen: **Karla Moust — 06 53671665**
 
-**Deel 2 — Partner-bijlagen** (één pagina/sectie per partner, met page-break)
-Op basis van de items in de offerte zijn dit feitelijk bureau-interne leveranciers, dus ik genereer bijlagen per logische rol:
+**Logistiek dag 1 (di 19 mei) verfijnd:**
+- Veerboot vertrek Harlingen **14:05**, aankomst Vlieland **15:45**
+- Fietsen uitreiken **±16:00**
+- Lange Paal-groep: **op de fiets** naar camping
+- Stortemelk-groep: **lopend** naar camping
 
-- **Bijlage A — Camping Stortemelk**: aankomst, aantal staplaatsen (66 + 2 legertent), Apollo-tenten, kooktent, zaalhuur Bolder (2 avonden), opslagcontainer, kampvuur, eindafrekening via Bureau Vlieland
-- **Bijlage B — Natuurkampeerterrein Lange Paal**: 83 personen, verblijf begeleiders, 8 damesfietsen, eindschoonmaak
-- **Bijlage C — Rederij Doeksen**: heen 14:00 di 19/5, retour 12:00 vr 22/5, 166 pax + bagagevervoer (live ferry-tijden bevestigen)
-- **Bijlage D — Fietsverhuur**: 75 schoolreisfietsen + 8 damesfietsen, ophaal di 16:30, retour vr 10:30
-- **Bijlage E — Catering**: 3 vegetarische avondmaaltijden × 166 pers., locaties, allergieën navragen
-- **Bijlage F — Vlieland Outdoor Center (VOC)**: Strandspektakel + Lasergame/Discgolf, programma woensdag & donderdag, rotatie-schema klassen
-- **Bijlage G — Workshopbegeleiders (intern SGH-team)**: workshop-overzicht met begeleider + benodigdheden uit het boekje (Bunker, Vogelbingo, Bootcamp, Hardlooptraining, Duik in geschiedenis etc.)
-- **Bijlage H — Materiaal & overig**: kampvuurhout, kartonnen decorstukken (13 fietsdozen), waterkokers, koffievoorzieningen, geluidsbox
+**Bagagevervoer (Bijlage opnemen):**
+- Contact: **Rogier Rispens — 06 51360578**
+- Twee bagagekarren in Harlingen klaarzetten (één Stortemelk / één Lange Paal), met **brief erop** ter herkenning
 
-Elke bijlage opent met: contactpersoon Bureau Vlieland, project-ref BV-2604-0002, datum, en een korte takenlijst voor die partner.
+**Tenten — verantwoordelijken (Stortemelk + Lange Paal):**
+- Vervoer, opzetten en afbreken door Stortemelk-medewerkers
+- Verantwoordelijke: **Angela Zijnge — 06 51928977**
+- Coördinator groepen Stortemelk: **Karin Kwant — 06 86868622**
 
-## Stijl
+**Legertenten + brandhout:**
+- Geleverd door **Fietsverhuur Jan van Vlieland — Klaas Houter — 06 53949984**
+- Plaatsing **maandag 18 mei** (dag voor aankomst), zowel Lange Paal als Stortemelk
+- Brandhout wordt tegelijk afgeleverd
 
-- Word-document, A4, professionele opmaak
-- Brand-kleuren Bureau Vlieland (uit codebase ophalen)
-- Leesbare typografie, duidelijke hoofdstukken, tabellen voor dagprogramma's
-- Paginanummers en kop/voettekst met projectnummer
-- Output: `/mnt/documents/Draaiboek_BV-2604-0002_Vlielandreis_SGH.docx`
+**Stortemelk zaalhuur:** Grote zaal Bolder op **dinsdagavond 19 mei + donderdagavond 21 mei** (uit oude offerte: 2 avonden — vertaald naar mei-data)
+
+**Bunkermuseum als nieuwe bijlage:**
+- Eigen partner-sectie met contactgegevens
+- Operationele instructies voor hun bezoek-onderdeel in het programma
+
+**Aanvullingen uit de oude offerte (sept→mei vertaald):**
+Detailcijfers die in v1 ontbraken:
+- 75 schoolfietsen + 12 damesfietsen + **2 e-bikes + 2 elektrische bakfietsen** (v1 had alleen 75+8)
+- **66 Apollo-tenten + 2 legertenten** (preciezer)
+- 99 staplaatsen Stortemelk (33 tenten × 3 nachten)
+- Kooktent op Stortemelk: woensdag + donderdag
+- Materiaal: koffiezet, koelkasten, waterkokers, geluidset, kartonhandling, inzet auto's
+- VOC: afhuur + 2x personeel (1 strand / 1 bos), 3 ochtenden
+- Catering: 498 vegetarische avondmaaltijden (3× 166)
+
+**Behoud uit v1:**
+- Branding + Wadden-ambassadeur
+- Volledige overname Vlielandboekje (programma, paklijst, huisregels, workshops)
+- Klantgegevens SGH zichtbaar
+- Geen prijzen (operationeel doc)
+
+## Output
+
+- Migratie voor Bunkermuseum-partner (1 INSERT met de juiste velden uit `partners`-tabel)
+- `/mnt/documents/Draaiboek_BV-2604-0002_Vlielandreis_SGH_v2.docx`
+- v1 blijft beschikbaar ter vergelijking
 
 ## Wat ik niet doe
 
-- Geen wijzigingen in de app/codebase
-- Geen e-mail versturen — je krijgt alleen het bestand om te downloaden
-- Geen prijzen vermelden (financieel zit in de offerte/factuur, niet in een operationeel draaiboek)
-
-Na goedkeuring lever ik het Word-bestand. Wil je achteraf nog iets wijzigen, dan maak ik een v2.
+- Geen wijziging aan de offerte/projectdata in de database (alleen nieuwe partner aanmaken)
+- Geen e-mail naar Bunkermuseum — alleen aanmaken
