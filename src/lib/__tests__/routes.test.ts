@@ -1,9 +1,17 @@
-import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+/**
+ * Route integrity check.
+ * Verifies every literal `<Link to="/...">` in the source resolves to a route
+ * defined in src/App.tsx. Specifically asserts that links to
+ * `/programma-op-maat` and `/voorbeeldprogrammas` exist and resolve.
+ *
+ * Run: `bun run src/lib/__tests__/routes.test.ts`
+ * Exit code 1 on failure.
+ */
+import { readFileSync, readdirSync, statSync } from "fs";
+import { join, resolve } from "path";
 
-const SRC = resolve(__dirname, "../..");
-const APP_TSX = resolve(SRC, "App.tsx");
+const SRC = resolve(process.cwd(), "src");
+const APP_TSX = join(SRC, "App.tsx");
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -19,42 +27,34 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-function extractRoutes(): { exact: Set<string>; prefixes: string[] } {
+function extractRoutes() {
   const src = readFileSync(APP_TSX, "utf8");
   const exact = new Set<string>();
   const prefixes: string[] = [];
-
-  // <Route path="..." />
   const routeRe = /<Route\s+path=["']([^"']+)["']/g;
   let m: RegExpExecArray | null;
   while ((m = routeRe.exec(src))) {
     const path = m[1];
     if (path === "*") continue;
     if (path.includes(":")) {
-      // dynamic segment — record the static prefix before the first ':'
       const prefix = path.slice(0, path.indexOf(":")).replace(/\/$/, "");
       if (prefix) prefixes.push(prefix);
     } else {
       exact.add(path);
     }
   }
-  // NotFound legacy redirects in NotFound.tsx are also valid destinations,
-  // but we only check that <Link to="..."> targets resolve in App routes.
   return { exact, prefixes };
 }
 
-function extractLinks(): Array<{ file: string; to: string }> {
+function extractLinks() {
   const files = walk(SRC);
   const links: Array<{ file: string; to: string }> = [];
-  // Match <Link to="..."> with literal string only (skip template/expressions)
   const linkRe = /<Link\b[^>]*\bto=\{?["'`]([^"'`{}\n]+)["'`]\}?/g;
   for (const f of files) {
     const src = readFileSync(f, "utf8");
     let m: RegExpExecArray | null;
     while ((m = linkRe.exec(src))) {
-      const raw = m[1];
-      // strip query/hash
-      const path = raw.split("?")[0].split("#")[0];
+      const path = m[1].split("?")[0].split("#")[0];
       if (!path.startsWith("/")) continue;
       links.push({ file: f, to: path });
     }
@@ -62,35 +62,44 @@ function extractLinks(): Array<{ file: string; to: string }> {
   return links;
 }
 
-describe("internal route integrity", () => {
+export function runRouteIntegrityChecks(): void {
   const { exact, prefixes } = extractRoutes();
   const links = extractLinks();
+  const errors: string[] = [];
 
   const isResolvable = (p: string) =>
-    exact.has(p) || prefixes.some((pre) => p === pre || p.startsWith(pre + "/") || p.startsWith(pre));
+    exact.has(p) || prefixes.some((pre) => p === pre || p.startsWith(pre + "/"));
 
-  it("App.tsx defines /programma-op-maat and /voorbeeldprogrammas", () => {
-    expect(exact.has("/programma-op-maat")).toBe(true);
-    expect(exact.has("/voorbeeldprogrammas")).toBe(true);
-  });
+  if (!exact.has("/programma-op-maat")) errors.push("App.tsx mist route /programma-op-maat");
+  if (!exact.has("/voorbeeldprogrammas")) errors.push("App.tsx mist route /voorbeeldprogrammas");
 
-  it("every <Link to=\"/programma-op-maat\"> resolves to a defined route", () => {
-    const targets = links.filter((l) => l.to === "/programma-op-maat");
-    expect(targets.length).toBeGreaterThan(0);
-    for (const t of targets) expect(isResolvable(t.to)).toBe(true);
-  });
-
-  it("every <Link to=\"/voorbeeldprogrammas\"> resolves to a defined route", () => {
-    const targets = links.filter((l) => l.to === "/voorbeeldprogrammas");
-    expect(targets.length).toBeGreaterThan(0);
-    for (const t of targets) expect(isResolvable(t.to)).toBe(true);
-  });
-
-  it("no internal <Link> points to an undefined route", () => {
-    const broken = links.filter((l) => !isResolvable(l.to));
-    if (broken.length) {
-      const summary = broken.map((b) => `  ${b.to}  (in ${b.file.replace(SRC, "src")})`).join("\n");
-      throw new Error(`Found ${broken.length} broken internal links:\n${summary}`);
+  const checkTarget = (target: string) => {
+    const found = links.filter((l) => l.to === target);
+    if (found.length === 0) errors.push(`Geen <Link to="${target}"> gevonden in code`);
+    for (const l of found) {
+      if (!isResolvable(l.to)) errors.push(`Broken link → ${l.to} in ${l.file.replace(SRC, "src")}`);
     }
-  });
-});
+  };
+  checkTarget("/programma-op-maat");
+  checkTarget("/voorbeeldprogrammas");
+
+  const broken = links.filter((l) => !isResolvable(l.to));
+  for (const b of broken) {
+    errors.push(`Broken internal link: ${b.to} (in ${b.file.replace(SRC, "src")})`);
+  }
+
+  console.log(`✓ ${exact.size} exact routes, ${prefixes.length} dynamic-prefix routes`);
+  console.log(`✓ ${links.length} interne <Link> targets gescand`);
+
+  if (errors.length) {
+    console.error(`\n✗ ${errors.length} probleem(en):`);
+    for (const e of errors) console.error("  - " + e);
+    process.exit(1);
+  }
+  console.log("✓ Alle routes / links OK");
+}
+
+// Auto-run when invoked directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runRouteIntegrityChecks();
+}
