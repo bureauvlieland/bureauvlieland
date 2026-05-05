@@ -55,7 +55,7 @@ export const ConfiguratorWizard = ({ onComplete, onTemplateSelected, initialData
     wantsAccommodation: initialData?.wantsAccommodation ?? null,
     selectedTemplate: null,
   });
-  const [templateInspiration, setTemplateInspiration] = useState<string | null>(null);
+  const [templateInspiration] = useState<string | null>(null);
   const [pendingTemplate, setPendingTemplate] = useState<ProgramTemplate | null>(null);
 
   const { data: fullTemplate } = useTemplateWithItems(pendingTemplate?.id || null);
