@@ -27,13 +27,20 @@ const usePublicPartners = () => {
   return useQuery({
     queryKey: ["public-partners"],
     queryFn: async (): Promise<PublicPartner[]> => {
-      // Step 1 — count published blocks per provider_id (no FK exists, so no embed)
-      const { data: blocks, error: blockErr } = await supabase
+      // Fetch all publicly visible partners
+      const { data: partners, error } = await supabase
+        .from("partners")
+        .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
+        .eq("is_active", true)
+        .eq("is_public", true);
+      if (error) throw error;
+
+      // Count published blocks per provider for display
+      const { data: blocks } = await supabase
         .from("building_blocks")
         .select("provider_id")
         .eq("status", "published")
         .not("provider_id", "is", null);
-      if (blockErr) throw blockErr;
 
       const blockCountByProvider = new Map<string, number>();
       for (const row of blocks ?? []) {
@@ -42,32 +49,7 @@ const usePublicPartners = () => {
         blockCountByProvider.set(pid, (blockCountByProvider.get(pid) ?? 0) + 1);
       }
 
-      const providerIds = Array.from(blockCountByProvider.keys()).filter((id) => id !== "bureau");
-
-      // Step 2 — fetch partners in two passes to avoid PostgREST .or() escaping issues with hyphenated IDs
-      const partnerMap = new Map<string, any>();
-
-      // 2a) Partners that provide a published bouwsteen
-      if (providerIds.length > 0) {
-        const { data: blockProviders, error: bpErr } = await supabase
-          .from("partners")
-          .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
-          .eq("is_active", true)
-          .in("id", providerIds);
-        if (bpErr) throw bpErr;
-        for (const p of blockProviders ?? []) partnerMap.set(p.id, p);
-      }
-
-      // 2b) Partners with a MAP-koppeling (direct boekbaar)
-      const { data: mapPartners, error: mpErr } = await supabase
-        .from("partners")
-        .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
-        .eq("is_active", true)
-        .not("map_tenant_slug", "is", null);
-      if (mpErr) throw mpErr;
-      for (const p of mapPartners ?? []) partnerMap.set(p.id, p);
-
-      const result: PublicPartner[] = Array.from(partnerMap.values())
+      return (partners ?? [])
         .filter((p) => p.id !== "bureau")
         .map((p) => ({
           id: p.id,
@@ -79,9 +61,8 @@ const usePublicPartners = () => {
           location_description: p.location_description,
           map_tenant_slug: p.map_tenant_slug,
           block_count: blockCountByProvider.get(p.id) ?? 0,
-        }));
-
-      return result.sort((a, b) => a.name.localeCompare(b.name));
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 };
