@@ -179,6 +179,7 @@ const Partners = () => {
                   const mapUrl = p.map_tenant_slug
                     ? `https://boeking.mijnactiviteitenplanner.nl/${p.map_tenant_slug}`
                     : null;
+                  const websiteHref = normalizeWebsiteUrl(p.website_url);
                   return (
                     <Card key={p.id} className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
                       <div className="relative h-44 overflow-hidden bg-muted">
