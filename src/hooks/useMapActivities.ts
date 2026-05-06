@@ -129,15 +129,19 @@ export const useAllMapActivities = (
 
           const types = (typesRes.data || []) as MapActivityType[];
           const typeImageMap = new Map(types.map((t) => [t.Id, t.Image]));
+          const onlineAvailableMap = new Map(types.map((t) => [t.Id, t.IsAvailableOnline]));
 
-          return ((activitiesRes.data || []) as MapActivity[]).map((a) => ({
-            ...a,
-            _partnerId: partner.id,
-            _partnerName: partner.name,
-            _partnerSlug: partner.map_tenant_slug!,
-            _partnerImage: partner.image_url,
-            _image: mapImageUrl(typeImageMap.get(a.ActivityTypeId) || null),
-          }));
+          return ((activitiesRes.data || []) as MapActivity[])
+            // Respect MAP "online beschikbaar" flag — verberg types die niet online boekbaar zijn
+            .filter((a) => onlineAvailableMap.get(a.ActivityTypeId) !== false)
+            .map((a) => ({
+              ...a,
+              _partnerId: partner.id,
+              _partnerName: partner.name,
+              _partnerSlug: partner.map_tenant_slug!,
+              _partnerImage: partner.image_url,
+              _image: mapImageUrl(typeImageMap.get(a.ActivityTypeId) || null),
+            }));
         })
       );
 
