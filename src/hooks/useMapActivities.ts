@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const mapImageUrl = (ref: string | null) =>
@@ -151,6 +151,7 @@ export const useAllMapActivities = (
     },
     enabled,
     staleTime: 2 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 };
 

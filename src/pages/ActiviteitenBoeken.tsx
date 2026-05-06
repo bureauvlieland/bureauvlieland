@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet";
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapActivityCard, type BundledTime } from "@/components/map/MapActivityCard";
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
-import { Search, CalendarDays, Ticket } from "lucide-react";
+import { Search, CalendarDays, Ticket, Loader2 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 
@@ -26,18 +26,48 @@ interface BundledActivity {
   totalSlotsLeft: number;
 }
 
+const INITIAL_DAYS = 14;
+const LOAD_MORE_DAYS = 14;
+const MAX_DAYS = 90;
+
 const ActiviteitenBoeken = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [search, setSearch] = useState("");
+  const [daysWindow, setDaysWindow] = useState(INITIAL_DAYS);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset window when date selection changes
+  useEffect(() => {
+    setDaysWindow(INITIAL_DAYS);
+  }, [selectedDate]);
 
   const dateStart = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
     : format(new Date(), "yyyy-MM-dd");
   const dateEnd = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
-    : format(addDays(new Date(), 30), "yyyy-MM-dd");
+    : format(addDays(new Date(), daysWindow), "yyyy-MM-dd");
 
-  const { data: activities, isLoading } = useAllMapActivities(dateStart, dateEnd);
+  const { data: activities, isLoading, isFetching } = useAllMapActivities(dateStart, dateEnd);
+
+  const canLoadMore = !selectedDate && daysWindow < MAX_DAYS;
+
+  // Infinite scroll sentinel
+  useEffect(() => {
+    if (!canLoadMore || isFetching) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setDaysWindow((w) => Math.min(w + LOAD_MORE_DAYS, MAX_DAYS));
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [canLoadMore, isFetching]);
 
   const filtered = useMemo<EnrichedActivity[]>(() => {
     if (!activities) return [];
@@ -75,7 +105,6 @@ const ActiviteitenBoeken = () => {
       if (existing) {
         existing.times.push(time);
         existing.totalSlotsLeft += a.RemainingSlots;
-        // Keep earliest as representative
         if (new Date(a.Departure) < new Date(existing.representative.Departure)) {
           existing.representative = a;
         }
@@ -88,7 +117,6 @@ const ActiviteitenBoeken = () => {
       }
     }
 
-    // Sort times within each bundle, sort bundles by earliest time, sort dates
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, bundles]) => {
@@ -195,24 +223,41 @@ const ActiviteitenBoeken = () => {
                   </CardContent>
                 </Card>
               ) : (
-                grouped.map(([dateKey, bundles]) => (
-                  <div key={dateKey}>
-                    <h2 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-1">
-                      {format(new Date(dateKey), "EEEE d MMMM yyyy", { locale: nl })}
-                    </h2>
-                    <div className="space-y-3">
-                      {bundles.map((bundle) => (
-                        <MapActivityCard
-                          key={`${bundle.representative.ActivityTypeId}-${bundle.representative._partnerId}-${dateKey}`}
-                          activity={bundle.representative}
-                          times={bundle.times}
-                          totalSlotsLeft={bundle.totalSlotsLeft}
-                          showPartner
-                        />
-                      ))}
+                <>
+                  {grouped.map(([dateKey, bundles]) => (
+                    <div key={dateKey}>
+                      <h2 className="text-sm font-semibold text-muted-foreground mb-3 sticky top-0 bg-background py-1">
+                        {format(new Date(dateKey), "EEEE d MMMM yyyy", { locale: nl })}
+                      </h2>
+                      <div className="space-y-3">
+                        {bundles.map((bundle) => (
+                          <MapActivityCard
+                            key={`${bundle.representative.ActivityTypeId}-${bundle.representative._partnerId}-${dateKey}`}
+                            activity={bundle.representative}
+                            times={bundle.times}
+                            totalSlotsLeft={bundle.totalSlotsLeft}
+                            showPartner
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {!selectedDate && (
+                    <div ref={sentinelRef} className="py-6 text-center text-sm text-muted-foreground">
+                      {isFetching ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Meer activiteiten laden…
+                        </span>
+                      ) : daysWindow >= MAX_DAYS ? (
+                        <span>Alles geladen (komende {MAX_DAYS} dagen)</span>
+                      ) : (
+                        <span>Scroll voor meer</span>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
