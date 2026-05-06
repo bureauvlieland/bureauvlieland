@@ -7,19 +7,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  AlertCircle, 
-  Package, 
-  Plus, 
-  Edit, 
-  Users, 
+import {
+  AlertCircle,
+  Package,
+  Plus,
+  Edit,
+  Users,
   Clock,
   Euro,
   CheckCircle,
   FileEdit,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
-import { PartnerBlockSheet } from "@/components/partner-portal/PartnerBlockSheet";
+import { PartnerBlockSheet, type PrefillFromMap } from "@/components/partner-portal/PartnerBlockSheet";
+import { MapTypeCard } from "@/components/partner-portal/MapTypeCard";
+import { useMapActivityTypes, type MapActivityType } from "@/hooks/useMapActivities";
 import type { PartnerBuildingBlock } from "@/types/partner";
 
 const PartnerBlocksContent = () => {
