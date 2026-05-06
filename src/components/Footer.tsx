@@ -163,7 +163,7 @@ export const Footer = () => {
           {/* Utility row */}
           <nav aria-label="Footer secundair" className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
             <Link to="/over-ons" className="hover:text-primary transition-colors">Over ons</Link>
-            <Link to="/diensten" className="hover:text-primary transition-colors">Onze werkwijze</Link>
+            <Link to="/onze-werkwijze" className="hover:text-primary transition-colors">Onze werkwijze</Link>
             <Link to="/partners" className="hover:text-primary transition-colors">Partners</Link>
             <Link to="/samenwerken" className="hover:text-primary transition-colors">Samenwerken</Link>
             <Link to="/contact" className="hover:text-primary transition-colors">Contact</Link>

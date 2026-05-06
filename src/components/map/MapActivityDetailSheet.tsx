@@ -252,11 +252,11 @@ export const MapActivityDetailSheet = ({
                   <p className="text-xs text-muted-foreground mt-1">Stel zelf samen</p>
                 </Card>
               </Link>
-              <Link to="/diensten" className="block">
+              <Link to="/onze-werkwijze" className="block">
                 <Card className="p-3 h-full hover:bg-accent/50 transition-colors border">
                   <UtensilsCrossed className="h-5 w-5 text-primary mb-2" />
-                  <p className="text-sm font-medium leading-tight">Catering of fietsen?</p>
-                  <p className="text-xs text-muted-foreground mt-1">Onze diensten</p>
+                  <p className="text-sm font-medium leading-tight">Hoe werken wij?</p>
+                  <p className="text-xs text-muted-foreground mt-1">Onze werkwijze</p>
                 </Card>
               </Link>
             </div>

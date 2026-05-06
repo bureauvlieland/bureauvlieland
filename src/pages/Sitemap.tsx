@@ -60,7 +60,7 @@ const sections: SitemapSection[] = [
     title: "Over ons",
     links: [
       { label: "Over Bureau Vlieland", href: "/over-ons" },
-      { label: "Onze werkwijze", href: "/diensten" },
+      { label: "Onze werkwijze", href: "/onze-werkwijze" },
       { label: "Voor wie", href: "/voor-wie" },
       { label: "Aangesloten partners", href: "/partners" },
       { label: "Samenwerken", href: "/samenwerken" },

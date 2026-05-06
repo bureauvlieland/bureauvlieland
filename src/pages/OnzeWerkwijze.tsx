@@ -1,71 +1,79 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { Services } from "@/components/Services";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import eventImage from "@/assets/districon-vlieland-22.jpg";
 import { useKenBurns } from "@/hooks/use-ken-burns";
+import { RouteCards } from "@/components/werkwijze/RouteCards";
+import { ProcessSteps } from "@/components/werkwijze/ProcessSteps";
+import { WerkwijzeFaq } from "@/components/werkwijze/WerkwijzeFaq";
 
-const Diensten = () => {
+const OnzeWerkwijze = () => {
   const kenBurns = useKenBurns();
-  
+
   return (
     <div className="min-h-screen">
-       <Helmet>
-        <title>Onze diensten – Bureau Vlieland | Programma, boekingen & catering</title>
-        <meta name="description" content="Bureau Vlieland ontwikkelt programma's en boekt alle eilandpartners voor uw groep op Vlieland. Eén partij, één factuur — van inhoud tot catering." />
-        <link rel="canonical" href="https://bureauvlieland.nl/diensten" />
-        <meta property="og:title" content="Onze diensten – Bureau Vlieland | Programma, boekingen & catering" />
-        <meta property="og:description" content="Bureau Vlieland verzorgt complete programma's voor teams en organisaties op Vlieland: van inhoudelijke sessies tot catering en lokale begeleiding." />
+      <Helmet>
+        <title>Onze werkwijze – Bureau Vlieland | Hoe wij groepen op Vlieland organiseren</title>
+        <meta
+          name="description"
+          content="Zo werkt Bureau Vlieland: zelf uw programma samenstellen of op maat. Eén vast aanspreekpunt, alle eilandpartners geboekt, één overzichtelijke factuur."
+        />
+        <link rel="canonical" href="https://bureauvlieland.nl/onze-werkwijze" />
+        <meta property="og:title" content="Onze werkwijze – Bureau Vlieland" />
+        <meta
+          property="og:description"
+          content="Twee routes, één belofte: één partij, één factuur. Ontdek hoe Bureau Vlieland uw programma op Vlieland organiseert."
+        />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
-        <meta property="og:url" content="https://bureauvlieland.nl/diensten" />
+        <meta property="og:url" content="https://bureauvlieland.nl/onze-werkwijze" />
         <meta property="og:type" content="website" />
       </Helmet>
       <Navigation />
       <main id="main-content">
-        {/* Hero Section */}
+        {/* Hero */}
         <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ 
-              backgroundImage: `url(${eventImage})`,
-              ...kenBurns
-            }}
+            style={{ backgroundImage: `url(${eventImage})`, ...kenBurns }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
           </div>
 
-          {/* Decorative wave patterns */}
           <div className="absolute top-0 left-0 w-full h-32 opacity-10 pointer-events-none">
             <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
-              <path d="M0,50 Q300,20 600,50 T1200,50 L1200,0 L0,0 Z" fill="currentColor" className="text-background"/>
+              <path d="M0,50 Q300,20 600,50 T1200,50 L1200,0 L0,0 Z" fill="currentColor" className="text-background" />
             </svg>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-32 opacity-10 pointer-events-none">
             <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
-              <path d="M0,70 Q300,100 600,70 T1200,70 L1200,120 L0,120 Z" fill="currentColor" className="text-background"/>
+              <path d="M0,70 Q300,100 600,70 T1200,70 L1200,120 L0,120 Z" fill="currentColor" className="text-background" />
             </svg>
           </div>
 
           <div className="relative z-10 text-center text-primary-foreground px-4">
-            <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">
-              Onze diensten
-            </h1>
+            <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">Onze werkwijze</h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Eén partij voor programma-ontwikkeling, boekingen en catering — één factuur
+              Eén partij, één factuur — zo organiseren wij uw programma op Vlieland
             </p>
           </div>
         </section>
 
-        {/* Services Content */}
-        <Services />
+        {/* Twee routes */}
+        <RouteCards />
 
-        {/* CTA naar Configurator */}
+        {/* Procesvisualisatie */}
+        <ProcessSteps />
+
+        {/* FAQ */}
+        <WerkwijzeFaq />
+
+        {/* CTA */}
         <section className="py-16 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-center">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Weet u al wat u wilt?
+              Klaar om te starten?
             </h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
               Stel direct uw programma samen uit onze bouwstenen. Liever persoonlijk advies? Vraag een maatwerkofferte aan.
@@ -90,4 +98,4 @@ const Diensten = () => {
   );
 };
 
-export default Diensten;
+export default OnzeWerkwijze;

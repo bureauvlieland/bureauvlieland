@@ -16,7 +16,7 @@ import { Terms } from "./pages/Terms";
 import { PartnerTerms } from "./pages/PartnerTerms";
 import NotFound from "./pages/NotFound";
 import ComingSoon from "./pages/ComingSoon";
-import Diensten from "./pages/Diensten";
+import OnzeWerkwijze from "./pages/OnzeWerkwijze";
 import VoorWie from "./pages/VoorWie";
 import OverOns from "./pages/OverOns";
 import Contact from "./pages/Contact";
@@ -117,7 +117,8 @@ const App = () => {
           <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/diensten" element={<Diensten />} />
+            <Route path="/onze-werkwijze" element={<OnzeWerkwijze />} />
+            <Route path="/diensten" element={<Navigate to="/onze-werkwijze" replace />} />
             <Route path="/voor-wie" element={<VoorWie />} />
             <Route path="/samenwerken" element={<Programmas />} />
             <Route path="/bouwstenen" element={<Bouwstenen />} />
