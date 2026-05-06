@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles } from "lucide-react";
-import heroImage from "@/assets/vlieland-landscape.jpg";
+import heroImage from "@/assets/hero-vlieland.jpg";
 
 export const HeroEditorial = () => {
   return (
@@ -11,7 +11,7 @@ export const HeroEditorial = () => {
       <div className="absolute inset-0">
         <img
           src={heroImage}
-          alt="Vlieland strand bij zonsondergang met vuurtoren in de verte"
+          alt="Groep gasten geniet samen op Vlieland"
           className="w-full h-full object-cover"
           fetchPriority="high"
           loading="eager"
