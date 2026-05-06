@@ -32,6 +32,9 @@ const slugify = (s: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    // MAP gebruikt 'en' i.p.v. '&' / '+' in zijn URL-slugs
+    .replace(/&/g, " en ")
+    .replace(/\+/g, " en ")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
