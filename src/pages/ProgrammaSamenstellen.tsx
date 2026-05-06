@@ -12,6 +12,7 @@ import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import heroImage from "@/assets/beach-signs.jpg";
 
