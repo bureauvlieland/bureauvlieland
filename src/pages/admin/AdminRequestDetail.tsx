@@ -253,6 +253,7 @@ const AdminRequestDetail = () => {
   const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
+  const [editingCost, setEditingCost] = useState<any | null>(null);
   const [syncBlocksOpen, setSyncBlocksOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
@@ -2144,7 +2145,11 @@ const AdminRequestDetail = () => {
                       </TableHeader>
                       <TableBody>
                         {items.filter(item => item.day_index === -1).map((item) => (
-                          <TableRow key={item.id}>
+                          <TableRow
+                            key={item.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setEditingCost(item)}
+                          >
                             <TableCell className="font-medium">{item.block_name}</TableCell>
                             <TableCell className="text-muted-foreground text-sm">
                               {item.admin_price_notes || "-"}
@@ -2152,7 +2157,16 @@ const AdminRequestDetail = () => {
                             <TableCell className="font-medium">
                               €{(item.admin_price_override ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
                             </TableCell>
-                            <TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditingCost(item)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2172,6 +2186,7 @@ const AdminRequestDetail = () => {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -2405,10 +2420,18 @@ const AdminRequestDetail = () => {
       {/* Add cost sheet */}
       {request && (
         <AdminAddCostSheet
-          open={addCostOpen}
-          onOpenChange={setAddCostOpen}
+          open={addCostOpen || !!editingCost}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAddCostOpen(false);
+              setEditingCost(null);
+            } else if (!editingCost) {
+              setAddCostOpen(true);
+            }
+          }}
           requestId={request.id}
           onSuccess={fetchRequestData}
+          editingItem={editingCost}
         />
       )}
       {/* Create accommodation sheet */}
