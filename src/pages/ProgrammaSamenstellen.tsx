@@ -47,7 +47,7 @@ const ProgrammaSamenstellen = () => {
   } = useCart();
 
   const [phase, setPhase] = useState<ConfigPhase>(
-    cartItems.length > 0 ? "program" : "basics"
+    searchParamsHasTemplate() ? "basics" : (cartItems.length > 0 ? "program" : "basics")
   );
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
