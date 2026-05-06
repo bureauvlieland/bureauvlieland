@@ -27,16 +27,22 @@ interface MapActivityCardProps {
   totalSlotsLeft?: number;
 }
 
+// MAP-slug: lowercase + accenten weg, '&'/'+' -> 'en', spaties -> '-'.
+// Overige leestekens (komma, en/em-dash, apostrof, punt, etc.) blijven behouden
+// en worden via encodeURIComponent veilig in de URL gezet — exact zoals MAP doet.
 const slugify = (s: string) =>
   s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    // MAP gebruikt 'en' i.p.v. '&' / '+' in zijn URL-slugs
     .replace(/&/g, " en ")
     .replace(/\+/g, " en ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .split("-")
+    .map((segment) => encodeURIComponent(segment))
+    .join("-");
 
 export const MapActivityCard = ({
   activity,
