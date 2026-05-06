@@ -48,6 +48,7 @@ const slugify = (s: string) =>
 export const MapActivityCard = ({
   activity,
   onBook,
+  onSelect,
   showPartner = true,
   times,
   totalSlotsLeft,
