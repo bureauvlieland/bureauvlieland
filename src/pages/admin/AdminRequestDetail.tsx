@@ -2158,11 +2158,11 @@ const AdminRequestDetail = () => {
                                 size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive"
                                 onClick={async () => {
-                                  const { error } = await supabase
-                                    .from("program_request_items")
-                                    .delete()
-                                    .eq("id", item.id);
-                                  if (error) {
+                                  const { data, error } = await supabase.functions.invoke(
+                                    "notify-partner-item-deletion",
+                                    { body: { request_id: request!.id, item_ids: [item.id], origin: window.location.origin } }
+                                  );
+                                  if (error || (data as any)?.error) {
                                     toast.error("Fout bij verwijderen");
                                   } else {
                                     toast.success("Kosten verwijderd");
