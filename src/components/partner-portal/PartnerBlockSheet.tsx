@@ -261,12 +261,33 @@ export const PartnerBlockSheet = ({
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(getInitialFormData(block));
+      const initial = getInitialFormData(block);
+      if (isNew && prefillFromMap) {
+        initial.name = prefillFromMap.name || "";
+        initial.description = prefillFromMap.description || "";
+        initial.short_description = prefillFromMap.description?.slice(0, 200) || "";
+        if (prefillFromMap.duration_hours != null) {
+          initial.duration = `${prefillFromMap.duration_hours} uur`;
+        }
+        if (prefillFromMap.price_per_person != null) {
+          initial.price_adult = prefillFromMap.price_per_person.toString();
+          initial.price_type = "per_person";
+        }
+        if (prefillFromMap.max_persons != null && prefillFromMap.max_persons > 0) {
+          initial.max_people = prefillFromMap.max_persons.toString();
+        }
+        if (prefillFromMap.external_url) {
+          initial.external_url = prefillFromMap.external_url;
+        }
+        initial.category = "activiteiten";
+        initial.vat_rate = "21";
+      }
+      setFormData(initial);
       setImagePreview(block?.image_url || null);
       setImageValidation(null);
       setActiveTab("algemeen");
     }
-  }, [block, isOpen]);
+  }, [block, isOpen, isNew, prefillFromMap]);
 
   const handleImageUpload = async (file: File) => {
     if (!block?.id && isNew) {
