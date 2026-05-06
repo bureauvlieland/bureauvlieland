@@ -12,6 +12,7 @@ import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import heroImage from "@/assets/beach-signs.jpg";
 
@@ -45,21 +46,26 @@ const ProgrammaSamenstellen = () => {
     loadFromTemplate,
   } = useCart();
 
+  const hasTemplateParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("template");
   const [phase, setPhase] = useState<ConfigPhase>(
-    cartItems.length > 0 ? "program" : "basics"
+    hasTemplateParam ? "basics" : (cartItems.length > 0 ? "program" : "basics")
   );
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const handledBlockRef = useRef<string | null>(null);
 
-  // Check for existing draft on mount
+  const templateSlug = searchParams.get("template");
+  const { data: templateData } = useTemplateWithItems(templateSlug);
+
+  // Check for existing draft on mount — skip when arriving with a template (explicit intent overrides draft)
   useEffect(() => {
+    if (templateSlug) return;
     if (hasPendingDraft && pendingDraft && pendingDraft.cartItems.length > 0) {
       setShowDraftDialog(true);
       setPhase("program");
     }
-  }, [hasPendingDraft, pendingDraft]);
+  }, [hasPendingDraft, pendingDraft, templateSlug]);
 
   // Auto-add default blocks when entering program phase
   useEffect(() => {
@@ -106,13 +112,21 @@ const ProgrammaSamenstellen = () => {
 
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
     clearCart();
-    setNumberOfPeople(data.numberOfPeople);
-    data.selectedDates.forEach((date, i) => {
-      if (i === 0) setSelectedDate(date);
-      else addDate(date);
-    });
+    if (templateData && data.selectedDates.length > 0) {
+      // Load full template starting from the chosen first date
+      loadFromTemplate(templateData, data.selectedDates[0], data.numberOfPeople);
+      // Strip ?template from URL so refresh / draft doesn't re-trigger
+      searchParams.delete("template");
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      setNumberOfPeople(data.numberOfPeople);
+      data.selectedDates.forEach((date, i) => {
+        if (i === 0) setSelectedDate(date);
+        else addDate(date);
+      });
+    }
     setPhase("program");
-  }, [clearCart, setNumberOfPeople, setSelectedDate, addDate]);
+  }, [clearCart, setNumberOfPeople, setSelectedDate, addDate, templateData, loadFromTemplate, searchParams, setSearchParams]);
 
   const handleAddItem = useCallback((blockId: string, dayIndex: number) => {
     const added = addToCart(blockId, dayIndex);
@@ -198,7 +212,13 @@ const ProgrammaSamenstellen = () => {
         {/* Content */}
         <section className={`py-10 md:py-14 ${phase === "program" ? "pb-28" : ""}`}>
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            {phase === "basics" && <BasicsForm onSubmit={handleBasicsSubmit} />}
+            {phase === "basics" && (
+              <BasicsForm
+                onSubmit={handleBasicsSubmit}
+                templateName={templateData?.name ?? null}
+                templateDurationDays={templateData?.duration_days ?? null}
+              />
+            )}
 
             {phase === "program" && (
               <ProgramBuilderView
