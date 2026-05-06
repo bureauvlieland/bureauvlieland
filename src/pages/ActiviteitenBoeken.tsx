@@ -35,6 +35,7 @@ const ActiviteitenBoeken = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [daysWindow, setDaysWindow] = useState(INITIAL_DAYS);
+  const [selectedBundle, setSelectedBundle] = useState<BundledActivity | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset window when date selection changes
