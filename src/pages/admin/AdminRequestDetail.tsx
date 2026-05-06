@@ -1878,15 +1878,16 @@ const AdminRequestDetail = () => {
                                               size="icon"
                                               className="h-8 w-8 text-destructive hover:text-destructive"
                                               onClick={async () => {
-                                                const { error } = await supabase
-                                                  .from("program_request_items")
-                                                  .delete()
-                                                  .eq("id", item.id);
-                                                if (!error) {
-                                                  toast.success("Activiteit verwijderd");
-                                                  fetchRequestData();
-                                                } else {
+                                                const { data, error } = await supabase.functions.invoke(
+                                                  "notify-partner-item-deletion",
+                                                  { body: { request_id: request!.id, item_ids: [item.id], origin: window.location.origin } }
+                                                );
+                                                if (error || (data as any)?.error) {
                                                   toast.error("Fout bij verwijderen");
+                                                } else {
+                                                  const sent = (data as any)?.emails_sent ?? 0;
+                                                  toast.success(sent > 0 ? `Activiteit verwijderd · ${sent} partner(s) gemaild` : "Activiteit verwijderd");
+                                                  fetchRequestData();
                                                 }
                                               }}
                                             >
