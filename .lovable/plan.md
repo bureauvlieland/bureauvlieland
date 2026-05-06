@@ -1,23 +1,17 @@
-## Lazy loading op /activiteiten-boeken
+## Hero homepage: warmer beeld met mensen
 
-Vervang het vaste 30-dagen venster door een incrementeel venster met "load more" via infinite scroll.
+`sunset-dinner.jpg` matcht exact: lange tafel met gasten bij zonsondergang, vuurtoren op de achtergrond — meer beleving en mensen dan het huidige landschap.
 
-### Gedrag
-- Start: 14 dagen vooruit
-- Per scroll naar bodem: +14 dagen
-- Maximum: 90 dagen
-- Bij datum-selectie in kalender: alleen die dag (venster niet relevant)
-- Bij wissen datum: venster reset naar 14 dagen
+### Wijziging
 
-### Wijzigingen in `src/pages/ActiviteitenBoeken.tsx`
-1. Nieuwe state `daysWindow` (default 14), reset naar 14 wanneer `selectedDate` verandert.
-2. `dateEnd` baseren op `addDays(today, daysWindow)` wanneer geen datum is gekozen.
-3. Sentinel `<div ref={sentinelRef} />` onderaan de resultatenlijst.
-4. `IntersectionObserver` in `useEffect`: bij zichtbaar worden → `setDaysWindow(w => Math.min(w + 14, 90))`, alleen actief als `!selectedDate && daysWindow < 90 && !isFetching`.
-5. Skeleton/spinner-rij tonen onder de lijst zolang `isFetching` (vervolgladingen) en label "Alles geladen" wanneer max bereikt.
+In `src/components/home/HeroEditorial.tsx`:
 
-### Caching
-React-Query key blijft `["map-activities-all", dateStart, dateEnd]`. Elke window-uitbreiding is een nieuwe key; vorige resultaten blijven zichtbaar dankzij `placeholderData: keepPreviousData` (toevoegen in `useAllMapActivities`).
+- Vervang import `vlieland-landscape.jpg` door `sunset-dinner.jpg`.
+- Update `alt` naar: "Gasten aan een lange tafel bij zonsondergang met de vuurtoren van Vlieland op de achtergrond".
+- Behoud bestaande gradients/vignettes (warm sunset werkt goed met huidige tekst-overlay).
 
-### Geen wijzigingen aan
-- Filter/zoek-logica, bundeling per dag, MapActivityCard, edge function.
+Geen andere wijzigingen.  
+  
+Doe toch maar hero-vlieland.jpg
+
+&nbsp;
