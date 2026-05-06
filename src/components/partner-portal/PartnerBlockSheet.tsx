@@ -64,6 +64,17 @@ interface ImageValidationResult {
   warning?: string;
 }
 
+export interface PrefillFromMap {
+  map_activity_type_id: number;
+  name: string;
+  description: string | null;
+  duration_hours: number | null;
+  price_per_person: number | null;
+  max_persons: number | null;
+  external_url: string | null;
+  image_ref: string | null;
+}
+
 interface PartnerBlockSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,6 +82,7 @@ interface PartnerBlockSheetProps {
   isNew: boolean;
   partnerId: string;
   onSaved: () => void;
+  prefillFromMap?: PrefillFromMap | null;
 }
 
 // Validate image file
@@ -234,6 +246,7 @@ export const PartnerBlockSheet = ({
   isNew,
   partnerId,
   onSaved,
+  prefillFromMap,
 }: PartnerBlockSheetProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -248,12 +261,33 @@ export const PartnerBlockSheet = ({
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(getInitialFormData(block));
+      const initial = getInitialFormData(block);
+      if (isNew && prefillFromMap) {
+        initial.name = prefillFromMap.name || "";
+        initial.description = prefillFromMap.description || "";
+        initial.short_description = prefillFromMap.description?.slice(0, 200) || "";
+        if (prefillFromMap.duration_hours != null) {
+          initial.duration = `${prefillFromMap.duration_hours} uur`;
+        }
+        if (prefillFromMap.price_per_person != null) {
+          initial.price_adult = prefillFromMap.price_per_person.toString();
+          initial.price_type = "per_person";
+        }
+        if (prefillFromMap.max_persons != null && prefillFromMap.max_persons > 0) {
+          initial.max_people = prefillFromMap.max_persons.toString();
+        }
+        if (prefillFromMap.external_url) {
+          initial.external_url = prefillFromMap.external_url;
+        }
+        initial.category = "activiteiten";
+        initial.vat_rate = "21";
+      }
+      setFormData(initial);
       setImagePreview(block?.image_url || null);
       setImageValidation(null);
       setActiveTab("algemeen");
     }
-  }, [block, isOpen]);
+  }, [block, isOpen, isNew, prefillFromMap]);
 
   const handleImageUpload = async (file: File) => {
     if (!block?.id && isNew) {
@@ -404,15 +438,29 @@ export const PartnerBlockSheet = ({
       if (isNew) {
         // Generate a readable slug ID from the name
         const blockId = slugify(formData.name) || `partner-${Date.now()}`;
-        
+
         const { error } = await supabase
           .from("building_blocks")
           .insert({
             id: blockId,
             ...blockData,
+            ...(prefillFromMap
+              ? { map_activity_type_id: prefillFromMap.map_activity_type_id }
+              : {}),
           });
 
         if (error) throw error;
+
+        // Try to import MAP image (best-effort)
+        if (prefillFromMap?.image_ref) {
+          try {
+            await supabase.functions.invoke("import-map-image", {
+              body: { blockId, mapImageRef: prefillFromMap.image_ref },
+            });
+          } catch (imgErr) {
+            console.warn("MAP image import failed", imgErr);
+          }
+        }
 
         toast({
           title: "Voorstel ingediend",

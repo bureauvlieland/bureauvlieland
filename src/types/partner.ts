@@ -144,6 +144,7 @@ export interface PartnerBuildingBlock {
   external_url: string | null;
   price_display_override: string | null;
   sort_order: number | null;
+  map_activity_type_id?: number | null;
 }
 
 export interface PartnerDashboardData {

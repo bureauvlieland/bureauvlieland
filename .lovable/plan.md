@@ -1,72 +1,82 @@
+# MAP-activiteitentypes als bouwsteen-bron op /partner/aanbod
+
 ## Doel
 
-De detailpagina van een voorbeeldprogramma (bijv. `/voorbeeldprogrammas/culinaire-ontdekking`) krijgt een meer editoriale, sfeervolle uitstraling. Beter ritme tussen secties, rijker kleurgebruik uit het bestaande design system (ocean, sand, sunset) en sterkere positionering van de waardepropositie.
+Partners met een MAP-koppeling (`partners.map_tenant_slug` ingevuld) zien hun MAP activity types automatisch op hun aanbod-pagina. Een type kan in twee staten verkeren:
 
-## Huidige knelpunten
+1. **Nog niet gepubliceerd** → kaartje met "MAP"-badge en knop *Verrijken & publiceren*. Open de bestaande Bouwsteen-sheet, voorgevuld met MAP-data; opslaan = nieuw `building_blocks`-record (status `concept`) gekoppeld via `map_activity_type_id`.
+2. **Al gekoppeld aan een bouwsteen** → MAP-type wordt niet apart getoond; in plaats daarvan toont de bestaande bouwsteenkaart een extra MAP-badge ("Synchroon met MAP") zodat duidelijk is dat de bron MAP is.
 
-- Hero is relatief laag (44vh) en de meta-pills (duur/groep/prijs) staan er onderaan ingeperst.
-- Beschrijving, highlights, praktische info en tijdlijn staan allemaal op vergelijkbare witte/lichtgrijze achtergronden — weinig ritme.
-- "Voor wie" en "Praktische info" liggen visueel op één niveau; "voor wie" verdient meer gewicht (positionering).
-- Geen duidelijke samenvattings-/feiten-strook; bezoekers moeten lezen om de essentie te vinden.
-- Sand- en sunset-tokens in `index.css` worden nauwelijks gebruikt.
+## UX op /partner/aanbod
 
-## Aanpak (alleen frontend / presentatie)
+Lay-out blijft de huidige drie secties (Gepubliceerd / Goedgekeurd / Wacht op goedkeuring), met daaronder een nieuwe sectie:
 
-### 1. Hero rijker en luchtiger
-- Hoogte naar `min-h-[60vh]` met meer ademruimte; gradient van `--ocean-deep` (bodem) naar transparant + subtiele vignet links.
-- Titel groter (`text-5xl md:text-7xl`), display-font, met een dunne sunset-accentlijn boven de titel ("Voorbeeldprogramma · {duration} dagen").
-- Hook in serif/italic, max-w-2xl, lichter gewicht.
-- Meta-pills omgezet naar één horizontale "fact strip" onderaan de hero met iconen op donkere semitransparante balk (backdrop-blur), netjes uitgelijnd.
-
-### 2. Intro / positionering-sectie ("Het verhaal")
-- Direct onder de hero: tweekoloms layout op desktop:
-  - Links: kleine kicker "Het verhaal" + `template.description` als rustige body-tekst.
-  - Rechts: een sticky "kaart" met de essentie — duur, doelgroep, indicatieve prijs, sfeerwoorden (vibes als chips), en een primaire CTA "Gebruik dit programma". Achtergrond `bg-card` met `shadow-medium`, subtiele sand-rand.
-- Hierdoor staat de propositie + CTA al boven de vouw na scroll.
-
-### 3. Highlights als editorial grid
-- Achtergrond met subtiele `--gradient-sand` (zacht zandverloop) zodat deze sectie visueel ademt.
-- Highlights renderen als kaart-grid (2–3 koloms) i.p.v. losse bullets: elk item krijgt een klein checkmark-icoon in primary-cirkel + korte tekst op witte kaart met `shadow-soft`.
-- Storytelling-alinea's (`copy.story`) als rustig leesblok eronder, gecentreerd, max-w-prose, serif-italic intro-cap optioneel.
-
-### 4. Voor wie — gepromoveerd tot eigen sectie
-- Aparte sectie met `bg-[hsl(var(--ocean-deep))]` of `bg-primary` en lichte tekst — donker contrastblok midden op de pagina dat de positionering ("voor welk type groep") visueel laat landen.
-- Groot citaat-achtig statement (`copy.forWhom`) + de vibe-chips in licht-op-donker variant.
-
-### 5. Praktische info opnieuw vormgeven
-- Op `bg-muted/30` (huidige baseline), maar met een nette kaart (border + radius) i.p.v. losse bullets.
-- Het "doordeweekse aankomst"-blok behoudt zijn eigen accentkaart, maar krijgt het sand-token als achtergrond en een sunset-accentstreep links voor warmte (i.p.v. primary blauw op blauw).
-
-### 6. Tijdlijn-sectie
-- Visueel rustiger: lichte sectiekop "Programma per dag" met dunne kicker, achtergrond `bg-background`.
-- CTA-blok onderaan tijdlijn vervangen door een full-width "call-out" kaart met `--gradient-hero` achtergrond, witte tekst, primaire knop in sunset-kleur (`bg-[hsl(var(--sunset))] text-sunset-foreground`) — dit wordt het visuele ankerpunt richting conversie.
-
-### 7. "Andere programma's"
-- Sectiekop met kicker "Verder kijken" + subtitel.
-- Achtergrond `bg-sand/40` (zacht) zodat afsluiting warm aanvoelt vóór de footer.
-
-### 8. Kleurritme over de pagina (van boven naar onder)
-```text
-Hero            → ocean-deep / hero gradient
-Verhaal+CTA     → background (wit)
-Highlights      → sand gradient
-Voor wie        → primary / ocean-deep (donker contrast)
-Praktisch       → muted (licht)
-Tijdlijn        → background
-CTA-blok        → hero gradient + sunset accent
-Andere prog's   → sand zacht
 ```
-Dit geeft een editoriaal "ademend" ritme licht↔donker↔warm.
+[Gepubliceerd]            ← bestaande bouwstenen
+[Goedgekeurd]
+[Wacht op goedkeuring]
+[Beschikbaar vanuit MAP]  ← nieuw, alleen zichtbaar als partner.map_tenant_slug bestaat
+```
 
-## Bestanden die wijzigen
+De MAP-sectie:
+- Titel: "Beschikbaar vanuit MAP" + ondertitel "Activiteitentypes uit MijnActiviteitenPlanner. Verrijk en publiceer ze om als bouwsteen te gebruiken."
+- Lege staat (alle types al verrijkt): "Alle MAP-types zijn al toegevoegd aan uw aanbod."
+- Per type een kaartje met:
+  - MAP-afbeelding (via bestaande `mapImageUrl`)
+  - Naam + korte beschrijving (uit MAP)
+  - Badge linksboven `MAP` (gekleurd, herkenbaar — accent kleur)
+  - Vermelding duur in uur, indien aanwezig
+  - Primaire knop *Verrijken & publiceren* → opent `PartnerBlockSheet` met voorgevulde data
+  - Disabled / waarschuwing als `IsAvailableOnline === false`
 
-- `src/pages/VoorbeeldprogrammaDetail.tsx` — herindeling secties, hero, intro+sticky-card, donker "voor wie"-blok, CTA-callout, related-sectie.
-- `src/components/programmas/ProgramHighlights.tsx` — naar kaart-grid + sand-achtergrond, story-blok los.
-- `src/components/programmas/ProgramPractical.tsx` — alleen praktisch (niet meer "voor wie"); kaart-styling, sunset-accent op weekend-tip.
-- Geen wijzigingen aan data, hooks, edge functions of `programTemplateCopy.ts`.
+Op bestaande bouwsteenkaart waar `map_activity_type_id` is gevuld: een tweede badge naast de status-badge, tekst "Synchroon met MAP", subtiele accent-styling.
 
-## Buiten scope
+## Gegevensmodel
 
-- Geen wijzigingen aan businesslogica, routes, database of teksten in `programTemplateCopy.ts`.
-- Geen aanpassingen aan `ProgramCard` of overzichtspagina.
-- Geen nieuwe design tokens; we gebruiken alleen bestaande HSL-tokens uit `index.css`.
+Eén kolom toevoegen aan `building_blocks`:
+- `map_activity_type_id integer NULL` — verwijst naar `MapActivityType.Id` per partner (uniek binnen `provider_id`).
+- Unique partial index op `(provider_id, map_activity_type_id) WHERE map_activity_type_id IS NOT NULL` om dubbele koppelingen te voorkomen.
+- Geen FK (MAP is extern).
+
+RLS hoeft niet aangepast (kolom valt onder bestaande policies).
+
+## Verrijk-flow
+
+1. Partner klikt *Verrijken & publiceren* op een MAP-kaart.
+2. `PartnerBlockSheet` opent met `isNew=true` en een nieuwe prop `prefillFromMap` waarin: naam, beschrijving, duur (in uren → tekst "X uur"), prijs (`PricePerPerson`), max personen (`MaxPersons`), externe boekings-URL (`https://boeking.mijnactiviteitenplanner.nl/{slug}`), `map_activity_type_id`.
+3. Sheet werkt verder als bestaande "nieuwe activiteit"-flow → opslaan = `concept` (wacht op goedkeuring).
+4. MAP-image wordt automatisch overgenomen door bij het opslaan een serverside-fetch te doen (in een lichte edge function `import-map-image`) die het MAP-bestand ophaalt en in `building-block-images` upload, daarna `image_url` zet. Als import faalt: stille fallback, partner kan handmatig uploaden (huidige flow).
+5. Na opslaan refresht de aanbod-pagina; de MAP-kaart verdwijnt uit de MAP-sectie en het nieuwe concept verschijnt onder "Wacht op goedkeuring" met de "Synchroon met MAP"-badge.
+
+## Plaatsing in code
+
+Wijzigingen, allemaal in frontend behalve één migratie + één edge function:
+
+- **Migratie**: kolom `map_activity_type_id` + unique partial index.
+- **`src/pages/PartnerBlocks.tsx`**:
+  - Haal partner op (incl. `map_tenant_slug`).
+  - Gebruik `useMapActivityTypes(slug, !!slug, partnerId)`.
+  - Bereken `linkedTypeIds = new Set(blocks.filter(b => b.map_activity_type_id).map(...))`.
+  - Filter MAP-types die nog niet gekoppeld zijn → `availableMapTypes`.
+  - Render nieuwe sectie met `MapTypeCard`.
+  - Geef `prefillFromMap` mee aan `PartnerBlockSheet` als de gebruiker vanaf MAP komt.
+- **Nieuw component `src/components/partner-portal/MapTypeCard.tsx`** — visueel duidelijk verschillend (accent-rand + MAP-badge).
+- **`PartnerBlockSheet.tsx`**:
+  - Nieuwe prop `prefillFromMap?: { ... }`.
+  - In `getInitialFormData` voorvullen wanneer prefill aanwezig is.
+  - Bij opslaan (alleen wanneer `isNew && prefillFromMap`): set `map_activity_type_id` en roep daarna `import-map-image` edge function aan.
+- **`PartnerBuildingBlock` type** — veld `map_activity_type_id?: number | null` toevoegen + select-list in `PartnerBlocks.tsx` uitbreiden.
+- **Edge function `import-map-image`** — input `{ blockId, mapImageRef, partnerId, slug }`; haalt bestand op, uploadt naar `building-block-images`, update `building_blocks.image_url`. Service-role key; valideert dat caller admin is óf eigenaar van het block.
+- **Bestaande BlockCard** — toon "Synchroon met MAP"-badge wanneer `map_activity_type_id` aanwezig is.
+
+## Buiten scope (expliciet)
+
+- Geen automatische sync van prijs/voorraad uit MAP ná publicatie (partner beheert dat zelf in de bouwsteen).
+- Geen tonen op publieke `/partners`-pagina — daar tellen we al `block_count`; dit verandert daar niets.
+- Geen automatisch verwijderen van bouwsteen als type uit MAP verdwijnt (handmatig).
+
+## Risico's
+
+- MAP-image-import kan falen bij CORS of niet-bestaande `Image`-referentie → fallback naar handmatig.
+- Partners zonder MAP-koppeling zien niets nieuws; geen regressie.
+- `useMapActivityTypes` cached 10 minuten → eventueel nieuwe types pas zichtbaar na refresh; acceptabel.

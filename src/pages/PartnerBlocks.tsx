@@ -7,19 +7,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  AlertCircle, 
-  Package, 
-  Plus, 
-  Edit, 
-  Users, 
+import {
+  AlertCircle,
+  Package,
+  Plus,
+  Edit,
+  Users,
   Clock,
   Euro,
   CheckCircle,
   FileEdit,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
-import { PartnerBlockSheet } from "@/components/partner-portal/PartnerBlockSheet";
+import { PartnerBlockSheet, type PrefillFromMap } from "@/components/partner-portal/PartnerBlockSheet";
+import { MapTypeCard } from "@/components/partner-portal/MapTypeCard";
+import { useMapActivityTypes, type MapActivityType } from "@/hooks/useMapActivities";
 import type { PartnerBuildingBlock } from "@/types/partner";
 
 const PartnerBlocksContent = () => {
@@ -29,35 +32,44 @@ const PartnerBlocksContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [mapTenantSlug, setMapTenantSlug] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<PartnerBuildingBlock | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isNewBlock, setIsNewBlock] = useState(false);
+  const [prefillFromMap, setPrefillFromMap] = useState<PrefillFromMap | null>(null);
+
+  const BLOCK_SELECT = `
+    id, name, description, short_description, category, block_type,
+    duration, price_adult, price_adult_note, price_type,
+    price_child, price_child_note, price_child_min_age, price_child_max_age,
+    price_pet, price_pet_note,
+    min_people, max_people, is_published, is_active, status,
+    image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
+    seasonal_notes, tags, location_lat, location_lng, location_address,
+    external_url, price_display_override, sort_order, map_activity_type_id
+  `;
 
   useEffect(() => {
     const fetchBlocks = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         navigate("/partner/login");
         return;
       }
 
-      // Check if admin is impersonating
       const impersonatePartnerId = searchParams.get("impersonate");
       let currentPartnerId: string | null = null;
 
       if (impersonatePartnerId) {
         const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        
-        if (isAdmin) {
-          currentPartnerId = impersonatePartnerId;
-        }
+        if (isAdmin) currentPartnerId = impersonatePartnerId;
       }
 
       if (!currentPartnerId) {
         const { data: partner, error: partnerError } = await supabase
           .from("partners")
-          .select("id")
+          .select("id, map_tenant_slug")
           .eq("auth_user_id", session.user.id)
           .eq("is_active", true)
           .single();
@@ -69,23 +81,21 @@ const PartnerBlocksContent = () => {
         }
 
         currentPartnerId = partner.id;
+        setMapTenantSlug(partner.map_tenant_slug);
+      } else {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("map_tenant_slug")
+          .eq("id", currentPartnerId)
+          .maybeSingle();
+        setMapTenantSlug(partner?.map_tenant_slug ?? null);
       }
 
       setPartnerId(currentPartnerId);
 
-      // Fetch building blocks for this partner
       const { data: blocksData, error: blocksError } = await supabase
         .from("building_blocks")
-        .select(`
-          id, name, description, short_description, category, block_type, 
-          duration, price_adult, price_adult_note, price_type, 
-          price_child, price_child_note, price_child_min_age, price_child_max_age,
-          price_pet, price_pet_note, 
-          min_people, max_people, is_published, is_active, status,
-          image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-          seasonal_notes, tags, location_lat, location_lng, location_address,
-          external_url, price_display_override, sort_order
-        `)
+        .select(BLOCK_SELECT)
         .eq("provider_id", currentPartnerId)
         .order("name");
 
@@ -96,22 +106,57 @@ const PartnerBlocksContent = () => {
         return;
       }
 
-      setBlocks(blocksData || []);
+      setBlocks((blocksData || []) as PartnerBuildingBlock[]);
       setIsLoading(false);
     };
 
     fetchBlocks();
   }, [navigate, searchParams]);
 
+  const { data: mapTypes = [] } = useMapActivityTypes(
+    mapTenantSlug,
+    !!mapTenantSlug && !!partnerId,
+    partnerId ?? undefined,
+  );
+
+  const linkedTypeIds = new Set(
+    blocks
+      .map((b) => b.map_activity_type_id)
+      .filter((v): v is number => typeof v === "number"),
+  );
+  const availableMapTypes = (mapTypes as MapActivityType[]).filter(
+    (t) => !linkedTypeIds.has(t.Id),
+  );
+
   const handleEditBlock = (block: PartnerBuildingBlock) => {
     setSelectedBlock(block);
     setIsNewBlock(false);
+    setPrefillFromMap(null);
     setShowSheet(true);
   };
 
   const handleNewBlock = () => {
     setSelectedBlock(null);
     setIsNewBlock(true);
+    setPrefillFromMap(null);
+    setShowSheet(true);
+  };
+
+  const handleEnrichFromMap = (type: MapActivityType) => {
+    setSelectedBlock(null);
+    setIsNewBlock(true);
+    setPrefillFromMap({
+      map_activity_type_id: type.Id,
+      name: type.Name,
+      description: type.Description ?? null,
+      duration_hours: type.Duration,
+      price_per_person: null,
+      max_persons: null,
+      external_url: mapTenantSlug
+        ? `https://boeking.mijnactiviteitenplanner.nl/${mapTenantSlug}`
+        : null,
+      image_ref: type.Image,
+    });
     setShowSheet(true);
   };
 
@@ -119,28 +164,19 @@ const PartnerBlocksContent = () => {
     setShowSheet(false);
     setSelectedBlock(null);
     setIsNewBlock(false);
+    setPrefillFromMap(null);
   };
 
   const handleBlockSaved = async () => {
-    // Refresh blocks
     if (!partnerId) return;
 
     const { data: blocksData } = await supabase
       .from("building_blocks")
-      .select(`
-        id, name, description, short_description, category, block_type, 
-        duration, price_adult, price_adult_note, price_type, 
-        price_child, price_child_note, price_child_min_age, price_child_max_age,
-        price_pet, price_pet_note, 
-        min_people, max_people, is_published, is_active, status,
-        image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-        seasonal_notes, tags, location_lat, location_lng, location_address,
-        external_url, price_display_override, sort_order
-      `)
+      .select(BLOCK_SELECT)
       .eq("provider_id", partnerId)
       .order("name");
 
-    setBlocks(blocksData || []);
+    setBlocks((blocksData || []) as PartnerBuildingBlock[]);
     handleSheetClose();
   };
 
@@ -184,71 +220,95 @@ const PartnerBlocksContent = () => {
         </Button>
       </div>
 
-      {blocks.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-lg font-medium mb-2">Nog geen aanbod</h2>
-            <p className="text-muted-foreground mb-4">
-              U hebt nog geen activiteiten of diensten toegevoegd.
-            </p>
-            <Button onClick={handleNewBlock}>
-              <Plus className="h-4 w-4 mr-2" />
-              Eerste activiteit toevoegen
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-8">
-          {/* Published blocks */}
-          {publishedBlocks.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                Gepubliceerd ({publishedBlocks.length})
-              </h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {publishedBlocks.map((block) => (
-                  <BlockCard key={block.id} block={block} onEdit={handleEditBlock} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Active blocks (approved but not public) */}
-          {activeBlocks.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-blue-600" />
-                Goedgekeurd ({activeBlocks.length})
-              </h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Deze activiteiten zijn goedgekeurd en beschikbaar voor maatwerk-offertes, maar nog niet publiek zichtbaar.
+      <div className="space-y-8">
+        {blocks.length === 0 && availableMapTypes.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-lg font-medium mb-2">Nog geen aanbod</h2>
+              <p className="text-muted-foreground mb-4">
+                U hebt nog geen activiteiten of diensten toegevoegd.
               </p>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeBlocks.map((block) => (
-                  <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="active" />
-                ))}
+              <Button onClick={handleNewBlock}>
+                <Plus className="h-4 w-4 mr-2" />
+                Eerste activiteit toevoegen
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {publishedBlocks.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Gepubliceerd ({publishedBlocks.length})
+                </h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {publishedBlocks.map((block) => (
+                    <BlockCard key={block.id} block={block} onEdit={handleEditBlock} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Concept blocks (awaiting approval) */}
-          {conceptBlocks.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <FileEdit className="h-5 w-5 text-amber-600" />
-                Wacht op goedkeuring ({conceptBlocks.length})
-              </h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {conceptBlocks.map((block) => (
-                  <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="concept" />
-                ))}
+            {activeBlocks.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-blue-600" />
+                  Goedgekeurd ({activeBlocks.length})
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Deze activiteiten zijn goedgekeurd en beschikbaar voor maatwerk-offertes, maar nog niet publiek zichtbaar.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeBlocks.map((block) => (
+                    <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="active" />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+
+            {conceptBlocks.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <FileEdit className="h-5 w-5 text-amber-600" />
+                  Wacht op goedkeuring ({conceptBlocks.length})
+                </h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {conceptBlocks.map((block) => (
+                    <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="concept" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {mapTenantSlug && (
+              <div>
+                <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-accent" />
+                  Beschikbaar vanuit MAP ({availableMapTypes.length})
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Activiteitentypes uit MijnActiviteitenPlanner. Verrijk en publiceer ze om als bouwsteen op Bureau Vlieland te gebruiken.
+                </p>
+                {availableMapTypes.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                      Alle MAP-types zijn al toegevoegd aan uw aanbod.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {availableMapTypes.map((t) => (
+                      <MapTypeCard key={t.Id} type={t} onEnrich={handleEnrichFromMap} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <PartnerBlockSheet
         isOpen={showSheet}
@@ -257,6 +317,7 @@ const PartnerBlocksContent = () => {
         isNew={isNewBlock}
         partnerId={partnerId || ""}
         onSaved={handleBlockSaved}
+        prefillFromMap={prefillFromMap}
       />
     </div>
   );
@@ -294,10 +355,20 @@ const BlockCard = ({ block, onEdit, status }: BlockCardProps) => {
     return "";
   };
 
+  const isFromMap = typeof block.map_activity_type_id === "number";
+
   return (
     <Card className={getBorderClass()}>
       <div className="aspect-video relative overflow-hidden rounded-t-lg">
         <img src={getImageUrl()} alt={block.name} className="w-full h-full object-cover" />
+        {isFromMap && (
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-accent text-accent-foreground gap-1">
+              <Sparkles className="h-3 w-3" />
+              Synchroon met MAP
+            </Badge>
+          </div>
+        )}
         <div className="absolute top-2 right-2">
           {isDraft && (
             <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
