@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapActivityCard, type BundledTime } from "@/components/map/MapActivityCard";
+import { MapActivityDetailSheet } from "@/components/map/MapActivityDetailSheet";
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
 import { Search, CalendarDays, Ticket, Loader2 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -34,6 +35,7 @@ const ActiviteitenBoeken = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [daysWindow, setDaysWindow] = useState(INITIAL_DAYS);
+  const [selectedBundle, setSelectedBundle] = useState<BundledActivity | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset window when date selection changes
@@ -237,6 +239,16 @@ const ActiviteitenBoeken = () => {
                             times={bundle.times}
                             totalSlotsLeft={bundle.totalSlotsLeft}
                             showPartner
+                            onSelect={() => {
+                              setSelectedBundle(bundle);
+                              try {
+                                (window as any).dataLayer?.push({
+                                  event: "activity_detail_open",
+                                  activity: bundle.representative.ActivityTypeName,
+                                  partner: bundle.representative._partnerName,
+                                });
+                              } catch {}
+                            }}
                           />
                         ))}
                       </div>
@@ -263,6 +275,14 @@ const ActiviteitenBoeken = () => {
           </div>
         </div>
       </main>
+
+      <MapActivityDetailSheet
+        activity={selectedBundle?.representative ?? null}
+        times={selectedBundle?.times ?? []}
+        totalSlotsLeft={selectedBundle?.totalSlotsLeft ?? 0}
+        open={!!selectedBundle}
+        onOpenChange={(o) => !o && setSelectedBundle(null)}
+      />
 
       <Footer />
     </>

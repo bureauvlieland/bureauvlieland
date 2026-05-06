@@ -20,6 +20,7 @@ interface MapActivityCardProps {
     _image?: string | null;
   };
   onBook?: (activity: MapActivity & { _partnerId?: string; _partnerSlug?: string }) => void;
+  onSelect?: () => void;
   showPartner?: boolean;
   /** When provided, renders all departure times as chips and uses external booking link */
   times?: BundledTime[];
@@ -47,6 +48,7 @@ const slugify = (s: string) =>
 export const MapActivityCard = ({
   activity,
   onBook,
+  onSelect,
   showPartner = true,
   times,
   totalSlotsLeft,
@@ -68,7 +70,10 @@ export const MapActivityCard = ({
   const hasTimes = times && times.length > 0;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card
+      className={`overflow-hidden hover:shadow-md transition-shadow ${onSelect ? "cursor-pointer" : ""}`}
+      onClick={onSelect}
+    >
       <div className={imageUrl ? "flex flex-col sm:flex-row" : ""}>
         {imageUrl && (
           <div className="sm:w-40 h-32 sm:h-auto flex-shrink-0 overflow-hidden">
@@ -184,7 +189,12 @@ export const MapActivityCard = ({
             </div>
             {!isFull && bookingUrl ? (
               <Button size="sm" asChild>
-                <a href={bookingUrl} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   Boeken
                   <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
                 </a>
@@ -192,7 +202,13 @@ export const MapActivityCard = ({
             ) : (
               !isFull &&
               onBook && (
-                <Button size="sm" onClick={() => onBook(activity)}>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBook(activity);
+                  }}
+                >
                   Boeken
                 </Button>
               )
