@@ -32,35 +32,44 @@ const PartnerBlocksContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [mapTenantSlug, setMapTenantSlug] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<PartnerBuildingBlock | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isNewBlock, setIsNewBlock] = useState(false);
+  const [prefillFromMap, setPrefillFromMap] = useState<PrefillFromMap | null>(null);
+
+  const BLOCK_SELECT = `
+    id, name, description, short_description, category, block_type,
+    duration, price_adult, price_adult_note, price_type,
+    price_child, price_child_note, price_child_min_age, price_child_max_age,
+    price_pet, price_pet_note,
+    min_people, max_people, is_published, is_active, status,
+    image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
+    seasonal_notes, tags, location_lat, location_lng, location_address,
+    external_url, price_display_override, sort_order, map_activity_type_id
+  `;
 
   useEffect(() => {
     const fetchBlocks = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         navigate("/partner/login");
         return;
       }
 
-      // Check if admin is impersonating
       const impersonatePartnerId = searchParams.get("impersonate");
       let currentPartnerId: string | null = null;
 
       if (impersonatePartnerId) {
         const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        
-        if (isAdmin) {
-          currentPartnerId = impersonatePartnerId;
-        }
+        if (isAdmin) currentPartnerId = impersonatePartnerId;
       }
 
       if (!currentPartnerId) {
         const { data: partner, error: partnerError } = await supabase
           .from("partners")
-          .select("id")
+          .select("id, map_tenant_slug")
           .eq("auth_user_id", session.user.id)
           .eq("is_active", true)
           .single();
@@ -72,23 +81,21 @@ const PartnerBlocksContent = () => {
         }
 
         currentPartnerId = partner.id;
+        setMapTenantSlug(partner.map_tenant_slug);
+      } else {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("map_tenant_slug")
+          .eq("id", currentPartnerId)
+          .maybeSingle();
+        setMapTenantSlug(partner?.map_tenant_slug ?? null);
       }
 
       setPartnerId(currentPartnerId);
 
-      // Fetch building blocks for this partner
       const { data: blocksData, error: blocksError } = await supabase
         .from("building_blocks")
-        .select(`
-          id, name, description, short_description, category, block_type, 
-          duration, price_adult, price_adult_note, price_type, 
-          price_child, price_child_note, price_child_min_age, price_child_max_age,
-          price_pet, price_pet_note, 
-          min_people, max_people, is_published, is_active, status,
-          image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-          seasonal_notes, tags, location_lat, location_lng, location_address,
-          external_url, price_display_override, sort_order
-        `)
+        .select(BLOCK_SELECT)
         .eq("provider_id", currentPartnerId)
         .order("name");
 
@@ -99,22 +106,57 @@ const PartnerBlocksContent = () => {
         return;
       }
 
-      setBlocks(blocksData || []);
+      setBlocks((blocksData || []) as PartnerBuildingBlock[]);
       setIsLoading(false);
     };
 
     fetchBlocks();
   }, [navigate, searchParams]);
 
+  const { data: mapTypes = [] } = useMapActivityTypes(
+    mapTenantSlug,
+    !!mapTenantSlug && !!partnerId,
+    partnerId ?? undefined,
+  );
+
+  const linkedTypeIds = new Set(
+    blocks
+      .map((b) => b.map_activity_type_id)
+      .filter((v): v is number => typeof v === "number"),
+  );
+  const availableMapTypes = (mapTypes as MapActivityType[]).filter(
+    (t) => !linkedTypeIds.has(t.Id),
+  );
+
   const handleEditBlock = (block: PartnerBuildingBlock) => {
     setSelectedBlock(block);
     setIsNewBlock(false);
+    setPrefillFromMap(null);
     setShowSheet(true);
   };
 
   const handleNewBlock = () => {
     setSelectedBlock(null);
     setIsNewBlock(true);
+    setPrefillFromMap(null);
+    setShowSheet(true);
+  };
+
+  const handleEnrichFromMap = (type: MapActivityType) => {
+    setSelectedBlock(null);
+    setIsNewBlock(true);
+    setPrefillFromMap({
+      map_activity_type_id: type.Id,
+      name: type.Name,
+      description: type.Description ?? null,
+      duration_hours: type.Duration,
+      price_per_person: null,
+      max_persons: null,
+      external_url: mapTenantSlug
+        ? `https://boeking.mijnactiviteitenplanner.nl/${mapTenantSlug}`
+        : null,
+      image_ref: type.Image,
+    });
     setShowSheet(true);
   };
 
@@ -122,28 +164,19 @@ const PartnerBlocksContent = () => {
     setShowSheet(false);
     setSelectedBlock(null);
     setIsNewBlock(false);
+    setPrefillFromMap(null);
   };
 
   const handleBlockSaved = async () => {
-    // Refresh blocks
     if (!partnerId) return;
 
     const { data: blocksData } = await supabase
       .from("building_blocks")
-      .select(`
-        id, name, description, short_description, category, block_type, 
-        duration, price_adult, price_adult_note, price_type, 
-        price_child, price_child_note, price_child_min_age, price_child_max_age,
-        price_pet, price_pet_note, 
-        min_people, max_people, is_published, is_active, status,
-        image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-        seasonal_notes, tags, location_lat, location_lng, location_address,
-        external_url, price_display_override, sort_order
-      `)
+      .select(BLOCK_SELECT)
       .eq("provider_id", partnerId)
       .order("name");
 
-    setBlocks(blocksData || []);
+    setBlocks((blocksData || []) as PartnerBuildingBlock[]);
     handleSheetClose();
   };
 
