@@ -43,11 +43,18 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6">
       <div className="text-center mb-8">
+        {templateName && (
+          <p className="text-xs uppercase tracking-[0.2em] text-primary mb-3 font-semibold">
+            Voorbeeldprogramma · {templateName}
+          </p>
+        )}
         <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-          Hoeveel personen en welke datum(s)?
+          {templateName ? "Wanneer en met hoeveel personen?" : "Hoeveel personen en welke datum(s)?"}
         </h2>
         <p className="text-muted-foreground">
-          Daarna kunt u direct activiteiten toevoegen aan uw programma.
+          {templateName
+            ? `Kies uw startdatum${templateDurationDays && templateDurationDays > 1 ? ` (${templateDurationDays} dagen worden automatisch ingevuld)` : ""} en aantal personen. Daarna laden wij dit programma voor u in.`
+            : "Daarna kunt u direct activiteiten toevoegen aan uw programma."}
         </p>
       </div>
 
