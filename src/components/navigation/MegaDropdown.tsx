@@ -64,7 +64,7 @@ const voorPriveItems: NavItem[] = [
 
 const overOnsItems: NavItem[] = [
   { label: "Over Bureau Vlieland", href: "/over-ons" },
-  { label: "Onze werkwijze", href: "/diensten" },
+  { label: "Onze werkwijze", href: "/onze-werkwijze" },
   { label: "Aangesloten partners", href: "/partners" },
   { label: "Samenwerken", href: "/samenwerken" },
   { label: "Contact", href: "/contact" },
