@@ -151,6 +151,7 @@ export const useAllMapActivities = (
     },
     enabled,
     staleTime: 2 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 };
 
