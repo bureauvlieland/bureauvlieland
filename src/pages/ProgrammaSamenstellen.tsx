@@ -212,7 +212,13 @@ const ProgrammaSamenstellen = () => {
         {/* Content */}
         <section className={`py-10 md:py-14 ${phase === "program" ? "pb-28" : ""}`}>
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            {phase === "basics" && <BasicsForm onSubmit={handleBasicsSubmit} />}
+            {phase === "basics" && (
+              <BasicsForm
+                onSubmit={handleBasicsSubmit}
+                templateName={templateData?.name ?? null}
+                templateDurationDays={templateData?.duration_days ?? null}
+              />
+            )}
 
             {phase === "program" && (
               <ProgramBuilderView
