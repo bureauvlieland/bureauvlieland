@@ -355,10 +355,20 @@ const BlockCard = ({ block, onEdit, status }: BlockCardProps) => {
     return "";
   };
 
+  const isFromMap = typeof block.map_activity_type_id === "number";
+
   return (
     <Card className={getBorderClass()}>
       <div className="aspect-video relative overflow-hidden rounded-t-lg">
         <img src={getImageUrl()} alt={block.name} className="w-full h-full object-cover" />
+        {isFromMap && (
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-accent text-accent-foreground gap-1">
+              <Sparkles className="h-3 w-3" />
+              Synchroon met MAP
+            </Badge>
+          </div>
+        )}
         <div className="absolute top-2 right-2">
           {isDraft && (
             <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
