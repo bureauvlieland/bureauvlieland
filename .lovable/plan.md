@@ -1,90 +1,72 @@
 ## Doel
 
-Voorbeeldprogramma's wervender en inhoudelijk completer maken, plus toevoeging van een nieuw exclusief eendaags programma met privé-overtocht via de Regina Andrea (Waddenrecreatiebedrijf Neptunus).
+De detailpagina van een voorbeeldprogramma (bijv. `/voorbeeldprogrammas/culinaire-ontdekking`) krijgt een meer editoriale, sfeervolle uitstraling. Beter ritme tussen secties, rijker kleurgebruik uit het bestaande design system (ocean, sand, sunset) en sterkere positionering van de waardepropositie.
 
-## 1. Sfeervolle storytelling per programma
+## Huidige knelpunten
 
-Per gepubliceerd template uitgebreidere, wervende content opbouwen. We voegen géén nieuwe DB-kolommen toe — we benutten de bestaande velden (`description`, `short_description`, `target_group`) maximaal en vullen aanvullende narratieve secties via een nieuwe statische copy-laag in de frontend.
+- Hero is relatief laag (44vh) en de meta-pills (duur/groep/prijs) staan er onderaan ingeperst.
+- Beschrijving, highlights, praktische info en tijdlijn staan allemaal op vergelijkbare witte/lichtgrijze achtergronden — weinig ritme.
+- "Voor wie" en "Praktische info" liggen visueel op één niveau; "voor wie" verdient meer gewicht (positionering).
+- Geen duidelijke samenvattings-/feiten-strook; bezoekers moeten lezen om de essentie te vinden.
+- Sand- en sunset-tokens in `index.css` worden nauwelijks gebruikt.
 
-**Nieuwe frontend-content per template** (in `src/lib/programTemplateCopy.ts`):
-- `hook` — pakkende openingszin (1 regel)
-- `story` — sfeerbeschrijving (2–3 alinea's, formele 'u'-toon)
-- `highlights` — 4–6 bullet-highlights ("Wat maakt dit programma bijzonder")
-- `forWhom` — concreet doelgroepprofiel + groepsgrootte-advies
-- `vibe` — 3 sfeerwoorden / tags voor visuele chips
-- `practical` — praktische info (vertrektijden, fysieke inspanning, weersafhankelijkheid)
+## Aanpak (alleen frontend / presentatie)
 
-Deze copy wordt gerenderd op `VoorbeeldprogrammaDetail.tsx` in nieuwe secties tussen hero en timeline:
-- Hero: `hook` als ondertitel
-- Sectie "Wat maakt dit bijzonder" (highlights, icon-grid)
-- Sectie "Voor wie" (forWhom)
-- Sectie "Sfeer" (vibe-chips)
-- Sectie "Praktische info" (praktisch + weekendregel waar van toepassing)
+### 1. Hero rijker en luchtiger
+- Hoogte naar `min-h-[60vh]` met meer ademruimte; gradient van `--ocean-deep` (bodem) naar transparant + subtiele vignet links.
+- Titel groter (`text-5xl md:text-7xl`), display-font, met een dunne sunset-accentlijn boven de titel ("Voorbeeldprogramma · {duration} dagen").
+- Hook in serif/italic, max-w-2xl, lichter gewicht.
+- Meta-pills omgezet naar één horizontale "fact strip" onderaan de hero met iconen op donkere semitransparante balk (backdrop-blur), netjes uitgelijnd.
 
-Op `ProgramCard` (overzicht): `hook` als subtitel boven `short_description` voor sterkere wervende eerste indruk.
+### 2. Intro / positionering-sectie ("Het verhaal")
+- Direct onder de hero: tweekoloms layout op desktop:
+  - Links: kleine kicker "Het verhaal" + `template.description` als rustige body-tekst.
+  - Rechts: een sticky "kaart" met de essentie — duur, doelgroep, indicatieve prijs, sfeerwoorden (vibes als chips), en een primaire CTA "Gebruik dit programma". Achtergrond `bg-card` met `shadow-medium`, subtiele sand-rand.
+- Hierdoor staat de propositie + CTA al boven de vouw na scroll.
 
-**Inhoudelijke verrijking bestaande templates** — copy verzorgt het wervende verhaal; we passen géén timeline-items aan in deze ronde. Verrijking van blokken zelf is een latere stap.
+### 3. Highlights als editorial grid
+- Achtergrond met subtiele `--gradient-sand` (zacht zandverloop) zodat deze sectie visueel ademt.
+- Highlights renderen als kaart-grid (2–3 koloms) i.p.v. losse bullets: elk item krijgt een klein checkmark-icoon in primary-cirkel + korte tekst op witte kaart met `shadow-soft`.
+- Storytelling-alinea's (`copy.story`) als rustig leesblok eronder, gecentreerd, max-w-prose, serif-italic intro-cap optioneel.
 
-## 2. Weekendregel voor 2-daagse programma's
+### 4. Voor wie — gepromoveerd tot eigen sectie
+- Aparte sectie met `bg-[hsl(var(--ocean-deep))]` of `bg-primary` en lichte tekst — donker contrastblok midden op de pagina dat de positionering ("voor welk type groep") visueel laat landen.
+- Groot citaat-achtig statement (`copy.forWhom`) + de vibe-chips in licht-op-donker variant.
 
-Op detailpagina's van templates met `duration_days === 2` voegen we onder "Praktische info" een blok toe:
+### 5. Praktische info opnieuw vormgeven
+- Op `bg-muted/30` (huidige baseline), maar met een nette kaart (border + radius) i.p.v. losse bullets.
+- Het "doordeweekse aankomst"-blok behoudt zijn eigen accentkaart, maar krijgt het sand-token als achtergrond en een sunset-accentstreep links voor warmte (i.p.v. primary blauw op blauw).
 
-> **Doordeweekse aankomst aanbevolen** — Voor tweedaagse programma's adviseren wij een doordeweekse aankomst (ma–do). In het weekend hanteren onze logiespartners doorgaans een minimum verblijf van twee nachten, waardoor een tweedaags arrangement op vrijdag of zaterdag vaak niet mogelijk is. Onze reisspecialist denkt graag met u mee over alternatieve data.
+### 6. Tijdlijn-sectie
+- Visueel rustiger: lichte sectiekop "Programma per dag" met dunne kicker, achtergrond `bg-background`.
+- CTA-blok onderaan tijdlijn vervangen door een full-width "call-out" kaart met `--gradient-hero` achtergrond, witte tekst, primaire knop in sunset-kleur (`bg-[hsl(var(--sunset))] text-sunset-foreground`) — dit wordt het visuele ankerpunt richting conversie.
 
-Geen badge op de overzichtskaart (per keuze gebruiker).
+### 7. "Andere programma's"
+- Sectiekop met kicker "Verder kijken" + subtitel.
+- Achtergrond `bg-sand/40` (zacht) zodat afsluiting warm aanvoelt vóór de footer.
 
-## 3. Nieuw programma: "Exclusieve Eilanddag — Privévaart Regina Andrea"
+### 8. Kleurritme over de pagina (van boven naar onder)
+```text
+Hero            → ocean-deep / hero gradient
+Verhaal+CTA     → background (wit)
+Highlights      → sand gradient
+Voor wie        → primary / ocean-deep (donker contrast)
+Praktisch       → muted (licht)
+Tijdlijn        → background
+CTA-blok        → hero gradient + sunset accent
+Andere prog's   → sand zacht
+```
+Dit geeft een editoriaal "ademend" ritme licht↔donker↔warm.
 
-### 3a. Nieuwe partner-bouwstenen (building_blocks, status `published`, provider_id `waddenrecreatiebedrijf-neptunus`)
+## Bestanden die wijzigen
 
-| id | name | category | price_type | sort | rol |
-|----|------|----------|------------|------|-----|
-| `regina-andrea-prive-heen` | Privévaart Regina Andrea — Harlingen → Vlieland | vervoer | per_person | pinned dag 1 start | vervangt Doeksen heen |
-| `regina-andrea-prive-terug` | Privévaart Regina Andrea — Vlieland → Harlingen (incl. warm buffet) | vervoer | per_person | pinned dag 1 eind | vervangt Doeksen terug, incl. diner aan boord |
-| `regina-andrea-koffie-ontvangst` | Ontvangst met koffie & lekkers aan boord | catering | per_person | aanvullend (optioneel onderdeel van overtocht-heen) |
+- `src/pages/VoorbeeldprogrammaDetail.tsx` — herindeling secties, hero, intro+sticky-card, donker "voor wie"-blok, CTA-callout, related-sectie.
+- `src/components/programmas/ProgramHighlights.tsx` — naar kaart-grid + sand-achtergrond, story-blok los.
+- `src/components/programmas/ProgramPractical.tsx` — alleen praktisch (niet meer "voor wie"); kaart-styling, sunset-accent op weekend-tip.
+- Geen wijzigingen aan data, hooks, edge functions of `programTemplateCopy.ts`.
 
-Prijzen blijven "op aanvraag" (`price_display_override`) — Neptunus geeft offerte op basis van groep. Zo respecteren we het partner-quote-traject. Inclusief havengeld + toeristenbelasting en fiets op Vlieland zit in de heen-overtocht (vermeld in description).
+## Buiten scope
 
-### 3b. Nieuw template `prive-eilanddag-regina-andrea`
-
-- `duration_days`: 1
-- `name`: "Exclusieve Eilanddag — Privévaart Regina Andrea"
-- `short_description`: "Uw eigen schip, eigen tempo: privévaart, fiets, strand en warm buffet aan boord."
-- `target_group`: "Bedrijfsuitjes, familiefeesten en groepen die exclusiviteit zoeken"
-- `is_published`: true
-
-**Timeline (1 dag):**
-1. 09:00 — Privévaart Regina Andrea heen (incl. koffie & lekkers, fiets aan boord)
-2. 11:30 — Fietstocht met begeleiding
-3. 12:30 — Lunch op locatie
-4. 14:30 — Strandspektakel _of_ vrije tijd (we kiezen één: vrije tijd, want privévaart-doelgroep wil flexibiliteit)
-5. 16:30 — Privévaart Regina Andrea terug — warm buffet aan boord
-
-Storytelling-copy beschrijft het USP: eigen schip, flexibele vertrektijden, alles inclusief, ideaal vanaf ~30 personen.
-
-## 4. Optimalisaties overzichtspagina
-
-- `ProgramCard` toont `hook` (uit copy-laag) als prominente ondertitel.
-- "Nieuw"-badge op `prive-eilanddag-regina-andrea` (op basis van een `featured` flag in de copy-laag, niet in DB — dichter bij UI).
-
-## Bestanden
-
-**Nieuw:**
-- `src/lib/programTemplateCopy.ts` — copy-map keyed op template-id
-- `src/components/programmas/ProgramHighlights.tsx`
-- `src/components/programmas/ProgramForWhom.tsx`
-- `src/components/programmas/ProgramPractical.tsx` (incl. conditionele 2-daagse weekendregel)
-
-**Wijzigen:**
-- `src/pages/VoorbeeldprogrammaDetail.tsx` — nieuwe secties + hook in hero
-- `src/components/programmas/ProgramCard.tsx` — hook als subtitel + featured-badge
-
-**Database (insert):**
-- 3 nieuwe rijen `building_blocks` (Regina Andrea heen / terug / koffie)
-- 1 nieuwe rij `program_templates`
-- 5 nieuwe rijen `program_template_items`
-
-## Niet in scope (latere ronde)
-
-- Inhoudelijk uitbreiden van bestaande timelines met extra blokken.
-- Nieuwe afbeeldingen genereren voor het Regina Andrea-programma (we starten met een passende bestaande haven/boot-afbeelding; vervangen kan in een vervolg).
+- Geen wijzigingen aan businesslogica, routes, database of teksten in `programTemplateCopy.ts`.
+- Geen aanpassingen aan `ProgramCard` of overzichtspagina.
+- Geen nieuwe design tokens; we gebruiken alleen bestaande HSL-tokens uit `index.css`.
