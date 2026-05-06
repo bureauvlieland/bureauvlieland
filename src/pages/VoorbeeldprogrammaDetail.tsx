@@ -8,8 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTemplateWithItems, usePublishedTemplates } from "@/hooks/useProgramTemplates";
 import { ProgramTimeline } from "@/components/programmas/ProgramTimeline";
 import { ProgramCard } from "@/components/programmas/ProgramCard";
+import { ProgramHighlights } from "@/components/programmas/ProgramHighlights";
+import { ProgramPractical } from "@/components/programmas/ProgramPractical";
 import { ArrowLeft, ArrowRight, Calendar, Users, Euro } from "lucide-react";
 import { useKenBurns } from "@/hooks/use-ken-burns";
+import { getTemplateCopy } from "@/lib/programTemplateCopy";
 import heroVlieland from "@/assets/hero-vlieland.jpg";
 
 const VoorbeeldprogrammaDetail = () => {
