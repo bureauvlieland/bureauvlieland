@@ -39,74 +39,8 @@ const Evenementen = () => {
         </div>
       </section>
 
-      {/* Vuurtorenloop Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1">
-              <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-                <span className="text-sm font-semibold text-primary">18 april 2027</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Vuurtorenloop Vlieland
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Het hardloopfeest Vuurtorenloop Vlieland is <strong>MOOI ZWAAR!</strong> Een unieke 
-                hardloopervaring langs de prachtige stranden en door de natuur van Vlieland. 
-              </p>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Datum</p>
-                    <p className="text-muted-foreground">Zondag 18 april 2027</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Locatie</p>
-                    <p className="text-muted-foreground">Vlieland</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-muted-foreground mb-8">
-                Hardlopen op zondag is een uitstekende bezigheid, zeker op een Waddeneiland als Vlieland. 
-                Elke deelnemer krijgt een medaille en na afloop worden er heerlijke broodjes geserveerd. 
-                Dit evenement is zeer verslavend!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://vuurtorenloop.nl/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-block"
-                >
-                  <Button variant="default" className="w-full sm:w-auto">
-                    Meer informatie <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
-                <Link to="/contact">
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    Organiseer met Bureau Vlieland
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <img
-                src={vuurtorenloopImage}
-                alt="Vuurtorenloop - hardlopers op het strand van Vlieland"
-                className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Amusetour Section */}
-      <section className="py-20 bg-accent-soft/30">
+      <section className="py-20 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
@@ -166,6 +100,72 @@ const Evenementen = () => {
                   </Button>
                 </Link>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Vuurtorenloop Section */}
+      <section className="py-20 bg-accent-soft/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="order-2 md:order-1">
+              <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
+                <span className="text-sm font-semibold text-primary">18 april 2027</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
+                Vuurtorenloop Vlieland
+              </h2>
+              <p className="text-lg text-muted-foreground mb-6">
+                Het hardloopfeest Vuurtorenloop Vlieland is <strong>MOOI ZWAAR!</strong> Een unieke 
+                hardloopervaring langs de prachtige stranden en door de natuur van Vlieland. 
+              </p>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-foreground">Datum</p>
+                    <p className="text-muted-foreground">Zondag 18 april 2027</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-foreground">Locatie</p>
+                    <p className="text-muted-foreground">Vlieland</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-muted-foreground mb-8">
+                Hardlopen op zondag is een uitstekende bezigheid, zeker op een Waddeneiland als Vlieland. 
+                Elke deelnemer krijgt een medaille en na afloop worden er heerlijke broodjes geserveerd. 
+                Dit evenement is zeer verslavend!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <a 
+                  href="https://vuurtorenloop.nl/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <Button variant="default" className="w-full sm:w-auto">
+                    Meer informatie <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
+                <Link to="/contact">
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    Organiseer met Bureau Vlieland
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="order-1 md:order-2">
+              <img
+                src={vuurtorenloopImage}
+                alt="Vuurtorenloop - hardlopers op het strand van Vlieland"
+                className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
+                loading="lazy"
+              />
             </div>
           </div>
         </div>
