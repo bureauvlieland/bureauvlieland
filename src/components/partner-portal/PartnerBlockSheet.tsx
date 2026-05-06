@@ -246,6 +246,7 @@ export const PartnerBlockSheet = ({
   isNew,
   partnerId,
   onSaved,
+  prefillFromMap,
 }: PartnerBlockSheetProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
