@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapActivityCard, type BundledTime } from "@/components/map/MapActivityCard";
+import { MapActivityDetailSheet } from "@/components/map/MapActivityDetailSheet";
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
 import { Search, CalendarDays, Ticket, Loader2 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
