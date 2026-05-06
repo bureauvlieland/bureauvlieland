@@ -1,49 +1,52 @@
-## Detail-sheet + cross-sell op /activiteiten-boeken
+## Doel
+1. **(B)** Voortaan: wanneer een admin een programma-onderdeel verwijdert dat al naar de partner was verstuurd, krijgt die partner automatisch een korte annulering-mail.
+2. **(A)** Met terugwerkende kracht: voor BV-2602-0004 alsnog een nette annulering-mail sturen aan de 4 betrokken activiteitenpartners.
 
-Houdt bezoekers langer op de site door eerst een rijke detailweergave te tonen voor ze naar MAP doorklikken, en een zachte cross-sell naar onze eigen flows.
+---
 
-### Nieuwe component: `MapActivityDetailSheet`
-Locatie: `src/components/map/MapActivityDetailSheet.tsx`. Gebaseerd op shadcn `Sheet` (right side, breed: `sm:max-w-xl lg:max-w-2xl`).
+## Deel B — Workflow aanpassen
 
-**Inhoud (top → bottom):**
-1. Hero-foto van de activiteit (groot, full-width binnen sheet)
-2. Titel + partner-naam (klikbaar naar `/partners` indien mogelijk)
-3. Badges: Direct boekbaar, restplekken-status
-4. Volledige beschrijving (geen line-clamp)
-5. Meta-grid: datum, duur, max personen, prijs p.p. (+ kindprijs), eventueel notes
-6. **Vertrektijden** als grote knoppen-grid: elke tijd toont restplekken; klik op tijd = open MAP-boekings-URL in nieuwe tab (`target="_blank"`, `rel="noopener noreferrer"`).
-7. Disclaimer-strip: "U boekt rechtstreeks bij {partner}. De boekingspagina opent in een nieuw venster." met `ExternalLink` icoon.
-8. **Cross-sell footer** (zie hieronder)
+### Nieuwe edge function: `notify-partner-item-deletion`
+Service-role functie die één of meer `item_id`s ontvangt, zelf bepaalt wie gemaild moet worden, mail verstuurt (gegroepeerd per partner) en daarna de items hard verwijdert.
 
-### Cross-sell strip (in de sheet, onderaan)
-Drie compacte kaarten naast elkaar (stack op mobiel):
-- "Ook overnachten?" → `/logies-aanvragen` (Bed-icoon)
-- "Compleet programma?" → `/programma-samenstellen` (Sparkles-icoon)
-- "Catering of fietsen?" → `/diensten` (UtensilsCrossed-icoon)
+Logica per item:
+- Skip mail wanneer een van deze waar is:
+  - `block_type = 'self_arranged'` of `'bureau'`
+  - `provider_id = 'bureau'`
+  - `provider_id IS NULL`
+  - `skip_partner_notification = true` **én** nooit naar partner verstuurd (`customer_approved_at IS NULL` én `status = 'pending'`)
+- Anders: groepeer per `provider_id`, render `cancellation_partner_project`-template (al beschikbaar) met variant-tekst "Een onderdeel van aanvraag … is komen te vervallen", log naar `email_log` (`email_type = 'partner_item_cancellation'`) en `project_communications`.
 
-Tekst kort, één regel CTA. Subtiele kaarten met `border` + `hover:bg-accent/50`.
+Daarna: `DELETE` van alle item-ids (ongeacht of er gemaild is) met service role.
 
-### Wijzigingen in `MapActivityCard`
-- De hele kaart wordt klikbaar (`onClick` op de Card → opent sheet via callback `onSelect`).
-- Huidige "Boeken"-knop blijft bestaan, maar krijgt `e.stopPropagation()` zodat directe click direct naar MAP gaat (power-user pad).
-- Cursor pointer + subtiele hover state al aanwezig.
+### Frontend
+In `src/pages/admin/AdminRequestDetail.tsx` de twee directe `supabase.from("program_request_items").delete()` calls (regel ~1881 voor activiteit-verwijderen en ~2161 voor "overige kosten") vervangen door een aanroep van de nieuwe edge function. Voor "overige kosten" stuurt de function gewoon nooit een mail (block_type bureau / provider bureau).
 
-### Wijzigingen in `ActiviteitenBoeken.tsx`
-- State: `selectedBundle: BundledActivity | null`.
-- `MapActivityCard` krijgt `onSelect={() => setSelectedBundle(bundle)}` prop.
-- Render `<MapActivityDetailSheet bundle={selectedBundle} onClose={() => setSelectedBundle(null)} />` op page-niveau.
+Bestaande directe deletes elders in admin-componenten worden NIET aangepast (alleen de zichtbare verwijder-knoppen op de programma-pagina).
 
-### Datacontract sheet
-Sheet ontvangt `bundle: BundledActivity` (representative + alle times + partner-info). Geen extra fetches nodig — alle data zit al in de bundle.
+---
 
-### Tracking (optioneel, low effort)
-`window.dataLayer?.push({ event: "activity_detail_open", activityType, partner })` bij sheet-open en `event: "activity_book_click"` bij klik op vertrektijd. Helpt later effect meten.
+## Deel A — Eenmalige actie voor BV-2602-0004
 
-### Niet in scope
-- Geen iframe naar MAP (X-Frame-Options + mobiele beleving).
-- Geen eigen checkout (geen MAP booking-API).
-- Geen wijzigingen aan de filter/zoek/lazy-load logica.
+De 4 items zijn al hard verwijderd, dus de edge function kan de partners niet meer reconstrueren uit `program_request_items`. We doen het via een eenmalige database-actie + handmatige mail-trigger:
 
-### Bestanden
-- **Nieuw:** `src/components/map/MapActivityDetailSheet.tsx`
-- **Aangepast:** `src/components/map/MapActivityCard.tsx`, `src/pages/ActiviteitenBoeken.tsx`
+1. Ophalen van de 4 partners op basis van `email_log` van 4 mei 15:34 (related_partner_id = `vliehors-expres`, `vlieland-outdoor-center`, `zuiver`, `zeehonden`) en hun `contact_email`/`email`.
+2. Per partner een mail sturen via Mailjet met dezelfde template als in B, met de tekst dat het activiteitenprogramma van Jeannette van Spil (BV-2602-0004) is komen te vervallen. (Het logies-stuk loopt door — dit is alleen voor de activiteitenpartners.)
+3. Loggen naar `email_log` (type `partner_item_cancellation`, related_request_id = `50197350-…`) en `project_communications`.
+
+Dit gebeurt via een eenmalige aanroep van een kleine helper-edge-function `backfill-cancellation-bv-2602-0004` (of inline via de nieuwe function met een `legacy_partners` parameter — eenvoudiger). Na uitvoering wordt het script verwijderd.
+
+---
+
+## Wat NIET verandert
+- Het logies-deel (`accommodation_quotes`) blijft ongemoeid; commissiefactuur kan straks normaal opgesteld worden.
+- De `cancel-program-request` flow voor het annuleren van een hele aanvraag blijft bestaan en ongewijzigd.
+- Bestaande email-templates worden hergebruikt; geen nieuwe template nodig.
+
+## Bestanden
+- `supabase/functions/notify-partner-item-deletion/index.ts` — nieuw
+- `src/pages/admin/AdminRequestDetail.tsx` — twee delete-handlers herbedraden
+- Eenmalige run via `supabase--curl_edge_functions` voor BV-2602-0004 met `legacy_partners`-payload
+
+## Open vraag
+- Akkoord dat de mail aan de 4 partners van BV-2602-0004 nu (op 6 mei) verstuurd wordt vanuit `bureauvlieland.nl` — of wil je 'm eerst zelf zien? Ik kan ook eerst een preview van de tekst tonen voordat ik 'm verstuur.
