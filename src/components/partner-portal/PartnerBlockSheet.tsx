@@ -438,15 +438,29 @@ export const PartnerBlockSheet = ({
       if (isNew) {
         // Generate a readable slug ID from the name
         const blockId = slugify(formData.name) || `partner-${Date.now()}`;
-        
+
         const { error } = await supabase
           .from("building_blocks")
           .insert({
             id: blockId,
             ...blockData,
+            ...(prefillFromMap
+              ? { map_activity_type_id: prefillFromMap.map_activity_type_id }
+              : {}),
           });
 
         if (error) throw error;
+
+        // Try to import MAP image (best-effort)
+        if (prefillFromMap?.image_ref) {
+          try {
+            await supabase.functions.invoke("import-map-image", {
+              body: { blockId, mapImageRef: prefillFromMap.image_ref },
+            });
+          } catch (imgErr) {
+            console.warn("MAP image import failed", imgErr);
+          }
+        }
 
         toast({
           title: "Voorstel ingediend",
