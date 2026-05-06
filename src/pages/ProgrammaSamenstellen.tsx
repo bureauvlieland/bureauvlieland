@@ -46,8 +46,9 @@ const ProgrammaSamenstellen = () => {
     loadFromTemplate,
   } = useCart();
 
+  const hasTemplateParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("template");
   const [phase, setPhase] = useState<ConfigPhase>(
-    searchParamsHasTemplate() ? "basics" : (cartItems.length > 0 ? "program" : "basics")
+    hasTemplateParam ? "basics" : (cartItems.length > 0 ? "program" : "basics")
   );
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
