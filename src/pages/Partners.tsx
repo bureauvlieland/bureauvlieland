@@ -69,6 +69,17 @@ const usePublicPartners = () => {
 
 type PartnerFilter = "all" | "activity_provider" | "accommodation";
 
+const normalizeWebsiteUrl = (raw: string | null | undefined): string | null => {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  // Reject obvious junk
+  if (!/\./.test(trimmed)) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^\/\//.test(trimmed)) return `https:${trimmed}`;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
+};
+
 const Partners = () => {
   const kenBurns = useKenBurns();
   const { data: partners, isLoading } = usePublicPartners();
