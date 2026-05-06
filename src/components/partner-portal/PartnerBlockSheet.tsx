@@ -64,6 +64,17 @@ interface ImageValidationResult {
   warning?: string;
 }
 
+export interface PrefillFromMap {
+  map_activity_type_id: number;
+  name: string;
+  description: string | null;
+  duration_hours: number | null;
+  price_per_person: number | null;
+  max_persons: number | null;
+  external_url: string | null;
+  image_ref: string | null;
+}
+
 interface PartnerBlockSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,6 +82,7 @@ interface PartnerBlockSheetProps {
   isNew: boolean;
   partnerId: string;
   onSaved: () => void;
+  prefillFromMap?: PrefillFromMap | null;
 }
 
 // Validate image file
