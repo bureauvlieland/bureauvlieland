@@ -239,6 +239,16 @@ const ActiviteitenBoeken = () => {
                             times={bundle.times}
                             totalSlotsLeft={bundle.totalSlotsLeft}
                             showPartner
+                            onSelect={() => {
+                              setSelectedBundle(bundle);
+                              try {
+                                (window as any).dataLayer?.push({
+                                  event: "activity_detail_open",
+                                  activity: bundle.representative.ActivityTypeName,
+                                  partner: bundle.representative._partnerName,
+                                });
+                              } catch {}
+                            }}
                           />
                         ))}
                       </div>
