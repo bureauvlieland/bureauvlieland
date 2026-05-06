@@ -54,13 +54,17 @@ const ProgrammaSamenstellen = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const handledBlockRef = useRef<string | null>(null);
 
-  // Check for existing draft on mount
+  const templateSlug = searchParams.get("template");
+  const { data: templateData } = useTemplateWithItems(templateSlug);
+
+  // Check for existing draft on mount — skip when arriving with a template (explicit intent overrides draft)
   useEffect(() => {
+    if (templateSlug) return;
     if (hasPendingDraft && pendingDraft && pendingDraft.cartItems.length > 0) {
       setShowDraftDialog(true);
       setPhase("program");
     }
-  }, [hasPendingDraft, pendingDraft]);
+  }, [hasPendingDraft, pendingDraft, templateSlug]);
 
   // Auto-add default blocks when entering program phase
   useEffect(() => {
