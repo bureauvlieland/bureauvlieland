@@ -69,6 +69,17 @@ const usePublicPartners = () => {
 
 type PartnerFilter = "all" | "activity_provider" | "accommodation";
 
+const normalizeWebsiteUrl = (raw: string | null | undefined): string | null => {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  // Reject obvious junk
+  if (!/\./.test(trimmed)) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^\/\//.test(trimmed)) return `https:${trimmed}`;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
+};
+
 const Partners = () => {
   const kenBurns = useKenBurns();
   const { data: partners, isLoading } = usePublicPartners();
@@ -168,6 +179,7 @@ const Partners = () => {
                   const mapUrl = p.map_tenant_slug
                     ? `https://boeking.mijnactiviteitenplanner.nl/${p.map_tenant_slug}`
                     : null;
+                  const websiteHref = normalizeWebsiteUrl(p.website_url);
                   return (
                     <Card key={p.id} className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
                       <div className="relative h-44 overflow-hidden bg-muted">
@@ -218,9 +230,9 @@ const Partners = () => {
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-border">
-                          {p.website_url && (
+                          {websiteHref && (
                             <a
-                              href={p.website_url}
+                              href={websiteHref}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex"
