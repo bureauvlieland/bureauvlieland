@@ -484,4 +484,14 @@ const MapTypeRow = ({ type, onEnrich }: MapTypeRowProps) => {
   );
 };
 
+const PartnerBlocks = () => (
+  <PartnerLayout>
+    <Helmet>
+      <title>Mijn Aanbod | Partner Portal | Bureau Vlieland</title>
+      <meta name="robots" content="noindex, nofollow" />
+    </Helmet>
+    <PartnerBlocksContent />
+  </PartnerLayout>
+);
+
 export default PartnerBlocks;
