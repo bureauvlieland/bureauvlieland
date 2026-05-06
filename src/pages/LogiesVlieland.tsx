@@ -17,7 +17,7 @@ import {
   Handshake,
   MessageSquare
 } from "lucide-react";
-import heroImage from "@/assets/vlieland-landscape.jpg";
+const heroImage = "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/building-block-images/1778074823160-hotel_zeezicht_2.jpg";
 
 const LogiesVlieland = () => {
   const accommodationTypes = [
