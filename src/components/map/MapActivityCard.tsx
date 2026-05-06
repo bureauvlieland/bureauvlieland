@@ -70,7 +70,10 @@ export const MapActivityCard = ({
   const hasTimes = times && times.length > 0;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card
+      className={`overflow-hidden hover:shadow-md transition-shadow ${onSelect ? "cursor-pointer" : ""}`}
+      onClick={onSelect}
+    >
       <div className={imageUrl ? "flex flex-col sm:flex-row" : ""}>
         {imageUrl && (
           <div className="sm:w-40 h-32 sm:h-auto flex-shrink-0 overflow-hidden">
