@@ -189,7 +189,12 @@ export const MapActivityCard = ({
             </div>
             {!isFull && bookingUrl ? (
               <Button size="sm" asChild>
-                <a href={bookingUrl} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   Boeken
                   <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
                 </a>
@@ -197,7 +202,13 @@ export const MapActivityCard = ({
             ) : (
               !isFull &&
               onBook && (
-                <Button size="sm" onClick={() => onBook(activity)}>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBook(activity);
+                  }}
+                >
                   Boeken
                 </Button>
               )
