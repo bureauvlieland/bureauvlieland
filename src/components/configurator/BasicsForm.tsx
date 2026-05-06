@@ -12,9 +12,11 @@ export interface BasicsFormData {
 
 interface BasicsFormProps {
   onSubmit: (data: BasicsFormData) => void;
+  templateName?: string | null;
+  templateDurationDays?: number | null;
 }
 
-export const BasicsForm = ({ onSubmit }: BasicsFormProps) => {
+export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: BasicsFormProps) => {
   const [numberOfPeople, setNumberOfPeople] = useState(20);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
 
