@@ -8,8 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTemplateWithItems, usePublishedTemplates } from "@/hooks/useProgramTemplates";
 import { ProgramTimeline } from "@/components/programmas/ProgramTimeline";
 import { ProgramCard } from "@/components/programmas/ProgramCard";
+import { ProgramHighlights } from "@/components/programmas/ProgramHighlights";
+import { ProgramPractical } from "@/components/programmas/ProgramPractical";
 import { ArrowLeft, ArrowRight, Calendar, Users, Euro } from "lucide-react";
 import { useKenBurns } from "@/hooks/use-ken-burns";
+import { getTemplateCopy } from "@/lib/programTemplateCopy";
 import heroVlieland from "@/assets/hero-vlieland.jpg";
 
 const VoorbeeldprogrammaDetail = () => {
@@ -26,6 +29,7 @@ const VoorbeeldprogrammaDetail = () => {
   }, [isLoading, isError, template, slug, navigate]);
 
   const heroImage = template?.image_url || heroVlieland;
+  const copy = getTemplateCopy(slug);
   const related = (allTemplates || [])
     .filter((t) => t.id !== slug)
     .slice(0, 3);
@@ -93,9 +97,9 @@ const VoorbeeldprogrammaDetail = () => {
                 <h1 className="text-3xl md:text-5xl font-display font-bold mb-3">
                   {template?.name}
                 </h1>
-                {template?.short_description && (
+                {(copy?.hook || template?.short_description) && (
                   <p className="text-lg md:text-xl text-white/90 max-w-3xl mb-4">
-                    {template.short_description}
+                    {copy?.hook || template?.short_description}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -132,6 +136,14 @@ const VoorbeeldprogrammaDetail = () => {
               </p>
             </div>
           </section>
+        )}
+
+        {/* Storytelling */}
+        {copy && <ProgramHighlights copy={copy} />}
+
+        {/* Voor wie + praktisch */}
+        {copy && template && (
+          <ProgramPractical copy={copy} durationDays={template.duration_days} />
         )}
 
         {/* Timeline */}

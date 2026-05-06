@@ -1,44 +1,90 @@
 ## Doel
-`/voorbeeldprogrammas` schaalbaar en sneller maken nu er 8 templates op één pagina staan (en er nog meer bijkomen). De pagina is nu eindeloos lang: alle tijdlijnen worden direct geladen via `useTemplateWithItems` (1 query per template), wat traag oplaadt en visueel overweldigend is.
 
-## Verbeteringen
+Voorbeeldprogramma's wervender en inhoudelijk completer maken, plus toevoeging van een nieuw exclusief eendaags programma met privé-overtocht via de Regina Andrea (Waddenrecreatiebedrijf Neptunus).
 
-### 1. Architectuur: detailpagina per programma
-- Nieuwe route `/voorbeeldprogrammas/:slug` met `VoorbeeldprogrammaDetail.tsx` die één template + tijdlijn rendert.
-- Overzichtspagina toont alleen kaarten + linkt door (geen inline timelines meer).
-- Resultaat: 1 query op overzicht (`usePublishedTemplates`) i.p.v. 1 + N. Snellere LCP, betere SEO (eigen `<title>`/canonical/JSON-LD per programma), deelbare URL's.
-- Backwards compat: oude anchor-links `#template-{id}` redirecten via `useEffect` naar de detailpagina.
+## 1. Sfeervolle storytelling per programma
 
-### 2. Overzicht: filteren & groeperen
-- Filterchips bovenaan: **duur** (1 dag / 2 dagen / 3 dagen / meerdaags) en **thema** (Avontuur, Wellness, Culinair, Compleet, Chill) — afgeleid uit naam/omschrijving of een nieuwe `theme` kolom (out of scope: alleen client-side categorisatie nu).
-- Sorteer-toggle: aanbevolen (sort_order) vs. korte programma's eerst.
-- Lege-staat per filter.
+Per gepubliceerd template uitgebreidere, wervende content opbouwen. We voegen géén nieuwe DB-kolommen toe — we benutten de bestaande velden (`description`, `short_description`, `target_group`) maximaal en vullen aanvullende narratieve secties via een nieuwe statische copy-laag in de frontend.
 
-### 3. Kaart-UX
-- Subtiel "thema"-label rechtsboven (kleur per thema), naast bestaande duur-badge.
-- "Vanaf €X p.p."-badge alleen tonen als gevuld (nu al, prima).
-- Skeleton placeholders i.p.v. spinner tijdens loading.
-- Hele card als `<Link>` (a11y + middle-click) i.p.v. div met onClick.
+**Nieuwe frontend-content per template** (in `src/lib/programTemplateCopy.ts`):
+- `hook` — pakkende openingszin (1 regel)
+- `story` — sfeerbeschrijving (2–3 alinea's, formele 'u'-toon)
+- `highlights` — 4–6 bullet-highlights ("Wat maakt dit programma bijzonder")
+- `forWhom` — concreet doelgroepprofiel + groepsgrootte-advies
+- `vibe` — 3 sfeerwoorden / tags voor visuele chips
+- `practical` — praktische info (vertrektijden, fysieke inspanning, weersafhankelijkheid)
 
-### 4. SEO & metadata
-- `ItemList` JSON-LD op overzicht met alle programma's.
-- `TouristTrip`/`Product` JSON-LD op detailpagina met `name`, `description`, `duration`, `offers.price`.
-- Per detailpagina eigen `<title>` + canonical.
-- Overzicht-`<title>` ingekort, meta-description scherper ("8 kant-en-klare programma's …").
+Deze copy wordt gerenderd op `VoorbeeldprogrammaDetail.tsx` in nieuwe secties tussen hero en timeline:
+- Hero: `hook` als ondertitel
+- Sectie "Wat maakt dit bijzonder" (highlights, icon-grid)
+- Sectie "Voor wie" (forWhom)
+- Sectie "Sfeer" (vibe-chips)
+- Sectie "Praktische info" (praktisch + weekendregel waar van toepassing)
 
-### 5. Hero & CTA's
-- Hero iets compacter (`h-[50vh]`, `min-h-[360px]`) — geeft sneller zicht op de kaarten.
-- Twee duidelijke hero-CTA's: "Bekijk programma's" (scrollt naar grid) + secundair "Stel zelf samen".
-- Bottom-CTA mag blijven; tekst iets aanscherpen.
+Op `ProgramCard` (overzicht): `hook` als subtitel boven `short_description` voor sterkere wervende eerste indruk.
 
-### 6. Bestanden
-- Aanpassen: `src/pages/VoorbeeldprogrammaOverzicht.tsx` (timelines weg, filters + cards-as-link)
-- Nieuw: `src/pages/VoorbeeldprogrammaDetail.tsx` (timeline + CTA + SEO)
-- Aanpassen: `src/App.tsx` (nieuwe route)
-- Aanpassen: `src/pages/Sitemap.tsx` (detail-URLs toevoegen)
-- Optioneel: `src/components/programmas/ProgramCard.tsx` extraheren uit overzicht voor herbruik.
+**Inhoudelijke verrijking bestaande templates** — copy verzorgt het wervende verhaal; we passen géén timeline-items aan in deze ronde. Verrijking van blokken zelf is een latere stap.
 
-## Niet in scope (voor nu)
-- Database-velden uitbreiden (`theme`, slug-veld). We gebruiken `id` als slug en client-side categorisatie. Kunnen we toevoegen wanneer het inhoudelijke programma erbij komt.
-- Wijzigingen aan `ProgramTimeline` zelf.
-- Boekingsflow / configurator.
+## 2. Weekendregel voor 2-daagse programma's
+
+Op detailpagina's van templates met `duration_days === 2` voegen we onder "Praktische info" een blok toe:
+
+> **Doordeweekse aankomst aanbevolen** — Voor tweedaagse programma's adviseren wij een doordeweekse aankomst (ma–do). In het weekend hanteren onze logiespartners doorgaans een minimum verblijf van twee nachten, waardoor een tweedaags arrangement op vrijdag of zaterdag vaak niet mogelijk is. Onze reisspecialist denkt graag met u mee over alternatieve data.
+
+Geen badge op de overzichtskaart (per keuze gebruiker).
+
+## 3. Nieuw programma: "Exclusieve Eilanddag — Privévaart Regina Andrea"
+
+### 3a. Nieuwe partner-bouwstenen (building_blocks, status `published`, provider_id `waddenrecreatiebedrijf-neptunus`)
+
+| id | name | category | price_type | sort | rol |
+|----|------|----------|------------|------|-----|
+| `regina-andrea-prive-heen` | Privévaart Regina Andrea — Harlingen → Vlieland | vervoer | per_person | pinned dag 1 start | vervangt Doeksen heen |
+| `regina-andrea-prive-terug` | Privévaart Regina Andrea — Vlieland → Harlingen (incl. warm buffet) | vervoer | per_person | pinned dag 1 eind | vervangt Doeksen terug, incl. diner aan boord |
+| `regina-andrea-koffie-ontvangst` | Ontvangst met koffie & lekkers aan boord | catering | per_person | aanvullend (optioneel onderdeel van overtocht-heen) |
+
+Prijzen blijven "op aanvraag" (`price_display_override`) — Neptunus geeft offerte op basis van groep. Zo respecteren we het partner-quote-traject. Inclusief havengeld + toeristenbelasting en fiets op Vlieland zit in de heen-overtocht (vermeld in description).
+
+### 3b. Nieuw template `prive-eilanddag-regina-andrea`
+
+- `duration_days`: 1
+- `name`: "Exclusieve Eilanddag — Privévaart Regina Andrea"
+- `short_description`: "Uw eigen schip, eigen tempo: privévaart, fiets, strand en warm buffet aan boord."
+- `target_group`: "Bedrijfsuitjes, familiefeesten en groepen die exclusiviteit zoeken"
+- `is_published`: true
+
+**Timeline (1 dag):**
+1. 09:00 — Privévaart Regina Andrea heen (incl. koffie & lekkers, fiets aan boord)
+2. 11:30 — Fietstocht met begeleiding
+3. 12:30 — Lunch op locatie
+4. 14:30 — Strandspektakel _of_ vrije tijd (we kiezen één: vrije tijd, want privévaart-doelgroep wil flexibiliteit)
+5. 16:30 — Privévaart Regina Andrea terug — warm buffet aan boord
+
+Storytelling-copy beschrijft het USP: eigen schip, flexibele vertrektijden, alles inclusief, ideaal vanaf ~30 personen.
+
+## 4. Optimalisaties overzichtspagina
+
+- `ProgramCard` toont `hook` (uit copy-laag) als prominente ondertitel.
+- "Nieuw"-badge op `prive-eilanddag-regina-andrea` (op basis van een `featured` flag in de copy-laag, niet in DB — dichter bij UI).
+
+## Bestanden
+
+**Nieuw:**
+- `src/lib/programTemplateCopy.ts` — copy-map keyed op template-id
+- `src/components/programmas/ProgramHighlights.tsx`
+- `src/components/programmas/ProgramForWhom.tsx`
+- `src/components/programmas/ProgramPractical.tsx` (incl. conditionele 2-daagse weekendregel)
+
+**Wijzigen:**
+- `src/pages/VoorbeeldprogrammaDetail.tsx` — nieuwe secties + hook in hero
+- `src/components/programmas/ProgramCard.tsx` — hook als subtitel + featured-badge
+
+**Database (insert):**
+- 3 nieuwe rijen `building_blocks` (Regina Andrea heen / terug / koffie)
+- 1 nieuwe rij `program_templates`
+- 5 nieuwe rijen `program_template_items`
+
+## Niet in scope (latere ronde)
+
+- Inhoudelijk uitbreiden van bestaande timelines met extra blokken.
+- Nieuwe afbeeldingen genereren voor het Regina Andrea-programma (we starten met een passende bestaande haven/boot-afbeelding; vervangen kan in een vervolg).
