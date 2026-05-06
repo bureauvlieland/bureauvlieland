@@ -2186,6 +2186,7 @@ const AdminRequestDetail = () => {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -2419,10 +2420,18 @@ const AdminRequestDetail = () => {
       {/* Add cost sheet */}
       {request && (
         <AdminAddCostSheet
-          open={addCostOpen}
-          onOpenChange={setAddCostOpen}
+          open={addCostOpen || !!editingCost}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAddCostOpen(false);
+              setEditingCost(null);
+            } else if (!editingCost) {
+              setAddCostOpen(true);
+            }
+          }}
           requestId={request.id}
           onSuccess={fetchRequestData}
+          editingItem={editingCost}
         />
       )}
       {/* Create accommodation sheet */}
