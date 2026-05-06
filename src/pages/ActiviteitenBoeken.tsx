@@ -276,6 +276,14 @@ const ActiviteitenBoeken = () => {
         </div>
       </main>
 
+      <MapActivityDetailSheet
+        activity={selectedBundle?.representative ?? null}
+        times={selectedBundle?.times ?? []}
+        totalSlotsLeft={selectedBundle?.totalSlotsLeft ?? 0}
+        open={!!selectedBundle}
+        onOpenChange={(o) => !o && setSelectedBundle(null)}
+      />
+
       <Footer />
     </>
   );
