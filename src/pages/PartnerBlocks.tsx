@@ -311,121 +311,176 @@ const PartnerBlocksContent = () => {
   );
 };
 
-interface BlockCardProps {
+interface BlockSectionProps {
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  description?: string;
+  blocks: PartnerBuildingBlock[];
+  onEdit: (block: PartnerBuildingBlock) => void;
+  status?: string;
+}
+
+const BlockSection = ({ icon, title, count, description, blocks, onEdit, status }: BlockSectionProps) => (
+  <div>
+    <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-2">
+      {icon}
+      {title} ({count})
+    </h2>
+    {description && <p className="text-xs text-muted-foreground mb-3">{description}</p>}
+    <div className={description ? "space-y-2" : "space-y-2 mt-3"}>
+      {blocks.map((block) => (
+        <BlockRow key={block.id} block={block} onEdit={onEdit} status={status} />
+      ))}
+    </div>
+  </div>
+);
+
+interface BlockRowProps {
   block: PartnerBuildingBlock;
   onEdit: (block: PartnerBuildingBlock) => void;
   status?: string;
 }
 
-const BlockCard = ({ block, onEdit, status }: BlockCardProps) => {
+const formatBlockPrice = (block: PartnerBuildingBlock) => {
+  if (!block.price_adult) return "Prijs op aanvraag";
+  const price = block.price_adult.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
+  switch (block.price_type) {
+    case "per_person": return `€${price} p.p.`;
+    case "per_person_per_day": return `€${price} p.p.p.d.`;
+    case "total": return `€${price} totaal`;
+    default: return `€${price}`;
+  }
+};
+
+const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
   const isDraft = status === "concept";
   const isActive = status === "active";
-  
-  const getImageUrl = () => {
-    if (block.image_url) return block.image_url;
-    return "/placeholder.svg";
-  };
-  
-  const formatPrice = () => {
-    if (!block.price_adult) return "Prijs op aanvraag";
-    const price = block.price_adult.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
-    switch (block.price_type) {
-      case "per_person": return `€${price} p.p.`;
-      case "per_person_per_day": return `€${price} p.p.p.d.`;
-      case "total": return `€${price} totaal`;
-      default: return `€${price}`;
-    }
-  };
-
-  const getBorderClass = () => {
-    if (isDraft) return "border-amber-300 dark:border-amber-700";
-    if (isActive) return "border-blue-300 dark:border-blue-700";
-    return "";
-  };
-
   const isFromMap = typeof block.map_activity_type_id === "number";
+  const img = block.image_url || "/placeholder.svg";
 
   return (
-    <Card className={getBorderClass()}>
-      <div className="aspect-video relative overflow-hidden rounded-t-lg">
-        <img src={getImageUrl()} alt={block.name} className="w-full h-full object-cover" />
-        {isFromMap && (
-          <div className="absolute top-2 left-2">
-            <Badge className="bg-accent text-accent-foreground gap-1">
-              <Sparkles className="h-3 w-3" />
-              Synchroon met MAP
-            </Badge>
+    <Card
+      className="cursor-pointer hover:bg-muted/40 transition-colors"
+      onClick={() => onEdit(block)}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          <img
+            src={img}
+            alt={block.name}
+            className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium truncate">{block.name}</span>
+              {isFromMap && (
+                <Badge variant="outline" className="gap-1 text-xs font-normal border-accent/40 text-accent-foreground bg-accent/10">
+                  <Sparkles className="h-3 w-3" />
+                  MAP
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+              <span className="flex items-center gap-1">
+                <Euro className="h-3 w-3" />
+                {formatBlockPrice(block)}
+              </span>
+              {block.duration && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {block.duration}
+                </span>
+              )}
+              {(block.min_people || block.max_people) && (
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {block.min_people && block.max_people
+                    ? `${block.min_people}-${block.max_people}`
+                    : block.min_people
+                    ? `min. ${block.min_people}`
+                    : `max. ${block.max_people}`}
+                </span>
+              )}
+            </div>
           </div>
-        )}
-        <div className="absolute top-2 right-2">
-          {isDraft && (
-            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-              Wacht op goedkeuring
-            </Badge>
-          )}
-          {isActive && (
-            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-              Goedgekeurd
-            </Badge>
-          )}
-          {!isDraft && !isActive && (
-            <Badge className="bg-green-600">Gepubliceerd</Badge>
-          )}
+          <div className="shrink-0 flex items-center gap-2">
+            {isDraft && (
+              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-normal">
+                Wacht op goedkeuring
+              </Badge>
+            )}
+            {isActive && (
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 font-normal">
+                Goedgekeurd
+              </Badge>
+            )}
+            {!isDraft && !isActive && (
+              <Badge className="bg-green-600 font-normal">Gepubliceerd</Badge>
+            )}
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(block); }}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
-      <CardContent className="p-4">
-        <h3 className="font-semibold mb-1">{block.name}</h3>
-        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-          {block.short_description || block.description || "Geen beschrijving"}
-        </p>
-        
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-4">
-          <span className="flex items-center gap-1">
-            <Euro className="h-3 w-3" />
-            {formatPrice()}
-          </span>
-          {block.duration && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {block.duration}
-            </span>
-          )}
-          {(block.min_people || block.max_people) && (
-            <span className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              {block.min_people && block.max_people
-                ? `${block.min_people}-${block.max_people}`
-                : block.min_people
-                ? `min. ${block.min_people}`
-                : `max. ${block.max_people}`}
-            </span>
-          )}
-        </div>
-
-        <Button variant="outline" className="w-full" onClick={() => onEdit(block)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Bewerken
-        </Button>
-
-        {isDraft && (
-          <p className="text-xs text-center text-amber-600 mt-2 font-medium">
-            Bureau Vlieland beoordeelt uw voorstel
-          </p>
-        )}
       </CardContent>
     </Card>
   );
 };
 
-const PartnerBlocks = () => {
+interface MapTypeRowProps {
+  type: MapActivityType;
+  onEnrich: (type: MapActivityType) => void;
+}
+
+const mapImageUrl = (ref: string | null) =>
+  ref ? `https://portal.mijnactiviteitenplanner.nl/File/Get?reference=${encodeURIComponent(ref)}` : null;
+
+const MapTypeRow = ({ type, onEnrich }: MapTypeRowProps) => {
+  const img = mapImageUrl(type.Image);
   return (
-    <PartnerLayout>
-      <Helmet>
-        <title>Mijn Aanbod | Partner Portal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <PartnerBlocksContent />
-    </PartnerLayout>
+    <Card
+      className="border-dashed border-accent/50 bg-accent/5 cursor-pointer hover:bg-accent/10 transition-colors"
+      onClick={() => onEnrich(type)}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          {img ? (
+            <img src={img} alt={type.Name} className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted" />
+          ) : (
+            <div className="h-14 w-20 rounded-md bg-muted flex items-center justify-center shrink-0">
+              <Sparkles className="h-5 w-5 text-muted-foreground" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium truncate">{type.Name}</span>
+              <Badge className="bg-accent text-accent-foreground gap-1 font-normal text-xs">
+                <Sparkles className="h-3 w-3" />
+                Vanuit MAP
+              </Badge>
+            </div>
+            {(type.Duration || type.Description) && (
+              <div className="flex items-center gap-x-3 text-xs text-muted-foreground mt-0.5">
+                {type.Duration ? (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {type.Duration} uur
+                  </span>
+                ) : null}
+                {type.Description && (
+                  <span className="truncate">{type.Description}</span>
+                )}
+              </div>
+            )}
+          </div>
+          <Button size="sm" onClick={(e) => { e.stopPropagation(); onEnrich(type); }}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Verrijken
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
