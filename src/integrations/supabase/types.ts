@@ -624,6 +624,7 @@ export type Database = {
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
+          map_activity_type_id: number | null
           max_people: number | null
           min_people: number | null
           name: string
@@ -667,6 +668,7 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          map_activity_type_id?: number | null
           max_people?: number | null
           min_people?: number | null
           name: string
@@ -710,6 +712,7 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          map_activity_type_id?: number | null
           max_people?: number | null
           min_people?: number | null
           name?: string
