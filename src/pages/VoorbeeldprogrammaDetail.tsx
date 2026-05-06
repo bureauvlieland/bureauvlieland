@@ -29,6 +29,7 @@ const VoorbeeldprogrammaDetail = () => {
   }, [isLoading, isError, template, slug, navigate]);
 
   const heroImage = template?.image_url || heroVlieland;
+  const copy = getTemplateCopy(slug);
   const related = (allTemplates || [])
     .filter((t) => t.id !== slug)
     .slice(0, 3);
