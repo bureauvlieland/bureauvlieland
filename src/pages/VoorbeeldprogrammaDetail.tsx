@@ -97,9 +97,9 @@ const VoorbeeldprogrammaDetail = () => {
                 <h1 className="text-3xl md:text-5xl font-display font-bold mb-3">
                   {template?.name}
                 </h1>
-                {template?.short_description && (
+                {(copy?.hook || template?.short_description) && (
                   <p className="text-lg md:text-xl text-white/90 max-w-3xl mb-4">
-                    {template.short_description}
+                    {copy?.hook || template?.short_description}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
