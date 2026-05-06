@@ -8,7 +8,7 @@ const faqs = [
   },
   {
     q: "Wie is mijn aanspreekpunt?",
-    a: "Vanaf het moment dat u contact opneemt heeft u één vast aanspreekpunt bij Bureau Vlieland. Tijdens uw verblijf op het eiland staat er bovendien een lokale contactpersoon klaar voor de praktische zaken.",
+    a: "Vanaf het moment dat u contact opneemt heeft u één vast aanspreekpunt bij Bureau Vlieland — voor, tijdens en na uw bezoek. Op het eiland zelf wordt u door de betreffende partners ontvangen; wij zijn op de achtergrond bereikbaar als er iets nodig is.",
   },
   {
     q: "Wat regelen jullie wel — en wat niet?",

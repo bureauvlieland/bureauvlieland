@@ -24,7 +24,7 @@ const steps = [
   {
     icon: MapPin,
     title: "Op het eiland",
-    description: "Tijdens uw bezoek staat een lokaal aanspreekpunt voor u klaar.",
+    description: "Alle partners zijn voorbereid op uw komst — u kunt direct genieten van uw programma.",
   },
   {
     icon: Receipt,
