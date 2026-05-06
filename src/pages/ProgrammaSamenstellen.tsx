@@ -112,13 +112,21 @@ const ProgrammaSamenstellen = () => {
 
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
     clearCart();
-    setNumberOfPeople(data.numberOfPeople);
-    data.selectedDates.forEach((date, i) => {
-      if (i === 0) setSelectedDate(date);
-      else addDate(date);
-    });
+    if (templateData && data.selectedDates.length > 0) {
+      // Load full template starting from the chosen first date
+      loadFromTemplate(templateData, data.selectedDates[0], data.numberOfPeople);
+      // Strip ?template from URL so refresh / draft doesn't re-trigger
+      searchParams.delete("template");
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      setNumberOfPeople(data.numberOfPeople);
+      data.selectedDates.forEach((date, i) => {
+        if (i === 0) setSelectedDate(date);
+        else addDate(date);
+      });
+    }
     setPhase("program");
-  }, [clearCart, setNumberOfPeople, setSelectedDate, addDate]);
+  }, [clearCart, setNumberOfPeople, setSelectedDate, addDate, templateData, loadFromTemplate, searchParams, setSearchParams]);
 
   const handleAddItem = useCallback((blockId: string, dayIndex: number) => {
     const added = addToCart(blockId, dayIndex);
