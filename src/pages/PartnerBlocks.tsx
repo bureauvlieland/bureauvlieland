@@ -238,69 +238,57 @@ const PartnerBlocksContent = () => {
         ) : (
           <>
             {publishedBlocks.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  Gepubliceerd ({publishedBlocks.length})
-                </h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {publishedBlocks.map((block) => (
-                    <BlockCard key={block.id} block={block} onEdit={handleEditBlock} />
-                  ))}
-                </div>
-              </div>
+              <BlockSection
+                icon={<CheckCircle className="h-4 w-4 text-green-600" />}
+                title="Gepubliceerd"
+                count={publishedBlocks.length}
+                blocks={publishedBlocks}
+                onEdit={handleEditBlock}
+              />
             )}
 
             {activeBlocks.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-blue-600" />
-                  Goedgekeurd ({activeBlocks.length})
-                </h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Deze activiteiten zijn goedgekeurd en beschikbaar voor maatwerk-offertes, maar nog niet publiek zichtbaar.
-                </p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {activeBlocks.map((block) => (
-                    <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="active" />
-                  ))}
-                </div>
-              </div>
+              <BlockSection
+                icon={<ShieldCheck className="h-4 w-4 text-blue-600" />}
+                title="Goedgekeurd"
+                count={activeBlocks.length}
+                description="Beschikbaar voor maatwerk-offertes, nog niet publiek zichtbaar."
+                blocks={activeBlocks}
+                onEdit={handleEditBlock}
+                status="active"
+              />
             )}
 
             {conceptBlocks.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <FileEdit className="h-5 w-5 text-amber-600" />
-                  Wacht op goedkeuring ({conceptBlocks.length})
-                </h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {conceptBlocks.map((block) => (
-                    <BlockCard key={block.id} block={block} onEdit={handleEditBlock} status="concept" />
-                  ))}
-                </div>
-              </div>
+              <BlockSection
+                icon={<FileEdit className="h-4 w-4 text-amber-600" />}
+                title="Wacht op goedkeuring"
+                count={conceptBlocks.length}
+                blocks={conceptBlocks}
+                onEdit={handleEditBlock}
+                status="concept"
+              />
             )}
 
             {mapTenantSlug && (
               <div>
-                <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-accent" />
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-accent" />
                   Beschikbaar vanuit MAP ({availableMapTypes.length})
                 </h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Activiteitentypes uit MijnActiviteitenPlanner. Verrijk en publiceer ze om als bouwsteen op Bureau Vlieland te gebruiken.
+                <p className="text-xs text-muted-foreground mb-3">
+                  Activiteitentypes uit MijnActiviteitenPlanner. Verrijk en publiceer om als bouwsteen te gebruiken.
                 </p>
                 {availableMapTypes.length === 0 ? (
                   <Card>
-                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    <CardContent className="py-6 text-center text-sm text-muted-foreground">
                       Alle MAP-types zijn al toegevoegd aan uw aanbod.
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
                     {availableMapTypes.map((t) => (
-                      <MapTypeCard key={t.Id} type={t} onEnrich={handleEnrichFromMap} />
+                      <MapTypeRow key={t.Id} type={t} onEnrich={handleEnrichFromMap} />
                     ))}
                   </div>
                 )}
