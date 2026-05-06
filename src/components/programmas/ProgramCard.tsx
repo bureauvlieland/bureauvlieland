@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 import { Calendar, Users, Euro, ArrowRight } from "lucide-react";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { inferTheme, THEME_META } from "@/lib/programTemplateTheme";
+import { getTemplateCopy } from "@/lib/programTemplateCopy";
 
 export const ProgramCard = ({ template }: { template: ProgramTemplate }) => {
   const theme = THEME_META[inferTheme(template.name, template.description)];
+  const copy = getTemplateCopy(template.id);
+  const subtitle = copy?.hook || template.short_description;
   return (
     <Link
       to={`/voorbeeldprogrammas/${template.id}`}
@@ -23,15 +26,22 @@ export const ProgramCard = ({ template }: { template: ProgramTemplate }) => {
           <Calendar className="h-3 w-3" />
           {template.duration_days} {template.duration_days === 1 ? "dag" : "dagen"}
         </span>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${theme.className}`}>
-          {theme.label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {copy?.featured && (
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary text-primary-foreground backdrop-blur-sm">
+              Nieuw
+            </span>
+          )}
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${theme.className}`}>
+            {theme.label}
+          </span>
+        </div>
       </div>
 
       <div className="absolute inset-x-0 bottom-0 p-5">
         <h3 className="font-display font-bold text-xl text-white mb-1">{template.name}</h3>
-        {template.short_description && (
-          <p className="text-white/85 text-sm line-clamp-2 mb-3">{template.short_description}</p>
+        {subtitle && (
+          <p className="text-white/85 text-sm line-clamp-2 mb-3">{subtitle}</p>
         )}
         <div className="flex flex-wrap gap-2">
           {template.target_group && (
