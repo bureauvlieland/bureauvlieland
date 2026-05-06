@@ -138,6 +138,14 @@ const VoorbeeldprogrammaDetail = () => {
           </section>
         )}
 
+        {/* Storytelling */}
+        {copy && <ProgramHighlights copy={copy} />}
+
+        {/* Voor wie + praktisch */}
+        {copy && template && (
+          <ProgramPractical copy={copy} durationDays={template.duration_days} />
+        )}
+
         {/* Timeline */}
         <section className="py-12 bg-muted/20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
