@@ -20,6 +20,7 @@ interface MapActivityCardProps {
     _image?: string | null;
   };
   onBook?: (activity: MapActivity & { _partnerId?: string; _partnerSlug?: string }) => void;
+  onSelect?: () => void;
   showPartner?: boolean;
   /** When provided, renders all departure times as chips and uses external booking link */
   times?: BundledTime[];
