@@ -230,9 +230,9 @@ const Partners = () => {
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-border">
-                          {p.website_url && (
+                          {websiteHref && (
                             <a
-                              href={p.website_url}
+                              href={websiteHref}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex"
