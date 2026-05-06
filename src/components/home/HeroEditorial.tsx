@@ -11,7 +11,7 @@ export const HeroEditorial = () => {
       <div className="absolute inset-0">
         <img
           src={heroImage}
-          alt="Vlieland strand bij zonsondergang met vuurtoren in de verte"
+          alt="Groep gasten geniet samen op Vlieland"
           className="w-full h-full object-cover"
           fetchPriority="high"
           loading="eager"
