@@ -85,7 +85,11 @@ export const loadTemplateToCart = (
 };
 
 /**
- * Calculate indicative total price for a template
+ * Calculate indicative total price for a template.
+ * Respects each block's `price_type`:
+ *  - per_person / per_person_per_day → × personen (× dagen indien p.p.p.d.)
+ *  - total → 1× (groepstotaal)
+ *  - on_request / null → tellen niet mee
  */
 export const calculateTemplatePrice = (
   template: ProgramTemplate,
@@ -99,11 +103,21 @@ export const calculateTemplatePrice = (
 
   let total = 0;
   let hasAnyPrice = false;
+  const days = Math.max(template.duration_days || 1, 1);
 
   for (const item of template.items) {
-    if (item.block?.price_adult) {
-      hasAnyPrice = true;
-      total += item.block.price_adult * numberOfPeople;
+    const block = item.block;
+    if (!block?.price_adult) continue;
+    const pt = block.price_type;
+    if (pt === "on_request" || pt == null) continue;
+    hasAnyPrice = true;
+    if (pt === "total") {
+      total += block.price_adult;
+    } else if (pt === "per_person_per_day") {
+      total += block.price_adult * numberOfPeople * days;
+    } else {
+      // per_person (default)
+      total += block.price_adult * numberOfPeople;
     }
   }
 
