@@ -160,9 +160,13 @@ export const PartnerItemSheet = ({
   // ===== Open admin price change detection =====
   const effectivePeopleForItem = item.override_people ?? request.number_of_people;
   const numberOfDaysForItem = getNumberOfDays(request.selected_dates);
-  const isPerPersonPriceType = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+  const isPerPersonPriceType = isPerPersonItem(item);
+  const isPerDayPriceType = isPerDayItem(item);
+  // Admin-totaal: ALTIJD via centrale berekening (incl. dagvermenigvuldiger voor p.p.p.d.)
   const adminTotal = item.admin_price_override != null
-    ? (isPerPersonPriceType ? item.admin_price_override * effectivePeopleForItem : item.admin_price_override)
+    ? item.admin_price_override
+        * (isPerPersonPriceType ? effectivePeopleForItem : 1)
+        * (isPerDayPriceType ? numberOfDaysForItem : 1)
     : null;
   // Helper checkt zowel timestamp als materieel bedragverschil — pure timestamp-aanrakingen
   // (bv. "Synchroniseer"-knop) tellen niet als open wijziging.
