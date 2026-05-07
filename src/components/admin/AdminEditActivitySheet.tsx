@@ -154,6 +154,7 @@ export const AdminEditActivitySheet = ({
         day_index: selectedDayIndex,
         preferred_time: time,
         admin_price_override: price,
+        price_type: priceType,
         customer_notes: notes || null,
         block_type: isBureauInvoiced ? "bureau" : "partner",
         location_lat: locationLat,
