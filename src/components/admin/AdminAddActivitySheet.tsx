@@ -181,7 +181,7 @@ export const AdminAddActivitySheet = ({
           admin_price_override: price,
           admin_price_notes: customDescription || null,
           skip_partner_notification: true,
-          price_type: selectedBlock.price_type || "per_person",
+          price_type: priceType,
           location_lat: locationLat,
           location_lng: locationLng,
           location_address: locationAddress || null,
