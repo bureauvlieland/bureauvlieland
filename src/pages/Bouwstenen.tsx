@@ -241,6 +241,73 @@ const Bouwstenen = () => {
         </section>
       </main>
 
+      <Dialog open={!!detailBlock} onOpenChange={(open) => !open && setDetailBlock(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
+          {detailBlock && (
+            <div className="flex flex-col max-h-[90vh]">
+              <div className="relative h-56 shrink-0 bg-muted">
+                <img
+                  src={getBlockImage(detailBlock)}
+                  alt={detailBlock.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-3 left-3">
+                  <Badge className="bg-background/95 text-foreground border border-border shadow-sm backdrop-blur-sm">
+                    {categoryLabels[detailBlock.category] ?? detailBlock.category}
+                  </Badge>
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-4">
+                  <DialogHeader className="text-left space-y-1">
+                    <DialogTitle className="font-display text-2xl">{detailBlock.name}</DialogTitle>
+                    <DialogDescription>door {getProviderName(detailBlock)}</DialogDescription>
+                  </DialogHeader>
+
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                    {detailBlock.duration && (
+                      <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{detailBlock.duration}</span>
+                    )}
+                    {detailBlock.min_people && detailBlock.max_people && (
+                      <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{detailBlock.min_people}–{detailBlock.max_people} pers.</span>
+                    )}
+                    {detailBlock.location_address && (
+                      <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" />{detailBlock.location_address}</span>
+                    )}
+                  </div>
+
+                  {detailBlock.description && (
+                    <div className="prose prose-sm max-w-none text-foreground whitespace-pre-line">
+                      {detailBlock.description}
+                    </div>
+                  )}
+
+                  <div className="flex items-baseline justify-between pt-4 border-t border-border">
+                    <div>
+                      <span className="text-lg font-semibold text-foreground">
+                        {formatBlockPrice(detailBlock)}
+                      </span>
+                      {formatPriceNote(detailBlock) && (
+                        <span className="text-sm text-muted-foreground ml-1">
+                          {formatPriceNote(detailBlock)}
+                        </span>
+                      )}
+                    </div>
+                    <Link to={`/programma-samenstellen?block=${detailBlock.id}`}>
+                      <Button className="gap-1">
+                        Toevoegen aan programma
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
       <Footer />
     </div>
   );
