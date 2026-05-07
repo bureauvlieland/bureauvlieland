@@ -139,17 +139,49 @@ export const AdminEditActivitySheet = ({
   const handleSave = async () => {
     if (!item) return;
 
+    // --- Validatie ---
+    const trimmedName = customName.trim();
+    if (!trimmedName) {
+      toast.error("Omschrijving is verplicht");
+      return;
+    }
+    const rawPrice = priceOverride.trim();
+    if (rawPrice === "") {
+      toast.error("Prijs is verplicht — vul een bedrag in groter dan €0");
+      return;
+    }
+    const price = parseFloat(rawPrice);
+    if (!isFinite(price)) {
+      toast.error("Prijs is geen geldig getal");
+      return;
+    }
+    if (price < 0) {
+      toast.error("Prijs mag niet negatief zijn");
+      return;
+    }
+    if (price === 0) {
+      toast.error("Prijs moet groter zijn dan €0");
+      return;
+    }
+    if (!["per_person", "per_person_per_day", "total"].includes(priceType)) {
+      toast.error("Ongeldig prijstype geselecteerd");
+      return;
+    }
+    if (invoicedBy === "partner" && (!selectedProviderId || selectedProviderId === "bureau")) {
+      toast.error("Kies een partner als uitvoerder, of zet facturatie op Bureau Vlieland");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const time = preferredTime === "flexibel" ? null : preferredTime;
-      const price = priceOverride ? parseFloat(priceOverride) : null;
 
       // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
       
       const updateData: Record<string, unknown> = {
-        block_name: customName,
+        block_name: trimmedName,
         admin_price_notes: customDescription || null,
         day_index: selectedDayIndex,
         preferred_time: time,
@@ -171,7 +203,7 @@ export const AdminEditActivitySheet = ({
 
       // Bureau-eigen kostenposten met een prijs hoeven geen klant-akkoord:
       // direct als bevestigd markeren zodat de status-teller klopt.
-      if (isBureauInvoiced && price !== null && item.status === "pending") {
+      if (isBureauInvoiced && item.status === "pending") {
         const nowIso = new Date().toISOString();
         updateData.status = "confirmed";
         updateData.item_quote_status = "bevestigd";
@@ -189,7 +221,7 @@ export const AdminEditActivitySheet = ({
       if (error) throw error;
 
       // Resolve bureau_item_pricing todo if price was set on a bureau item
-      if (isBureauInvoiced && price !== null) {
+      if (isBureauInvoiced) {
         await resolveAutoTodo("bureau_item_pricing", item.id);
       }
 
