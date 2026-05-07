@@ -78,7 +78,7 @@ export const AdminAddCostSheet = ({
       return;
     }
     const parsedAmount = parseFloat(amount.replace(",", "."));
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    if (isNaN(parsedAmount) || !isFinite(parsedAmount)) {
       toast.error("Voer een geldig bedrag in");
       return;
     }
