@@ -93,6 +93,7 @@ export const AdminEditActivitySheet = ({
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [preferredTime, setPreferredTime] = useState("flexibel");
   const [priceOverride, setPriceOverride] = useState("");
+  const [priceType, setPriceType] = useState<"per_person" | "per_person_per_day" | "total">("per_person");
   const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
