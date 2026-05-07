@@ -53,6 +53,7 @@ export const AdminAddActivitySheet = ({
   existingBlockIds,
   onSuccess,
   invoicingMode,
+  numberOfPeople,
 }: AdminAddActivitySheetProps) => {
   const { data: blocks = [], isLoading } = useAdminBuildingBlocks();
   
