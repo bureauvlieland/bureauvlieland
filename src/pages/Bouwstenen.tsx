@@ -44,6 +44,7 @@ const Bouwstenen = () => {
   const { data: blocks, isLoading } = usePublishedBuildingBlocks();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<BuildingBlockCategory | "all">("all");
+  const [detailBlock, setDetailBlock] = useState<BuildingBlock | null>(null);
 
   const visibleBlocks = useMemo(() => {
     return (blocks ?? []).filter((b) => !HIDDEN_IDS.has(b.id));
