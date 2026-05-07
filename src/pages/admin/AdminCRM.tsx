@@ -31,10 +31,12 @@ import {
   Mail,
   Phone,
   FileText,
+  Pencil,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { AdminPartnersContent } from "@/pages/admin/AdminPartners";
+import { EditCustomerDialog, type EditableCustomer } from "@/components/admin/EditCustomerDialog";
 
 interface Customer {
   id: string;
@@ -55,6 +57,8 @@ const AdminCRMContent = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editing, setEditing] = useState<EditableCustomer | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const activeTab = searchParams.get("tab") || "customers";
   const setActiveTab = (tab: string) => {
@@ -104,7 +108,7 @@ const AdminCRMContent = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, refreshKey]);
 
   const filteredCustomers = useMemo(() => {
     return customers
@@ -243,6 +247,19 @@ const AdminCRMContent = () => {
                                 <LogIn className="h-4 w-4 mr-2" />
                                 Inloggen als klant
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setEditing({
+                                    customer_name: customer.customer_name,
+                                    customer_email: customer.customer_email,
+                                    customer_phone: customer.customer_phone,
+                                    customer_company: customer.customer_company,
+                                  })
+                                }
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Gegevens bewerken
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -260,6 +277,16 @@ const AdminCRMContent = () => {
           <AdminPartnersContent />
         </TabsContent>
       </Tabs>
+
+      <EditCustomerDialog
+        open={editing !== null}
+        onOpenChange={(o) => !o && setEditing(null)}
+        customer={editing}
+        onSaved={() => {
+          setEditing(null);
+          setRefreshKey((k) => k + 1);
+        }}
+      />
     </div>
   );
 };
