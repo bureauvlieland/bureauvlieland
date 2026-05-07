@@ -82,6 +82,7 @@ export const AdminAddActivitySheet = ({
   const [preferredTime, setPreferredTime] = useState<string>("flexibel");
   const [notes, setNotes] = useState("");
   const [priceOverride, setPriceOverride] = useState<string>("");
+  const [priceType, setPriceType] = useState<"per_person" | "per_person_per_day" | "total">("per_person");
   const [customName, setCustomName] = useState<string>("");
   const [customDescription, setCustomDescription] = useState<string>("");
   const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">(invoicingMode === "bureau_central" ? "bureau" : "partner");
