@@ -1,68 +1,83 @@
-## Wat gaat er mis
+## Vergelijking getekende offerte vs. systeem
 
-### 1. Concrete data-bug die je in de screenshot ziet
-Item "Vliehors Expres" (12 pers., €4.248) heeft in de database:
-- `price_type = per_person`
-- `admin_price_override = 354,00`
-- 12 personen → 354 × 12 = **€4.248** (= €29,50 × 12 × 12 = de som die jij beoogde voor totaal)
+Offerte 2180189 (30-12-2025, getekend door OVM Partners) = **€7.329,00 incl. BTW**.
+Systeem toont nu **€20.830,52** voor BV-2604-0004. Verschil ~ €13.500.
 
-Iemand heeft hier een **totaalbedrag** ingevuld terwijl het veld als **per persoon** geconfigureerd stond. De UI berekent dan keurig 354 × 12. Dat is een UX-valkuil die we structureel moeten dichten.
+Dit is een **legacy-project** dat is overgezet uit het oude offertesysteem en daarbij zijn de prijstypes en automatische opslagen niet correct gemapt.
 
-### 2. Structurele inconsistenties (meerdere plekken berekenen prijzen zelf)
-De centrale helpers in `src/lib/portalPricing.ts` (`getDisplayLineTotal`, `getDisplayUnitPrice`) worden niet overal gebruikt. Op deze plekken wordt opnieuw met `× personen` gerekend — sommige negeren de dagvermenigvuldiging voor `per_person_per_day`:
+### Concrete fouten in de data
 
-| Bestand | Probleem |
-|---|---|
-| `PartnerItemSheet.tsx` (r. 165, 326, 504–540) | Eigen berekening; mist `× dagen` voor p.p.p.d. |
-| `PartnerItemCard.tsx` (r. 166–183) | Idem, mist dagen |
-| `supabase/functions/notify-partner-price-change/index.ts` | Mailt een verkeerd totaal voor p.p.p.d. |
-| `supabase/functions/notify-customer-price-change/index.ts` | Idem |
-| `AdminAddActivitySheet.tsx` | Geen `price_type`-keuze in UI; neemt blind `price_adult` over |
-| `AdminEditActivitySheet.tsx` | Geen `price_type`-keuze; geen live-totaal preview |
-| `templateLoader.ts` (`calculateTemplatePrice`) | Vermenigvuldigt altijd × personen, ook voor `total`-blokken |
+| # | Item | Offerte | Database nu | Systeem rekent | Oorzaak |
+|---|---|---|---|---|---|
+| 1 | **Fietshuur** | €225,60 totaal (12 × 2 dgn × €9,40) | `admin_price_override = 225,60` met `price_type = per_person_per_day` | 225,60 × 12 × 3 = **€8.121,60** | price_type moet `total` zijn — het bedrag is al het groepstotaal |
+| 2 | **Vliehors Expres** | €354,00 totaal (private tour) | `30,00` met `per_person` (door mij vorige beurt onterecht zo gezet) | 30 × 12 = €360 | Moet terug naar `354,00` `total` |
+| 3 | **Overtocht heen + terug** | 1× Doeksen retour €442,80 (extra kost, klopt) | Daarnaast 2 dag-items "Overtocht Harlingen → Vlieland" en "→ Harlingen" `€16,16 p.p.` (`pending`) | 2 × 12 × 16,16 = €387,84 extra | Day-items zijn dubbelop met de €442,80 Doeksen-regel — moeten op `€0` of `cancelled` |
+| 4 | **Toeristenbelasting** | 1× €92,88 (al in offerte) | Handmatig bureau-item `Toeristenbelasting` €92,88 + automatische regel `Toeristenbelasting (12 pers. × 3 dgn)` €92,88 | 2× €92,88 = €185,76 | Handmatig item verwijderen; auto-regel uit `app_settings` is leidend |
+| 5 | **Natuurbijdrage €18,00** | Niet in offerte | Auto via `nature_contribution_pp` | €18 erbij | Niet in originele offerte — voor dit legacy-project uitschakelen of in mindering brengen |
+| 6 | **Opslag centrale facturatie €30,00** | Niet in offerte | Auto via `bureau_central_surcharge_pp` (`invoicing_mode=bureau_central`) | €30 erbij | Idem — niet in originele offerte |
+| 7 | **Coördinatiefee €200,00** | Niet in offerte (zit in "Bureau- & administratiekosten 15%" van €1.039,72) | Auto via `coordination_fee_tiers` | €200 dubbelop | Bureau 15% dekt dit al — coördinatiefee moet eruit voor dit project |
 
-### 3. UX die de bug uit (1) mogelijk maakt
-- Bij **toevoegen** van een activiteit (`AdminAddActivitySheet`) is er geen keuze tussen p.p. / p.p.p.d. / totaal — de admin ziet enkel "Prijs voor klant (€)" en weet dus niet of zijn invoer × personen gaat.
-- Bij **bewerken** (`AdminEditActivitySheet`) ontbreekt diezelfde keuze + preview.
-- Alleen de "Prijsaanpassing"-popover (`AdminQuotePriceEditor`) heeft wél een prijstype-selector + live totaal — daar gaat het goed.
+Som van fouten: 7.896 (fiets-overshoot) + 6 (vliehors) + 388 (dubbele overtocht) + 93 (dubbele toeristenbelasting) + 18 (natuur) + 30 (opslag) + 200 (coördinatiefee) ≈ **€8.631 te veel**, plus de 442,80 Doeksen die nu dubbel kan zijn afhankelijk van keuze. Klopt grofweg met het verschil van ~€13.500 (de rest komt door cumulatie van fiets × dagen).
 
 ---
 
-## Wat ik ga aanpassen
+## Wat ik wil doen (data-correctie, geen code-wijziging)
 
-### A. Eén centrale berekening voor álle portals
-1. `PartnerItemSheet.tsx` & `PartnerItemCard.tsx`: vervang de drie eigen `× effectivePeople`-blokken door `getDisplayLineTotal(item, people, days)` en `getDisplayUnitPrice(item, people)` uit `portalPricing.ts`. Toelichting (`€X p.p.p.d. × Y personen × Z dagen`) wordt afgeleid uit `isPerPersonItem` / `isPerDayItem`.
-2. `notify-partner-price-change` & `notify-customer-price-change` edge functions: voeg dezelfde helper toe (TS-port in een gedeelde `_shared/pricing.ts`) en bereken `newTotal` daarmee, inclusief dagen.
-3. `templateLoader.calculateTemplatePrice`: gebruik `price_type` om wél/niet × personen te doen (en `× dagen` voor p.p.p.d.).
+Eén ronde gerichte updates op `program_request_items` en `program_requests` voor BV-2604-0004:
 
-### B. UX-guards in de admin-invoer
-4. `AdminAddActivitySheet`: voeg een `price_type`-selector toe (per persoon / per persoon per dag / totaal — voorgevuld vanuit de bouwsteen) en toon onder het prijsveld een live-berekend totaal ("Totaal: € X voor Y personen × Z dagen"). Sla de gekozen `price_type` mee op bij het inserten.
-5. `AdminEditActivitySheet`: zelfde toevoeging — selector + live preview, en `price_type` mee opslaan in `updateData`.
-6. Validatie in beide sheets: als `price_type = per_person` én bedrag > €500, toon een waarschuwing "Weet je zeker dat dit een prijs per persoon is en geen totaalbedrag?". Geen blokkering, alleen een herinnering.
+```text
+[1] Fietshuur (id 2f3d31de…)
+    price_type:  per_person_per_day → total
+    admin_price_override blijft 225,60
+    admin_price_notes: "12x 2 dagen x €9,40 — totaal als groepsprijs"
 
-### C. Eenmalige correctie van de zichtbare data-bug
-7. Het specifieke item `9429bbdf-...` ("Vliehors Expres" 12p, €4.248): laten zoals het is — admin moet via de nieuwe UI bevestigen of het 354 totaal of 29,50 p.p. moet zijn. Niet automatisch corrigeren (we weten de intentie niet zeker en er is geen quoted_price).
+[2] Vliehors Expres (item)
+    price_type:  per_person → total
+    admin_price_override: 30 → 354
+    admin_price_notes: "Private tour + lunch (zie offerte 30-12-2025)"
 
-### D. Test-uitbreiding
-8. `portalPricing.consistency.test.ts` uitbreiden met:
-   - p.p.p.d.-totaal in partner-portal en mail (admin override).
-   - templateLoader: total-block telt 1×, p.p.-block telt × personen.
+[2b] Building block Vliehors Expres
+    price_adult: 30 → 354 met price_type 'total'
+    (matches offerte; voor toekomstige projecten kan dit per persoon worden
+     gemaakt via een aparte "p.p."-bouwsteen; nu eerst gelijktrekken met offerte)
+
+[3] Twee Overtocht day-items (Harlingen→Vlieland + Vlieland→Harlingen)
+    Optie A: status → cancelled (verdwijnen uit financieel + programma)
+    Optie B: admin_price_override → 0 + price_type total
+             (blijven zichtbaar in dag-overzicht voor ferry-tijden, tellen niet mee)
+    Mijn voorkeur: B — ferry-tijden blijven zichtbaar.
+
+[4] Handmatig bureau-item "Toeristenbelasting" €92,88 (day -1)
+    status → cancelled (auto-regel van app_settings blijft leidend)
+
+[5+6] Natuurbijdrage + opslag centrale facturatie
+    Niet uit te schakelen per project zonder code-wijziging.
+    Twee opties:
+      A. Negeer (€48 afwijking accepteren als legacy-restpost)
+      B. Voeg een correctie-regel toe als bureau-item van -€48,00 (price_type total)
+         met notitie "Correctie: legacy-offerte zonder natuurbijdrage/opslag"
+    Mijn voorkeur: B — netjes traceerbaar.
+
+[7] Coördinatiefee €200
+    Dit zit niet als item maar wordt automatisch berekend uit
+    coordination_fee_tiers (op basis van 12 personen).
+    Niet per project uit te zetten zonder code. Ook hier:
+      A. Negeer
+      B. Correctie-regel -€200,00 toevoegen
+    Mijn voorkeur: B (samenvoegen met [6] tot één correctie-regel van -€248,00).
+```
+
+**Verwacht eindtotaal na correctie:** ≈ €7.329 (gelijk aan getekende offerte).
 
 ---
 
-## Wat ik níet aanraak
-- De databaseschema's en triggers (alleen UI/lib).
-- `quoted_price`-logica (die werkt correct: het IS al een groepstotaal).
-- De `Synchroniseer`-knop (logica klopt — neemt `price_adult` 1-op-1 over en respecteert `quoted_price`).
+## Wat ik niet aanraak
 
-## Bestanden die ik wijzig
-- `src/lib/portalPricing.ts` (kleine extractie van label-helpers)
-- `src/components/partner-portal/PartnerItemSheet.tsx`
-- `src/components/partner-portal/PartnerItemCard.tsx`
-- `src/components/admin/AdminAddActivitySheet.tsx`
-- `src/components/admin/AdminEditActivitySheet.tsx`
-- `src/lib/templateLoader.ts`
-- `supabase/functions/_shared/pricing.ts` (nieuw)
-- `supabase/functions/notify-partner-price-change/index.ts`
-- `supabase/functions/notify-customer-price-change/index.ts`
-- `src/lib/__tests__/portalPricing.consistency.test.ts`
+- De codebase / business rules. Auto-toeristenbelasting, natuurbijdrage, opslag en coördinatiefee blijven gewoon werken voor nieuwe projecten — alleen voor dit legacy-project halen we ze er via een correctie-regel uit.
+- Eerdere facturen of partner-statussen.
+
+## Beslissingen die ik van je nodig heb
+
+1. **Overtocht day-items**: A (annuleren) of B (op €0 zetten, ferry-tijden blijven zichtbaar)?
+2. **Natuurbijdrage + opslag + coördinatiefee** (€248 totaal): negeren of correctie-regel van -€248 toevoegen om exact op €7.329 uit te komen?
+3. **Vliehors Expres bouwsteen**: laten we hem nu op €354 totaal zetten (matcht offerte voor private tour) of op €29,50 p.p. (logischer voor toekomstige boekingen)?
