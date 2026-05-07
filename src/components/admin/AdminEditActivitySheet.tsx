@@ -389,15 +389,60 @@ export const AdminEditActivitySheet = ({
           {/* Price override */}
           <div className="space-y-2">
             <Label htmlFor="editPrice">Prijs voor klant (€)</Label>
-            <Input
-              id="editPrice"
-              type="number"
-              step="0.01"
-              min="0"
-              value={priceOverride}
-              onChange={(e) => setPriceOverride(e.target.value)}
-              placeholder="Prijs per persoon"
-            />
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <Input
+                id="editPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceOverride}
+                onChange={(e) => setPriceOverride(e.target.value)}
+                placeholder={priceType === "total" ? "Totaalprijs" : "Prijs per persoon"}
+              />
+              <Select value={priceType} onValueChange={(v) => setPriceType(v as typeof priceType)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="per_person">Per persoon</SelectItem>
+                  <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
+                  <SelectItem value="total">Totaalbedrag</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(() => {
+              const price = parseFloat(priceOverride);
+              if (!isFinite(price) || price <= 0) return null;
+              const days = Math.max(selectedDates.length, 1);
+              const people = Math.max(numberOfPeople, 1);
+              const total =
+                priceType === "total"
+                  ? price
+                  : priceType === "per_person_per_day"
+                    ? price * people * days
+                    : price * people;
+              const breakdown =
+                priceType === "total"
+                  ? "Totaalbedrag"
+                  : priceType === "per_person_per_day"
+                    ? `€${price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getPriceTypeSuffix(priceType)} × ${people} pers. × ${days} dagen`
+                    : `€${price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getPriceTypeSuffix(priceType)} × ${people} pers.`;
+              return (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {breakdown} = <span className="font-semibold text-foreground">€{total.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </p>
+                  {priceType === "per_person" && price > 500 && (
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <p className="text-amber-800">
+                        Weet je zeker dat dit een prijs <strong>per persoon</strong> is en geen totaalbedrag? Wijzig anders het prijstype hiernaast.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Location */}
