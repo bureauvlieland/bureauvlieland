@@ -392,9 +392,26 @@ export const AdminAddActivitySheet = ({
               )}
             </div>
 
+            {/* Price configuration */}
+            <div className="space-y-2">
+              <Label>Prijsconfiguratie</Label>
+              <Select value={priceType} onValueChange={(v) => setPriceType(v as typeof priceType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="per_person">Per persoon</SelectItem>
+                  <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
+                  <SelectItem value="total">Totaalprijs</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Price override */}
             <div className="space-y-2">
-              <Label htmlFor="price">Prijs voor klant (€)</Label>
+              <Label htmlFor="price">
+                Prijs voor klant {priceType === "per_person" ? "(per persoon)" : priceType === "per_person_per_day" ? "(per persoon per dag)" : "(totaal)"}
+              </Label>
               <Input
                 id="price"
                 type="number"
@@ -402,10 +419,34 @@ export const AdminAddActivitySheet = ({
                 min="0"
                 value={priceOverride}
                 onChange={(e) => setPriceOverride(e.target.value)}
-                placeholder="Laat leeg voor standaard prijs"
+                placeholder="Laat leeg voor 'op aanvraag'"
               />
+              {priceOverride && !Number.isNaN(parseFloat(priceOverride)) && (() => {
+                const p = parseFloat(priceOverride);
+                const days = Math.max(selectedDates.length, 1);
+                const total = priceType === "per_person"
+                  ? p * numberOfPeople
+                  : priceType === "per_person_per_day"
+                    ? p * numberOfPeople * days
+                    : p;
+                const showWarning = priceType === "per_person" && p > 500;
+                return (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Totaal: € {total.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {priceType !== "total" && ` (${numberOfPeople} personen${priceType === "per_person_per_day" ? ` × ${days} dagen` : ""})`}
+                    </p>
+                    {showWarning && (
+                      <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded p-2">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        Weet je zeker dat dit een prijs <strong>per persoon</strong> is en geen totaalbedrag?
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
               <p className="text-xs text-muted-foreground">
-                Standaard: €{selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}
+                Standaardprijs bouwsteen: €{selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}
               </p>
             </div>
 
