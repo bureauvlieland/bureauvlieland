@@ -26,10 +26,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
+import { type BuildingBlock, type BuildingBlockCategory, type BuildingBlockPriceType } from "@/types/buildingBlock";
 import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
+import { AlertTriangle } from "lucide-react";
 
 interface AdminAddActivitySheetProps {
   open: boolean;
@@ -39,6 +40,7 @@ interface AdminAddActivitySheetProps {
   existingBlockIds: string[];
   onSuccess: () => void;
   invoicingMode?: string;
+  numberOfPeople: number;
 }
 
 type CategoryFilter = "all" | BuildingBlockCategory;
