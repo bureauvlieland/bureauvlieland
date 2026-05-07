@@ -4,7 +4,7 @@
  *
  * KEY RULE:
  * - `quoted_price` = always the TOTAL for the whole group (never multiply)
- * - `admin_price_override` = unit price, multiply by numberOfPeople when price_type is per_person/on_request
+ * - `admin_price_override` = unit price, multiply by numberOfPeople only when price_type is per_person/per_person_per_day
  * - `override_people` on item = use instead of program-wide numberOfPeople when set
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
@@ -149,7 +149,7 @@ export function hasOpenAdminPriceChange(
 
 /** Whether this item should be multiplied by number of people */
 export function isPerPersonItem(item: { price_type?: string | null }): boolean {
-  return !item.price_type || item.price_type === "per_person" || item.price_type === "on_request" || item.price_type === "per_person_per_day";
+  return !item.price_type || item.price_type === "per_person" || item.price_type === "per_person_per_day";
 }
 
 /** Whether this item should also be multiplied by number of days */
@@ -161,6 +161,7 @@ export function isPerDayItem(item: { price_type?: string | null }): boolean {
 export function getPriceTypeSuffix(priceType?: string | null): string {
   if (priceType === "per_person_per_day") return "p.p.p.d.";
   if (priceType === "total") return "totaal";
+  if (priceType === "on_request") return "totaal";
   return "p.p.";
 }
 
