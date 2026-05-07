@@ -21,7 +21,7 @@ import {
 import { format, parseISO, differenceInHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
-import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
+import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceTypeSuffix } from "@/lib/portalPricing";
 
 interface PartnerItemCardProps {
   item: PartnerItem;
