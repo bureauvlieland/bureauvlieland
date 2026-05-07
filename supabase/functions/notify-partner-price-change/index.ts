@@ -98,9 +98,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const effectivePeople = item.override_people ?? program.number_of_people;
     const isPerPerson =
       item.price_type === "per_person" || item.price_type === "per_person_per_day";
-    const newTotal = isPerPerson
-      ? Number(item.admin_price_override) * effectivePeople
-      : Number(item.admin_price_override);
+    const isPerDay = item.price_type === "per_person_per_day";
+    const numberOfDays = Math.max(
+      Array.isArray(program.selected_dates) ? program.selected_dates.length : 1,
+      1,
+    );
+    const newTotal =
+      Number(item.admin_price_override)
+      * (isPerPerson ? effectivePeople : 1)
+      * (isPerDay ? numberOfDays : 1);
     const dates = (program.selected_dates as string[]).map(formatDateNL).join(", ");
 
     const html = `
