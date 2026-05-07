@@ -122,6 +122,11 @@ export const AdminAddActivitySheet = ({
     setPreferredTime("flexibel");
     setNotes("");
     setPriceOverride(block.price_adult != null ? String(block.price_adult) : "");
+    setPriceType(
+      (block.price_type === "per_person_per_day" || block.price_type === "total")
+        ? block.price_type
+        : "per_person"
+    );
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
     setInvoicedBy(invoicingMode === "bureau_central" ? "bureau" : (block.block_type === "bureau" ? "bureau" : "partner"));
