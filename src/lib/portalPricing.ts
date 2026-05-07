@@ -157,6 +157,35 @@ export function isPerDayItem(item: { price_type?: string | null }): boolean {
   return item.price_type === "per_person_per_day";
 }
 
+/** Short suffix label for unit prices ("p.p.", "p.p.p.d.", "totaal"). */
+export function getPriceTypeSuffix(priceType?: string | null): string {
+  if (priceType === "per_person_per_day") return "p.p.p.d.";
+  if (priceType === "total") return "totaal";
+  return "p.p.";
+}
+
+/**
+ * Human-readable explanation for how a line total is built up.
+ * E.g. "€29,50 p.p. × 12 personen × 3 dagen" or "Totaalprijs".
+ */
+export function getPriceBreakdownLabel(
+  item: { price_type?: string | null; admin_price_override?: number | null; override_people?: number | null },
+  programPeople: number,
+  numberOfDays: number = 1,
+): string {
+  const unit = item.admin_price_override;
+  if (unit == null) return "";
+  const fmt = (n: number) =>
+    n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (!isPerPersonItem(item)) return "Totaalprijs";
+  const people = getEffectivePeople(item, programPeople);
+  const suffix = getPriceTypeSuffix(item.price_type);
+  if (isPerDayItem(item)) {
+    return `€${fmt(unit)} ${suffix} × ${people} personen × ${numberOfDays} dagen`;
+  }
+  return `€${fmt(unit)} ${suffix} × ${people} personen`;
+}
+
 /**
  * Single source of truth for "hoeveel dagen telt dit programma".
  * Geeft altijd minimaal 1 terug — een leeg of ontbrekend `selected_dates`

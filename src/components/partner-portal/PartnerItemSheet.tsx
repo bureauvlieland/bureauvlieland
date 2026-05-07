@@ -45,7 +45,7 @@ import {
   minutesToTime,
   type PartnerConflictItem 
 } from "@/lib/timeUtils";
-import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
+import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
@@ -160,9 +160,13 @@ export const PartnerItemSheet = ({
   // ===== Open admin price change detection =====
   const effectivePeopleForItem = item.override_people ?? request.number_of_people;
   const numberOfDaysForItem = getNumberOfDays(request.selected_dates);
-  const isPerPersonPriceType = item.price_type === "per_person" || item.price_type === "per_person_per_day";
+  const isPerPersonPriceType = isPerPersonItem(item);
+  const isPerDayPriceType = isPerDayItem(item);
+  // Admin-totaal: ALTIJD via centrale berekening (incl. dagvermenigvuldiger voor p.p.p.d.)
   const adminTotal = item.admin_price_override != null
-    ? (isPerPersonPriceType ? item.admin_price_override * effectivePeopleForItem : item.admin_price_override)
+    ? item.admin_price_override
+        * (isPerPersonPriceType ? effectivePeopleForItem : 1)
+        * (isPerDayPriceType ? numberOfDaysForItem : 1)
     : null;
   // Helper checkt zowel timestamp als materieel bedragverschil — pure timestamp-aanrakingen
   // (bv. "Synchroniseer"-knop) tellen niet als open wijziging.
@@ -319,13 +323,9 @@ export const PartnerItemSheet = ({
     } else {
       // Default: pre-fill proposedTime with preferred_time for alternative
       if (item.preferred_time) setProposedTime(item.preferred_time);
-      // Pre-fill price from admin override if available
-      if (item.admin_price_override && !quotedPrice) {
-        const effectivePeople = item.override_people ?? request.number_of_people;
-        const priceValue = (item.price_type === "per_person" || item.price_type === "per_person_per_day")
-          ? item.admin_price_override * effectivePeople
-          : item.admin_price_override;
-        setQuotedPrice(priceValue.toFixed(2).replace(".", ","));
+      // Pre-fill price from admin override if available — gebruik centraal berekend totaal
+      if (item.admin_price_override && !quotedPrice && adminTotal != null) {
+        setQuotedPrice(adminTotal.toFixed(2).replace(".", ","));
       }
     }
     setShowResponseForm(true);
@@ -501,16 +501,13 @@ export const PartnerItemSheet = ({
           )}
 
           {/* Admin price override - expected price */}
-          {item.admin_price_override !== null && item.admin_price_override !== undefined && (() => {
-            const effectivePeople = item.override_people ?? request.number_of_people;
-            const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
-            const totalPrice = isPerPerson
-              ? item.admin_price_override * effectivePeople
-              : item.admin_price_override;
+          {item.admin_price_override !== null && item.admin_price_override !== undefined && adminTotal !== null && (() => {
             const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
             const isOpenChange = !!item.admin_price_override_updated_at &&
               (!ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime()) &&
               !!item.quoted_price; // alleen tonen als er al een eerdere bevestiging was
+            const breakdown = getPriceBreakdownLabel(item, request.number_of_people, numberOfDaysForItem);
+            const overrideMatchesGroup = item.override_people && item.override_people !== request.number_of_people;
             return (
               <>
                 <Separator />
@@ -529,14 +526,11 @@ export const PartnerItemSheet = ({
                     <div className="flex items-center gap-2">
                       <Euro className="h-4 w-4 text-primary" />
                       <span className="font-semibold text-lg">
-                        €{totalPrice.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        €{adminTotal.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {isPerPerson
-                        ? `€${item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."} × ${effectivePeople} personen${item.override_people && item.override_people !== request.number_of_people ? " (afwijkend aantal voor dit onderdeel)" : ""}`
-                        : "Totaalprijs"
-                      } · Bevestig of pas aan bij je reactie.
+                      {breakdown}{overrideMatchesGroup ? " (afwijkend aantal voor dit onderdeel)" : ""} · Bevestig of pas aan bij je reactie.
                     </p>
                   </div>
 

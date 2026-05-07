@@ -60,6 +60,8 @@ interface ProgramRequestItem {
   status: string;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  price_type?: string | null;
+  override_people?: number | null;
   location_lat?: number | null;
   location_lng?: number | null;
   location_address?: string | null;
@@ -72,6 +74,7 @@ interface AdminEditActivitySheetProps {
   requestId: string;
   selectedDates: string[];
   onSuccess: () => void;
+  numberOfPeople: number;
 }
 
 export const AdminEditActivitySheet = ({
@@ -81,6 +84,7 @@ export const AdminEditActivitySheet = ({
   requestId,
   selectedDates,
   onSuccess,
+  numberOfPeople,
 }: AdminEditActivitySheetProps) => {
   // Form state
   const [customName, setCustomName] = useState("");

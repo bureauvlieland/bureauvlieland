@@ -21,7 +21,7 @@ import {
 import { format, parseISO, differenceInHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
-import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
+import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceTypeSuffix } from "@/lib/portalPricing";
 
 interface PartnerItemCardProps {
   item: PartnerItem;
@@ -165,8 +165,13 @@ export const PartnerItemCard = ({
         {/* Admin price override - expected price (only when not yet confirmed) */}
         {item.admin_price_override !== null && item.admin_price_override !== undefined && !item.quoted_price && (() => {
           const effectivePeople = item.override_people ?? request.number_of_people;
-          const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
-          const total = isPerPerson ? item.admin_price_override * effectivePeople : item.admin_price_override;
+          const numDays = getNumberOfDays(request?.selected_dates);
+          const isPerPerson = isPerPersonItem(item);
+          const isPerDay = isPerDayItem(item);
+          const total = item.admin_price_override
+            * (isPerPerson ? effectivePeople : 1)
+            * (isPerDay ? numDays : 1);
+          const suffix = getPriceTypeSuffix(item.price_type);
           return (
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
               <span className="text-muted-foreground">Verwachte prijs:</span>{" "}
@@ -175,7 +180,7 @@ export const PartnerItemCard = ({
               </span>
               {isPerPerson && (
                 <span className="text-xs text-muted-foreground ml-1">
-                  (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.price_type === "per_person_per_day" ? "p.p.p.d." : "p.p."} × {effectivePeople})
+                  (€{item.admin_price_override.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {suffix} × {effectivePeople}{isPerDay ? ` × ${numDays}d` : ""})
                 </span>
               )}
             </div>
