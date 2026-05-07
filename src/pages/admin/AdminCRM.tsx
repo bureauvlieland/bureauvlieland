@@ -108,7 +108,7 @@ const AdminCRMContent = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, refreshKey]);
 
   const filteredCustomers = useMemo(() => {
     return customers
