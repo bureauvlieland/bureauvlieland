@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Info, Trash2, Save } from "lucide-react";
+import { Info, Trash2, Save, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { resolveAutoTodo } from "@/lib/autoTodoCreator";
+import { getPriceTypeSuffix } from "@/lib/portalPricing";
 
 interface PartnerOption {
   id: string;
