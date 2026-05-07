@@ -277,6 +277,16 @@ const AdminCRMContent = () => {
           <AdminPartnersContent />
         </TabsContent>
       </Tabs>
+
+      <EditCustomerDialog
+        open={editing !== null}
+        onOpenChange={(o) => !o && setEditing(null)}
+        customer={editing}
+        onSaved={() => {
+          setEditing(null);
+          setRefreshKey((k) => k + 1);
+        }}
+      />
     </div>
   );
 };
