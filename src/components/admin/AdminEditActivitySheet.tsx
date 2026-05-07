@@ -443,29 +443,51 @@ export const AdminEditActivitySheet = ({
               </Select>
             </div>
             {(() => {
+              const fmt = (n: number) =>
+                n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
               const price = parseFloat(priceOverride);
-              if (!isFinite(price) || price <= 0) return null;
+              const hasPrice = isFinite(price) && price > 0;
               const days = Math.max(selectedDates.length, 1);
               const people = Math.max(numberOfPeople, 1);
-              const total =
-                priceType === "total"
+
+              const total = !hasPrice
+                ? 0
+                : priceType === "total"
                   ? price
                   : priceType === "per_person_per_day"
                     ? price * people * days
                     : price * people;
+
               const breakdown =
                 priceType === "total"
-                  ? "Totaalbedrag"
+                  ? `Totaalbedrag voor ${people} personen${days > 1 ? ` × ${days} dagen` : ""}`
                   : priceType === "per_person_per_day"
-                    ? `€${price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getPriceTypeSuffix(priceType)} × ${people} pers. × ${days} dagen`
-                    : `€${price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getPriceTypeSuffix(priceType)} × ${people} pers.`;
+                    ? `€${fmt(price)} p.p.p.d. × ${people} personen × ${days} dagen`
+                    : `€${fmt(price)} p.p. × ${people} personen`;
+
+              const perPerson = priceType === "total" && people > 0 ? total / people : null;
+
               return (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {breakdown} = <span className="font-semibold text-foreground">€{total.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </p>
-                  {priceType === "per_person" && price > 500 && (
-                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm text-muted-foreground">{breakdown}</span>
+                    <span className="text-base font-semibold text-foreground">
+                      €{fmt(total)}
+                    </span>
+                  </div>
+                  {perPerson !== null && hasPrice && (
+                    <p className="text-xs text-muted-foreground">
+                      Afgeleid: €{fmt(perPerson)} per persoon
+                      {days > 1 ? ` (€${fmt(perPerson / days)} p.p.p.d.)` : ""}
+                    </p>
+                  )}
+                  {!hasPrice && (
+                    <p className="text-xs text-muted-foreground italic">
+                      Vul een bedrag in om het totaal te berekenen.
+                    </p>
+                  )}
+                  {priceType === "per_person" && hasPrice && price > 500 && (
+                    <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-sm">
                       <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                       <p className="text-amber-800">
                         Weet je zeker dat dit een prijs <strong>per persoon</strong> is en geen totaalbedrag? Wijzig anders het prijstype hiernaast.
