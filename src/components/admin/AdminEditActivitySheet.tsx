@@ -139,10 +139,42 @@ export const AdminEditActivitySheet = ({
   const handleSave = async () => {
     if (!item) return;
 
+    // --- Validatie ---
+    const trimmedName = customName.trim();
+    if (!trimmedName) {
+      toast.error("Omschrijving is verplicht");
+      return;
+    }
+    const rawPrice = priceOverride.trim();
+    if (rawPrice === "") {
+      toast.error("Prijs is verplicht — vul een bedrag in groter dan €0");
+      return;
+    }
+    const price = parseFloat(rawPrice);
+    if (!isFinite(price)) {
+      toast.error("Prijs is geen geldig getal");
+      return;
+    }
+    if (price < 0) {
+      toast.error("Prijs mag niet negatief zijn");
+      return;
+    }
+    if (price === 0) {
+      toast.error("Prijs moet groter zijn dan €0");
+      return;
+    }
+    if (!["per_person", "per_person_per_day", "total"].includes(priceType)) {
+      toast.error("Ongeldig prijstype geselecteerd");
+      return;
+    }
+    if (invoicedBy === "partner" && (!selectedProviderId || selectedProviderId === "bureau")) {
+      toast.error("Kies een partner als uitvoerder, of zet facturatie op Bureau Vlieland");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const time = preferredTime === "flexibel" ? null : preferredTime;
-      const price = priceOverride ? parseFloat(priceOverride) : null;
 
       // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
