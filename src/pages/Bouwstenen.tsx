@@ -184,7 +184,7 @@ const Bouwstenen = () => {
                           {block.short_description}
                         </p>
                       )}
-                      <div className="flex items-baseline justify-between mt-auto pt-3 border-t border-border">
+                      <div className="flex items-baseline justify-between mt-auto pt-3 border-t border-border gap-2">
                         <div>
                           <span className="text-base font-semibold text-foreground">
                             {formatBlockPrice(block)}
@@ -195,12 +195,25 @@ const Bouwstenen = () => {
                             </span>
                           )}
                         </div>
-                        <Link to={`/programma-samenstellen?block=${block.id}`}>
-                          <Button size="sm" variant="ghost" className="gap-1 text-primary hover:text-primary">
-                            Toevoegen
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
+                        <div className="flex items-center gap-1">
+                          {block.description && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => setDetailBlock(block)}
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                              Meer info
+                            </Button>
+                          )}
+                          <Link to={`/programma-samenstellen?block=${block.id}`}>
+                            <Button size="sm" variant="ghost" className="gap-1 text-primary hover:text-primary">
+                              Toevoegen
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
