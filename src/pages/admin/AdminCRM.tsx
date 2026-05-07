@@ -247,6 +247,19 @@ const AdminCRMContent = () => {
                                 <LogIn className="h-4 w-4 mr-2" />
                                 Inloggen als klant
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setEditing({
+                                    customer_name: customer.customer_name,
+                                    customer_email: customer.customer_email,
+                                    customer_phone: customer.customer_phone,
+                                    customer_company: customer.customer_company,
+                                  })
+                                }
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Gegevens bewerken
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
