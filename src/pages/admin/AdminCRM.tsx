@@ -31,10 +31,12 @@ import {
   Mail,
   Phone,
   FileText,
+  Pencil,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { AdminPartnersContent } from "@/pages/admin/AdminPartners";
+import { EditCustomerDialog, type EditableCustomer } from "@/components/admin/EditCustomerDialog";
 
 interface Customer {
   id: string;
