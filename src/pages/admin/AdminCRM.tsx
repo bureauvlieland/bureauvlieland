@@ -57,6 +57,8 @@ const AdminCRMContent = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editing, setEditing] = useState<EditableCustomer | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const activeTab = searchParams.get("tab") || "customers";
   const setActiveTab = (tab: string) => {
