@@ -125,6 +125,8 @@ export const AdminEditActivitySheet = ({
       setSelectedDayIndex(item.day_index);
       setPreferredTime(item.preferred_time || "flexibel");
       setPriceOverride(item.admin_price_override?.toString() || "");
+      const pt = (item.price_type as "per_person" | "per_person_per_day" | "total" | null) || "per_person";
+      setPriceType(pt === "per_person_per_day" || pt === "total" ? pt : "per_person");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
       setSelectedProviderId(item.provider_id || "bureau");
