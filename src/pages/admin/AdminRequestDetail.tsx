@@ -2368,6 +2368,7 @@ const AdminRequestDetail = () => {
           requestId={request.id}
           selectedDates={request.selected_dates as string[]}
           onSuccess={fetchRequestData}
+          numberOfPeople={request.number_of_people}
         />
       )}
 
