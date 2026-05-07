@@ -323,13 +323,9 @@ export const PartnerItemSheet = ({
     } else {
       // Default: pre-fill proposedTime with preferred_time for alternative
       if (item.preferred_time) setProposedTime(item.preferred_time);
-      // Pre-fill price from admin override if available
-      if (item.admin_price_override && !quotedPrice) {
-        const effectivePeople = item.override_people ?? request.number_of_people;
-        const priceValue = (item.price_type === "per_person" || item.price_type === "per_person_per_day")
-          ? item.admin_price_override * effectivePeople
-          : item.admin_price_override;
-        setQuotedPrice(priceValue.toFixed(2).replace(".", ","));
+      // Pre-fill price from admin override if available — gebruik centraal berekend totaal
+      if (item.admin_price_override && !quotedPrice && adminTotal != null) {
+        setQuotedPrice(adminTotal.toFixed(2).replace(".", ","));
       }
     }
     setShowResponseForm(true);
