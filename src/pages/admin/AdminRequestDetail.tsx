@@ -2355,6 +2355,7 @@ const AdminRequestDetail = () => {
           existingBlockIds={items.map(item => item.block_id)}
           onSuccess={fetchRequestData}
           invoicingMode={request.invoicing_mode}
+          numberOfPeople={request.number_of_people}
         />
       )}
 
