@@ -181,7 +181,7 @@ export const AdminEditActivitySheet = ({
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
       
       const updateData: Record<string, unknown> = {
-        block_name: customName,
+        block_name: trimmedName,
         admin_price_notes: customDescription || null,
         day_index: selectedDayIndex,
         preferred_time: time,
@@ -203,7 +203,7 @@ export const AdminEditActivitySheet = ({
 
       // Bureau-eigen kostenposten met een prijs hoeven geen klant-akkoord:
       // direct als bevestigd markeren zodat de status-teller klopt.
-      if (isBureauInvoiced && price !== null && item.status === "pending") {
+      if (isBureauInvoiced && item.status === "pending") {
         const nowIso = new Date().toISOString();
         updateData.status = "confirmed";
         updateData.item_quote_status = "bevestigd";
