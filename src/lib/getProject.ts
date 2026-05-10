@@ -77,7 +77,7 @@ export async function listProjectsForWerkbank(opts: {
     ? await supabase
         .from("accommodation_requests")
         .select(`
-          id, reference_number, status, completion_status, cancelled_at, updated_at,
+          id, reference_number, status, completion_status, updated_at,
           linked_program_id,
           accommodation_quotes(id, status, updated_at)
         `)
