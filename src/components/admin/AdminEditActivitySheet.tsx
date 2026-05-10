@@ -448,24 +448,23 @@ export const AdminEditActivitySheet = ({
               const price = parseFloat(priceOverride);
               const hasPrice = isFinite(price) && price > 0;
               const days = Math.max(selectedDates.length, 1);
-              const people = Math.max(numberOfPeople, 1);
+              // Mirror portalPricing: gebruik override_people indien gezet, anders programma-totaal
+              const effectivePeople = Math.max(item?.override_people ?? numberOfPeople, 1);
 
               const total = !hasPrice
                 ? 0
                 : priceType === "total"
                   ? price
                   : priceType === "per_person_per_day"
-                    ? price * people * days
-                    : price * people;
+                    ? price * effectivePeople * days
+                    : price * effectivePeople;
 
               const breakdown =
                 priceType === "total"
-                  ? `Totaalbedrag voor ${people} personen${days > 1 ? ` × ${days} dagen` : ""}`
+                  ? "Vast totaalbedrag voor de hele groep"
                   : priceType === "per_person_per_day"
-                    ? `€${fmt(price)} p.p.p.d. × ${people} personen × ${days} dagen`
-                    : `€${fmt(price)} p.p. × ${people} personen`;
-
-              const perPerson = priceType === "total" && people > 0 ? total / people : null;
+                    ? `€${fmt(price)} p.p.p.d. × ${effectivePeople} personen × ${days} dagen`
+                    : `€${fmt(price)} p.p. × ${effectivePeople} personen`;
 
               return (
                 <div className="space-y-2 rounded-md border bg-muted/40 p-3">
@@ -475,12 +474,6 @@ export const AdminEditActivitySheet = ({
                       €{fmt(total)}
                     </span>
                   </div>
-                  {perPerson !== null && hasPrice && (
-                    <p className="text-xs text-muted-foreground">
-                      Afgeleid: €{fmt(perPerson)} per persoon
-                      {days > 1 ? ` (€${fmt(perPerson / days)} p.p.p.d.)` : ""}
-                    </p>
-                  )}
                   {!hasPrice && (
                     <p className="text-xs text-muted-foreground italic">
                       Vul een bedrag in om het totaal te berekenen.
@@ -491,6 +484,14 @@ export const AdminEditActivitySheet = ({
                       <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                       <p className="text-amber-800">
                         Weet je zeker dat dit een prijs <strong>per persoon</strong> is en geen totaalbedrag? Wijzig anders het prijstype hiernaast.
+                      </p>
+                    </div>
+                  )}
+                  {priceType === "total" && hasPrice && price < 50 && effectivePeople > 10 && (
+                    <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <p className="text-amber-800">
+                        Weet je zeker dat dit een <strong>totaalbedrag</strong> is voor de hele groep en geen prijs per persoon? Wijzig anders het prijstype hiernaast.
                       </p>
                     </div>
                   )}
