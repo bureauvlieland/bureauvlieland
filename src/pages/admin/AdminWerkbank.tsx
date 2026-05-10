@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ClaudiaChatPanel } from "@/components/admin/werkbank/ClaudiaChatPanel";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
+import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 
 type QuickView =
   | "alles"
