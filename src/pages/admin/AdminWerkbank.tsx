@@ -19,6 +19,8 @@ import {
   type ProjectCommunicationState,
 } from "@/lib/projectCommunication";
 import { cn } from "@/lib/utils";
+import { ClaudiaChatPanel } from "@/components/admin/werkbank/ClaudiaChatPanel";
+import { InboxList } from "@/components/admin/werkbank/InboxList";
 
 type QuickView =
   | "alles"
