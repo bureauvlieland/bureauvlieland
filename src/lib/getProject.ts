@@ -57,7 +57,7 @@ export async function listProjectsForWerkbank(opts: {
 } = {}): Promise<ProjectSummary[]> {
   const { includeFinished = false } = opts;
 
-  const { data: programs, error: progErr } = await supabase
+  let query = supabase
     .from("program_requests")
     .select(`
       id, reference_number, customer_name, customer_email, customer_phone, customer_company,
@@ -67,6 +67,10 @@ export async function listProjectsForWerkbank(opts: {
     `)
     .order("updated_at", { ascending: false })
     .limit(500);
+  if (!includeFinished) {
+    query = query.neq("status", "cancelled").is("cancelled_at", null);
+  }
+  const { data: programs, error: progErr } = await query;
   if (progErr) throw progErr;
 
   const lodgingIds = (programs ?? [])
