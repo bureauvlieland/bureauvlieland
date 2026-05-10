@@ -97,6 +97,7 @@ const AdminPurchaseInvoiceInbox = lazy(() => import("./pages/admin/AdminPurchase
 const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
 const AdminFinancialDashboard = lazy(() => import("./pages/admin/AdminFinancialDashboard"));
 const AdminPlanning = lazy(() => import("./pages/admin/AdminPlanning"));
+const AdminWerkbank = lazy(() => import("./pages/admin/AdminWerkbank"));
 
 const queryClient = new QueryClient();
 
@@ -195,6 +196,8 @@ const App = () => {
             <Route path="/partner/planning" element={<PartnerPlanning />} />
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* Admin routes */}
+            <Route path="/admin" element={<Navigate to="/admin/werkbank" replace />} />
+            <Route path="/admin/werkbank" element={<AdminWerkbank />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/projecten" element={<AdminProjects />} />
             <Route path="/admin/programma-nieuw" element={<AdminProgramNew />} />
