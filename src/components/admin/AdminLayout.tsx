@@ -92,6 +92,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     {
       label: "Operationeel",
       items: [
+        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox },
         { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
         { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
         { title: "Planning", url: "/admin/planning", icon: CalendarDays },
