@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Hotel, Sparkles } from "lucide-react";
 import {
@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ClaudiaChatPanel } from "@/components/admin/werkbank/ClaudiaChatPanel";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
+import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 
 type QuickView =
   | "alles"
@@ -100,92 +101,7 @@ function ProjectListRow({
   );
 }
 
-function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
-  const navigate = useNavigate();
-  if (!project) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Selecteer een project links om details te zien.
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="font-mono text-xs text-muted-foreground">{project.reference}</div>
-          <h2 className="text-xl font-semibold">
-            {project.customer.company || project.customer.name}
-          </h2>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {project.numberOfPeople} personen · {project.dates.join(" → ") || "geen datum"}
-          </div>
-        </div>
-        <Button
-          size="sm"
-          onClick={() =>
-            navigate(
-              project.kind === "logies_only"
-                ? `/admin/logies/${project.id}` // tijdelijk: detail van logies
-                : `/admin/projecten/${project.id}`,
-            )
-          }
-        >
-          Open dossier
-        </Button>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Programma</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {project.hasProgram ? (
-              <>
-                <div className="text-xs text-muted-foreground">Pipeline: {project.programPipeline}</div>
-                <CommBadge state={project.programComm} />
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">Geen programma-spoor.</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Logies</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {project.hasLodging && project.lodgingComm ? (
-              <>
-                <div className="text-xs text-muted-foreground">
-                  Pipeline: {project.lodgingPipeline}
-                </div>
-                <CommBadge state={project.lodgingComm} />
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">Geen logies in dit project.</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Sparkles className="h-4 w-4 text-primary" /> Claudia denkt mee
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            AI-suggesties komen in Fase 6. Hier verschijnen straks concrete vervolgstappen,
-            concept-mails en herinneringen die je met één klik kunt openen.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+// ProjectDetailPanel is imported from ./werkbank/ProjectDetailPanel
 
 export default function AdminWerkbank() {
   const [params, setParams] = useSearchParams();
