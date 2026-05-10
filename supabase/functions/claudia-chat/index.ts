@@ -66,7 +66,48 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "voorstel_taak",
+      description:
+        "Stel een nieuwe taak voor om aan te maken in de Werkbank. Wordt NIET direct uitgevoerd — de admin krijgt eerst een bevestigingskaart en moet zelf klikken.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_id: { type: "string", description: "UUID van het project (program_request.id), optioneel." },
+          title: { type: "string", description: "Korte, actiegerichte titel." },
+          description: { type: "string", description: "Optionele toelichting." },
+          priority: { type: "string", enum: ["low", "normal", "high", "urgent"] },
+          due_date: { type: "string", description: "Optioneel YYYY-MM-DD." },
+        },
+        required: ["title", "priority"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "voorstel_email_concept",
+      description:
+        "Stel een concept-mail voor (aan klant of partner). Wordt NIET verstuurd — admin ziet het concept en kan kopiëren of openen in de mailflow.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_id: { type: "string", description: "UUID van het project." },
+          doelgroep: { type: "string", enum: ["klant", "partner"] },
+          onderwerp: { type: "string" },
+          body: { type: "string", description: "Volledige mailtekst, juiste tone (klant=u, partner=je)." },
+        },
+        required: ["doelgroep", "onderwerp", "body"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
+
+const WRITE_TOOL_NAMES = new Set(["voorstel_taak", "voorstel_email_concept"]);
 
 function daysSince(iso?: string | null): number | null {
   if (!iso) return null;
