@@ -108,7 +108,6 @@ export async function listProjectsForWerkbank(opts: {
       ? getProjectPipelineStage({
           status: (lodging as any).status,
           completion_status: (lodging as any).completion_status,
-          cancelled_at: (lodging as any).cancelled_at,
         })
       : null;
 
