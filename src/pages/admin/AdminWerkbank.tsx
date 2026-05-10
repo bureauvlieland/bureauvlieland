@@ -240,6 +240,8 @@ export default function AdminWerkbank() {
     };
   }, [projects]);
 
+  const [claudiaOpen, setClaudiaOpen] = useState(false);
+
   return (
     <AdminLayout>
       <div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -250,77 +252,91 @@ export default function AdminWerkbank() {
               Eén overzicht voor alles wat aandacht vraagt.
             </p>
           </div>
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-            <TabsList>
-              <TabsTrigger value="inbox">Inbox</TabsTrigger>
-              <TabsTrigger value="projecten">Projecten</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+              <TabsList>
+                <TabsTrigger value="inbox">Inbox</TabsTrigger>
+                <TabsTrigger value="projecten">Projecten</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button size="sm" variant="outline" onClick={() => setClaudiaOpen(true)} className="gap-1.5">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Claudia
+            </Button>
+          </div>
         </header>
 
         <div className="flex flex-1 overflow-hidden">
           {/* Linker lijst */}
           <aside className="flex w-[380px] flex-col border-r">
-            <div className="space-y-2 border-b p-3">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Zoek op naam, bedrijf, referentie…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-              <div className="flex flex-wrap gap-1.5 text-xs">
-                {QUICK_VIEWS.map((v) => {
-                  const count =
-                    v.id === "wacht_op_mij" ? counts.bij_bureau :
-                    v.id === "wacht_op_klant" ? counts.wacht_op_klant :
-                    v.id === "wacht_op_partner" ? counts.wacht_op_partner :
-                    v.id === "stilte" ? counts.stilte :
-                    (projects?.length ?? 0);
-                  return (
-                    <button
-                      key={v.id}
-                      onClick={() => setView(v.id)}
-                      className={cn(
-                        "rounded-full border px-2.5 py-1 transition-colors",
-                        view === v.id
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "hover:bg-muted",
-                      )}
-                    >
-                      {v.label}{" "}
-                      <span className={cn(
-                        "ml-1 rounded-full bg-muted px-1.5 text-[10px]",
-                        view === v.id && "bg-primary-foreground/20",
-                      )}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
-                ))
-              ) : filtered.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Geen projecten in deze weergave.
-                </div>
-              ) : (
-                filtered.map((p) => (
-                  <ProjectListRow
-                    key={p.id}
-                    project={p}
-                    selected={selected?.id === p.id}
-                    onClick={() => handleSelect(p.id)}
+            {tab === "projecten" && (
+              <div className="space-y-2 border-b p-3">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Zoek op naam, bedrijf, referentie…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8"
                   />
-                ))
+                </div>
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  {QUICK_VIEWS.map((v) => {
+                    const count =
+                      v.id === "wacht_op_mij" ? counts.bij_bureau :
+                      v.id === "wacht_op_klant" ? counts.wacht_op_klant :
+                      v.id === "wacht_op_partner" ? counts.wacht_op_partner :
+                      v.id === "stilte" ? counts.stilte :
+                      (projects?.length ?? 0);
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() => setView(v.id)}
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 transition-colors",
+                          view === v.id
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "hover:bg-muted",
+                        )}
+                      >
+                        {v.label}{" "}
+                        <span className={cn(
+                          "ml-1 rounded-full bg-muted px-1.5 text-[10px]",
+                          view === v.id && "bg-primary-foreground/20",
+                        )}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto">
+              {tab === "inbox" ? (
+                <InboxList selectedProjectId={selected?.id ?? null} onSelect={handleSelect} />
+              ) : (
+                <div className="space-y-1.5 p-2">
+                  {isLoading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))
+                  ) : filtered.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Geen projecten in deze weergave.
+                    </div>
+                  ) : (
+                    filtered.map((p) => (
+                      <ProjectListRow
+                        key={p.id}
+                        project={p}
+                        selected={selected?.id === p.id}
+                        onClick={() => handleSelect(p.id)}
+                      />
+                    ))
+                  )}
+                </div>
               )}
             </div>
           </aside>
@@ -331,6 +347,13 @@ export default function AdminWerkbank() {
           </section>
         </div>
       </div>
+
+      <ClaudiaChatPanel
+        open={claudiaOpen}
+        onOpenChange={setClaudiaOpen}
+        contextProjectId={selected?.id ?? null}
+      />
     </AdminLayout>
   );
 }
+
