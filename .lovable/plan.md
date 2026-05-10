@@ -1,83 +1,48 @@
-## Vergelijking getekende offerte vs. systeem
+## Probleem
 
-Offerte 2180189 (30-12-2025, getekend door OVM Partners) = **€7.329,00 incl. BTW**.
-Systeem toont nu **€20.830,52** voor BV-2604-0004. Verschil ~ €13.500.
+In het sheet **Activiteit bewerken** (admin) staat onder het bedrag een misleidende afleiding bij items met `price_type = "total"` (zoals **Vliehors Expres Exclusief** in BV-2602-0005).
 
-Dit is een **legacy-project** dat is overgezet uit het oude offertesysteem en daarbij zijn de prijstypes en automatische opslagen niet correct gemapt.
+Wat er nu wordt getoond:
 
-### Concrete fouten in de data
-
-| # | Item | Offerte | Database nu | Systeem rekent | Oorzaak |
-|---|---|---|---|---|---|
-| 1 | **Fietshuur** | €225,60 totaal (12 × 2 dgn × €9,40) | `admin_price_override = 225,60` met `price_type = per_person_per_day` | 225,60 × 12 × 3 = **€8.121,60** | price_type moet `total` zijn — het bedrag is al het groepstotaal |
-| 2 | **Vliehors Expres** | €354,00 totaal (private tour) | `30,00` met `per_person` (door mij vorige beurt onterecht zo gezet) | 30 × 12 = €360 | Moet terug naar `354,00` `total` |
-| 3 | **Overtocht heen + terug** | 1× Doeksen retour €442,80 (extra kost, klopt) | Daarnaast 2 dag-items "Overtocht Harlingen → Vlieland" en "→ Harlingen" `€16,16 p.p.` (`pending`) | 2 × 12 × 16,16 = €387,84 extra | Day-items zijn dubbelop met de €442,80 Doeksen-regel — moeten op `€0` of `cancelled` |
-| 4 | **Toeristenbelasting** | 1× €92,88 (al in offerte) | Handmatig bureau-item `Toeristenbelasting` €92,88 + automatische regel `Toeristenbelasting (12 pers. × 3 dgn)` €92,88 | 2× €92,88 = €185,76 | Handmatig item verwijderen; auto-regel uit `app_settings` is leidend |
-| 5 | **Natuurbijdrage €18,00** | Niet in offerte | Auto via `nature_contribution_pp` | €18 erbij | Niet in originele offerte — voor dit legacy-project uitschakelen of in mindering brengen |
-| 6 | **Opslag centrale facturatie €30,00** | Niet in offerte | Auto via `bureau_central_surcharge_pp` (`invoicing_mode=bureau_central`) | €30 erbij | Idem — niet in originele offerte |
-| 7 | **Coördinatiefee €200,00** | Niet in offerte (zit in "Bureau- & administratiekosten 15%" van €1.039,72) | Auto via `coordination_fee_tiers` | €200 dubbelop | Bureau 15% dekt dit al — coördinatiefee moet eruit voor dit project |
-
-Som van fouten: 7.896 (fiets-overshoot) + 6 (vliehors) + 388 (dubbele overtocht) + 93 (dubbele toeristenbelasting) + 18 (natuur) + 30 (opslag) + 200 (coördinatiefee) ≈ **€8.631 te veel**, plus de 442,80 Doeksen die nu dubbel kan zijn afhankelijk van keuze. Klopt grofweg met het verschil van ~€13.500 (de rest komt door cumulatie van fiets × dagen).
-
----
-
-## Wat ik wil doen (data-correctie, geen code-wijziging)
-
-Eén ronde gerichte updates op `program_request_items` en `program_requests` voor BV-2604-0004:
-
-```text
-[1] Fietshuur (id 2f3d31de…)
-    price_type:  per_person_per_day → total
-    admin_price_override blijft 225,60
-    admin_price_notes: "12x 2 dagen x €9,40 — totaal als groepsprijs"
-
-[2] Vliehors Expres (item)
-    price_type:  per_person → total
-    admin_price_override: 30 → 354
-    admin_price_notes: "Private tour + lunch (zie offerte 30-12-2025)"
-
-[2b] Building block Vliehors Expres
-    price_adult: 30 → 354 met price_type 'total'
-    (matches offerte; voor toekomstige projecten kan dit per persoon worden
-     gemaakt via een aparte "p.p."-bouwsteen; nu eerst gelijktrekken met offerte)
-
-[3] Twee Overtocht day-items (Harlingen→Vlieland + Vlieland→Harlingen)
-    Optie A: status → cancelled (verdwijnen uit financieel + programma)
-    Optie B: admin_price_override → 0 + price_type total
-             (blijven zichtbaar in dag-overzicht voor ferry-tijden, tellen niet mee)
-    Mijn voorkeur: B — ferry-tijden blijven zichtbaar.
-
-[4] Handmatig bureau-item "Toeristenbelasting" €92,88 (day -1)
-    status → cancelled (auto-regel van app_settings blijft leidend)
-
-[5+6] Natuurbijdrage + opslag centrale facturatie
-    Niet uit te schakelen per project zonder code-wijziging.
-    Twee opties:
-      A. Negeer (€48 afwijking accepteren als legacy-restpost)
-      B. Voeg een correctie-regel toe als bureau-item van -€48,00 (price_type total)
-         met notitie "Correctie: legacy-offerte zonder natuurbijdrage/opslag"
-    Mijn voorkeur: B — netjes traceerbaar.
-
-[7] Coördinatiefee €200
-    Dit zit niet als item maar wordt automatisch berekend uit
-    coordination_fee_tiers (op basis van 12 personen).
-    Niet per project uit te zetten zonder code. Ook hier:
-      A. Negeer
-      B. Correctie-regel -€200,00 toevoegen
-    Mijn voorkeur: B (samenvoegen met [6] tot één correctie-regel van -€248,00).
+```
+Totaalbedrag voor 150 personen × 2 dagen   €825,00
+Afgeleid: €5,50 per persoon (€2,75 p.p.p.d.)
 ```
 
-**Verwacht eindtotaal na correctie:** ≈ €7.329 (gelijk aan getekende offerte).
+Dit klopt niet:
 
----
+- `price_type = total` betekent dat €825 het **vaste totaal** is voor de hele groep — ongeacht aantal personen of dagen. De zin "voor 150 personen × 2 dagen" suggereert dat het bedrag mee-schaalt.
+- De "Afgeleid: … p.p.p.d." regel zet een totaalbedrag om in een per-persoon-per-dag tarief, terwijl Vliehors Expres juist géén per-persoon-prijs hanteert. Dat is precies de verwarring die je zag.
+- De afleiding gebruikt `numberOfPeople` (150) terwijl het item een eigen `override_people` heeft (70). Voor andere items (per_person / per_person_per_day) moet wél `override_people ?? numberOfPeople` worden gebruikt — anders berekent het paneel een ander totaal dan wat onder water in `portalPricing.ts` wordt gerekend.
 
-## Wat ik niet aanraak
+Onder water (`program_request_items`) is alles correct opgeslagen: `price_type='total'`, `admin_price_override=825`, `override_people=70`. Het totaalbedrag van €825 klopt dus. Alleen de UI in dit sheet is misleidend.
 
-- De codebase / business rules. Auto-toeristenbelasting, natuurbijdrage, opslag en coördinatiefee blijven gewoon werken voor nieuwe projecten — alleen voor dit legacy-project halen we ze er via een correctie-regel uit.
-- Eerdere facturen of partner-statussen.
+## Wat aanpassen
 
-## Beslissingen die ik van je nodig heb
+Eén bestand: `src/components/admin/AdminEditActivitySheet.tsx`, het breakdown-paneel (regels ~445-499).
 
-1. **Overtocht day-items**: A (annuleren) of B (op €0 zetten, ferry-tijden blijven zichtbaar)?
-2. **Natuurbijdrage + opslag + coördinatiefee** (€248 totaal): negeren of correctie-regel van -€248 toevoegen om exact op €7.329 uit te komen?
-3. **Vliehors Expres bouwsteen**: laten we hem nu op €354 totaal zetten (matcht offerte voor private tour) of op €29,50 p.p. (logischer voor toekomstige boekingen)?
+1. **Effectief aantal personen** = `override_people ?? numberOfPeople`. Gebruiken in zowel breakdown-tekst als totaalberekening, zodat het paneel exact spiegelt wat `getDisplayLineTotal` in `portalPricing.ts` doet.
+
+2. **Breakdown-tekst per price_type:**
+   - `total` → `"Vast totaalbedrag voor de hele groep"` (geen "× personen × dagen").
+   - `per_person` → `"€X p.p. × N personen"` (zoals nu).
+   - `per_person_per_day` → `"€X p.p.p.d. × N personen × D dagen"` (zoals nu).
+
+3. **"Afgeleid"-regel:**
+   - Bij `total`: regel volledig **verbergen**. Een totaalbedrag heeft geen zinvolle p.p.- of p.p.p.d.-afleiding (en zeker niet als de groep niet per-persoon afrekent).
+   - Bij `per_person` / `per_person_per_day`: regel blijft zoals hij is.
+
+4. **Waarschuwing bij `total` met opvallend laag bedrag** (optioneel, klein): als `price_type=total` én `priceOverride < 50` én `numberOfPeople > 10`, een subtiele hint "Weet je zeker dat dit een totaalbedrag is en geen per-persoon prijs?" — spiegelbeeld van de bestaande waarschuwing bij `per_person` met hoog bedrag. Houdt admin scherp op verkeerd ingesteld prijstype.
+
+## Wat niet aanpassen
+
+- Geen wijzigingen aan `portalPricing.ts`, edge functions of database. De rekenkundige logica klopt al; alleen de admin-UI is onduidelijk.
+- Geen wijziging aan het input-veld of het Select-component zelf.
+
+## Verificatie
+
+Na de wijziging openen voor:
+
+- **BV-2602-0005 / Vliehors Expres Exclusief** (`total`, 825, override 70 op 150 totaal) → breakdown toont *"Vast totaalbedrag voor de hele groep — €825,00"*, geen p.p./p.p.p.d.-afleiding.
+- **BV-2604-0008 / Fietshuur** (`per_person_per_day`, 12, 15 pers, 2 dagen) → blijft *"€12,00 p.p.p.d. × 15 personen × 2 dagen — €360,00"* met afgeleide per-persoon-regel.
+- **BV-2604-0008 / Strand BBQ** (`per_person`, 35, 15 pers) → blijft *"€35,00 p.p. × 15 personen — €525,00"*.
