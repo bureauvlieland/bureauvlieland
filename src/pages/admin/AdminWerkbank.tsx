@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Hotel, Sparkles } from "lucide-react";
 import {
