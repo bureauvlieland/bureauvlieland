@@ -303,6 +303,29 @@ Deno.serve(async (req) => {
         tool_calls: toolCalls,
       });
 
+      // Short-circuit: if any write-tool was proposed, return proposals + ack to client.
+      const writeProposals = toolCalls
+        .filter((c: any) => WRITE_TOOL_NAMES.has(c.function?.name))
+        .map((c: any) => {
+          let args: Record<string, unknown> = {};
+          try { args = JSON.parse(c.function?.arguments || "{}"); } catch (_) {}
+          return { type: c.function.name, args };
+        });
+
+      if (writeProposals.length > 0) {
+        const ack = msg.content?.trim()
+          || (writeProposals[0].type === "voorstel_taak"
+                ? "Ik heb een taak voor je klaargezet. Bevestig hieronder om aan te maken."
+                : "Ik heb een concept-mail voor je opgesteld. Bekijk en bevestig hieronder.");
+        const sseBody =
+          `data: ${JSON.stringify({ choices: [{ delta: { content: ack } }] })}\n\n` +
+          `data: ${JSON.stringify({ proposals: writeProposals })}\n\n` +
+          `data: [DONE]\n\n`;
+        return new Response(sseBody, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+
       for (const call of toolCalls) {
         let parsedArgs: Record<string, unknown> = {};
         try {
