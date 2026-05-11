@@ -92,12 +92,8 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     {
       label: "Operationeel",
       items: [
-        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox },
-        { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-        { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
+        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: todoCount },
         { title: "Planning", url: "/admin/planning", icon: CalendarDays },
-        { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
-        { title: "Logies", url: "/admin/logies", icon: Hotel },
         { title: "CRM", url: "/admin/crm", icon: Users },
         { title: "Chat", url: "/admin/chat", icon: MessageCircle },
       ],
