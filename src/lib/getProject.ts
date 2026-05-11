@@ -145,15 +145,15 @@ export async function listProjectsForWerkbank(opts: {
     : { data: [], error: null };
   if (lodgErr) throw lodgErr;
 
-  const lodgingByProgramId = new Map<string, typeof lodgings[number]>();
-  for (const l of lodgings ?? []) {
+  const lodgingByProgramId = new Map<string, LodgingRow>();
+  for (const l of (lodgings ?? []) as LodgingRow[]) {
     if (l.linked_program_id) lodgingByProgramId.set(l.linked_program_id, l);
   }
 
-  const summaries: ProjectSummary[] = (programs ?? []).map((p) => {
-    const items = (p as any).program_request_items ?? [];
+  const summaries: ProjectSummary[] = ((programs ?? []) as ProgramRow[]).map((p) => {
+    const items: ProgramItemRow[] = p.program_request_items ?? [];
     const lodging = lodgingByProgramId.get(p.id) ?? null;
-    const lodgingQuotes = (lodging as any)?.accommodation_quotes ?? [];
+    const lodgingQuotes: LodgingQuoteRow[] = lodging?.accommodation_quotes ?? [];
 
     const hasProgram = items.length > 0;
     const hasLodging = !!lodging;
@@ -163,23 +163,29 @@ export async function listProjectsForWerkbank(opts: {
     else if (!hasProgram && hasLodging) kind = "logies_only";
 
     // Pipeline
-    const programPipeline = getProjectPipelineStage(p as any);
+    const programPipeline = getProjectPipelineStage({
+      status: p.status ?? undefined,
+      quote_status: p.quote_status,
+      terms_accepted_at: p.terms_accepted_at,
+      completion_status: p.completion_status,
+      cancelled_at: p.cancelled_at,
+    });
     const lodgingPipeline = lodging
       ? getProjectPipelineStage({
-          status: (lodging as any).status,
-          completion_status: (lodging as any).completion_status,
+          status: lodging.status ?? undefined,
+          completion_status: lodging.completion_status,
         })
       : null;
 
     // Communicatie-status (vereenvoudigd voor lijst-view)
     const itemsReadyForPartner = items.filter(
-      (i: any) =>
+      (i) =>
         i.skip_partner_notification === true &&
         i.status !== "cancelled" &&
-        (p.quote_status === "akkoord_ontvangen" || i.customer_approved_at),
+        (p.quote_status === "akkoord_ontvangen" || !!i.customer_approved_at),
     ).length;
     const itemsAwaitingPartnerResponse = items.filter(
-      (i: any) =>
+      (i) =>
         i.skip_partner_notification === false &&
         i.status !== "cancelled" &&
         i.item_quote_status !== "bevestigd",
@@ -196,10 +202,10 @@ export async function listProjectsForWerkbank(opts: {
     const lodgingComm = lodging
       ? getLodgingCommunicationState({
           hasRequest: true,
-          quotesPending: lodgingQuotes.filter((q: any) => q.status === "pending").length,
-          quotesAwaitingCustomerChoice: lodgingQuotes.filter((q: any) => q.status === "submitted").length,
-          quoteSelected: lodgingQuotes.some((q: any) => q.status === "selected"),
-          last_outbound_at: (lodging as any).updated_at,
+          quotesPending: lodgingQuotes.filter((q) => q.status === "pending").length,
+          quotesAwaitingCustomerChoice: lodgingQuotes.filter((q) => q.status === "submitted").length,
+          quoteSelected: lodgingQuotes.some((q) => q.status === "selected"),
+          last_outbound_at: lodging.updated_at,
         })
       : null;
 
@@ -212,7 +218,6 @@ export async function listProjectsForWerkbank(opts: {
         return "geannuleerd";
       if (programPipeline === "afgerond" && (!lodgingPipeline || lodgingPipeline === "afgerond"))
         return "afgerond";
-      // meest urgente (vroegste in de funnel) telt
       const order: ProjectPipelineStage[] = [
         "concept", "offerte_verstuurd", "akkoord_ontvangen",
         "av_getekend", "facturatie", "afgerond", "geannuleerd",
@@ -222,8 +227,8 @@ export async function listProjectsForWerkbank(opts: {
     })();
 
     const reference =
-      kind === "logies_only" && (lodging as any)?.reference_number
-        ? (lodging as any).reference_number
+      kind === "logies_only" && lodging?.reference_number
+        ? lodging.reference_number
         : p.reference_number ?? p.id.slice(0, 8);
 
     return {
