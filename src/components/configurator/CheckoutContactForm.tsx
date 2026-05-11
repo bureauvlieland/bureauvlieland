@@ -131,6 +131,7 @@ export const CheckoutContactForm = ({
           selected_dates: isoDates,
           general_notes: formData.notes || null,
           program_type: "self_service",
+          origin: "self_service",
           program_description: finalEventType,
           quote_status: "concept",
         })

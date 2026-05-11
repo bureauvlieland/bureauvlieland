@@ -117,6 +117,7 @@ const ProgrammaOpMaat = () => {
           selected_dates: isoDates,
           general_notes: formData.wishes || null,
           program_type: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
+          origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: `Maatwerk ${programType}${wantsAccommodation ? " — logies gewenst" : ""}`,
           invoicing_mode: "bureau_central",
         })
