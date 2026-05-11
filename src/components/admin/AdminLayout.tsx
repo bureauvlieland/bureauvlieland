@@ -92,12 +92,8 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     {
       label: "Operationeel",
       items: [
-        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox },
-        { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-        { title: "Taken", url: "/admin/todos", icon: ClipboardList, badge: todoCount },
+        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: todoCount },
         { title: "Planning", url: "/admin/planning", icon: CalendarDays },
-        { title: "Projecten", url: "/admin/projecten", icon: FolderKanban },
-        { title: "Logies", url: "/admin/logies", icon: Hotel },
         { title: "CRM", url: "/admin/crm", icon: Users },
         { title: "Chat", url: "/admin/chat", icon: MessageCircle },
       ],
@@ -172,7 +168,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       <SidebarContent className="flex flex-col h-full bg-slate-900 text-white">
         {/* Logo */}
         <div className="p-4 border-b border-slate-700">
-          <Link to="/admin/dashboard" className="flex items-center gap-3">
+          <Link to="/admin/werkbank" className="flex items-center gap-3">
             <img src={logo} alt="Bureau Vlieland" className="h-8 w-auto" />
             {!isCollapsed && (
               <div className="flex items-center gap-2">
