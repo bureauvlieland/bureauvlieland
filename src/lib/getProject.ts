@@ -242,7 +242,7 @@ export async function listProjectsForWerkbank(opts: {
         company: p.customer_company,
       },
       dates: Array.isArray(p.selected_dates)
-        ? (p.selected_dates as any[]).map(String)
+        ? (p.selected_dates as unknown[]).map(String)
         : [],
       numberOfPeople: p.number_of_people ?? 0,
       pipeline: overallPipeline,
