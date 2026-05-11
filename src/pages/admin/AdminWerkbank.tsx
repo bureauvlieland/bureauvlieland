@@ -204,8 +204,8 @@ export default function AdminWerkbank() {
                     className="pl-8"
                   />
                 </div>
-                <div className="flex flex-wrap gap-1.5 text-xs">
-                  {QUICK_VIEWS.map((v) => {
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  {!archive && QUICK_VIEWS.map((v) => {
                     const count =
                       v.id === "wacht_op_mij" ? counts.bij_bureau :
                       v.id === "wacht_op_klant" ? counts.wacht_op_klant :
@@ -233,6 +233,19 @@ export default function AdminWerkbank() {
                       </button>
                     );
                   })}
+                  <button
+                    onClick={() => toggleArchive(!archive)}
+                    className={cn(
+                      "ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors",
+                      archive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                    )}
+                    title={archive ? "Terug naar werklijst" : "Toon gearchiveerde projecten"}
+                  >
+                    <Archive className="h-3 w-3" />
+                    {archive ? "Archief aan" : "Archief"}
+                  </button>
                 </div>
               </div>
             )}
