@@ -18,13 +18,7 @@ export interface QuoteItemForStatus {
 }
 
 export interface ProgramForQuoteStatus {
-  program_type?: string | null;
   quote_status?: string | null;
-}
-
-/** @deprecated All projects now use quote_status; this always returns true for projects with a quote_status */
-export function isQuoteOrMaatwerk(programType?: string | null): boolean {
-  return programType === "quote" || !!programType?.startsWith("maatwerk_") || programType === "self_service";
 }
 
 export function getQuoteItemSendPhase(

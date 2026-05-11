@@ -123,7 +123,7 @@ export const MaatwerkIntakeForm = ({
         actor_name: formData.name,
         new_value: {
           type: "maatwerk",
-          program_type: programType,
+          origin: programType,
           template_inspiration: templateInspiration,
           wants_accommodation: wantsAccommodation,
         },

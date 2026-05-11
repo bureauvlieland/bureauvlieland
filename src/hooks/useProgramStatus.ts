@@ -10,7 +10,6 @@ interface ProgramForStatus {
   billing_address_city?: string;
   billing_contact_name?: string;
   items: ProgramRequestItem[];
-  program_type?: string;
   quote_status?: string | null;
 }
 

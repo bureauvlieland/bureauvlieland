@@ -132,7 +132,7 @@ const ProgrammaOpMaat = () => {
         actor_name: formData.name,
         new_value: {
           type: "maatwerk",
-          program_type: programType,
+          origin: programType,
           wants_accommodation: wantsAccommodation,
           source: "programma-op-maat-page",
         },
