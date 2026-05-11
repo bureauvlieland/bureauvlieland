@@ -1,17 +1,76 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Hotel, Sparkles, ExternalLink } from "lucide-react";
+import { Hotel, Sparkles, ExternalLink, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import {
   COMMUNICATION_STATE_META,
   type ProjectCommunicationState,
 } from "@/lib/projectCommunication";
 import type { ProjectSummary } from "@/lib/getProject";
 import { cn } from "@/lib/utils";
+
+type ItemRow = Pick<
+  Tables<"program_request_items">,
+  | "id"
+  | "block_name"
+  | "block_type"
+  | "day_index"
+  | "preferred_time"
+  | "confirmed_time"
+  | "status"
+  | "quoted_price"
+  | "provider_id"
+  | "provider_name"
+  | "skip_partner_notification"
+  | "customer_approved_at"
+  | "item_quote_status"
+>;
+
+type QuoteRow = Pick<
+  Tables<"accommodation_quotes">,
+  | "id"
+  | "status"
+  | "partner_id"
+  | "price_total"
+  | "accommodation_name"
+  | "room_configuration"
+> & {
+  partners: Pick<Tables<"partners">, "id" | "name"> | null;
+};
+
+type LodgingRow = Pick<
+  Tables<"accommodation_requests">,
+  | "id"
+  | "reference_number"
+  | "status"
+  | "arrival_date"
+  | "departure_date"
+  | "number_of_guests"
+> & {
+  accommodation_quotes: QuoteRow[];
+};
+
+type CommRow = Pick<
+  Tables<"project_communications">,
+  "id" | "communication_type" | "direction" | "subject" | "content" | "communication_date"
+>;
+
+type InvoiceRow = Pick<
+  Tables<"bureau_invoices">,
+  "id" | "invoice_number" | "amount_incl_vat" | "invoice_type" | "invoice_date"
+>;
+
+interface DetailData {
+  items: ItemRow[];
+  lodging: LodgingRow | null;
+  comms: CommRow[];
+  invoices: InvoiceRow[];
+}
 
 function CommBadge({ state }: { state: ProjectCommunicationState }) {
   const meta = COMMUNICATION_STATE_META[state];
@@ -28,45 +87,74 @@ function fmtEur(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 }
 
+function fmtTime(item: Pick<ItemRow, "confirmed_time" | "preferred_time">) {
+  return item.confirmed_time ?? item.preferred_time ?? "—";
+}
+
+function netInvoiced(invoices: InvoiceRow[]) {
+  return invoices.reduce((sum, inv) => {
+    const amt = inv.amount_incl_vat ?? 0;
+    return sum + (inv.invoice_type === "credit" ? -amt : amt);
+  }, 0);
+}
+
 export function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
   const navigate = useNavigate();
 
-  const { data: detail } = useQuery({
+  const { data: detail, isLoading, error } = useQuery<DetailData>({
     queryKey: ["werkbank-detail", project?.id],
     enabled: !!project?.id,
     queryFn: async () => {
       const id = project!.id;
-      const [items, lodging, comms, financial] = await Promise.all([
-        supabase
-          .from("program_request_items")
-          .select("id, title, day_index, start_time, end_time, status, quoted_price, provider_id, skip_partner_notification, customer_approved_at")
-          .eq("request_id", id)
-          .order("day_index", { ascending: true })
-          .order("start_time", { ascending: true }),
-        project!.hasLodging
-          ? supabase
-              .from("accommodation_requests")
-              .select("id, reference_number, status, arrival_date, departure_date, number_of_guests, accommodation_quotes(id, status, partner_id, price_total, room_summary)")
-              .eq("linked_program_id", id)
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-        supabase
-          .from("project_communications")
-          .select("id, communication_type, direction, subject, content, communication_date")
-          .eq("request_id", id)
-          .order("communication_date", { ascending: false })
-          .limit(15),
-        supabase
-          .from("bureau_invoices")
-          .select("id, invoice_number, amount_incl_vat, invoice_type, invoice_date")
-          .eq("request_id", id)
-          .order("invoice_date", { ascending: false }),
+
+      const itemsPromise = supabase
+        .from("program_request_items")
+        .select(
+          "id, block_name, block_type, day_index, preferred_time, confirmed_time, status, quoted_price, provider_id, provider_name, skip_partner_notification, customer_approved_at, item_quote_status",
+        )
+        .eq("request_id", id)
+        .order("day_index", { ascending: true });
+
+      const lodgingPromise = project!.hasLodging
+        ? supabase
+            .from("accommodation_requests")
+            .select(
+              "id, reference_number, status, arrival_date, departure_date, number_of_guests, accommodation_quotes(id, status, partner_id, price_total, accommodation_name, room_configuration, partners!accommodation_quotes_partner_id_fkey(id, name))",
+            )
+            .eq("linked_program_id", id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null });
+
+      const commsPromise = supabase
+        .from("project_communications")
+        .select("id, communication_type, direction, subject, content, communication_date")
+        .eq("request_id", id)
+        .order("communication_date", { ascending: false })
+        .limit(15);
+
+      const invoicesPromise = supabase
+        .from("bureau_invoices")
+        .select("id, invoice_number, amount_incl_vat, invoice_type, invoice_date")
+        .eq("request_id", id)
+        .order("invoice_date", { ascending: false });
+
+      const [items, lodging, comms, invoices] = await Promise.all([
+        itemsPromise,
+        lodgingPromise,
+        commsPromise,
+        invoicesPromise,
       ]);
+
+      if (items.error) throw items.error;
+      if ("error" in lodging && lodging.error) throw lodging.error;
+      if (comms.error) throw comms.error;
+      if (invoices.error) throw invoices.error;
+
       return {
-        items: items.data ?? [],
-        lodging: lodging.data,
-        comms: comms.data ?? [],
-        invoices: financial.data ?? [],
+        items: (items.data ?? []) as ItemRow[],
+        lodging: (lodging.data ?? null) as LodgingRow | null,
+        comms: (comms.data ?? []) as CommRow[],
+        invoices: (invoices.data ?? []) as InvoiceRow[],
       };
     },
   });
@@ -115,6 +203,12 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
           Open dossier <ExternalLink className="ml-1 h-3.5 w-3.5" />
         </Button>
       </div>
+
+      {error && (
+        <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          Kon details niet laden: {(error as Error).message}
+        </div>
+      )}
 
       <Tabs defaultValue="overzicht">
         <TabsList className="w-full justify-start overflow-x-auto">
@@ -169,21 +263,28 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsContent>
 
         <TabsContent value="programma">
-          {!detail ? (
+          {isLoading ? (
             <div className="p-4 text-sm text-muted-foreground">Laden…</div>
-          ) : detail.items.length === 0 ? (
+          ) : !detail || detail.items.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">Geen programma-items.</div>
           ) : (
             <div className="space-y-1.5">
-              {detail.items.map((it: any) => (
+              {detail.items.map((it) => (
                 <div key={it.id} className="flex items-center justify-between rounded border bg-background px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <div className="truncate font-medium">{it.title}</div>
+                    <div className="truncate font-medium">{it.block_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      Dag {it.day_index === -1 ? "intern" : it.day_index} · {it.start_time ?? "—"} · {it.status}
+                      {it.day_index === -1 ? "Intern" : `Dag ${it.day_index}`} · {fmtTime(it)} · {it.status}
+                      {it.block_type === "bureau" && " · bureau"}
+                      {it.provider_name && it.block_type !== "bureau" && ` · ${it.provider_name}`}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">{fmtEur(it.quoted_price)}</div>
+                  <div className="ml-2 shrink-0 text-right text-xs">
+                    <div>{fmtEur(it.quoted_price)}</div>
+                    {it.item_quote_status && (
+                      <div className="text-muted-foreground">{it.item_quote_status}</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -191,28 +292,35 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsContent>
 
         <TabsContent value="logies">
-          {!detail?.lodging ? (
+          {isLoading ? (
+            <div className="p-4 text-sm text-muted-foreground">Laden…</div>
+          ) : !detail?.lodging ? (
             <div className="p-4 text-sm text-muted-foreground">Geen logies-aanvraag.</div>
           ) : (
             <div className="space-y-2">
               <div className="rounded border bg-background px-3 py-2 text-sm">
                 <div className="font-mono text-xs text-muted-foreground">{detail.lodging.reference_number}</div>
-                <div>{detail.lodging.number_of_guests} gasten · {detail.lodging.arrival_date} → {detail.lodging.departure_date}</div>
+                <div>
+                  {detail.lodging.number_of_guests} gasten · {detail.lodging.arrival_date} → {detail.lodging.departure_date}
+                </div>
                 <div className="mt-1 text-xs text-muted-foreground">Status: {detail.lodging.status}</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs font-medium uppercase text-muted-foreground">Offertes</div>
-                {(detail.lodging.accommodation_quotes ?? []).map((q: any) => (
-                  <div key={q.id} className="flex items-center justify-between rounded border bg-background px-3 py-1.5 text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground">{q.partner_id}</div>
-                      <div className="text-xs">{q.status}</div>
-                    </div>
-                    <div className="text-xs">{fmtEur(q.price_total)}</div>
-                  </div>
-                ))}
-                {(detail.lodging.accommodation_quotes ?? []).length === 0 && (
+                {detail.lodging.accommodation_quotes.length === 0 ? (
                   <div className="text-xs text-muted-foreground">Nog geen offertes.</div>
+                ) : (
+                  detail.lodging.accommodation_quotes.map((q) => (
+                    <div key={q.id} className="flex items-center justify-between rounded border bg-background px-3 py-1.5 text-sm">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          {q.partners?.name ?? q.accommodation_name ?? "Onbekende partner"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{q.status}</div>
+                      </div>
+                      <div className="ml-2 shrink-0 text-xs">{fmtEur(q.price_total)}</div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -220,19 +328,28 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsContent>
 
         <TabsContent value="financieel">
-          {!detail ? (
+          {isLoading ? (
             <div className="p-4 text-sm text-muted-foreground">Laden…</div>
-          ) : detail.invoices.length === 0 ? (
+          ) : !detail || detail.invoices.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">Nog geen facturen.</div>
           ) : (
-            <div className="space-y-1.5">
-              {detail.invoices.map((inv: any) => (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded bg-muted px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Netto gefactureerd (incl. btw)</span>
+                <span className="font-medium">{fmtEur(netInvoiced(detail.invoices))}</span>
+              </div>
+              {detail.invoices.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between rounded border bg-background px-3 py-2 text-sm">
                   <div>
                     <div className="font-medium">{inv.invoice_number}</div>
-                    <div className="text-xs text-muted-foreground">{inv.invoice_date} · {inv.invoice_type}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {inv.invoice_date} · {inv.invoice_type}
+                    </div>
                   </div>
-                  <div>{fmtEur(inv.amount_incl_vat)}</div>
+                  <div className={cn(inv.invoice_type === "credit" && "text-destructive")}>
+                    {inv.invoice_type === "credit" ? "−" : ""}
+                    {fmtEur(inv.amount_incl_vat)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -240,22 +357,31 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsContent>
 
         <TabsContent value="communicatie">
-          {!detail ? (
+          {isLoading ? (
             <div className="p-4 text-sm text-muted-foreground">Laden…</div>
-          ) : detail.comms.length === 0 ? (
+          ) : !detail || detail.comms.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">Nog geen communicatie gelogd.</div>
           ) : (
             <div className="space-y-2">
-              {detail.comms.map((c: any) => (
-                <div key={c.id} className="rounded border bg-background px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{c.communication_type} · {c.direction}</span>
-                    <span>{new Date(c.communication_date).toLocaleString("nl-NL")}</span>
+              {detail.comms.map((c) => {
+                const isInbound = c.direction === "inbound" || c.direction === "in";
+                const Icon = isInbound ? ArrowDownLeft : ArrowUpRight;
+                return (
+                  <div key={c.id} className="rounded border bg-background px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Icon className="h-3 w-3" />
+                        {c.communication_type} · {c.direction}
+                      </span>
+                      <span>{new Date(c.communication_date).toLocaleString("nl-NL")}</span>
+                    </div>
+                    {c.subject && <div className="mt-1 font-medium">{c.subject}</div>}
+                    <div className="mt-0.5 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
+                      {c.content}
+                    </div>
                   </div>
-                  {c.subject && <div className="mt-1 font-medium">{c.subject}</div>}
-                  <div className="mt-0.5 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">{c.content}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </TabsContent>
