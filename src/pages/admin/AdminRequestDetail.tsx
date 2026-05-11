@@ -1660,7 +1660,7 @@ const AdminRequestDetail = () => {
                           <TableHead>Tijd</TableHead>
                           {isQuoteMode ? (
                             <>
-                              <TableHead>Offerte-status</TableHead>
+                              <TableHead>Status</TableHead>
                               <TableHead>Deelnemers</TableHead>
                               <TableHead>Prijs (aanpasbaar)</TableHead>
                               <TableHead className="w-[80px]"></TableHead>
@@ -1828,13 +1828,37 @@ const AdminRequestDetail = () => {
                                     {isQuoteMode ? (
                                       <>
                                         <TableCell>
-                                          <ItemDisplayStatusBadge
-                                            audience="admin"
-                                            status={deriveItemDisplayStatus(item as any, {
-                                              programPeople: request.number_of_people,
-                                              numberOfDays: numDaysForItem,
-                                            })}
-                                          />
+                                          <div className="flex flex-col gap-1 items-start">
+                                            <ItemDisplayStatusBadge
+                                              audience="admin"
+                                              status={deriveItemDisplayStatus(item as any, {
+                                                programPeople: request.number_of_people,
+                                                numberOfDays: numDaysForItem,
+                                              })}
+                                            />
+                                            {(() => {
+                                              if (item.provider_id === "bureau") return null;
+                                              if (item.status === "cancelled") return null;
+                                              const sendPhase = getItemSendPhase(item, request);
+                                              if (sendPhase === "klaar_voor_partner" || sendPhase === "wacht_op_klant") {
+                                                return (
+                                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                                                    <Send className="h-3 w-3" />
+                                                    Nog naar partner
+                                                  </span>
+                                                );
+                                              }
+                                              if (sendPhase === "verstuurd") {
+                                                return (
+                                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                                                    <Send className="h-3 w-3" />
+                                                    Verstuurd
+                                                  </span>
+                                                );
+                                              }
+                                              return null;
+                                            })()}
+                                          </div>
                                         </TableCell>
                                         <TableCell>
                                           <input
