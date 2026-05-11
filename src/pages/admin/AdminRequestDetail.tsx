@@ -1707,7 +1707,9 @@ const AdminRequestDetail = () => {
                                         const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
                                         const isConfirmed = !!item.confirmed_time;
                                         const isProposal = !item.confirmed_time && !!item.proposed_time;
-                                        const showOriginal = (isConfirmed || isProposal) && item.preferred_time && activeTime !== item.preferred_time;
+                                        // Toon "was: X" alleen bij een echt klant-tegenvoorstel.
+                                        // Niet meer bij admin-sync-verschillen (Fase 4b).
+                                        const showOriginal = isProposal && item.preferred_time && item.preferred_time !== item.proposed_time;
 
                                         const handleSaveTime = async (time: string | null) => {
                                           // Belangrijk: een tijdwijziging mag de partner-workflow status NIET muteren.
