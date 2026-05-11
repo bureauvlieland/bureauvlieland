@@ -207,8 +207,8 @@ export default function AdminWerkbank() {
         <div className="flex flex-1 overflow-hidden">
           {/* Linker lijst */}
           <aside className="flex w-[380px] flex-col border-r">
-            {tab === "projecten" && (
-              <div className="space-y-2 border-b p-3">
+            <div className="space-y-2 border-b p-3">
+              {tab === "projecten" && (
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -218,6 +218,33 @@ export default function AdminWerkbank() {
                     className="pl-8"
                   />
                 </div>
+              )}
+
+              {/* Type-filter (geldt voor beide tabs) */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <Layers className="h-3 w-3 text-muted-foreground" />
+                {([
+                  { id: "all", label: "Alle" },
+                  { id: "programma_only", label: "Programma" },
+                  { id: "logies_only", label: "Logies" },
+                  { id: "combi", label: "Combi" },
+                ] as const).map((k) => (
+                  <button
+                    key={k.id}
+                    onClick={() => setKind(k.id)}
+                    className={cn(
+                      "rounded-full border px-2.5 py-0.5 transition-colors",
+                      kindFilter === k.id
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+
+              {tab === "projecten" && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   {!archive && QUICK_VIEWS.map((v) => {
                     const count =
@@ -261,12 +288,12 @@ export default function AdminWerkbank() {
                     {archive ? "Archief aan" : "Archief"}
                   </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
-                <InboxList selectedProjectId={selected?.id ?? null} onSelect={handleSelect} />
+                <InboxList selectedProjectId={selected?.id ?? null} onSelect={handleSelect} kindFilter={kindFilter} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (
