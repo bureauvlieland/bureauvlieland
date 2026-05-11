@@ -245,11 +245,7 @@ export const ProgramOverviewCard = ({
             {/* Type */}
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                {isQuoteMode ? (
-                  <Sparkles className="h-4 w-4 text-primary" />
-                ) : (
-                  <Briefcase className="h-4 w-4 text-primary" />
-                )}
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Type</p>
