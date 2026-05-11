@@ -130,7 +130,13 @@ export const PartnerUnifiedList = ({
       const canInvoice = canItemBeInvoiced(i);
       
       const hasCustomerAccepted = !!i.customer_accepted_at || !!i.customer_approved_at;
-      const effectiveStatus = (i.status === "confirmed" && hasCustomerAccepted) ? "accepted" : i.status;
+      // Als het hele project is geannuleerd, telt dit item ook als "geannuleerd" —
+      // ongeacht zijn eigen item-status. Anders blijven oude pendings in de actie-tab
+      // hangen voor projecten die allang niet meer doorgaan.
+      const programCancelled =
+        i.program_requests.status === "cancelled" || !!i.program_requests.cancelled_at;
+      const baseStatus = programCancelled ? "cancelled" : i.status;
+      const effectiveStatus = (baseStatus === "confirmed" && hasCustomerAccepted) ? "accepted" : baseStatus;
       
       const awaitingTerms = hasCustomerAccepted && 
         !i.invoiced_number && 
@@ -141,6 +147,7 @@ export const PartnerUnifiedList = ({
       const effPeople = i.override_people ?? i.program_requests.number_of_people ?? 1;
       const numDays = getNumberOfDays(i.program_requests.selected_dates);
       const priceChangePending =
+        !programCancelled &&
         !!i.quoted_price &&
         !i.invoiced_number &&
         i.status !== "cancelled" &&
@@ -156,12 +163,12 @@ export const PartnerUnifiedList = ({
         status: effectiveStatus,
         urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
         peopleCount: i.program_requests.number_of_people,
-        isNew: isNewItem(i),
-        isModified: isModifiedByCustomer(i),
-        hasCounter: i.status === "counter_proposed",
+        isNew: !programCancelled && isNewItem(i),
+        isModified: !programCancelled && isModifiedByCustomer(i),
+        hasCounter: !programCancelled && i.status === "counter_proposed",
         canInvoice,
         awaitingTerms,
-        isRecentlyCancelled: i.status === "cancelled" && isRecentlyUpdated(i.updated_at),
+        isRecentlyCancelled: effectiveStatus === "cancelled" && isRecentlyUpdated(i.updated_at),
         priceChangePending,
         originalItem: i,
       };
