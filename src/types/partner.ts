@@ -94,6 +94,7 @@ export interface PartnerItem {
     status: string;
     reference_number: string | null;
     terms_accepted_at: string | null;
+    cancelled_at?: string | null;
     cancellation_reason?: string | null;
     invoicing_mode?: string; // 'partner_direct' | 'bureau_central'
     // Billing details (only populated when terms_accepted_at is set)
