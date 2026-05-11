@@ -39,7 +39,6 @@ interface CustomerPortalSplashProps {
     reference_number?: string | null;
     number_of_people: number;
     terms_accepted_at?: string;
-    program_type?: string;
     origin?: string | null;
     quote_status?: string | null;
     invoicing_mode?: string | null;

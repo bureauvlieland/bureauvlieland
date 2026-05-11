@@ -52,7 +52,7 @@ export const ProgramOverviewCard = ({
   const isMultiDay = selectedDates.length > 1;
   // Fase 5: alle projecten doorlopen dezelfde quote-pipeline. Het type-onderscheid
   // bestaat alleen nog voor micro-copy (maatwerk-varianten gebruiken iets andere woorden).
-  const isMaatwerk = isMaatwerkProject({ origin, program_type: programType });
+  const isMaatwerk = isMaatwerkProject({ origin: origin ?? programType });
 
   // Calculate quote validity
   const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;

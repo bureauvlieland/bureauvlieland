@@ -77,7 +77,6 @@ interface MobileProgramViewProps {
     acceptedTerms?: AcceptedTermsEntry[];
     reference_number?: string | null;
     // Quote mode fields
-    program_type?: string;
     origin?: string | null;
     quote_status?: string | null;
     quote_valid_until?: string | null;
@@ -223,7 +222,7 @@ export const MobileProgramView = ({
         accommodationQuotes={accommodationQuotes}
         referenceNumber={program.reference_number}
         accommodationReferenceNumber={accommodation?.reference_number}
-        programType={(program.origin ?? program.program_type) as any}
+        programType={program.origin as any}
         origin={program.origin}
         quoteStatus={program.quote_status as any}
         quoteValidUntil={program.quote_valid_until}
@@ -245,13 +244,13 @@ export const MobileProgramView = ({
             onOpenBilling={onOpenBilling}
             onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
             onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
-            programType={program.origin ?? program.program_type}
+            programType={program.origin}
             quoteStatus={program.quote_status}
             programPublishedAt={program.program_published_at}
           />
 
           <ProgramIntroCard
-            programType={program.origin ?? program.program_type}
+            programType={program.origin}
             quoteStatus={program.quote_status}
             quoteValidUntil={program.quote_valid_until}
             termsAcceptedAt={program.terms_accepted_at}

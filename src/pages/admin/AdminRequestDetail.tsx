@@ -151,7 +151,6 @@ interface ProgramRequest {
   cancellation_reason: string | null;
   linked_accommodation_id: string | null;
   // Quote mode fields
-  program_type?: string | null;
   origin?: string | null;
   quote_status: QuoteStatus | null;
   quote_valid_until: string | null;
@@ -2514,7 +2513,7 @@ const AdminRequestDetail = () => {
             return Math.ceil((new Date(sorted[sorted.length - 1]).getTime() - new Date(sorted[0]).getTime()) / (1000 * 60 * 60 * 24)) + 1;
           })()}
           numberOfPeople={request.number_of_people}
-          programType={request.origin ?? request.program_type ?? "self_service"}
+          programType={request.origin ?? "self_service"}
           onSuccess={fetchRequestData}
         />
       )}
