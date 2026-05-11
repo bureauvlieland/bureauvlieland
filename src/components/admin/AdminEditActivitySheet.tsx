@@ -175,6 +175,10 @@ export const AdminEditActivitySheet = ({
     setIsSubmitting(true);
     try {
       const time = preferredTime === "flexibel" ? null : preferredTime;
+      // Fase 4b — admin-tijd is altijd één bron van waarheid: zowel preferred_time
+      // als confirmed_time mee-updaten zodat alle weergaven (lijst, popup, klant,
+      // partner) hetzelfde tonen. Geen "was: X" meer als gevolg van out-of-sync.
+      const timeChanged = (item?.preferred_time || null) !== time;
 
       // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
@@ -185,6 +189,16 @@ export const AdminEditActivitySheet = ({
         admin_price_notes: customDescription || null,
         day_index: selectedDayIndex,
         preferred_time: time,
+        ...(timeChanged
+          ? {
+              confirmed_time: time,
+              proposed_time: null,
+              status_note: time
+                ? `Tijd ${time} ingesteld door admin`
+                : "Tijd verwijderd door admin",
+              status_updated_at: new Date().toISOString(),
+            }
+          : {}),
         admin_price_override: price,
         price_type: priceType,
         customer_notes: notes || null,
