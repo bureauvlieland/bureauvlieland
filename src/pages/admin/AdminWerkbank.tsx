@@ -111,12 +111,20 @@ export default function AdminWerkbank() {
   const [view, setView] = useState<QuickView>("alles");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(params.get("id"));
+  const [archive, setArchive] = useState<boolean>(params.get("archief") === "1");
 
   const { data: projects, isLoading } = useQuery({
-    queryKey: ["werkbank-projects"],
-    queryFn: () => listProjectsForWerkbank(),
+    queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
+    queryFn: () => listProjectsForWerkbank({ archiveOnly: archive }),
     refetchInterval: 60_000,
   });
+
+  const toggleArchive = (next: boolean) => {
+    setArchive(next);
+    const p = new URLSearchParams(params);
+    if (next) p.set("archief", "1"); else p.delete("archief");
+    setParams(p, { replace: true });
+  };
 
   const filtered = useMemo(() => {
     let list = projects ?? [];
