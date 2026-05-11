@@ -1842,16 +1842,16 @@ const AdminRequestDetail = () => {
                                               const sendPhase = getItemSendPhase(item, request);
                                               if (sendPhase === "klaar_voor_partner" || sendPhase === "wacht_op_klant") {
                                                 return (
-                                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
-                                                    <Send className="h-3 w-3" />
+                                                  <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+                                                    <Send className="h-2.5 w-2.5" />
                                                     Nog naar partner
                                                   </span>
                                                 );
                                               }
                                               if (sendPhase === "verstuurd") {
                                                 return (
-                                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-                                                    <Send className="h-3 w-3" />
+                                                  <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-0.5 text-[11px] font-medium leading-tight text-muted-foreground">
+                                                    <Send className="h-2.5 w-2.5" />
                                                     Verstuurd
                                                   </span>
                                                 );
