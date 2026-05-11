@@ -53,10 +53,8 @@ export interface ProjectForItemPhase {
   quote_status?: string | null;
 }
 
-/** @deprecated Bureau items now follow the same workflow as partner items */
-export function isBureauItem(item: Pick<ItemForSendPhase, "provider_id">): boolean {
-  return item.provider_id === "bureau";
-}
+// `isBureauItem` is verwijderd (Fase 4a, audit-beslissing).
+// Gebruik op renderniveau direct `item.provider_id === "bureau"`.
 
 /** Get the send phase for a single item in the context of a project */
 export function getItemSendPhase(
