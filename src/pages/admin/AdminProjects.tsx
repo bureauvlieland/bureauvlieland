@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { PipelineFunnel } from "@/components/admin/PipelineFunnel";
 import { supabase } from "@/integrations/supabase/client";
+import { isQuoteOriginProject } from "@/lib/projectOrigin";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -21,6 +21,7 @@ import { DayTabs } from "@/components/configurator/DayTabs";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
 import { hasQuoteItemsAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
+import { isMaatwerkProject } from "@/lib/projectOrigin";
 import {
   Calendar,
   Settings,
