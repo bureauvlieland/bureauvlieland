@@ -51,7 +51,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     icon: "Clock",
   },
   wacht_op_klant: {
-    adminLabel: "Wacht op klant",
+    adminLabel: "Wacht op klant-akkoord",
     customerLabel: "Akkoord nodig",
     color: "text-blue-700 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-950/50",
