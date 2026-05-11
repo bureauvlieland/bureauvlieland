@@ -3,56 +3,93 @@
 Inventarisatie van plekken waar `program_type` en bureau-als-partner workflow
 nog onderscheid maken. Bron voor Fase 4 (bureau-rolfusie) en Fase 5 (één projectmodel).
 
-## `program_type` als workflow-driver
+Beslissing per call-site: **behoud** / **verwijder** / **vervang door X**.
 
-Komt voor in:
+---
 
-- `src/types/programRequest.ts` — type-definitie (`self_service` / `quote` / `maatwerk_zakelijk` / `maatwerk_prive`)
-- `src/hooks/useCustomerProgram.ts` — branching op type voor klantenportaal
-- `src/hooks/useProgramStatus.ts` — status-resolutie verschilt per type
-- `src/pages/admin/AdminRequestDetail.tsx` — UI-takken per type
-- `src/pages/admin/AdminProjects.tsx` — filter & label per type
-- `src/pages/admin/AdminProgramNew.tsx` — keuze-UI bij creatie
-- `src/components/admin/WorkOverview.tsx` — kolom & sortering per type
-- `src/components/admin/CopyFromProgramDialog.tsx` — kopieert type mee
-- `src/components/configurator/RequestFormModal.tsx` — zet type bij submit
-- `src/components/configurator/MaatwerkIntakeForm.tsx` — type = `maatwerk_*`
-- `src/components/configurator/CheckoutContactForm.tsx` — type = `self_service`
-- `src/lib/quoteItemSendStatus.ts` — branching
-- `src/components/customer-portal/*` — verschillende splash + flow per type
-- `src/pages/ProgrammaOpMaat.tsx` — submit met type=`maatwerk_*`
+## 1. `program_type` als workflow-driver
 
-**Plan Fase 5**: vervang de waarde door één gedeeld concept "Project". Behoud kolom als `origin` (analytics-only metadata: `customer_form` / `admin_created` / `configurator` / `lodging_only`). Workflow-branches verwijderen.
+Streefbeeld Fase 5: één gedeeld "Project"-concept. Kolom blijft als
+`origin` (`customer_form` / `admin_created` / `configurator` / `lodging_only`)
+puur voor analytics; geen workflow-branches meer.
 
-## Bureau-als-partner
+| Call-site | Beslissing | Toelichting |
+|---|---|---|
+| `src/types/programRequest.ts` (`ProgramType`) | **vervang door `Origin`** | Hernoem type naar `ProjectOrigin`, behoud waarden als label-set. |
+| `src/hooks/useCustomerProgram.ts` | **verwijder branching** | Klantportaal toont één flow; alleen `origin` als badge in admin. |
+| `src/hooks/useProgramStatus.ts` | **verwijder branching** | Status-resolutie gaat al via `getProjectPipelineStage` — type is overbodig. |
+| `src/pages/admin/AdminRequestDetail.tsx` | **vervang door tab-conditie** | UI-takken voor `maatwerk` worden één tab in detailpaneel. |
+| `src/pages/admin/AdminProjects.tsx` | **verwijder** | Pagina vervangen door Werkbank; geen aparte type-filter meer nodig. |
+| `src/pages/admin/AdminProgramNew.tsx` | **behoud (tijdelijk)** | Admin kiest origin bij creatie; later UI vereenvoudigen. |
+| `src/components/admin/WorkOverview.tsx` | **verwijder** | Werkbank vervangt dit overzicht. |
+| `src/components/admin/CopyFromProgramDialog.tsx` | **vervang door `origin = 'admin_created'`** | Gekopieerde projecten krijgen vaste origin. |
+| `src/components/configurator/RequestFormModal.tsx` | **vervang door `origin = 'customer_form'`** | Geen workflow-impact, alleen label. |
+| `src/components/configurator/MaatwerkIntakeForm.tsx` | **vervang door `origin = 'configurator'` + `is_maatwerk` flag** | Maatwerk wordt een attribuut, geen aparte flow. |
+| `src/components/configurator/CheckoutContactForm.tsx` | **vervang door `origin = 'configurator'`** | |
+| `src/lib/quoteItemSendStatus.ts` | **verwijder branching** | Send-status onafhankelijk van type. |
+| `src/components/customer-portal/*` | **verwijder type-splash** | Eén klantflow, micro-copy via `origin` mag. |
+| `src/pages/ProgrammaOpMaat.tsx` | **vervang door `origin = 'configurator'` + `is_maatwerk = true`** | |
 
-- `src/lib/projectWorkflow.ts` — `isBureauItem()` (al `@deprecated`)
-- `src/types/buildingBlock.ts` — `block_type = "bureau"` enum
-- `src/pages/admin/AdminRequestDetail.tsx` — UI-knoppen per provider_id="bureau"
-- `src/pages/admin/AdminBuildingBlocks.tsx` — filter & badge per block_type
-- `src/hooks/useCustomerProgram.ts` — verstopt bureau-items in klantview
-- `src/components/configurator/CheckoutContactForm.tsx` — bureau-toevoegingen
-- `src/components/admin/AdminAddCostSheet.tsx` — kosten via provider="bureau"
-- `src/components/admin/AdminEditActivitySheet.tsx` — speciale flow
-- `src/components/admin/AdminAiProgramDialog.tsx` — bureau in selectielijst
-- `src/components/admin/ApplyTemplateDialog.tsx`
-- `src/components/accommodation/AccommodationWizard.tsx`
-- `src/components/admin/RequestCompletionStatus.tsx`
-- `src/components/admin/BuildingBlockSheet.tsx`
-- `src/components/admin/AdminAddActivitySheet.tsx`
-- DB-trigger `guard_item_status_consistency` heeft expliciete bureau-bypass.
+**Migratiestappen Fase 5:**
+1. Toevoegen kolom `origin TEXT` (nullable) en backfill: `program_type` 1-op-1 mappen.
+2. Refactor naar `origin` zonder branching; `program_type` blijft tijdelijk staan.
+3. Na deploy verifiëren met regressie-checklist; pas dan `program_type` droppen.
 
-**Plan Fase 4**:
-- Verwijder `isBureauItem()` helper.
-- `block_type = "bureau"` blijft als leverancier-tag (informatief), niet workflow-bepalend.
-- Bureau-acties als interne checklist in detailpaneel met statussen
-  `te_plannen → geregeld → uitgevoerd → gefactureerd`.
-- Partner-record `bureau` filteren uit partner-lijsten (`id !== 'bureau'`).
+---
 
-## Logies vs programma onderscheid in UI
+## 2. Bureau-als-partner
 
-- `src/pages/admin/AdminAccommodation.tsx` (apart overzicht — vervangt door Werkbank-filter)
-- `src/pages/admin/AdminAccommodationDetail.tsx` (wordt embedded in detailpaneel-tab)
-- Sidebar-item `Logies` → vervangen door filter in Werkbank.
+Streefbeeld Fase 4: bureau-acties als interne checklist met statussen
+`te_plannen → geregeld → uitgevoerd → gefactureerd`. `block_type='bureau'`
+blijft als leverancier-tag (informatief), niet workflow-bepalend.
 
-**Plan Fase 3**: redirects van oude routes naar `/admin/werkbank?...`.
+| Call-site | Beslissing | Toelichting |
+|---|---|---|
+| `src/lib/projectWorkflow.ts` (`isBureauItem`) | **verwijder** | Helper is al `@deprecated`. Vervang door directe `block_type === 'bureau'` check op renderniveau. |
+| `src/types/buildingBlock.ts` (`block_type`-enum) | **behoud** | `bureau` blijft als waarde, krijgt geen workflow-rol meer. |
+| `src/pages/admin/AdminRequestDetail.tsx` | **vervang door checklist-component** | Bureau-knoppen worden interne checklist-rij. |
+| `src/pages/admin/AdminBuildingBlocks.tsx` | **behoud filter** | Filter "type=bureau" blijft handig voor admin. |
+| `src/hooks/useCustomerProgram.ts` | **behoud verstop-logica** | Bureau-items blijven onzichtbaar voor klant. |
+| `src/components/configurator/CheckoutContactForm.tsx` | **vervang door post-submit hook** | Bureau-items worden via edge function toegevoegd, niet inline. |
+| `src/components/admin/AdminAddCostSheet.tsx` | **behoud + relabel** | "Bureau-kosten" wordt "Interne post"; provider blijft `bureau`. |
+| `src/components/admin/AdminEditActivitySheet.tsx` | **vereenvoudig** | Speciale flow weg; gebruikt zelfde sheet als andere items. |
+| `src/components/admin/AdminAiProgramDialog.tsx` | **behoud** | AI mag bureau-blokken voorstellen. |
+| `src/components/admin/ApplyTemplateDialog.tsx` | **behoud** | Templates kennen bureau-items (ferry/bikes). |
+| `src/components/accommodation/AccommodationWizard.tsx` | **behoud** | Logies-wizard verandert niet in Fase 4. |
+| `src/components/admin/RequestCompletionStatus.tsx` | **vervang door checklist-status** | Bureau-completion via interne checklist. |
+| `src/components/admin/BuildingBlockSheet.tsx` | **behoud** | Editor blijft type-agnostisch. |
+| `src/components/admin/AdminAddActivitySheet.tsx` | **behoud** | Toevoeg-flow blijft hetzelfde. |
+| DB-trigger `guard_item_status_consistency` (bureau-bypass) | **behoud** | Bypass blijft logisch (geen partner-traject). |
+| Partner-record `id='bureau'` in lijsten | **filter eruit** | Toevoegen `id !== 'bureau'` in alle partner-selectors. |
+
+**Memory-impact Fase 4:**
+- Raakt `mem://business/bureau-internal-item-workflow` (filtering `day_index = -1` blijft).
+- Raakt `mem://business/managed-services-transition` (ferry/bikes als bureau-items blijven).
+- Raakt `mem://business/invoicing-centralization-rules` (bureau_central blijft leidend).
+
+---
+
+## 3. Logies vs programma onderscheid in UI
+
+| Call-site | Beslissing | Toelichting |
+|---|---|---|
+| `src/pages/admin/AdminAccommodation.tsx` | **redirect → Werkbank** | `?kind=logies_only`; pagina blijft als `-legacy` route bestaan. |
+| `src/pages/admin/AdminAccommodationDetail.tsx` | **embed in detailpaneel-tab** | Bestaande detailpagina via `?id=...` blijft werken voor diepe links. |
+| Sidebar-item `Logies` | **al verwijderd** | Vervangen door `?kind=logies_only` in Werkbank. |
+
+---
+
+## Regressie-checklist (verplicht vóór Fase 4 én vóór Fase 5)
+
+Vink bij elke fase af; plak resultaat in chat.
+
+1. **Configurator → checkout**: één activiteit + ferry → checkout → bevestigingsmail.
+2. **Klant-portal**: open token-link van bestaand programma → zie items, geen bureau-items zichtbaar.
+3. **Partner-portal**: log in als partner → zie eigen items, geen klant-PII.
+4. **Logies-aanvraag**: open token-link → zie offertes, kies er één → status update.
+5. **Bestaande factuur**: open `bureau_invoice` PDF → totalen kloppen, btw correct.
+6. **Werkbank**: actief project openen → alle 5 tabs leveren data of nette lege staat.
+7. **Archief**: `?archief=1` → geannuleerd/verwijderd zichtbaar, badge "Gearchiveerd" op detail.
+8. **Memory-check**: lopen wijzigingen synchroon met `mem://index.md` Core-regels?
+
+Vangt ervaring leert ~80% van regressies in 5–10 min.
