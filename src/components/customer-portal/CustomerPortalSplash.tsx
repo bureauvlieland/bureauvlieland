@@ -39,6 +39,7 @@ interface CustomerPortalSplashProps {
     number_of_people: number;
     terms_accepted_at?: string;
     program_type?: string;
+    origin?: string | null;
     quote_status?: string | null;
     invoicing_mode?: string | null;
   };
@@ -116,7 +117,7 @@ export const CustomerPortalSplash = ({
   onNavigate,
 }: CustomerPortalSplashProps) => {
   const termsAccepted = !!program.terms_accepted_at;
-  const isMaatwerk = !!program.program_type?.startsWith("maatwerk_");
+  const isMaatwerk = isMaatwerkProject(program);
   const isQuoteAwaitingApproval = program.quote_status === "offerte_verstuurd" && !termsAccepted;
   const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
   const accStatus = getAccommodationStatus(accommodation, accommodationQuotes);
