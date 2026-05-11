@@ -3,7 +3,7 @@ import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, BedDouble, Briefcase, Sparkles, Clock, AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
+import { Calendar, Users, BedDouble, Sparkles, Clock, AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import type { ProgramType, QuoteStatus } from "@/types/programRequest";
 import { isMaatwerkProject } from "@/lib/projectOrigin";
