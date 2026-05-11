@@ -2178,6 +2178,7 @@ export type Database = {
           invoicing_mode: string
           linked_accommodation_id: string | null
           number_of_people: number
+          origin: string | null
           program_description: string | null
           program_published_at: string | null
           program_type: string
@@ -2227,6 +2228,7 @@ export type Database = {
           invoicing_mode?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          origin?: string | null
           program_description?: string | null
           program_published_at?: string | null
           program_type?: string
@@ -2276,6 +2278,7 @@ export type Database = {
           invoicing_mode?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
+          origin?: string | null
           program_description?: string | null
           program_published_at?: string | null
           program_type?: string
