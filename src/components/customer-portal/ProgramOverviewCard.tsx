@@ -41,6 +41,7 @@ export const ProgramOverviewCard = ({
   referenceNumber,
   accommodationReferenceNumber,
   programType = "self_service",
+  origin,
   quoteStatus,
   quoteValidUntil,
   termsAcceptedAt,
@@ -49,29 +50,25 @@ export const ProgramOverviewCard = ({
   hasPendingItems,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
-  const isMaatwerk = programType === "maatwerk_zakelijk" || programType === "maatwerk_prive";
-  const isQuoteMode = true; // All projects use unified quote pipeline
-  
+  // Fase 5: alle projecten doorlopen dezelfde quote-pipeline. Het type-onderscheid
+  // bestaat alleen nog voor micro-copy (maatwerk-varianten gebruiken iets andere woorden).
+  const isMaatwerk = isMaatwerkProject({ origin, program_type: programType });
+
   // Calculate quote validity
   const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;
   const isExpired = validUntilDate ? isPast(validUntilDate) : false;
   const daysUntilExpiry = validUntilDate ? differenceInDays(validUntilDate, new Date()) : null;
-  
-  // Determine program type label
+
+  // Determine program type label (status-driven, niet type-driven)
   const getProgramTypeLabel = () => {
+    if (termsAcceptedAt) return "Boeking bevestigd";
+    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
     if (isMaatwerk) return "Maatwerk";
-    if (isQuoteMode) {
-      if (termsAcceptedAt) return "Boeking bevestigd";
-      if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
-      return "Maatwerkvoorstel";
-    }
-    return isMultiDay ? "Meerdaags verblijf" : "Eendaags programma";
+    return "Voorstel";
   };
 
   // Determine quote status for display
   const getQuoteDisplayStatus = () => {
-    if (!isQuoteMode) return null;
-    
     if (termsAcceptedAt) {
       return { label: "Definitief", variant: "success" as const, icon: CheckCircle2 };
     }
@@ -86,7 +83,6 @@ export const ProgramOverviewCard = ({
     }
     return { label: "In voorbereiding", variant: "muted" as const, icon: Clock };
   };
-
   const quoteDisplayStatus = getQuoteDisplayStatus();
 
   // Determine accommodation status
