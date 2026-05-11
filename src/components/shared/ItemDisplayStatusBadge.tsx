@@ -4,6 +4,12 @@ import {
   itemDisplayStatusConfig,
 } from "@/lib/itemStatus";
 import { MICRO_PILL_BASE_CLASSES, type MicroPillTone } from "./MicroPill";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ItemDisplayStatusBadgeProps {
   status: ItemDisplayStatus;
@@ -11,11 +17,6 @@ interface ItemDisplayStatusBadgeProps {
   className?: string;
 }
 
-/**
- * Eén plek voor het uiterlijk van alle item-statusbadges in admin/klant.
- * Gebruikt dezelfde MicroPill base-classes als andere statuslabels zodat
- * niets nergens net anders oogt.
- */
 const TONE_BY_STATUS: Record<ItemDisplayStatus, MicroPillTone> = {
   wacht_op_partner: "blue",
   wacht_op_klant: "amber",
@@ -42,6 +43,13 @@ const TONE_CLASSES: Record<MicroPillTone, string> = {
     "bg-purple-50 text-purple-700 border-purple-200/70 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/60",
 };
 
+const ACTOR_LABEL: Record<string, string> = {
+  partner: "Aanbieder",
+  klant: "Klant",
+  bureau: "Bureau Vlieland",
+  geen: "—",
+};
+
 export const ItemDisplayStatusBadge = ({
   status,
   audience = "admin",
@@ -49,10 +57,35 @@ export const ItemDisplayStatusBadge = ({
 }: ItemDisplayStatusBadgeProps) => {
   const cfg = itemDisplayStatusConfig[status];
   const label = audience === "customer" ? cfg.customerLabel : cfg.adminLabel;
+  const tooltip = audience === "customer" ? cfg.customerTooltip : cfg.adminTooltip;
   const tone = TONE_BY_STATUS[status] ?? "slate";
+
   return (
-    <span className={cn(MICRO_PILL_BASE_CLASSES, TONE_CLASSES[tone], className)}>
-      {label}
-    </span>
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={cn(
+              MICRO_PILL_BASE_CLASSES,
+              TONE_CLASSES[tone],
+              "cursor-help",
+              className,
+            )}
+          >
+            {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[260px] text-xs leading-snug">
+          <p className="font-medium">{label}</p>
+          <p className="mt-0.5 text-muted-foreground">{tooltip}</p>
+          {cfg.actor !== "geen" && (
+            <p className="mt-1 text-[11px]">
+              <span className="text-muted-foreground">Aan zet: </span>
+              <span className="font-medium">{ACTOR_LABEL[cfg.actor]}</span>
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
