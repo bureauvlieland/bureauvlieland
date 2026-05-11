@@ -54,8 +54,9 @@ export interface ProjectSummary {
  */
 export async function listProjectsForWerkbank(opts: {
   includeFinished?: boolean;
+  archiveOnly?: boolean;
 } = {}): Promise<ProjectSummary[]> {
-  const { includeFinished = false } = opts;
+  const { includeFinished = false, archiveOnly = false } = opts;
 
   let query = supabase
     .from("program_requests")
@@ -67,8 +68,14 @@ export async function listProjectsForWerkbank(opts: {
     `)
     .order("updated_at", { ascending: false })
     .limit(500);
-  if (!includeFinished) {
-    query = query.neq("status", "cancelled").is("cancelled_at", null);
+  if (archiveOnly) {
+    // Archief = expliciet geannuleerd of verwijderd
+    query = query.or("status.in.(cancelled,deleted),cancelled_at.not.is.null");
+  } else if (!includeFinished) {
+    // Standaard werklijst: verberg geannuleerd én verwijderd
+    query = query
+      .not("status", "in", "(cancelled,deleted)")
+      .is("cancelled_at", null);
   }
   const { data: programs, error: progErr } = await query;
   if (progErr) throw progErr;
