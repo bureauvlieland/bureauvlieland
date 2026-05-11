@@ -106,7 +106,6 @@ export const MaatwerkIntakeForm = ({
           number_of_people: numberOfPeople,
           selected_dates: isoDates,
           general_notes: formData.wishes || null,
-          program_type: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: programDescription,
           invoicing_mode: "bureau_central",

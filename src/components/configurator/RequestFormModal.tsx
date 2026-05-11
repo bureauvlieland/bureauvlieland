@@ -134,7 +134,7 @@ export const RequestFormModal = ({
       const isoDates = effectiveDates.map(d => d.toISOString().split('T')[0]);
       
       // Create program request in database
-      // Event type is stored as description metadata, program_type is always 'self_service' for configurator
+      // Event type is stored as description metadata; origin is always 'self_service' for configurator
       const finalEventType = formData.eventType || inferredEventType || 'niet_gespecificeerd';
       
       const { data: requestData, error: insertError } = await supabase
@@ -148,7 +148,6 @@ export const RequestFormModal = ({
           number_of_people: numberOfPeople,
           selected_dates: isoDates,
           general_notes: formData.notes || null,
-          program_type: 'self_service',
           origin: 'self_service',
           program_description: finalEventType,
           quote_status: 'concept',
