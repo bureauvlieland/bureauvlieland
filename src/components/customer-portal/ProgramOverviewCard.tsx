@@ -197,7 +197,7 @@ export const ProgramOverviewCard = ({
           </div>
 
           {/* Quote validity warning */}
-          {isQuoteMode && quoteStatus === "offerte_verstuurd" && validUntilDate && !termsAcceptedAt && (
+          {quoteStatus === "offerte_verstuurd" && validUntilDate && !termsAcceptedAt && (
             <div className={`flex items-center gap-2 p-3 rounded-lg ${isExpired ? "bg-red-50 dark:bg-red-900/20" : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-blue-50 dark:bg-blue-900/20"}`}>
               {isExpired ? (
                 <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
