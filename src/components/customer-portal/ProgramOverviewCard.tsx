@@ -275,7 +275,7 @@ export const ProgramOverviewCard = ({
           {/* Company name if available */}
           {customerCompany && (
             <p className="text-sm text-muted-foreground pt-2 border-t">
-              {isQuoteMode ? "Voorstel voor" : "Programma voor"} <span className="font-medium text-foreground">{customerCompany}</span>
+              Voorstel voor <span className="font-medium text-foreground">{customerCompany}</span>
             </p>
           )}
         </div>
