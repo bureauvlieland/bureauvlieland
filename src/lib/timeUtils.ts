@@ -10,6 +10,20 @@ export interface TimeSlot {
 }
 
 /**
+ * Eén bron van waarheid voor de "actieve" tijd van een programma-onderdeel.
+ * Volgorde: confirmed_time → proposed_time → preferred_time.
+ * Gebruik dit overal in admin/customer/partner-weergaven (Fase 4b).
+ */
+export interface ItemWithTimes {
+  confirmed_time?: string | null;
+  proposed_time?: string | null;
+  preferred_time?: string | null;
+}
+export const getEffectiveTime = (item: ItemWithTimes): string | null => {
+  return item.confirmed_time || item.proposed_time || item.preferred_time || null;
+};
+
+/**
  * Parse duration string to minutes
  * Examples: "2 uur" → 120, "1,5 uur" → 90, "30 min" → 30, "1 uur 30 min" → 90
  */
