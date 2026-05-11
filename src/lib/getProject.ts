@@ -203,6 +203,8 @@ export async function listProjectsForWerkbank(opts: {
     };
   });
 
+  if (archiveOnly) return summaries;
   if (includeFinished) return summaries;
-  return summaries.filter((s) => s.pipeline !== "afgerond" && s.pipeline !== "geannuleerd");
+  // Werklijst: alleen 'geannuleerd' wegfilteren; 'afgerond' blijft zichtbaar tot facturatie klaar is.
+  return summaries.filter((s) => s.pipeline !== "geannuleerd");
 }
