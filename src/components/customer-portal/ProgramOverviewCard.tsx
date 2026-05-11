@@ -19,6 +19,8 @@ interface ProgramOverviewCardProps {
   accommodationReferenceNumber?: string | null;
   // Quote mode props
   programType?: ProgramType;
+  /** Fase 5: opvolger van programType. Als beide gezet zijn wint origin. */
+  origin?: string | null;
   quoteStatus?: QuoteStatus | null;
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string | null;
