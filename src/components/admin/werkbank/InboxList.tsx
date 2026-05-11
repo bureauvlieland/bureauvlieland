@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { loadInbox, type InboxItem, type InboxReason } from "@/lib/getInbox";
+import type { ProjectKind } from "@/lib/getProject";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { COMMUNICATION_STATE_META } from "@/lib/projectCommunication";
