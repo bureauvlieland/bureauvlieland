@@ -76,7 +76,12 @@ export async function loadInbox(): Promise<InboxItem[]> {
 
   // Todos
   for (const t of todos ?? []) {
-    const projectId = (t as any).related_request_id ?? `_orphan_${(t as any).id}`;
+    const relatedId = (t as any).related_request_id as string | null;
+    // Verberg todo's die hangen aan een project dat niet meer in de actieve werklijst staat
+    // (geannuleerd of verwijderd). Echte losse taken (geen related_request_id) blijven zichtbaar.
+    if (relatedId && !projectById.has(relatedId)) continue;
+
+    const projectId = relatedId ?? `_orphan_${(t as any).id}`;
     const item = ensure(projectId);
     item.todos.push({
       id: (t as any).id,

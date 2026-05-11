@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Sparkles } from "lucide-react";
+import { Search, Hotel, Sparkles, Archive } from "lucide-react";
 import {
   listProjectsForWerkbank,
   type ProjectSummary,
@@ -111,12 +111,20 @@ export default function AdminWerkbank() {
   const [view, setView] = useState<QuickView>("alles");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(params.get("id"));
+  const [archive, setArchive] = useState<boolean>(params.get("archief") === "1");
 
   const { data: projects, isLoading } = useQuery({
-    queryKey: ["werkbank-projects"],
-    queryFn: () => listProjectsForWerkbank(),
+    queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
+    queryFn: () => listProjectsForWerkbank({ archiveOnly: archive }),
     refetchInterval: 60_000,
   });
+
+  const toggleArchive = (next: boolean) => {
+    setArchive(next);
+    const p = new URLSearchParams(params);
+    if (next) p.set("archief", "1"); else p.delete("archief");
+    setParams(p, { replace: true });
+  };
 
   const filtered = useMemo(() => {
     let list = projects ?? [];
@@ -196,8 +204,8 @@ export default function AdminWerkbank() {
                     className="pl-8"
                   />
                 </div>
-                <div className="flex flex-wrap gap-1.5 text-xs">
-                  {QUICK_VIEWS.map((v) => {
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  {!archive && QUICK_VIEWS.map((v) => {
                     const count =
                       v.id === "wacht_op_mij" ? counts.bij_bureau :
                       v.id === "wacht_op_klant" ? counts.wacht_op_klant :
@@ -225,6 +233,19 @@ export default function AdminWerkbank() {
                       </button>
                     );
                   })}
+                  <button
+                    onClick={() => toggleArchive(!archive)}
+                    className={cn(
+                      "ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors",
+                      archive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "hover:bg-muted",
+                    )}
+                    title={archive ? "Terug naar werklijst" : "Toon gearchiveerde projecten"}
+                  >
+                    <Archive className="h-3 w-3" />
+                    {archive ? "Archief aan" : "Archief"}
+                  </button>
                 </div>
               </div>
             )}
@@ -240,7 +261,7 @@ export default function AdminWerkbank() {
                     ))
                   ) : filtered.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
-                      Geen projecten in deze weergave.
+                      {archive ? "Geen gearchiveerde projecten." : "Geen projecten in deze weergave."}
                     </div>
                   ) : (
                     filtered.map((p) => (

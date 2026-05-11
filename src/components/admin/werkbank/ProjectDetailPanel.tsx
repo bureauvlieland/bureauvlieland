@@ -180,6 +180,9 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
             {project.dates.length > 0 && ` · ${project.dates.join(" → ")}`}
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
+            {project.pipeline === "geannuleerd" && (
+              <Badge variant="destructive">Gearchiveerd</Badge>
+            )}
             <CommBadge state={project.comm} />
             <Badge variant="outline">{project.pipeline.replace(/_/g, " ")}</Badge>
             {project.kind !== "programma_only" && (
