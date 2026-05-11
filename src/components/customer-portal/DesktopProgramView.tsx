@@ -196,7 +196,7 @@ export const DesktopProgramView = ({
           accommodationQuotes={accommodationQuotes}
           referenceNumber={program.reference_number}
           accommodationReferenceNumber={accommodation?.reference_number}
-          programType={program.program_type as any}
+          programType={(program.origin ?? program.program_type) as any}
           origin={program.origin}
           quoteStatus={program.quote_status as any}
           quoteValidUntil={program.quote_valid_until}
@@ -218,13 +218,13 @@ export const DesktopProgramView = ({
               onOpenBilling={onOpenBilling}
               onScrollToTerms={scrollToTerms}
               onScrollToAccommodation={scrollToAccommodation}
-              programType={program.program_type}
+              programType={program.origin ?? program.program_type}
               quoteStatus={program.quote_status}
               programPublishedAt={program.program_published_at}
             />
 
             <ProgramIntroCard
-              programType={program.program_type}
+              programType={program.origin ?? program.program_type}
               quoteStatus={program.quote_status}
               quoteValidUntil={program.quote_valid_until}
               termsAcceptedAt={program.terms_accepted_at}
