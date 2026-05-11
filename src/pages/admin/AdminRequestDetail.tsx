@@ -2075,6 +2075,7 @@ const AdminRequestDetail = () => {
                                               })}
                                             />
                                           </div>
+                                        </TableCell>
                                         <TableCell>
                                           {item.quoted_price != null ? (
                                             <span className="font-medium">
