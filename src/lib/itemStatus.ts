@@ -127,7 +127,6 @@ export function deriveItemDisplayStatus(
   if (item.status === "unavailable") return "niet_beschikbaar";
 
   const hasAcceptance = !!item.customer_accepted_at;
-  const partnerResponded = item.status === "confirmed" || item.status === "alternative";
 
   // Open admin-prijswijziging die de klant nog niet heeft afgehandeld.
   const openPriceChange = hasOpenAdminPriceChange(
@@ -138,9 +137,6 @@ export function deriveItemDisplayStatus(
 
   if (hasAcceptance) {
     // Edge case: admin heeft ná het klant-akkoord een nieuwe override gezet.
-    // Conventie (zie plan stap 3): dit hoort weg te wezen omdat een nieuw klant-akkoord
-    // de quoted_price ook bijwerkt. Voor legacy-rijen tonen we 'prijs_gewijzigd' alleen
-    // als de override NA customer_accepted_at gezet is.
     if (
       openPriceChange &&
       item.admin_price_override_updated_at &&
@@ -152,15 +148,8 @@ export function deriveItemDisplayStatus(
     return "geaccepteerd";
   }
 
-  if (partnerResponded) {
-    if (openPriceChange) return "prijs_gewijzigd";
-    return "wacht_op_klant";
-  }
-
-  // Nog niet verstuurd naar de partner → bal ligt bij de klant (akkoord op offerte),
-  // niet bij de aanbieder. Pas zodra het item daadwerkelijk de deur uit is, schuift
-  // de status door naar "wacht_op_partner".
-  if (item.skip_partner_notification) return "wacht_op_klant";
-
-  return "wacht_op_partner";
+  // De Status-kolom toont uitsluitend de klant-as. De vraag of het onderdeel
+  // al naar de partner is gestuurd staat hier los van en wordt elders getoond
+  // (zie de "Nog naar partner" / "Verstuurd"-chip).
+  return "wacht_op_klant";
 }
