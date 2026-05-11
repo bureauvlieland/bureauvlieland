@@ -2066,52 +2066,15 @@ const AdminRequestDetail = () => {
                                     ) : (
                                       <>
                                         <TableCell>
-                                          <div className="flex items-center gap-1.5">
-                                            {statusIcons[item.status]}
-                                            <Badge className={`${statusInfo.bgColor} ${statusInfo.color}`}>
-                                              {(() => {
-                                                if (item.skip_partner_notification) {
-                                                  const phase = getItemSendPhase(item, request);
-                                                  if (phase === "wacht_op_klant") return "Wacht op klant";
-                                                  if (phase === "klaar_voor_partner") return "Klaar om te versturen";
-                                                }
-                                                return statusInfo.label;
-                                              })()}
-                                            </Badge>
-                                            {hasCustomerApproval && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Klant akkoord</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            {showWaitingForCustomer && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <Clock className="h-4 w-4 text-amber-500 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Wacht op klant</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            {priceChangeWaitingCustomer && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger>
-                                                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>Wacht op klantakkoord nieuwe prijs</TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
+                                          <div className="flex flex-col gap-1 items-start">
+                                            <ItemDisplayStatusBadge
+                                              audience="admin"
+                                              status={deriveItemDisplayStatus(item as any, {
+                                                programPeople: request.number_of_people,
+                                                numberOfDays: numDaysForItem,
+                                              })}
+                                            />
                                           </div>
-                                          {item.status_note && (
-                                            <p className="text-xs text-muted-foreground mt-1">{item.status_note}</p>
-                                          )}
                                         </TableCell>
                                         <TableCell>
                                           {item.quoted_price != null ? (

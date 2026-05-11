@@ -1,7 +1,6 @@
-import { CheckCircle, CheckCircle2, Clock, XCircle, MessageSquare, Ban, FileText, ArrowLeftRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { type ItemStatus } from "@/types/programRequest";
+import { MicroPill, type MicroPillTone } from "@/components/shared/MicroPill";
 import { cn } from "@/lib/utils";
-import { type ItemStatus, itemStatusConfig } from "@/types/programRequest";
 
 interface ItemStatusBadgeProps {
   status: ItemStatus;
@@ -10,15 +9,32 @@ interface ItemStatusBadgeProps {
   overrideLabel?: string;
 }
 
-const iconMap = {
-  Clock,
-  CheckCircle,
-  CheckCircle2,
-  XCircle,
-  MessageSquare,
-  Ban,
-  FileText,
-  ArrowLeftRight,
+/**
+ * Klant-portaal label voor partner-zijde item-status. Dezelfde MicroPill
+ * stijl als alle andere statuslabels in het product, geen iconen meer.
+ */
+const TONE_BY_STATUS: Record<ItemStatus, MicroPillTone> = {
+  pending: "blue",
+  confirmed: "emerald",
+  accepted: "emerald",
+  unavailable: "red",
+  alternative: "amber",
+  cancelled: "slate",
+  executed: "emerald",
+  invoiced: "emerald",
+  counter_proposed: "amber",
+};
+
+const LABEL_BY_STATUS: Record<ItemStatus, string> = {
+  pending: "Wacht op aanbieder",
+  confirmed: "Beschikbaar",
+  accepted: "Akkoord",
+  unavailable: "Niet beschikbaar",
+  alternative: "Alternatief voorstel",
+  cancelled: "Geannuleerd",
+  executed: "Uitgevoerd",
+  invoiced: "Uitgevoerd",
+  counter_proposed: "Tegenvoorstel",
 };
 
 export const ItemStatusBadge = ({
@@ -27,21 +43,11 @@ export const ItemStatusBadge = ({
   showLabel = true,
   overrideLabel,
 }: ItemStatusBadgeProps) => {
-  const config = itemStatusConfig[status];
-  const IconComponent = iconMap[config.icon as keyof typeof iconMap];
-
+  const tone = TONE_BY_STATUS[status] ?? "slate";
+  const label = overrideLabel ?? LABEL_BY_STATUS[status] ?? status;
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "gap-1.5 font-medium border-0",
-        config.bgColor,
-        config.color,
-        className
-      )}
-    >
-      <IconComponent className="h-3.5 w-3.5" />
-      {showLabel && <span>{overrideLabel || config.label}</span>}
-    </Badge>
+    <MicroPill tone={tone} className={cn(className)}>
+      {showLabel ? label : ""}
+    </MicroPill>
   );
 };

@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ItemStatusBadge } from "./ItemStatusBadge";
+import { MicroPill } from "@/components/shared/MicroPill";
 import { CounterProposalDialog } from "./CounterProposalDialog";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info, AlertTriangle } from "lucide-react";
@@ -132,16 +133,10 @@ export const CustomerProgramItem = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-medium">{item.block_name}</h4>
                 {isNewlyAdded && (
-                  <Badge variant="secondary" className="gap-1 bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400 border-0">
-                    <Sparkles className="h-3 w-3" />
-                    Nieuw
-                  </Badge>
+                  <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
                 {isSelfArranged ? (
-                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Zelf te regelen
-                  </Badge>
+                  <MicroPill tone="amber">Zelf te regelen</MicroPill>
                 ) : item.status === "pending" ? (
                   // Less is more: tijdens "wachten op aanbieders" tonen we geen
                   // statuschip per onderdeel. De globale voortgang in de sidebar
@@ -149,10 +144,7 @@ export const CustomerProgramItem = ({
                   // partner reageert verschijnt er weer een badge.
                   null
                 ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
-                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
-                    <Check className="h-3.5 w-3.5" />
-                    Bevestigd
-                  </Badge>
+                  <MicroPill tone="emerald">Bevestigd</MicroPill>
                 ) : (
                   <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={
                     needsCustomerAction && item.status === "confirmed" ? "Beschikbaar" :
@@ -161,10 +153,7 @@ export const CustomerProgramItem = ({
                   } />
                 )}
                 {priceChangeNeedsAttention && (
-                  <Badge variant="outline" className="gap-1.5 font-medium border-0 bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    Prijs gewijzigd
-                  </Badge>
+                  <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
