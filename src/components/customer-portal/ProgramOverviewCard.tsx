@@ -152,7 +152,7 @@ export const ProgramOverviewCard = ({
                     #{accommodationReferenceNumber}
                   </Badge>
                 )}
-                {isQuoteMode && (
+                {isMaatwerk && (
                   <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
                     <Sparkles className="h-3 w-3" />
                     Maatwerk
@@ -162,9 +162,7 @@ export const ProgramOverviewCard = ({
               <p className="text-sm text-muted-foreground mt-1">
                 {isMaatwerk
                   ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
-                  : isQuoteMode 
-                  ? "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
-                  : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
+                  : "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
                 }
               </p>
               
