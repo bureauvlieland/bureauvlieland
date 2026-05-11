@@ -1942,28 +1942,83 @@ const AdminRequestDetail = () => {
                                         <TableCell>
                                           <div className="flex items-center gap-1">
                                             {(() => {
-                                              const phase = getItemSendPhase(item, request);
-                                              if (phase !== "klaar_voor_partner" && phase !== "wacht_op_klant") return null;
+                                              if (item.status === "cancelled") return null;
                                               if (item.provider_id === "bureau") return null;
-                                              const isWaiting = phase === "wacht_op_klant";
+                                              const phase = getItemSendPhase(item, request);
+                                              const displayStatus = deriveItemDisplayStatus(item as any, {
+                                                programPeople: request.number_of_people,
+                                                numberOfDays: numDaysForItem,
+                                              });
+
+                                              type ActionDef = {
+                                                label: string;
+                                                title: string;
+                                                onClick: () => void;
+                                                className: string;
+                                              };
+                                              let action: ActionDef | null = null;
+
+                                              if (displayStatus === "niet_beschikbaar") {
+                                                action = {
+                                                  label: "Vraag opnieuw",
+                                                  title: "Stuur deze aanvraag opnieuw naar de partner",
+                                                  onClick: () => handleSendSingleItemToPartner(item),
+                                                  className: "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
+                                                };
+                                              } else if (phase === "klaar_voor_partner") {
+                                                action = {
+                                                  label: "Verstuur",
+                                                  title: "Stuur dit onderdeel naar de partner",
+                                                  onClick: () => handleSendSingleItemToPartner(item),
+                                                  className: "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
+                                                };
+                                              } else if (phase === "wacht_op_klant") {
+                                                action = {
+                                                  label: "Verstuur (forceer)",
+                                                  title: "Stuur naar partner (klant nog niet formeel akkoord)",
+                                                  onClick: () => handleSendSingleItemToPartner(item),
+                                                  className: "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
+                                                };
+                                              } else if (
+                                                phase === "verstuurd" &&
+                                                (displayStatus === "wacht_op_klant" || displayStatus === "wacht_op_partner")
+                                              ) {
+                                                action = {
+                                                  label: "Herinner",
+                                                  title: "Stuur dit onderdeel opnieuw naar de partner",
+                                                  onClick: () => handleSendSingleItemToPartner(item),
+                                                  className: "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100",
+                                                };
+                                              } else if (
+                                                displayStatus === "geaccepteerd" ||
+                                                displayStatus === "uitgevoerd" ||
+                                                displayStatus === "prijs_gewijzigd"
+                                              ) {
+                                                action = {
+                                                  label: "Bekijk",
+                                                  title: "Open onderdeel-details",
+                                                  onClick: () => setEditingItem(item),
+                                                  className: "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                                                };
+                                              }
+
+                                              if (!action) return null;
                                               return (
                                                 <TooltipProvider>
                                                   <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleSendSingleItemToPartner(item)}
-                                                        className={`h-8 w-8 ${isWaiting ? "text-amber-600 hover:text-amber-700" : "text-primary hover:text-primary"}`}
+                                                      <button
+                                                        type="button"
+                                                        onClick={action.onClick}
+                                                        className={cn(
+                                                          "inline-flex h-7 items-center whitespace-nowrap rounded-md border px-2 text-[11px] font-medium leading-none transition-colors",
+                                                          action.className,
+                                                        )}
                                                       >
-                                                        <Send className="h-4 w-4" />
-                                                      </Button>
+                                                        {action.label}
+                                                      </button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
-                                                      {isWaiting
-                                                        ? "Stuur naar partner (klant nog niet formeel akkoord)"
-                                                        : "Stuur dit onderdeel naar de partner"}
-                                                    </TooltipContent>
+                                                    <TooltipContent>{action.title}</TooltipContent>
                                                   </Tooltip>
                                                 </TooltipProvider>
                                               );
