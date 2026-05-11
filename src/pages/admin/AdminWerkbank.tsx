@@ -261,7 +261,7 @@ export default function AdminWerkbank() {
                     ))
                   ) : filtered.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
-                      Geen projecten in deze weergave.
+                      {archive ? "Geen gearchiveerde projecten." : "Geen projecten in deze weergave."}
                     </div>
                   ) : (
                     filtered.map((p) => (
