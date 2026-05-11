@@ -112,7 +112,8 @@ import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOp
 import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { isBureauItem } from "@/lib/projectWorkflow";
+// Bureau-items herkennen we direct via provider_id (audit-beslissing Fase 4a):
+const isBureauItem = (i: { provider_id?: string | null }) => i.provider_id === "bureau";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
