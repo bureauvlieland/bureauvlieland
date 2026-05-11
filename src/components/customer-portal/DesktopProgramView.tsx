@@ -21,6 +21,7 @@ import { DayTabs } from "@/components/configurator/DayTabs";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
 import { hasQuoteItemsAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
+import { isMaatwerkProject } from "@/lib/projectOrigin";
 import {
   Calendar,
   Settings,
@@ -78,6 +79,7 @@ interface DesktopProgramViewProps {
     reference_number?: string | null;
     // Quote mode fields
     program_type?: string;
+    origin?: string | null;
     quote_status?: string | null;
     quote_valid_until?: string | null;
     // Program description
@@ -226,7 +228,7 @@ export const DesktopProgramView = ({
               quoteValidUntil={program.quote_valid_until}
               termsAcceptedAt={program.terms_accepted_at}
               itemCount={program.items.filter(i => i.status !== "cancelled").length}
-              isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
+              isMaatwerkEmpty={isMaatwerkProject(program) && program.items.length === 0}
               onAcceptQuoteProposal={onAcceptQuoteProposal}
               hasUnapprovedItems={hasUnapprovedItems}
               programPublishedAt={program.program_published_at}
@@ -336,7 +338,7 @@ export const DesktopProgramView = ({
                           Toevoegen
                         </Button>
                       )}
-                      {!(program.program_type?.startsWith("maatwerk_") && statusSummary.total === 0) && (
+                      {!(isMaatwerkProject(program) && statusSummary.total === 0) && (
                         <Badge variant="secondary">
                           {statusSummary.total} activiteiten
                         </Badge>

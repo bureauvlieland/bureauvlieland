@@ -6,6 +6,7 @@ import { CheckCircle, Loader2, Clock, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramRequestWithItems } from "@/types/programRequest";
+import { getProjectOrigin } from "@/lib/projectOrigin";
 
 interface AcceptQuoteProposalCardProps {
   program: ProgramRequestWithItems;
@@ -19,7 +20,7 @@ export const AcceptQuoteProposalCard = ({
   const [isLoading, setIsLoading] = useState(false);
 
   // Check conditions
-  if (program.program_type !== "quote") return null;
+  if (getProjectOrigin(program) !== "quote") return null;
   if (program.quote_status !== "offerte_verstuurd") return null;
 
   const validUntil = program.quote_valid_until

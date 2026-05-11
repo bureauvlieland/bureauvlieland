@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import { isMaatwerkProject } from "@/lib/projectOrigin";
 import vlielandLandscape from "@/assets/vlieland-landscape.jpg";
 import cyclingGroup from "@/assets/cycling-group.jpg";
 import sunsetDinner from "@/assets/sunset-dinner.jpg";
@@ -39,6 +40,7 @@ interface CustomerPortalSplashProps {
     number_of_people: number;
     terms_accepted_at?: string;
     program_type?: string;
+    origin?: string | null;
     quote_status?: string | null;
     invoicing_mode?: string | null;
   };
@@ -116,7 +118,7 @@ export const CustomerPortalSplash = ({
   onNavigate,
 }: CustomerPortalSplashProps) => {
   const termsAccepted = !!program.terms_accepted_at;
-  const isMaatwerk = !!program.program_type?.startsWith("maatwerk_");
+  const isMaatwerk = isMaatwerkProject(program);
   const isQuoteAwaitingApproval = program.quote_status === "offerte_verstuurd" && !termsAccepted;
   const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
   const accStatus = getAccommodationStatus(accommodation, accommodationQuotes);
