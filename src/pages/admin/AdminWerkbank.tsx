@@ -112,6 +112,12 @@ export default function AdminWerkbank() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(params.get("id"));
   const [archive, setArchive] = useState<boolean>(params.get("archief") === "1");
+  const initialKind = (params.get("kind") as ProjectKind | null) ?? "all";
+  const [kindFilter, setKindFilter] = useState<ProjectKind | "all">(
+    initialKind === "logies_only" || initialKind === "combi" || initialKind === "programma_only"
+      ? initialKind
+      : "all",
+  );
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
@@ -126,8 +132,16 @@ export default function AdminWerkbank() {
     setParams(p, { replace: true });
   };
 
+  const setKind = (next: ProjectKind | "all") => {
+    setKindFilter(next);
+    const p = new URLSearchParams(params);
+    if (next === "all") p.delete("kind"); else p.set("kind", next);
+    setParams(p, { replace: true });
+  };
+
   const filtered = useMemo(() => {
     let list = projects ?? [];
+    if (kindFilter !== "all") list = list.filter((p) => p.kind === kindFilter);
     const qv = QUICK_VIEWS.find((v) => v.id === view);
     if (qv?.match) list = list.filter((p) => qv.match!.includes(p.comm));
     if (search.trim()) {
@@ -141,7 +155,7 @@ export default function AdminWerkbank() {
       );
     }
     return list;
-  }, [projects, view, search]);
+  }, [projects, view, search, kindFilter]);
 
   const selected = filtered.find((p) => p.id === selectedId)
     ?? projects?.find((p) => p.id === selectedId)
