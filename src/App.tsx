@@ -229,7 +229,8 @@ const App = () => {
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />
             <Route path="/admin/templates" element={<AdminTemplates />} />
             <Route path="/admin/media" element={<AdminMedia />} />
-            <Route path="/admin/logies" element={<AdminAccommodation />} />
+            <Route path="/admin/logies" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />
+            <Route path="/admin/logies-legacy" element={<AdminAccommodation />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminChat />} />
