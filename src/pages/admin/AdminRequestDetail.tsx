@@ -884,6 +884,32 @@ const AdminRequestDetail = () => {
     }
   };
 
+  const handleSendSingleItemToPartner = async (item: any) => {
+    if (!request) return;
+    const phase = getItemSendPhase(item, request);
+    if (phase === "wacht_op_klant") {
+      const ok = window.confirm(
+        `De klant heeft het programma nog niet formeel akkoord. Toch "${item.block_name}" naar de partner sturen?`,
+      );
+      if (!ok) return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
+        body: {
+          request_id: request.id,
+          origin: window.location.origin,
+          item_ids: [item.id],
+        },
+      });
+      if (error) throw error;
+      toast.success(data?.message || `"${item.block_name}" verstuurd naar partner`);
+      fetchRequestData();
+    } catch (err) {
+      console.error("Error sending single item:", err);
+      toast.error("Fout bij versturen naar partner");
+    }
+  };
+
   const handlePublishProgram = async () => {
     if (!request) return;
     setIsPublishing(true);
