@@ -157,5 +157,10 @@ export function deriveItemDisplayStatus(
     return "wacht_op_klant";
   }
 
+  // Nog niet verstuurd naar de partner → bal ligt bij de klant (akkoord op offerte),
+  // niet bij de aanbieder. Pas zodra het item daadwerkelijk de deur uit is, schuift
+  // de status door naar "wacht_op_partner".
+  if (item.skip_partner_notification) return "wacht_op_klant";
+
   return "wacht_op_partner";
 }
