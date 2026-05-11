@@ -99,7 +99,7 @@ interface Project {
   program_id: string | null;
   program_ref: string | null;
   program_status: string | null;
-  program_type: string | null;
+  origin: string | null;
   quote_status: string | null;
   completion_status: string | null;
 
@@ -314,7 +314,7 @@ const AdminProjectsContent = () => {
             id, reference_number, customer_name, customer_email, customer_company,
             customer_token, number_of_people, selected_dates, status,
             terms_accepted_at, created_at, linked_accommodation_id,
-            program_type, quote_status, completion_status
+            origin, quote_status, completion_status
           `)
           .neq("status", "deleted")
           .order("created_at", { ascending: false }),
@@ -397,7 +397,7 @@ const AdminProjectsContent = () => {
           program_id: prog.id,
           program_ref: prog.reference_number,
           program_status: prog.status,
-          program_type: prog.program_type,
+          origin: prog.origin,
           quote_status: prog.quote_status,
           completion_status: prog.completion_status,
           accommodation_id: linkedAcc?.id || null,
@@ -430,7 +430,7 @@ const AdminProjectsContent = () => {
           program_id: null,
           program_ref: null,
           program_status: null,
-          program_type: null,
+          origin: null,
           quote_status: null,
           completion_status: null,
           accommodation_id: acc.id,

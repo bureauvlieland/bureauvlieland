@@ -34,7 +34,7 @@ interface ProjectData {
   selected_dates: unknown;
   number_of_people: number;
   status: string;
-  program_type: string;
+  origin: string | null;
   completion_status: string | null;
   created_at: string;
 }
@@ -133,7 +133,7 @@ export const WorkOverview = () => {
       const [projectsRes, itemsRes, remindersRes, accomRes] = await Promise.all([
         supabase
           .from("program_requests")
-          .select("id, customer_name, customer_company, reference_number, quote_status, quote_valid_until, quote_sent_at, selected_dates, number_of_people, status, program_type, completion_status, created_at")
+          .select("id, customer_name, customer_company, reference_number, quote_status, quote_valid_until, quote_sent_at, selected_dates, number_of_people, status, origin, completion_status, created_at")
           .eq("status", "active")
           .order("created_at", { ascending: false }),
         supabase
@@ -376,7 +376,7 @@ export const WorkOverview = () => {
         ) : (
           <div className="space-y-2">
             {summaries.map((s) => {
-              const pipelineBadge = getPipelineBadge(s.project.quote_status, s.project.program_type);
+              const pipelineBadge = getPipelineBadge(s.project.quote_status, s.project.origin ?? "");
               const isUrgent = s.urgencyScore >= 60;
 
               return (

@@ -36,7 +36,7 @@ interface ProgramCandidate {
   customer_company: string | null;
   number_of_people: number;
   selected_dates: string[];
-  program_type: string;
+  origin: string | null;
   program_description: string | null;
   created_at: string;
   item_count: number;
@@ -64,7 +64,7 @@ export const CopyFromProgramDialog = ({
       // Fetch programs that are not cancelled and not the current one
       const { data: requests, error } = await supabase
         .from("program_requests")
-        .select("id, reference_number, customer_name, customer_company, number_of_people, selected_dates, program_type, program_description, created_at")
+        .select("id, reference_number, customer_name, customer_company, number_of_people, selected_dates, origin, program_description, created_at")
         .neq("id", requestId)
         .neq("status", "cancelled")
         .order("created_at", { ascending: false })
@@ -105,7 +105,7 @@ export const CopyFromProgramDialog = ({
           let score = 0;
           if (duration === durationDays) score += 2;
           if (numberOfPeople > 0 && Math.abs(r.number_of_people - numberOfPeople) / numberOfPeople <= 0.3) score += 1;
-          if (r.program_type === programType) score += 1;
+          if (r.origin === programType) score += 1;
 
           return {
             ...r,
