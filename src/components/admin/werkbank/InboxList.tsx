@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { loadInbox, type InboxItem, type InboxReason } from "@/lib/getInbox";
+import type { ProjectKind } from "@/lib/getProject";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { COMMUNICATION_STATE_META } from "@/lib/projectCommunication";
@@ -16,9 +17,10 @@ const REASON_META: Record<InboxReason, { label: string; icon: typeof AlertTriang
 interface InboxListProps {
   selectedProjectId: string | null;
   onSelect: (projectId: string) => void;
+  kindFilter?: ProjectKind | "all";
 }
 
-export function InboxList({ selectedProjectId, onSelect }: InboxListProps) {
+export function InboxList({ selectedProjectId, onSelect, kindFilter = "all" }: InboxListProps) {
   const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ["werkbank-inbox"],
@@ -36,11 +38,16 @@ export function InboxList({ selectedProjectId, onSelect }: InboxListProps) {
     );
   }
 
-  const items = data ?? [];
+  const allItems = data ?? [];
+  const items = kindFilter === "all"
+    ? allItems
+    : allItems.filter((i) => i.project?.kind === kindFilter);
   if (items.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
-        🎉 Inbox leeg — niets dat nu aandacht vraagt.
+        {kindFilter === "all"
+          ? "🎉 Inbox leeg — niets dat nu aandacht vraagt."
+          : "Geen inbox-items voor dit type."}
       </div>
     );
   }
