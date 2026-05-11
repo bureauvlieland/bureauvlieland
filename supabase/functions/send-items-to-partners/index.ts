@@ -131,7 +131,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { request_id, origin, dry_run } = await req.json();
+    interface SendItemsBody {
+      request_id?: string;
+      origin?: string;
+      dry_run?: boolean;
+      // Optionele subset van item-ids; als opgegeven worden ALLEEN deze items
+      // verstuurd (per-item versturen vanuit admin). Anders alle skip-items.
+      item_ids?: string[];
+    }
+    const { request_id, origin, dry_run, item_ids }: SendItemsBody = await req.json();
 
     if (!request_id) {
       return new Response(
@@ -157,13 +165,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // 2. Fetch all non-cancelled items that haven't been sent yet
-    const { data: allItems, error: itemsError } = await supabase
+    // 2. Fetch non-cancelled items that haven't been sent yet.
+    //    Als item_ids is meegegeven, beperken we tot die subset (per-item versturen).
+    let itemsQuery = supabase
       .from("program_request_items")
       .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, day_index, skip_partner_notification, customer_approved_at, status")
       .eq("request_id", request_id)
       .eq("skip_partner_notification", true)
       .neq("status", "cancelled");
+
+    if (item_ids && item_ids.length > 0) {
+      itemsQuery = itemsQuery.in("id", item_ids);
+    }
+
+    const { data: allItems, error: itemsError } = await itemsQuery;
 
     if (itemsError) {
       console.error("Error fetching items:", itemsError);
