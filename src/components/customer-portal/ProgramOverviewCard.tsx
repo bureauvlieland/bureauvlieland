@@ -131,7 +131,7 @@ export const ProgramOverviewCard = ({
   };
 
   return (
-    <Card className={`border-primary/20 ${isQuoteMode ? "bg-gradient-to-br from-amber-50/50 to-primary/5" : "bg-gradient-to-br from-primary/5 to-primary/10"}`}>
+    <Card className="border-primary/20 bg-gradient-to-br from-amber-50/50 to-primary/5">
       <CardContent className="p-6">
         <div className="space-y-4">
         {/* Header */}
