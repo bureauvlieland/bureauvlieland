@@ -76,29 +76,30 @@ export async function loadInbox(): Promise<InboxItem[]> {
 
   // Todos
   for (const t of todos ?? []) {
-    const relatedId = (t as any).related_request_id as string | null;
+    const relatedId = t.related_request_id;
     // Verberg todo's die hangen aan een project dat niet meer in de actieve werklijst staat
     // (geannuleerd of verwijderd). Echte losse taken (geen related_request_id) blijven zichtbaar.
     if (relatedId && !projectById.has(relatedId)) continue;
 
-    const projectId = relatedId ?? `_orphan_${(t as any).id}`;
+    const projectId = relatedId ?? `_orphan_${t.id}`;
     const item = ensure(projectId);
+    const priority = (t.priority ?? "normal") as InboxTodo["priority"];
     item.todos.push({
-      id: (t as any).id,
-      title: (t as any).title,
-      priority: (t as any).priority,
-      due_date: (t as any).due_date,
-      auto_type: (t as any).auto_type,
+      id: t.id,
+      title: t.title,
+      priority,
+      due_date: t.due_date,
+      auto_type: t.auto_type,
     });
     if (!item.reasons.includes("todo")) item.reasons.push("todo");
 
     const prioScore =
-      (t as any).priority === "urgent" ? 40
-      : (t as any).priority === "high" ? 25
-      : (t as any).priority === "normal" ? 10
+      priority === "urgent" ? 40
+      : priority === "high" ? 25
+      : priority === "normal" ? 10
       : 5;
     item.score += prioScore;
-    if ((t as any).due_date && (t as any).due_date <= today) item.score += 15;
+    if (t.due_date && t.due_date <= today) item.score += 15;
   }
 
   // Communicatiestatus-driven items

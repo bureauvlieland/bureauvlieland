@@ -8,6 +8,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import {
   getProjectPipelineStage,
   type ProjectPipelineStage,
@@ -20,6 +21,54 @@ import {
 } from "./projectCommunication";
 
 export type ProjectKind = "combi" | "programma_only" | "logies_only";
+
+// Rij-vormen die we daadwerkelijk uit Supabase plukken (Pick op gegenereerde DB-types).
+// Zo vangt tsc kolomnaam-fouten direct (zoals destijds met `room_summary`).
+type ProgramItemRow = Pick<
+  Tables<"program_request_items">,
+  | "id"
+  | "status"
+  | "skip_partner_notification"
+  | "customer_approved_at"
+  | "provider_id"
+  | "block_type"
+  | "day_index"
+  | "item_quote_status"
+  | "updated_at"
+>;
+
+type ProgramRow = Pick<
+  Tables<"program_requests">,
+  | "id"
+  | "reference_number"
+  | "customer_name"
+  | "customer_email"
+  | "customer_phone"
+  | "customer_company"
+  | "number_of_people"
+  | "selected_dates"
+  | "status"
+  | "quote_status"
+  | "terms_accepted_at"
+  | "completion_status"
+  | "cancelled_at"
+  | "updated_at"
+  | "linked_accommodation_id"
+> & {
+  program_request_items: ProgramItemRow[] | null;
+};
+
+type LodgingQuoteRow = Pick<
+  Tables<"accommodation_quotes">,
+  "id" | "status" | "updated_at"
+>;
+
+type LodgingRow = Pick<
+  Tables<"accommodation_requests">,
+  "id" | "reference_number" | "status" | "completion_status" | "updated_at" | "linked_program_id"
+> & {
+  accommodation_quotes: LodgingQuoteRow[] | null;
+};
 
 export interface ProjectSummary {
   id: string;                       // = program_request.id
@@ -96,15 +145,15 @@ export async function listProjectsForWerkbank(opts: {
     : { data: [], error: null };
   if (lodgErr) throw lodgErr;
 
-  const lodgingByProgramId = new Map<string, typeof lodgings[number]>();
-  for (const l of lodgings ?? []) {
+  const lodgingByProgramId = new Map<string, LodgingRow>();
+  for (const l of (lodgings ?? []) as LodgingRow[]) {
     if (l.linked_program_id) lodgingByProgramId.set(l.linked_program_id, l);
   }
 
-  const summaries: ProjectSummary[] = (programs ?? []).map((p) => {
-    const items = (p as any).program_request_items ?? [];
+  const summaries: ProjectSummary[] = ((programs ?? []) as ProgramRow[]).map((p) => {
+    const items: ProgramItemRow[] = p.program_request_items ?? [];
     const lodging = lodgingByProgramId.get(p.id) ?? null;
-    const lodgingQuotes = (lodging as any)?.accommodation_quotes ?? [];
+    const lodgingQuotes: LodgingQuoteRow[] = lodging?.accommodation_quotes ?? [];
 
     const hasProgram = items.length > 0;
     const hasLodging = !!lodging;
@@ -114,23 +163,29 @@ export async function listProjectsForWerkbank(opts: {
     else if (!hasProgram && hasLodging) kind = "logies_only";
 
     // Pipeline
-    const programPipeline = getProjectPipelineStage(p as any);
+    const programPipeline = getProjectPipelineStage({
+      status: p.status ?? undefined,
+      quote_status: p.quote_status,
+      terms_accepted_at: p.terms_accepted_at,
+      completion_status: p.completion_status,
+      cancelled_at: p.cancelled_at,
+    });
     const lodgingPipeline = lodging
       ? getProjectPipelineStage({
-          status: (lodging as any).status,
-          completion_status: (lodging as any).completion_status,
+          status: lodging.status ?? undefined,
+          completion_status: lodging.completion_status,
         })
       : null;
 
     // Communicatie-status (vereenvoudigd voor lijst-view)
     const itemsReadyForPartner = items.filter(
-      (i: any) =>
+      (i) =>
         i.skip_partner_notification === true &&
         i.status !== "cancelled" &&
-        (p.quote_status === "akkoord_ontvangen" || i.customer_approved_at),
+        (p.quote_status === "akkoord_ontvangen" || !!i.customer_approved_at),
     ).length;
     const itemsAwaitingPartnerResponse = items.filter(
-      (i: any) =>
+      (i) =>
         i.skip_partner_notification === false &&
         i.status !== "cancelled" &&
         i.item_quote_status !== "bevestigd",
@@ -147,10 +202,10 @@ export async function listProjectsForWerkbank(opts: {
     const lodgingComm = lodging
       ? getLodgingCommunicationState({
           hasRequest: true,
-          quotesPending: lodgingQuotes.filter((q: any) => q.status === "pending").length,
-          quotesAwaitingCustomerChoice: lodgingQuotes.filter((q: any) => q.status === "submitted").length,
-          quoteSelected: lodgingQuotes.some((q: any) => q.status === "selected"),
-          last_outbound_at: (lodging as any).updated_at,
+          quotesPending: lodgingQuotes.filter((q) => q.status === "pending").length,
+          quotesAwaitingCustomerChoice: lodgingQuotes.filter((q) => q.status === "submitted").length,
+          quoteSelected: lodgingQuotes.some((q) => q.status === "selected"),
+          last_outbound_at: lodging.updated_at,
         })
       : null;
 
@@ -163,7 +218,6 @@ export async function listProjectsForWerkbank(opts: {
         return "geannuleerd";
       if (programPipeline === "afgerond" && (!lodgingPipeline || lodgingPipeline === "afgerond"))
         return "afgerond";
-      // meest urgente (vroegste in de funnel) telt
       const order: ProjectPipelineStage[] = [
         "concept", "offerte_verstuurd", "akkoord_ontvangen",
         "av_getekend", "facturatie", "afgerond", "geannuleerd",
@@ -173,8 +227,8 @@ export async function listProjectsForWerkbank(opts: {
     })();
 
     const reference =
-      kind === "logies_only" && (lodging as any)?.reference_number
-        ? (lodging as any).reference_number
+      kind === "logies_only" && lodging?.reference_number
+        ? lodging.reference_number
         : p.reference_number ?? p.id.slice(0, 8);
 
     return {
@@ -188,7 +242,7 @@ export async function listProjectsForWerkbank(opts: {
         company: p.customer_company,
       },
       dates: Array.isArray(p.selected_dates)
-        ? (p.selected_dates as any[]).map(String)
+        ? (p.selected_dates as unknown[]).map(String)
         : [],
       numberOfPeople: p.number_of_people ?? 0,
       pipeline: overallPipeline,
