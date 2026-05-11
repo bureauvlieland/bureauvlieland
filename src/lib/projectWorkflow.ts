@@ -63,8 +63,9 @@ export function getItemSendPhase(
 ): ItemSendPhase {
   if (item.status === "cancelled") return "niet_van_toepassing";
 
-  // Bureau cost items (day -1) are internal — never sent to partners
-  if (item.day_index === -1 && item.provider_id === "bureau") return "niet_van_toepassing";
+  // Bureau-managed items (ferries, bikes, vrije tijd, kostenposten) zijn altijd intern —
+  // ze worden nooit naar een externe partner gestuurd, ongeacht day_index of klant-akkoord.
+  if (item.provider_id === "bureau") return "niet_van_toepassing";
 
   // Already sent to partner (or bureau)
   if (!item.skip_partner_notification) return "verstuurd";
