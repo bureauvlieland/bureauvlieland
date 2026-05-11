@@ -1650,9 +1650,34 @@ const AdminRequestDetail = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                    <Table>
+                 <CardContent className="p-0">
+                 <details className="group border-b bg-muted/20 px-4 py-2 text-xs text-muted-foreground [&_summary::-webkit-details-marker]:hidden">
+                   <summary className="flex cursor-pointer items-center gap-2 select-none">
+                     <Info className="h-3.5 w-3.5" />
+                     <span className="font-medium">Wat betekenen de statussen?</span>
+                     <span className="ml-auto text-[11px] opacity-70 group-open:hidden">tonen</span>
+                     <span className="ml-auto text-[11px] opacity-70 hidden group-open:inline">verbergen</span>
+                   </summary>
+                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] leading-tight">
+                     <LegendPill className="bg-blue-50 text-blue-700 border-blue-200/70">Wacht op aanbieder</LegendPill>
+                     <span>aanbieder moet nog reageren</span>
+                     <LegendPill className="bg-amber-50 text-amber-700 border-amber-200/70">Wacht op klant-akkoord</LegendPill>
+                     <span>klant moet nog akkoord geven</span>
+                     <LegendPill className="bg-amber-50 text-amber-700 border-amber-200/70">Wacht op klant (nieuwe prijs)</LegendPill>
+                     <span>prijs aangepast — wacht op klant</span>
+                     <LegendPill className="bg-emerald-50 text-emerald-700 border-emerald-200/70">Klant akkoord</LegendPill>
+                     <span>bevestigd door klant</span>
+                     <LegendPill className="bg-slate-50 text-slate-500 border-slate-200">Geannuleerd</LegendPill>
+                     <span className="w-full border-t pt-2 mt-1 text-muted-foreground">
+                       <span className="inline-flex items-center gap-1 mr-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600">
+                         <Send className="h-2.5 w-2.5" /> Nog naar partner
+                       </span>
+                       chip = onderdeel is nog niet naar de aanbieder gestuurd.
+                     </span>
+                   </div>
+                 </details>
+                 <div className="overflow-x-auto">
+                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Activiteit</TableHead>
