@@ -26,6 +26,12 @@ export interface ItemDisplayStatusInfo {
   adminLabel: string;
   /** Label voor de klant (formele toon) */
   customerLabel: string;
+  /** Korte uitleg voor admin: betekenis + wie aan zet is */
+  adminTooltip: string;
+  /** Korte uitleg voor de klant (formele toon) */
+  customerTooltip: string;
+  /** Wie moet er actie ondernemen? */
+  actor: "partner" | "klant" | "bureau" | "geen";
   /** Tailwind text-color (semantisch via tokens waar mogelijk) */
   color: string;
   /** Tailwind background-color */
@@ -46,6 +52,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   wacht_op_partner: {
     adminLabel: "Wacht op aanbieder",
     customerLabel: "Wacht op aanbieder",
+    adminTooltip: "Aanvraag is verstuurd. De aanbieder moet bevestigen of een alternatief voorstellen.",
+    customerTooltip: "We wachten op een reactie van de aanbieder. Bureau Vlieland volgt dit voor u op.",
+    actor: "partner",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "Clock",
@@ -53,6 +62,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   wacht_op_klant: {
     adminLabel: "Wacht op klant-akkoord",
     customerLabel: "Akkoord nodig",
+    adminTooltip: "De aanbieder heeft gereageerd. De klant moet dit onderdeel nog akkoord geven.",
+    customerTooltip: "Dit onderdeel is beschikbaar. Geef akkoord om het definitief te bevestigen.",
+    actor: "klant",
     color: "text-blue-700 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-950/50",
     icon: "AlertCircle",
@@ -60,6 +72,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   prijs_gewijzigd: {
     adminLabel: "Wacht op klant (nieuwe prijs)",
     customerLabel: "Nieuwe prijs — akkoord nodig",
+    adminTooltip: "De prijs is aangepast. De klant moet de nieuwe prijs nog goedkeuren.",
+    customerTooltip: "De prijs van dit onderdeel is bijgewerkt. Bevestig de nieuwe prijs om door te gaan.",
+    actor: "klant",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "AlertTriangle",
@@ -67,6 +82,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   geaccepteerd: {
     adminLabel: "Klant akkoord",
     customerLabel: "Akkoord",
+    adminTooltip: "Klant heeft akkoord gegeven. Geen actie nodig tot uitvoering.",
+    customerTooltip: "U hebt dit onderdeel bevestigd. Het wordt op de afgesproken datum uitgevoerd.",
+    actor: "geen",
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
@@ -74,6 +92,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   uitgevoerd: {
     adminLabel: "Uitgevoerd",
     customerLabel: "Uitgevoerd",
+    adminTooltip: "Onderdeel is uitgevoerd. Klaar voor facturatie of al gefactureerd.",
+    customerTooltip: "Dit onderdeel is uitgevoerd.",
+    actor: "geen",
     color: "text-emerald-700 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-950/50",
     icon: "CheckCircle2",
@@ -81,6 +102,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   geannuleerd: {
     adminLabel: "Geannuleerd",
     customerLabel: "Geannuleerd",
+    adminTooltip: "Dit onderdeel is geannuleerd en telt niet meer mee in het programma.",
+    customerTooltip: "Dit onderdeel is geannuleerd.",
+    actor: "geen",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
     icon: "Ban",
@@ -88,6 +112,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   niet_beschikbaar: {
     adminLabel: "Niet beschikbaar",
     customerLabel: "Niet beschikbaar",
+    adminTooltip: "Aanbieder heeft afgewezen. Bureau moet vervanging zoeken of opnieuw uitvragen.",
+    customerTooltip: "De aanbieder is niet beschikbaar. Bureau Vlieland zoekt een passend alternatief.",
+    actor: "bureau",
     color: "text-red-700 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-950/50",
     icon: "XCircle",
@@ -95,6 +122,9 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   self_arranged: {
     adminLabel: "Zelf te regelen",
     customerLabel: "Zelf te regelen",
+    adminTooltip: "Klant regelt en betaalt dit onderdeel zelf — buiten Bureau Vlieland om.",
+    customerTooltip: "U boekt en betaalt dit onderdeel zelf, rechtstreeks bij de aanbieder.",
+    actor: "klant",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "ExternalLink",
