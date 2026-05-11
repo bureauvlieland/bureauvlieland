@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Sparkles } from "lucide-react";
+import { Search, Hotel, Sparkles, Archive } from "lucide-react";
 import {
   listProjectsForWerkbank,
   type ProjectSummary,
