@@ -197,6 +197,7 @@ export const DesktopProgramView = ({
           referenceNumber={program.reference_number}
           accommodationReferenceNumber={accommodation?.reference_number}
           programType={program.program_type as any}
+          origin={program.origin}
           quoteStatus={program.quote_status as any}
           quoteValidUntil={program.quote_valid_until}
           termsAcceptedAt={program.terms_accepted_at}

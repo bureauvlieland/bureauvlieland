@@ -3,9 +3,10 @@ import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, BedDouble, Briefcase, Sparkles, Clock, AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
+import { Calendar, Users, BedDouble, Sparkles, Clock, AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import type { ProgramType, QuoteStatus } from "@/types/programRequest";
+import { isMaatwerkProject } from "@/lib/projectOrigin";
 
 interface ProgramOverviewCardProps {
   selectedDates: Date[];
@@ -18,6 +19,8 @@ interface ProgramOverviewCardProps {
   accommodationReferenceNumber?: string | null;
   // Quote mode props
   programType?: ProgramType;
+  /** Fase 5: opvolger van programType. Als beide gezet zijn wint origin. */
+  origin?: string | null;
   quoteStatus?: QuoteStatus | null;
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string | null;
@@ -38,6 +41,7 @@ export const ProgramOverviewCard = ({
   referenceNumber,
   accommodationReferenceNumber,
   programType = "self_service",
+  origin,
   quoteStatus,
   quoteValidUntil,
   termsAcceptedAt,
@@ -46,29 +50,25 @@ export const ProgramOverviewCard = ({
   hasPendingItems,
 }: ProgramOverviewCardProps) => {
   const isMultiDay = selectedDates.length > 1;
-  const isMaatwerk = programType === "maatwerk_zakelijk" || programType === "maatwerk_prive";
-  const isQuoteMode = true; // All projects use unified quote pipeline
-  
+  // Fase 5: alle projecten doorlopen dezelfde quote-pipeline. Het type-onderscheid
+  // bestaat alleen nog voor micro-copy (maatwerk-varianten gebruiken iets andere woorden).
+  const isMaatwerk = isMaatwerkProject({ origin, program_type: programType });
+
   // Calculate quote validity
   const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;
   const isExpired = validUntilDate ? isPast(validUntilDate) : false;
   const daysUntilExpiry = validUntilDate ? differenceInDays(validUntilDate, new Date()) : null;
-  
-  // Determine program type label
+
+  // Determine program type label (status-driven, niet type-driven)
   const getProgramTypeLabel = () => {
+    if (termsAcceptedAt) return "Boeking bevestigd";
+    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
     if (isMaatwerk) return "Maatwerk";
-    if (isQuoteMode) {
-      if (termsAcceptedAt) return "Boeking bevestigd";
-      if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
-      return "Maatwerkvoorstel";
-    }
-    return isMultiDay ? "Meerdaags verblijf" : "Eendaags programma";
+    return "Voorstel";
   };
 
   // Determine quote status for display
   const getQuoteDisplayStatus = () => {
-    if (!isQuoteMode) return null;
-    
     if (termsAcceptedAt) {
       return { label: "Definitief", variant: "success" as const, icon: CheckCircle2 };
     }
@@ -83,7 +83,6 @@ export const ProgramOverviewCard = ({
     }
     return { label: "In voorbereiding", variant: "muted" as const, icon: Clock };
   };
-
   const quoteDisplayStatus = getQuoteDisplayStatus();
 
   // Determine accommodation status
@@ -132,7 +131,7 @@ export const ProgramOverviewCard = ({
   };
 
   return (
-    <Card className={`border-primary/20 ${isQuoteMode ? "bg-gradient-to-br from-amber-50/50 to-primary/5" : "bg-gradient-to-br from-primary/5 to-primary/10"}`}>
+    <Card className="border-primary/20 bg-gradient-to-br from-amber-50/50 to-primary/5">
       <CardContent className="p-6">
         <div className="space-y-4">
         {/* Header */}
@@ -140,7 +139,7 @@ export const ProgramOverviewCard = ({
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-                  {isMaatwerk ? "Uw maatwerkprogramma" : isQuoteMode ? "Uw maatwerkvoorstel" : "Uw zakelijke programma op Vlieland"}
+                  {isMaatwerk ? "Uw maatwerkprogramma" : "Uw voorstel"}
                 </h1>
                 {referenceNumber && (
                   <Badge variant="outline" className="font-mono text-xs">
@@ -153,7 +152,7 @@ export const ProgramOverviewCard = ({
                     #{accommodationReferenceNumber}
                   </Badge>
                 )}
-                {isQuoteMode && (
+                {isMaatwerk && (
                   <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
                     <Sparkles className="h-3 w-3" />
                     Maatwerk
@@ -163,9 +162,7 @@ export const ProgramOverviewCard = ({
               <p className="text-sm text-muted-foreground mt-1">
                 {isMaatwerk
                   ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
-                  : isQuoteMode 
-                  ? "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
-                  : "Wij stemmen activiteiten, logies en planning op elkaar af zodat alles klopt."
+                  : "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
                 }
               </p>
               
@@ -200,7 +197,7 @@ export const ProgramOverviewCard = ({
           </div>
 
           {/* Quote validity warning */}
-          {isQuoteMode && quoteStatus === "offerte_verstuurd" && validUntilDate && !termsAcceptedAt && (
+          {quoteStatus === "offerte_verstuurd" && validUntilDate && !termsAcceptedAt && (
             <div className={`flex items-center gap-2 p-3 rounded-lg ${isExpired ? "bg-red-50 dark:bg-red-900/20" : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-blue-50 dark:bg-blue-900/20"}`}>
               {isExpired ? (
                 <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
@@ -248,11 +245,7 @@ export const ProgramOverviewCard = ({
             {/* Type */}
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                {isQuoteMode ? (
-                  <Sparkles className="h-4 w-4 text-primary" />
-                ) : (
-                  <Briefcase className="h-4 w-4 text-primary" />
-                )}
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Type</p>
@@ -282,7 +275,7 @@ export const ProgramOverviewCard = ({
           {/* Company name if available */}
           {customerCompany && (
             <p className="text-sm text-muted-foreground pt-2 border-t">
-              {isQuoteMode ? "Voorstel voor" : "Programma voor"} <span className="font-medium text-foreground">{customerCompany}</span>
+              Voorstel voor <span className="font-medium text-foreground">{customerCompany}</span>
             </p>
           )}
         </div>
