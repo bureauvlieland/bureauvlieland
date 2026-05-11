@@ -265,6 +265,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         ...requestData,
         selected_dates: requestData.selected_dates as string[],
         program_type: (requestData.program_type || 'self_service') as ProgramType,
+        origin: ((requestData as { origin?: string | null }).origin ?? requestData.program_type ?? 'self_service'),
         quote_status: requestData.quote_status as QuoteStatus | null,
         items: itemsWithImages as ProgramRequestItem[],
       };
