@@ -484,6 +484,15 @@ export const PartnerItemSheet = ({
                   <span>{item.duration}</span>
                 </div>
               )}
+              {item.override_people != null && item.override_people !== request.number_of_people && (
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    <span className="font-medium text-foreground">{item.override_people} deelnemers</span>
+                    <span className="text-muted-foreground"> (van {request.number_of_people} in de hele groep)</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
