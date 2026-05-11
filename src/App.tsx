@@ -198,12 +198,16 @@ const App = () => {
             {/* Admin routes */}
             <Route path="/admin" element={<Navigate to="/admin/werkbank" replace />} />
             <Route path="/admin/werkbank" element={<AdminWerkbank />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/projecten" element={<AdminProjects />} />
+            <Route path="/admin/dashboard" element={<Navigate to="/admin/werkbank" replace />} />
+            <Route path="/admin/projecten" element={<Navigate to="/admin/werkbank" replace />} />
+            <Route path="/admin/logies-aanvragen" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />
             <Route path="/admin/programma-nieuw" element={<AdminProgramNew />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
             <Route path="/admin/partners" element={<Navigate to="/admin/crm?tab=partners" replace />} />
-            <Route path="/admin/aanvragen" element={<Navigate to="/admin/projecten" replace />} />
+            <Route path="/admin/aanvragen" element={<Navigate to="/admin/werkbank" replace />} />
+            {/* Legacy page routes still mounted for direct access; sidebar links removed in favour of Werkbank. */}
+            <Route path="/admin/dashboard-legacy" element={<AdminDashboard />} />
+            <Route path="/admin/projecten-legacy" element={<AdminProjects />} />
             <Route path="/admin/aanvragen/:id" element={<AdminRequestDetail />} />
             <Route path="/admin/projecten/:id" element={<AdminRequestDetail />} />
             <Route path="/admin/projecten/:id/offerte-preview" element={<AdminQuotePreview />} />
