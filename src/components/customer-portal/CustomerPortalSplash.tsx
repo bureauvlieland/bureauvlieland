@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import { isMaatwerkProject } from "@/lib/projectOrigin";
 import vlielandLandscape from "@/assets/vlieland-landscape.jpg";
 import cyclingGroup from "@/assets/cycling-group.jpg";
 import sunsetDinner from "@/assets/sunset-dinner.jpg";

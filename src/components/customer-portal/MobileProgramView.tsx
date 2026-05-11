@@ -77,6 +77,7 @@ interface MobileProgramViewProps {
     reference_number?: string | null;
     // Quote mode fields
     program_type?: string;
+    origin?: string | null;
     quote_status?: string | null;
     quote_valid_until?: string | null;
     // Program description
@@ -253,7 +254,7 @@ export const MobileProgramView = ({
             quoteValidUntil={program.quote_valid_until}
             termsAcceptedAt={program.terms_accepted_at}
             itemCount={program.items.filter(i => i.status !== "cancelled").length}
-            isMaatwerkEmpty={!!program.program_type?.startsWith("maatwerk_") && program.items.length === 0}
+            isMaatwerkEmpty={isMaatwerkProject(program) && program.items.length === 0}
             onAcceptQuoteProposal={onAcceptQuoteProposal}
             hasUnapprovedItems={hasUnapprovedItems}
             programPublishedAt={program.program_published_at}
@@ -354,7 +355,7 @@ export const MobileProgramView = ({
                   Toevoegen
                 </Button>
               )}
-              {!(program.program_type?.startsWith("maatwerk_") && statusSummary.total === 0) && (
+              {!(isMaatwerkProject(program) && statusSummary.total === 0) && (
                 <Badge variant="secondary">
                   {statusSummary.total} activiteiten
                 </Badge>
