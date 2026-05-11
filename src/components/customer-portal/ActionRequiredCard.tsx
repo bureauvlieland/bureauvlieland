@@ -65,6 +65,7 @@ export const ActionRequiredCard = ({
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isQuotePreApproval = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming", "offerte_verstuurd"].includes(quoteStatus);
   const isQuoteBeingPrepared = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
+  // Note: `programType` is treated as the project's `origin` (Fase 5). Same string values.
 
   const getAction = (): ActionConfig | null => {
     // Priority 1: Alternative proposals need customer action
