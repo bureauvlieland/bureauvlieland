@@ -220,6 +220,8 @@ export interface ProgramRequest {
   reference_number: string | null;
   // Quote mode fields
   program_type: ProgramType;
+  /** Fase 5: leesveld dat program_type opvolgt. Tijdens transitie altijd gevuld via DB-trigger. */
+  origin?: string | null;
   quote_status: QuoteStatus | null;
   quote_valid_until: string | null;
   quote_sent_at: string | null;
