@@ -2006,6 +2006,33 @@ const AdminRequestDetail = () => {
                                         </TableCell>
                                         <TableCell>
                                           <div className="flex items-center gap-1">
+                                            {(() => {
+                                              const phase = getItemSendPhase(item, request);
+                                              if (phase !== "klaar_voor_partner" && phase !== "wacht_op_klant") return null;
+                                              if (item.provider_id === "bureau") return null;
+                                              const isWaiting = phase === "wacht_op_klant";
+                                              return (
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleSendSingleItemToPartner(item)}
+                                                        className={`h-8 w-8 ${isWaiting ? "text-amber-600 hover:text-amber-700" : "text-primary hover:text-primary"}`}
+                                                      >
+                                                        <Send className="h-4 w-4" />
+                                                      </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                      {isWaiting
+                                                        ? "Stuur naar partner (klant nog niet formeel akkoord)"
+                                                        : "Stuur dit onderdeel naar de partner"}
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              );
+                                            })()}
                                             <Button
                                               variant="ghost"
                                               size="icon"
