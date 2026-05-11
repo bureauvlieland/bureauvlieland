@@ -8,6 +8,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import {
   getProjectPipelineStage,
   type ProjectPipelineStage,
@@ -20,6 +21,54 @@ import {
 } from "./projectCommunication";
 
 export type ProjectKind = "combi" | "programma_only" | "logies_only";
+
+// Rij-vormen die we daadwerkelijk uit Supabase plukken (Pick op gegenereerde DB-types).
+// Zo vangt tsc kolomnaam-fouten direct (zoals destijds met `room_summary`).
+type ProgramItemRow = Pick<
+  Tables<"program_request_items">,
+  | "id"
+  | "status"
+  | "skip_partner_notification"
+  | "customer_approved_at"
+  | "provider_id"
+  | "block_type"
+  | "day_index"
+  | "item_quote_status"
+  | "updated_at"
+>;
+
+type ProgramRow = Pick<
+  Tables<"program_requests">,
+  | "id"
+  | "reference_number"
+  | "customer_name"
+  | "customer_email"
+  | "customer_phone"
+  | "customer_company"
+  | "number_of_people"
+  | "selected_dates"
+  | "status"
+  | "quote_status"
+  | "terms_accepted_at"
+  | "completion_status"
+  | "cancelled_at"
+  | "updated_at"
+  | "linked_accommodation_id"
+> & {
+  program_request_items: ProgramItemRow[] | null;
+};
+
+type LodgingQuoteRow = Pick<
+  Tables<"accommodation_quotes">,
+  "id" | "status" | "updated_at"
+>;
+
+type LodgingRow = Pick<
+  Tables<"accommodation_requests">,
+  "id" | "reference_number" | "status" | "completion_status" | "updated_at" | "linked_program_id"
+> & {
+  accommodation_quotes: LodgingQuoteRow[] | null;
+};
 
 export interface ProjectSummary {
   id: string;                       // = program_request.id
