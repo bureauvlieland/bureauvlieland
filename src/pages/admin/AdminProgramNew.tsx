@@ -127,7 +127,6 @@ const AdminProgramNewContent = () => {
           number_of_people: formData.numberOfPeople,
           selected_dates: formData.selectedDates.map((d) => format(d, "yyyy-MM-dd")),
           general_notes: formData.generalNotes || null,
-          program_type: formData.programType,
           origin: formData.programType,
           quote_status: formData.programType === "quote" ? "concept" : null,
           quote_valid_until: formData.programType === "quote" 

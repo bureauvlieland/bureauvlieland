@@ -219,8 +219,9 @@ export interface ProgramRequest {
   expires_at: string;
   reference_number: string | null;
   // Quote mode fields
-  program_type: ProgramType;
-  /** Fase 5: leesveld dat program_type opvolgt. Tijdens transitie altijd gevuld via DB-trigger. */
+  /** @deprecated Fase 5: vervangen door `origin`. Tijdens transitie nog leesbaar via DB. */
+  program_type?: string | null;
+  /** Fase 5: bron-of-truth voor "wat voor project is dit?". */
   origin?: string | null;
   quote_status: QuoteStatus | null;
   quote_valid_until: string | null;

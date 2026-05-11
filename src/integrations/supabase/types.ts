@@ -2178,10 +2178,9 @@ export type Database = {
           invoicing_mode: string
           linked_accommodation_id: string | null
           number_of_people: number
-          origin: string | null
+          origin: string
           program_description: string | null
           program_published_at: string | null
-          program_type: string
           quote_pdf_path: string | null
           quote_personal_message: string | null
           quote_sent_at: string | null
@@ -2228,10 +2227,9 @@ export type Database = {
           invoicing_mode?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
-          origin?: string | null
+          origin?: string
           program_description?: string | null
           program_published_at?: string | null
-          program_type?: string
           quote_pdf_path?: string | null
           quote_personal_message?: string | null
           quote_sent_at?: string | null
@@ -2278,10 +2276,9 @@ export type Database = {
           invoicing_mode?: string
           linked_accommodation_id?: string | null
           number_of_people?: number
-          origin?: string | null
+          origin?: string
           program_description?: string | null
           program_published_at?: string | null
-          program_type?: string
           quote_pdf_path?: string | null
           quote_personal_message?: string | null
           quote_sent_at?: string | null
