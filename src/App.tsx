@@ -215,7 +215,8 @@ const App = () => {
             <Route path="/admin/projecten/:id/factuur" element={<AdminInvoicePreview />} />
             {/* AdminPartners removed — /admin/partners redirects to /admin/crm?tab=partners above */}
             <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
-            <Route path="/admin/todos" element={<AdminTodos />} />
+            <Route path="/admin/todos" element={<Navigate to="/admin/werkbank" replace />} />
+            <Route path="/admin/todos-legacy" element={<AdminTodos />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
             <Route path="/admin/berichten" element={<AdminMessages />} />
             <Route path="/admin/berichten/templates" element={<AdminEmailTemplates />} />
