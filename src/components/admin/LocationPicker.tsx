@@ -8,6 +8,26 @@ import "leaflet/dist/leaflet.css";
 const VLIELAND_CENTER: [number, number] = [53.2967, 5.0456];
 const DEFAULT_ZOOM = 15;
 
+/**
+ * Compose a clean Dutch-style address from a Nominatim addressdetails object:
+ *   "Dorpsstraat 88, Vlieland"
+ * Falls back to a sensible truncation of display_name when details are missing.
+ */
+function formatAddress(data: any): string {
+  const a = data?.address ?? {};
+  const street = a.road || a.pedestrian || a.footway || a.path || a.cycleway || "";
+  const nr = a.house_number || "";
+  const place =
+    a.village || a.town || a.city || a.hamlet || a.suburb || a.municipality || "";
+  const line1 = [street, nr].filter(Boolean).join(" ").trim();
+  const parts = [line1, place].filter(Boolean);
+  if (parts.length) return parts.join(", ");
+  if (data?.display_name) {
+    return String(data.display_name).split(",").slice(0, 2).join(", ").trim();
+  }
+  return "";
+}
+
 interface LocationPickerProps {
   lat: number | null;
   lng: number | null;
