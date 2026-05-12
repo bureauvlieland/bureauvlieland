@@ -19,6 +19,12 @@ interface ProjectChatSheetProps {
   customerEmail?: string;
 }
 
+interface ProgramMeta {
+  customer_token: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+}
+
 interface ChatMessage {
   id: string;
   conversation_id: string;
