@@ -167,12 +167,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, guestDetails, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
       programDetails?: ProgramDetailsUpdate;
       billingDetails?: BillingDetailsUpdate;
+      guestDetails?: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null };
       acceptTerms?: boolean;
       signatureName?: string;
       acceptItemId?: string;
@@ -202,7 +203,7 @@ Deno.serve(async (req) => {
     }
     
     // Must have at least one type of update
-    if ((!changes || !items) && !programDetails && !billingDetails && !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal) {
+    if ((!changes || !items) && !programDetails && !billingDetails && !guestDetails && !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
