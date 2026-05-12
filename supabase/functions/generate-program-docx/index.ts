@@ -187,6 +187,20 @@ Deno.serve(async (req) => {
       dayGroups.get(k)!.push(it);
     });
 
+    // Prefetch static map images for all visible items with coordinates.
+    // Resilient: failed fetches resolve to null and are skipped silently.
+    const mapImages = new Map<string, Uint8Array>();
+    const mapTargets = visible.filter(
+      (it: any) => typeof it.location_lat === "number" && typeof it.location_lng === "number",
+    );
+    const mapResults = await Promise.allSettled(
+      mapTargets.map((it: any) => fetchStaticMapPng(it.location_lat, it.location_lng)),
+    );
+    mapTargets.forEach((it: any, i: number) => {
+      const r = mapResults[i];
+      if (r.status === "fulfilled" && r.value) mapImages.set(it.id, r.value);
+    });
+
     // Build cover page
     const customerLabel = program.customer_company || program.customer_name || "";
     const dateRange =
