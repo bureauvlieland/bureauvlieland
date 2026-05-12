@@ -147,7 +147,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       related_item_id: item.id,
       status: "sent",
       sent_by: "admin",
-      metadata: { reason: "price_change", new_total: newTotal },
+      metadata: {
+        template_name: EmailTypes.PROGRAM_REQUEST_CUSTOMER,
+        actor: "admin → klant (prijswijziging)",
+        reason: "price_change",
+        new_total: newTotal,
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {

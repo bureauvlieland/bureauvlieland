@@ -127,6 +127,10 @@ Deno.serve(async (req) => {
           related_partner_id: partner.id,
           status: "sent",
           sent_by: "system",
+          metadata: {
+            template_name: "accommodation_quote_withdrawn",
+            actor: "admin → partner (offerte ingetrokken)",
+          },
         });
       } catch (emailErr) {
         console.error("Failed to send withdrawal email:", emailErr);

@@ -158,7 +158,12 @@ Bureau Vlieland`,
       status: emailSent ? "sent" : "failed",
       error_message: emailError || undefined,
       sent_by: "admin-reset-partner-password",
-      metadata: { initiated_by_admin: true, method: "set_password_link" },
+      metadata: {
+        template_name: "partner_password_reset",
+        actor: "admin → partner",
+        initiated_by_admin: true,
+        method: "set_password_link",
+      },
     });
 
     await adminClient.from("admin_activity_log").insert({

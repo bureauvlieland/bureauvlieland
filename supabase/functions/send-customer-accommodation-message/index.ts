@@ -230,6 +230,11 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: errorText.substring(0, 500),
         sent_by: `customer:${programRequest.customer_email}`,
+        metadata: {
+          template_name: "customer_accommodation_message",
+          actor: "klant → partner (logies-bericht)",
+          failure: true,
+        },
       });
 
       throw new Error("EMAIL_SERVICE_ERROR");
@@ -246,7 +251,11 @@ Deno.serve(async (req) => {
       related_partner_id: quote.partner_id,
       status: "sent",
       sent_by: `customer:${programRequest.customer_email}`,
-      metadata: { message_preview: message.substring(0, 200) },
+      metadata: {
+        template_name: "customer_accommodation_message",
+        actor: "klant → partner (logies-bericht)",
+        message_preview: message.substring(0, 200),
+      },
     });
 
     // Log as project communication (customer ↔ partner thread)

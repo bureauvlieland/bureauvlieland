@@ -257,6 +257,8 @@ Deno.serve(async (req) => {
         status: "sent",
         sent_by: "send-accommodation-quote-request",
         metadata: {
+          template_name: "accommodation_quote_request_partner",
+          actor: "admin → partner (offerte-aanvraag)",
           customer_name: request.customer_name,
           arrival_date: request.arrival_date,
           departure_date: request.departure_date,

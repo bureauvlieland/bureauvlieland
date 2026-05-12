@@ -147,6 +147,10 @@ Deno.serve(async (req) => {
       related_partner_id: partner.id,
       status: "sent",
       sent_by: "system:password_reset",
+      metadata: {
+        template_name: "partner_password_reset",
+        actor: "partner → self (wachtwoord reset)",
+      },
     });
 
     console.log("Password reset email sent to:", trimmedEmail);

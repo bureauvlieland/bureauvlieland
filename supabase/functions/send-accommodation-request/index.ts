@@ -270,7 +270,11 @@ Deno.serve(async (req) => {
         related_accommodation_id: request.id,
         status: "sent",
         sent_by: "send-accommodation-request",
-        metadata: { number_of_guests: request.number_of_guests },
+        metadata: {
+          template_name: EmailTypes.ACCOMMODATION_REQUEST_BUREAU,
+          actor: "klant → bureau (nieuwe logies-aanvraag)",
+          number_of_guests: request.number_of_guests,
+        },
       }),
       logEmail({
         email_type: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
@@ -280,6 +284,10 @@ Deno.serve(async (req) => {
         related_accommodation_id: request.id,
         status: "sent",
         sent_by: "send-accommodation-request",
+        metadata: {
+          template_name: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
+          actor: "system → klant (bevestiging logies-aanvraag)",
+        },
       }),
     ]);
 

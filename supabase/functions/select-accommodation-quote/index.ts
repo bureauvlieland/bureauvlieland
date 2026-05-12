@@ -449,6 +449,10 @@ Deno.serve(async (req) => {
             related_partner_id: quote.partner_id,
             status: "sent",
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
+              actor: "system → partner (logies geselecteerd)",
+            },
           });
 
           console.log(`Selection notification sent to partner ${quote.partner?.name}`);
@@ -464,6 +468,11 @@ Deno.serve(async (req) => {
             status: "failed",
             error_message: String(e),
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
+              actor: "system → partner (logies geselecteerd)",
+              failure: true,
+            },
           });
         }
       }
@@ -579,6 +588,10 @@ Deno.serve(async (req) => {
             related_accommodation_id: request.id,
             status: "sent",
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
+              actor: "system → klant (logies bevestigd)",
+            },
           });
 
           console.log(`Selection confirmation sent to customer ${request.customer_name}`);
@@ -593,6 +606,11 @@ Deno.serve(async (req) => {
             status: "failed",
             error_message: String(e),
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
+              actor: "system → klant (logies bevestigd)",
+              failure: true,
+            },
           });
         }
       }
@@ -653,6 +671,10 @@ Deno.serve(async (req) => {
               related_partner_id: rqPartner.id,
               status: "sent",
               sent_by: "system",
+              metadata: {
+                template_name: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
+                actor: "system → partner (niet gekozen)",
+              },
             });
 
             console.log(`Rejection notification sent to partner ${rqPartner.name}`);
@@ -668,6 +690,11 @@ Deno.serve(async (req) => {
               status: "failed",
               error_message: String(e),
               sent_by: "system",
+              metadata: {
+                template_name: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
+                actor: "system → partner (niet gekozen)",
+                failure: true,
+              },
             });
           }
         }

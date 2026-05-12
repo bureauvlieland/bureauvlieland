@@ -250,6 +250,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       mailjet_message_id: messageId?.toString() || null,
       sent_by: "system",
       metadata: {
+        template_name: "quote_offer_customer",
+        actor: "admin → klant (offerte)",
         valid_until: validUntil,
         has_custom_body: !!emailBody,
         item_count: items?.length || 0,

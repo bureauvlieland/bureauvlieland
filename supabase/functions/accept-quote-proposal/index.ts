@@ -450,6 +450,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
             customerMailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
           sent_by: "system",
           metadata: {
+            template_name: "quote_accepted_customer",
+            actor: "klant → bureau (akkoord bevestiging)",
             approved_item_count: approvedItems?.length || 0,
             test_mode: testMode,
           },
@@ -470,6 +472,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
               ? customerEmailError.message
               : "Unknown error",
           sent_by: "system",
+          metadata: {
+            template_name: "quote_accepted_customer",
+            actor: "klant → bureau (akkoord bevestiging)",
+            failure: true,
+          },
         });
       }
 

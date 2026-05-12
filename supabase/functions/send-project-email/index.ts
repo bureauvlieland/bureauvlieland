@@ -150,7 +150,11 @@ Deno.serve(async (req) => {
       related_partner_id: partnerId || undefined,
       status: "sent",
       sent_by: `admin:${user.id}`,
-      metadata: { body_preview: body.substring(0, 200) },
+      metadata: {
+        template_name: "admin_project_email",
+        actor: "admin → ad-hoc projectmail",
+        body_preview: body.substring(0, 200),
+      },
     });
 
     // Log as project communication
