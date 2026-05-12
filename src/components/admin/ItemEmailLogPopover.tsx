@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Loader2, AlertTriangle, Wand2, ExternalLink } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, Wand2, ExternalLink, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -114,6 +114,82 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
     }
   };
 
+  const exportIncompleteToCsv = (rows: DisplayEntry[]) => {
+    if (rows.length === 0) {
+      toast.info("Geen incomplete entries om te exporteren");
+      return;
+    }
+    const headers = [
+      "id",
+      "created_at",
+      "sent_at",
+      "email_type",
+      "subject",
+      "recipient_email",
+      "recipient_name",
+      "status",
+      "sent_by",
+      "mailjet_message_id",
+      "missing_fields",
+      "current_template_name",
+      "current_actor",
+      "related_item_id",
+      "related_request_id",
+      "error_message",
+      "metadata_json",
+      "match_source",
+      "inferred_edge_function",
+    ];
+    const escape = (v: unknown): string => {
+      if (v === null || v === undefined) return "";
+      const s = typeof v === "string" ? v : JSON.stringify(v);
+      if (/[",\n\r;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = [headers.join(",")];
+    for (const r of rows) {
+      const meta = (r.metadata ?? {}) as Record<string, unknown>;
+      const missing = getMissingValidationFields(r.metadata);
+      lines.push(
+        [
+          r.id,
+          r.created_at,
+          r.sent_at ?? "",
+          r.email_type,
+          r.subject,
+          r.recipient_email,
+          r.recipient_name ?? "",
+          r.status,
+          r.sent_by ?? "",
+          r.mailjet_message_id ?? "",
+          missing.join("|"),
+          typeof meta.template_name === "string" ? meta.template_name : "",
+          typeof meta.actor === "string" ? meta.actor : "",
+          r.related_item_id ?? "",
+          r.related_request_id ?? "",
+          r.error_message ?? "",
+          JSON.stringify(meta),
+          r.matchSource,
+          inferEdgeFunctionFromType(r.email_type),
+        ]
+          .map(escape)
+          .join(","),
+      );
+    }
+    // BOM for Excel UTF-8 detection
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    a.href = url;
+    a.download = `email-log-incomplete-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${rows.length} entries geëxporteerd`);
+  };
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -262,7 +338,17 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                         zijn meegegeven.
                       </span>
                     </div>
-                    <div className="mt-1.5 flex justify-end">
+                    <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 gap-1 border-amber-300 bg-white px-2 text-[10px] text-amber-900 hover:bg-amber-100"
+                        onClick={() => exportIncompleteToCsv(incomplete)}
+                        title="Download incomplete entries als CSV (opent in Excel)"
+                      >
+                        <Download className="h-3 w-3" />
+                        Export CSV
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
