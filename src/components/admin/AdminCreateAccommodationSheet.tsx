@@ -89,14 +89,22 @@ export const AdminCreateAccommodationSheet = ({
 
       if (insertError) throw insertError;
 
-      // Link back: update program_requests.linked_accommodation_id
+      // Link back: program_requests.linked_accommodation_id.
+      // The DB trigger sync_accommodation_program_link normally handles this,
+      // but we still set it explicitly so the UI sees the link without a refetch.
       const { error: updateError } = await supabase
         .from("program_requests")
         .update({ linked_accommodation_id: accRequest.id })
         .eq("id", project.id);
 
       if (updateError) {
+        // Surface the failure — leaving the project unlinked while the
+        // accommodation already exists creates the kind of inconsistency
+        // we have just repaired in production data.
         console.error("Failed to link accommodation back to project:", updateError);
+        throw new Error(
+          `Logiesaanvraag aangemaakt, maar koppeling met project mislukt: ${updateError.message}. Ververs de pagina; de database-trigger zou de koppeling alsnog moeten herstellen.`,
+        );
       }
 
       toast.success("Logiesaanvraag aangemaakt");
