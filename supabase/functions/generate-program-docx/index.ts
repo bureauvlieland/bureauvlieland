@@ -428,13 +428,15 @@ Deno.serve(async (req) => {
       ],
     });
 
-    const buffer = await Packer.toBuffer(doc);
+    const blob = await Packer.toBlob(doc);
+    const arrayBuffer = await blob.arrayBuffer();
 
-    return new Response(buffer, {
+    return new Response(arrayBuffer, {
       status: 200,
       headers: {
         ...corsHeaders,
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="programma-${program.reference_number || request_id}.docx"`,
       },
     });
   } catch (e) {
