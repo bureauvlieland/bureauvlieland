@@ -7,6 +7,7 @@ import {
   getRecipientEmail,
   getSubjectPrefix,
   buildReplyTo,
+  renderActorLine,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
@@ -658,6 +659,11 @@ Deno.serve(async (req) => {
         templateId = TemplateIds.STATUS_UNAVAILABLE;
       }
 
+      // Bepaal "Aan zet" zodat de status-mail strookt met de UI-MicroPill.
+      // confirmed → klant moet akkoord geven; alternative → klant beslist; unavailable → bureau zoekt alternatief.
+      const actor: "klant" | "bureau" | "geen" =
+        status === "confirmed" || status === "alternative" ? "klant" : "bureau";
+
       const templateVariables = {
         customer_name: sanitizeHtml(programRequest.customer_name),
         activity_name: sanitizeHtml(item.block_name),
@@ -667,6 +673,7 @@ Deno.serve(async (req) => {
         proposed_time: sanitizeHtml(proposedTime || ""),
         proposed_date: proposedDate || "",
         portal_link: portalUrl,
+        actor_line: renderActorLine(actor),
       };
 
       const template = await getRenderedTemplate(templateId, templateVariables);
