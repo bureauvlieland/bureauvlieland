@@ -61,7 +61,7 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
       entity_type: "program_request",
       entity_id: it.request_id,
       reference: it.program_requests?.reference_number,
-      summary: `Onderdeel "${it.name}" wacht ${age} dagen op partner-reactie`,
+      summary: `Onderdeel "${it.block_name}" wacht ${age} dagen op partner-reactie`,
       age_days: age,
       deeplink: deeplinkProject(it.request_id),
     });
