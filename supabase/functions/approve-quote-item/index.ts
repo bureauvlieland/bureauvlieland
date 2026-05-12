@@ -59,9 +59,7 @@ function generatePartnerNotificationEmailFallback(
     .map((d: string) => formatDateNL(d))
     .join(", ");
 
-  const timeInfo = item.preferred_time
-    ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(item.preferred_time)}</span>`
-    : "";
+  const timeInfo = renderEffectiveTimeLine(item, "Tijd");
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
