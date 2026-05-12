@@ -233,15 +233,18 @@ export default function AdminLocations() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MapPin className="h-6 w-6 text-primary" /> Locaties
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Beheer adressen en kaartpinnen voor bouwstenen en partners. Klik op een rij om de pin te plaatsen,
-            of selecteer meerdere bouwstenen om ze in één keer aan een partnerlocatie te koppelen.
-          </p>
+      <div className="p-6 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <MapPin className="h-6 w-6" />
+              Locaties
+            </h1>
+            <p className="text-slate-500 mt-1 text-sm">
+              Beheer adressen en kaartpinnen voor bouwstenen en partners. Klik op een rij om de pin te plaatsen,
+              of selecteer meerdere bouwstenen om ze in één keer aan een partnerlocatie te koppelen.
+            </p>
+          </div>
         </div>
 
         <Card className="p-4 flex flex-wrap items-center gap-4">
