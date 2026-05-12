@@ -13,9 +13,11 @@ interface LocationPickerProps {
   lng: number | null;
   address: string;
   onChange: (lat: number | null, lng: number | null, address: string) => void;
+  /** Tailwind height class for the map container, e.g. "h-[250px]" or "h-[600px]" */
+  mapHeightClass?: string;
 }
 
-export const LocationPicker = ({ lat, lng, address, onChange }: LocationPickerProps) => {
+export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "h-[250px]" }: LocationPickerProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
