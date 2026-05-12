@@ -106,14 +106,15 @@ Deno.serve(async (req) => {
     }
 
     // Group items by partner
-    const partnerGroups = new Map<string, { email: string; name: string; items: string[] }>();
+    const partnerGroups = new Map<string, { email: string; name: string; items: string[]; itemIds: string[] }>();
     for (const item of notifiableItems) {
       if (!item.provider_email) continue;
       const key = item.provider_id;
       if (!partnerGroups.has(key)) {
-        partnerGroups.set(key, { email: item.provider_email, name: item.provider_name, items: [] });
+        partnerGroups.set(key, { email: item.provider_email, name: item.provider_name, items: [], itemIds: [] });
       }
       partnerGroups.get(key)!.items.push(item.block_name);
+      partnerGroups.get(key)!.itemIds.push(item.id);
     }
 
     // Send emails per partner
