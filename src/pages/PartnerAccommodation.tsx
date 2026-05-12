@@ -194,8 +194,11 @@ const PartnerAccommodationContent = () => {
       });
     }
 
-    // Combine requests with their quotes
-    const combined: RequestWithQuote[] = (requestsData || []).map((req) => {
+    // Combine requests with their quotes; cancelled/closed lodging requests are hidden from partner action views.
+    const activeRequestsData = (requestsData || []).filter(
+      (req) => req.status !== "cancelled" && req.status !== "completed"
+    );
+    const combined: RequestWithQuote[] = activeRequestsData.map((req) => {
       const matchingQuote = quotes?.find(q => q.request_id === req.id);
       const invoicingMode = req.linked_program_id
         ? invoicingModeMap.get(req.linked_program_id) ?? null
