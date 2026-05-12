@@ -50,8 +50,9 @@ export const ClaudiaBadge = () => {
   const urgent = data?.urgent ?? 0;
 
   return (
-    <Link
-      to="/admin/werkbank"
+    <button
+      type="button"
+      onClick={() => navigate("/admin/werkbank")}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
         urgent > 0
@@ -75,6 +76,6 @@ export const ClaudiaBadge = () => {
           {total}
         </Badge>
       )}
-    </Link>
+    </button>
   );
 };
