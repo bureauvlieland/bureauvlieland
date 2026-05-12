@@ -641,7 +641,44 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Handle individual item acceptance (klant akkoord op partner voorstel)
+    // Handle guest details update (gastenlijst, dieetwensen, kamerindeling)
+    if (guestDetails) {
+      const now = new Date().toISOString();
+      const programUpdate: any = { updated_at: now, guest_details_updated_at: now };
+      const changedFields: string[] = [];
+
+      if (guestDetails.guest_names !== undefined) {
+        const v = (guestDetails.guest_names || "").slice(0, 5000) || null;
+        programUpdate.guest_names = v;
+        if ((program.guest_names || null) !== v) changedFields.push("gastenlijst");
+      }
+      if (guestDetails.dietary_notes !== undefined) {
+        const v = (guestDetails.dietary_notes || "").slice(0, 5000) || null;
+        programUpdate.dietary_notes = v;
+        if ((program.dietary_notes || null) !== v) changedFields.push("dieetwensen");
+      }
+
+      await supabase.from("program_requests").update(programUpdate).eq("id", program.id);
+
+      if (guestDetails.room_assignment !== undefined && program.linked_accommodation_id) {
+        const v = (guestDetails.room_assignment || "").slice(0, 5000) || null;
+        await supabase
+          .from("accommodation_requests")
+          .update({ room_assignment: v, guest_details_updated_at: now, updated_at: now })
+          .eq("id", program.linked_accommodation_id);
+        changedFields.push("kamerindeling");
+      }
+
+      if (changedFields.length > 0) {
+        await supabase.from("program_request_history").insert({
+          request_id: program.id,
+          action: "guest_details_updated",
+          actor: "customer",
+          actor_name: program.customer_name,
+          notes: `Bijgewerkt: ${changedFields.join(", ")}`,
+        });
+      }
+    }
     if (acceptItemId) {
       const { data: item, error: itemError } = await supabase
         .from("program_request_items")
