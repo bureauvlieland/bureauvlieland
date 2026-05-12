@@ -165,7 +165,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const resp = await sendEmailViaMailjet(messages);
         for (let i = 0; i < logs.length; i++) {
           logs[i].status = "sent";
-          logs[i].mailjet_message_id = resp?.Messages?.[i]?.MessageID?.toString() || null;
+          const msgIdx = logMessageIndex[i] ?? i;
+          logs[i].mailjet_message_id = resp?.Messages?.[msgIdx]?.MessageID?.toString() || null;
           await logEmail(logs[i]);
         }
       } catch (e) {
