@@ -31,6 +31,8 @@ interface EmailLogEntry {
   related_item_id: string | null;
   related_request_id: string | null;
   metadata: Record<string, unknown> | null;
+  sent_by: string | null;
+  mailjet_message_id: string | null;
 }
 
 type MatchSource = "direct" | "group" | "project";
