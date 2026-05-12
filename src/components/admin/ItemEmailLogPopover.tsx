@@ -354,8 +354,10 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                       )}
                     </li>
                   );
-                })}
-              </ul>
+                    })}
+                  </ul>
+                );
+              })()}
             </>
           )}
         </div>
