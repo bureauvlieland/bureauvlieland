@@ -52,7 +52,7 @@ async function fetchOpenRecommendations(): Promise<Recommendation[]> {
   if (error) throw error;
   // priority sort: urgent < normal < info — alfabetisch klopt niet; sort manueel
   const order = { urgent: 0, normal: 1, info: 2 } as const;
-  return (data ?? []).sort(
+  return ((data ?? []) as unknown as Recommendation[]).sort(
     (a, b) =>
       (order[a.priority as keyof typeof order] ?? 3) -
       (order[b.priority as keyof typeof order] ?? 3),
