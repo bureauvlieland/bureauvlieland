@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useChat, type ChatMessage } from "@/hooks/useChat";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
+import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
 
 interface ChatWidgetProps {
   source: "customer_portal" | "partner_portal";
@@ -136,9 +137,17 @@ export const ChatWidget = ({
               </div>
             )}
 
-            {messages.map((msg) => (
-              <ChatBubble key={msg.id} message={msg} />
-            ))}
+            {messages.map((msg, idx) => {
+              const msgDate = new Date(msg.created_at);
+              const prevDate = idx > 0 ? new Date(messages[idx - 1].created_at) : null;
+              const showDateSep = !prevDate || !isSameDay(msgDate, prevDate);
+              return (
+                <div key={msg.id}>
+                  {showDateSep && <ChatDateSeparator date={msgDate} />}
+                  <ChatBubble message={msg} />
+                </div>
+              );
+            })}
 
             {waitingForReply && (
               <div className="bg-muted/60 rounded-xl px-4 py-3 text-sm text-muted-foreground">

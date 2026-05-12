@@ -6,10 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
 
 interface ProjectChatSheetProps {
   open: boolean;
@@ -213,26 +214,31 @@ export function ProjectChatSheet({
                 Nog geen berichten. Stuur het eerste bericht naar {customerName || "de klant"}.
               </p>
             )}
-            {messages.map((msg) => {
+            {messages.map((msg, idx) => {
               const isAdmin = msg.sender_type === "admin";
+              const msgDate = new Date(msg.created_at);
+              const prevDate = idx > 0 ? new Date(messages[idx - 1].created_at) : null;
+              const showDateSep = !prevDate || !isSameDay(msgDate, prevDate);
               return (
-                <div
-                  key={msg.id}
-                  className={cn("flex flex-col", isAdmin ? "items-end" : "items-start")}
-                >
+                <div key={msg.id}>
+                  {showDateSep && <ChatDateSeparator date={msgDate} />}
                   <div
-                    className={cn(
-                      "max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words",
-                      isAdmin
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
-                    )}
+                    className={cn("flex flex-col", isAdmin ? "items-end" : "items-start")}
                   >
-                    {msg.content}
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words",
+                        isAdmin
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      )}
+                    >
+                      {msg.content}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground mt-0.5 px-1">
+                      {msg.sender_name} · {format(msgDate, "HH:mm", { locale: nl })}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground mt-0.5 px-1">
-                    {msg.sender_name} · {format(new Date(msg.created_at), "HH:mm", { locale: nl })}
-                  </span>
                 </div>
               );
             })}

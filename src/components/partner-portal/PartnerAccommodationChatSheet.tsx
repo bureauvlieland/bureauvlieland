@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { useAccommodationChat } from "@/hooks/useAccommodationChat";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
+import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
 
 interface PartnerAccommodationChatSheetProps {
   open: boolean;
@@ -83,19 +84,25 @@ export function PartnerAccommodationChatSheet({
                 Nog geen berichten over deze aanvraag.
               </p>
             )}
-            {messages.map((msg) => {
+            {messages.map((msg, idx) => {
               const isPartner = msg.sender_type === "visitor";
+              const msgDate = new Date(msg.created_at);
+              const prevDate = idx > 0 ? new Date(messages[idx - 1].created_at) : null;
+              const showDateSep = !prevDate || !isSameDay(msgDate, prevDate);
               return (
-                <div key={msg.id} className={`flex ${isPartner ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                    isPartner 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-foreground"
-                  }`}>
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                    <p className={`text-[10px] mt-1 ${isPartner ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                      {msg.sender_name} · {format(new Date(msg.created_at), "d MMM HH:mm", { locale: nl })}
-                    </p>
+                <div key={msg.id}>
+                  {showDateSep && <ChatDateSeparator date={msgDate} />}
+                  <div className={`flex ${isPartner ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                      isPartner 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted text-foreground"
+                    }`}>
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className={`text-[10px] mt-1 ${isPartner ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                        {msg.sender_name} · {format(msgDate, "HH:mm", { locale: nl })}
+                      </p>
+                    </div>
                   </div>
                 </div>
               );
