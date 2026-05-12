@@ -1850,6 +1850,11 @@ const AdminRequestDetail = () => {
                                             {isProposal && (
                                               <div className="text-[10px] text-orange-600 leading-tight">voorstel klant</div>
                                             )}
+                                            {item.customer_counter_time && item.customer_counter_time !== activeTime && (
+                                              <MicroPill tone="purple" className="mt-0.5">
+                                                Klant stelt voor: {item.customer_counter_time}
+                                              </MicroPill>
+                                            )}
                                             {showOriginal && (
                                               <div className="text-[10px] text-muted-foreground line-through leading-tight">
                                                 was: {item.preferred_time}
