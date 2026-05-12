@@ -158,11 +158,12 @@ Deno.serve(async (req) => {
       (blocks ?? []).forEach((b: any) => blocksMap.set(b.id, b));
     }
 
-    // Filter items: skip cancelled, day_index < 0 (extra costs), and bureau-internal
+    // Filter items: skip cancelled and extra-cost rows (day_index < 0).
+    // NB: block_type "bureau" enkel uitsluiten als het ook day_index < 0 heeft
+    // (centraal gefactureerde extra's). Reguliere bureau-items horen wél in het programma.
     const visible = (items ?? [])
       .filter((i: any) => i.status !== "cancelled")
       .filter((i: any) => (i.day_index ?? 0) >= 0)
-      .filter((i: any) => i.block_type !== "bureau")
       .sort((a: any, b: any) => {
         if (a.day_index !== b.day_index) return a.day_index - b.day_index;
         const at = a.confirmed_time || a.proposed_time || a.preferred_time || "zz";
