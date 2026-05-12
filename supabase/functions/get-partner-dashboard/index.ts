@@ -70,7 +70,10 @@ Deno.serve(async (req) => {
           billing_address_city,
           billing_contact_name,
           billing_contact_email,
-          billing_reference
+          billing_reference,
+          guest_names,
+          dietary_notes,
+          guest_details_updated_at
         )
       `)
       .eq("provider_id", partner.id)
