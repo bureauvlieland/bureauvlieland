@@ -493,6 +493,17 @@ const CustomerProgram = () => {
         hasLinkedAccommodation={!!accommodation}
       />
 
+      <EditGuestDetailsDialog
+        isOpen={showGuestDialog}
+        onClose={() => setShowGuestDialog(false)}
+        initialGuestNames={guestDetails.guest_names || ""}
+        initialDietaryNotes={guestDetails.dietary_notes || ""}
+        initialRoomAssignment={guestDetails.room_assignment || ""}
+        showDietary={guestDetails.showDietary}
+        showRoomAssignment={guestDetails.showRoomAssignment}
+        onSave={handleSaveGuestDetails}
+      />
+
       {/* Chat Widget */}
       {token && program && (
         <ChatWidget
