@@ -588,6 +588,10 @@ Deno.serve(async (req) => {
             related_accommodation_id: request.id,
             status: "sent",
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
+              actor: "system → klant (logies bevestigd)",
+            },
           });
 
           console.log(`Selection confirmation sent to customer ${request.customer_name}`);
