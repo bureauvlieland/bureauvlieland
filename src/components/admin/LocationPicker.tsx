@@ -261,41 +261,54 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
     requestAnimationFrame(sync);
   }, [lat, lng]);
 
-  // Search via Nominatim
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) return;
+  // Geocode an arbitrary address string and place marker
+  const geocodeAndPlace = useCallback(async (query: string, keepAddress = false) => {
+    if (!query.trim()) return false;
     setIsSearching(true);
-
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=nl&q=${encodeURIComponent(searchQuery)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=nl&q=${encodeURIComponent(query)}&limit=1`
       );
       const results = await res.json();
-
       if (results.length > 0) {
         const hit = results[0];
         const parsedLat = parseFloat(hit.lat);
         const parsedLng = parseFloat(hit.lon);
-
         if (leafletMapRef.current) {
           const L = (await import("leaflet")).default;
           leafletMapRef.current.setView([parsedLat, parsedLng], 17);
-
           if (markerRef.current) {
             markerRef.current.setLatLng([parsedLat, parsedLng]);
           } else {
             markerRef.current = L.marker([parsedLat, parsedLng]).addTo(leafletMapRef.current);
           }
         }
-
-        onChange(parsedLat, parsedLng, formatAddress(hit) || searchQuery);
+        const newAddr = keepAddress ? query : (formatAddress(hit) || query);
+        onChangeRef.current(parsedLat, parsedLng, newAddr);
+        return true;
       }
     } catch {
-      // silently fail
+      // ignore
     } finally {
       setIsSearching(false);
     }
-  }, [searchQuery, onChange]);
+    return false;
+  }, []);
+
+  const handleSearch = useCallback(() => {
+    geocodeAndPlace(searchQuery);
+  }, [searchQuery, geocodeAndPlace]);
+
+  // Auto-geocode current address on mount if we have an address but no coords
+  const autoTriedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${address}`;
+    if (autoTriedRef.current === key) return;
+    if (address && address.trim() && (lat == null || lng == null) && leafletMapRef.current) {
+      autoTriedRef.current = key;
+      geocodeAndPlace(address, true);
+    }
+  }, [address, lat, lng, geocodeAndPlace]);
 
   const handleClear = () => {
     if (markerRef.current && leafletMapRef.current) {
