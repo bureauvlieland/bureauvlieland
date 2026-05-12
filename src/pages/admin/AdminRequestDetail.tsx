@@ -139,6 +139,8 @@ const LegendPill = ({ children, className }: { children: React.ReactNode; classN
   </span>
 );
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { TicketBookingInline } from "@/components/admin/tickets/TicketBookingInline";
+import { isTicketItem } from "@/lib/ticketItems";
 
 
 interface ProgramRequest {
