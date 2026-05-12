@@ -63,7 +63,7 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
       const [partnersRes, blocksRes] = await Promise.all([
         supabase
           .from("partners")
-          .select("name, address, location_lat, location_lng")
+          .select("name, address_street, address_postal, address_city, location_lat, location_lng")
           .not("location_lat", "is", null)
           .not("location_lng", "is", null),
         supabase
@@ -79,9 +79,11 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
         const key = `${p.location_lat},${p.location_lng}`;
         if (seen.has(key)) continue;
         seen.add(key);
+        const addr = [p.address_street, [p.address_postal, p.address_city].filter(Boolean).join(" ")]
+          .filter(Boolean).join(", ");
         list.push({
           label: p.name,
-          address: p.address || "",
+          address: addr,
           lat: Number(p.location_lat),
           lng: Number(p.location_lng),
           source: "partner",
