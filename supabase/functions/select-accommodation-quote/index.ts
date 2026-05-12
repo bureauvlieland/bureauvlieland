@@ -690,6 +690,11 @@ Deno.serve(async (req) => {
               status: "failed",
               error_message: String(e),
               sent_by: "system",
+              metadata: {
+                template_name: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
+                actor: "system → partner (niet gekozen)",
+                failure: true,
+              },
             });
           }
         }
