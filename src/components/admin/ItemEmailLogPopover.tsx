@@ -272,8 +272,20 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                 );
               })()}
 
-              <ul className="divide-y">
-                {logs.map((log) => {
+              {(() => {
+                const visible = onlyIncomplete
+                  ? logs.filter((l) => getMissingValidationFields(l.metadata).length > 0)
+                  : logs;
+                if (visible.length === 0) {
+                  return (
+                    <div className="px-3 py-6 text-center text-xs text-slate-500">
+                      Geen entries met ontbrekende metadata.
+                    </div>
+                  );
+                }
+                return (
+                  <ul className="divide-y">
+                    {visible.map((log) => {
                   const variant = STATUS_VARIANTS[log.status] ?? {
                     label: log.status,
                     className: "bg-slate-100 text-slate-700 border-slate-200",
