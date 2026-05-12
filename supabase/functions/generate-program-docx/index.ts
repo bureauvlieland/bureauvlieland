@@ -188,18 +188,24 @@ Deno.serve(async (req) => {
     });
 
     // Prefetch static map images for all visible items with coordinates.
-    // Resilient: failed fetches resolve to null and are skipped silently.
+    // NB: numeric columns from Supabase can arrive as strings — coerce safely.
     const mapImages = new Map<string, Uint8Array>();
-    const mapTargets = visible.filter(
-      (it: any) => typeof it.location_lat === "number" && typeof it.location_lng === "number",
-    );
+    const mapTargets = visible
+      .map((it: any) => {
+        const lat = it.location_lat == null ? NaN : Number(it.location_lat);
+        const lng = it.location_lng == null ? NaN : Number(it.location_lng);
+        return Number.isFinite(lat) && Number.isFinite(lng) ? { it, lat, lng } : null;
+      })
+      .filter(Boolean) as Array<{ it: any; lat: number; lng: number }>;
+    console.log(`[docx] prefetching ${mapTargets.length} static maps`);
     const mapResults = await Promise.allSettled(
-      mapTargets.map((it: any) => fetchStaticMapPng(it.location_lat, it.location_lng)),
+      mapTargets.map(({ lat, lng }) => fetchStaticMapPng(lat, lng)),
     );
-    mapTargets.forEach((it: any, i: number) => {
+    mapTargets.forEach(({ it }, i) => {
       const r = mapResults[i];
       if (r.status === "fulfilled" && r.value) mapImages.set(it.id, r.value);
     });
+    console.log(`[docx] embedded ${mapImages.size} maps`);
 
     // Build cover page
     const customerLabel = program.customer_company || program.customer_name || "";
