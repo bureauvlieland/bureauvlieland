@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LocationEditDialog, type LocationEntity } from "@/components/admin/LocationEditDialog";
@@ -38,7 +37,6 @@ export default function AdminLocations() {
   const [rows, setRows] = useState<Record<EntityKind, LocationRow[]>>({
     building_block: [],
     partner: [],
-    program_item: [],
   });
   const [loading, setLoading] = useState(true);
   const [onlyMissing, setOnlyMissing] = useState(true);
@@ -49,13 +47,15 @@ export default function AdminLocations() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [blocksRes, partnersRes, itemsRes] = await Promise.all([
-        supabase.from("building_blocks").select("id, name, category, location_lat, location_lng, location_address").order("name"),
-        supabase.from("partners").select("id, name, address_street, address_postal, address_city, location_lat, location_lng").order("name"),
+      const [blocksRes, partnersRes] = await Promise.all([
         supabase
-          .from("program_request_items")
-          .select("id, block_name, provider_id, provider_name, location_lat, location_lng, location_address, request_id")
-          .or("provider_id.is.null,provider_id.eq."),
+          .from("building_blocks")
+          .select("id, name, category, location_lat, location_lng, location_address")
+          .order("name"),
+        supabase
+          .from("partners")
+          .select("id, name, address_street, address_postal, address_city, location_lat, location_lng")
+          .order("name"),
       ]);
 
       const blocks: LocationRow[] = (blocksRes.data ?? []).map((b: any) => ({
@@ -82,20 +82,7 @@ export default function AdminLocations() {
           .join(", "),
       }));
 
-      const items: LocationRow[] = (itemsRes.data ?? [])
-        .filter((i: any) => i.location_address || i.location_lat)
-        .map((i: any) => ({
-          kind: "program_item",
-          id: i.id,
-          name: i.block_name,
-          category: i.provider_name || "Los onderdeel",
-          subtitle: i.provider_name || "Los programma-onderdeel",
-          lat: i.location_lat,
-          lng: i.location_lng,
-          address: i.location_address ?? "",
-        }));
-
-      setRows({ building_block: blocks, partner: partners, program_item: items });
+      setRows({ building_block: blocks, partner: partners });
     } catch (e: any) {
       toast({ title: "Laden mislukt", description: e.message, variant: "destructive" });
     } finally {
@@ -115,7 +102,7 @@ export default function AdminLocations() {
     return list;
   }, [rows, tab, onlyMissing, search]);
 
-  const editingIndex = editing ? filtered.findIndex((r) => r.id === editing.id && r.kind === editing.kind) : -1;
+  const editingIndex = editing ? filtered.findIndex((r) => r.id === editing.id) : -1;
 
   const openEdit = (row: LocationRow) => {
     setEditing(row);
@@ -131,31 +118,22 @@ export default function AdminLocations() {
   const handleSave = async (e: LocationEntity) => {
     if (!editing) return;
     const kind = editing.kind;
-    let res;
-    if (kind === "building_block") {
-      res = await supabase.from("building_blocks").update({
-        location_lat: e.lat,
-        location_lng: e.lng,
-        location_address: e.address || null,
-      }).eq("id", e.id);
-    } else if (kind === "partner") {
-      res = await supabase.from("partners").update({
-        location_lat: e.lat,
-        location_lng: e.lng,
-      }).eq("id", e.id);
-    } else {
-      res = await supabase.from("program_request_items").update({
-        location_lat: e.lat,
-        location_lng: e.lng,
-        location_address: e.address || null,
-      }).eq("id", e.id);
-    }
+    const res = kind === "building_block"
+      ? await supabase.from("building_blocks").update({
+          location_lat: e.lat,
+          location_lng: e.lng,
+          location_address: e.address || null,
+        }).eq("id", e.id)
+      : await supabase.from("partners").update({
+          location_lat: e.lat,
+          location_lng: e.lng,
+        }).eq("id", e.id);
+
     if (res.error) {
       toast({ title: "Opslaan mislukt", description: res.error.message, variant: "destructive" });
       return;
     }
     toast({ title: "Locatie opgeslagen", description: e.name });
-    // Update local state
     setRows((prev) => ({
       ...prev,
       [kind]: prev[kind].map((r) => (r.id === e.id ? { ...r, lat: e.lat, lng: e.lng, address: e.address } : r)),
@@ -166,7 +144,6 @@ export default function AdminLocations() {
   const counts = {
     building_block: rows.building_block.length,
     partner: rows.partner.length,
-    program_item: rows.program_item.length,
   };
 
   return (
@@ -176,7 +153,7 @@ export default function AdminLocations() {
           <MapPin className="h-6 w-6 text-primary" /> Locaties
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Beheer adressen en kaartpinnen voor bouwstenen, partners en losse programma-onderdelen.
+          Beheer adressen en kaartpinnen voor bouwstenen en partners. Klik op een rij om de pin te plaatsen.
         </p>
       </div>
 
@@ -200,10 +177,9 @@ export default function AdminLocations() {
         <TabsList>
           <TabsTrigger value="building_block">Bouwstenen ({counts.building_block})</TabsTrigger>
           <TabsTrigger value="partner">Partners ({counts.partner})</TabsTrigger>
-          <TabsTrigger value="program_item">Overig ({counts.program_item})</TabsTrigger>
         </TabsList>
 
-        {(["building_block", "partner", "program_item"] as EntityKind[]).map((k) => (
+        {(["building_block", "partner"] as EntityKind[]).map((k) => (
           <TabsContent key={k} value={k} className="mt-4">
             <Card>
               {loading ? (
