@@ -82,6 +82,7 @@ const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
 const AdminCommissionInvoiceCreate = lazy(() => import("./pages/admin/AdminCommissionInvoiceCreate"));
 const AdminCommissionInvoices = lazy(() => import("./pages/admin/AdminCommissionInvoices"));
 const AdminBuildingBlocks = lazy(() => import("./pages/admin/AdminBuildingBlocks"));
+const AdminLocations = lazy(() => import("./pages/admin/AdminLocations"));
 const AdminInvoicing = lazy(() => import("./pages/admin/AdminInvoicing"));
 const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation"));
 const AdminAccommodationDetail = lazy(() => import("./pages/admin/AdminAccommodationDetail"));
