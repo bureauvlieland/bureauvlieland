@@ -893,6 +893,9 @@ const AdminRequestDetail = () => {
   const handleSendSingleItemToPartner = async (item: any) => {
     if (!request) return;
     const phase = getItemSendPhase(item, request);
+    // Force-mode wanneer klant nog niet formeel akkoord is, óf wanneer het
+    // item al eerder is verzonden (dan is dit een herinnering / herversturen).
+    const needsForce = phase !== "klaar_voor_partner";
     if (phase === "wacht_op_klant") {
       const ok = window.confirm(
         `De klant heeft het programma nog niet formeel akkoord. Toch "${item.block_name}" naar de partner sturen?`,
@@ -905,6 +908,7 @@ const AdminRequestDetail = () => {
           request_id: request.id,
           origin: window.location.origin,
           item_ids: [item.id],
+          ...(needsForce ? { mode: "force" as const } : {}),
         },
       });
       if (error) throw error;
