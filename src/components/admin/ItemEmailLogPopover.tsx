@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Loader2 } from "lucide-react";
+import { Mail, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
