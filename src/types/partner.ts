@@ -107,6 +107,9 @@ export interface PartnerItem {
     billing_contact_name?: string | null;
     billing_contact_email?: string | null;
     billing_reference?: string | null;
+    guest_names?: string | null;
+    dietary_notes?: string | null;
+    guest_details_updated_at?: string | null;
   };
 }
 
