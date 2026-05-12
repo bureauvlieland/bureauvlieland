@@ -152,6 +152,10 @@ async function notifyCustomer(
       error_message: mjResponse.ok ? undefined : JSON.stringify(mjResult),
       mailjet_message_id: messageId,
       sent_by: "system",
+      metadata: {
+        template_name: "inbound_reply_to_customer",
+        actor: "partner → klant (via inbound parse)",
+      },
     });
 
     console.log(`Customer notification sent to ${recipientEmail} for ${referenceNumber}`);
