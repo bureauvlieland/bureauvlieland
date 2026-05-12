@@ -84,6 +84,25 @@ const useOpenTodoCount = () => {
   });
 };
 
+const useOpenTicketsCount = () => {
+  return useQuery({
+    queryKey: ["admin-open-tickets-count"],
+    queryFn: async () => {
+      const { TICKET_BLOCK_IDS } = await import("@/lib/ticketItems");
+      const { count, error } = await supabase
+        .from("program_request_items")
+        .select("id", { count: "exact", head: true })
+        .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
+        .is("booking_reference", null)
+        .is("booking_document_path", null)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+};
+
 const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => void }) => {
   const location = useLocation();
   const { state } = useSidebar();
