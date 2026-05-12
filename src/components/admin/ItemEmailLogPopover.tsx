@@ -33,6 +33,15 @@ interface EmailLogEntry {
   metadata: Record<string, unknown> | null;
   sent_by: string | null;
   mailjet_message_id: string | null;
+  delivered_at: string | null;
+  opened_at: string | null;
+  clicked_at: string | null;
+  bounced_at: string | null;
+  blocked_at: string | null;
+  spam_at: string | null;
+  unsub_at: string | null;
+  open_count: number | null;
+  click_count: number | null;
 }
 
 type MatchSource = "direct" | "group" | "project";
@@ -48,11 +57,16 @@ interface ItemEmailLogPopoverProps {
 }
 
 const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
-  sent: { label: "Verzonden", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  sent: { label: "Verzonden", className: "bg-sky-100 text-sky-800 border-sky-200" },
   delivered: { label: "Afgeleverd", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  opened: { label: "Geopend", className: "bg-violet-100 text-violet-800 border-violet-200" },
+  clicked: { label: "Geklikt", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   pending: { label: "In wachtrij", className: "bg-amber-100 text-amber-800 border-amber-200" },
   failed: { label: "Mislukt", className: "bg-rose-100 text-rose-800 border-rose-200" },
   bounced: { label: "Bounced", className: "bg-rose-100 text-rose-800 border-rose-200" },
+  blocked: { label: "Geblokkeerd", className: "bg-rose-100 text-rose-800 border-rose-200" },
+  spam: { label: "Als spam gemeld", className: "bg-rose-100 text-rose-800 border-rose-200" },
+  unsubscribed: { label: "Uitgeschreven", className: "bg-slate-200 text-slate-800 border-slate-300" },
   suppressed: { label: "Onderdrukt", className: "bg-slate-100 text-slate-700 border-slate-200" },
   dlq: { label: "Mislukt", className: "bg-rose-100 text-rose-800 border-rose-200" },
 };
@@ -194,7 +208,7 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const fetchLogs = async () => {
     setLoading(true);
     const SELECT =
-      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata, sent_by, mailjet_message_id";
+      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata, sent_by, mailjet_message_id, delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, unsub_at, open_count, click_count";
 
     const queries: Array<Promise<{ data: EmailLogEntry[] | null; source: MatchSource }>> = [];
 
@@ -477,6 +491,45 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                             : "-"}
                         </span>
                       </div>
+                      {(log.delivered_at || log.opened_at || log.clicked_at || log.bounced_at || log.blocked_at || log.spam_at || log.unsub_at) && (
+                        <div className="flex flex-wrap gap-1 pt-0.5 text-[10px] text-slate-600">
+                          {log.delivered_at && (
+                            <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-emerald-800" title={format(new Date(log.delivered_at), "d MMM yyyy HH:mm", { locale: nl })}>
+                              ✓ Afgeleverd
+                            </span>
+                          )}
+                          {log.opened_at && (
+                            <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-violet-800" title={`${log.open_count ?? 1}× geopend, voor het eerst op ${format(new Date(log.opened_at), "d MMM yyyy HH:mm", { locale: nl })}`}>
+                              👁 {log.open_count && log.open_count > 1 ? `${log.open_count}× geopend` : "Geopend"}
+                            </span>
+                          )}
+                          {log.clicked_at && (
+                            <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-indigo-800" title={`${log.click_count ?? 1}× geklikt, voor het eerst op ${format(new Date(log.clicked_at), "d MMM yyyy HH:mm", { locale: nl })}`}>
+                              🔗 {log.click_count && log.click_count > 1 ? `${log.click_count}× geklikt` : "Geklikt"}
+                            </span>
+                          )}
+                          {log.bounced_at && (
+                            <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-rose-800">
+                              ⚠ Bounced
+                            </span>
+                          )}
+                          {log.blocked_at && (
+                            <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-rose-800">
+                              ⛔ Geblokkeerd
+                            </span>
+                          )}
+                          {log.spam_at && (
+                            <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-rose-800">
+                              🚫 Spam-melding
+                            </span>
+                          )}
+                          {log.unsub_at && (
+                            <span className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-slate-700">
+                              ✉ Uitgeschreven
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {missingFields.length > 0 && (
                         <div className="flex items-center justify-between gap-2 text-[10px] text-amber-700">
                           <div

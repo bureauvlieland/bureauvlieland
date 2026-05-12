@@ -1322,12 +1322,20 @@ export type Database = {
       }
       email_log: {
         Row: {
+          blocked_at: string | null
+          bounced_at: string | null
+          click_count: number
+          clicked_at: string | null
           created_at: string
+          delivered_at: string | null
           email_type: string
           error_message: string | null
           id: string
+          mailjet_events: Json
           mailjet_message_id: string | null
           metadata: Json | null
+          open_count: number
+          opened_at: string | null
           recipient_email: string
           recipient_name: string | null
           related_accommodation_id: string | null
@@ -1336,16 +1344,26 @@ export type Database = {
           related_request_id: string | null
           sent_at: string | null
           sent_by: string | null
+          spam_at: string | null
           status: string
           subject: string
+          unsub_at: string | null
         }
         Insert: {
+          blocked_at?: string | null
+          bounced_at?: string | null
+          click_count?: number
+          clicked_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           email_type: string
           error_message?: string | null
           id?: string
+          mailjet_events?: Json
           mailjet_message_id?: string | null
           metadata?: Json | null
+          open_count?: number
+          opened_at?: string | null
           recipient_email: string
           recipient_name?: string | null
           related_accommodation_id?: string | null
@@ -1354,16 +1372,26 @@ export type Database = {
           related_request_id?: string | null
           sent_at?: string | null
           sent_by?: string | null
+          spam_at?: string | null
           status?: string
           subject: string
+          unsub_at?: string | null
         }
         Update: {
+          blocked_at?: string | null
+          bounced_at?: string | null
+          click_count?: number
+          clicked_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           email_type?: string
           error_message?: string | null
           id?: string
+          mailjet_events?: Json
           mailjet_message_id?: string | null
           metadata?: Json | null
+          open_count?: number
+          opened_at?: string | null
           recipient_email?: string
           recipient_name?: string | null
           related_accommodation_id?: string | null
@@ -1372,8 +1400,10 @@ export type Database = {
           related_request_id?: string | null
           sent_at?: string | null
           sent_by?: string | null
+          spam_at?: string | null
           status?: string
           subject?: string
+          unsub_at?: string | null
         }
         Relationships: [
           {
