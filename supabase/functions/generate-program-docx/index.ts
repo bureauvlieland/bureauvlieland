@@ -342,7 +342,7 @@ Deno.serve(async (req) => {
                   new ImageRun({
                     type: "png",
                     data: mapPng,
-                    transformation: { width: 360, height: 180 },
+                    transformation: { width: 280, height: 280 },
                     altText: {
                       title: "Locatie op de kaart",
                       description: it.location_address,
