@@ -363,6 +363,8 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     navigate("/partner/login");
   };
 
+  const pageTitle = useMemo(() => getAdminPageTitle(location.pathname), [location.pathname]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-100 flex">
@@ -381,7 +383,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     return null;
   }
 
-  const pageTitle = useMemo(() => getAdminPageTitle(location.pathname), [location.pathname]);
 
   return (
     <SidebarProvider>
