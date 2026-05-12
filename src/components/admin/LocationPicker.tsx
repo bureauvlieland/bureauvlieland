@@ -204,12 +204,36 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
 
       leafletMapRef.current = map;
       if (mounted) setMapReady(true);
+
+      // Repeatedly invalidate size while parent (sheet/dialog) animates open,
+      // so the map renders tiles correctly and the marker becomes visible.
+      [50, 150, 300, 600].forEach((ms) => {
+        setTimeout(() => {
+          if (!leafletMapRef.current) return;
+          leafletMapRef.current.invalidateSize();
+          if (markerRef.current) {
+            const ll = markerRef.current.getLatLng();
+            const b = leafletMapRef.current.getBounds();
+            if (!b.contains(ll)) leafletMapRef.current.setView(ll, DEFAULT_ZOOM);
+          }
+        }, ms);
+      });
     };
 
     initMap();
 
+    // Watch for container resizing (sheet open animation, window resize)
+    let ro: ResizeObserver | null = null;
+    if (mapRef.current && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        if (leafletMapRef.current) leafletMapRef.current.invalidateSize();
+      });
+      ro.observe(mapRef.current);
+    }
+
     return () => {
       mounted = false;
+      if (ro) ro.disconnect();
       if (leafletMapRef.current) {
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
