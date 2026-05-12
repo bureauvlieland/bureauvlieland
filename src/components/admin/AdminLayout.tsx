@@ -359,8 +359,14 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     return null;
   }
 
+  const pageTitle = useMemo(() => getAdminPageTitle(location.pathname), [location.pathname]);
+
   return (
     <SidebarProvider>
+      <Helmet>
+        <title>{pageTitle} | Admin | Bureau Vlieland</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="min-h-screen flex w-full bg-slate-100">
         <AdminSidebar admin={admin} onLogout={handleLogout} />
         
@@ -383,3 +389,41 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     </SidebarProvider>
   );
 };
+
+const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
+  { match: /^\/admin\/werkbank/, title: "Werkbank" },
+  { match: /^\/admin\/projecten\/[^/]+\/offerte-preview/, title: "Offerte preview" },
+  { match: /^\/admin\/(aanvragen|projecten)\/[^/]+\/factuur/, title: "Factuur maken" },
+  { match: /^\/admin\/(aanvragen|projecten)\/[^/]+/, title: "Projectdetail" },
+  { match: /^\/admin\/projecten/, title: "Projecten & Planning" },
+  { match: /^\/admin\/programma-nieuw/, title: "Nieuw programma" },
+  { match: /^\/admin\/crm/, title: "CRM" },
+  { match: /^\/admin\/partners\/[^/]+/, title: "Partnerdetail" },
+  { match: /^\/admin\/chat/, title: "Chat" },
+  { match: /^\/admin\/bouwstenen/, title: "Bouwstenen" },
+  { match: /^\/admin\/locaties/, title: "Locaties" },
+  { match: /^\/admin\/templates/, title: "Templates" },
+  { match: /^\/admin\/media/, title: "Media" },
+  { match: /^\/admin\/financieel/, title: "Financieel" },
+  { match: /^\/admin\/facturatie/, title: "Facturatie" },
+  { match: /^\/admin\/inkoopfacturen\/inbox/, title: "Inkoop-inbox" },
+  { match: /^\/admin\/inkoopfacturen/, title: "Inkoopfacturen" },
+  { match: /^\/admin\/commissies\/factuur-maken/, title: "Commissiefactuur maken" },
+  { match: /^\/admin\/commissies\/facturen/, title: "Commissiefacturen" },
+  { match: /^\/admin\/commissies/, title: "Commissies" },
+  { match: /^\/admin\/instellingen/, title: "Instellingen" },
+  { match: /^\/admin\/berichten\/templates/, title: "Email templates" },
+  { match: /^\/admin\/berichten/, title: "Berichtencentrum" },
+  { match: /^\/admin\/logs/, title: "Activiteitenlog" },
+  { match: /^\/admin\/logies\/[^/]+/, title: "Logiesdetail" },
+  { match: /^\/admin\/dashboard/, title: "Dashboard" },
+  { match: /^\/admin\/todos/, title: "Taken" },
+];
+
+function getAdminPageTitle(pathname: string): string {
+  for (const entry of ADMIN_TITLE_MAP) {
+    if (entry.match.test(pathname)) return entry.title;
+  }
+  return "Admin";
+}
+
