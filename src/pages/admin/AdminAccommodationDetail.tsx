@@ -191,6 +191,7 @@ export default function AdminAccommodationDetail() {
   const [closeNotifyCustomer, setCloseNotifyCustomer] = useState(true);
   const [showCloseEmailSheet, setShowCloseEmailSheet] = useState(false);
   const [closeEmailDefaults, setCloseEmailDefaults] = useState({ subject: "", body: "" });
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
