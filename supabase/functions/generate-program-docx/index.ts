@@ -346,9 +346,11 @@ Deno.serve(async (req) => {
             leftChildren.push(
               new Paragraph({
                 children: [
-                  new ImageRun({
+              new ImageRun({
+                    type: cached.type === "png" ? "png" : "jpg",
                     data: cached.buffer,
                     transformation: { width: 200, height: 150 },
+                    altText: { title: "Afbeelding", description: "Activiteit", name: "activity" },
                   }),
                 ],
               }),
