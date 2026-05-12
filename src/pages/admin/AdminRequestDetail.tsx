@@ -75,6 +75,8 @@ import {
 } from "@/components/ui/popover";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { ensureSendItemsTodo } from "@/lib/sendItemsTodo";
+import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 import { 
   itemStatusConfig, 
   type ItemStatus, 
@@ -286,6 +288,7 @@ const AdminRequestDetail = () => {
   }, [searchParams, setSearchParams]);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
@@ -1387,6 +1390,21 @@ const AdminRequestDetail = () => {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Groep & wensen */}
+          <Card>
+            <CardContent className="p-6">
+              <GuestDetailsDisplay
+                guestNames={(request as any).guest_names ?? null}
+                dietaryNotes={(request as any).dietary_notes ?? null}
+                roomAssignment={null}
+                showDietary={items.some((i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering"))}
+                showRoomAssignment={false}
+                updatedAt={(request as any).guest_details_updated_at ?? null}
+                onEdit={() => setGuestDialogOpen(true)}
+              />
             </CardContent>
           </Card>
 
@@ -2795,6 +2813,20 @@ const AdminRequestDetail = () => {
           generalNotes={request.general_notes}
           linkedAccommodationId={request.linked_accommodation_id}
           onSuccess={() => fetchRequestData()}
+        />
+      )}
+
+      {request && (
+        <AdminGuestDetailsDialog
+          open={guestDialogOpen}
+          onOpenChange={setGuestDialogOpen}
+          scope="program_request"
+          recordId={request.id}
+          initialGuestNames={(request as any).guest_names}
+          initialDietaryNotes={(request as any).dietary_notes}
+          showDietary={items.some((i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering"))}
+          showRoomAssignment={false}
+          onSaved={() => fetchRequestData({ silent: true })}
         />
       )}
     </>

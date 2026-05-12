@@ -312,6 +312,24 @@ const CustomerProgram = () => {
   const invoicingMode = (program as any).invoicing_mode || "bureau_central";
   const isMultiDay = selectedDates.length > 1;
 
+  // Determine which guest-details fields to show
+  const hasCateringItems = (program.items || []).some(
+    (i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering")
+  );
+  const guestShowDietary = hasCateringItems;
+  const guestShowRoomAssignment = isMultiDay || !!accommodation;
+  const guestDetails = {
+    guest_names: (program as any).guest_names ?? null,
+    dietary_notes: (program as any).dietary_notes ?? null,
+    room_assignment: accommodation?.room_assignment ?? null,
+    updated_at:
+      (program as any).guest_details_updated_at ??
+      (accommodation as any)?.guest_details_updated_at ??
+      null,
+    showDietary: guestShowDietary,
+    showRoomAssignment: guestShowRoomAssignment,
+  };
+
   const viewProps = {
     program: program as any,
     invoicingMode,
@@ -331,6 +349,8 @@ const CustomerProgram = () => {
     onOpenBilling: () => setShowBillingDialog(true),
     onOpenEdit: () => setShowEditDialog(true),
     onOpenCancel: () => setShowCancelDialog(true),
+    onOpenGuestDetails: () => setShowGuestDialog(true),
+    guestDetails,
     onSubmitChanges: () => setShowConfirmDialog(true),
     onRefresh: refetch,
     onAcceptTerms: handleAcceptTerms,
@@ -471,6 +491,17 @@ const CustomerProgram = () => {
         dateRange={dateRange}
         isSubmitting={isCancelling}
         hasLinkedAccommodation={!!accommodation}
+      />
+
+      <EditGuestDetailsDialog
+        isOpen={showGuestDialog}
+        onClose={() => setShowGuestDialog(false)}
+        initialGuestNames={guestDetails.guest_names || ""}
+        initialDietaryNotes={guestDetails.dietary_notes || ""}
+        initialRoomAssignment={guestDetails.room_assignment || ""}
+        showDietary={guestDetails.showDietary}
+        showRoomAssignment={guestDetails.showRoomAssignment}
+        onSave={handleSaveGuestDetails}
       />
 
       {/* Chat Widget */}

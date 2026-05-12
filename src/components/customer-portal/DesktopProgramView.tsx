@@ -15,6 +15,7 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
+import { GuestDetailsCard } from "./GuestDetailsCard";
 import { CompactBillingSection } from "./CompactBillingSection";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
@@ -119,6 +120,16 @@ interface DesktopProgramViewProps {
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;
+  // Guest details
+  onOpenGuestDetails?: () => void;
+  guestDetails?: {
+    guest_names: string | null;
+    dietary_notes: string | null;
+    room_assignment: string | null;
+    updated_at: string | null;
+    showDietary: boolean;
+    showRoomAssignment: boolean;
+  };
 }
 
 export const DesktopProgramView = ({
@@ -150,6 +161,8 @@ export const DesktopProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onOpenGuestDetails,
+  guestDetails,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -220,6 +233,13 @@ export const DesktopProgramView = ({
               programType={program.origin}
               quoteStatus={program.quote_status}
               programPublishedAt={program.program_published_at}
+              guestDetailsIncomplete={
+                !!guestDetails &&
+                (!guestDetails.guest_names ||
+                  (guestDetails.showDietary && !guestDetails.dietary_notes) ||
+                  (guestDetails.showRoomAssignment && !guestDetails.room_assignment))
+              }
+              onOpenGuestDetails={onOpenGuestDetails}
             />
 
             <ProgramIntroCard
@@ -235,6 +255,18 @@ export const DesktopProgramView = ({
               allConfirmed={allConfirmed}
               quotePdfUrl={(program as any).quote_pdf_url}
             />
+
+            {guestDetails && isPublished && onOpenGuestDetails && (
+              <GuestDetailsCard
+                guestNames={guestDetails.guest_names}
+                dietaryNotes={guestDetails.dietary_notes}
+                roomAssignment={guestDetails.room_assignment}
+                showDietary={guestDetails.showDietary}
+                showRoomAssignment={guestDetails.showRoomAssignment}
+                updatedAt={guestDetails.updated_at}
+                onEdit={onOpenGuestDetails}
+              />
+            )}
           </>
         )}
 

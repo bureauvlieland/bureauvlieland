@@ -30,10 +30,12 @@ interface ActionRequiredCardProps {
   programType?: string;
   quoteStatus?: string | null;
   programPublishedAt?: string | null;
+  guestDetailsIncomplete?: boolean;
+  onOpenGuestDetails?: () => void;
   className?: string;
 }
 
-type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "complete" | null;
+type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "guest_details" | "complete" | null;
 
 interface ActionConfig {
   type: ActionType;
@@ -59,6 +61,8 @@ export const ActionRequiredCard = ({
   programType,
   quoteStatus,
   programPublishedAt,
+  guestDetailsIncomplete,
+  onOpenGuestDetails,
   className,
 }: ActionRequiredCardProps) => {
   const isPublished = !!programPublishedAt;
@@ -172,6 +176,19 @@ export const ActionRequiredCard = ({
           label: "Ondertekenen",
           onClick: onScrollToTerms,
         } : undefined,
+      };
+    }
+
+    // Guest details still missing after signing
+    if (termsAccepted && guestDetailsIncomplete) {
+      return {
+        type: "guest_details",
+        title: "Vul de gastenlijst en wensen aan",
+        description:
+          "Uw boeking staat. Vul nog de namen van uw gasten en eventuele dieet- of kamerwensen in, zodat wij en de aanbieders hier rekening mee kunnen houden.",
+        icon: <FileText className="h-5 w-5" />,
+        variant: "info",
+        cta: onOpenGuestDetails ? { label: "Aanvullen", onClick: onOpenGuestDetails } : undefined,
       };
     }
 
