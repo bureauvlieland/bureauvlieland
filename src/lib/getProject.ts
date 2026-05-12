@@ -262,6 +262,6 @@ export async function listProjectsForWerkbank(opts: {
 
   if (archiveOnly) return summaries;
   if (includeFinished) return summaries;
-  // Werklijst: alleen 'geannuleerd' wegfilteren; 'afgerond' blijft zichtbaar tot facturatie klaar is.
-  return summaries.filter((s) => s.pipeline !== "geannuleerd");
+  // Werklijst: geannuleerde én volledig afgeronde projecten horen in het archief.
+  return summaries.filter((s) => s.pipeline !== "geannuleerd" && s.pipeline !== "afgerond");
 }
