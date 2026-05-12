@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Loader2, AlertTriangle, Wand2 } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, Wand2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
