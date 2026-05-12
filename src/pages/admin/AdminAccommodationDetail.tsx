@@ -1331,6 +1331,19 @@ export default function AdminAccommodationDetail() {
         }
       />
 
+      {request && (
+        <AdminGuestDetailsDialog
+          open={showGuestDialog}
+          onOpenChange={setShowGuestDialog}
+          scope="accommodation_request"
+          recordId={request.id}
+          initialRoomAssignment={(request as any).room_assignment ?? null}
+          showDietary={false}
+          showRoomAssignment={true}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] })}
+        />
+      )}
+
       {/* Status Email Sheet */}
       <SendProjectEmailSheet
         open={showStatusEmailSheet}
