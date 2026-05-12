@@ -213,7 +213,11 @@ Deno.serve(async (req) => {
       status: emailStatus,
       mailjet_message_id: mailjetMessageId || undefined,
       sent_by: "system",
-      metadata: { conversation_id },
+      metadata: {
+        template_name: "chat_reply_notification",
+        actor: "system → ontvanger (chat reply)",
+        conversation_id,
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {
