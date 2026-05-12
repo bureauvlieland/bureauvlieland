@@ -446,6 +446,19 @@ export const PartnerItemSheet = ({
             </div>
           </div>
 
+          {(request.guest_names || (item.block_category === "catering" && request.dietary_notes)) && (
+            <div className="bg-muted/30 rounded-lg p-4 border">
+              <GuestDetailsDisplay
+                guestNames={request.guest_names ?? null}
+                dietaryNotes={request.dietary_notes ?? null}
+                roomAssignment={null}
+                showDietary={item.block_category === "catering"}
+                showRoomAssignment={false}
+                updatedAt={request.guest_details_updated_at ?? null}
+              />
+            </div>
+          )}
+
           <Separator />
 
           {/* Details section */}
