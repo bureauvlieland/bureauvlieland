@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const EMBED_MODEL = "google/gemini-embedding-001";
+const EMBED_MODEL = "openai/text-embedding-3-small";
 const EMBED_DIMS = 1536;
 const BATCH_SIZE = 16; // embeddings per request
 const MAX_CONTENT = 6000;
