@@ -80,6 +80,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const messages: any[] = [];
     const logs: any[] = [];
+    const logMessageIndex: number[] = [];
     const notified: string[] = [];
 
     for (const pid of partner_ids) {
@@ -123,6 +124,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const recipient = getRecipientEmail(email, origin);
       const subject = `${subjectPrefix}Bevestiging boeking via Bureau Vlieland — ${program.reference_number || ""}`;
 
+      const messageIdx = messages.length;
       messages.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: recipient, Name: partner.name }],
@@ -131,17 +133,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
         HTMLPart: html,
       });
 
-      logs.push({
-        email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject,
-        recipient_email: recipient,
-        recipient_name: partner.name,
-        related_request_id: program.id,
-        related_partner_id: pid,
-        status: "pending",
-        sent_by: "admin",
-        metadata: { item_count: partnerItems.length, informational: true, test_mode: testMode },
-      });
+      const partnerItemIds = partnerItems.map((it: any) => it.id);
+      for (const it of partnerItems) {
+        logs.push({
+          email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
+          subject,
+          recipient_email: recipient,
+          recipient_name: partner.name,
+          related_request_id: program.id,
+          related_partner_id: pid,
+          related_item_id: it.id,
+          status: "pending",
+          sent_by: "admin",
+          metadata: {
+            item_count: partnerItems.length,
+            item_ids: partnerItemIds,
+            informational: true,
+            test_mode: testMode,
+            template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
+            actor: "admin → partner (informatief)",
+          },
+        });
+        logMessageIndex.push(messageIdx);
+      }
 
       notified.push(pid);
     }
@@ -151,7 +165,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const resp = await sendEmailViaMailjet(messages);
         for (let i = 0; i < logs.length; i++) {
           logs[i].status = "sent";
-          logs[i].mailjet_message_id = resp?.Messages?.[i]?.MessageID?.toString() || null;
+          const msgIdx = logMessageIndex[i] ?? i;
+          logs[i].mailjet_message_id = resp?.Messages?.[msgIdx]?.MessageID?.toString() || null;
           await logEmail(logs[i]);
         }
       } catch (e) {

@@ -372,6 +372,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const baseUrl = getPortalBaseUrl(origin);
     const emailMessages: any[] = [];
     const emailLogs: any[] = [];
+    const logMessageIndex: number[] = [];
 
     for (const [partnerId, group] of groups) {
       // In force-mode (herinnering / herversturen) raken we de status niet
@@ -401,6 +402,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? `${subjectPrefix}Herinnering: aanvraag via Bureau Vlieland — ${program.reference_number || ""}`
         : `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`;
 
+      const messageIdx = emailMessages.length;
       emailMessages.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: recipientEmail, Name: group.partnerName }],
@@ -409,17 +411,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
         HTMLPart: emailHtml,
       });
 
-      emailLogs.push({
-        email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: subjectLine,
-        recipient_email: recipientEmail,
-        recipient_name: group.partnerName,
-        related_request_id: program.id,
-        related_partner_id: partnerId,
-        status: "pending",
-        sent_by: "admin",
-        metadata: { item_count: group.items.length, test_mode: testMode, reminder: isForce },
-      });
+      // Log per item zodat de mail-log popover per onderdeel werkt
+      for (const it of group.items) {
+        emailLogs.push({
+          email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
+          subject: subjectLine,
+          recipient_email: recipientEmail,
+          recipient_name: group.partnerName,
+          related_request_id: program.id,
+          related_partner_id: partnerId,
+          related_item_id: it.id,
+          status: "pending",
+          sent_by: "admin",
+          metadata: {
+            item_count: group.items.length,
+            item_ids: group.itemIds,
+            test_mode: testMode,
+            reminder: isForce,
+            template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
+            actor: "admin → partner",
+          },
+        });
+        logMessageIndex.push(messageIdx);
+      }
 
       console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
     }
@@ -430,7 +444,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         console.log(`Sent ${emailMessages.length} partner notification emails`);
         for (let i = 0; i < emailLogs.length; i++) {
           emailLogs[i].status = "sent";
-          emailLogs[i].mailjet_message_id = mailjetResponse?.Messages?.[i]?.MessageID?.toString() || null;
+          const msgIdx = logMessageIndex[i] ?? i;
+          emailLogs[i].mailjet_message_id = mailjetResponse?.Messages?.[msgIdx]?.MessageID?.toString() || null;
           await logEmail(emailLogs[i]);
         }
       } catch (emailError) {
