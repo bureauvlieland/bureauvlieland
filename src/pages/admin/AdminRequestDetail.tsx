@@ -2527,6 +2527,15 @@ const AdminRequestDetail = () => {
         </div>
       </AdminLayout>
 
+      <ProjectChatSheet
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        requestId={request.id}
+        customerName={request.customer_name}
+        customerEmail={request.customer_email}
+      />
+
+
       {/* Cancel dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
