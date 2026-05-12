@@ -111,6 +111,7 @@ import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOpenAdminPriceChange, isPerPersonItem, isPerDayItem, getEffectivePeople, getNumberOfDays } from "@/lib/portalPricing";
 import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { MicroPill } from "@/components/shared/MicroPill";
 import { useAppSettings } from "@/hooks/useAppSettings";
 // Bureau-items herkennen we direct via provider_id (audit-beslissing Fase 4a):
 const isBureauItem = (i: { provider_id?: string | null }) => i.provider_id === "bureau";
@@ -1849,6 +1850,11 @@ const AdminRequestDetail = () => {
                                             </div>
                                             {isProposal && (
                                               <div className="text-[10px] text-orange-600 leading-tight">voorstel klant</div>
+                                            )}
+                                            {(item as any).customer_counter_time && (item as any).customer_counter_time !== activeTime && (
+                                              <MicroPill tone="purple" className="mt-0.5">
+                                                Klant stelt voor: {(item as any).customer_counter_time}
+                                              </MicroPill>
                                             )}
                                             {showOriginal && (
                                               <div className="text-[10px] text-muted-foreground line-through leading-tight">
