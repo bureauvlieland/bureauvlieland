@@ -65,7 +65,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const { data: items } = await supabase
       .from("program_request_items")
-      .select("id, block_name, provider_id, provider_name, preferred_time, day_index")
+      .select("id, block_name, provider_id, provider_name, preferred_time, proposed_time, confirmed_time, day_index")
       .eq("request_id", request_id)
       .in("provider_id", partner_ids)
       .neq("status", "cancelled");
@@ -91,9 +91,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (partnerItems.length === 0) continue;
 
       const itemsHtml = partnerItems.map((it: any) => {
-        const t = it.preferred_time
-          ? `<br><span style="color:#666;font-size:13px;">⏰ Gewenste tijd: ${sanitizeHtml(it.preferred_time)}</span>` : "";
-        return `<li style="margin-bottom:12px;"><strong>${sanitizeHtml(it.block_name)}</strong>${t}</li>`;
+        return `<li style="margin-bottom:12px;"><strong>${sanitizeHtml(it.block_name)}</strong>${renderEffectiveTimeLine(it, "Tijd")}</li>`;
       }).join("");
 
       const html = `
