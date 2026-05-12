@@ -369,6 +369,7 @@ export type Database = {
           departure_date: string
           expires_at: string
           facilities_required: Json | null
+          guest_details_updated_at: string | null
           id: string
           linked_program_id: string | null
           location_preference: Json | null
@@ -377,6 +378,7 @@ export type Database = {
           quotes_requested_count: number
           reference_number: string | null
           reopened_reason: string | null
+          room_assignment: string | null
           room_count: number | null
           room_occupancy: string | null
           room_types: Json | null
@@ -402,6 +404,7 @@ export type Database = {
           departure_date: string
           expires_at?: string
           facilities_required?: Json | null
+          guest_details_updated_at?: string | null
           id?: string
           linked_program_id?: string | null
           location_preference?: Json | null
@@ -410,6 +413,7 @@ export type Database = {
           quotes_requested_count?: number
           reference_number?: string | null
           reopened_reason?: string | null
+          room_assignment?: string | null
           room_count?: number | null
           room_occupancy?: string | null
           room_types?: Json | null
@@ -435,6 +439,7 @@ export type Database = {
           departure_date?: string
           expires_at?: string
           facilities_required?: Json | null
+          guest_details_updated_at?: string | null
           id?: string
           linked_program_id?: string | null
           location_preference?: Json | null
@@ -443,6 +448,7 @@ export type Database = {
           quotes_requested_count?: number
           reference_number?: string | null
           reopened_reason?: string | null
+          room_assignment?: string | null
           room_count?: number | null
           room_occupancy?: string | null
           room_types?: Json | null
@@ -2346,8 +2352,11 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_token: string
+          dietary_notes: string | null
           expires_at: string
           general_notes: string | null
+          guest_details_updated_at: string | null
+          guest_names: string | null
           id: string
           invoicing_mode: string
           linked_accommodation_id: string | null
@@ -2395,8 +2404,11 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_token: string
+          dietary_notes?: string | null
           expires_at?: string
           general_notes?: string | null
+          guest_details_updated_at?: string | null
+          guest_names?: string | null
           id?: string
           invoicing_mode?: string
           linked_accommodation_id?: string | null
@@ -2444,8 +2456,11 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           customer_token?: string
+          dietary_notes?: string | null
           expires_at?: string
           general_notes?: string | null
+          guest_details_updated_at?: string | null
+          guest_names?: string | null
           id?: string
           invoicing_mode?: string
           linked_accommodation_id?: string | null

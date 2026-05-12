@@ -46,6 +46,10 @@ export interface AccommodationRequest {
   quotes_requested_count: number;
   quotes_declined_count: number;
   
+  // Guest details (free-text)
+  room_assignment?: string | null;
+  guest_details_updated_at?: string | null;
+
   // Timestamps
   created_at: string;
   updated_at: string;

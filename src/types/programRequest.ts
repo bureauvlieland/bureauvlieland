@@ -229,6 +229,10 @@ export interface ProgramRequest {
   admin_created_by: string | null;
   // Program description
   program_description: string | null;
+  // Guest details (free-text)
+  guest_names?: string | null;
+  dietary_notes?: string | null;
+  guest_details_updated_at?: string | null;
   // Publish flow
   program_published_at: string | null;
 }

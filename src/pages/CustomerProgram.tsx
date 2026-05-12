@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChangeConfirmationDialog, type PendingChange } from "@/components/customer-portal/ChangeConfirmationDialog";
 import { EditProgramDetailsDialog } from "@/components/customer-portal/EditProgramDetailsDialog";
+import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDetailsDialog";
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigation";
@@ -49,6 +50,7 @@ const CustomerProgram = () => {
     getPendingChanges,
     submitChanges,
     updateProgramDetails,
+    updateGuestDetails,
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
@@ -68,6 +70,7 @@ const CustomerProgram = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showBillingDialog, setShowBillingDialog] = useState(false);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -187,6 +190,16 @@ const CustomerProgram = () => {
       });
     }
 
+    return success;
+  };
+
+  const handleSaveGuestDetails = async (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => {
+    const success = await updateGuestDetails(updates);
+    if (success) {
+      toast({ title: "Wensen opgeslagen", description: "Bureau Vlieland en de aanbieders zien uw aanvullingen." });
+    } else {
+      toast({ title: "Er ging iets mis", description: "Probeer het later opnieuw.", variant: "destructive" });
+    }
     return success;
   };
 
