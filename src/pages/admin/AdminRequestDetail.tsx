@@ -128,7 +128,8 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare } from "lucide-react";
+import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 
 const LegendPill = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <span className={cn("inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-tight", className)}>
