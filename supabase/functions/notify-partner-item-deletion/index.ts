@@ -19,6 +19,7 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 interface LegacyPartner {
   partner_id: string;
   item_names: string[];
+  item_ids?: string[];
 }
 
 interface RequestPayload {
