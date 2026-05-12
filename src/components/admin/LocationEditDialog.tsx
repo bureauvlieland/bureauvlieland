@@ -75,7 +75,7 @@ export const LocationEditDialog = ({ open, entity, onClose, onSave, onPrev, onNe
           )}
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-hidden px-6 py-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
           {entity && (
             <LocationPicker
               key={entity.id}
