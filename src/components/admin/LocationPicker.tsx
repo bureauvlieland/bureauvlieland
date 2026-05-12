@@ -53,6 +53,82 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [_mapReady, setMapReady] = useState(false);
+  const [known, setKnown] = useState<KnownLocation[]>([]);
+  const [showSuggest, setShowSuggest] = useState(false);
+
+  // Load known addresses from existing partners + bouwstenen so users can pick instead of retyping
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [partnersRes, blocksRes] = await Promise.all([
+        supabase
+          .from("partners")
+          .select("name, address, location_lat, location_lng")
+          .not("location_lat", "is", null)
+          .not("location_lng", "is", null),
+        supabase
+          .from("building_blocks")
+          .select("name, location_address, location_lat, location_lng")
+          .not("location_lat", "is", null)
+          .not("location_lng", "is", null),
+      ]);
+      if (cancelled) return;
+      const list: KnownLocation[] = [];
+      const seen = new Set<string>();
+      for (const p of (partnersRes.data || []) as any[]) {
+        const key = `${p.location_lat},${p.location_lng}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        list.push({
+          label: p.name,
+          address: p.address || "",
+          lat: Number(p.location_lat),
+          lng: Number(p.location_lng),
+          source: "partner",
+        });
+      }
+      for (const b of (blocksRes.data || []) as any[]) {
+        const key = `${b.location_lat},${b.location_lng}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        list.push({
+          label: b.name,
+          address: b.location_address || "",
+          lat: Number(b.location_lat),
+          lng: Number(b.location_lng),
+          source: "bouwsteen",
+        });
+      }
+      setKnown(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const suggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return known
+      .filter(k =>
+        k.label.toLowerCase().includes(q) ||
+        k.address.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [searchQuery, known]);
+
+  const pickKnown = useCallback(async (k: KnownLocation) => {
+    setShowSuggest(false);
+    setSearchQuery("");
+    if (leafletMapRef.current) {
+      const L = (await import("leaflet")).default;
+      leafletMapRef.current.setView([k.lat, k.lng], 17);
+      if (markerRef.current) {
+        markerRef.current.setLatLng([k.lat, k.lng]);
+      } else {
+        markerRef.current = L.marker([k.lat, k.lng]).addTo(leafletMapRef.current);
+      }
+    }
+    onChange(k.lat, k.lng, k.address || k.label);
+  }, [onChange]);
 
   // Always-current refs so map click handler doesn't capture stale closures
   const addressRef = useRef(address);
