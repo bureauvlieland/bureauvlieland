@@ -99,6 +99,7 @@ const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
 const AdminFinancialDashboard = lazy(() => import("./pages/admin/AdminFinancialDashboard"));
 const AdminProjectsOverview = lazy(() => import("./pages/admin/AdminProjectsOverview"));
 const AdminWerkbank = lazy(() => import("./pages/admin/AdminWerkbank"));
+const AdminTickets = lazy(() => import("./pages/admin/AdminTickets"));
 
 const queryClient = new QueryClient();
 
