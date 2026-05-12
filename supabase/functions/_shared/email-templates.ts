@@ -205,6 +205,58 @@ export function getRecipientEmail(originalEmail: string, origin?: string): strin
   return isTestMode(origin) ? TEST_EMAIL : originalEmail;
 }
 
+// ============================================================
+// Effective time + actor helpers (Phase 4b/4d alignment)
+// ============================================================
+
+export interface ItemTimeFields {
+  confirmed_time?: string | null;
+  proposed_time?: string | null;
+  preferred_time?: string | null;
+}
+
+/**
+ * Single source of truth for "the time we should communicate" about an item.
+ * Mirrors the UI rule from Phase 4b: confirmed > proposed > preferred.
+ */
+export function getEffectiveItemTime(item: ItemTimeFields | null | undefined): string | null {
+  if (!item) return null;
+  return item.confirmed_time || item.proposed_time || item.preferred_time || null;
+}
+
+/**
+ * Inline "⏰ Tijd: hh:mm" snippet for partner/customer mails.
+ * Returns "" when there is no time at all (so callers can concatenate freely).
+ */
+export function renderEffectiveTimeLine(
+  item: ItemTimeFields | null | undefined,
+  label = "Tijd",
+): string {
+  const time = getEffectiveItemTime(item);
+  if (!time) return "";
+  return `<br><span style="color:#666; font-size:13px;">⏰ ${label}: ${sanitizeHtml(time)}</span>`;
+}
+
+export type ItemActor = "partner" | "klant" | "bureau" | "geen";
+
+const ACTOR_LABEL: Record<ItemActor, string> = {
+  partner: "Aanbieder",
+  klant: "Klant",
+  bureau: "Bureau Vlieland",
+  geen: "Geen actie nodig",
+};
+
+/**
+ * "Aan zet: …" line for partner/customer status mails — matches the
+ * MicroPill tooltip language in the UI so wording stays consistent.
+ */
+export function renderActorLine(actor: ItemActor | null | undefined): string {
+  if (!actor || actor === "geen") return "";
+  return `<p style="margin:16px 0 0; padding:10px 14px; background:#f1f5f9; border-left:3px solid #0F4C5C; border-radius:4px; font-size:13px; color:#334155;">
+    <strong>Aan zet:</strong> ${ACTOR_LABEL[actor]}
+  </p>`;
+}
+
 // Template IDs as constants for consistency
 export const TemplateIds = {
   // Program request emails
