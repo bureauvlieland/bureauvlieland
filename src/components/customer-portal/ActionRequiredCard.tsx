@@ -30,10 +30,12 @@ interface ActionRequiredCardProps {
   programType?: string;
   quoteStatus?: string | null;
   programPublishedAt?: string | null;
+  guestDetailsIncomplete?: boolean;
+  onOpenGuestDetails?: () => void;
   className?: string;
 }
 
-type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "complete" | null;
+type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "guest_details" | "complete" | null;
 
 interface ActionConfig {
   type: ActionType;
@@ -59,6 +61,8 @@ export const ActionRequiredCard = ({
   programType,
   quoteStatus,
   programPublishedAt,
+  guestDetailsIncomplete,
+  onOpenGuestDetails,
   className,
 }: ActionRequiredCardProps) => {
   const isPublished = !!programPublishedAt;
