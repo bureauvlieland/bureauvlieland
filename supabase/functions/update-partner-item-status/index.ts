@@ -513,34 +513,40 @@ Deno.serve(async (req) => {
       const counterResponseRecipient = getRecipientEmail(programRequest.customer_email, origin);
       const counterSubjectPrefix = getSubjectPrefix(origin);
       
-      const emailSent = await sendEmailViaMailjet(
+      const sendResult = await sendEmailViaMailjet(
         counterResponseRecipient,
         programRequest.customer_name,
         `${counterSubjectPrefix}${emailSubject}`,
         emailBody,
         programRequest.reference_number
       );
-      
-      if (emailSent) {
+
+      // Log altijd (sent of failed) zodat de mail-popover compleet is
+      await supabase.from("email_log").insert({
+        email_type: "counter_proposal_response",
+        subject: `${counterSubjectPrefix}${emailSubject}`,
+        recipient_email: counterResponseRecipient,
+        recipient_name: programRequest.customer_name,
+        related_request_id: item.request_id,
+        related_item_id: itemId,
+        related_partner_id: partner.id,
+        status: sendResult.ok ? "sent" : "failed",
+        error_message: sendResult.error || null,
+        mailjet_message_id: sendResult.messageId,
+        sent_at: sendResult.ok ? new Date().toISOString() : null,
+        sent_by: "partner",
+        metadata: {
+          template_name: TemplateIds.COUNTER_PROPOSAL_RESPONSE,
+          actor: "partner → klant (reactie op tegenvoorstel)",
+          old_status: oldStatus,
+          new_status: status,
+          quoted_price: quotedPrice,
+          proposed_time: proposedTime,
+        },
+      });
+
+      if (sendResult.ok) {
         console.log(`Counter-proposal response email sent to ${counterResponseRecipient}`);
-        // Log email
-        await supabase.from("email_log").insert({
-          email_type: "counter_proposal_response",
-          subject: emailSubject,
-          recipient_email: counterResponseRecipient,
-          recipient_name: programRequest.customer_name,
-          related_request_id: item.request_id,
-          related_item_id: itemId,
-          related_partner_id: partner.id,
-          status: "sent",
-          sent_at: new Date().toISOString(),
-          metadata: {
-            old_status: oldStatus,
-            new_status: status,
-            quoted_price: quotedPrice,
-            proposed_time: proposedTime,
-          },
-        });
       } else {
         console.warn(`Failed to send counter-proposal response email to ${counterResponseRecipient}`);
       }
