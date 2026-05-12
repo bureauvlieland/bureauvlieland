@@ -308,13 +308,37 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
   return (
     <div className="space-y-3">
       {/* Search bar */}
-      <div className="flex gap-2">
-        <Input
-          placeholder="Zoek adres op Vlieland..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleSearch())}
-        />
+      <div className="flex gap-2 relative">
+        <div className="flex-1 relative">
+          <Input
+            placeholder="Zoek adres of bestaande locatie..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setShowSuggest(true); }}
+            onFocus={() => setShowSuggest(true)}
+            onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleSearch())}
+          />
+          {showSuggest && suggestions.length > 0 && (
+            <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto">
+              {suggestions.map((k, i) => (
+                <button
+                  key={`${k.lat},${k.lng},${i}`}
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-start gap-2"
+                  onMouseDown={(e) => { e.preventDefault(); pickKnown(k); }}
+                >
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{k.label}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {k.address || `${k.lat.toFixed(5)}, ${k.lng.toFixed(5)}`} · {k.source}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Button type="button" variant="outline" size="icon" onClick={handleSearch} disabled={isSearching}>
           <Search className="h-4 w-4" />
         </Button>
