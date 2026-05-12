@@ -169,7 +169,11 @@ Deno.serve(async (req) => {
           related_partner_id: partner.id,
           status: results[results.length - 1].success ? "sent" : "failed",
           sent_by: "admin",
-          metadata: { original_recipient: partner.email },
+          metadata: {
+            template_name: "partner_mailing",
+            actor: "admin → partner (bulk mailing)",
+            original_recipient: partner.email,
+          },
         });
       } catch (err) {
         console.error(`Error sending to ${partner.name}:`, err);
