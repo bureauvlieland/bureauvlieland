@@ -372,6 +372,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const baseUrl = getPortalBaseUrl(origin);
     const emailMessages: any[] = [];
     const emailLogs: any[] = [];
+    const logMessageIndex: number[] = [];
 
     for (const [partnerId, group] of groups) {
       // In force-mode (herinnering / herversturen) raken we de status niet
