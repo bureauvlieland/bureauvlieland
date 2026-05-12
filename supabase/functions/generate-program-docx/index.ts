@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
 
     const buffer = await Packer.toBuffer(doc);
 
-    return new Response(arrayBuffer, {
+    return new Response(buffer, {
       status: 200,
       headers: {
         ...corsHeaders,
