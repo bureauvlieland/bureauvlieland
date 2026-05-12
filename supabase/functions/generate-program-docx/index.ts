@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
         });
 
         bodyChildren.push(itemTable);
-        bodyChildren.push(new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: "" })] }));
+        bodyChildren.push(new Paragraph({ spacing: { after: 200 } }));
       }
     }
 
