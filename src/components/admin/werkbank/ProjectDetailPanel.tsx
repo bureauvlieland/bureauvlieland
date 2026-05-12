@@ -217,6 +217,8 @@ function ProjectActionsCard({ requestId }: { requestId: string }) {
     </Card>
   );
 }
+
+export function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
 
