@@ -98,6 +98,9 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
     .limit(15);
 
   (pendingQuotes ?? []).forEach((q: any) => {
+    // Skip cancelled lodging requests — geen actie meer nodig
+    const parentStatus = q.accommodation_requests?.status;
+    if (parentStatus === "cancelled" || parentStatus === "completed") return;
     const age = Math.floor((now.getTime() - new Date(q.submitted_at).getTime()) / (24 * 60 * 60 * 1000));
     signals.push({
       category: "lodging_quote_unforwarded",
@@ -218,6 +221,8 @@ async function prioritizeWithAI(signals: Signal[], apiKey: string): Promise<Prio
 Je krijgt een lijst signalen uit de live database. Vat ze samen in maximaal 12 concrete, prioritaire actie-aanbevelingen voor de admin (Erwin).
 
 Toon: zakelijk, bondig Nederlands, je-vorm naar Erwin. Geen emoji's. Geen prijsuitspraken. Geen adviezen die externe data nodig hebben (zoals weer of ferry-tijden).
+
+Negeer signalen die betrekking hebben op geannuleerde of afgeronde aanvragen — daar is geen actie meer op nodig. Als de samenvatting of context aangeeft dat een project, aanvraag of logies-aanvraag is geannuleerd, sla die over.
 
 Prioriteit-richtlijn:
 - urgent: verloopt < 3 dagen, klant-vertrouwen op spel, geld > €1000 staat lang open
