@@ -8,6 +8,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  renderEffectiveTimeLine,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
