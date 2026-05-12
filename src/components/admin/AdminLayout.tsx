@@ -91,6 +91,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: todoCount = 0 } = useOpenTodoCount();
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
+  const { data: openTicketsCount = 0 } = useOpenTicketsCount();
 
   const menuSections: MenuSection[] = [
     {
