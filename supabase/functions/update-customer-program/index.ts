@@ -679,6 +679,8 @@ Deno.serve(async (req) => {
         });
       }
     }
+
+    // Handle individual item acceptance (klant akkoord op partner voorstel)
     if (acceptItemId) {
       const { data: item, error: itemError } = await supabase
         .from("program_request_items")
