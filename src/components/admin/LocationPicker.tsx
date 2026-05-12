@@ -377,6 +377,16 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
               className="pl-8"
             />
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => geocodeAndPlace(address, true)}
+            disabled={!address.trim() || isSearching}
+            title="Plaats marker op basis van dit adres"
+          >
+            <Search className="h-4 w-4 mr-1" /> Plaats op adres
+          </Button>
           {(lat || address) && (
             <Button type="button" variant="ghost" size="icon" onClick={handleClear}>
               <X className="h-4 w-4" />
