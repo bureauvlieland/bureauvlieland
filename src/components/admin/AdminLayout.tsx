@@ -99,6 +99,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: todoCount },
         { title: "Projecten", url: "/admin/projecten", icon: CalendarDays },
+        { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
         { title: "CRM", url: "/admin/crm", icon: Users },
         { title: "Chat", url: "/admin/chat", icon: MessageCircle },
       ],
