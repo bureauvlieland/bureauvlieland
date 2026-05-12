@@ -10,6 +10,8 @@ import {
   getRenderedTemplate,
   buildReplyTo,
   TemplateIds,
+  renderEffectiveTimeLine,
+  getEffectiveItemTime,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
