@@ -490,6 +490,8 @@ export const PartnerAccommodationQuoteSheet = ({
                   <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
 
           {/* Status message for closed quotes */}
           {existingQuote?.status === "selected" && existingQuote?.id && (
