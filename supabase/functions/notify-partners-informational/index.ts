@@ -80,6 +80,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const messages: any[] = [];
     const logs: any[] = [];
+    const logMessageIndex: number[] = [];
     const notified: string[] = [];
 
     for (const pid of partner_ids) {
