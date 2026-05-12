@@ -414,6 +414,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
 const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/werkbank/, title: "Werkbank" },
+  { match: /^\/admin\/tickets/, title: "Tickets" },
   { match: /^\/admin\/projecten\/[^/]+\/offerte-preview/, title: "Offerte preview" },
   { match: /^\/admin\/(aanvragen|projecten)\/[^/]+\/factuur/, title: "Factuur maken" },
   { match: /^\/admin\/(aanvragen|projecten)\/[^/]+/, title: "Projectdetail" },
