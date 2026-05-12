@@ -289,14 +289,31 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                         </span>
                       </div>
                       {missingFields.length > 0 && (
-                        <div
-                          className="flex items-center gap-1 text-[10px] text-amber-700"
-                          title={`Ontbrekende metadata: ${missingFields.join(", ")}. Deze entry voldoet niet aan de huidige validatie en zou nu geweigerd worden.`}
-                        >
-                          <AlertTriangle className="h-3 w-3" />
-                          <span>
-                            Onvolledige metadata ({missingFields.join(", ")})
-                          </span>
+                        <div className="flex items-center justify-between gap-2 text-[10px] text-amber-700">
+                          <div
+                            className="flex items-center gap-1"
+                            title={`Ontbrekende metadata: ${missingFields.join(", ")}. Deze entry voldoet niet aan de huidige validatie en zou nu geweigerd worden.`}
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>
+                              Onvolledige metadata ({missingFields.join(", ")})
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-5 gap-1 px-1.5 text-[10px] text-amber-800 hover:bg-amber-100"
+                            disabled={repairing !== null}
+                            onClick={() => repairMetadata([log.id], log.id)}
+                            title="Vul template_name en actor automatisch aan op basis van email_type en sent_by"
+                          >
+                            {repairing === log.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-3 w-3" />
+                            )}
+                            Aanvullen
+                          </Button>
                         </div>
                       )}
                       {log.error_message && (
