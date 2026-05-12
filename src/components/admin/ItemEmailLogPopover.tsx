@@ -110,7 +110,7 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const fetchLogs = async () => {
     setLoading(true);
     const SELECT =
-      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata";
+      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata, sent_by, mailjet_message_id";
 
     const queries: Array<Promise<{ data: EmailLogEntry[] | null; source: MatchSource }>> = [];
 
