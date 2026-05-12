@@ -233,6 +233,13 @@ export const DesktopProgramView = ({
               programType={program.origin}
               quoteStatus={program.quote_status}
               programPublishedAt={program.program_published_at}
+              guestDetailsIncomplete={
+                !!guestDetails &&
+                (!guestDetails.guest_names ||
+                  (guestDetails.showDietary && !guestDetails.dietary_notes) ||
+                  (guestDetails.showRoomAssignment && !guestDetails.room_assignment))
+              }
+              onOpenGuestDetails={onOpenGuestDetails}
             />
 
             <ProgramIntroCard
