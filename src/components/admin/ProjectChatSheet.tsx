@@ -19,6 +19,12 @@ interface ProjectChatSheetProps {
   customerEmail?: string;
 }
 
+interface ProgramMeta {
+  customer_token: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+}
+
 interface ChatMessage {
   id: string;
   conversation_id: string;
@@ -54,7 +60,17 @@ export function ProjectChatSheet({
     (async () => {
       setIsLoading(true);
       try {
-        // Find existing conversation linked to this project
+        // Fetch program meta for customer_token + fallback name/email
+        const { data: program } = await supabase
+          .from("program_requests")
+          .select("customer_token, customer_name, customer_email")
+          .eq("id", requestId)
+          .maybeSingle();
+        const meta = (program || {}) as ProgramMeta;
+        const visitorName = customerName || meta.customer_name || "";
+        const visitorEmail = customerEmail || meta.customer_email || "";
+
+        // Find any existing conversation for this project (shared with customer portal)
         const { data: existing } = await supabase
           .from("chat_conversations")
           .select("id")
@@ -70,9 +86,10 @@ export function ProjectChatSheet({
             .from("chat_conversations")
             .insert({
               request_id: requestId,
-              source: "admin_project",
-              visitor_name: customerName || "",
-              visitor_email: customerEmail || "",
+              source: "customer_portal",
+              source_token: meta.customer_token,
+              visitor_name: visitorName,
+              visitor_email: visitorEmail,
               status: "active",
             })
             .select("id")

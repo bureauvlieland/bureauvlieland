@@ -128,7 +128,8 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare } from "lucide-react";
+import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 
 const LegendPill = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <span className={cn("inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-tight", className)}>
@@ -252,6 +253,7 @@ const AdminRequestDetail = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [bureauInvoices, setBureauInvoices] = useState<BureauInvoice[]>([]);
   const [linkedAccommodation, setLinkedAccommodation] = useState<LinkedAccommodation | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -1124,6 +1126,10 @@ const AdminRequestDetail = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setChatOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Chat met klant
+              </Button>
               {/* Quote mode actions */}
               {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
                 <>
@@ -2520,6 +2526,15 @@ const AdminRequestDetail = () => {
           </Tabs>
         </div>
       </AdminLayout>
+
+      <ProjectChatSheet
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        requestId={request.id}
+        customerName={request.customer_name}
+        customerEmail={request.customer_email}
+      />
+
 
       {/* Cancel dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
