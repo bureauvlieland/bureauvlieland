@@ -483,8 +483,13 @@ export const PartnerAccommodationQuoteSheet = ({
                   {request.special_requests}
                 </div>
               )}
-            </CardContent>
-          </Card>
+
+              {request.room_assignment && (
+                <div className="text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 rounded">
+                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">Kamerindeling van de klant</p>
+                  <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
+                </div>
+              )}
 
           {/* Status message for closed quotes */}
           {existingQuote?.status === "selected" && existingQuote?.id && (
