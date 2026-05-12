@@ -112,6 +112,7 @@ import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOp
 import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { MicroPill } from "@/components/shared/MicroPill";
+import { ItemEmailLogPopover } from "@/components/admin/ItemEmailLogPopover";
 import { useAppSettings } from "@/hooks/useAppSettings";
 // Bureau-items herkennen we direct via provider_id (audit-beslissing Fase 4a):
 const isBureauItem = (i: { provider_id?: string | null }) => i.provider_id === "bureau";
