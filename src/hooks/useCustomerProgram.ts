@@ -946,6 +946,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     getPendingChanges,
     submitChanges,
     updateProgramDetails,
+    updateGuestDetails,
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
