@@ -432,6 +432,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             actor: "admin → partner",
           },
         });
+        logMessageIndex.push(messageIdx);
       }
 
       console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
