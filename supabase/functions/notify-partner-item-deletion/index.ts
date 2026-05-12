@@ -175,6 +175,7 @@ Deno.serve(async (req) => {
           partner_name: p.name,
           partner_email: email,
           item_names: lp.item_names,
+          item_ids: lp.item_ids || [],
           origin, intro_text,
         });
         if (ok) emailsSent++;
