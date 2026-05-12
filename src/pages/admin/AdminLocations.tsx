@@ -12,7 +12,7 @@ import { LocationEditDialog, type LocationEntity } from "@/components/admin/Loca
 import { MapPin, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type EntityKind = "building_block" | "partner" | "program_item";
+type EntityKind = "building_block" | "partner";
 
 interface LocationRow extends LocationEntity {
   kind: EntityKind;
