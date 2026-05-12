@@ -128,7 +128,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing } from "lucide-react";
 
 const LegendPill = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <span className={cn("inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-tight", className)}>
@@ -2006,7 +2006,7 @@ const AdminRequestDetail = () => {
                                               });
 
                                               type ActionDef = {
-                                                label: string;
+                                                icon: React.ComponentType<{ className?: string }>;
                                                 title: string;
                                                 onClick: () => void;
                                                 className: string;
@@ -2015,22 +2015,22 @@ const AdminRequestDetail = () => {
 
                                               if (displayStatus === "niet_beschikbaar") {
                                                 action = {
-                                                  label: "Vraag opnieuw",
-                                                  title: "Stuur deze aanvraag opnieuw naar de partner",
+                                                  icon: RefreshCw,
+                                                  title: "Vraag opnieuw — stuur deze aanvraag opnieuw naar de partner",
                                                   onClick: () => handleSendSingleItemToPartner(item),
                                                   className: "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
                                                 };
                                               } else if (phase === "klaar_voor_partner") {
                                                 action = {
-                                                  label: "Verstuur",
-                                                  title: "Stuur dit onderdeel naar de partner",
+                                                  icon: Send,
+                                                  title: "Verstuur — stuur dit onderdeel naar de partner",
                                                   onClick: () => handleSendSingleItemToPartner(item),
                                                   className: "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
                                                 };
                                               } else if (phase === "wacht_op_klant") {
                                                 action = {
-                                                  label: "Verstuur (forceer)",
-                                                  title: "Stuur naar partner (klant nog niet formeel akkoord)",
+                                                  icon: Send,
+                                                  title: "Verstuur (forceer) — naar partner sturen vóór formeel klantakkoord",
                                                   onClick: () => handleSendSingleItemToPartner(item),
                                                   className: "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
                                                 };
@@ -2039,8 +2039,8 @@ const AdminRequestDetail = () => {
                                                 (displayStatus === "wacht_op_klant" || displayStatus === "wacht_op_partner")
                                               ) {
                                                 action = {
-                                                  label: "Herinner",
-                                                  title: "Stuur dit onderdeel opnieuw naar de partner",
+                                                  icon: BellRing,
+                                                  title: "Herinner — stuur dit onderdeel opnieuw naar de partner",
                                                   onClick: () => handleSendSingleItemToPartner(item),
                                                   className: "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100",
                                                 };
@@ -2050,14 +2050,15 @@ const AdminRequestDetail = () => {
                                                 displayStatus === "prijs_gewijzigd"
                                               ) {
                                                 action = {
-                                                  label: "Bekijk",
-                                                  title: "Open onderdeel-details",
+                                                  icon: Eye,
+                                                  title: "Bekijk onderdeel-details",
                                                   onClick: () => setEditingItem(item),
                                                   className: "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
                                                 };
                                               }
 
                                               if (!action) return null;
+                                              const ActionIcon = action.icon;
                                               return (
                                                 <TooltipProvider>
                                                   <Tooltip>
@@ -2065,12 +2066,13 @@ const AdminRequestDetail = () => {
                                                       <button
                                                         type="button"
                                                         onClick={action.onClick}
+                                                        aria-label={action.title}
                                                         className={cn(
-                                                          "inline-flex h-7 items-center whitespace-nowrap rounded-md border px-2 text-[11px] font-medium leading-none transition-colors",
+                                                          "inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
                                                           action.className,
                                                         )}
                                                       >
-                                                        {action.label}
+                                                        <ActionIcon className="h-3.5 w-3.5" />
                                                       </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>{action.title}</TooltipContent>
