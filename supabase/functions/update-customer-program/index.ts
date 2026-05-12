@@ -214,13 +214,21 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify program exists and get details
-    const { data: program, error: programError } = await supabase
+    // Verify program exists and get details.
+    // Guest details (gastenlijst, dieetwensen, kamerindeling) blijven bewerkbaar
+    // tot/na aankomst — voor die branch laten we verlopen tokens toe.
+    const isGuestDetailsOnly =
+      !!guestDetails && !changes && !items && !programDetails && !billingDetails &&
+      !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal;
+
+    let programQuery = supabase
       .from("program_requests")
       .select("*")
-      .eq("customer_token", token)
-      .gt("expires_at", new Date().toISOString())
-      .single();
+      .eq("customer_token", token);
+    if (!isGuestDetailsOnly) {
+      programQuery = programQuery.gt("expires_at", new Date().toISOString());
+    }
+    const { data: program, error: programError } = await programQuery.single();
 
     if (programError || !program) {
       return new Response(
