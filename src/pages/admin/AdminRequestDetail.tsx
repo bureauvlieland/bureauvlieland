@@ -1126,6 +1126,10 @@ const AdminRequestDetail = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setChatOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Chat met klant
+              </Button>
               {/* Quote mode actions */}
               {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
                 <>
