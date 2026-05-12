@@ -1,129 +1,107 @@
+## Bevindingen — afhankelijkheden van de fasen 4a–4d en 5
 
-## Uitgangspunt
+Korte audit van álle plekken die met de 5 fasen meebewogen hadden moeten worden. De UI is grotendeels op orde, maar de **e-mailflows en één edge-functie zijn achtergebleven**. Hieronder per onderwerp wat ik vond en wat ik voorstel.
 
-We pakken de BV-2604-0010-problemen aan met dezelfde discipline als Iteratie A/B/C uit `.lovable/plan.md`:
-- **A-vangnet eerst**: elke laag die we aanraken krijgt eerst echte types uit `src/integrations/supabase/types.ts` — geen `as any`.
-- **B-bewijs per stap**: per substap plak ik in chat een korte verificatie (DB-rij, screenshot-locatie of ripgrep-bewijs) voordat we doorgaan.
-- **C-audit-aansluiting**: Fase 4a raakt `isBureauItem` (`@deprecated`) en de `audit-legacy-concepts.md`-regels voor `projectWorkflow.ts` en `AdminRequestDetail.tsx`. Beslissingen die we nemen, voer ik gelijk in dat doc door.
+### 1. Tijden in e-mails (Fase 4b — niet doorgevoerd in mails)
 
-Geen DB-migraties. Geen UI-redesign. Alleen presentatie- en workflow-logica, plus één edge-function-uitbreiding.
+In de UI tonen we overal de "effectieve tijd" (`confirmed_time || proposed_time || preferred_time`). In de e-mails wordt nog uitsluitend `preferred_time` gebruikt. Als jij als bureau de tijd aanpast (vult `confirmed_time`), krijgt de partner of klant nog steeds de oude wenstijd in de mail.
 
----
+Geraakte edge-functies:
+- `send-items-to-partners` — eerste e-mail naar partner
+- `notify-partners-informational` — herinneringen / informatieve mails
+- `approve-quote-item` — bevestiging na klantakkoord
+- `accept-quote-proposal` — partner accepteert tegenvoorstel
+- `update-customer-program` — programmawijziging-mail naar partner én klant
+- `update-partner-item-status` — bevestigingsmail richting klant
 
-## Fase 4a — Eén workflow-bron in admin (gate voor 4b–4d)
+Geraakte templates (DB):
+- `Nieuwe activiteit - Partner` — variabele `preferred_time` → effectieve tijd
+- `Status: Alternatief voorgesteld` — `proposed_time` blijft bestaan, maar valt nu mogelijk samen met admin-`confirmed_time`
+- `Reactie op tegenvoorstel (Klant)` — idem
+- `Programmawijzigingen - Partner` (changes_list-string in code)
 
-**Doel:** Admin-overzicht en verzendknop tonen exact dezelfde fase per item, gebaseerd op één helper.
+**Voorstel:** één gedeelde helper `getEffectiveItemTime(item)` in `supabase/functions/_shared/email-templates.ts`, die overal in de mails de juiste tijd kiest en mooi formatteert. Daarnaast in de change-emails ("admin heeft tijd aangepast") expliciet toevoegen wie de tijd heeft gezet, zodat het strookt met de `status_note`-conventie uit Fase 4b.
 
-**Scope (geen functionele veranderingen, alleen consolidatie):**
-- `src/lib/projectWorkflow.ts`: `getItemSendPhase` blijft de bron; `isBureauItem` wordt verwijderd uit alle call-sites (audit-beslissing).
-- `src/pages/admin/AdminRequestDetail.tsx`: alle status-labels (`Wacht op aanbieder` / `Wacht op klant` / `Klaar voor partner` / `Verstuurd`) gaan via `getItemSendPhase`. Geen losse string-checks meer.
-- `supabase/functions/send-items-to-partners/index.ts`: dry-run en echte verzending gebruiken dezelfde fase-regels (item is alleen "klaar" als `getItemSendPhase` dat zegt) — zo kan de popup nooit meer iets tonen wat de overzichtsregel niet "klaar" noemt.
+### 2. Force-send per item (Fase 4c — half af)
 
-**A-vangnet:** types voor `ItemForSendPhase` en `ProjectForItemPhase` afstemmen op `Database['public']['Tables']['program_request_items']['Row']` resp. `…['program_requests']['Row']`. Geen `as any` in deze drie bestanden.
+In `AdminRequestDetail.tsx` zit een `window.confirm` voor "Verstuur (forceer)". Maar de aanroep stuurt **geen `mode: "force"` mee** en de edge-functie `send-items-to-partners` filtert nog steeds hard op `skip_partner_notification = true` (regel 174). Gevolg: een item dat al een keer is uitgegaan en in `wacht_op_klant` zit, kan via deze knop niet alsnog naar de partner. De gate op `customer_approved_at` is feitelijk weggehaald, maar de skip-filter werkt als nieuwe blokkade.
 
-**B-bewijs:** open BV-2604-0010 in `/admin/werkbank` → plak in chat per item: status-label in lijst + wat de "Bekijk & verstuur"-popup laat zien. Beide moeten matchen.
+**Voorstel:**
+- Edge-functie `send-items-to-partners` body uitbreiden met `mode: "auto" | "force"` (default `auto`).
+- In `force` de skip-filter laten vervallen voor de meegegeven `item_ids`, en na verzending alleen `status_updated_at` bijwerken (niet opnieuw `customer_approved_at` of `skip_partner_notification` resetten).
+- `handleSendSingleItemToPartner` in `AdminRequestDetail.tsx` stuurt `mode: "force"` zodra `getItemSendPhase` ≠ `klaar_voor_partner`, of zodra de displayStatus `verstuurd` is (her-versturen / herinneren).
+- Aparte e-mailtoon voor "herinnering" vs "eerste verzending" — nu krijgt de partner bij forceren tweemaal exact dezelfde mail. Voorstel: nieuwe template `Herinnering partner: aanvraag openstaand` of een vlag `is_reminder` in dezelfde template.
 
----
+### 3. Klant-tegenvoorstel (Fase 4d — geen mailspoor)
 
-## Fase 4b — Tijden eenduidig (admin + klant + partner)
+De klant kan via `customer_counter_time` een andere tijd voorstellen voordat hij akkoord geeft. De partner ziet dat in `PartnerItemSheet`, maar er gaat **geen e-mail** richting bureau of partner. Het admin-overzicht toont het ook niet als chip/indicator (alleen via `wacht_op_klant` pill).
 
-**Doel:** Eén effectieve tijd per item. Admin-wijziging is definitief, geen "was: 13:30"-verwarring meer.
+**Voorstel:**
+- Nieuwe interne mail naar bureau (`hallo@bureauvlieland.nl`) zodra een klant een tegen-tijd voorstelt — eenvoudige notificatie + link naar werkbank.
+- Geen aparte template per geval: voeg twee templates toe: `Klant-tegenvoorstel (Bureau)` en (alleen als jij dat wilt) `Klant stelt andere tijd voor (Partner)` — of bewust geen partner-mail, omdat de fysieke partner-akkoord-flow pas start na bureau-bevestiging.
+- In `AdminRequestDetail.tsx` tabelregel een kleine `MicroPill tone="purple"` met "Klant stelt voor: 10:00" naast de effectieve tijd (consistent met de nieuwe statusbadges).
 
-**Scope:**
-- Effectieve tijd overal: `confirmed_time || proposed_time || preferred_time`.
-- Admin-tijdwijziging (`update-customer-program` of admin-edit-pad): zet zowel `preferred_time` als `confirmed_time` op de nieuwe waarde + log `status_note` als "Tijd … aangepast door Bureau Vlieland". Geen `proposed_time` meer voor admin-overrides.
-- `src/components/customer-portal/CustomerTimeline.tsx` (sortering klopt al), `CustomerProgramItem.tsx`: `status_note` met "ingesteld door admin" wordt getoond als Bureau-Vlieland-melding, niet als "Reactie aanbieder".
-- `src/pages/admin/AdminRequestDetail.tsx` lijstweergave: één tijd, geen "was:" tenzij er een echte partner-`proposed_time` is die afwijkt.
-- Partner-portal (`PartnerItemCard`/`PartnerItemSheet`): toont effectieve tijd in plaats van alleen `preferred_time`.
+### 4. Bureau-items in change/cancel e-mails (Fase 4 — bureau-rolfusie)
 
-**A-vangnet:** kleine helper `getEffectiveTime(item)` met expliciet `Pick<Row, "confirmed_time"|"proposed_time"|"preferred_time">` — gebruikt door alle vier de plekken.
+Goed nieuws: `notify-partner-cancellation`, `notify-partner-item-deletion` en `notify-partner-price-change` filteren `provider_id === "bureau"` correct eruit. Hier is **geen actie nodig**, alleen vastleggen in de audit-doc dat dit gecontroleerd is.
 
-**B-bewijs:** na codefix datacorrectie voor BV-2604-0010 Beach Golf (`preferred_time = confirmed_time = 11:30`) en plak DB-rij + screenshot-locaties (admin-lijst, klantpagina, partnerportal) in chat.
+### 5. Origin / Fase 5 — geen rest-issues
 
----
+Geen edge-functie of template verwijst nog naar `program_type`. Alleen comment-only. **Geen actie**, behalve `audit-legacy-concepts.md` afsluiten met "Fase 5 — geen open call-sites".
 
-## Fase 4c — Per-item naar partner sturen, los van programma-akkoord
+### 6. Statusbadge-betekenis in klantmails
 
-**Doel:** Admin kan één onderdeel naar de partner sturen ook als de klant het hele programma nog niet formeel heeft geakkordeerd. Akkoord is een afspraak tussen Bureau Vlieland en klant, geen technische blokkade.
+De nieuwe `MicroPill` + tooltips communiceren de exacte betekenis van statussen in de portal. De e-mailtemplates `Status: Bevestigd / Niet beschikbaar / Alternatief voorgesteld` gebruiken nog vrijere wording.
 
-**Scope:**
-- `supabase/functions/send-items-to-partners/index.ts`: optionele body-parameter `mode: "auto" | "force"`. In `force` vervalt de gate op `customer_approved_at`/`quote_status`. Filtering blijft: `block_type !== 'bureau'`, `day_index !== -1`, `skip_partner_notification = true`, `status !== 'cancelled'`.
-- `AdminRequestDetail.tsx`: per item een actie "Stuur naar partner" als fase = `klaar_voor_partner` óf `wacht_op_klant`. In het laatste geval een korte inline-melding ("Klant heeft het programma nog niet formeel akkoord — toch versturen?").
-- "Bekijk & verstuur"-popup blijft bestaan voor bulk, maar gebruikt dezelfde fase-regels (4a) en geeft duidelijk aan welke items in `wacht_op_klant` zitten.
+**Voorstel (klein):** in dezelfde mailtekst één regel toevoegen "Aan zet: Bureau Vlieland / klant / aanbieder", overgenomen uit `ItemDisplayStatusInfo.actor`. Dit voorkomt dat partner of klant de mail krijgt en alsnog moet raden of er actie wordt verwacht.
 
-**A-vangnet:** edge-function input via expliciete TS-interface (geen `body: any`); response-type met `sent_item_ids`/`skipped_item_ids`.
+### 7. Werkbank-mailoverzicht (uitbreiding, optioneel)
 
-**B-bewijs:** test op een dummy/staging-item: stuur één item in `wacht_op_klant` met `mode: force`, plak edge-log + DB-rij (`skip_partner_notification = false`, `email_log` entry).
-
----
-
-## Fase 4d — Klant kan zelf tijden voorstellen vóór akkoord + partner-dashboard opschonen
-
-**Doel:** Twee laatste blokkers wegnemen.
-
-**Scope klant-tijdvoorstel:**
-- `CustomerProgramItem.tsx` in quote-mode: per item dat nog niet `customer_approved_at` heeft een knop "Andere tijd voorstellen". Schrijft `customer_counter_time` (bestaand veld), géén partner-flow, géén status-wijziging.
-- Admin ziet dat in de lijst als kleine indicator ("Klant stelt voor: 10:00") naast de effectieve tijd.
-
-**Scope partner-dashboard (`get-partner-dashboard` + `PartnerUnifiedList`):**
-- Verberg standaard uit actieve tabs: items met `status` in (`cancelled`, `unavailable`, `rejected`, `expired`), items van projecten met `status = cancelled`, en alles met `skip_partner_notification = true`.
-- Eigen tab "Afgerond / niet meer relevant" toont deze items wel (retentie blijft 3 maanden conform `mem://infrastructure/partner-dashboard-retention-policy`).
-
-**A-vangnet:** `get-partner-dashboard` response-types al gedefinieerd in `src/types/partner.ts`; uitbreiden met `archived_items: PartnerItem[]`. Geen `as any` in `usePartnerDashboard.ts` of `PartnerUnifiedList.tsx`.
-
-**B-bewijs:**
-- Klantportaal: tijdvoorstel op een test-item → DB-rij (`customer_counter_time`) + admin-lijst toont indicator.
-- Partner-portal: log in als de partner van BV-2604-0010 → actieve tab toont alleen relevante items, archief-tab toont de rest.
+Nu de UI strak is, zou het helpen om in de werkbank per item te zien **welke mails er al uit zijn** (laatste verstuurd, herinneringen, etc.) — er bestaat een `email_log`-tabel die dit kan voeden. Voorstel: smal popover-icoontje in de Acties-kolom dat de relevante `email_log`-regels voor dat item toont. Geen DB-werk nodig, alleen een nieuwe hook + popover.
 
 ---
 
-## Datacorrectie (na Fase 4b)
+## Voorgestelde uitvoering (in deze volgorde)
 
-Eénmalige update voor BV-2604-0010 Beach Golf:
-```text
-preferred_time = '11:30'
-confirmed_time = '11:30'
-proposed_time  = NULL
-status_note    = 'Tijd 11:30 ingesteld door Bureau Vlieland (op verzoek klant)'
-```
-Plus controle op andere items in dit project waar `confirmed_time` afwijkt van `preferred_time` zonder partner-`proposed_time`.
+1. **Mails effectieve tijd** — gedeelde helper + 6 edge-functies + 1 template-variabele aanpassen. *(grootste impact, kleinste blast radius)*
+2. **Force-send afmaken** — `mode: "force"` in edge + UI; herinneringstemplate splitsen.
+3. **Klant-tegenvoorstel** — interne notificatiemail + admin-indicator (MicroPill).
+4. **Statusmails verrijken** — `Aan zet: …` regel toevoegen in 3 status-templates.
+5. **`audit-legacy-concepts.md` bijwerken** — bureau-cancel/delete/price ✓, Fase 5 ✓.
+6. *(optioneel)* **Mail-log popover** in werkbank-tabel.
 
----
-
-## Regressie-checklist (verplicht na Fase 4d)
-
-Plak resultaat per regel in chat:
-
-1. Admin verandert tijd op niet-verzonden item → admin-lijst, klantpagina, partner-preview tonen allemaal nieuwe tijd, geen "was:".
-2. Partner doet `proposed_time` → admin-lijst toont "voorstel: 14:00 (was 11:30)".
-3. Klant doet `customer_counter_time` in offertefase → admin ziet indicator, partner ziet niets.
-4. Per-item "Stuur naar partner" werkt vóór klant-akkoord (force-mode) en e-mail gaat uit.
-5. Bulk "Bekijk & verstuur"-popup en admin-lijst noemen exact dezelfde items "klaar".
-6. Status-label in lijst = fase uit `getItemSendPhase` — geen tegenstrijdige labels.
-7. Partner-dashboard: actieve tab schoon, archief-tab toont oude/geannuleerde items.
-8. Geen `as any` toegevoegd in de geraakte bestanden (ripgrep-bewijs).
+Geen DB-migraties nodig. Templates bewerk ik via de bestaande `email_templates`-tabel (admin email-templates UI). Alle wijzigingen blijven in presentatie-/workflow-laag.
 
 ---
 
-## Volgorde & gates
+## Technische details (samenvatting)
 
 ```text
-4a (workflow-bron + types)  ──▶ B-bewijs ──▶ 4b (tijden + types)
-                                              │
-                                              ▼ B-bewijs
-                                            4c (per-item versturen + edge-types)
-                                              │
-                                              ▼ B-bewijs
-                                            4d (klant-tijdvoorstel + partner-archief)
-                                              │
-                                              ▼ regressie-checklist
-                                            Fase 5 (`program_type` → `origin`)
+shared/email-templates.ts
+  + getEffectiveItemTime(item)
+  + formatActorLine(actor)   // 'Aan zet: …'
+
+send-items-to-partners
+  + body.mode: "auto" | "force"
+  + force: laat skip_partner_notification-filter vallen voor meegegeven item_ids
+  + selecteer ook confirmed_time, proposed_time naast preferred_time
+
+notify-partners-informational, approve-quote-item, accept-quote-proposal,
+update-customer-program, update-partner-item-status
+  ~ vervang preferred_time-uitlees door getEffectiveItemTime()
+
+new edge function (of inline in update-customer-program):
+  notify-bureau-customer-counter
+  - trigger: klant zet customer_counter_time
+  - mail naar hallo@bureauvlieland.nl met deeplink naar werkbank-item
+
+email_templates (DB-update via admin-UI of migratie):
+  ~ "Nieuwe activiteit - Partner"      → var 'preferred_time' → 'effective_time'
+  ~ "Status: Bevestigd"                → +Aan zet-regel
+  ~ "Status: Niet beschikbaar"         → +Aan zet-regel
+  ~ "Status: Alternatief voorgesteld"  → +Aan zet-regel
+  + "Klant-tegenvoorstel (Bureau)"
+  + (optioneel) "Herinnering partner: aanvraag openstaand"
 ```
 
-Elke gate is hard: zonder bewijs in chat geen volgende stap. Audit-doc-regels die we onderweg vastleggen, voer ik direct door in `.lovable/audit-legacy-concepts.md`.
-
-## Buiten scope
-
-- Geen DB-migraties (alle velden bestaan al).
-- Geen wijzigingen aan logies-flow, facturatie, of `bureau_central`-regels.
-- Geen visuele redesign — alleen labels, knoppen en filters.
+Geen wijzigingen aan logies-flow, facturatie, RLS of bureau_central-regels.
