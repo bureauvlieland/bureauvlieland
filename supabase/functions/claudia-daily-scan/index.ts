@@ -39,21 +39,22 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
 
-  // === 1. Items wachten op partner-akkoord ===
+  // === 1. Items wachten op partner-akkoord (>3 dagen pending) ===
+  const cutoff3d = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   const { data: pendingItems } = await supabase
     .from("program_request_items")
     .select(
-      "id, request_id, name, status, item_quote_status, created_at, partner_quote_sent_at, skip_partner_notification, block_type, program_requests:request_id(id, reference_number, status)"
+      "id, request_id, block_name, status, item_quote_status, created_at, status_updated_at, skip_partner_notification, block_type, program_requests:request_id(id, reference_number, status)"
     )
     .eq("status", "pending")
     .neq("block_type", "bureau")
     .eq("skip_partner_notification", false)
-    .lte("partner_quote_sent_at", new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString())
+    .lte("status_updated_at", cutoff3d)
     .limit(20);
 
   (pendingItems ?? []).forEach((it: any) => {
     if (it.program_requests?.status !== "active") return;
-    const sent = it.partner_quote_sent_at ? new Date(it.partner_quote_sent_at) : new Date(it.created_at);
+    const sent = new Date(it.status_updated_at ?? it.created_at);
     const age = Math.floor((now.getTime() - sent.getTime()) / (24 * 60 * 60 * 1000));
     signals.push({
       category: "partner_overdue",
