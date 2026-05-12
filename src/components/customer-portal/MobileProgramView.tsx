@@ -17,6 +17,7 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
+import { GuestDetailsCard } from "./GuestDetailsCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
@@ -117,6 +118,15 @@ interface MobileProgramViewProps {
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;
+  onOpenGuestDetails?: () => void;
+  guestDetails?: {
+    guest_names: string | null;
+    dietary_notes: string | null;
+    room_assignment: string | null;
+    updated_at: string | null;
+    showDietary: boolean;
+    showRoomAssignment: boolean;
+  };
 }
 
 export const MobileProgramView = ({
@@ -147,6 +157,8 @@ export const MobileProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onOpenGuestDetails,
+  guestDetails,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
