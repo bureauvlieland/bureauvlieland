@@ -205,7 +205,12 @@ Bureau Vlieland`,
       error_message: emailError || undefined,
       mailjet_message_id: mailjetMessageId || undefined,
       sent_by: "resend-partner-invitation",
-      metadata: { resend: true, method: "set_password_link" },
+      metadata: {
+        template_name: EmailTypes.PARTNER_INVITATION,
+        actor: "admin → partner (resend invitation)",
+        resend: true,
+        method: "set_password_link",
+      },
     });
 
     await adminClient.from("admin_activity_log").insert({
