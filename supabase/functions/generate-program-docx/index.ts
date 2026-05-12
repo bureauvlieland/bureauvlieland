@@ -16,7 +16,46 @@ import {
   VerticalAlign,
   PageBreak,
   ExternalHyperlink,
+  ImageRun,
 } from "npm:docx@9.5.1";
+
+/**
+ * Fetch a single OpenStreetMap raster tile centred on the given coordinates.
+ * Returns a PNG as Uint8Array, or null on failure.
+ *
+ * We use the standard OSM tile server (tile.openstreetmap.org) which is
+ * reachable from Supabase Edge runtime, unlike staticmap.openstreetmap.de
+ * which is blocked at DNS level.
+ *
+ * A User-Agent identifying the application is required by OSM tile policy.
+ */
+async function fetchStaticMapPng(lat: number, lng: number): Promise<Uint8Array | null> {
+  const zoom = 14;
+  const n = 2 ** zoom;
+  const xtile = Math.floor(((lng + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const ytile = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
+  );
+  const url = `https://tile.openstreetmap.org/${zoom}/${xtile}/${ytile}.png`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const resp = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { "User-Agent": "BureauVlieland-Programma/1.0 (hallo@bureauvlieland.nl)" },
+    });
+    clearTimeout(timer);
+    if (!resp.ok) {
+      console.warn(`[docx] tile fetch ${resp.status} for ${lat},${lng}`);
+      return null;
+    }
+    return new Uint8Array(await resp.arrayBuffer());
+  } catch (e) {
+    console.warn(`[docx] tile fetch failed for ${lat},${lng}:`, (e as any)?.message ?? e);
+    return null;
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -163,6 +202,26 @@ Deno.serve(async (req) => {
       dayGroups.get(k)!.push(it);
     });
 
+    // Prefetch static map images for all visible items with coordinates.
+    // NB: numeric columns from Supabase can arrive as strings — coerce safely.
+    const mapImages = new Map<string, Uint8Array>();
+    const mapTargets = visible
+      .map((it: any) => {
+        const lat = it.location_lat == null ? NaN : Number(it.location_lat);
+        const lng = it.location_lng == null ? NaN : Number(it.location_lng);
+        return Number.isFinite(lat) && Number.isFinite(lng) ? { it, lat, lng } : null;
+      })
+      .filter(Boolean) as Array<{ it: any; lat: number; lng: number }>;
+    console.log(`[docx] prefetching ${mapTargets.length} static maps`);
+    const mapResults = await Promise.allSettled(
+      mapTargets.map(({ lat, lng }) => fetchStaticMapPng(lat, lng)),
+    );
+    mapTargets.forEach(({ it }, i) => {
+      const r = mapResults[i];
+      if (r.status === "fulfilled" && r.value) mapImages.set(it.id, r.value);
+    });
+    console.log(`[docx] embedded ${mapImages.size} maps`);
+
     // Build cover page
     const customerLabel = program.customer_company || program.customer_name || "";
     const dateRange =
@@ -272,6 +331,28 @@ Deno.serve(async (req) => {
               ],
             }),
           );
+
+          // Static map image (if successfully prefetched)
+          const mapPng = mapImages.get(it.id);
+          if (mapPng) {
+            rightChildren.push(
+              new Paragraph({
+                spacing: { after: 120 },
+                children: [
+                  new ImageRun({
+                    type: "png",
+                    data: mapPng,
+                    transformation: { width: 280, height: 280 },
+                    altText: {
+                      title: "Locatie op de kaart",
+                      description: it.location_address,
+                      name: "map",
+                    },
+                  }),
+                ],
+              }),
+            );
+          }
         }
 
         if (description) {
