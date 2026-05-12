@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ async function fetchOpenCount(): Promise<{ total: number; urgent: number }> {
 
 export const ClaudiaBadge = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data } = useQuery({
     queryKey: ["claudia-recommendations-count"],
     queryFn: fetchOpenCount,
@@ -49,8 +50,9 @@ export const ClaudiaBadge = () => {
   const urgent = data?.urgent ?? 0;
 
   return (
-    <Link
-      to="/admin/werkbank"
+    <button
+      type="button"
+      onClick={() => navigate("/admin/werkbank")}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
         urgent > 0
@@ -74,6 +76,6 @@ export const ClaudiaBadge = () => {
           {total}
         </Badge>
       )}
-    </Link>
+    </button>
   );
 };

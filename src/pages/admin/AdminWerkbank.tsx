@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -119,6 +119,13 @@ export default function AdminWerkbank() {
       ? initialKind
       : "all",
   );
+
+  // Keep selection in sync with URL param so the Claudia badge (which clears
+  // ?id=) actually returns to the recommendations overview.
+  useEffect(() => {
+    const idParam = params.get("id");
+    setSelectedId(idParam);
+  }, [params]);
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
