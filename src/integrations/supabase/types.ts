@@ -2139,6 +2139,9 @@ export type Database = {
           block_id: string | null
           block_name: string
           block_type: string
+          booking_document_path: string | null
+          booking_group_id: string | null
+          booking_reference: string | null
           commission_amount: number | null
           commission_invoiced_at: string | null
           commission_notes: string | null
@@ -2190,6 +2193,7 @@ export type Database = {
           status_note: string | null
           status_updated_at: string | null
           status_updated_by: string | null
+          ticket_last_emailed_at: string | null
           updated_at: string
           version: number
         }
@@ -2202,6 +2206,9 @@ export type Database = {
           block_id?: string | null
           block_name: string
           block_type: string
+          booking_document_path?: string | null
+          booking_group_id?: string | null
+          booking_reference?: string | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
@@ -2253,6 +2260,7 @@ export type Database = {
           status_note?: string | null
           status_updated_at?: string | null
           status_updated_by?: string | null
+          ticket_last_emailed_at?: string | null
           updated_at?: string
           version?: number
         }
@@ -2265,6 +2273,9 @@ export type Database = {
           block_id?: string | null
           block_name?: string
           block_type?: string
+          booking_document_path?: string | null
+          booking_group_id?: string | null
+          booking_reference?: string | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
@@ -2316,6 +2327,7 @@ export type Database = {
           status_note?: string | null
           status_updated_at?: string | null
           status_updated_by?: string | null
+          ticket_last_emailed_at?: string | null
           updated_at?: string
           version?: number
         }

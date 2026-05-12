@@ -45,6 +45,7 @@ import {
   BarChart3,
   Inbox,
   MapPin,
+  Ticket,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
@@ -83,6 +84,25 @@ const useOpenTodoCount = () => {
   });
 };
 
+const useOpenTicketsCount = () => {
+  return useQuery({
+    queryKey: ["admin-open-tickets-count"],
+    queryFn: async () => {
+      const { TICKET_BLOCK_IDS } = await import("@/lib/ticketItems");
+      const { count, error } = await supabase
+        .from("program_request_items")
+        .select("id", { count: "exact", head: true })
+        .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
+        .is("booking_reference", null)
+        .is("booking_document_path", null)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+};
+
 const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => void }) => {
   const location = useLocation();
   const { state } = useSidebar();
@@ -90,6 +110,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: todoCount = 0 } = useOpenTodoCount();
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
+  const { data: openTicketsCount = 0 } = useOpenTicketsCount();
 
   const menuSections: MenuSection[] = [
     {
@@ -97,6 +118,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: todoCount },
         { title: "Projecten", url: "/admin/projecten", icon: CalendarDays },
+        { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
         { title: "CRM", url: "/admin/crm", icon: Users },
         { title: "Chat", url: "/admin/chat", icon: MessageCircle },
       ],
@@ -392,6 +414,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
 const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/werkbank/, title: "Werkbank" },
+  { match: /^\/admin\/tickets/, title: "Tickets" },
   { match: /^\/admin\/projecten\/[^/]+\/offerte-preview/, title: "Offerte preview" },
   { match: /^\/admin\/(aanvragen|projecten)\/[^/]+\/factuur/, title: "Factuur maken" },
   { match: /^\/admin\/(aanvragen|projecten)\/[^/]+/, title: "Projectdetail" },

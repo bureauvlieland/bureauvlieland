@@ -298,6 +298,11 @@ export interface ProgramRequestItem {
   location_lat?: number | null;
   location_lng?: number | null;
   location_address?: string | null;
+  // Ticket booking fields (ferries / bike rentals)
+  booking_reference?: string | null;
+  booking_document_path?: string | null;
+  booking_group_id?: string | null;
+  ticket_last_emailed_at?: string | null;
 }
 
 export interface ProgramRequestHistory {
