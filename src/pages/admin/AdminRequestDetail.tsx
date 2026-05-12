@@ -2051,7 +2051,7 @@ const AdminRequestDetail = () => {
                                             >
                                               <Copy className="h-4 w-4" />
                                             </Button>
-                                            <ItemEmailLogPopover itemId={item.id} itemName={item.block_name || undefined} />
+                                            <ItemEmailLogPopover itemId={item.id} itemName={item.block_name || undefined} requestId={request.id} />
                                             <Button
                                               variant="ghost"
                                               size="icon"
@@ -2162,7 +2162,7 @@ const AdminRequestDetail = () => {
                                             >
                                               <Copy className="h-4 w-4" />
                                             </Button>
-                                            <ItemEmailLogPopover itemId={item.id} itemName={item.block_name || undefined} />
+                                            <ItemEmailLogPopover itemId={item.id} itemName={item.block_name || undefined} requestId={request.id} />
                                             <Button
                                               variant="ghost"
                                               size="icon"
