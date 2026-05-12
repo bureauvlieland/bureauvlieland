@@ -253,6 +253,7 @@ const AdminRequestDetail = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [bureauInvoices, setBureauInvoices] = useState<BureauInvoice[]>([]);
   const [linkedAccommodation, setLinkedAccommodation] = useState<LinkedAccommodation | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
