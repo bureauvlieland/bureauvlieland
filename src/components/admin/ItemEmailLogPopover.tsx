@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Mail, Loader2, AlertTriangle } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, Wand2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -75,6 +76,33 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<DisplayEntry[]>([]);
+  const [repairing, setRepairing] = useState<string | "all" | null>(null);
+
+  const repairMetadata = async (ids: string[], scope: string | "all") => {
+    if (ids.length === 0) return;
+    setRepairing(scope);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "backfill-email-log-metadata",
+        { body: { ids } },
+      );
+      if (error) throw error;
+      const updated = (data?.results ?? []).filter(
+        (r: { updated: boolean }) => r.updated,
+      ).length;
+      toast.success(
+        updated > 0
+          ? `${updated} log-entry${updated === 1 ? "" : "s"} aangevuld`
+          : "Geen entries aangepast",
+      );
+      await fetchLogs();
+    } catch (e) {
+      toast.error(`Aanvullen mislukt: ${(e as Error).message}`);
+    } finally {
+      setRepairing(null);
+    }
+  };
+
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -192,6 +220,7 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                   (l) => getMissingValidationFields(l.metadata).length > 0,
                 );
                 if (incomplete.length === 0) return null;
+                const incompleteIds = incomplete.map((l) => l.id);
                 return (
                   <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">
                     <div className="flex items-start gap-1.5">
@@ -204,9 +233,26 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                         zijn meegegeven.
                       </span>
                     </div>
+                    <div className="mt-1.5 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 gap-1 border-amber-300 bg-white px-2 text-[10px] text-amber-900 hover:bg-amber-100"
+                        disabled={repairing !== null}
+                        onClick={() => repairMetadata(incompleteIds, "all")}
+                      >
+                        {repairing === "all" ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-3 w-3" />
+                        )}
+                        Vul alle {incomplete.length} aan
+                      </Button>
+                    </div>
                   </div>
                 );
               })()}
+
               <ul className="divide-y">
                 {logs.map((log) => {
                   const variant = STATUS_VARIANTS[log.status] ?? {
@@ -243,14 +289,31 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                         </span>
                       </div>
                       {missingFields.length > 0 && (
-                        <div
-                          className="flex items-center gap-1 text-[10px] text-amber-700"
-                          title={`Ontbrekende metadata: ${missingFields.join(", ")}. Deze entry voldoet niet aan de huidige validatie en zou nu geweigerd worden.`}
-                        >
-                          <AlertTriangle className="h-3 w-3" />
-                          <span>
-                            Onvolledige metadata ({missingFields.join(", ")})
-                          </span>
+                        <div className="flex items-center justify-between gap-2 text-[10px] text-amber-700">
+                          <div
+                            className="flex items-center gap-1"
+                            title={`Ontbrekende metadata: ${missingFields.join(", ")}. Deze entry voldoet niet aan de huidige validatie en zou nu geweigerd worden.`}
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>
+                              Onvolledige metadata ({missingFields.join(", ")})
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-5 gap-1 px-1.5 text-[10px] text-amber-800 hover:bg-amber-100"
+                            disabled={repairing !== null}
+                            onClick={() => repairMetadata([log.id], log.id)}
+                            title="Vul template_name en actor automatisch aan op basis van email_type en sent_by"
+                          >
+                            {repairing === log.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-3 w-3" />
+                            )}
+                            Aanvullen
+                          </Button>
                         </div>
                       )}
                       {log.error_message && (
