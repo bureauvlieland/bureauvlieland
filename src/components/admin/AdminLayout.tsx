@@ -47,6 +47,7 @@ import {
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
+import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 
 interface AdminLayoutProps {
   children: ReactNode;
