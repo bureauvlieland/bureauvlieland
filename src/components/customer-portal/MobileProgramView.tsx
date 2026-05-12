@@ -274,6 +274,18 @@ export const MobileProgramView = ({
             allConfirmed={allConfirmed}
             quotePdfUrl={(program as any).quote_pdf_url}
           />
+
+          {guestDetails && isPublished && onOpenGuestDetails && (
+            <GuestDetailsCard
+              guestNames={guestDetails.guest_names}
+              dietaryNotes={guestDetails.dietary_notes}
+              roomAssignment={guestDetails.room_assignment}
+              showDietary={guestDetails.showDietary}
+              showRoomAssignment={guestDetails.showRoomAssignment}
+              updatedAt={guestDetails.updated_at}
+              onEdit={onOpenGuestDetails}
+            />
+          )}
         </>
       )}
 
