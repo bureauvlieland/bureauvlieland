@@ -632,8 +632,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         // Log emails as sent
         for (let i = 0; i < emailLogs.length; i++) {
           emailLogs[i].status = "sent";
+          const msgIdx = logMessageIndex[i] ?? i;
           emailLogs[i].mailjet_message_id =
-            mailjetResponse?.Messages?.[i]?.MessageID?.toString() || null;
+            mailjetResponse?.Messages?.[msgIdx]?.MessageID?.toString() || null;
           await logEmail(emailLogs[i]);
         }
       } catch (emailError) {
