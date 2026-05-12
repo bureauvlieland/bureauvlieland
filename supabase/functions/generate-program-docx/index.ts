@@ -20,16 +20,36 @@ import {
 } from "npm:docx@9.5.1";
 
 /**
- * Fetch a single OpenStreetMap raster tile centred on the given coordinates.
- * Returns a PNG as Uint8Array, or null on failure.
- *
- * We use the standard OSM tile server (tile.openstreetmap.org) which is
- * reachable from Supabase Edge runtime, unlike staticmap.openstreetmap.de
- * which is blocked at DNS level.
- *
- * A User-Agent identifying the application is required by OSM tile policy.
+ * Fetch a static map image with a red marker centred on the coordinates.
+ * Primary: Geoapify Static Maps API (supports markers natively).
+ * Fallback: plain OSM raster tile (no marker) so the document still generates.
  */
 async function fetchStaticMapPng(lat: number, lng: number): Promise<Uint8Array | null> {
+  const apiKey = Deno.env.get("GEOAPIFY_API_KEY");
+  if (apiKey) {
+    const url =
+      `https://maps.geoapify.com/v1/staticmap` +
+      `?style=osm-bright` +
+      `&width=600&height=600` +
+      `&center=lonlat:${lng},${lat}` +
+      `&zoom=15` +
+      `&marker=lonlat:${lng},${lat};color:%23c9602b;size:medium;type:awesome` +
+      `&apiKey=${apiKey}`;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const resp = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (resp.ok) {
+        return new Uint8Array(await resp.arrayBuffer());
+      }
+      console.warn(`[docx] geoapify ${resp.status} for ${lat},${lng}`);
+    } catch (e) {
+      console.warn(`[docx] geoapify failed for ${lat},${lng}:`, (e as any)?.message ?? e);
+    }
+  }
+
+  // Fallback: kale OSM-tegel (geen marker)
   const zoom = 14;
   const n = 2 ** zoom;
   const xtile = Math.floor(((lng + 180) / 360) * n);
