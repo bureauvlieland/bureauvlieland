@@ -120,6 +120,13 @@ export default function AdminWerkbank() {
       : "all",
   );
 
+  // Keep selection in sync with URL param so the Claudia badge (which clears
+  // ?id=) actually returns to the recommendations overview.
+  useEffect(() => {
+    const idParam = params.get("id");
+    setSelectedId(idParam);
+  }, [params]);
+
   const { data: projects, isLoading } = useQuery({
     queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
     queryFn: () => listProjectsForWerkbank({ archiveOnly: archive }),
