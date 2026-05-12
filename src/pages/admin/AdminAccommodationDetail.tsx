@@ -78,6 +78,8 @@ import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodat
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodationChatSheet";
 import { CompletionActions } from "@/components/admin/CompletionActions";
+import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 
 interface LinkedProgram {
   id: string;
@@ -189,6 +191,7 @@ export default function AdminAccommodationDetail() {
   const [closeNotifyCustomer, setCloseNotifyCustomer] = useState(true);
   const [showCloseEmailSheet, setShowCloseEmailSheet] = useState(false);
   const [closeEmailDefaults, setCloseEmailDefaults] = useState({ subject: "", body: "" });
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -785,6 +788,18 @@ export default function AdminAccommodationDetail() {
                     "{request.special_requests}"
                   </p>
                 )}
+
+                <div className="border-t pt-3 mt-2">
+                  <GuestDetailsDisplay
+                    guestNames={null}
+                    dietaryNotes={null}
+                    roomAssignment={(request as any).room_assignment ?? null}
+                    showDietary={false}
+                    showRoomAssignment={true}
+                    updatedAt={(request as any).guest_details_updated_at ?? null}
+                    onEdit={() => setShowGuestDialog(true)}
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -1315,6 +1330,19 @@ export default function AdminAccommodationDetail() {
           updateGuestsMutation.mutateAsync({ newGuests, selectedQuoteIds })
         }
       />
+
+      {request && (
+        <AdminGuestDetailsDialog
+          open={showGuestDialog}
+          onOpenChange={setShowGuestDialog}
+          scope="accommodation_request"
+          recordId={request.id}
+          initialRoomAssignment={(request as any).room_assignment ?? null}
+          showDietary={false}
+          showRoomAssignment={true}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] })}
+        />
+      )}
 
       {/* Status Email Sheet */}
       <SendProjectEmailSheet

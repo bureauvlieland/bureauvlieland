@@ -58,6 +58,8 @@ interface AccommodationRequest {
   location_preference: string[];
   budget_range: string | null;
   special_requests: string | null;
+  room_assignment?: string | null;
+  guest_details_updated_at?: string | null;
   wants_activities: boolean;
   status: string;
   created_at: string;
@@ -190,7 +192,12 @@ export const PartnerAccommodationRequestCard = ({
           </div>
         )}
 
-        {/* Reset reason banner */}
+        {request.room_assignment && (
+          <div className="text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
+            <p className="text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">Kamerindeling van de klant</p>
+            <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
+          </div>
+        )}
         {quote?.status === "pending" && quote?.reset_reason && (
           <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />

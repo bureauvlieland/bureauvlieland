@@ -38,6 +38,7 @@ import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { PartnerItem } from "@/types/partner";
+import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
 import { 
   generateTimeSlots, 
   getBlockedTimeSlotsFromPartnerItems, 
@@ -444,6 +445,19 @@ export const PartnerItemSheet = ({
               </div>
             </div>
           </div>
+
+          {(request.guest_names || (item.block_category === "catering" && request.dietary_notes)) && (
+            <div className="bg-muted/30 rounded-lg p-4 border">
+              <GuestDetailsDisplay
+                guestNames={request.guest_names ?? null}
+                dietaryNotes={request.dietary_notes ?? null}
+                roomAssignment={null}
+                showDietary={item.block_category === "catering"}
+                showRoomAssignment={false}
+                updatedAt={request.guest_details_updated_at ?? null}
+              />
+            </div>
+          )}
 
           <Separator />
 

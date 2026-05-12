@@ -55,6 +55,8 @@ interface AccommodationRequest {
   location_preference: string[];
   budget_range: string | null;
   special_requests: string | null;
+  room_assignment?: string | null;
+  guest_details_updated_at?: string | null;
   wants_activities: boolean;
   status: string;
   created_at: string;
@@ -479,6 +481,13 @@ export const PartnerAccommodationQuoteSheet = ({
                 <div className="text-sm bg-muted/50 p-2 rounded">
                   <span className="font-medium">Speciale wensen: </span>
                   {request.special_requests}
+                </div>
+              )}
+
+              {request.room_assignment && (
+                <div className="text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 rounded">
+                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">Kamerindeling van de klant</p>
+                  <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
                 </div>
               )}
             </CardContent>

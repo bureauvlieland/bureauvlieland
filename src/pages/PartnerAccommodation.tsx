@@ -29,6 +29,8 @@ interface AccommodationRequest {
   location_preference: string[];
   budget_range: string | null;
   special_requests: string | null;
+  room_assignment: string | null;
+  guest_details_updated_at: string | null;
   wants_activities: boolean;
   status: string;
   created_at: string;
