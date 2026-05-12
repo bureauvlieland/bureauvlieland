@@ -1,0 +1,16 @@
+
+ALTER TABLE public.email_log
+  ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS opened_at    TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS clicked_at   TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS bounced_at   TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS blocked_at   TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS spam_at      TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS unsub_at     TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS open_count   INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS click_count  INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS mailjet_events JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+CREATE INDEX IF NOT EXISTS idx_email_log_mailjet_message_id
+  ON public.email_log (mailjet_message_id)
+  WHERE mailjet_message_id IS NOT NULL;
