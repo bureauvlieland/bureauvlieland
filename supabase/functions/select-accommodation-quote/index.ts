@@ -671,6 +671,10 @@ Deno.serve(async (req) => {
               related_partner_id: rqPartner.id,
               status: "sent",
               sent_by: "system",
+              metadata: {
+                template_name: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
+                actor: "system → partner (niet gekozen)",
+              },
             });
 
             console.log(`Rejection notification sent to partner ${rqPartner.name}`);
