@@ -188,7 +188,12 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                       &lt;{log.recipient_email}&gt;
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      <span>{log.email_type}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span>{log.email_type}</span>
+                        <span className="rounded bg-slate-100 px-1 text-slate-500" title={`Match via ${log.matchSource}`}>
+                          {SOURCE_LABELS[log.matchSource]}
+                        </span>
+                      </span>
                       <span>
                         {ts
                           ? format(new Date(ts), "d MMM yyyy HH:mm", { locale: nl })
