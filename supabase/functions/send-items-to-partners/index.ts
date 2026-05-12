@@ -374,13 +374,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const emailLogs: any[] = [];
 
     for (const [partnerId, group] of groups) {
+      // In force-mode (herinnering / herversturen) raken we de status niet
+      // aan: het item zit al in de partner-flow. We loggen alleen tijdstip.
+      const updatePayload = isForce
+        ? { status_updated_at: new Date().toISOString() }
+        : {
+            skip_partner_notification: false,
+            status: "pending",
+            status_updated_at: new Date().toISOString(),
+          };
+
       const { error: updateError } = await supabase
         .from("program_request_items")
-        .update({
-          skip_partner_notification: false,
-          status: "pending",
-          status_updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .in("id", group.itemIds);
 
       if (updateError) {
@@ -389,14 +395,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       const partnerPortalUrl = `${baseUrl}/partner/login`;
-      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl);
+      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl, isForce);
       const recipientEmail = getRecipientEmail(group.partnerEmail, origin);
+      const subjectLine = isForce
+        ? `${subjectPrefix}Herinnering: aanvraag via Bureau Vlieland — ${program.reference_number || ""}`
+        : `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`;
 
       emailMessages.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: recipientEmail, Name: group.partnerName }],
         ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-        Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+        Subject: subjectLine,
         HTMLPart: emailHtml,
       });
 
