@@ -87,21 +87,28 @@ export const AdminEditActivitySheet = ({
   onSuccess,
   numberOfPeople,
 }: AdminEditActivitySheetProps) => {
-  // Form state
-  const [customName, setCustomName] = useState("");
-  const [customDescription, setCustomDescription] = useState("");
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [preferredTime, setPreferredTime] = useState("flexibel");
-  const [priceOverride, setPriceOverride] = useState("");
-  const [priceType, setPriceType] = useState<"per_person" | "per_person_per_day" | "total">("per_person");
-  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">("partner");
-  const [notes, setNotes] = useState("");
+  // Form state — lazy-init from `item` so the first render already has the
+  // correct values (LocationPicker mounts immediately and bakes lat/lng into Leaflet).
+  const [customName, setCustomName] = useState(item?.block_name ?? "");
+  const [customDescription, setCustomDescription] = useState(item?.admin_price_notes ?? "");
+  const [selectedDayIndex, setSelectedDayIndex] = useState(item?.day_index ?? 0);
+  const [preferredTime, setPreferredTime] = useState(item?.preferred_time ?? "flexibel");
+  const [priceOverride, setPriceOverride] = useState(item?.admin_price_override?.toString() ?? "");
+  const [priceType, setPriceType] = useState<"per_person" | "per_person_per_day" | "total">(
+    (item?.price_type === "per_person_per_day" || item?.price_type === "total")
+      ? item.price_type
+      : "per_person"
+  );
+  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">(
+    item?.block_type === "bureau" ? "bureau" : "partner"
+  );
+  const [notes, setNotes] = useState(item?.customer_notes ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [locationLat, setLocationLat] = useState<number | null>(null);
-  const [locationLng, setLocationLng] = useState<number | null>(null);
-  const [locationAddress, setLocationAddress] = useState("");
-  const [selectedProviderId, setSelectedProviderId] = useState("");
+  const [locationLat, setLocationLat] = useState<number | null>(item?.location_lat ?? null);
+  const [locationLng, setLocationLng] = useState<number | null>(item?.location_lng ?? null);
+  const [locationAddress, setLocationAddress] = useState(item?.location_address ?? "");
+  const [selectedProviderId, setSelectedProviderId] = useState(item?.provider_id ?? "bureau");
   const [partners, setPartners] = useState<PartnerOption[]>([]);
 
   // Fetch partners for executor dropdown
