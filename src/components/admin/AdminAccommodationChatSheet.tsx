@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { useAccommodationChat } from "@/hooks/useAccommodationChat";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
+import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
 
 interface AdminAccommodationChatSheetProps {
   open: boolean;
