@@ -363,8 +363,7 @@ Deno.serve(async (req) => {
       ],
     });
 
-    const blob = await Packer.toBlob(doc);
-    const arrayBuffer = await blob.arrayBuffer();
+    const buffer = await Packer.toBuffer(doc);
 
     return new Response(arrayBuffer, {
       status: 200,
