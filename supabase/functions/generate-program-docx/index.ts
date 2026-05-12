@@ -352,7 +352,9 @@ Deno.serve(async (req) => {
       status: 200,
       headers: {
         ...corsHeaders,
-        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        // The Supabase functions client only returns Blob data for octet-stream/pdf.
+        // The DOCX MIME type is otherwise parsed as text in the browser, corrupting the file.
+        "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="programma-${program.reference_number || request_id}.docx"`,
       },
     });
