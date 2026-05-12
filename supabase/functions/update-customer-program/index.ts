@@ -229,6 +229,8 @@ Deno.serve(async (req) => {
     }
 
     const emailMessages: any[] = [];
+    // Pending log entries — ingevuld met definitieve status + mailjet_message_id ná de batch-send.
+    const pendingEmailLogs: Array<{ logPayload: any; messageIdx: number }> = [];
 
     // Handle program details updates (dates/people/description changes)
     if (programDetails) {
