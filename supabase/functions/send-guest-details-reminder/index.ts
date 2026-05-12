@@ -30,11 +30,12 @@ Deno.serve(async (req) => {
     const maxStr = targetMax.toISOString().split("T")[0];
 
     // Find program_requests where the first selected_date is ~14 days out,
-    // terms accepted, and guest_details not yet filled, and no reminder sent.
+    // terms accepted, not cancelled, and guest details still incomplete.
     const { data: requests, error } = await supabase
       .from("program_requests")
-      .select("id, customer_name, customer_email, customer_token, reference_number, selected_dates, guest_names, dietary_notes, terms_accepted_at")
+      .select("id, customer_name, customer_email, customer_token, reference_number, selected_dates, guest_names, dietary_notes, terms_accepted_at, status, cancelled_at")
       .not("terms_accepted_at", "is", null)
+      .is("cancelled_at", null)
       .not("selected_dates", "is", null);
 
     if (error) throw error;
@@ -43,11 +44,25 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
 
     for (const r of requests || []) {
+      if (r.status === "geannuleerd" || r.status === "cancelled") continue;
       const dates = (r.selected_dates as string[]) || [];
       if (!dates.length) continue;
       const firstDate = [...dates].sort()[0];
       if (firstDate < minStr || firstDate > maxStr) continue;
-      if (r.guest_names && r.guest_names.trim()) continue;
+
+      const guestsMissing = !r.guest_names || !r.guest_names.trim();
+
+      // Dietary only relevant when catering items exist in the program
+      const { data: cateringItems } = await supabase
+        .from("program_request_items")
+        .select("id")
+        .eq("request_id", r.id)
+        .eq("block_category", "catering")
+        .limit(1);
+      const hasCatering = !!(cateringItems && cateringItems.length);
+      const dietsMissing = hasCatering && (!r.dietary_notes || !r.dietary_notes.trim());
+
+      if (!guestsMissing && !dietsMissing) continue;
 
       // Skip if already reminded
       const { data: existing } = await supabase
@@ -102,6 +117,8 @@ Deno.serve(async (req) => {
             template_name: "guest_details_reminder",
             actor: "system:cron",
             arrival_date: firstDate,
+            guests_missing: guestsMissing,
+            diets_missing: dietsMissing,
           },
         });
         sent++;
