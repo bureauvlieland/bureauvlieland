@@ -139,6 +139,8 @@ const LegendPill = ({ children, className }: { children: React.ReactNode; classN
   </span>
 );
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { TicketBookingInline } from "@/components/admin/tickets/TicketBookingInline";
+import { isTicketItem } from "@/lib/ticketItems";
 
 
 interface ProgramRequest {
@@ -225,6 +227,10 @@ interface ProgramRequestItem {
   location_lat?: number | null;
   location_lng?: number | null;
   location_address?: string | null;
+  // Ticket booking (ferries / bike rental)
+  booking_reference?: string | null;
+  booking_document_path?: string | null;
+  booking_group_id?: string | null;
 }
 
 interface HistoryEntry {
@@ -1822,6 +1828,32 @@ const AdminRequestDetail = () => {
                                         <div className="text-xs text-slate-500">{item.block_category}</div>
                                         {item.admin_price_notes && (
                                           <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
+                                        )}
+                                        {isTicketItem(item) && (
+                                          <TicketBookingInline
+                                            item={{
+                                              id: item.id,
+                                              block_id: item.block_id,
+                                              block_name: item.block_name,
+                                              day_index: item.day_index,
+                                              booking_reference: item.booking_reference ?? null,
+                                              booking_document_path: item.booking_document_path ?? null,
+                                              booking_group_id: item.booking_group_id ?? null,
+                                            }}
+                                            siblings={items
+                                              .filter((s) => isTicketItem(s))
+                                              .map((s) => ({
+                                                id: s.id,
+                                                block_id: s.block_id,
+                                                block_name: s.block_name,
+                                                day_index: s.day_index,
+                                                booking_reference: s.booking_reference ?? null,
+                                                booking_document_path: s.booking_document_path ?? null,
+                                                booking_group_id: s.booking_group_id ?? null,
+                                              }))}
+                                            requestId={request.id}
+                                            onChanged={() => fetchRequestData({ silent: true })}
+                                          />
                                         )}
                                       </div>
                                     </TableCell>
