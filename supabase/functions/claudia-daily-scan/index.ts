@@ -70,13 +70,15 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   // === 2. Logies-aanvragen zonder offertes ===
   const { data: idleLodging } = await supabase
     .from("accommodation_requests")
-    .select("id, reference_number, customer_name, created_at, status, quotes_requested_count")
+    .select("id, reference_number, customer_name, created_at, status, quotes_requested_count, program_requests:linked_program_id(status)")
     .in("status", ["submitted", "processing", "pending"])
     .eq("quotes_requested_count", 0)
     .lte("created_at", new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString())
     .limit(10);
 
   (idleLodging ?? []).forEach((r: any) => {
+    const linkedProgramStatus = r.program_requests?.status;
+    if (linkedProgramStatus === "cancelled" || linkedProgramStatus === "completed") return;
     const age = Math.floor((now.getTime() - new Date(r.created_at).getTime()) / (24 * 60 * 60 * 1000));
     signals.push({
       category: "lodging_no_quotes",
@@ -92,15 +94,17 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   // === 3. Logies-quotes wachten op verwerking ===
   const { data: pendingQuotes } = await supabase
     .from("accommodation_quotes")
-    .select("id, request_id, accommodation_name, submitted_at, status, price_total, accommodation_requests:request_id(reference_number, customer_name, status)")
+    .select("id, request_id, accommodation_name, submitted_at, status, price_total, accommodation_requests:request_id(reference_number, customer_name, status, program_requests:linked_program_id(status))")
     .eq("status", "submitted")
     .lte("submitted_at", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
     .limit(15);
 
   (pendingQuotes ?? []).forEach((q: any) => {
-    // Skip cancelled lodging requests — geen actie meer nodig
+    // Skip cancelled lodging requests/projects — geen actie meer nodig
     const parentStatus = q.accommodation_requests?.status;
+    const linkedProgramStatus = q.accommodation_requests?.program_requests?.status;
     if (parentStatus === "cancelled" || parentStatus === "completed") return;
+    if (linkedProgramStatus === "cancelled" || linkedProgramStatus === "completed") return;
     const age = Math.floor((now.getTime() - new Date(q.submitted_at).getTime()) / (24 * 60 * 60 * 1000));
     signals.push({
       category: "lodging_quote_unforwarded",
