@@ -230,6 +230,11 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: errorText.substring(0, 500),
         sent_by: `customer:${programRequest.customer_email}`,
+        metadata: {
+          template_name: "customer_accommodation_message",
+          actor: "klant → partner (logies-bericht)",
+          failure: true,
+        },
       });
 
       throw new Error("EMAIL_SERVICE_ERROR");
