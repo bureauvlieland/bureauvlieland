@@ -13,10 +13,59 @@ export interface EmailLogEntry {
   error_message?: string;
   mailjet_message_id?: string;
   sent_by: string;
-  metadata?: Record<string, unknown>;
+  /**
+   * Metadata MUST include `template_name` (machine-readable template identifier,
+   * e.g. "partner_item_cancellation") and `actor` (who initiated the send,
+   * e.g. "admin → partner", "klant → bureau", "system").
+   * The audit popover relies on these fields.
+   */
+  metadata: { template_name: string; actor: string } & Record<string, unknown>;
+}
+
+export class EmailLogValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmailLogValidationError";
+  }
+}
+
+/**
+ * Validates that an email-log entry contains the required audit fields.
+ * Throws EmailLogValidationError when `metadata.template_name` or
+ * `metadata.actor` is missing/empty so the calling edge function fails loudly
+ * instead of silently writing an incomplete row.
+ */
+function validateEntry(entry: EmailLogEntry): void {
+  const errors: string[] = [];
+
+  if (!entry.email_type) errors.push("email_type is required");
+  if (!entry.subject) errors.push("subject is required");
+  if (!entry.recipient_email) errors.push("recipient_email is required");
+  if (!entry.status) errors.push("status is required");
+  if (!entry.sent_by) errors.push("sent_by is required");
+
+  const meta = entry.metadata as Record<string, unknown> | undefined;
+  const templateName = meta?.template_name;
+  const actor = meta?.actor;
+
+  if (typeof templateName !== "string" || templateName.trim() === "") {
+    errors.push("metadata.template_name is required (non-empty string)");
+  }
+  if (typeof actor !== "string" || actor.trim() === "") {
+    errors.push("metadata.actor is required (non-empty string)");
+  }
+
+  if (errors.length > 0) {
+    throw new EmailLogValidationError(
+      `logEmail validation failed for "${entry.email_type ?? "unknown"}" → ${entry.recipient_email ?? "unknown"}: ${errors.join("; ")}`,
+    );
+  }
 }
 
 export async function logEmail(entry: EmailLogEntry): Promise<void> {
+  // Validate FIRST — throws synchronously so callers fail fast.
+  validateEntry(entry);
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
