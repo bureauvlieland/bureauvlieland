@@ -16,19 +16,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface MailSendResult {
+  ok: boolean;
+  messageId: string | null;
+  error?: string;
+}
+
 const sendEmailViaMailjet = async (
   to: string,
   toName: string,
   subject: string,
   htmlContent: string,
   referenceNumber?: string | null
-) => {
+): Promise<MailSendResult> => {
   const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
   const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
   if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
     console.error("Mailjet credentials not configured");
-    return false;
+    return { ok: false, messageId: null, error: "Mailjet credentials not configured" };
   }
 
   const credentials = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
@@ -57,17 +63,18 @@ const sendEmailViaMailjet = async (
       }),
     });
 
+    const data = await response.json().catch(() => ({}));
+    const messageId = data?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Mailjet error:", errorText);
-      return false;
+      console.error("Mailjet error:", data);
+      return { ok: false, messageId, error: JSON.stringify(data).slice(0, 1000) };
     }
 
-    await response.text(); // Consume response body
-    return true;
+    return { ok: true, messageId };
   } catch (error) {
     console.error("Error sending email via Mailjet:", error);
-    return false;
+    return { ok: false, messageId: null, error: error instanceof Error ? error.message : "Unknown" };
   }
 };
 
