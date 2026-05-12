@@ -218,7 +218,7 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
       {/* Map */}
       <div
         ref={mapRef}
-        className="h-[250px] rounded-lg border overflow-hidden"
+        className={`${mapHeightClass} rounded-lg border overflow-hidden`}
         style={{ zIndex: 0 }}
       />
 
