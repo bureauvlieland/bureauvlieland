@@ -329,7 +329,7 @@ export default function AdminLocations() {
                           onClick={() => openEdit(row)}
                           className="col-span-11 grid grid-cols-11 gap-2 text-left items-center"
                         >
-                          <div className="col-span-3 font-medium truncate">{row.name}</div>
+                          <div className="col-span-3 text-sm font-medium truncate">{row.name}</div>
                           <div className="col-span-2 text-sm text-muted-foreground truncate">{row.category}</div>
                           <div className="col-span-4 text-sm text-muted-foreground truncate">
                             {row.address || <span className="italic">—</span>}
