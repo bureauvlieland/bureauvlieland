@@ -101,7 +101,122 @@ function netInvoiced(invoices: InvoiceRow[]) {
   }, 0);
 }
 
-export function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
+interface TodoRow {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: "low" | "normal" | "high" | "urgent";
+  due_date: string | null;
+  auto_type: string | null;
+}
+
+const PRIORITY_TONE: Record<TodoRow["priority"], string> = {
+  urgent: "border-red-200 bg-red-50 text-red-700",
+  high:   "border-amber-200 bg-amber-50 text-amber-700",
+  normal: "border-slate-200 bg-slate-50 text-slate-700",
+  low:    "border-slate-200 bg-white text-slate-600",
+};
+
+function ProjectActionsCard({ requestId }: { requestId: string }) {
+  const queryClient = useQueryClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: todos = [], isLoading } = useQuery<TodoRow[]>({
+    queryKey: ["werkbank-detail-todos", requestId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_todos")
+        .select("id, title, description, priority, due_date, auto_type")
+        .eq("related_request_id", requestId)
+        .not("status", "in", "(done,dismissed)")
+        .or(`snoozed_until.is.null,snoozed_until.lte.${today}`)
+        .order("priority", { ascending: false })
+        .order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as TodoRow[];
+    },
+  });
+
+  const refreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["werkbank-detail-todos", requestId] });
+    queryClient.invalidateQueries({ queryKey: ["werkbank-inbox"] });
+    queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] });
+    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations"] });
+    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations-count"] });
+  };
+
+  const setStatus = async (id: string, status: "done" | "dismissed") => {
+    const patch: Record<string, unknown> = { status };
+    if (status === "done") patch.completed_at = new Date().toISOString();
+    const { error } = await supabase.from("admin_todos").update(patch).eq("id", id);
+    if (error) {
+      toast({ title: "Kon niet bijwerken", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: status === "done" ? "Opgepakt" : "Gemarkeerd als niet relevant" });
+    refreshAll();
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <ListTodo className="h-4 w-4 text-amber-600" /> Acties voor dit project
+          {todos.length > 0 && (
+            <Badge variant="secondary" className="text-[10px]">{todos.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground">Laden…</div>
+        ) : todos.length === 0 ? (
+          <div className="text-sm text-muted-foreground">Geen openstaande acties. 🎉</div>
+        ) : (
+          todos.map((t) => (
+            <div
+              key={t.id}
+              className={cn(
+                "flex flex-wrap items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm",
+                PRIORITY_TONE[t.priority],
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="font-medium leading-snug">{t.title}</div>
+                {t.description && (
+                  <div className="mt-0.5 text-xs opacity-80 whitespace-pre-wrap">{t.description}</div>
+                )}
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] opacity-70">
+                  <span>Prioriteit: {t.priority}</span>
+                  {t.due_date && <span>· Deadline {t.due_date}</span>}
+                  {t.auto_type && <span>· {t.auto_type}</span>}
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 bg-white"
+                  onClick={() => setStatus(t.id, "done")}
+                >
+                  <Check className="h-3.5 w-3.5" /> Opgepakt
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1"
+                  onClick={() => setStatus(t.id, "dismissed")}
+                >
+                  <X className="h-3.5 w-3.5" /> Niet relevant
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
 
