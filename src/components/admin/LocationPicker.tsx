@@ -1,12 +1,21 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MapPin, Search, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import "leaflet/dist/leaflet.css";
 
 const VLIELAND_CENTER: [number, number] = [53.2967, 5.0456];
 const DEFAULT_ZOOM = 15;
+
+interface KnownLocation {
+  label: string;
+  address: string;
+  lat: number;
+  lng: number;
+  source: "partner" | "bouwsteen";
+}
 
 /**
  * Compose a clean Dutch-style address from a Nominatim addressdetails object:
