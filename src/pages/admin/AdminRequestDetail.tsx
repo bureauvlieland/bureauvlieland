@@ -645,6 +645,17 @@ const AdminRequestDetail = () => {
     setIsCancelling(true);
 
     try {
+      const response = await supabase.functions.invoke("cancel-program-request", {
+        body: {
+          token: request.customer_token,
+          reason: cancellationReason || undefined,
+          cancelAccommodation: true,
+          origin: window.location.origin,
+        },
+      });
+
+      if (response.error) throw response.error;
+
       const { error } = await supabase
         .from("program_requests")
         .update({
@@ -663,7 +674,7 @@ const AdminRequestDetail = () => {
         details: { reason: cancellationReason },
       });
 
-      toast.success("Aanvraag geannuleerd");
+      toast.success("Aanvraag geannuleerd; gekoppelde logiespartners zijn verwerkt");
       setCancelDialogOpen(false);
       fetchRequestData();
     } catch (error) {
