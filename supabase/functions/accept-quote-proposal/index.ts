@@ -556,6 +556,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // 8. Update items and send notifications per partner
     const emailMessages: any[] = [];
     const emailLogs: any[] = [];
+    const logMessageIndex: number[] = [];
 
     for (const [partnerId, group] of partnerGroups) {
       // Update items to pending and remove skip flag
