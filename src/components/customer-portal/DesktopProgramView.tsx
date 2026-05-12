@@ -15,6 +15,7 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
+import { GuestDetailsCard } from "./GuestDetailsCard";
 import { CompactBillingSection } from "./CompactBillingSection";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
@@ -119,6 +120,16 @@ interface DesktopProgramViewProps {
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;
+  // Guest details
+  onOpenGuestDetails?: () => void;
+  guestDetails?: {
+    guest_names: string | null;
+    dietary_notes: string | null;
+    room_assignment: string | null;
+    updated_at: string | null;
+    showDietary: boolean;
+    showRoomAssignment: boolean;
+  };
 }
 
 export const DesktopProgramView = ({
@@ -150,6 +161,8 @@ export const DesktopProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onOpenGuestDetails,
+  guestDetails,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
