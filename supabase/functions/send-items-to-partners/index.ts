@@ -183,10 +183,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     //    Als item_ids is meegegeven, beperken we tot die subset (per-item versturen).
     let itemsQuery = supabase
       .from("program_request_items")
-      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, day_index, skip_partner_notification, customer_approved_at, status")
+      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, skip_partner_notification, customer_approved_at, status")
       .eq("request_id", request_id)
-      .eq("skip_partner_notification", true)
       .neq("status", "cancelled");
+
+    // In force-mode (per-item, herinnering) negeren we de skip-filter zodat
+    // we ook items kunnen herinneren die al uitgegaan zijn.
+    if (!isForce) {
+      itemsQuery = itemsQuery.eq("skip_partner_notification", true);
+    }
 
     if (item_ids && item_ids.length > 0) {
       itemsQuery = itemsQuery.in("id", item_ids);
