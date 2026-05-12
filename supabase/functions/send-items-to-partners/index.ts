@@ -147,8 +147,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // Optionele subset van item-ids; als opgegeven worden ALLEEN deze items
       // verstuurd (per-item versturen vanuit admin). Anders alle skip-items.
       item_ids?: string[];
+      // "auto" (default): alleen items met skip_partner_notification=true.
+      // "force": ook items die al verzonden zijn — gebruikt voor herinneringen
+      //   en het forceren van een verzending vóór formeel klantakkoord.
+      mode?: "auto" | "force";
     }
-    const { request_id, origin, dry_run, item_ids }: SendItemsBody = await req.json();
+    const { request_id, origin, dry_run, item_ids, mode = "auto" }: SendItemsBody = await req.json();
+    const isForce = mode === "force";
 
     if (!request_id) {
       return new Response(
