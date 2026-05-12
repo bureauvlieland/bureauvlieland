@@ -362,7 +362,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
           status: "sent",
           mailjet_message_id: mailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
           sent_by: "system",
-          metadata: { triggered_by: "per_item_approval", test_mode: testMode },
+          metadata: {
+            template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
+            actor: "system → partner (na klantakkoord per item)",
+            triggered_by: "per_item_approval",
+            test_mode: testMode,
+          },
         });
 
         console.log(`Sent notification to partner ${item.provider_name} for item ${item.block_name}`);
