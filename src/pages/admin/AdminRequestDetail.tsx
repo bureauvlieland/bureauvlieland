@@ -288,6 +288,7 @@ const AdminRequestDetail = () => {
   }, [searchParams, setSearchParams]);
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSendingToPartners, setIsSendingToPartners] = useState(false);
