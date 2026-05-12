@@ -66,7 +66,8 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 function generatePartnerNotificationEmail(
   group: PartnerGroup,
   program: any,
-  portalUrl: string
+  portalUrl: string,
+  isReminder = false,
 ): string {
   const formattedDates = (program.selected_dates as string[])
     .map((d: string) => formatDateNL(d))
@@ -74,23 +75,28 @@ function generatePartnerNotificationEmail(
 
   const itemsHtml = group.items
     .map((item) => {
-      const timeInfo = item.preferred_time
-        ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(item.preferred_time)}</span>`
-        : "";
       return `<li style="margin-bottom: 12px;">
         <strong>${sanitizeHtml(item.block_name)}</strong>
-        ${timeInfo}
+        ${renderEffectiveTimeLine(item, "Tijd")}
       </li>`;
     })
     .join("");
 
+  const headline = isReminder
+    ? "Herinnering: aanvraag staat nog open"
+    : "Nieuwe aanvraag via Bureau Vlieland";
+  const intro = isReminder
+    ? `<p>Beste ${sanitizeHtml(group.partnerName)},</p>
+       <p>Een vriendelijke <strong>herinnering</strong>: onderstaande aanvraag staat nog open in jullie partnerportaal en wacht op een reactie.</p>`
+    : `<p>Beste ${sanitizeHtml(group.partnerName)},</p>
+       <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland.</p>`;
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
       <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-        Nieuwe aanvraag via Bureau Vlieland
+        ${headline}
       </h2>
-      <p>Beste ${sanitizeHtml(group.partnerName)},</p>
-      <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland.</p>
+      ${intro}
       <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3 style="margin-top: 0; color: #2d3748;">📅 Programma details</h3>
         <table style="width: 100%; border-collapse: collapse;">
