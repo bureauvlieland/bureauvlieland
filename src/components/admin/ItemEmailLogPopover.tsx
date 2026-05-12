@@ -283,6 +283,68 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
               })()}
 
               {(() => {
+                const incomplete = logs.filter(
+                  (l) => getMissingValidationFields(l.metadata).length > 0,
+                );
+                if (incomplete.length === 0) return null;
+                const byActor = new Map<string, number>();
+                const byTemplate = new Map<string, number>();
+                for (const l of incomplete) {
+                  const meta = l.metadata ?? {};
+                  const actor =
+                    typeof meta.actor === "string" && meta.actor.trim() !== ""
+                      ? meta.actor
+                      : "— ontbreekt —";
+                  const tmpl =
+                    typeof meta.template_name === "string" && meta.template_name.trim() !== ""
+                      ? meta.template_name
+                      : `— ontbreekt — (${l.email_type})`;
+                  byActor.set(actor, (byActor.get(actor) ?? 0) + 1);
+                  byTemplate.set(tmpl, (byTemplate.get(tmpl) ?? 0) + 1);
+                }
+                const sortDesc = (m: Map<string, number>) =>
+                  Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+                const actors = sortDesc(byActor);
+                const templates = sortDesc(byTemplate);
+                return (
+                  <div className="border-b bg-slate-50 px-3 py-2 text-[10px] text-slate-700 space-y-2">
+                    <div>
+                      <div className="mb-1 font-semibold text-slate-600">
+                        Per actor ({actors.length})
+                      </div>
+                      <ul className="space-y-0.5">
+                        {actors.slice(0, 6).map(([k, v]) => (
+                          <li key={k} className="flex items-center justify-between gap-2">
+                            <code className="truncate text-slate-700">{k}</code>
+                            <span className="shrink-0 rounded bg-white px-1 text-slate-600">{v}</span>
+                          </li>
+                        ))}
+                        {actors.length > 6 && (
+                          <li className="text-slate-400">+{actors.length - 6} meer…</li>
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="mb-1 font-semibold text-slate-600">
+                        Per template_name ({templates.length})
+                      </div>
+                      <ul className="space-y-0.5">
+                        {templates.slice(0, 6).map(([k, v]) => (
+                          <li key={k} className="flex items-center justify-between gap-2">
+                            <code className="truncate text-slate-700">{k}</code>
+                            <span className="shrink-0 rounded bg-white px-1 text-slate-600">{v}</span>
+                          </li>
+                        ))}
+                        {templates.length > 6 && (
+                          <li className="text-slate-400">+{templates.length - 6} meer…</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {(() => {
                 const visible = onlyIncomplete
                   ? logs.filter((l) => getMissingValidationFields(l.metadata).length > 0)
                   : logs;
