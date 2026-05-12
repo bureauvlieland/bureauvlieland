@@ -361,6 +361,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsList>
 
         <TabsContent value="overzicht" className="space-y-3">
+          <ProjectActionsCard requestId={project.id} />
           <div className="grid gap-3 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Programma</CardTitle></CardHeader>
