@@ -7,6 +7,8 @@ import {
   getRenderedTemplate, 
   TemplateIds,
   sanitizeHtml,
+  getEffectiveItemTime,
+  renderEffectiveTimeLine,
   getRecipientEmail as sharedGetRecipientEmail,
   getSubjectPrefix as sharedGetSubjectPrefix,
   isTestMode as sharedIsTestMode,
@@ -1164,9 +1166,10 @@ Deno.serve(async (req) => {
 
       // Email to partners with billing details
       for (const [, provider] of providerItems) {
-        const itemsList = provider.items.map(i => 
-          `<li>${sanitizeHtml(i.block_name)}${i.preferred_time ? ` (${i.preferred_time})` : ""}</li>`
-        ).join("");
+        const itemsList = provider.items.map(i => {
+          const t = getEffectiveItemTime(i);
+          return `<li>${sanitizeHtml(i.block_name)}${t ? ` (${sanitizeHtml(t)})` : ""}</li>`;
+        }).join("");
 
         const billingTableHtml = `
           <table style="width: 100%;">
