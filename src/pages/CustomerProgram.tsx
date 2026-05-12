@@ -349,6 +349,8 @@ const CustomerProgram = () => {
     onOpenBilling: () => setShowBillingDialog(true),
     onOpenEdit: () => setShowEditDialog(true),
     onOpenCancel: () => setShowCancelDialog(true),
+    onOpenGuestDetails: () => setShowGuestDialog(true),
+    guestDetails,
     onSubmitChanges: () => setShowConfirmDialog(true),
     onRefresh: refetch,
     onAcceptTerms: handleAcceptTerms,
