@@ -2815,6 +2815,20 @@ const AdminRequestDetail = () => {
           onSuccess={() => fetchRequestData()}
         />
       )}
+
+      {request && (
+        <AdminGuestDetailsDialog
+          open={guestDialogOpen}
+          onOpenChange={setGuestDialogOpen}
+          scope="program_request"
+          recordId={request.id}
+          initialGuestNames={(request as any).guest_names}
+          initialDietaryNotes={(request as any).dietary_notes}
+          showDietary={items.some((i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering"))}
+          showRoomAssignment={false}
+          onSaved={() => fetchRequestData({ silent: true })}
+        />
+      )}
     </>
   );
 };
