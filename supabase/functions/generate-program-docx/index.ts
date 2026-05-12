@@ -155,18 +155,6 @@ Deno.serve(async (req) => {
       ? program.selected_dates.map((d: string) => new Date(d))
       : [];
 
-    // Pre-fetch images
-    const imageCache = new Map<string, { buffer: Uint8Array; type: "jpg" | "png" } | null>();
-    await Promise.all(
-      visible.map(async (it: any) => {
-        const block = it.block_id ? blocksMap.get(it.block_id) : null;
-        const url = block?.image_url;
-        if (url && !imageCache.has(url)) {
-          imageCache.set(url, await fetchImageBuffer(url));
-        }
-      }),
-    );
-
     // Group items per day
     const dayGroups = new Map<number, any[]>();
     visible.forEach((it: any) => {
@@ -317,50 +305,18 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Image cell
-        const imgUrl = block?.image_url;
-        const cached = imgUrl ? imageCache.get(imgUrl) : null;
-        const leftChildren: Paragraph[] = [];
-        if (cached) {
-          try {
-            leftChildren.push(
-              new Paragraph({
-                children: [
-              new ImageRun({
-                    type: cached.type === "png" ? "png" : "jpg",
-                    data: cached.buffer,
-                    transformation: { width: 200, height: 150 },
-                    altText: { title: "Afbeelding", description: "Activiteit", name: "activity" },
-                  }),
-                ],
-              }),
-            );
-          } catch {
-            leftChildren.push(new Paragraph({ children: [new TextRun({ text: "" })] }));
-          }
-        } else {
-          leftChildren.push(new Paragraph({ children: [new TextRun({ text: "" })] }));
-        }
-
         const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
         const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
         const itemTable = new Table({
           width: { size: 9360, type: WidthType.DXA },
-          columnWidths: [2880, 6480],
+          columnWidths: [9360],
           rows: [
             new TableRow({
               children: [
                 new TableCell({
                   borders: cellBorders,
-                  width: { size: 2880, type: WidthType.DXA },
-                  margins: { top: 80, bottom: 80, left: 0, right: 160 },
-                  verticalAlign: VerticalAlign.TOP,
-                  children: leftChildren,
-                }),
-                new TableCell({
-                  borders: cellBorders,
-                  width: { size: 6480, type: WidthType.DXA },
+                  width: { size: 9360, type: WidthType.DXA },
                   margins: { top: 80, bottom: 80, left: 0, right: 0 },
                   verticalAlign: VerticalAlign.TOP,
                   children: rightChildren,
