@@ -16,19 +16,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface MailSendResult {
+  ok: boolean;
+  messageId: string | null;
+  error?: string;
+}
+
 const sendEmailViaMailjet = async (
   to: string,
   toName: string,
   subject: string,
   htmlContent: string,
   referenceNumber?: string | null
-) => {
+): Promise<MailSendResult> => {
   const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
   const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
   if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
     console.error("Mailjet credentials not configured");
-    return false;
+    return { ok: false, messageId: null, error: "Mailjet credentials not configured" };
   }
 
   const credentials = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
@@ -57,17 +63,18 @@ const sendEmailViaMailjet = async (
       }),
     });
 
+    const data = await response.json().catch(() => ({}));
+    const messageId = data?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Mailjet error:", errorText);
-      return false;
+      console.error("Mailjet error:", data);
+      return { ok: false, messageId, error: JSON.stringify(data).slice(0, 1000) };
     }
 
-    await response.text(); // Consume response body
-    return true;
+    return { ok: true, messageId };
   } catch (error) {
     console.error("Error sending email via Mailjet:", error);
-    return false;
+    return { ok: false, messageId: null, error: error instanceof Error ? error.message : "Unknown" };
   }
 };
 
@@ -506,34 +513,40 @@ Deno.serve(async (req) => {
       const counterResponseRecipient = getRecipientEmail(programRequest.customer_email, origin);
       const counterSubjectPrefix = getSubjectPrefix(origin);
       
-      const emailSent = await sendEmailViaMailjet(
+      const sendResult = await sendEmailViaMailjet(
         counterResponseRecipient,
         programRequest.customer_name,
         `${counterSubjectPrefix}${emailSubject}`,
         emailBody,
         programRequest.reference_number
       );
-      
-      if (emailSent) {
+
+      // Log altijd (sent of failed) zodat de mail-popover compleet is
+      await supabase.from("email_log").insert({
+        email_type: "counter_proposal_response",
+        subject: `${counterSubjectPrefix}${emailSubject}`,
+        recipient_email: counterResponseRecipient,
+        recipient_name: programRequest.customer_name,
+        related_request_id: item.request_id,
+        related_item_id: itemId,
+        related_partner_id: partner.id,
+        status: sendResult.ok ? "sent" : "failed",
+        error_message: sendResult.error || null,
+        mailjet_message_id: sendResult.messageId,
+        sent_at: sendResult.ok ? new Date().toISOString() : null,
+        sent_by: "partner",
+        metadata: {
+          template_name: TemplateIds.COUNTER_PROPOSAL_RESPONSE,
+          actor: "partner → klant (reactie op tegenvoorstel)",
+          old_status: oldStatus,
+          new_status: status,
+          quoted_price: quotedPrice,
+          proposed_time: proposedTime,
+        },
+      });
+
+      if (sendResult.ok) {
         console.log(`Counter-proposal response email sent to ${counterResponseRecipient}`);
-        // Log email
-        await supabase.from("email_log").insert({
-          email_type: "counter_proposal_response",
-          subject: emailSubject,
-          recipient_email: counterResponseRecipient,
-          recipient_name: programRequest.customer_name,
-          related_request_id: item.request_id,
-          related_item_id: itemId,
-          related_partner_id: partner.id,
-          status: "sent",
-          sent_at: new Date().toISOString(),
-          metadata: {
-            old_status: oldStatus,
-            new_status: status,
-            quoted_price: quotedPrice,
-            proposed_time: proposedTime,
-          },
-        });
       } else {
         console.warn(`Failed to send counter-proposal response email to ${counterResponseRecipient}`);
       }
@@ -697,15 +710,39 @@ Deno.serve(async (req) => {
       const emailSubject = template?.subject || subjectMap[status];
 
       const statusSubjectPrefix = getSubjectPrefix(origin);
-      const emailSent = await sendEmailViaMailjet(
-        getRecipientEmail(programRequest.customer_email, origin),
+      const statusRecipient = getRecipientEmail(programRequest.customer_email, origin);
+      const statusSendResult = await sendEmailViaMailjet(
+        statusRecipient,
         programRequest.customer_name,
         `${statusSubjectPrefix}${emailSubject}`,
         emailHtml,
         programRequest.reference_number
       );
 
-      if (!emailSent) {
+      await supabase.from("email_log").insert({
+        email_type: templateId,
+        subject: `${statusSubjectPrefix}${emailSubject}`,
+        recipient_email: statusRecipient,
+        recipient_name: programRequest.customer_name,
+        related_request_id: item.request_id,
+        related_item_id: itemId,
+        related_partner_id: partner.id,
+        status: statusSendResult.ok ? "sent" : "failed",
+        error_message: statusSendResult.error || null,
+        mailjet_message_id: statusSendResult.messageId,
+        sent_at: statusSendResult.ok ? new Date().toISOString() : null,
+        sent_by: "partner",
+        metadata: {
+          template_name: templateId,
+          actor: actor === "klant" ? "klant (akkoord vereist)" : "bureau (zoekt alternatief)",
+          new_status: status,
+          quoted_price: quotedPrice,
+          proposed_time: proposedTime,
+          proposed_date: proposedDate,
+        },
+      });
+
+      if (!statusSendResult.ok) {
         console.warn(`Failed to send ${status} email to customer, but status update succeeded`);
       } else {
         console.log(`Status email (${status}) sent to ${programRequest.customer_email}`);

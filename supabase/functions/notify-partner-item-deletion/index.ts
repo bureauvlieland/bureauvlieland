@@ -19,6 +19,7 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 interface LegacyPartner {
   partner_id: string;
   item_names: string[];
+  item_ids?: string[];
 }
 
 interface RequestPayload {
@@ -38,10 +39,11 @@ async function sendCancellationEmail(opts: {
   partner_name: string;
   partner_email: string;
   item_names: string[];
+  item_ids?: string[];
   origin?: string;
   intro_text?: string;
 }) {
-  const { supabase, request_id, refNumber, partner_id, partner_name, partner_email, item_names, origin, intro_text } = opts;
+  const { supabase, request_id, refNumber, partner_id, partner_name, partner_email, item_names, item_ids = [], origin, intro_text } = opts;
 
   const itemsList = item_names.map((n) => `• ${sanitizeHtml(n)}`).join("<br>");
   const subject = `${getSubjectPrefix(origin)}Onderdeel van aanvraag ${refNumber} komt te vervallen`;
@@ -78,18 +80,34 @@ async function sendCancellationEmail(opts: {
 
   const mjData = await mjRes.json().catch(() => ({}));
   const messageId = mjData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+  const status = mjRes.ok ? "sent" : "failed";
+  const errorMessage = mjRes.ok ? null : JSON.stringify(mjData).slice(0, 1000);
+  const sentAt = new Date().toISOString();
+  const baseMetadata = {
+    template_name: "partner_item_cancellation",
+    actor: "admin → partner (annulering)",
+    item_ids,
+    item_count: item_ids.length,
+  };
 
-  await supabase.from("email_log").insert({
+  // Eén log-rij per item zodat de mail-popover per onderdeel werkt
+  const idsForLog = item_ids.length > 0 ? item_ids : [null];
+  const rows = idsForLog.map((iid) => ({
     email_type: "partner_item_cancellation",
     subject,
     recipient_email: recipientEmail,
     recipient_name: partner_name,
     related_request_id: request_id,
     related_partner_id: partner_id,
-    status: mjRes.ok ? "sent" : "failed",
+    related_item_id: iid,
+    status,
+    error_message: errorMessage,
     mailjet_message_id: messageId,
-    sent_at: new Date().toISOString(),
-  });
+    sent_at: status === "sent" ? sentAt : null,
+    sent_by: "admin",
+    metadata: baseMetadata,
+  }));
+  await supabase.from("email_log").insert(rows);
 
   await supabase.from("project_communications").insert({
     request_id,
@@ -157,6 +175,7 @@ Deno.serve(async (req) => {
           partner_name: p.name,
           partner_email: email,
           item_names: lp.item_names,
+          item_ids: lp.item_ids || [],
           origin, intro_text,
         });
         if (ok) emailsSent++;
@@ -210,12 +229,13 @@ Deno.serve(async (req) => {
     }
 
     // Group per partner
-    const groups = new Map<string, { name: string; email: string; items: string[] }>();
+    const groups = new Map<string, { name: string; email: string; items: string[]; itemIds: string[] }>();
     for (const it of notifiable) {
       if (!it.provider_email) continue;
       const key = it.provider_id;
-      if (!groups.has(key)) groups.set(key, { name: it.provider_name || key, email: it.provider_email, items: [] });
+      if (!groups.has(key)) groups.set(key, { name: it.provider_name || key, email: it.provider_email, items: [], itemIds: [] });
       groups.get(key)!.items.push(it.block_name);
+      groups.get(key)!.itemIds.push(it.id);
     }
 
     for (const [pid, g] of groups) {
@@ -225,6 +245,7 @@ Deno.serve(async (req) => {
         partner_name: g.name,
         partner_email: g.email,
         item_names: g.items,
+        item_ids: g.itemIds,
         origin,
       });
       if (ok) emailsSent++;

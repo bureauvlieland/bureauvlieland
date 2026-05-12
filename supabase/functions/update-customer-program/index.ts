@@ -229,6 +229,8 @@ Deno.serve(async (req) => {
     }
 
     const emailMessages: any[] = [];
+    // Pending log entries — ingevuld met definitieve status + mailjet_message_id ná de batch-send.
+    const pendingEmailLogs: Array<{ logPayload: any; messageIdx: number }> = [];
 
     // Handle program details updates (dates/people/description changes)
     if (programDetails) {
@@ -328,20 +330,24 @@ Deno.serve(async (req) => {
                   HTMLPart: emailBody,
                 });
 
-                await supabase.from("email_log").insert({
-                  email_type: "accommodation_people_change",
-                  subject: `${subjectPrefix}${emailSubject}`,
-                  recipient_email: getRecipientEmail(partner.email, origin),
-                  recipient_name: partner.name,
-                  related_request_id: program.id,
-                  related_accommodation_id: program.linked_accommodation_id,
-                  related_partner_id: partner.id,
-                  status: "pending",
-                  sent_by: "update-customer-program",
-                  metadata: {
-                    old_people: program.number_of_people,
-                    new_people: programDetails.numberOfPeople,
-                    accommodation_name: quote.accommodation_name,
+                pendingEmailLogs.push({
+                  messageIdx: emailMessages.length - 1,
+                  logPayload: {
+                    email_type: "accommodation_people_change",
+                    subject: `${subjectPrefix}${emailSubject}`,
+                    recipient_email: getRecipientEmail(partner.email, origin),
+                    recipient_name: partner.name,
+                    related_request_id: program.id,
+                    related_accommodation_id: program.linked_accommodation_id,
+                    related_partner_id: partner.id,
+                    sent_by: "update-customer-program",
+                    metadata: {
+                      template_name: "accommodation_people_change",
+                      actor: "klant → logiespartner (gastenwijziging)",
+                      old_people: program.number_of_people,
+                      new_people: programDetails.numberOfPeople,
+                      accommodation_name: quote.accommodation_name,
+                    },
                   },
                 });
               }
@@ -540,22 +546,26 @@ Deno.serve(async (req) => {
                   HTMLPart: emailBody,
                 });
 
-                // Log the accommodation date change email
-                await supabase.from("email_log").insert({
-                  email_type: "accommodation_date_change",
-                  subject: `${subjectPrefix}${emailSubject}`,
-                  recipient_email: getRecipientEmail(notifyEmail, origin),
-                  recipient_name: partner.name,
-                  related_request_id: program.id,
-                  related_accommodation_id: program.linked_accommodation_id,
-                  related_partner_id: partner.id,
-                  status: "pending",
-                  sent_by: "update-customer-program",
-                  metadata: {
-                    new_arrival_date: newArrivalDate,
-                    new_departure_date: newDepartureDate,
-                    accommodation_name: quote.accommodation_name,
-                    customer_name: program.customer_company || program.customer_name,
+                // Log the accommodation date change email (deferred)
+                pendingEmailLogs.push({
+                  messageIdx: emailMessages.length - 1,
+                  logPayload: {
+                    email_type: "accommodation_date_change",
+                    subject: `${subjectPrefix}${emailSubject}`,
+                    recipient_email: getRecipientEmail(notifyEmail, origin),
+                    recipient_name: partner.name,
+                    related_request_id: program.id,
+                    related_accommodation_id: program.linked_accommodation_id,
+                    related_partner_id: partner.id,
+                    sent_by: "update-customer-program",
+                    metadata: {
+                      template_name: "accommodation_date_change",
+                      actor: "klant → logiespartner (datumwijziging)",
+                      new_arrival_date: newArrivalDate,
+                      new_departure_date: newDepartureDate,
+                      accommodation_name: quote.accommodation_name,
+                      customer_name: program.customer_company || program.customer_name,
+                    },
                   },
                 });
               }
@@ -943,22 +953,26 @@ Deno.serve(async (req) => {
           HTMLPart: emailBody,
         });
 
-        // Log email for counter proposal
-        await supabase.from("email_log").insert({
-          email_type: "counter_proposal_partner",
-          subject: `${subjectPrefix}${emailSubject}`,
-          recipient_email: counterProposalRecipient,
-          recipient_name: item.provider_name,
-          related_request_id: program.id,
-          related_item_id: itemId,
-          related_partner_id: item.provider_id,
-          status: "pending",
-          sent_by: "update-customer-program",
-          metadata: {
-            counter_time: counterTime,
-            counter_note: counterNote,
-            block_name: item.block_name,
-            customer_name: program.customer_company || program.customer_name,
+        // Log email for counter proposal (deferred)
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "counter_proposal_partner",
+            subject: `${subjectPrefix}${emailSubject}`,
+            recipient_email: counterProposalRecipient,
+            recipient_name: item.provider_name,
+            related_request_id: program.id,
+            related_item_id: itemId,
+            related_partner_id: item.provider_id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "counter_proposal_partner",
+              actor: "klant → partner (tegenvoorstel tijd)",
+              counter_time: counterTime,
+              counter_note: counterNote,
+              block_name: item.block_name,
+              customer_name: program.customer_company || program.customer_name,
+            },
           },
         });
       }
@@ -986,17 +1000,24 @@ Deno.serve(async (req) => {
           Subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
           HTMLPart: bureauHtml,
         });
-        await supabase.from("email_log").insert({
-          email_type: "customer_counter_proposal_bureau",
-          subject: `Klant stelt andere tijd voor — ${item.block_name}`,
-          recipient_email: "hallo@bureauvlieland.nl",
-          recipient_name: "Bureau Vlieland",
-          related_request_id: program.id,
-          related_item_id: itemId,
-          related_partner_id: item.provider_id,
-          status: "pending",
-          sent_by: "update-customer-program",
-          metadata: { counter_time: counterTime, counter_note: counterNote },
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "customer_counter_proposal_bureau",
+            subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
+            recipient_email: "hallo@bureauvlieland.nl",
+            recipient_name: "Bureau Vlieland",
+            related_request_id: program.id,
+            related_item_id: itemId,
+            related_partner_id: item.provider_id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "customer_counter_proposal_bureau",
+              actor: "klant → bureau (interne notificatie)",
+              counter_time: counterTime,
+              counter_note: counterNote,
+            },
+          },
         });
         // Admin todo
         const { data: existingCounterTodo } = await supabase
@@ -1685,11 +1706,33 @@ Deno.serve(async (req) => {
 
     // Send all emails
     if (emailMessages.length > 0) {
+      let mailjetResp: any = null;
+      let sendError: string | null = null;
       try {
-        await sendEmailViaMailjet(emailMessages);
+        mailjetResp = await sendEmailViaMailjet(emailMessages);
       } catch (emailError) {
         console.error("Error sending emails:", emailError);
-        // Don't fail the request if emails fail
+        sendError = emailError instanceof Error ? emailError.message : "Unknown";
+      }
+
+      if (pendingEmailLogs.length > 0) {
+        const sentAt = new Date().toISOString();
+        const rows = pendingEmailLogs.map(({ logPayload, messageIdx }) => {
+          const messageId = mailjetResp?.Messages?.[messageIdx]?.To?.[0]?.MessageID?.toString() || null;
+          const ok = !sendError && !!mailjetResp;
+          return {
+            ...logPayload,
+            status: ok ? "sent" : "failed",
+            error_message: ok ? null : sendError,
+            mailjet_message_id: messageId,
+            sent_at: ok ? sentAt : null,
+          };
+        });
+        try {
+          await supabase.from("email_log").insert(rows);
+        } catch (logErr) {
+          console.error("Error writing email_log batch:", logErr);
+        }
       }
     }
 
