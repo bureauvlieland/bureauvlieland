@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChangeConfirmationDialog, type PendingChange } from "@/components/customer-portal/ChangeConfirmationDialog";
 import { EditProgramDetailsDialog } from "@/components/customer-portal/EditProgramDetailsDialog";
+import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDetailsDialog";
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigation";
@@ -49,6 +50,7 @@ const CustomerProgram = () => {
     getPendingChanges,
     submitChanges,
     updateProgramDetails,
+    updateGuestDetails,
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
@@ -68,6 +70,7 @@ const CustomerProgram = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showBillingDialog, setShowBillingDialog] = useState(false);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
