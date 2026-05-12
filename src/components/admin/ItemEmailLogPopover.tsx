@@ -191,10 +191,28 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
       </TooltipProvider>
       <PopoverContent align="end" className="w-[380px] p-0">
         <div className="border-b px-3 py-2">
-          <div className="text-xs font-semibold text-slate-700">E-mail log</div>
-          {itemName && (
-            <div className="text-xs text-slate-500 truncate">{itemName}</div>
-          )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-700">E-mail log</div>
+              {itemName && (
+                <div className="text-xs text-slate-500 truncate">{itemName}</div>
+              )}
+            </div>
+            {logs.some((l) => getMissingValidationFields(l.metadata).length > 0) && (
+              <button
+                type="button"
+                onClick={() => setOnlyIncomplete((v) => !v)}
+                className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] transition-colors ${
+                  onlyIncomplete
+                    ? "border-amber-300 bg-amber-100 text-amber-900"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+                title="Toon alleen entries met ontbrekende template_name/actor"
+              >
+                {onlyIncomplete ? "Toon alles" : "Alleen onvolledig"}
+              </button>
+            )}
+          </div>
         </div>
         <div className="max-h-[360px] overflow-y-auto">
           {loading ? (
