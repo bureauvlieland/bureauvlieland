@@ -606,6 +606,11 @@ Deno.serve(async (req) => {
             status: "failed",
             error_message: String(e),
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
+              actor: "system → klant (logies bevestigd)",
+              failure: true,
+            },
           });
         }
       }
