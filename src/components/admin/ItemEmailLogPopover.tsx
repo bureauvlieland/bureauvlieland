@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Loader2, AlertTriangle, Wand2, ExternalLink } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, Wand2, ExternalLink, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -262,7 +262,17 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                         zijn meegegeven.
                       </span>
                     </div>
-                    <div className="mt-1.5 flex justify-end">
+                    <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 gap-1 border-amber-300 bg-white px-2 text-[10px] text-amber-900 hover:bg-amber-100"
+                        onClick={() => exportIncompleteToCsv(incomplete)}
+                        title="Download incomplete entries als CSV (opent in Excel)"
+                      >
+                        <Download className="h-3 w-3" />
+                        Export CSV
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
