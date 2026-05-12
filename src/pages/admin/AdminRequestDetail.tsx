@@ -2162,6 +2162,7 @@ const AdminRequestDetail = () => {
                                             >
                                               <Copy className="h-4 w-4" />
                                             </Button>
+                                            <ItemEmailLogPopover itemId={item.id} itemName={item.block_name || undefined} />
                                             <Button
                                               variant="ghost"
                                               size="icon"
