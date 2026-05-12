@@ -181,14 +181,14 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
 
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + " Vlieland")}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(searchQuery + " Vlieland")}&limit=1`
       );
       const results = await res.json();
 
       if (results.length > 0) {
-        const { lat: sLat, lon: sLng, display_name } = results[0];
-        const parsedLat = parseFloat(sLat);
-        const parsedLng = parseFloat(sLng);
+        const hit = results[0];
+        const parsedLat = parseFloat(hit.lat);
+        const parsedLng = parseFloat(hit.lon);
 
         if (leafletMapRef.current) {
           const L = (await import("leaflet")).default;
@@ -201,7 +201,7 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
           }
         }
 
-        onChange(parsedLat, parsedLng, display_name.split(",").slice(0, 3).join(",").trim());
+        onChange(parsedLat, parsedLng, formatAddress(hit) || searchQuery);
       }
     } catch {
       // silently fail
