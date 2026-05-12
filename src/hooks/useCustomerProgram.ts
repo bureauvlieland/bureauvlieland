@@ -611,6 +611,29 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  const updateGuestDetails = useCallback(async (updates: {
+    guest_names?: string | null;
+    dietary_notes?: string | null;
+    room_assignment?: string | null;
+  }): Promise<boolean> => {
+    if (!program) return false;
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token,
+          guestDetails: updates,
+          origin: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error updating guest details:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const updateBillingDetails = useCallback(async (details: BillingDetails): Promise<boolean> => {
     if (!program) return false;
 
