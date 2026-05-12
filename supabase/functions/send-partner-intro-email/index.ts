@@ -150,6 +150,12 @@ Deno.serve(async (req) => {
             status: "failed",
             error_message: errText,
             sent_by: `admin:${user.id}`,
+            metadata: {
+              template_name: "partner_intro_portal",
+              actor: "admin → partner (intro portal)",
+              test: !!test,
+              failure: true,
+            },
           });
         } else {
           sentCount++;
@@ -160,7 +166,11 @@ Deno.serve(async (req) => {
             recipient_name: recipient.name,
             status: "sent",
             sent_by: `admin:${user.id}`,
-            metadata: { test: !!test },
+            metadata: {
+              template_name: "partner_intro_portal",
+              actor: "admin → partner (intro portal)",
+              test: !!test,
+            },
           });
         }
       } catch (err) {
