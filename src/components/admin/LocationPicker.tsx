@@ -181,7 +181,7 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
 
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(searchQuery + " Vlieland")}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=nl&q=${encodeURIComponent(searchQuery)}&limit=1`
       );
       const results = await res.json();
 
