@@ -8,6 +8,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  renderEffectiveTimeLine,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -37,6 +38,8 @@ interface ProgramItem {
   provider_name: string;
   provider_email: string | null;
   preferred_time: string | null;
+  proposed_time: string | null;
+  confirmed_time: string | null;
   day_index: number;
   skip_partner_notification: boolean;
 }
@@ -126,12 +129,9 @@ function generatePartnerNotificationEmail(
 
   const itemsHtml = group.items
     .map((item) => {
-      const timeInfo = item.preferred_time
-        ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(item.preferred_time)}</span>`
-        : "";
       return `<li style="margin-bottom: 12px;">
         <strong>${sanitizeHtml(item.block_name)}</strong>
-        ${timeInfo}
+        ${renderEffectiveTimeLine(item, "Tijd")}
       </li>`;
     })
     .join("");

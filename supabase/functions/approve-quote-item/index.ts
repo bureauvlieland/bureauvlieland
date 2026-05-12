@@ -10,6 +10,8 @@ import {
   getRenderedTemplate,
   buildReplyTo,
   TemplateIds,
+  renderEffectiveTimeLine,
+  getEffectiveItemTime,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -57,9 +59,7 @@ function generatePartnerNotificationEmailFallback(
     .map((d: string) => formatDateNL(d))
     .join(", ");
 
-  const timeInfo = item.preferred_time
-    ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(item.preferred_time)}</span>`
-    : "";
+  const timeInfo = renderEffectiveTimeLine(item, "Tijd");
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -323,7 +323,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         dates: formattedDates,
         number_of_people: String(program.number_of_people),
         block_name: sanitizeHtml(item.block_name),
-        preferred_time: item.preferred_time ? sanitizeHtml(item.preferred_time) : "",
+        preferred_time: getEffectiveItemTime(item) ? sanitizeHtml(getEffectiveItemTime(item)!) : "",
+        effective_time: getEffectiveItemTime(item) ? sanitizeHtml(getEffectiveItemTime(item)!) : "",
         portal_url: partnerPortalUrl,
       });
 

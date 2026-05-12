@@ -7,6 +7,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  renderEffectiveTimeLine,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
@@ -28,6 +29,8 @@ interface ProgramItem {
   provider_name: string;
   provider_email: string | null;
   preferred_time: string | null;
+  proposed_time: string | null;
+  confirmed_time: string | null;
   day_index: number;
   skip_partner_notification: boolean;
   customer_approved_at: string | null;
@@ -63,7 +66,8 @@ const sendEmailViaMailjet = async (messages: any[]) => {
 function generatePartnerNotificationEmail(
   group: PartnerGroup,
   program: any,
-  portalUrl: string
+  portalUrl: string,
+  isReminder = false,
 ): string {
   const formattedDates = (program.selected_dates as string[])
     .map((d: string) => formatDateNL(d))
@@ -71,23 +75,28 @@ function generatePartnerNotificationEmail(
 
   const itemsHtml = group.items
     .map((item) => {
-      const timeInfo = item.preferred_time
-        ? `<br><span style="color: #666; font-size: 13px;">⏰ Gewenste tijd: ${sanitizeHtml(item.preferred_time)}</span>`
-        : "";
       return `<li style="margin-bottom: 12px;">
         <strong>${sanitizeHtml(item.block_name)}</strong>
-        ${timeInfo}
+        ${renderEffectiveTimeLine(item, "Tijd")}
       </li>`;
     })
     .join("");
 
+  const headline = isReminder
+    ? "Herinnering: aanvraag staat nog open"
+    : "Nieuwe aanvraag via Bureau Vlieland";
+  const intro = isReminder
+    ? `<p>Beste ${sanitizeHtml(group.partnerName)},</p>
+       <p>Een vriendelijke <strong>herinnering</strong>: onderstaande aanvraag staat nog open in jullie partnerportaal en wacht op een reactie.</p>`
+    : `<p>Beste ${sanitizeHtml(group.partnerName)},</p>
+       <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland.</p>`;
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
       <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-        Nieuwe aanvraag via Bureau Vlieland
+        ${headline}
       </h2>
-      <p>Beste ${sanitizeHtml(group.partnerName)},</p>
-      <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland.</p>
+      ${intro}
       <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h3 style="margin-top: 0; color: #2d3748;">📅 Programma details</h3>
         <table style="width: 100%; border-collapse: collapse;">
@@ -138,8 +147,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // Optionele subset van item-ids; als opgegeven worden ALLEEN deze items
       // verstuurd (per-item versturen vanuit admin). Anders alle skip-items.
       item_ids?: string[];
+      // "auto" (default): alleen items met skip_partner_notification=true.
+      // "force": ook items die al verzonden zijn — gebruikt voor herinneringen
+      //   en het forceren van een verzending vóór formeel klantakkoord.
+      mode?: "auto" | "force";
     }
-    const { request_id, origin, dry_run, item_ids }: SendItemsBody = await req.json();
+    const { request_id, origin, dry_run, item_ids, mode = "auto" }: SendItemsBody = await req.json();
+    const isForce = mode === "force";
 
     if (!request_id) {
       return new Response(
@@ -169,10 +183,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     //    Als item_ids is meegegeven, beperken we tot die subset (per-item versturen).
     let itemsQuery = supabase
       .from("program_request_items")
-      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, day_index, skip_partner_notification, customer_approved_at, status")
+      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, skip_partner_notification, customer_approved_at, status")
       .eq("request_id", request_id)
-      .eq("skip_partner_notification", true)
       .neq("status", "cancelled");
+
+    // In force-mode (per-item, herinnering) negeren we de skip-filter zodat
+    // we ook items kunnen herinneren die al uitgegaan zijn.
+    if (!isForce) {
+      itemsQuery = itemsQuery.eq("skip_partner_notification", true);
+    }
 
     if (item_ids && item_ids.length > 0) {
       itemsQuery = itemsQuery.in("id", item_ids);
@@ -355,13 +374,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const emailLogs: any[] = [];
 
     for (const [partnerId, group] of groups) {
+      // In force-mode (herinnering / herversturen) raken we de status niet
+      // aan: het item zit al in de partner-flow. We loggen alleen tijdstip.
+      const updatePayload = isForce
+        ? { status_updated_at: new Date().toISOString() }
+        : {
+            skip_partner_notification: false,
+            status: "pending",
+            status_updated_at: new Date().toISOString(),
+          };
+
       const { error: updateError } = await supabase
         .from("program_request_items")
-        .update({
-          skip_partner_notification: false,
-          status: "pending",
-          status_updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .in("id", group.itemIds);
 
       if (updateError) {
@@ -370,27 +395,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       const partnerPortalUrl = `${baseUrl}/partner/login`;
-      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl);
+      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl, isForce);
       const recipientEmail = getRecipientEmail(group.partnerEmail, origin);
+      const subjectLine = isForce
+        ? `${subjectPrefix}Herinnering: aanvraag via Bureau Vlieland — ${program.reference_number || ""}`
+        : `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`;
 
       emailMessages.push({
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: recipientEmail, Name: group.partnerName }],
         ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-        Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+        Subject: subjectLine,
         HTMLPart: emailHtml,
       });
 
       emailLogs.push({
         email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+        subject: subjectLine,
         recipient_email: recipientEmail,
         recipient_name: group.partnerName,
         related_request_id: program.id,
         related_partner_id: partnerId,
         status: "pending",
         sent_by: "admin",
-        metadata: { item_count: group.items.length, test_mode: testMode },
+        metadata: { item_count: group.items.length, test_mode: testMode, reminder: isForce },
       });
 
       console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
