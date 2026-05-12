@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_MODEL = "google/gemini-3-flash-preview";
+const AI_MODEL = "google/gemini-2.5-flash";
 
 type Signal = {
   category: string;
@@ -266,13 +266,11 @@ Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X",
                       related_entity_id: { type: "string" },
                       deeplink: { type: "string" },
                     },
-                    required: ["kind", "priority", "title", "body", "related_entity_type", "related_entity_id"],
-                    additionalProperties: false,
+                    required: ["kind", "priority", "title", "body"],
                   },
                 },
               },
               required: ["recommendations"],
-              additionalProperties: false,
             },
           },
         },

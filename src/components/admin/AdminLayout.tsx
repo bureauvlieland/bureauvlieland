@@ -47,6 +47,7 @@ import {
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
+import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -366,6 +367,9 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
             <span className="font-semibold text-slate-900">Admin</span>
+            <div className="ml-auto flex items-center gap-2">
+              <ClaudiaBadge />
+            </div>
           </header>
 
           <main className="flex-1 overflow-auto">
