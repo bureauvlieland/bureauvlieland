@@ -1706,11 +1706,33 @@ Deno.serve(async (req) => {
 
     // Send all emails
     if (emailMessages.length > 0) {
+      let mailjetResp: any = null;
+      let sendError: string | null = null;
       try {
-        await sendEmailViaMailjet(emailMessages);
+        mailjetResp = await sendEmailViaMailjet(emailMessages);
       } catch (emailError) {
         console.error("Error sending emails:", emailError);
-        // Don't fail the request if emails fail
+        sendError = emailError instanceof Error ? emailError.message : "Unknown";
+      }
+
+      if (pendingEmailLogs.length > 0) {
+        const sentAt = new Date().toISOString();
+        const rows = pendingEmailLogs.map(({ logPayload, messageIdx }) => {
+          const messageId = mailjetResp?.Messages?.[messageIdx]?.To?.[0]?.MessageID?.toString() || null;
+          const ok = !sendError && !!mailjetResp;
+          return {
+            ...logPayload,
+            status: ok ? "sent" : "failed",
+            error_message: ok ? null : sendError,
+            mailjet_message_id: messageId,
+            sent_at: ok ? sentAt : null,
+          };
+        });
+        try {
+          await supabase.from("email_log").insert(rows);
+        } catch (logErr) {
+          console.error("Error writing email_log batch:", logErr);
+        }
       }
     }
 
