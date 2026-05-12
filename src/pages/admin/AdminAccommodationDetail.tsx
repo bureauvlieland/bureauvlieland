@@ -78,6 +78,8 @@ import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodat
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodationChatSheet";
 import { CompletionActions } from "@/components/admin/CompletionActions";
+import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 
 interface LinkedProgram {
   id: string;
