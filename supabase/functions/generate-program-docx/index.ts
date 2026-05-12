@@ -5,7 +5,6 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  ImageRun,
   Table,
   TableRow,
   TableCell,
@@ -41,26 +40,6 @@ function fmtDate(d: Date) {
 }
 function fmtDateShort(d: Date) {
   return `${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-async function fetchImageBuffer(url: string): Promise<{ buffer: Uint8Array; type: "jpg" | "png" } | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const ab = await res.arrayBuffer();
-    let buffer = new Uint8Array(ab);
-    let type: "jpg" | "png" = "jpg";
-    if (ct.includes("png")) type = "png";
-    else if (ct.includes("jpeg") || ct.includes("jpg")) type = "jpg";
-    else if (ct.includes("webp") || ct.includes("gif") || ct.includes("svg")) {
-      // not directly supported by docx ImageRun across all readers — skip
-      return null;
-    }
-    return { buffer, type };
-  } catch {
-    return null;
-  }
 }
 
 function p(text: string, opts: any = {}) {
