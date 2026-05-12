@@ -82,6 +82,7 @@ const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
 const AdminCommissionInvoiceCreate = lazy(() => import("./pages/admin/AdminCommissionInvoiceCreate"));
 const AdminCommissionInvoices = lazy(() => import("./pages/admin/AdminCommissionInvoices"));
 const AdminBuildingBlocks = lazy(() => import("./pages/admin/AdminBuildingBlocks"));
+const AdminLocations = lazy(() => import("./pages/admin/AdminLocations"));
 const AdminInvoicing = lazy(() => import("./pages/admin/AdminInvoicing"));
 const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation"));
 const AdminAccommodationDetail = lazy(() => import("./pages/admin/AdminAccommodationDetail"));
@@ -227,6 +228,7 @@ const App = () => {
             <Route path="/admin/inkoopfacturen" element={<AdminPurchaseInvoices />} />
             <Route path="/admin/inkoopfacturen/inbox" element={<AdminPurchaseInvoiceInbox />} />
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />
+            <Route path="/admin/locaties" element={<AdminLocations />} />
             <Route path="/admin/templates" element={<AdminTemplates />} />
             <Route path="/admin/media" element={<AdminMedia />} />
             <Route path="/admin/logies" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />

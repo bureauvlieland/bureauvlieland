@@ -1,73 +1,88 @@
 ## Doel
 
-1. Klant ontvangt automatisch een enthousiaste **aankomstmail** een paar dagen voor de eerste programmadag, met daarin het Word-programma als bijlage en uitleg over de overtocht (Doeksen, groepsticket bij klantenservicebalie Harlingen).
-2. In dat Word-document staat per programma-onderdeel een **kaartje met de locatie**, zodat de gasten direct zien waar ze moeten zijn.
+1. Eén centrale admin-pagina **Locaties** waar je in een lijst snel adres + kaartpin beheert voor álle entiteiten met een locatieveld (bouwstenen, partners, en losse programma-onderdelen).
+2. Het kaartje in het Word-document toont een **duidelijke marker** op de juiste locatie.
 
-## 1. Nieuwe edge function `send-arrival-reminder`
+---
 
-Gebaseerd op `send-guest-details-reminder`, maar met andere logica:
+## 1. Nieuwe admin-pagina `/admin/locaties`
 
-- **Wanneer**: eerste `selected_date` valt **3 t/m 5 dagen** in de toekomst (venster van 3 dagen zodat we niets missen als de cron een keer faalt).
-- **Voorwaarden**:
-  - `terms_accepted_at` ingevuld én `cancelled_at` leeg
-  - `status` niet `geannuleerd` / `cancelled`
-  - Nog géén eerdere `arrival_reminder` in `email_log` voor dit project (dedup via `related_request_id` + `email_type`)
-- **Per match**:
-  - Genereer het Word-document door intern `generate-program-docx` aan te roepen (service-role auth) en hang de buffer aan de mail als bijlage `Programma-{referentie}.docx`.
-  - Render template `arrival_reminder` met velden: `customer_name`, `arrival_date`, `number_of_people`, `reference_number`, `ferry_info_link` (https://www.rederij-doeksen.nl), `portal_link`.
-  - Verstuur via Mailjet (volgens bestaande email-architectuur, met `metadata.template_name` en `metadata.actor: "system"` zoals voorgeschreven door het Email Logging Contract).
-- **Cron**: dagelijks via pg_cron, vergelijkbaar met de bestaande herinneringsworkflow.
+**Plek in menu:** nieuw item **"Locaties"** in de admin-sidebar (icoon `MapPin`), tussen *Bouwstenen* en *Partners*.
 
-## 2. Nieuw e-mailtemplate `arrival_reminder`
+**Pagina-layout:**
 
-Toevoegen in `email_templates` tabel (via migratie). Toon, in lijn met huisstijl (formeel "u"):
+```
+┌─ Locaties ─────────────────────────────────────────────┐
+│ [Tabs] Bouwstenen (101) · Partners (47) · Overig (n)   │
+│ [Filter] Alleen zonder coördinaten ☑   [Zoek …]        │
+├────────────────────────────────────────────────────────┤
+│ Naam            Categorie  Adres            Status     │
+│ ────────────────────────────────────────────────────── │
+│ Strandtent X    Catering   Postweg 12      ● Pin OK    │
+│ Bunkermuseum    Excursies  —               ⚠ Geen pin  │
+│ …                                                      │
+└────────────────────────────────────────────────────────┘
+```
 
-> **Onderwerp**: Over een paar dagen bent u op Vlieland — uw programma & aankomstinformatie
->
-> Beste {{customer_name}},
->
-> Nog een paar nachtjes slapen — op {{arrival_date}} verwelkomen wij u en uw groep op Vlieland! Wij hebben er zin in.
->
-> In de bijlage vindt u het volledige programma met alle tijden, locaties en kaartjes. U kunt het ook altijd online bekijken via uw portaal.
->
-> **Reis met Rederij Doeksen** 
-> De boot vertrekt vanuit Harlingen Haven. Houd rekening met ruim op tijd aanwezig zijn (minimaal 30 minuten voor vertrek). Actuele vertrektijden vindt u op [rederij-doeksen.nl]({{ferry_info_link}}).
->
-> **Reist u met een groepsticket?** 
-> Meld u zich dan bij aankomst in Harlingen bij de **klantenservicebalie van Doeksen**. Daar krijgt u uw tickets, waarna u als groep door de ticketcontrole kunt.
->
-> Heeft u nog vragen? Stuur gerust een bericht via uw portaal of antwoord op deze mail.
->
-> Tot snel op Vlieland!  
-> Bureau Vlieland
+Status-badges: groen "Pin OK" (lat+lng), amber "Alleen adres", rood "Geen locatie".
 
-(Exacte HTML/MJML volgt het bestaande template-patroon.)
+Default-filter "Alleen zonder coördinaten" aan, zodat je direct het werklijstje ziet (huidige stand: 86 bouwstenen + 47 partners zonder coördinaten).
 
-## 3. Locatiekaart per onderdeel in het Word-document
+---
 
-Aanpassen `supabase/functions/generate-program-docx/index.ts`:
+## 2. Bewerk-popup (groot)
 
-- Voor elk item met `location_lat` + `location_lng`: haal **server-side** (binnen de edge function, niet via base64 data-URI) een statisch kaartje op.
-- Bron: OpenStreetMap static map (`https://staticmap.openstreetmap.de/staticmap.php?center=lat,lng&zoom=15&size=480x240&markers=lat,lng,red-pushpin`) — fetch als `ArrayBuffer`.
-- Voeg toe via `ImageRun` (PNG, fixed `transformation: { width: 360, height: 180 }`) **onder** het locatieadres in de bestaande paragraaf-flow. Geen tabel-wrapper, single-column blijft behouden (voorkomt de eerdere Word-corruptie).
-- **Alleen kaartjes**, geen activity-foto's — die hebben eerder de corruptie veroorzaakt en zijn voor deze mail niet nodig.
-- Robuust foutpad: als de fetch faalt of timeout (>5s), sla het kaartje voor dat item over en log een warning. Document moet altijd genereren.
-- Concurrente fetch: gebruik `Promise.all` over alle items vooraf, met `Promise.allSettled` zodat één faalend kaartje het document niet blokkeert.
+Klik op rij → opent een **grote dialog/modal** in het midden van het scherm (geen smal sheet rechts):
 
-## 4. Validatie
+- Breedte ~`max-w-5xl`, hoogte tot ~85vh.
+- Kaart neemt de hoofdruimte in, ongeveer **600–700px hoog**, full-width binnen de modal — comfortabel om pinnen te zetten.
+- Boven de kaart: naam + categorie + zoekveld (Nominatim) + "Pin op adres"-knop.
+- Onder de kaart: adresveld + lat/lng readout + knoppen *Wissen / Annuleer / Opslaan*.
+- Hergebruikt de bestaande `LocationPicker`-logica (klik = pin, reverse-geocode, search, marker-sync) maar met flexibele hoogte zodat de kaart in de modal kan groeien — bestaande hardcoded `h-[250px]` wordt configurable via prop (`mapHeight`).
+- Sluiten met Esc of klik buiten = annuleren (met confirm bij ongesaved wijzigingen).
+- Volgende/Vorige-knoppen onderin om snel door de lijst van "geen pin"-items te lopen zonder de modal te sluiten — versnelt de inhaalslag aanzienlijk.
 
-- Lokaal de edge function aanroepen met een test-`request_id` en het document als afbeeldingen renderen om te controleren dat:
-  - Word het bestand zonder corruptie-melding opent (Microsoft Office, jouw eerdere knelpunt).
-  - Kaartjes scherp en op de juiste locatie staan.
-- `send-arrival-reminder` één keer met `dry_run: true` parameter draaien (alleen loggen, niet verzenden) om de matchset te controleren voordat de cron live gaat.
+---
+
+## 3. Data
+
+Geen schemawijziging nodig — alle kolommen bestaan al:
+- `building_blocks`: `location_lat`, `location_lng`, `location_address`
+- `partners`: `address_street/postal/city`, `location_lat`, `location_lng`
+- `program_request_items`: `location_address`, `location_lat`, `location_lng` — tab "Overig" toont alleen items zonder `provider_id` waar minimaal adres of coördinaten zijn ingevuld
+
+Toegang: alleen admins (bestaande RLS dekt dit al).
+
+---
+
+## 4. Marker in Word-document
+
+In `supabase/functions/generate-program-docx/index.ts` halen we nu een **kale OSM-tegel** op (geen pin). Aanpassing:
+
+- Eerst opnieuw `staticmap.openstreetmap.de` proberen vanuit edge runtime (ondersteunt `markers=lat,lng,red-pushpin` natively).
+- Als die nog steeds onbereikbaar is: vragen om een gratis **Geoapify static-map** API key (3000/dag gratis) en die endpoint gebruiken — ondersteunt markers en is stabiel.
+- Robuust foutpad behouden: als de fetch faalt → kaartje overslaan, document blijft genereren.
+
+---
+
+## Validatie
+
+1. `/admin/locaties` opent → Bouwstenen-tab toont 101 rijen, 86 met "Geen pin"-badge.
+2. Klik een rij → grote popup → kaart vult de modal → klik op kaart zet pin → opslaan → badge wordt groen → "Volgende" springt naar volgend item zonder pin.
+3. Word-document genereren voor een test-programma → elk kaartje heeft een zichtbare marker op de juiste plek.
+
+---
 
 ## Bestanden
 
-- `supabase/functions/send-arrival-reminder/index.ts` (nieuw)
-- `supabase/functions/generate-program-docx/index.ts` (kaartjes toevoegen)
-- migratie: `email_templates` insert voor `arrival_reminder` + pg_cron schedule voor de nieuwe function
-- `mem://features/automated-reminder-system` updaten met de nieuwe arrival reminder
+- **Nieuw**: `src/pages/admin/AdminLocations.tsx`
+- **Nieuw**: `src/components/admin/LocationEditDialog.tsx` (grote popup, hergebruikt LocationPicker)
+- **Edit**: `src/components/admin/LocationPicker.tsx` (kaarthoogte als prop)
+- **Edit**: `src/App.tsx` (route `/admin/locaties`)
+- **Edit**: admin-sidebar (menu-item "Locaties")
+- **Edit**: `supabase/functions/generate-program-docx/index.ts` (markered static map met fallback)
+- Eventueel: secret `GEOAPIFY_API_KEY`
 
 ## Open vraag
 
-Wil je dat de aankomstmail naar **alleen** `customer_email` gaat, of ook in CC naar het interne bureau-adres (zodat jullie zien dat hij eruit is)?
+Wil je naast de tabel ook een **overzichtskaart** met alle pinnen tegelijk (handig om in één oogopslag te zien wat er ontbreekt)? Of houden we het puur op de lijst + bewerk-popup?

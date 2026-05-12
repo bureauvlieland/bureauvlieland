@@ -43,6 +43,7 @@ import {
   CalendarDays,
   BarChart3,
   Inbox,
+  MapPin,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
@@ -103,6 +104,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       label: "Content",
       items: [
         { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
+        { title: "Locaties", url: "/admin/locaties", icon: MapPin },
         { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
         { title: "Media", url: "/admin/media", icon: ImageIcon },
       ],
