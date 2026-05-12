@@ -491,6 +491,45 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                             : "-"}
                         </span>
                       </div>
+                      {(log.delivered_at || log.opened_at || log.clicked_at || log.bounced_at || log.blocked_at || log.spam_at || log.unsub_at) && (
+                        <div className="flex flex-wrap gap-1 pt-0.5 text-[10px] text-slate-600">
+                          {log.delivered_at && (
+                            <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-emerald-800" title={format(new Date(log.delivered_at), "d MMM yyyy HH:mm", { locale: nl })}>
+                              ✓ Afgeleverd
+                            </span>
+                          )}
+                          {log.opened_at && (
+                            <span className="rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-violet-800" title={`${log.open_count ?? 1}× geopend, voor het eerst op ${format(new Date(log.opened_at), "d MMM yyyy HH:mm", { locale: nl })}`}>
+                              👁 {log.open_count && log.open_count > 1 ? `${log.open_count}× geopend` : "Geopend"}
+                            </span>
+                          )}
+                          {log.clicked_at && (
+                            <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-indigo-800" title={`${log.click_count ?? 1}× geklikt, voor het eerst op ${format(new Date(log.clicked_at), "d MMM yyyy HH:mm", { locale: nl })}`}>
+                              🔗 {log.click_count && log.click_count > 1 ? `${log.click_count}× geklikt` : "Geklikt"}
+                            </span>
+                          )}
+                          {log.bounced_at && (
+                            <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-rose-800">
+                              ⚠ Bounced
+                            </span>
+                          )}
+                          {log.blocked_at && (
+                            <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-rose-800">
+                              ⛔ Geblokkeerd
+                            </span>
+                          )}
+                          {log.spam_at && (
+                            <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-rose-800">
+                              🚫 Spam-melding
+                            </span>
+                          )}
+                          {log.unsub_at && (
+                            <span className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-slate-700">
+                              ✉ Uitgeschreven
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {missingFields.length > 0 && (
                         <div className="flex items-center justify-between gap-2 text-[10px] text-amber-700">
                           <div
