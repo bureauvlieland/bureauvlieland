@@ -2642,6 +2642,7 @@ const AdminRequestDetail = () => {
       {/* Edit activity sheet */}
       {request && (
         <AdminEditActivitySheet
+          key={editingItem?.id ?? "none"}
           open={editingItem !== null}
           onOpenChange={(open) => !open && setEditingItem(null)}
           item={editingItem}
