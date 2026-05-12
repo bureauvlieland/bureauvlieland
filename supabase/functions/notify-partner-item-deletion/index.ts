@@ -229,12 +229,13 @@ Deno.serve(async (req) => {
     }
 
     // Group per partner
-    const groups = new Map<string, { name: string; email: string; items: string[] }>();
+    const groups = new Map<string, { name: string; email: string; items: string[]; itemIds: string[] }>();
     for (const it of notifiable) {
       if (!it.provider_email) continue;
       const key = it.provider_id;
-      if (!groups.has(key)) groups.set(key, { name: it.provider_name || key, email: it.provider_email, items: [] });
+      if (!groups.has(key)) groups.set(key, { name: it.provider_name || key, email: it.provider_email, items: [], itemIds: [] });
       groups.get(key)!.items.push(it.block_name);
+      groups.get(key)!.itemIds.push(it.id);
     }
 
     for (const [pid, g] of groups) {
@@ -244,6 +245,7 @@ Deno.serve(async (req) => {
         partner_name: g.name,
         partner_email: g.email,
         item_names: g.items,
+        item_ids: g.itemIds,
         origin,
       });
       if (ok) emailsSent++;
