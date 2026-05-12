@@ -384,6 +384,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
           status: "failed",
           error_message: emailError instanceof Error ? emailError.message : "Unknown error",
           sent_by: "system",
+          metadata: {
+            template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
+            actor: "system → partner (na klantakkoord per item)",
+            triggered_by: "per_item_approval",
+            failure: true,
+          },
         });
       }
     }
