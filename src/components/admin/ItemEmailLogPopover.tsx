@@ -173,53 +173,96 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : logs.length === 0 ? (
-            <div className="px-3 py-6 text-center text-xs text-slate-500">
-              Nog geen e-mails verzonden voor dit onderdeel.
+            <div className="px-3 py-6 space-y-2 text-center text-xs text-slate-500">
+              <div>Nog geen e-mails verzonden voor dit onderdeel.</div>
+              <div className="flex items-start gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-left text-[10px] text-amber-800">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                <span>
+                  Let op: e-mails zonder geldige <code>template_name</code> en{" "}
+                  <code>actor</code> worden door de validatie geweigerd en
+                  verschijnen daarom niet in deze lijst. Controleer de
+                  edge-function-logs als je een ontbrekende mail verwacht.
+                </span>
+              </div>
             </div>
           ) : (
-            <ul className="divide-y">
-              {logs.map((log) => {
-                const variant = STATUS_VARIANTS[log.status] ?? {
-                  label: log.status,
-                  className: "bg-slate-100 text-slate-700 border-slate-200",
-                };
-                const ts = log.sent_at || log.created_at;
-                return (
-                  <li key={log.id} className="px-3 py-2 text-xs space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-medium text-slate-800 truncate">
-                        {log.subject || log.email_type}
-                      </div>
-                      <Badge variant="outline" className={`shrink-0 text-[10px] ${variant.className}`}>
-                        {variant.label}
-                      </Badge>
-                    </div>
-                    <div className="text-slate-500 truncate">
-                      → {log.recipient_name ? `${log.recipient_name} ` : ""}
-                      &lt;{log.recipient_email}&gt;
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      <span className="flex items-center gap-1.5">
-                        <span>{log.email_type}</span>
-                        <span className="rounded bg-slate-100 px-1 text-slate-500" title={`Match via ${log.matchSource}`}>
-                          {SOURCE_LABELS[log.matchSource]}
-                        </span>
-                      </span>
-                      <span>
-                        {ts
-                          ? format(new Date(ts), "d MMM yyyy HH:mm", { locale: nl })
-                          : "-"}
-                      </span>
-                    </div>
-                    {log.error_message && (
-                      <div className="text-[10px] text-rose-600 truncate" title={log.error_message}>
-                        {log.error_message}
-                      </div>
-                    )}
-                  </li>
+            <>
+              {(() => {
+                const incomplete = logs.filter(
+                  (l) => getMissingValidationFields(l.metadata).length > 0,
                 );
-              })}
-            </ul>
+                if (incomplete.length === 0) return null;
+                return (
+                  <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">
+                    <div className="flex items-start gap-1.5">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>
+                        {incomplete.length} log-entry
+                        {incomplete.length === 1 ? "" : "s"} mist verplichte
+                        velden (template_name/actor) — vermoedelijk ouder dan de
+                        validatie. Nieuwe sends worden geweigerd tot deze velden
+                        zijn meegegeven.
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+              <ul className="divide-y">
+                {logs.map((log) => {
+                  const variant = STATUS_VARIANTS[log.status] ?? {
+                    label: log.status,
+                    className: "bg-slate-100 text-slate-700 border-slate-200",
+                  };
+                  const ts = log.sent_at || log.created_at;
+                  const missingFields = getMissingValidationFields(log.metadata);
+                  return (
+                    <li key={log.id} className="px-3 py-2 text-xs space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-medium text-slate-800 truncate">
+                          {log.subject || log.email_type}
+                        </div>
+                        <Badge variant="outline" className={`shrink-0 text-[10px] ${variant.className}`}>
+                          {variant.label}
+                        </Badge>
+                      </div>
+                      <div className="text-slate-500 truncate">
+                        → {log.recipient_name ? `${log.recipient_name} ` : ""}
+                        &lt;{log.recipient_email}&gt;
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <span>{log.email_type}</span>
+                          <span className="rounded bg-slate-100 px-1 text-slate-500" title={`Match via ${log.matchSource}`}>
+                            {SOURCE_LABELS[log.matchSource]}
+                          </span>
+                        </span>
+                        <span>
+                          {ts
+                            ? format(new Date(ts), "d MMM yyyy HH:mm", { locale: nl })
+                            : "-"}
+                        </span>
+                      </div>
+                      {missingFields.length > 0 && (
+                        <div
+                          className="flex items-center gap-1 text-[10px] text-amber-700"
+                          title={`Ontbrekende metadata: ${missingFields.join(", ")}. Deze entry voldoet niet aan de huidige validatie en zou nu geweigerd worden.`}
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>
+                            Onvolledige metadata ({missingFields.join(", ")})
+                          </span>
+                        </div>
+                      )}
+                      {log.error_message && (
+                        <div className="text-[10px] text-rose-600 truncate" title={log.error_message}>
+                          {log.error_message}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
       </PopoverContent>
