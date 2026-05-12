@@ -80,6 +80,14 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const [logs, setLogs] = useState<DisplayEntry[]>([]);
   const [repairing, setRepairing] = useState<string | "all" | null>(null);
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const inferEdgeFunctionFromType = (emailType: string): string => {
+    // Heuristiek: email_type → vermoedelijke edge function naam
+    const t = emailType.toLowerCase().replace(/_/g, "-");
+    if (t.startsWith("send-") || t.startsWith("notify-") || t.startsWith("resend-")) return t;
+    return `send-${t}`;
+  };
 
   const repairMetadata = async (ids: string[], scope: string | "all") => {
     if (ids.length === 0) return;
