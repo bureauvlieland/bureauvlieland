@@ -1379,6 +1379,7 @@ Deno.serve(async (req) => {
         signature_details: signatureTableHtml,
         partner_terms_note: partnerTermsNote,
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
+        portal_link: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
 
       const bookingCustomerSubject = bookingCustomerTemplate?.subject || "Boeking definitief bevestigd";
