@@ -60,6 +60,17 @@ const SOURCE_LABELS: Record<MatchSource, string> = {
   project: "Project",
 };
 
+function getMissingValidationFields(
+  meta: Record<string, unknown> | null,
+): string[] {
+  const missing: string[] = [];
+  const tmpl = meta?.template_name;
+  const actor = meta?.actor;
+  if (typeof tmpl !== "string" || tmpl.trim() === "") missing.push("template_name");
+  if (typeof actor !== "string" || actor.trim() === "") missing.push("actor");
+  return missing;
+}
+
 export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLogPopoverProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
