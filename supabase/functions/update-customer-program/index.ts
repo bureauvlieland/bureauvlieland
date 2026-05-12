@@ -963,6 +963,65 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Bureau notification: klant heeft een tegen-tijd voorgesteld.
+      // Geen aparte template — korte interne mail naar het bureau-adres met deeplink.
+      try {
+        const bureauUrl = `https://bureauvlieland.nl/admin/aanvragen/${program.id}`;
+        const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+        const refLabel = program.reference_number ? ` (${sanitizeHtml(program.reference_number)})` : "";
+        const bureauHtml = `
+          <p>Hoi team,</p>
+          <p>De klant <strong>${customerLabel}</strong>${refLabel} heeft een ander tijdstip voorgesteld voor:</p>
+          <div style="background:#faf5ff;border:1px solid #d6bcfa;border-radius:8px;padding:14px;margin:14px 0;">
+            <p style="margin:0;"><strong>${sanitizeHtml(item.block_name)}</strong> &mdash; partner: ${sanitizeHtml(item.provider_name)}</p>
+            <p style="margin:6px 0 0;">Oorspronkelijk: ${sanitizeHtml(item.proposed_time || item.confirmed_time || item.preferred_time || "—")}</p>
+            <p style="margin:6px 0 0;color:#7c3aed;font-weight:600;">Klant wil liever: ${sanitizeHtml(counterTime)}</p>
+            ${counterNote ? `<p style="margin:6px 0 0;font-style:italic;">"${sanitizeHtml(counterNote)}"</p>` : ""}
+          </div>
+          <p><a href="${bureauUrl}" style="background:#1a365d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open werkbank</a></p>
+        `;
+        emailMessages.push({
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
+          Subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
+          HTMLPart: bureauHtml,
+        });
+        await supabase.from("email_log").insert({
+          email_type: "customer_counter_proposal_bureau",
+          subject: `Klant stelt andere tijd voor — ${item.block_name}`,
+          recipient_email: "hallo@bureauvlieland.nl",
+          recipient_name: "Bureau Vlieland",
+          related_request_id: program.id,
+          related_item_id: itemId,
+          related_partner_id: item.provider_id,
+          status: "pending",
+          sent_by: "update-customer-program",
+          metadata: { counter_time: counterTime, counter_note: counterNote },
+        });
+        // Admin todo
+        const { data: existingCounterTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "customer_counter_proposal")
+          .eq("auto_entity_id", itemId)
+          .neq("status", "done")
+          .maybeSingle();
+        if (!existingCounterTodo) {
+          await supabase.from("admin_todos").insert({
+            title: `Klant ${program.customer_name} stelt andere tijd voor "${item.block_name}"`,
+            description: `Klant wil liever ${counterTime} i.p.v. ${item.proposed_time || item.confirmed_time || "het voorgestelde tijdstip"}${counterNote ? ` — "${counterNote}"` : ""}.`,
+            priority: "normal",
+            status: "todo",
+            related_request_id: program.id,
+            related_partner_id: item.provider_id !== "bureau" ? item.provider_id : null,
+            auto_type: "customer_counter_proposal",
+            auto_entity_id: itemId,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to send bureau counter-proposal notification:", err);
+      }
+
       console.log(`Customer submitted counter proposal for item ${itemId}: ${counterTime}`);
     }
 
