@@ -42,6 +42,7 @@ interface UseCustomerProgramReturn {
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
+  updateGuestDetails: (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
   acceptTerms: (signatureName?: string) => Promise<boolean>;
   cancelRequest: (reason?: string, cancelAccommodation?: boolean) => Promise<boolean>;
@@ -203,6 +204,8 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
             quotes_declined_count: (accomData as any).quotes_declined_count ?? 0,
             status: accomData.status as AccommodationRequest["status"],
             admin_notes: accomData.admin_notes,
+            room_assignment: (accomData as any).room_assignment ?? null,
+            guest_details_updated_at: (accomData as any).guest_details_updated_at ?? null,
             created_at: accomData.created_at,
             updated_at: accomData.updated_at,
             expires_at: accomData.expires_at,
