@@ -449,6 +449,10 @@ Deno.serve(async (req) => {
             related_partner_id: quote.partner_id,
             status: "sent",
             sent_by: "system",
+            metadata: {
+              template_name: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
+              actor: "system → partner (logies geselecteerd)",
+            },
           });
 
           console.log(`Selection notification sent to partner ${quote.partner?.name}`);
