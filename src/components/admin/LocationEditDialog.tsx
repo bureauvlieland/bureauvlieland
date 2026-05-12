@@ -65,15 +65,17 @@ export const LocationEditDialog = ({ open, entity, onClose, onSave, onPrev, onNe
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 gap-0">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b">
-          <DialogTitle className="text-lg">{entity?.name ?? "Locatie bewerken"}</DialogTitle>
+      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-4 border-b shrink-0">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            {entity?.name ?? "Locatie bewerken"}
+          </DialogTitle>
           {entity?.subtitle && (
-            <DialogDescription>{entity.subtitle}</DialogDescription>
+            <DialogDescription className="text-sm">{entity.subtitle}</DialogDescription>
           )}
         </DialogHeader>
 
-        <div className="px-6 py-5">
+        <div className="flex-1 min-h-0 overflow-hidden px-6 py-5">
           {entity && (
             <LocationPicker
               key={entity.id}
@@ -81,12 +83,12 @@ export const LocationEditDialog = ({ open, entity, onClose, onSave, onPrev, onNe
               lng={lng}
               address={address}
               onChange={handleChange}
-              mapHeightClass="h-[60vh] min-h-[420px]"
+              mapHeightClass="h-[48vh] min-h-[320px]"
             />
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-t bg-muted/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-3 border-t bg-muted/30 shrink-0">
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={onPrev} disabled={!hasPrev || saving}>
               <ChevronLeft className="h-4 w-4 mr-1" /> Vorige
@@ -96,10 +98,10 @@ export const LocationEditDialog = ({ open, entity, onClose, onSave, onPrev, onNe
             </Button>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleClose} disabled={saving}>
+            <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving}>
               <X className="h-4 w-4 mr-1" /> Annuleer
             </Button>
-            <Button onClick={handleSave} disabled={saving || !dirty}>
+            <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
               <Save className="h-4 w-4 mr-1" /> {saving ? "Opslaan…" : "Opslaan"}
             </Button>
           </div>
