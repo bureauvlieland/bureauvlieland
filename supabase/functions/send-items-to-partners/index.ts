@@ -375,9 +375,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const logMessageIndex: number[] = [];
 
     for (const [partnerId, group] of groups) {
-      // In force-mode (herinnering / herversturen) raken we de status niet
-      // aan: het item zit al in de partner-flow. We loggen alleen tijdstip.
-      const updatePayload = isForce
+      // Een item is een ÉCHTE herinnering als het al eerder naar de partner is
+      // gegaan (skip_partner_notification === false). Force-mode op een item dat
+      // nog skip=true heeft, is juist de éérste verzending (vóór klantakkoord).
+      // Dit moeten we los onderscheiden voor (a) onderwerpsregel en
+      // (b) status-update — anders blijft de "Verstuur (forceer)"-knop staan.
+      const isReminderForGroup =
+        isForce && group.items.every((i) => i.skip_partner_notification === false);
+
+      const updatePayload = isReminderForGroup
         ? { status_updated_at: new Date().toISOString() }
         : {
             skip_partner_notification: false,
@@ -396,9 +402,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       const partnerPortalUrl = `${baseUrl}/partner/login`;
-      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl, isForce);
+      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl, isReminderForGroup);
       const recipientEmail = getRecipientEmail(group.partnerEmail, origin);
-      const subjectLine = isForce
+      const subjectLine = isReminderForGroup
         ? `${subjectPrefix}Herinnering: aanvraag via Bureau Vlieland — ${program.reference_number || ""}`
         : `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`;
 
@@ -427,7 +433,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             item_count: group.items.length,
             item_ids: group.itemIds,
             test_mode: testMode,
-            reminder: isForce,
+            reminder: isReminderForGroup,
             template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
             actor: "admin → partner",
           },
@@ -435,7 +441,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         logMessageIndex.push(messageIdx);
       }
 
-      console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
+      console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items, reminder=${isReminderForGroup})`);
     }
 
     if (emailMessages.length > 0) {
