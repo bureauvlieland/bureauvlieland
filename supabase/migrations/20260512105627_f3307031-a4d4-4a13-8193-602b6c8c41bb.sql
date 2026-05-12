@@ -1,0 +1,2 @@
+ALTER TABLE public.admin_todos DROP CONSTRAINT admin_todos_status_check;
+ALTER TABLE public.admin_todos ADD CONSTRAINT admin_todos_status_check CHECK (status = ANY (ARRAY['todo'::text, 'in_progress'::text, 'done'::text, 'dismissed'::text]));
