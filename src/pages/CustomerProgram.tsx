@@ -193,6 +193,16 @@ const CustomerProgram = () => {
     return success;
   };
 
+  const handleSaveGuestDetails = async (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => {
+    const success = await updateGuestDetails(updates);
+    if (success) {
+      toast({ title: "Wensen opgeslagen", description: "Bureau Vlieland en de aanbieders zien uw aanvullingen." });
+    } else {
+      toast({ title: "Er ging iets mis", description: "Probeer het later opnieuw.", variant: "destructive" });
+    }
+    return success;
+  };
+
   const handleAcceptTerms = async (signatureName: string) => {
     const success = await acceptTerms(signatureName);
 
