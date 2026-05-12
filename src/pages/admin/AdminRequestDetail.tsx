@@ -1146,6 +1146,39 @@ const AdminRequestDetail = () => {
                   />
                 </>
               )}
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const { data, error } = await supabase.functions.invoke("generate-program-docx", {
+                      body: { request_id: request.id },
+                    });
+                    if (error) throw error;
+                    const blob = data instanceof Blob
+                      ? data
+                      : new Blob([data as ArrayBuffer], {
+                          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        });
+                    const baseName = request.reference_number
+                      ? `Programma-${request.reference_number}`
+                      : `Programma-${request.customer_company || request.customer_name}`;
+                    const fileName = `${baseName}.docx`.replace(/\s+/g, "-");
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch (e: any) {
+                    toast.error(e?.message ?? "Word-document genereren mislukt");
+                  }
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Word-document
+              </Button>
               <Button variant="outline" asChild>
                 <Link to={customerPortalUrl} target="_blank">
                   <ExternalLink className="h-4 w-4 mr-2" />
