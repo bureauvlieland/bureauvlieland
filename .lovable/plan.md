@@ -1,107 +1,120 @@
-## Bevindingen — afhankelijkheden van de fasen 4a–4d en 5
 
-Korte audit van álle plekken die met de 5 fasen meebewogen hadden moeten worden. De UI is grotendeels op orde, maar de **e-mailflows en één edge-functie zijn achtergebleven**. Hieronder per onderwerp wat ik vond en wat ik voorstel.
+# Claudia — admin AI-assistent (Niveau 1 + 2)
 
-### 1. Tijden in e-mails (Fase 4b — niet doorgevoerd in mails)
+## Wat Claudia precies doet
 
-In de UI tonen we overal de "effectieve tijd" (`confirmed_time || proposed_time || preferred_time`). In de e-mails wordt nog uitsluitend `preferred_time` gebruikt. Als jij als bureau de tijd aanpast (vult `confirmed_time`), krijgt de partner of klant nog steeds de oude wenstijd in de mail.
+**Rol:** dagelijkse operationele co-piloot van Bureau Vlieland, alleen voor admin (Erwin/jij). Géén klant- of partnercontact in deze fase.
 
-Geraakte edge-functies:
-- `send-items-to-partners` — eerste e-mail naar partner
-- `notify-partners-informational` — herinneringen / informatieve mails
-- `approve-quote-item` — bevestiging na klantakkoord
-- `accept-quote-proposal` — partner accepteert tegenvoorstel
-- `update-customer-program` — programmawijziging-mail naar partner én klant
-- `update-partner-item-status` — bevestigingsmail richting klant
+**Drie kerntaken:**
 
-Geraakte templates (DB):
-- `Nieuwe activiteit - Partner` — variabele `preferred_time` → effectieve tijd
-- `Status: Alternatief voorgesteld` — `proposed_time` blijft bestaan, maar valt nu mogelijk samen met admin-`confirmed_time`
-- `Reactie op tegenvoorstel (Klant)` — idem
-- `Programmawijzigingen - Partner` (changes_list-string in code)
+1. **Dagelijkse aanbevelingen** (cron 06:00 NL-tijd): scant alle live data en produceert een geprioriteerde top-N actielijst. Voorbeelden:
+   - "Project BV-2611-0023 wacht 6 dagen op partner Strandpaviljoen — stuur reminder"
+   - "Logies-aanvraag LOG-2611-0008 heeft 0 partners benaderd"
+   - "Quote €4.200 verloopt over 24u, klant heeft nog niet gereageerd"
+   - "Factuur BVC-2610-0014 staat 18 dagen open"
+   - "3 partners hebben deze maand nog geen enkele aanvraag gehad"
 
-**Voorstel:** één gedeelde helper `getEffectiveItemTime(item)` in `supabase/functions/_shared/email-templates.ts`, die overal in de mails de juiste tijd kiest en mooi formatteert. Daarnaast in de change-emails ("admin heeft tijd aangepast") expliciet toevoegen wie de tijd heeft gezet, zodat het strookt met de `status_note`-conventie uit Fase 4b.
+2. **Vraag-aan-Claudia chat** (in Werkbank-sidebar): admin stelt vrije vraag, Claudia antwoordt op basis van live DB + kennisbank. Voorbeelden:
+   - "Welke bouwstenen passen bij een 30-persoons heisessie in regen?"
+   - "Welke partner heeft historisch de beste conversie op blokarten?"
+   - "Vat de status van project X samen"
+   - "Hoeveel commissie staat er nog open?"
 
-### 2. Force-send per item (Fase 4c — half af)
+3. **Slimme suggesties bij creatie** (later, niet in v1): bij nieuw project automatisch templates/partners voorstellen op basis van vergelijkbare historie.
 
-In `AdminRequestDetail.tsx` zit een `window.confirm` voor "Verstuur (forceer)". Maar de aanroep stuurt **geen `mode: "force"` mee** en de edge-functie `send-items-to-partners` filtert nog steeds hard op `skip_partner_notification = true` (regel 174). Gevolg: een item dat al een keer is uitgegaan en in `wacht_op_klant` zit, kan via deze knop niet alsnog naar de partner. De gate op `customer_approved_at` is feitelijk weggehaald, maar de skip-filter werkt als nieuwe blokkade.
+## Wat Claudia kan & weet
 
-**Voorstel:**
-- Edge-functie `send-items-to-partners` body uitbreiden met `mode: "auto" | "force"` (default `auto`).
-- In `force` de skip-filter laten vervallen voor de meegegeven `item_ids`, en na verzending alleen `status_updated_at` bijwerken (niet opnieuw `customer_approved_at` of `skip_partner_notification` resetten).
-- `handleSendSingleItemToPartner` in `AdminRequestDetail.tsx` stuurt `mode: "force"` zodra `getItemSendPhase` ≠ `klaar_voor_partner`, of zodra de displayStatus `verstuurd` is (her-versturen / herinneren).
-- Aparte e-mailtoon voor "herinnering" vs "eerste verzending" — nu krijgt de partner bij forceren tweemaal exact dezelfde mail. Voorstel: nieuwe template `Herinnering partner: aanvraag openstaand` of een vlag `is_reminder` in dezelfde template.
+| Bron | Hoe gebruikt | Privacy |
+|------|--------------|---------|
+| Live database (projecten, items, quotes, todos, facturen, e-mail logs) | Direct gequeried per request | Admin-only via RLS + `is_admin` check |
+| Bouwstenen + categorieën | Geïndexeerd in pgvector (embeddings) | Geen PII |
+| Programma-templates | Geïndexeerd in pgvector | Geen PII |
+| Partner-profielen (publieke velden + historische performance) | Geïndexeerd in pgvector | Stripped van interne notities |
+| App-settings & business rules (commissie, toeristenbelasting, etc.) | Als systeem-context in elke prompt | n.v.t. |
 
-### 3. Klant-tegenvoorstel (Fase 4d — geen mailspoor)
+**Wat ze NIET doet (in v1):**
+- Geen e-mails versturen of todo's aanmaken zelf — alleen aanbevelen
+- Geen klant- of partnerportaal-presence
+- Geen ferry-tijden gokken (verwijst naar Doeksen API)
+- Geen prijs- of juridische uitspraken
 
-De klant kan via `customer_counter_time` een andere tijd voorstellen voordat hij akkoord geeft. De partner ziet dat in `PartnerItemSheet`, maar er gaat **geen e-mail** richting bureau of partner. Het admin-overzicht toont het ook niet als chip/indicator (alleen via `wacht_op_klant` pill).
+## "Leert" Claudia?
 
-**Voorstel:**
-- Nieuwe interne mail naar bureau (`hallo@bureauvlieland.nl`) zodra een klant een tegen-tijd voorstelt — eenvoudige notificatie + link naar werkbank.
-- Geen aparte template per geval: voeg twee templates toe: `Klant-tegenvoorstel (Bureau)` en (alleen als jij dat wilt) `Klant stelt andere tijd voor (Partner)` — of bewust geen partner-mail, omdat de fysieke partner-akkoord-flow pas start na bureau-bevestiging.
-- In `AdminRequestDetail.tsx` tabelregel een kleine `MicroPill tone="purple"` met "Klant stelt voor: 10:00" naast de effectieve tijd (consistent met de nieuwe statusbadges).
+Niet door modeltraining. Wel:
+- **Kennisbank groeit automatisch**: nieuwe/gewijzigde bouwstenen, templates en partners worden binnen 5 min opnieuw geëmbed via DB-trigger.
+- **Feedback-loop**: admin kan elke aanbeveling "✓ opgepakt" / "✕ niet relevant" markeren. Deze feedback wordt meegegeven als context bij de volgende dagrun ("admin negeert reminders ouder dan X dagen", "admin volgt facturatie-tips altijd op").
+- **Geen lange-termijn geheugen** buiten DB — alle "kennis" is op elk moment reproduceerbaar uit de huidige database-staat.
 
-### 4. Bureau-items in change/cancel e-mails (Fase 4 — bureau-rolfusie)
+## Architectuur
 
-Goed nieuws: `notify-partner-cancellation`, `notify-partner-item-deletion` en `notify-partner-price-change` filteren `provider_id === "bureau"` correct eruit. Hier is **geen actie nodig**, alleen vastleggen in de audit-doc dat dit gecontroleerd is.
-
-### 5. Origin / Fase 5 — geen rest-issues
-
-Geen edge-functie of template verwijst nog naar `program_type`. Alleen comment-only. **Geen actie**, behalve `audit-legacy-concepts.md` afsluiten met "Fase 5 — geen open call-sites".
-
-### 6. Statusbadge-betekenis in klantmails
-
-De nieuwe `MicroPill` + tooltips communiceren de exacte betekenis van statussen in de portal. De e-mailtemplates `Status: Bevestigd / Niet beschikbaar / Alternatief voorgesteld` gebruiken nog vrijere wording.
-
-**Voorstel (klein):** in dezelfde mailtekst één regel toevoegen "Aan zet: Bureau Vlieland / klant / aanbieder", overgenomen uit `ItemDisplayStatusInfo.actor`. Dit voorkomt dat partner of klant de mail krijgt en alsnog moet raden of er actie wordt verwacht.
-
-### 7. Werkbank-mailoverzicht (uitbreiding, optioneel)
-
-Nu de UI strak is, zou het helpen om in de werkbank per item te zien **welke mails er al uit zijn** (laatste verstuurd, herinneringen, etc.) — er bestaat een `email_log`-tabel die dit kan voeden. Voorstel: smal popover-icoontje in de Acties-kolom dat de relevante `email_log`-regels voor dat item toont. Geen DB-werk nodig, alleen een nieuwe hook + popover.
-
----
-
-## Voorgestelde uitvoering (in deze volgorde)
-
-1. **Mails effectieve tijd** — gedeelde helper + 6 edge-functies + 1 template-variabele aanpassen. *(grootste impact, kleinste blast radius)*
-2. **Force-send afmaken** — `mode: "force"` in edge + UI; herinneringstemplate splitsen.
-3. **Klant-tegenvoorstel** — interne notificatiemail + admin-indicator (MicroPill).
-4. **Statusmails verrijken** — `Aan zet: …` regel toevoegen in 3 status-templates.
-5. **`audit-legacy-concepts.md` bijwerken** — bureau-cancel/delete/price ✓, Fase 5 ✓.
-6. *(optioneel)* **Mail-log popover** in werkbank-tabel.
-
-Geen DB-migraties nodig. Templates bewerk ik via de bestaande `email_templates`-tabel (admin email-templates UI). Alle wijzigingen blijven in presentatie-/workflow-laag.
-
----
-
-## Technische details (samenvatting)
-
-```text
-shared/email-templates.ts
-  + getEffectiveItemTime(item)
-  + formatActorLine(actor)   // 'Aan zet: …'
-
-send-items-to-partners
-  + body.mode: "auto" | "force"
-  + force: laat skip_partner_notification-filter vallen voor meegegeven item_ids
-  + selecteer ook confirmed_time, proposed_time naast preferred_time
-
-notify-partners-informational, approve-quote-item, accept-quote-proposal,
-update-customer-program, update-partner-item-status
-  ~ vervang preferred_time-uitlees door getEffectiveItemTime()
-
-new edge function (of inline in update-customer-program):
-  notify-bureau-customer-counter
-  - trigger: klant zet customer_counter_time
-  - mail naar hallo@bureauvlieland.nl met deeplink naar werkbank-item
-
-email_templates (DB-update via admin-UI of migratie):
-  ~ "Nieuwe activiteit - Partner"      → var 'preferred_time' → 'effective_time'
-  ~ "Status: Bevestigd"                → +Aan zet-regel
-  ~ "Status: Niet beschikbaar"         → +Aan zet-regel
-  ~ "Status: Alternatief voorgesteld"  → +Aan zet-regel
-  + "Klant-tegenvoorstel (Bureau)"
-  + (optioneel) "Herinnering partner: aanvraag openstaand"
+```
+┌─────────────────────────────────────────────────┐
+│  Werkbank UI (admin-only)                       │
+│  ├─ <ClaudiaRecommendationsCard /> (top)        │
+│  ├─ <ClaudiaChatPanel />          (sidebar)     │
+│  └─ Topbar: 🔔 ClaudiaBadge (count nieuwe)     │
+└─────────────────────────────────────────────────┘
+              │                    │
+              ▼                    ▼
+   ┌───────────────────┐  ┌───────────────────┐
+   │ admin_recommend.. │  │ edge: claudia-chat│
+   │ (DB tabel)        │  │ (streaming)       │
+   └───────────────────┘  └───────────────────┘
+              ▲                    │
+              │                    ▼
+   ┌──────────────────────────────────────┐
+   │ edge: claudia-daily-scan (cron 06:00)│
+   │  1. Query 8-10 signalen uit DB       │
+   │  2. RAG-context ophalen (pgvector)   │
+   │  3. Lovable AI → tool-call           │
+   │  4. Insert in admin_recommendations  │
+   └──────────────────────────────────────┘
+              ▲
+              │ embedded content
+   ┌──────────────────────────────────────┐
+   │ edge: claudia-reindex                │
+   │  (DB trigger op blocks/templates/    │
+   │   partners → re-embed gewijzigde rij)│
+   │  pgvector(documents) tabel           │
+   └──────────────────────────────────────┘
 ```
 
-Geen wijzigingen aan logies-flow, facturatie, RLS of bureau_central-regels.
+## Bouwfases
+
+### Fase A — Fundering (DB + RAG)
+1. Migration: `pgvector` extension aan, `claudia_documents` tabel (id, source_type, source_id, content, embedding vector(1536), metadata, model_version, updated_at) + HNSW index.
+2. Migration: `admin_recommendations` tabel (id, kind, priority, title, body, related_entity_type, related_entity_id, status [open/done/dismissed], feedback, created_at, expires_at). RLS: alleen admin.
+3. Migration: `match_claudia_documents(query_embedding, source_types[], match_count)` SQL function.
+4. Edge function `claudia-reindex`: krijgt `{source_type, source_id}`, leest huidige rij, embed via Lovable AI Gateway (`google/gemini-embedding-001`, dimensions 1536), upsert in `claudia_documents`.
+5. Eenmalig backfill-script: alle `building_blocks` waar `status='published'`, alle `program_templates`, alle `partners` waar `is_active=true` → embed.
+
+### Fase B — Daily scan + UI
+6. Edge function `claudia-daily-scan`: queries voor 8 signaal-categorieën (overdue partner replies, expiring quotes, idle accommodations, open invoices, project status anomalies, partner workload imbalance, post-execution todos, missing critical fields). Per categorie max 5 items. Stuurt structured tool-call naar Lovable AI (`google/gemini-3-flash-preview`) om te prioriteren + Nederlandstalig te formuleren. Insert in `admin_recommendations` met `expires_at = now() + 24h`.
+7. Cron-schedule: `0 5 * * *` UTC (= 06:00 NL winter / 07:00 zomer; goed genoeg). Setup via `pg_cron` + `pg_net`.
+8. UI component `ClaudiaRecommendationsCard.tsx` op Werkbank: sectie bovenaan met aanbevelingen gegroepeerd per priority (urgent/normaal/info). Per item: titel, body, deeplink naar entity, knoppen ✓ Opgepakt / ✕ Niet relevant.
+9. UI component `ClaudiaBadge.tsx` in `AdminLayout` topbar: belletje met count `status='open'`.
+
+### Fase C — Chat
+10. Edge function `claudia-chat`: streaming SSE. Bouwt system prompt met (a) Bureau Vlieland context uit core memory, (b) RAG-resultaten uit `claudia_documents` op basis van vraag-embedding, (c) live DB-snapshot relevant voor de vraag (tool-calling: `query_projects`, `query_partners`, `query_financial_summary`). Verifieert admin via JWT.
+11. UI `ClaudiaChatPanel.tsx`: collapsable sidebar op Werkbank met chat-geschiedenis (alleen huidige sessie, niet gepersisteerd in v1), markdown rendering, streaming tokens.
+
+### Fase D — Feedback & polish
+12. Feedback-actie schrijft naar `admin_recommendations.feedback` + `status`. Daily scan leest laatste 30 dagen feedback en geeft samenvatting mee als context.
+13. AdminSettings sectie "Claudia" met aan/uit knop per categorie + handmatige "Run nu" knop.
+14. Admin-only MEM toevoegen + index.md update.
+
+## Technische details
+
+- **AI model**: `google/gemini-3-flash-preview` voor zowel daily scan als chat (snel, goedkoop, structured output via tool-calling). Embeddings: `google/gemini-embedding-001` met `dimensions: 1536` om bij `vector(1536)` kolom te passen.
+- **RLS**: `admin_recommendations` en `claudia_documents` alleen leesbaar via `is_admin(auth.uid())`. Edge functions gebruiken service role.
+- **Logging**: alle Claudia-runs naar bestaande `email_log`-achtige structuur (nieuwe tabel `claudia_run_log`) zodat je traceable bent welke prompt/respons resulteerde in welke aanbeveling.
+- **Kosten-schatting**: 1× daily scan ~€0,005, 50 chat-vragen/dag ~€0,15/maand, embeddings backfill eenmalig ~€0,50, daarna verwaarloosbaar.
+- **Rate-limit / 402 / 429** worden netjes opgevangen en als toast getoond.
+
+## Wat ik in deze build-ronde wel/niet doe
+
+**Wel (deze ronde):** Fase A (1-5) + Fase B (6-9). Dat is "Claudia leeft": dagelijkse aanbevelingen op de Werkbank + badge in de topbar, met RAG-fundament klaar.
+
+**Niet deze ronde (volgende prompt):** Fase C (chat) + Fase D (feedback-polish). Reden: chat heeft veel UI-werk en is pas zinvol als de aanbevelingen-laag goed staat. Zo kun je Claudia eerst een paar dagen "stilletjes" zien aanbevelen voordat we conversational gaan.
+
+Akkoord met deze scope en volgorde, of wil je iets schuiven (bv. chat eerder, of feedback-loop direct mee)?
