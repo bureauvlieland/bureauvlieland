@@ -225,6 +225,10 @@ interface ProgramRequestItem {
   location_lat?: number | null;
   location_lng?: number | null;
   location_address?: string | null;
+  // Ticket booking (ferries / bike rental)
+  booking_reference?: string | null;
+  booking_document_path?: string | null;
+  booking_group_id?: string | null;
 }
 
 interface HistoryEntry {
