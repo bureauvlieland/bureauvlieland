@@ -219,7 +219,6 @@ Deno.serve(async (req) => {
         new Paragraph({
           spacing: { after: 200 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: TERRACOTTA, space: 1 } },
-          children: [new TextRun({ text: "" })],
         }),
       );
 
