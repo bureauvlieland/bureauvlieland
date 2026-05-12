@@ -1,45 +1,73 @@
-# Chat met klant vanuit Admin (Project + Werkbank)
-
 ## Doel
-- Admin kan vanaf de **projectpagina** (`AdminRequestDetail`) én de **werkbank** (`AdminWerkbank` → `ProjectDetailPanel`) een chat openen met de klant.
-- Bericht-historie is **gedeeld** met het klantportaal (`CustomerProgram` → `ChatWidget`): wat de admin verstuurt komt in dezelfde thread terecht en omgekeerd.
-- De huidige losse chat-pagina (`/admin/chat`, `AdminChat.tsx`) blijft volledig bestaan en werkt ongewijzigd.
 
-## Huidige situatie (uit verkenning)
-- Component `src/components/admin/ProjectChatSheet.tsx` bestaat al en is gekoppeld aan `ProjectCommunicationsCard` op de admin-projectpagina.
-- Maar: hij maakt nieuwe conversaties aan met `source = 'admin_project'`, terwijl het klantportaal (`useChat`) zoekt op `source = 'customer_portal'` + `source_token = program.customer_token`. **Daardoor zien klant en admin nu twee verschillende threads.**
-- Werkbank-paneel (`ProjectDetailPanel`) heeft nog geen chat-knop.
+Eén pagina **Projecten & Planning** in het admin-menu (vervangt de huidige Planning-pagina) met drie tabs:
 
-## Aanpassingen
+1. **Lijst** — alle lopende projecten gesorteerd op eerstvolgende aankomst
+2. **Kalender** — de bestaande weekplanning
+3. **Logies** — alle logies-aanvragen in dezelfde lijststijl
 
-### 1. `ProjectChatSheet.tsx` — gedeelde thread garanderen
-- Bij openen eerst `program_requests` ophalen voor `customer_token`, `customer_name`, `customer_email` (zodat aanroepers alleen `requestId` hoeven door te geven).
-- Conversatie zoeken: `chat_conversations` waar `request_id = :requestId` (ongeacht source), nieuwste eerst.
-- Ontbreekt er een conversatie? Aanmaken met:
-  - `source = 'customer_portal'`
-  - `source_token = program.customer_token`
-  - `request_id`, `visitor_name`, `visitor_email`
-- Hierdoor pikt het bestaande klantportaal-`ChatWidget` (filter op `source_token`) dezelfde thread op → één gedeelde geschiedenis.
-- Props vereenvoudigen: `customerName`/`customerEmail` worden optioneel (fallback uit fetch).
+Werkbank blijft onveranderd voor "wat vraagt aandacht". Deze pagina is puur een operationeel overzicht.
 
-### 2. Werkbank — chat-knop toevoegen
-- In `src/components/admin/werkbank/ProjectDetailPanel.tsx`:
-  - State `chatOpen`.
-  - Knop "💬 Chat met klant" naast de bestaande "Open project"-knop in de header (alleen tonen als `project.hasProgram` / `project.id` bestaat).
-  - `<ProjectChatSheet open={chatOpen} onOpenChange={setChatOpen} requestId={project.id} customerName={project.customer.name} customerEmail={project.customer.email} />`.
+## Navigatie
 
-### 3. Admin-projectpagina — chat-knop prominent
-- Bestaande integratie via `ProjectCommunicationsCard` blijft.
-- Extra: kleine "Chat met klant"-knop in de header van `AdminRequestDetail` (naast bestaande acties) die hetzelfde sheet opent — voor snelle toegang zonder te scrollen naar de communicatiekaart.
+- Sidebar-item **Planning** → hernoemen naar **Projecten** (icoon `CalendarDays` / `ListChecks`), URL `/admin/projecten`.
+- `/admin/projecten` is nu nog een redirect naar `/admin/werkbank` → wordt de nieuwe pagina.
+- `/admin/planning` → redirect naar `/admin/projecten?tab=kalender` (back-compat).
+- `/admin/projecten-legacy` blijft bestaan als safety-net (niet in menu).
 
-### 4. Geen wijzigingen aan
-- `src/pages/admin/AdminChat.tsx` en `useAdminChat` blijven ongemoeid.
-- `useChat.ts` (klantportaal) blijft ongemoeid.
-- Edge function `notify-new-chat-reply` blijft de e-mailnotificatie naar de klant verzorgen.
+## Pagina-layout
 
-## Validatie
-- Open een project in admin → klik "Chat met klant" → typ bericht.
-- Open hetzelfde project in klantportaal → bericht verschijnt in `ChatWidget` (realtime).
-- Klant antwoordt → admin ziet antwoord realtime in zowel project- als werkbank-sheet.
-- Open `AdminWerkbank` → selecteer project → chatknop opent dezelfde thread.
-- `/admin/chat` lijst toont conversatie nog steeds normaal.
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Projecten & Planning                              [+ Nieuw] │
+│ ─────────────────────────────────────────────────────────── │
+│ [Lijst] [Kalender] [Logies]      🔍 zoek    [Type ▾] □ archief│
+└─────────────────────────────────────────────────────────────┘
+```
+
+URL-state: `?tab=lijst|kalender|logies`, `?q=`, `?type=all|programma|combi`, `?archief=1`.
+
+### Tab "Lijst" — schoon & compact
+
+Tabel gesorteerd op eerstvolgende datum (aankomst logies of eerste `selected_dates`). Gegroepeerd op tijd-bucket: **Deze week → Deze maand → Later → Zonder datum**. Default verbergt `afgerond` + `geannuleerd` (zichtbaar onder archief-toggle).
+
+Kolommen:
+| Datum | Ref | Klant / bedrijf | Pers. | Type | Status | Readiness |
+|---|---|---|---|---|---|---|
+
+- **Datum**: aankomst + duur (`12 jun · 3 dgn`); rij krijgt rode stip als datum verstreken.
+- **Type**-badge: Programma / Logies / Combi.
+- **Status**-badge: derived status (concept → offerte verstuurd → akkoord → AV → facturatie → afgerond), bestaande logica hergebruiken uit `AdminProjects.tsx` (`getDerivedStatus`).
+- **Readiness**: kleine progress-bar `done/total` (zelfde helper).
+- Klik op rij → `/admin/projecten/:id`.
+
+Geen PipelineFunnel, geen Gantt, geen uitklap-rij, geen bulk-acties — die blijven op de legacy-pagina.
+
+### Tab "Kalender"
+
+Hergebruikt component `AdminPlanning` 1-op-1 (huidige weekgrid met activiteiten + aankomst/vertrek). Wordt geëxtraheerd naar `WeekPlanningView.tsx` zodat de pagina-chrome (titel/tabs) niet dubbel staat.
+
+### Tab "Logies"
+
+Zelfde tabel-component als Lijst, maar gevoed met `accommodation_requests` (alle, ook combi). Kolom **Type** wordt **Status logies** (`submitted` / `quoted` / `selected` / `cancelled`). Datum = aankomst. Klik → `/admin/projecten/:linked_program_id` als gekoppeld, anders `/admin/logies/:id`.
+
+## Implementatie
+
+**Nieuwe bestanden**
+- `src/pages/admin/AdminProjectsOverview.tsx` — pagina-shell met tabs + URL-sync.
+- `src/components/admin/projecten/ProjectsListTable.tsx` — herbruikbare tabel (props: `rows`, `kind: "projecten" | "logies"`).
+- `src/components/admin/projecten/WeekPlanningView.tsx` — extractie van bestaande `AdminPlanningContent` body (zonder `AdminLayout` + helmet wrapper).
+- `src/lib/getProjectsOverview.ts` — query-helper die programma's + logies joint en mapt naar één rij-type met `earliestDate`, `derivedStatus`, `readiness`. Hergebruikt logica uit `AdminProjects.tsx`.
+
+**Aanpassingen**
+- `src/App.tsx` — route `/admin/projecten` → `AdminProjectsOverview`; `/admin/planning` → `<Navigate to="/admin/projecten?tab=kalender" replace />`.
+- `src/components/admin/AdminLayout.tsx` — sidebar-item label/icon ("Projecten").
+- `AdminPlanning.tsx` — wordt dunne wrapper of verwijderd (route is redirect).
+
+**Hergebruik (kopiëren naar helper, niet importeren uit legacy-pagina)**
+- `getDerivedStatus`, `DERIVED_STATUS_CONFIG`, `getEarliestProjectDate`, `getReadinessScore`, `getTimeBucket`, `TIME_BUCKET_LABEL` uit `AdminProjects.tsx` → naar `src/lib/projectStatus.ts` (deduped). Legacy importeert daarna uit deze helper.
+
+## Out of scope
+- Geen wijzigingen aan Werkbank, detailpagina, of dataflow.
+- Geen nieuwe DB-velden of edge-functies.
+- Bulk-delete en pipeline-funnel blijven op `/admin/projecten-legacy`.
