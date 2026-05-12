@@ -546,22 +546,26 @@ Deno.serve(async (req) => {
                   HTMLPart: emailBody,
                 });
 
-                // Log the accommodation date change email
-                await supabase.from("email_log").insert({
-                  email_type: "accommodation_date_change",
-                  subject: `${subjectPrefix}${emailSubject}`,
-                  recipient_email: getRecipientEmail(notifyEmail, origin),
-                  recipient_name: partner.name,
-                  related_request_id: program.id,
-                  related_accommodation_id: program.linked_accommodation_id,
-                  related_partner_id: partner.id,
-                  status: "pending",
-                  sent_by: "update-customer-program",
-                  metadata: {
-                    new_arrival_date: newArrivalDate,
-                    new_departure_date: newDepartureDate,
-                    accommodation_name: quote.accommodation_name,
-                    customer_name: program.customer_company || program.customer_name,
+                // Log the accommodation date change email (deferred)
+                pendingEmailLogs.push({
+                  messageIdx: emailMessages.length - 1,
+                  logPayload: {
+                    email_type: "accommodation_date_change",
+                    subject: `${subjectPrefix}${emailSubject}`,
+                    recipient_email: getRecipientEmail(notifyEmail, origin),
+                    recipient_name: partner.name,
+                    related_request_id: program.id,
+                    related_accommodation_id: program.linked_accommodation_id,
+                    related_partner_id: partner.id,
+                    sent_by: "update-customer-program",
+                    metadata: {
+                      template_name: "accommodation_date_change",
+                      actor: "klant → logiespartner (datumwijziging)",
+                      new_arrival_date: newArrivalDate,
+                      new_departure_date: newDepartureDate,
+                      accommodation_name: quote.accommodation_name,
+                      customer_name: program.customer_company || program.customer_name,
+                    },
                   },
                 });
               }
