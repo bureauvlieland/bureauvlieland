@@ -209,6 +209,11 @@ Deno.serve(async (req) => {
           error_message: mailjetResponse.ok ? undefined : JSON.stringify(mailjetResult),
           mailjet_message_id: messageId || undefined,
           sent_by: "system",
+          metadata: {
+            template_name: "accommodation_quote_notification_admin",
+            actor: "system → bureau",
+            quote_id: quoteId,
+          },
         });
 
         console.log(`Admin notification email ${mailjetResponse.ok ? "sent" : "failed"} for quote ${quoteId}`);
