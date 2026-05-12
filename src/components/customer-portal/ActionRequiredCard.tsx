@@ -179,6 +179,19 @@ export const ActionRequiredCard = ({
       };
     }
 
+    // Guest details still missing after signing
+    if (termsAccepted && guestDetailsIncomplete) {
+      return {
+        type: "guest_details",
+        title: "Vul de gastenlijst en wensen aan",
+        description:
+          "Uw boeking staat. Vul nog de namen van uw gasten en eventuele dieet- of kamerwensen in, zodat wij en de aanbieders hier rekening mee kunnen houden.",
+        icon: <FileText className="h-5 w-5" />,
+        variant: "info",
+        cta: onOpenGuestDetails ? { label: "Aanvullen", onClick: onOpenGuestDetails } : undefined,
+      };
+    }
+
     // Booking complete
     if (termsAccepted) {
       return {
