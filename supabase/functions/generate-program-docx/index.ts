@@ -310,6 +310,28 @@ Deno.serve(async (req) => {
               ],
             }),
           );
+
+          // Static map image (if successfully prefetched)
+          const mapPng = mapImages.get(it.id);
+          if (mapPng) {
+            rightChildren.push(
+              new Paragraph({
+                spacing: { after: 120 },
+                children: [
+                  new ImageRun({
+                    type: "png",
+                    data: mapPng,
+                    transformation: { width: 360, height: 180 },
+                    altText: {
+                      title: "Locatie op de kaart",
+                      description: it.location_address,
+                      name: "map",
+                    },
+                  }),
+                ],
+              }),
+            );
+          }
         }
 
         if (description) {
