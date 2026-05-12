@@ -194,7 +194,11 @@ Deno.serve(async (req) => {
       related_partner_id: partner.id,
       status: "sent",
       sent_by: `partner:${partner.id}`,
-      metadata: { message_preview: message.substring(0, 200) },
+      metadata: {
+        template_name: "partner_customer_message",
+        actor: "partner → klant",
+        message_preview: message.substring(0, 200),
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {
