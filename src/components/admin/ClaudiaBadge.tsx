@@ -23,6 +23,7 @@ async function fetchOpenCount(): Promise<{ total: number; urgent: number }> {
 
 export const ClaudiaBadge = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data } = useQuery({
     queryKey: ["claudia-recommendations-count"],
     queryFn: fetchOpenCount,
