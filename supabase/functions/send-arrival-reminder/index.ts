@@ -135,6 +135,7 @@ Deno.serve(async (req) => {
           Messages: [{
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: r.customer_name }],
+            Cc: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
             Subject: subject,
             HTMLPart: tpl.body,
             Attachments: [{
