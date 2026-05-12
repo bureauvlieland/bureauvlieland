@@ -98,6 +98,9 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
     .limit(15);
 
   (pendingQuotes ?? []).forEach((q: any) => {
+    // Skip cancelled lodging requests — geen actie meer nodig
+    const parentStatus = q.accommodation_requests?.status;
+    if (parentStatus === "cancelled" || parentStatus === "completed") return;
     const age = Math.floor((now.getTime() - new Date(q.submitted_at).getTime()) / (24 * 60 * 60 * 1000));
     signals.push({
       category: "lodging_quote_unforwarded",
