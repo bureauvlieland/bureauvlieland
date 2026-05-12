@@ -710,15 +710,39 @@ Deno.serve(async (req) => {
       const emailSubject = template?.subject || subjectMap[status];
 
       const statusSubjectPrefix = getSubjectPrefix(origin);
-      const emailSent = await sendEmailViaMailjet(
-        getRecipientEmail(programRequest.customer_email, origin),
+      const statusRecipient = getRecipientEmail(programRequest.customer_email, origin);
+      const statusSendResult = await sendEmailViaMailjet(
+        statusRecipient,
         programRequest.customer_name,
         `${statusSubjectPrefix}${emailSubject}`,
         emailHtml,
         programRequest.reference_number
       );
 
-      if (!emailSent) {
+      await supabase.from("email_log").insert({
+        email_type: templateId,
+        subject: `${statusSubjectPrefix}${emailSubject}`,
+        recipient_email: statusRecipient,
+        recipient_name: programRequest.customer_name,
+        related_request_id: item.request_id,
+        related_item_id: itemId,
+        related_partner_id: partner.id,
+        status: statusSendResult.ok ? "sent" : "failed",
+        error_message: statusSendResult.error || null,
+        mailjet_message_id: statusSendResult.messageId,
+        sent_at: statusSendResult.ok ? new Date().toISOString() : null,
+        sent_by: "partner",
+        metadata: {
+          template_name: templateId,
+          actor: actor === "klant" ? "klant (akkoord vereist)" : "bureau (zoekt alternatief)",
+          new_status: status,
+          quoted_price: quotedPrice,
+          proposed_time: proposedTime,
+          proposed_date: proposedDate,
+        },
+      });
+
+      if (!statusSendResult.ok) {
         console.warn(`Failed to send ${status} email to customer, but status update succeeded`);
       } else {
         console.log(`Status email (${status}) sent to ${programRequest.customer_email}`);
