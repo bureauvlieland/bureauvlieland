@@ -45,6 +45,7 @@ import {
   BarChart3,
   Inbox,
   MapPin,
+  Ticket,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
