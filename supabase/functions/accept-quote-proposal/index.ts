@@ -38,6 +38,8 @@ interface ProgramItem {
   provider_name: string;
   provider_email: string | null;
   preferred_time: string | null;
+  proposed_time: string | null;
+  confirmed_time: string | null;
   day_index: number;
   skip_partner_notification: boolean;
 }
