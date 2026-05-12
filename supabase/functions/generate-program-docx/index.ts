@@ -20,24 +20,39 @@ import {
 } from "npm:docx@9.5.1";
 
 /**
- * Fetch a static OpenStreetMap PNG for the given coords.
- * Returns Uint8Array on success, null on any failure (timeout, non-200, network).
+ * Fetch a single OpenStreetMap raster tile centred on the given coordinates.
+ * Returns a PNG as Uint8Array, or null on failure.
+ *
+ * We use the standard OSM tile server (tile.openstreetmap.org) which is
+ * reachable from Supabase Edge runtime, unlike staticmap.openstreetmap.de
+ * which is blocked at DNS level.
+ *
+ * A User-Agent identifying the application is required by OSM tile policy.
  */
 async function fetchStaticMapPng(lat: number, lng: number): Promise<Uint8Array | null> {
-  const url = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=480x240&markers=${lat},${lng},red-pushpin`;
+  const zoom = 14;
+  const n = 2 ** zoom;
+  const xtile = Math.floor(((lng + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const ytile = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
+  );
+  const url = `https://tile.openstreetmap.org/${zoom}/${xtile}/${ytile}.png`;
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
-    const resp = await fetch(url, { signal: ctrl.signal });
+    const resp = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { "User-Agent": "BureauVlieland-Programma/1.0 (hallo@bureauvlieland.nl)" },
+    });
     clearTimeout(timer);
     if (!resp.ok) {
-      console.warn(`[docx] map fetch ${resp.status} for ${lat},${lng}`);
+      console.warn(`[docx] tile fetch ${resp.status} for ${lat},${lng}`);
       return null;
     }
-    const buf = new Uint8Array(await resp.arrayBuffer());
-    return buf;
+    return new Uint8Array(await resp.arrayBuffer());
   } catch (e) {
-    console.warn(`[docx] map fetch failed for ${lat},${lng}:`, (e as any)?.message ?? e);
+    console.warn(`[docx] tile fetch failed for ${lat},${lng}:`, (e as any)?.message ?? e);
     return null;
   }
 }
