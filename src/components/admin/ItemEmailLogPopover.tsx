@@ -77,6 +77,7 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<DisplayEntry[]>([]);
   const [repairing, setRepairing] = useState<string | "all" | null>(null);
+  const [onlyIncomplete, setOnlyIncomplete] = useState(false);
 
   const repairMetadata = async (ids: string[], scope: string | "all") => {
     if (ids.length === 0) return;
