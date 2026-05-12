@@ -27,11 +27,21 @@ interface EmailLogEntry {
   sent_at: string | null;
   created_at: string;
   error_message: string | null;
+  related_item_id: string | null;
+  related_request_id: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+type MatchSource = "direct" | "group" | "project";
+
+interface DisplayEntry extends EmailLogEntry {
+  matchSource: MatchSource;
 }
 
 interface ItemEmailLogPopoverProps {
   itemId: string;
   itemName?: string;
+  requestId?: string;
 }
 
 const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
@@ -44,22 +54,76 @@ const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
   dlq: { label: "Mislukt", className: "bg-rose-100 text-rose-800 border-rose-200" },
 };
 
-export function ItemEmailLogPopover({ itemId, itemName }: ItemEmailLogPopoverProps) {
+const SOURCE_LABELS: Record<MatchSource, string> = {
+  direct: "Item",
+  group: "Groep",
+  project: "Project",
+};
+
+export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLogPopoverProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState<EmailLogEntry[]>([]);
+  const [logs, setLogs] = useState<DisplayEntry[]>([]);
 
   const fetchLogs = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("email_log")
-      .select(
-        "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message"
-      )
-      .eq("related_item_id", itemId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (!error && data) setLogs(data as EmailLogEntry[]);
+    const SELECT =
+      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata";
+
+    const queries: Promise<{ data: EmailLogEntry[] | null; source: MatchSource }>[] = [];
+
+    // 1. Direct match on related_item_id
+    queries.push(
+      supabase
+        .from("email_log")
+        .select(SELECT)
+        .eq("related_item_id", itemId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then(({ data }) => ({ data: (data as EmailLogEntry[]) ?? null, source: "direct" as const })),
+    );
+
+    // 2. Group match: metadata.item_ids JSONB array contains itemId
+    queries.push(
+      supabase
+        .from("email_log")
+        .select(SELECT)
+        .contains("metadata", { item_ids: [itemId] })
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then(({ data }) => ({ data: (data as EmailLogEntry[]) ?? null, source: "group" as const })),
+    );
+
+    // 3. Project-level fallback: same request, only when item is unknown to the row
+    if (requestId) {
+      queries.push(
+        supabase
+          .from("email_log")
+          .select(SELECT)
+          .eq("related_request_id", requestId)
+          .is("related_item_id", null)
+          .order("created_at", { ascending: false })
+          .limit(50)
+          .then(({ data }) => ({ data: (data as EmailLogEntry[]) ?? null, source: "project" as const })),
+      );
+    }
+
+    const results = await Promise.all(queries);
+    const merged = new Map<string, DisplayEntry>();
+    for (const { data, source } of results) {
+      if (!data) continue;
+      for (const row of data) {
+        if (merged.has(row.id)) continue;
+        merged.set(row.id, { ...row, matchSource: source });
+      }
+    }
+
+    const sorted = Array.from(merged.values()).sort((a, b) => {
+      const ta = new Date(a.sent_at || a.created_at).getTime();
+      const tb = new Date(b.sent_at || b.created_at).getTime();
+      return tb - ta;
+    });
+    setLogs(sorted);
     setLoading(false);
   };
 
