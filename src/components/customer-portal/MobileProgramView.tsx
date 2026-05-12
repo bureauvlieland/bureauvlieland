@@ -300,6 +300,8 @@ export const MobileProgramView = ({
                 numberOfPeople={program.number_of_people}
                 items={program.items}
                 referenceNumber={program.reference_number}
+                requestId={(program as any).id}
+                customerToken={program.customer_token}
                 variant="sm"
               />
               <Button
