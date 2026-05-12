@@ -409,17 +409,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
         HTMLPart: emailHtml,
       });
 
-      emailLogs.push({
-        email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: subjectLine,
-        recipient_email: recipientEmail,
-        recipient_name: group.partnerName,
-        related_request_id: program.id,
-        related_partner_id: partnerId,
-        status: "pending",
-        sent_by: "admin",
-        metadata: { item_count: group.items.length, test_mode: testMode, reminder: isForce },
-      });
+      // Log per item zodat de mail-log popover per onderdeel werkt
+      for (const it of group.items) {
+        emailLogs.push({
+          email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
+          subject: subjectLine,
+          recipient_email: recipientEmail,
+          recipient_name: group.partnerName,
+          related_request_id: program.id,
+          related_partner_id: partnerId,
+          related_item_id: it.id,
+          status: "pending",
+          sent_by: "admin",
+          metadata: {
+            item_count: group.items.length,
+            item_ids: group.itemIds,
+            test_mode: testMode,
+            reminder: isForce,
+            template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
+            actor: "admin → partner",
+          },
+        });
+      }
 
       console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
     }
