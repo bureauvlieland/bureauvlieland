@@ -161,7 +161,12 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: errorMessage,
         sent_by: "resend-email",
-        metadata: { original_email_id: email_log_id, ...metadata },
+        metadata: {
+          template_name: emailLog.email_type,
+          actor: "admin → resend",
+          original_email_id: email_log_id,
+          ...metadata,
+        },
       });
 
       throw new Error(errorMessage);
