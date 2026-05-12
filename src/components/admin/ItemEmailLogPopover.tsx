@@ -33,6 +33,15 @@ interface EmailLogEntry {
   metadata: Record<string, unknown> | null;
   sent_by: string | null;
   mailjet_message_id: string | null;
+  delivered_at: string | null;
+  opened_at: string | null;
+  clicked_at: string | null;
+  bounced_at: string | null;
+  blocked_at: string | null;
+  spam_at: string | null;
+  unsub_at: string | null;
+  open_count: number | null;
+  click_count: number | null;
 }
 
 type MatchSource = "direct" | "group" | "project";
@@ -48,11 +57,16 @@ interface ItemEmailLogPopoverProps {
 }
 
 const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
-  sent: { label: "Verzonden", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  sent: { label: "Verzonden", className: "bg-sky-100 text-sky-800 border-sky-200" },
   delivered: { label: "Afgeleverd", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  opened: { label: "Geopend", className: "bg-violet-100 text-violet-800 border-violet-200" },
+  clicked: { label: "Geklikt", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   pending: { label: "In wachtrij", className: "bg-amber-100 text-amber-800 border-amber-200" },
   failed: { label: "Mislukt", className: "bg-rose-100 text-rose-800 border-rose-200" },
   bounced: { label: "Bounced", className: "bg-rose-100 text-rose-800 border-rose-200" },
+  blocked: { label: "Geblokkeerd", className: "bg-rose-100 text-rose-800 border-rose-200" },
+  spam: { label: "Als spam gemeld", className: "bg-rose-100 text-rose-800 border-rose-200" },
+  unsubscribed: { label: "Uitgeschreven", className: "bg-slate-200 text-slate-800 border-slate-300" },
   suppressed: { label: "Onderdrukt", className: "bg-slate-100 text-slate-700 border-slate-200" },
   dlq: { label: "Mislukt", className: "bg-rose-100 text-rose-800 border-rose-200" },
 };
