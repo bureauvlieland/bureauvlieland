@@ -6,7 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Hotel, Sparkles, ExternalLink, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Hotel, Sparkles, ExternalLink, ArrowDownLeft, ArrowUpRight, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 import {
   COMMUNICATION_STATE_META,
   type ProjectCommunicationState,
