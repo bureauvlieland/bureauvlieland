@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.scan-purchase-invoice-internal]
 verify_jwt = false
+
+[functions.mailjet-event-webhook]
+verify_jwt = false
