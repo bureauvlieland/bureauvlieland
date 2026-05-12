@@ -1172,11 +1172,7 @@ const AdminRequestDetail = () => {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                   } catch (e: any) {
-                    toast({
-                      title: "Word-document genereren mislukt",
-                      description: e?.message ?? "Onbekende fout",
-                      variant: "destructive",
-                    });
+                    toast.error(e?.message ?? "Word-document genereren mislukt");
                   }
                 }}
               >
