@@ -20,6 +20,7 @@ import {
 } from "@/lib/projectCommunication";
 import { cn } from "@/lib/utils";
 import { ClaudiaChatPanel } from "@/components/admin/werkbank/ClaudiaChatPanel";
+import { ClaudiaRecommendationsCard } from "@/components/admin/werkbank/ClaudiaRecommendationsCard";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 

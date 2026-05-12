@@ -494,6 +494,66 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_recommendations: {
+        Row: {
+          body: string
+          created_at: string
+          deeplink: string | null
+          expires_at: string
+          feedback: string | null
+          feedback_at: string | null
+          feedback_by: string | null
+          id: string
+          kind: string
+          priority: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          run_id: string | null
+          source_signals: Json
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          deeplink?: string | null
+          expires_at?: string
+          feedback?: string | null
+          feedback_at?: string | null
+          feedback_by?: string | null
+          id?: string
+          kind: string
+          priority?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          run_id?: string | null
+          source_signals?: Json
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          deeplink?: string | null
+          expires_at?: string
+          feedback?: string | null
+          feedback_at?: string | null
+          feedback_by?: string | null
+          id?: string
+          kind?: string
+          priority?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          run_id?: string | null
+          source_signals?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_todos: {
         Row: {
           assigned_to: string | null
@@ -1008,6 +1068,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      claudia_documents: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          metadata: Json
+          model_version: string
+          source_id: string
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          metadata?: Json
+          model_version?: string
+          source_id: string
+          source_type: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          metadata?: Json
+          model_version?: string
+          source_id?: string
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      claudia_run_log: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          documents_indexed: number | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          input_summary: Json | null
+          model: string | null
+          output_summary: Json | null
+          recommendations_created: number | null
+          run_type: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          documents_indexed?: number | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_summary?: Json | null
+          model?: string | null
+          output_summary?: Json | null
+          recommendations_created?: number | null
+          run_type: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          documents_indexed?: number | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_summary?: Json | null
+          model?: string | null
+          output_summary?: Json | null
+          recommendations_created?: number | null
+          run_type?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
       }
       commission_invoice_lines: {
         Row: {
@@ -2702,6 +2846,7 @@ export type Database = {
       }
     }
     Functions: {
+      expire_stale_recommendations: { Args: never; Returns: undefined }
       get_invoicing_mode_for_accommodation: {
         Args: { _accommodation_request_id: string; _user_id: string }
         Returns: string
@@ -2716,6 +2861,22 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_partner: { Args: { _user_id: string }; Returns: boolean }
+      match_claudia_documents: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          query_embedding: string
+          source_types?: string[]
+        }
+        Returns: {
+          content: string
+          id: string
+          metadata: Json
+          similarity: number
+          source_id: string
+          source_type: string
+        }[]
+      }
       partner_can_view_accommodation_request: {
         Args: { _request_id: string; _user_id: string }
         Returns: boolean
