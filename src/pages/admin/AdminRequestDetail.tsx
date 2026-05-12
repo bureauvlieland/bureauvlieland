@@ -75,6 +75,8 @@ import {
 } from "@/components/ui/popover";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { ensureSendItemsTodo } from "@/lib/sendItemsTodo";
+import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 import { 
   itemStatusConfig, 
   type ItemStatus, 
