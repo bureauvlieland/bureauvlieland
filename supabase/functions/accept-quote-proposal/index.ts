@@ -580,6 +580,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl);
       const recipientEmail = getRecipientEmail(group.partnerEmail, origin);
 
+      const messageIdx = emailMessages.length;
       emailMessages.push({
         From: {
           Email: "hallo@bureauvlieland.nl",
@@ -596,21 +597,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
         HTMLPart: emailHtml,
       });
 
-      emailLogs.push({
-        email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
-        recipient_email: recipientEmail,
-        recipient_name: group.partnerName,
-        related_request_id: program.id,
-        related_partner_id: partnerId,
-        status: "pending",
-        sent_by: "system",
-        metadata: {
-          item_count: group.items.length,
-          triggered_by: "quote_accepted",
-          test_mode: testMode,
-        },
-      });
+      for (const it of group.items) {
+        emailLogs.push({
+          email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
+          subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+          recipient_email: recipientEmail,
+          recipient_name: group.partnerName,
+          related_request_id: program.id,
+          related_partner_id: partnerId,
+          related_item_id: it.id,
+          status: "pending",
+          sent_by: "system",
+          metadata: {
+            item_count: group.items.length,
+            item_ids: group.itemIds,
+            triggered_by: "quote_accepted",
+            test_mode: testMode,
+            template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,
+            actor: "system → partner (na klantakkoord)",
+          },
+        });
+        logMessageIndex.push(messageIdx);
+      }
 
       console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
     }
