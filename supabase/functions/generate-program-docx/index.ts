@@ -16,7 +16,7 @@ import {
   VerticalAlign,
   PageBreak,
   ExternalHyperlink,
-} from "npm:docx@8.5.0";
+} from "npm:docx@9.5.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -219,7 +219,6 @@ Deno.serve(async (req) => {
         new Paragraph({
           spacing: { after: 200 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: TERRACOTTA, space: 1 } },
-          children: [new TextRun({ text: "" })],
         }),
       );
 
@@ -305,29 +304,12 @@ Deno.serve(async (req) => {
           );
         }
 
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-        const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
-
-        const itemTable = new Table({
-          width: { size: 9360, type: WidthType.DXA },
-          columnWidths: [9360],
-          rows: [
-            new TableRow({
-              children: [
-                new TableCell({
-                  borders: cellBorders,
-                  width: { size: 9360, type: WidthType.DXA },
-                  margins: { top: 80, bottom: 80, left: 0, right: 0 },
-                  verticalAlign: VerticalAlign.TOP,
-                  children: rightChildren,
-                }),
-              ],
-            }),
-          ],
-        });
-
-        bodyChildren.push(itemTable);
-        bodyChildren.push(new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: "" })] }));
+        // Single-column layout: skip the table wrapper entirely.
+        // Push item paragraphs directly into the body for maximum Word compatibility.
+        for (const childPara of rightChildren) {
+          bodyChildren.push(childPara);
+        }
+        bodyChildren.push(new Paragraph({ spacing: { after: 200 } }));
       }
     }
 
@@ -364,10 +346,9 @@ Deno.serve(async (req) => {
       ],
     });
 
-    const blob = await Packer.toBlob(doc);
-    const arrayBuffer = await blob.arrayBuffer();
+    const buffer = await Packer.toBuffer(doc);
 
-    return new Response(arrayBuffer, {
+    return new Response(buffer, {
       status: 200,
       headers: {
         ...corsHeaders,
