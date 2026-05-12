@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
             template_name: "guest_details_reminder",
             actor: "system:cron",
             arrival_date: firstDate,
+            guests_missing: guestsMissing,
+            diets_missing: dietsMissing,
           },
         });
         sent++;
