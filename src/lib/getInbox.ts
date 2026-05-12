@@ -46,7 +46,7 @@ export async function loadInbox(): Promise<InboxItem[]> {
     supabase
       .from("admin_todos")
       .select("id, title, priority, due_date, auto_type, related_request_id, snoozed_until")
-      .neq("status", "done")
+      .not("status", "in", "(done,dismissed)")
       .or(`snoozed_until.is.null,snoozed_until.lte.${today}`)
       .order("priority", { ascending: false })
       .order("due_date", { ascending: true, nullsFirst: false })
