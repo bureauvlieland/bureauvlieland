@@ -70,41 +70,44 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
     const SELECT =
       "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata";
 
-    const queries: Promise<{ data: EmailLogEntry[] | null; source: MatchSource }>[] = [];
+    const queries: Array<Promise<{ data: EmailLogEntry[] | null; source: MatchSource }>> = [];
 
-    // 1. Direct match on related_item_id
     queries.push(
-      supabase
-        .from("email_log")
-        .select(SELECT)
-        .eq("related_item_id", itemId)
-        .order("created_at", { ascending: false })
-        .limit(50)
-        .then(({ data }) => ({ data: (data as EmailLogEntry[]) ?? null, source: "direct" as const })),
-    );
-
-    // 2. Group match: metadata.item_ids JSONB array contains itemId
-    queries.push(
-      supabase
-        .from("email_log")
-        .select(SELECT)
-        .contains("metadata", { item_ids: [itemId] })
-        .order("created_at", { ascending: false })
-        .limit(50)
-        .then(({ data }) => ({ data: (data as EmailLogEntry[]) ?? null, source: "group" as const })),
-    );
-
-    // 3. Project-level fallback: same request, only when item is unknown to the row
-    if (requestId) {
-      queries.push(
-        supabase
+      (async () => {
+        const { data } = await supabase
           .from("email_log")
           .select(SELECT)
-          .eq("related_request_id", requestId)
-          .is("related_item_id", null)
+          .eq("related_item_id", itemId)
           .order("created_at", { ascending: false })
-          .limit(50)
-          .then(({ data }) => ({ data: (data as EmailLogEntry[]) ?? null, source: "project" as const })),
+          .limit(50);
+        return { data: (data as EmailLogEntry[]) ?? null, source: "direct" as MatchSource };
+      })(),
+    );
+
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("email_log")
+          .select(SELECT)
+          .contains("metadata", { item_ids: [itemId] })
+          .order("created_at", { ascending: false })
+          .limit(50);
+        return { data: (data as EmailLogEntry[]) ?? null, source: "group" as MatchSource };
+      })(),
+    );
+
+    if (requestId) {
+      queries.push(
+        (async () => {
+          const { data } = await supabase
+            .from("email_log")
+            .select(SELECT)
+            .eq("related_request_id", requestId)
+            .is("related_item_id", null)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          return { data: (data as EmailLogEntry[]) ?? null, source: "project" as MatchSource };
+        })(),
       );
     }
 
