@@ -102,6 +102,7 @@ function netInvoiced(invoices: InvoiceRow[]) {
 
 export function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
   const navigate = useNavigate();
+  const [chatOpen, setChatOpen] = useState(false);
 
   const { data: detail, isLoading, error } = useQuery<DetailData>({
     queryKey: ["werkbank-detail", project?.id],
