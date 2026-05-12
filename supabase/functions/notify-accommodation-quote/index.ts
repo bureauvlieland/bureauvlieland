@@ -278,7 +278,9 @@ Deno.serve(async (req) => {
       related_partner_id: partner.id,
       status: "sent",
       sent_by: "notify-accommodation-quote",
-      metadata: { 
+      metadata: {
+        template_name: EmailTypes.ACCOMMODATION_QUOTE_NOTIFICATION,
+        actor: "system → klant",
         quote_id: quoteId,
         accommodation_name: quote.accommodation_name,
         price_total: quote.price_total,
