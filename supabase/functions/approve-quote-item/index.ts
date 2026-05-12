@@ -323,7 +323,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         dates: formattedDates,
         number_of_people: String(program.number_of_people),
         block_name: sanitizeHtml(item.block_name),
-        preferred_time: item.preferred_time ? sanitizeHtml(item.preferred_time) : "",
+        preferred_time: getEffectiveItemTime(item) ? sanitizeHtml(getEffectiveItemTime(item)!) : "",
+        effective_time: getEffectiveItemTime(item) ? sanitizeHtml(getEffectiveItemTime(item)!) : "",
         portal_url: partnerPortalUrl,
       });
 
