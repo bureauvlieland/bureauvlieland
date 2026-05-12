@@ -330,20 +330,24 @@ Deno.serve(async (req) => {
                   HTMLPart: emailBody,
                 });
 
-                await supabase.from("email_log").insert({
-                  email_type: "accommodation_people_change",
-                  subject: `${subjectPrefix}${emailSubject}`,
-                  recipient_email: getRecipientEmail(partner.email, origin),
-                  recipient_name: partner.name,
-                  related_request_id: program.id,
-                  related_accommodation_id: program.linked_accommodation_id,
-                  related_partner_id: partner.id,
-                  status: "pending",
-                  sent_by: "update-customer-program",
-                  metadata: {
-                    old_people: program.number_of_people,
-                    new_people: programDetails.numberOfPeople,
-                    accommodation_name: quote.accommodation_name,
+                pendingEmailLogs.push({
+                  messageIdx: emailMessages.length - 1,
+                  logPayload: {
+                    email_type: "accommodation_people_change",
+                    subject: `${subjectPrefix}${emailSubject}`,
+                    recipient_email: getRecipientEmail(partner.email, origin),
+                    recipient_name: partner.name,
+                    related_request_id: program.id,
+                    related_accommodation_id: program.linked_accommodation_id,
+                    related_partner_id: partner.id,
+                    sent_by: "update-customer-program",
+                    metadata: {
+                      template_name: "accommodation_people_change",
+                      actor: "klant → logiespartner (gastenwijziging)",
+                      old_people: program.number_of_people,
+                      new_people: programDetails.numberOfPeople,
+                      accommodation_name: quote.accommodation_name,
+                    },
                   },
                 });
               }
