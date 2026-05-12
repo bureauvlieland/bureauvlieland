@@ -788,6 +788,18 @@ export default function AdminAccommodationDetail() {
                     "{request.special_requests}"
                   </p>
                 )}
+
+                <div className="border-t pt-3 mt-2">
+                  <GuestDetailsDisplay
+                    guestNames={null}
+                    dietaryNotes={null}
+                    roomAssignment={(request as any).room_assignment ?? null}
+                    showDietary={false}
+                    showRoomAssignment={true}
+                    updatedAt={(request as any).guest_details_updated_at ?? null}
+                    onEdit={() => setShowGuestDialog(true)}
+                  />
+                </div>
               </CardContent>
             </Card>
 
