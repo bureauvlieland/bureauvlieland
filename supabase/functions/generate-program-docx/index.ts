@@ -304,28 +304,11 @@ Deno.serve(async (req) => {
           );
         }
 
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-        const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
-
-        const itemTable = new Table({
-          width: { size: 9360, type: WidthType.DXA },
-          columnWidths: [9360],
-          rows: [
-            new TableRow({
-              children: [
-                new TableCell({
-                  borders: cellBorders,
-                  width: { size: 9360, type: WidthType.DXA },
-                  margins: { top: 80, bottom: 80, left: 0, right: 0 },
-                  verticalAlign: VerticalAlign.TOP,
-                  children: rightChildren,
-                }),
-              ],
-            }),
-          ],
-        });
-
-        bodyChildren.push(itemTable);
+        // Single-column layout: skip the table wrapper entirely.
+        // Push item paragraphs directly into the body for maximum Word compatibility.
+        for (const childPara of rightChildren) {
+          bodyChildren.push(childPara);
+        }
         bodyChildren.push(new Paragraph({ spacing: { after: 200 } }));
       }
     }
