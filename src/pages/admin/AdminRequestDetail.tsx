@@ -1393,6 +1393,21 @@ const AdminRequestDetail = () => {
             </CardContent>
           </Card>
 
+          {/* Groep & wensen */}
+          <Card>
+            <CardContent className="p-6">
+              <GuestDetailsDisplay
+                guestNames={(request as any).guest_names ?? null}
+                dietaryNotes={(request as any).dietary_notes ?? null}
+                roomAssignment={null}
+                showDietary={items.some((i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering"))}
+                showRoomAssignment={false}
+                updatedAt={(request as any).guest_details_updated_at ?? null}
+                onEdit={() => setGuestDialogOpen(true)}
+              />
+            </CardContent>
+          </Card>
+
           {/* Status summary + linked accommodation row */}
           <div className="grid md:grid-cols-3 gap-6">
             {/* Status summary */}
