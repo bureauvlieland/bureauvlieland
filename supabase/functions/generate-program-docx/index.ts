@@ -16,7 +16,31 @@ import {
   VerticalAlign,
   PageBreak,
   ExternalHyperlink,
+  ImageRun,
 } from "npm:docx@9.5.1";
+
+/**
+ * Fetch a static OpenStreetMap PNG for the given coords.
+ * Returns Uint8Array on success, null on any failure (timeout, non-200, network).
+ */
+async function fetchStaticMapPng(lat: number, lng: number): Promise<Uint8Array | null> {
+  const url = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=480x240&markers=${lat},${lng},red-pushpin`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!resp.ok) {
+      console.warn(`[docx] map fetch ${resp.status} for ${lat},${lng}`);
+      return null;
+    }
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    return buf;
+  } catch (e) {
+    console.warn(`[docx] map fetch failed for ${lat},${lng}:`, (e as any)?.message ?? e);
+    return null;
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
