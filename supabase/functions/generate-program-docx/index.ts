@@ -16,7 +16,7 @@ import {
   VerticalAlign,
   PageBreak,
   ExternalHyperlink,
-} from "npm:docx@8.5.0";
+} from "npm:docx@9.5.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
