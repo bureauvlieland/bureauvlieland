@@ -118,13 +118,16 @@ export async function listProjectsForWerkbank(opts: {
     .order("updated_at", { ascending: false })
     .limit(500);
   if (archiveOnly) {
-    // Archief = expliciet geannuleerd of verwijderd
-    query = query.or("status.in.(cancelled,deleted),cancelled_at.not.is.null");
+    // Archief = geannuleerd, verwijderd, of volledig afgerond/gefactureerd
+    query = query.or(
+      "status.in.(cancelled,deleted),cancelled_at.not.is.null,completion_status.in.(fully_invoiced,completed)"
+    );
   } else if (!includeFinished) {
-    // Standaard werklijst: verberg geannuleerd én verwijderd
+    // Standaard werklijst: verberg geannuleerd, verwijderd én volledig afgerond
     query = query
       .not("status", "in", "(cancelled,deleted)")
-      .is("cancelled_at", null);
+      .is("cancelled_at", null)
+      .not("completion_status", "in", "(fully_invoiced,completed)");
   }
   const { data: programs, error: progErr } = await query;
   if (progErr) throw progErr;
@@ -259,6 +262,6 @@ export async function listProjectsForWerkbank(opts: {
 
   if (archiveOnly) return summaries;
   if (includeFinished) return summaries;
-  // Werklijst: alleen 'geannuleerd' wegfilteren; 'afgerond' blijft zichtbaar tot facturatie klaar is.
-  return summaries.filter((s) => s.pipeline !== "geannuleerd");
+  // Werklijst: geannuleerde én volledig afgeronde projecten horen in het archief.
+  return summaries.filter((s) => s.pipeline !== "geannuleerd" && s.pipeline !== "afgerond");
 }
