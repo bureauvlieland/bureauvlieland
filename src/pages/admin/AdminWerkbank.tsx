@@ -322,6 +322,11 @@ export default function AdminWerkbank() {
 
           {/* Rechter detail */}
           <section className="flex-1 overflow-y-auto bg-muted/20">
+            {!selected && (
+              <div className="p-4">
+                <ClaudiaRecommendationsCard />
+              </div>
+            )}
             <ProjectDetailPanel project={selected} />
           </section>
         </div>
