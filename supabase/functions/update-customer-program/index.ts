@@ -1000,17 +1000,24 @@ Deno.serve(async (req) => {
           Subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
           HTMLPart: bureauHtml,
         });
-        await supabase.from("email_log").insert({
-          email_type: "customer_counter_proposal_bureau",
-          subject: `Klant stelt andere tijd voor — ${item.block_name}`,
-          recipient_email: "hallo@bureauvlieland.nl",
-          recipient_name: "Bureau Vlieland",
-          related_request_id: program.id,
-          related_item_id: itemId,
-          related_partner_id: item.provider_id,
-          status: "pending",
-          sent_by: "update-customer-program",
-          metadata: { counter_time: counterTime, counter_note: counterNote },
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "customer_counter_proposal_bureau",
+            subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
+            recipient_email: "hallo@bureauvlieland.nl",
+            recipient_name: "Bureau Vlieland",
+            related_request_id: program.id,
+            related_item_id: itemId,
+            related_partner_id: item.provider_id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "customer_counter_proposal_bureau",
+              actor: "klant → bureau (interne notificatie)",
+              counter_time: counterTime,
+              counter_note: counterNote,
+            },
+          },
         });
         // Admin todo
         const { data: existingCounterTodo } = await supabase
