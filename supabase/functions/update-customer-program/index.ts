@@ -953,22 +953,26 @@ Deno.serve(async (req) => {
           HTMLPart: emailBody,
         });
 
-        // Log email for counter proposal
-        await supabase.from("email_log").insert({
-          email_type: "counter_proposal_partner",
-          subject: `${subjectPrefix}${emailSubject}`,
-          recipient_email: counterProposalRecipient,
-          recipient_name: item.provider_name,
-          related_request_id: program.id,
-          related_item_id: itemId,
-          related_partner_id: item.provider_id,
-          status: "pending",
-          sent_by: "update-customer-program",
-          metadata: {
-            counter_time: counterTime,
-            counter_note: counterNote,
-            block_name: item.block_name,
-            customer_name: program.customer_company || program.customer_name,
+        // Log email for counter proposal (deferred)
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "counter_proposal_partner",
+            subject: `${subjectPrefix}${emailSubject}`,
+            recipient_email: counterProposalRecipient,
+            recipient_name: item.provider_name,
+            related_request_id: program.id,
+            related_item_id: itemId,
+            related_partner_id: item.provider_id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "counter_proposal_partner",
+              actor: "klant → partner (tegenvoorstel tijd)",
+              counter_time: counterTime,
+              counter_note: counterNote,
+              block_name: item.block_name,
+              customer_name: program.customer_company || program.customer_name,
+            },
           },
         });
       }
