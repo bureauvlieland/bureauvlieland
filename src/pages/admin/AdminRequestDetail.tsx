@@ -1829,6 +1829,32 @@ const AdminRequestDetail = () => {
                                         {item.admin_price_notes && (
                                           <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
                                         )}
+                                        {isTicketItem(item) && (
+                                          <TicketBookingInline
+                                            item={{
+                                              id: item.id,
+                                              block_id: item.block_id,
+                                              block_name: item.block_name,
+                                              day_index: item.day_index,
+                                              booking_reference: item.booking_reference ?? null,
+                                              booking_document_path: item.booking_document_path ?? null,
+                                              booking_group_id: item.booking_group_id ?? null,
+                                            }}
+                                            siblings={items
+                                              .filter((s) => isTicketItem(s))
+                                              .map((s) => ({
+                                                id: s.id,
+                                                block_id: s.block_id,
+                                                block_name: s.block_name,
+                                                day_index: s.day_index,
+                                                booking_reference: s.booking_reference ?? null,
+                                                booking_document_path: s.booking_document_path ?? null,
+                                                booking_group_id: s.booking_group_id ?? null,
+                                              }))}
+                                            requestId={request.id}
+                                            onChanged={() => fetchRequestData({ silent: true })}
+                                          />
+                                        )}
                                       </div>
                                     </TableCell>
                                     <TableCell>
