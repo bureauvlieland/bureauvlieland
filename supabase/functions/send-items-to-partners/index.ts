@@ -411,14 +411,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       emailLogs.push({
         email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-        subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+        subject: subjectLine,
         recipient_email: recipientEmail,
         recipient_name: group.partnerName,
         related_request_id: program.id,
         related_partner_id: partnerId,
         status: "pending",
         sent_by: "admin",
-        metadata: { item_count: group.items.length, test_mode: testMode },
+        metadata: { item_count: group.items.length, test_mode: testMode, reminder: isForce },
       });
 
       console.log(`Prepared notification for partner ${group.partnerName} (${group.items.length} items)`);
