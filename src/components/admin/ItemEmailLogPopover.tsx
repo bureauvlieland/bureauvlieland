@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Loader2, AlertTriangle, Wand2 } from "lucide-react";
+import { Mail, Loader2, AlertTriangle, Wand2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,8 @@ interface EmailLogEntry {
   related_item_id: string | null;
   related_request_id: string | null;
   metadata: Record<string, unknown> | null;
+  sent_by: string | null;
+  mailjet_message_id: string | null;
 }
 
 type MatchSource = "direct" | "group" | "project";
@@ -78,6 +80,14 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const [logs, setLogs] = useState<DisplayEntry[]>([]);
   const [repairing, setRepairing] = useState<string | "all" | null>(null);
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const inferEdgeFunctionFromType = (emailType: string): string => {
+    // Heuristiek: email_type → vermoedelijke edge function naam
+    const t = emailType.toLowerCase().replace(/_/g, "-");
+    if (t.startsWith("send-") || t.startsWith("notify-") || t.startsWith("resend-")) return t;
+    return `send-${t}`;
+  };
 
   const repairMetadata = async (ids: string[], scope: string | "all") => {
     if (ids.length === 0) return;
@@ -108,7 +118,7 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
   const fetchLogs = async () => {
     setLoading(true);
     const SELECT =
-      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata";
+      "id, email_type, subject, recipient_email, recipient_name, status, sent_at, created_at, error_message, related_item_id, related_request_id, metadata, sent_by, mailjet_message_id";
 
     const queries: Array<Promise<{ data: EmailLogEntry[] | null; source: MatchSource }>> = [];
 
@@ -345,6 +355,56 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                             )}
                             Aanvullen
                           </Button>
+                        </div>
+                      )}
+                      {missingFields.length > 0 && (
+                        <div className="space-y-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedId((id) => (id === log.id ? null : log.id))
+                            }
+                            className="flex items-center gap-1 text-[10px] text-amber-700 underline-offset-2 hover:underline"
+                            title="Toon ruwe payload + vermoedelijke edge function bron"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            {expandedId === log.id ? "Verberg bron" : "Bekijk bron van validatieprobleem"}
+                          </button>
+                          {expandedId === log.id && (
+                            <div className="rounded border border-amber-200 bg-amber-50/60 p-2 text-[10px] text-slate-700 space-y-1">
+                              <div>
+                                <span className="font-semibold text-slate-600">Vermoedelijke edge function:</span>{" "}
+                                <code className="rounded bg-white px-1 py-0.5 text-[10px] text-amber-900">
+                                  {inferEdgeFunctionFromType(log.email_type)}
+                                </code>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-600">sent_by:</span>{" "}
+                                <code>{log.sent_by ?? "—"}</code>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-600">log id:</span>{" "}
+                                <code className="break-all">{log.id}</code>
+                              </div>
+                              {log.mailjet_message_id && (
+                                <div>
+                                  <span className="font-semibold text-slate-600">mailjet:</span>{" "}
+                                  <code className="break-all">{log.mailjet_message_id}</code>
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-semibold text-slate-600">metadata (raw):</span>
+                                <pre className="mt-0.5 max-h-32 overflow-auto rounded bg-white p-1 text-[10px] text-slate-700">
+{JSON.stringify(log.metadata ?? {}, null, 2)}
+                                </pre>
+                              </div>
+                              <div className="pt-1 text-[9px] text-slate-500">
+                                Open de logs van bovengenoemde edge function in het backend-dashboard
+                                en filter op deze log id of mailjet id om de exacte logEmail-aanroep
+                                te vinden die de validatie miste.
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                       {log.error_message && (
