@@ -196,19 +196,36 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
             )}
           </div>
         </div>
-        <Button
-          size="sm"
-          onClick={() =>
-            navigate(
-              project.kind === "logies_only" && detail?.lodging
-                ? `/admin/logies/${detail.lodging.id}`
-                : `/admin/projecten/${project.id}`,
-            )
-          }
-        >
-          Open dossier <ExternalLink className="ml-1 h-3.5 w-3.5" />
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setChatOpen(true)}
+          >
+            <MessageSquare className="mr-1 h-3.5 w-3.5" /> Chat met klant
+          </Button>
+          <Button
+            size="sm"
+            onClick={() =>
+              navigate(
+                project.kind === "logies_only" && detail?.lodging
+                  ? `/admin/logies/${detail.lodging.id}`
+                  : `/admin/projecten/${project.id}`,
+              )
+            }
+          >
+            Open dossier <ExternalLink className="ml-1 h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
+
+      <ProjectChatSheet
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        requestId={project.id}
+        customerName={project.customer.name}
+        customerEmail={project.customer.email}
+      />
 
       {error && (
         <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
