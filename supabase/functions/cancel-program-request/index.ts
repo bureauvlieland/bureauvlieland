@@ -404,14 +404,54 @@ Deno.serve(async (req) => {
         </div>
       `,
     });
+    pendingLogs.push({
+      messageIdx: emails.length - 1,
+      logPayload: {
+        email_type: "cancellation_customer",
+        subject: `${subjectPrefix}${customerTemplate?.subject || "Bevestiging: Uw aanvraag is geannuleerd"}`,
+        recipient_email: program.customer_email,
+        recipient_name: program.customer_name,
+        related_request_id: program.id,
+        sent_by: "customer",
+        metadata: {
+          template_name: TemplateIds.CANCELLATION_CUSTOMER,
+          actor: "system → klant (annuleringsbevestiging)",
+          providers_count: providers.size + accommodationPartners.size,
+          cancellation_reason: reason || null,
+        },
+      },
+    });
 
-    // Send emails
+    // Send emails + log
+    let mailjetResp: any = null;
+    let sendError: string | null = null;
     try {
       if (emails.length > 0) {
-        await sendEmailViaMailjet(emails);
+        mailjetResp = await sendEmailViaMailjet(emails);
       }
     } catch (emailError) {
       console.error("Failed to send cancellation emails:", emailError);
+      sendError = emailError instanceof Error ? emailError.message : "Unknown";
+    }
+
+    if (pendingLogs.length > 0) {
+      const sentAt = new Date().toISOString();
+      const rows = pendingLogs.map(({ logPayload, messageIdx }) => {
+        const messageId = mailjetResp?.Messages?.[messageIdx]?.To?.[0]?.MessageID?.toString() || null;
+        const ok = !sendError && !!mailjetResp;
+        return {
+          ...logPayload,
+          status: ok ? "sent" : "failed",
+          error_message: ok ? null : sendError,
+          mailjet_message_id: messageId,
+          sent_at: ok ? sentAt : null,
+        };
+      });
+      try {
+        await supabase.from("email_log").insert(rows);
+      } catch (logErr) {
+        console.error("Error writing email_log batch:", logErr);
+      }
     }
 
     return new Response(
