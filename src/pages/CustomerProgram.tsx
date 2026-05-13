@@ -369,6 +369,18 @@ const CustomerProgram = () => {
     onApproveQuoteItem: approveQuoteItem,
   };
 
+  // Event-modus: automatisch + handmatige toggle
+  const eventMode = useEventMode(selectedDates, token ? `bv:event-mode:${token}` : undefined);
+
+  // Bij eerste render binnen het programma-venster: spring naar "Vandaag"
+  // (alleen bij splash en alleen als event-modus actief is — voorkomt onverwachte hops).
+  React.useEffect(() => {
+    if (eventMode.eventModeActive && activeView === "splash") {
+      setActiveView("today");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventMode.eventModeActive]);
+
   // Decision 2: Single-day programs skip the splash and go directly to program
   const effectiveView = !isMultiDay && activeView === "splash" ? "program" : activeView;
 
