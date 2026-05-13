@@ -128,7 +128,6 @@ export const PartnerAccommodationRequestCard = ({
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {request.customer_name}
-              {request.customer_company && request.invoicingMode !== "bureau_central" && ` • ${request.customer_email}`}
             </p>
           </div>
           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
@@ -230,25 +229,12 @@ export const PartnerAccommodationRequestCard = ({
               <span>Uw offerte is geaccepteerd!</span>
             </div>
             <div className="text-sm text-muted-foreground space-y-1">
-              {invoicingMode === "bureau_central" ? (
-                <>
-                  <p>Facturatie verloopt via Bureau Vlieland. Na afloop:</p>
-                  <ol className="list-decimal list-inside space-y-0.5 text-xs">
-                    <li>U stuurt de factuur naar Bureau Vlieland</li>
-                    <li>Registreer de factuur hier in het portaal</li>
-                    <li>Bureau Vlieland factureert de klant</li>
-                  </ol>
-                </>
-              ) : (
-                <>
-                  <p>De klant boekt rechtstreeks bij u. Na afloop van het verblijf:</p>
-                  <ol className="list-decimal list-inside space-y-0.5 text-xs">
-                    <li>U stuurt de factuur direct naar de klant</li>
-                    <li>Registreer de factuur hier in het portaal</li>
-                    <li>Bureau Vlieland factureert de commissie aan u</li>
-                  </ol>
-                </>
-              )}
+              <p>Bureau Vlieland verzorgt centraal de facturatie aan de klant. Na afloop van het verblijf:</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-xs">
+                <li>Stuur uw factuur (voor de geoffreerde prijs) naar facturatie@bureauvlieland.nl</li>
+                <li>Registreer de factuur hier in het portaal</li>
+                <li>Bureau Vlieland factureert de klant en verrekent de commissie met u</li>
+              </ol>
             </div>
           </div>
         )}

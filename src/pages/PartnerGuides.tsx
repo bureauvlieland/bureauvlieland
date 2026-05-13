@@ -534,21 +534,15 @@ const PartnerGuides = () => {
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground space-y-3">
                   <p>
-                    Per project wordt een facturatiemodel bepaald. Er zijn twee modellen:
+                    Bureau Vlieland verzorgt centraal de facturatie aan de klant. Jij factureert nooit rechtstreeks aan de eindklant.
                   </p>
-                  <div className="space-y-3">
-                    <div className="bg-muted p-3 rounded-lg">
-                      <p className="font-medium">Partner Direct</p>
-                      <p className="text-sm mt-1">U factureert rechtstreeks aan de eindklant. Bureau Vlieland stuurt u een commissiefactuur.</p>
-                    </div>
-                    <div className="bg-muted p-3 rounded-lg">
-                      <p className="font-medium">Bureau Centraal</p>
-                      <p className="text-sm mt-1">Bureau Vlieland factureert de eindklant. U stuurt uw factuur naar Bureau Vlieland.</p>
-                    </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="font-medium">Hoe werkt het?</p>
+                    <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
+                      <li>Je stuurt jouw factuur (voor de geoffreerde prijs) naar <strong>facturatie@bureauvlieland.nl</strong></li>
+                      <li>Bureau Vlieland factureert de klant en verrekent de commissie met jou</li>
+                    </ol>
                   </div>
-                  <p className="text-sm">
-                    Het facturatiemodel is zichtbaar in de aanvraagdetails, zodat u altijd weet aan wie u dient te factureren.
-                  </p>
                 </AccordionContent>
               </AccordionItem>
 
@@ -605,7 +599,7 @@ const PartnerGuides = () => {
                   </ol>
                   <div className="bg-muted p-3 rounded-lg text-sm space-y-2">
                     <p>
-                      <strong>Bij Bureau Centraal:</strong> Stuur uw factuur naar Bureau Vlieland in plaats van naar de eindklant. U kunt een factuurkopie uploaden bij het registreren.
+                      Stuur uw factuur naar <strong>facturatie@bureauvlieland.nl</strong> — niet rechtstreeks naar de klant. U kunt een factuurkopie uploaden bij het registreren.
                     </p>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800 text-sm">
@@ -777,13 +771,13 @@ const PartnerGuides = () => {
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="faq-facturatiemodel">
-                <AccordionTrigger>Wat is het verschil tussen 'Partner Direct' en 'Bureau Centraal' facturatie?</AccordionTrigger>
+                <AccordionTrigger>Aan wie stuur ik mijn factuur?</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground space-y-3">
                   <p>
-                    Bij <strong>Partner Direct</strong> factureert u rechtstreeks aan de eindklant. Bureau Vlieland stuurt u vervolgens een commissiefactuur over het gefactureerde bedrag.
+                    Altijd naar Bureau Vlieland — nooit rechtstreeks aan de eindklant. Bureau Vlieland verzorgt centraal de facturatie aan de klant en verrekent vervolgens de commissie met u.
                   </p>
                   <p>
-                    Bij <strong>Bureau Centraal</strong> factureert Bureau Vlieland de eindklant. U stuurt uw factuur naar Bureau Vlieland in plaats van naar de klant. Het facturatiemodel wordt per project bepaald en is zichtbaar in de aanvraagdetails.
+                    Stuur uw factuur (voor de geoffreerde prijs) naar <strong>facturatie@bureauvlieland.nl</strong>. Vermeld het referentienummer van het project voor snelle verwerking.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -830,7 +824,7 @@ const PartnerGuides = () => {
                   <ul className="list-disc list-inside space-y-2 ml-2">
                     <li>U ontvangt direct een melding via e-mail</li>
                     <li>De aanvraag wordt gemarkeerd als "Geannuleerd"</li>
-                    <li>Eventuele annuleringskosten handelt u rechtstreeks af met de klant</li>
+                    <li>Eventuele annuleringskosten verlopen via Bureau Vlieland</li>
                     <li>Over geannuleerde boekingen wordt geen commissie berekend</li>
                   </ul>
                 </AccordionContent>
