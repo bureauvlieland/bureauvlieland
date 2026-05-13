@@ -135,7 +135,7 @@ export const PracticalView = ({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Bewaar uw programma als PDF of importeer het direct in uw agenda.
+            Bewaar uw programma als Word-document of importeer het direct in uw agenda.
           </p>
           <div className="flex flex-wrap gap-2">
             <ProgramPdfDownload

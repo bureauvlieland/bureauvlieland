@@ -97,25 +97,18 @@ export const ProgramPdfDownload = ({
   };
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            onClick={handleDownload}
-            disabled={isGenerating || !requestId}
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Word-document downloaden</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Button
+      onClick={handleDownload}
+      disabled={isGenerating || !requestId}
+      variant="outline"
+      size="sm"
+    >
+      {isGenerating ? (
+        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+      ) : (
+        <FileText className="h-4 w-4 mr-1.5" />
+      )}
+      Word-document (.docx)
+    </Button>
   );
 };
