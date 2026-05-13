@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Footer } from "@/components/Footer";
@@ -16,18 +16,23 @@ import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPorta
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEventMode } from "@/hooks/useEventMode";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   AlertCircle,
   RefreshCw,
   Info,
   X,
+  Sparkles,
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { TodayView } from "@/components/customer-portal/TodayView";
+import { ProgramMap } from "@/components/customer-portal/ProgramMap";
+import { MobileBottomNav, type BottomNavView } from "@/components/customer-portal/MobileBottomNav";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
@@ -36,7 +41,7 @@ const CustomerProgram = () => {
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
   const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
-  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept">("splash");
+  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">("splash");
   
   const {
     program,
@@ -296,7 +301,7 @@ const CustomerProgram = () => {
   // Navigate to a specific view
   // Decision 1: Splash always shown for multi-day (no localStorage skip)
   // Decision 2: Single-day → skip splash, go directly to program
-  const handleNavigate = (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept") => {
+  const handleNavigate = (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => {
     setActiveView(view);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -364,6 +369,18 @@ const CustomerProgram = () => {
     onApproveQuoteItem: approveQuoteItem,
   };
 
+  // Event-modus: automatisch + handmatige toggle
+  const eventMode = useEventMode(selectedDates, token ? `bv:event-mode:${token}` : undefined);
+
+  // Bij eerste render binnen het programma-venster: spring naar "Vandaag"
+  // (alleen bij splash en alleen als event-modus actief is — voorkomt onverwachte hops).
+  useEffect(() => {
+    if (eventMode.eventModeActive && activeView === "splash") {
+      setActiveView("today");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventMode.eventModeActive]);
+
   // Decision 2: Single-day programs skip the splash and go directly to program
   const effectiveView = !isMultiDay && activeView === "splash" ? "program" : activeView;
 
@@ -381,6 +398,19 @@ const CustomerProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
+            {(eventMode.eventModeActive || eventMode.isEventDay) && (
+              <Button
+                variant={eventMode.eventModeActive ? "default" : "outline"}
+                size="sm"
+                onClick={() =>
+                  eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
+                }
+                title="Tijdens evenement: snel naar Vandaag, Kaart en tickets"
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                {eventMode.eventModeActive ? "Event-modus aan" : "Event-modus"}
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
               <RefreshCw className="h-4 w-4 mr-2" />
               Vernieuwen
@@ -451,6 +481,7 @@ const CustomerProgram = () => {
             activeView={effectiveView}
             onNavigate={handleNavigate}
             badges={badges}
+            showEventTabs={eventMode.eventModeActive}
           />
         );
       })()}
@@ -513,7 +544,52 @@ const CustomerProgram = () => {
             <DesktopProgramView {...viewProps} initialSection="accept" />
           )
         )}
+
+        {/* Today (event-modus) */}
+        {effectiveView === "today" && (
+          <TodayView
+            selectedDates={selectedDates}
+            items={program.items}
+            currentDayIndex={eventMode.currentDayIndex}
+            isUpcoming={eventMode.isUpcoming}
+            numberOfPeople={program.number_of_people}
+            customerCompany={(program as any).customer_company}
+            customerName={program.customer_name}
+          />
+        )}
+
+        {/* Map (event-modus) */}
+        {effectiveView === "map" && (
+          <ProgramMap
+            items={program.items}
+            selectedDates={selectedDates}
+            accommodationLabel={(accommodation as any)?.partner_name || "Logies"}
+            accommodationLat={(accommodation as any)?.location_lat ?? null}
+            accommodationLng={(accommodation as any)?.location_lng ?? null}
+            accommodationAddress={(accommodation as any)?.location_address ?? null}
+          />
+        )}
       </main>
+
+      {/* Extra bottom padding op mobile zodat content niet onder de bottom-nav valt */}
+      {isMobile && <div className="h-16" />}
+
+      {/* Mobile bottom nav — alleen tijdens event-modus */}
+      {isMobile && eventMode.eventModeActive && (
+        <MobileBottomNav
+          active={
+            (["today", "program", "map", "practical"].includes(effectiveView)
+              ? (effectiveView as BottomNavView)
+              : "today") as BottomNavView
+          }
+          onChange={(v) => handleNavigate(v)}
+          badges={{
+            program:
+              statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0) >
+              0,
+          }}
+        />
+      )}
 
       <Footer />
 

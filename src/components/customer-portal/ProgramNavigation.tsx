@@ -8,6 +8,8 @@ import {
   Receipt,
   ClipboardList,
   FileSignature,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
 
 type ActiveView =
@@ -16,7 +18,9 @@ type ActiveView =
   | "program"
   | "practical"
   | "billing"
-  | "accept";
+  | "accept"
+  | "today"
+  | "map";
 
 export interface TabBadge {
   label: string;
@@ -29,6 +33,8 @@ interface ProgramNavigationProps {
   activeView?: ActiveView;
   onNavigate?: (view: ActiveView) => void;
   badges?: Partial<Record<ActiveView, TabBadge | undefined>>;
+  /** Toon "Vandaag" en "Kaart" tabs (event-modus) */
+  showEventTabs?: boolean;
 }
 
 export const ProgramNavigation = ({
@@ -37,6 +43,7 @@ export const ProgramNavigation = ({
   activeView = "program",
   onNavigate,
   badges = {},
+  showEventTabs = false,
 }: ProgramNavigationProps) => {
   const handleClick = (view: ActiveView) => {
     onNavigate?.(view);
@@ -78,6 +85,35 @@ export const ProgramNavigation = ({
             Overzicht
             {renderBadge("splash")}
           </Button>
+
+          {showEventTabs && (
+            <>
+              <Button
+                variant={activeView === "today" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => handleClick("today")}
+                className={tabClass("today")}
+                role="tab"
+                aria-selected={activeView === "today"}
+              >
+                <Sparkles className="h-4 w-4" />
+                Vandaag
+                {renderBadge("today")}
+              </Button>
+              <Button
+                variant={activeView === "map" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => handleClick("map")}
+                className={tabClass("map")}
+                role="tab"
+                aria-selected={activeView === "map"}
+              >
+                <MapPin className="h-4 w-4" />
+                Kaart
+                {renderBadge("map")}
+              </Button>
+            </>
+          )}
 
           {isMultiDay && (
             <Button

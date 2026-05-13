@@ -1,0 +1,25 @@
+{
+  "name": "Bureau Vlieland — Mijn programma",
+  "short_name": "Mijn programma",
+  "description": "Uw persoonlijke programma, kaart en tickets voor uw verblijf op Vlieland.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0f3a5b",
+  "icons": [
+    {
+      "src": "/email-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/email-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
