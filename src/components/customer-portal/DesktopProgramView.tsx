@@ -219,7 +219,7 @@ export const DesktopProgramView = ({
         />
 
         {/* 2. Action required card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}
-        {(initialSection === "program" || !initialSection) && (
+        {(initialSection === "program" || !initialSection || initialSection === "accept" || initialSection === "billing") && initialSection !== "practical" && initialSection !== "accommodation" && initialSection === "program" && (
           <>
             <ActionRequiredCard
               statusSummary={statusSummary}
