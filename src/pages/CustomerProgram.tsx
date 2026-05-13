@@ -398,6 +398,19 @@ const CustomerProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
+            {(eventMode.eventModeActive || eventMode.isEventDay) && (
+              <Button
+                variant={eventMode.eventModeActive ? "default" : "outline"}
+                size="sm"
+                onClick={() =>
+                  eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
+                }
+                title="Tijdens evenement: snel naar Vandaag, Kaart en tickets"
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                {eventMode.eventModeActive ? "Event-modus aan" : "Event-modus"}
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
               <RefreshCw className="h-4 w-4 mr-2" />
               Vernieuwen
