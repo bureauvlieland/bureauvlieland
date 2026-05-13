@@ -310,6 +310,24 @@ Deno.serve(async (req) => {
         Subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
         HTMLPart: htmlContent,
       });
+      pendingLogs.push({
+        messageIdx: emails.length - 1,
+        logPayload: {
+          email_type: "cancellation_partner",
+          subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
+          recipient_email: getRecipientEmail(provider.email, origin),
+          recipient_name: provider.name,
+          related_request_id: program.id,
+          related_partner_id: providerId,
+          sent_by: "customer",
+          metadata: {
+            template_name: TemplateIds.CANCELLATION_PARTNER,
+            actor: "klant → partner (annulering)",
+            items: provider.items,
+            cancellation_reason: reason || null,
+          },
+        },
+      });
     }
 
     // Accommodation partner cancellation emails
