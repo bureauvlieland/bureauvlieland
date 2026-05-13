@@ -43,6 +43,7 @@ export const ProgramNavigation = ({
   activeView = "program",
   onNavigate,
   badges = {},
+  showEventTabs = false,
 }: ProgramNavigationProps) => {
   const handleClick = (view: ActiveView) => {
     onNavigate?.(view);
