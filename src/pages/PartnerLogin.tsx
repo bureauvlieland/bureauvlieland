@@ -87,7 +87,7 @@ const PartnerLogin = () => {
         // Check if this user is linked to a partner
         const { data: partner, error: partnerError } = await supabase
           .from("partners")
-          .select("id, name")
+          .select("id, name, password_set_at")
           .eq("auth_user_id", data.user.id)
           .eq("is_active", true)
           .single();
@@ -103,15 +103,17 @@ const PartnerLogin = () => {
           return;
         }
 
-        // Mark partner as activated, track login, and clear initial password
+        // Track login + clear initial password. Set password_set_at only the
+        // first time (zodat resend-partner-invitation correct kan blijven
+        // beoordelen of de activatie ooit voltooid is).
         try {
           const now = new Date().toISOString();
           await supabase
             .from("partners")
-            .update({ 
-              password_set_at: now,
+            .update({
               last_login_at: now,
               initial_password: null,
+              ...(partner.password_set_at ? {} : { password_set_at: now }),
             })
             .eq("auth_user_id", data.user.id);
         } catch (err) {
@@ -150,25 +152,40 @@ const PartnerLogin = () => {
     }
 
     setIsLoading(true);
+    // Hard timeout zodat de knop niet eindeloos blijft draaien als
+    // het netwerk/edge function hangt.
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      toast({
+        title: "Time-out",
+        description: "Het verzoek duurt te lang. Probeer het opnieuw of neem contact op met Bureau Vlieland.",
+        variant: "destructive",
+      });
+    }, 15000);
+
     try {
-      const { data, error } = await supabase.functions.invoke("send-partner-reset-email", {
+      const { error } = await supabase.functions.invoke("send-partner-reset-email", {
         body: { email: email.trim() },
       });
+
+      clearTimeout(timeoutId);
 
       if (error) throw error;
 
       toast({
         title: "Wachtwoord reset email verzonden",
-        description: "Controleer je inbox voor de reset link.",
+        description: "Controleer je inbox (en spam) voor de reset link. De link is 1 uur geldig.",
       });
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error("Password reset error:", err);
       toast({
         title: "Fout",
-        description: "Kon geen reset email verzenden. Probeer het opnieuw.",
+        description: "Kon geen reset email verzenden. Probeer het opnieuw of neem contact op met Bureau Vlieland.",
         variant: "destructive",
       });
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };

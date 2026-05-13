@@ -33,6 +33,9 @@ const PartnerResetPassword = () => {
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
+  const [resendEmail, setResendEmail] = useState("");
+  const [isResending, setIsResending] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -167,6 +170,50 @@ const PartnerResetPassword = () => {
 
   // Error state: session expired / invalid link
   if (sessionExpired && !sessionReady) {
+    const handleResend = async () => {
+      const parsed = z.string().email().safeParse(resendEmail.trim());
+      if (!parsed.success) {
+        toast({
+          title: "Ongeldig emailadres",
+          description: "Vul een geldig emailadres in.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsResending(true);
+      const timeoutId = setTimeout(() => {
+        setIsResending(false);
+        toast({
+          title: "Time-out",
+          description: "Het verzoek duurt te lang. Probeer het opnieuw.",
+          variant: "destructive",
+        });
+      }, 15000);
+      try {
+        const { error } = await supabase.functions.invoke("send-partner-reset-email", {
+          body: { email: resendEmail.trim() },
+        });
+        clearTimeout(timeoutId);
+        if (error) throw error;
+        setResendSent(true);
+        toast({
+          title: "Nieuwe link verzonden",
+          description: "Controleer uw inbox (en spam). De link is 1 uur geldig.",
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.error("Resend reset error:", err);
+        toast({
+          title: "Fout",
+          description: "Kon geen nieuwe link versturen. Neem contact op met Bureau Vlieland.",
+          variant: "destructive",
+        });
+      } finally {
+        clearTimeout(timeoutId);
+        setIsResending(false);
+      }
+    };
+
     return (
       <div className="min-h-screen bg-background">
         <Helmet>
@@ -174,15 +221,60 @@ const PartnerResetPassword = () => {
           <meta name="robots" content="noindex, nofollow" />
         </Helmet>
         <Navigation />
-        <main className="container mx-auto px-4 py-16 max-w-md text-center">
-          <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Link verlopen of ongeldig</h1>
-          <p className="text-muted-foreground mb-6">
-            Deze activeringslink is verlopen of niet meer geldig. Neem contact op met Bureau Vlieland om een nieuwe link te ontvangen.
-          </p>
-          <Button onClick={() => navigate("/partner/login")} variant="outline">
-            Naar inlogpagina
-          </Button>
+        <main className="container mx-auto px-4 py-16 max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-2" />
+              <CardTitle>Link verlopen of al gebruikt</CardTitle>
+              <CardDescription>
+                Activerings- en resetlinks zijn 1 uur geldig en kunnen maar één keer gebruikt worden. Vraag hieronder direct een nieuwe link aan.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {resendSent ? (
+                <div className="text-center space-y-4">
+                  <CheckCircle className="h-12 w-12 text-success mx-auto" />
+                  <p className="text-sm text-muted-foreground">
+                    De nieuwe link is verstuurd. Controleer uw inbox (en spam).
+                  </p>
+                  <Button onClick={() => navigate("/partner/login")} variant="outline" className="w-full">
+                    Naar inlogpagina
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resendEmail">Uw emailadres</Label>
+                    <Input
+                      id="resendEmail"
+                      type="email"
+                      placeholder="naam@bedrijf.nl"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      disabled={isResending}
+                      autoComplete="email"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleResend}
+                    disabled={isResending || !resendEmail.trim()}
+                    className="w-full"
+                  >
+                    {isResending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Stuur nieuwe link
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/partner/login")}
+                    variant="ghost"
+                    className="w-full"
+                    disabled={isResending}
+                  >
+                    Terug naar inlogpagina
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </main>
         <Footer />
       </div>
