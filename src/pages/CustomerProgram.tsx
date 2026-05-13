@@ -36,7 +36,7 @@ const CustomerProgram = () => {
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
   const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
-  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "billing">("splash");
+  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept">("splash");
   
   const {
     program,
