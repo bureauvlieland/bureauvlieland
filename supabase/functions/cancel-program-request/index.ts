@@ -267,15 +267,21 @@ Deno.serve(async (req) => {
     const emails: any[] = [];
 
     // Partner cancellation emails
+    const customerLabel = program.customer_company || program.customer_name || "";
     for (const [, provider] of providers) {
       const templateVariables = {
         partner_name: sanitizeHtml(provider.name),
-        customer_name: "Bureau Vlieland",
-        company_name: "",
+        customer_name: sanitizeHtml(customerLabel),
+        company_name: sanitizeHtml(program.customer_company || ""),
         reference_number: program.reference_number || "",
+        event_dates: dates,
         dates: dates,
         cancellation_reason: reason ? sanitizeHtml(reason) : "",
+        cancelled_items: provider.items
+          .map((item) => `<p style="margin: 5px 0;">• ${sanitizeHtml(item)}</p>`)
+          .join(""),
         activities_list: provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join(""),
+        activity_name: sanitizeHtml(provider.items[0] || "aanvraag"),
       };
 
       const partnerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_PARTNER, templateVariables);
