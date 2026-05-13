@@ -544,7 +544,52 @@ const CustomerProgram = () => {
             <DesktopProgramView {...viewProps} initialSection="accept" />
           )
         )}
+
+        {/* Today (event-modus) */}
+        {effectiveView === "today" && (
+          <TodayView
+            selectedDates={selectedDates}
+            items={program.items}
+            currentDayIndex={eventMode.currentDayIndex}
+            isUpcoming={eventMode.isUpcoming}
+            numberOfPeople={program.number_of_people}
+            customerCompany={(program as any).customer_company}
+            customerName={program.customer_name}
+          />
+        )}
+
+        {/* Map (event-modus) */}
+        {effectiveView === "map" && (
+          <ProgramMap
+            items={program.items}
+            selectedDates={selectedDates}
+            accommodationLabel={(accommodation as any)?.partner_name || "Logies"}
+            accommodationLat={(accommodation as any)?.location_lat ?? null}
+            accommodationLng={(accommodation as any)?.location_lng ?? null}
+            accommodationAddress={(accommodation as any)?.location_address ?? null}
+          />
+        )}
       </main>
+
+      {/* Extra bottom padding op mobile zodat content niet onder de bottom-nav valt */}
+      {isMobile && <div className="h-16" />}
+
+      {/* Mobile bottom nav — alleen tijdens event-modus */}
+      {isMobile && eventMode.eventModeActive && (
+        <MobileBottomNav
+          active={
+            (["today", "program", "map", "practical"].includes(effectiveView)
+              ? (effectiveView as BottomNavView)
+              : "today") as BottomNavView
+          }
+          onChange={(v) => handleNavigate(v)}
+          badges={{
+            program:
+              statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0) >
+              0,
+          }}
+        />
+      )}
 
       <Footer />
 
