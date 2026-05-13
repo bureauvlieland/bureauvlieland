@@ -92,7 +92,7 @@ export const TodayView = ({
       if (!t) return;
       const [hh, mm] = t.split(":").map(Number);
       const start = hh * 60 + (mm || 0);
-      const end = start + (i.duration || 60);
+      const end = start + (Number(i.duration) || 60);
       if (nowMinutes >= start && nowMinutes < end) active = idx;
     });
     return active;
