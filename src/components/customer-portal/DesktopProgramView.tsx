@@ -297,7 +297,7 @@ export const DesktopProgramView = ({
         )}
 
         {/* 4. Program, billing, terms, contact - visible when not showing accommodation or billing-only */}
-        {initialSection !== "accommodation" && initialSection !== "billing" && (
+        {(initialSection === "program" || !initialSection) && (
           <>
             {/* Program content only (no billing) */}
             <div id="program" className="scroll-mt-20">
