@@ -86,6 +86,35 @@ export const ProgramNavigation = ({
             {renderBadge("splash")}
           </Button>
 
+          {showEventTabs && (
+            <>
+              <Button
+                variant={activeView === "today" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => handleClick("today")}
+                className={tabClass("today")}
+                role="tab"
+                aria-selected={activeView === "today"}
+              >
+                <Sparkles className="h-4 w-4" />
+                Vandaag
+                {renderBadge("today")}
+              </Button>
+              <Button
+                variant={activeView === "map" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => handleClick("map")}
+                className={tabClass("map")}
+                role="tab"
+                aria-selected={activeView === "map"}
+              >
+                <MapPin className="h-4 w-4" />
+                Kaart
+                {renderBadge("map")}
+              </Button>
+            </>
+          )}
+
           {isMultiDay && (
             <Button
               variant={activeView === "accommodation" ? "secondary" : "ghost"}
