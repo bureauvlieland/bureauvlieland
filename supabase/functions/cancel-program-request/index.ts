@@ -265,10 +265,11 @@ Deno.serve(async (req) => {
     // Build emails
     const replyTo = buildReplyTo(program.reference_number);
     const emails: any[] = [];
+    const pendingLogs: Array<{ messageIdx: number; logPayload: any }> = [];
 
     // Partner cancellation emails
     const customerLabel = program.customer_company || program.customer_name || "";
-    for (const [, provider] of providers) {
+    for (const [providerId, provider] of providers) {
       const templateVariables = {
         partner_name: sanitizeHtml(provider.name),
         customer_name: sanitizeHtml(customerLabel),
