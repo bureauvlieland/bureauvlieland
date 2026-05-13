@@ -95,7 +95,7 @@ export const ContactAccommodationDialog = ({
             </div>
             <DialogTitle>Bericht verstuurd</DialogTitle>
             <DialogDescription>
-              Uw bericht is verzonden naar Bureau Vlieland. Zij nemen contact op met de accommodatie en koppelen het antwoord aan u terug.
+              Uw bericht is namens Bureau Vlieland naar de accommodatie verzonden. Zodra zij reageren, ontvangt u daarvan een e-mail én verschijnt het antwoord hier in het overzicht.
             </DialogDescription>
             <Button onClick={handleClose} className="mt-2">Sluiten</Button>
           </div>
@@ -113,14 +113,14 @@ export const ContactAccommodationDialog = ({
             Bericht via Bureau Vlieland
           </DialogTitle>
           <DialogDescription>
-            Uw bericht wordt via Bureau Vlieland doorgestuurd naar de accommodatie. Bureau Vlieland fungeert als tussenpersoon voor alle communicatie.
+            Uw bericht wordt namens Bureau Vlieland direct naar de accommodatie verzonden. Hun antwoord komt automatisch bij ons binnen — u ontvangt daarvan een e-mail én ziet het hier in het overzicht.
           </DialogDescription>
         </DialogHeader>
 
         {isBureauCentral && (
           <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
             <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>Alle communicatie met de accommodatie verloopt via Bureau Vlieland. Uw contactgegevens worden niet gedeeld met de accommodatie.</span>
+            <span>Uw contactgegevens worden niet met de accommodatie gedeeld. Alle communicatie verloopt via Bureau Vlieland.</span>
           </div>
         )}
 
