@@ -265,10 +265,11 @@ Deno.serve(async (req) => {
     // Build emails
     const replyTo = buildReplyTo(program.reference_number);
     const emails: any[] = [];
+    const pendingLogs: Array<{ messageIdx: number; logPayload: any }> = [];
 
     // Partner cancellation emails
     const customerLabel = program.customer_company || program.customer_name || "";
-    for (const [, provider] of providers) {
+    for (const [providerId, provider] of providers) {
       const templateVariables = {
         partner_name: sanitizeHtml(provider.name),
         customer_name: sanitizeHtml(customerLabel),
@@ -309,6 +310,24 @@ Deno.serve(async (req) => {
         Subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
         HTMLPart: htmlContent,
       });
+      pendingLogs.push({
+        messageIdx: emails.length - 1,
+        logPayload: {
+          email_type: "cancellation_partner",
+          subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
+          recipient_email: getRecipientEmail(provider.email, origin),
+          recipient_name: provider.name,
+          related_request_id: program.id,
+          related_partner_id: providerId,
+          sent_by: "customer",
+          metadata: {
+            template_name: TemplateIds.CANCELLATION_PARTNER,
+            actor: "klant → partner (annulering)",
+            items: provider.items,
+            cancellation_reason: reason || null,
+          },
+        },
+      });
     }
 
     // Accommodation partner cancellation emails
@@ -340,6 +359,25 @@ Deno.serve(async (req) => {
           </div>
         `,
       });
+      pendingLogs.push({
+        messageIdx: emails.length - 1,
+        logPayload: {
+          email_type: "cancellation_accommodation_partner",
+          subject: `${subjectPrefix}${accTemplate?.subject || `Logiesaanvraag geannuleerd — ${program.reference_number || ""}`}`,
+          recipient_email: getRecipientEmail(accPartner.email, origin),
+          recipient_name: accPartner.name,
+          related_request_id: program.id,
+          related_accommodation_id: program.linked_accommodation_id || null,
+          related_partner_id: partnerId,
+          sent_by: "customer",
+          metadata: {
+            template_name: TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER,
+            actor: "klant → logiespartner (annulering)",
+            accommodation_name: accPartner.accommodationName,
+            cancellation_reason: reason || null,
+          },
+        },
+      });
     }
 
     // Customer confirmation email
@@ -366,14 +404,54 @@ Deno.serve(async (req) => {
         </div>
       `,
     });
+    pendingLogs.push({
+      messageIdx: emails.length - 1,
+      logPayload: {
+        email_type: "cancellation_customer",
+        subject: `${subjectPrefix}${customerTemplate?.subject || "Bevestiging: Uw aanvraag is geannuleerd"}`,
+        recipient_email: program.customer_email,
+        recipient_name: program.customer_name,
+        related_request_id: program.id,
+        sent_by: "customer",
+        metadata: {
+          template_name: TemplateIds.CANCELLATION_CUSTOMER,
+          actor: "system → klant (annuleringsbevestiging)",
+          providers_count: providers.size + accommodationPartners.size,
+          cancellation_reason: reason || null,
+        },
+      },
+    });
 
-    // Send emails
+    // Send emails + log
+    let mailjetResp: any = null;
+    let sendError: string | null = null;
     try {
       if (emails.length > 0) {
-        await sendEmailViaMailjet(emails);
+        mailjetResp = await sendEmailViaMailjet(emails);
       }
     } catch (emailError) {
       console.error("Failed to send cancellation emails:", emailError);
+      sendError = emailError instanceof Error ? emailError.message : "Unknown";
+    }
+
+    if (pendingLogs.length > 0) {
+      const sentAt = new Date().toISOString();
+      const rows = pendingLogs.map(({ logPayload, messageIdx }) => {
+        const messageId = mailjetResp?.Messages?.[messageIdx]?.To?.[0]?.MessageID?.toString() || null;
+        const ok = !sendError && !!mailjetResp;
+        return {
+          ...logPayload,
+          status: ok ? "sent" : "failed",
+          error_message: ok ? null : sendError,
+          mailjet_message_id: messageId,
+          sent_at: ok ? sentAt : null,
+        };
+      });
+      try {
+        await supabase.from("email_log").insert(rows);
+      } catch (logErr) {
+        console.error("Error writing email_log batch:", logErr);
+      }
     }
 
     return new Response(

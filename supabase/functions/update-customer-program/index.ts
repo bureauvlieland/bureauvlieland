@@ -425,7 +425,7 @@ Deno.serve(async (req) => {
         const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
 
         // Email providers about date change
-        for (const [, provider] of providerItems) {
+        for (const [providerId, provider] of providerItems) {
           const itemsListHtml = provider.items.map(i => `<li>${sanitizeHtml(i)}</li>`).join("");
           
           const template = await getRenderedTemplate(TemplateIds.DATE_CHANGE_PARTNER, {
@@ -455,6 +455,24 @@ Deno.serve(async (req) => {
             To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
             Subject: `${subjectPrefix}${emailSubject}`,
             HTMLPart: emailBody,
+          });
+          pendingEmailLogs.push({
+            messageIdx: emailMessages.length - 1,
+            logPayload: {
+              email_type: "date_change_partner",
+              subject: `${subjectPrefix}${emailSubject}`,
+              recipient_email: getRecipientEmail(provider.email, origin),
+              recipient_name: provider.name,
+              related_request_id: program.id,
+              related_partner_id: providerId,
+              sent_by: "update-customer-program",
+              metadata: {
+                template_name: TemplateIds.DATE_CHANGE_PARTNER,
+                actor: "klant → partner (datumwijziging)",
+                new_dates: newDates,
+                items: provider.items,
+              },
+            },
           });
         }
 
@@ -617,6 +635,22 @@ Deno.serve(async (req) => {
           To: [{ Email: program.customer_email, Name: program.customer_name }],
           Subject: `${subjectPrefix}${dateChangeCustomerSubject}`,
           HTMLPart: dateChangeCustomerBody,
+        });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "date_change_customer",
+            subject: `${subjectPrefix}${dateChangeCustomerSubject}`,
+            recipient_email: program.customer_email,
+            recipient_name: program.customer_name,
+            related_request_id: program.id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "date_change_customer",
+              actor: "system → klant (datumwijziging bevestigd)",
+              new_dates: newDates,
+            },
+          },
         });
       }
     }
@@ -813,6 +847,22 @@ Deno.serve(async (req) => {
             </div>
           `,
         });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "all_items_accepted_bureau",
+            subject: allAcceptedSubject,
+            recipient_email: bureauEmail,
+            recipient_name: "Bureau Vlieland",
+            related_request_id: program.id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "all_items_accepted_bureau",
+              actor: "system → bureau (alle items akkoord)",
+              item_count: allItems.length,
+            },
+          },
+        });
       }
 
       console.log(`Customer accepted item ${acceptItemId}`);
@@ -883,6 +933,24 @@ Deno.serve(async (req) => {
           To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
           Subject: `${subjectPrefix}${emailSubject}`,
           HTMLPart: emailBody,
+        });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "item_cancelled_partner",
+            subject: `${subjectPrefix}${emailSubject}`,
+            recipient_email: getRecipientEmail(item.provider_email, origin),
+            recipient_name: item.provider_name,
+            related_request_id: program.id,
+            related_item_id: cancelItemId,
+            related_partner_id: item.provider_id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: TemplateIds.ITEM_CANCELLED_PARTNER,
+              actor: "klant → partner (item geannuleerd)",
+              block_name: item.block_name,
+            },
+          },
         });
       }
 
@@ -1293,7 +1361,7 @@ Deno.serve(async (req) => {
         .join(", ");
 
       // Email to partners with billing details
-      for (const [, provider] of providerItems) {
+      for (const [providerId, provider] of providerItems) {
         const itemsList = provider.items.map(i => {
           const t = getEffectiveItemTime(i);
           return `<li>${sanitizeHtml(i.block_name)}${t ? ` (${sanitizeHtml(t)})` : ""}</li>`;
@@ -1354,6 +1422,23 @@ Deno.serve(async (req) => {
           To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
           Subject: `${subjectPrefix}${emailSubject}`,
           HTMLPart: emailBody,
+        });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "booking_confirmed_partner",
+            subject: `${subjectPrefix}${emailSubject}`,
+            recipient_email: getRecipientEmail(provider.email, origin),
+            recipient_name: provider.name,
+            related_request_id: program.id,
+            related_partner_id: providerId,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: TemplateIds.BOOKING_CONFIRMED_PARTNER,
+              actor: "system → partner (boeking definitief)",
+              item_count: provider.items.length,
+            },
+          },
         });
       }
 
@@ -1434,6 +1519,22 @@ Deno.serve(async (req) => {
         To: [{ Email: program.customer_email, Name: program.customer_name }],
         Subject: `${subjectPrefix}${bookingCustomerSubject}`,
         HTMLPart: bookingCustomerBody,
+      });
+      pendingEmailLogs.push({
+        messageIdx: emailMessages.length - 1,
+        logPayload: {
+          email_type: "booking_confirmed_customer",
+          subject: `${subjectPrefix}${bookingCustomerSubject}`,
+          recipient_email: program.customer_email,
+          recipient_name: program.customer_name,
+          related_request_id: program.id,
+          sent_by: "update-customer-program",
+          metadata: {
+            template_name: TemplateIds.BOOKING_CONFIRMED_CUSTOMER,
+            actor: "system → klant (boekingsbevestiging)",
+            confirmed_count: confirmedItems?.length || 0,
+          },
+        },
       });
     }
 
@@ -1563,6 +1664,23 @@ Deno.serve(async (req) => {
               To: [{ Email: getRecipientEmail(block.provider.email, origin), Name: block.provider.name }],
               Subject: `${subjectPrefix}${emailSubject}`,
               HTMLPart: emailBody,
+            });
+            pendingEmailLogs.push({
+              messageIdx: emailMessages.length - 1,
+              logPayload: {
+                email_type: "item_added_partner",
+                subject: `${subjectPrefix}${emailSubject}`,
+                recipient_email: getRecipientEmail(block.provider.email, origin),
+                recipient_name: block.provider.name,
+                related_request_id: program.id,
+                related_partner_id: block.provider.id,
+                sent_by: "update-customer-program",
+                metadata: {
+                  template_name: TemplateIds.ITEM_ADDED_PARTNER,
+                  actor: "klant → partner (item toegevoegd)",
+                  block_name: block.name,
+                },
+              },
             });
           }
           
@@ -1702,6 +1820,22 @@ Deno.serve(async (req) => {
           Subject: `${subjectPrefix}${emailSubject}`,
           HTMLPart: emailBody,
         });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "item_changes_partner",
+            subject: `${subjectPrefix}${emailSubject}`,
+            recipient_email: getRecipientEmail(provider.email, origin),
+            recipient_name: provider.providerName,
+            related_request_id: program.id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: TemplateIds.ITEM_CHANGES_PARTNER,
+              actor: "klant → partner (programma-wijzigingen)",
+              change_count: provider.changes.length,
+            },
+          },
+        });
       }
 
       // Send customer confirmation email for item changes
@@ -1750,6 +1884,22 @@ Deno.serve(async (req) => {
         To: [{ Email: program.customer_email, Name: program.customer_name }],
         Subject: `${subjectPrefix}${itemChangesCustomerSubject}`,
         HTMLPart: itemChangesCustomerBody,
+      });
+      pendingEmailLogs.push({
+        messageIdx: emailMessages.length - 1,
+        logPayload: {
+          email_type: "item_changes_customer",
+          subject: `${subjectPrefix}${itemChangesCustomerSubject}`,
+          recipient_email: program.customer_email,
+          recipient_name: program.customer_name,
+          related_request_id: program.id,
+          sent_by: "update-customer-program",
+          metadata: {
+            template_name: TemplateIds.ITEM_CHANGES_CUSTOMER,
+            actor: "system → klant (wijzigingen bevestigd)",
+            change_count: changes.length,
+          },
+        },
       });
     }
 
