@@ -8,6 +8,8 @@ import {
   Receipt,
   ClipboardList,
   FileSignature,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
 
 type ActiveView =
@@ -16,7 +18,9 @@ type ActiveView =
   | "program"
   | "practical"
   | "billing"
-  | "accept";
+  | "accept"
+  | "today"
+  | "map";
 
 export interface TabBadge {
   label: string;
@@ -29,6 +33,8 @@ interface ProgramNavigationProps {
   activeView?: ActiveView;
   onNavigate?: (view: ActiveView) => void;
   badges?: Partial<Record<ActiveView, TabBadge | undefined>>;
+  /** Toon "Vandaag" en "Kaart" tabs (event-modus) */
+  showEventTabs?: boolean;
 }
 
 export const ProgramNavigation = ({
