@@ -296,7 +296,7 @@ const CustomerProgram = () => {
   // Navigate to a specific view
   // Decision 1: Splash always shown for multi-day (no localStorage skip)
   // Decision 2: Single-day → skip splash, go directly to program
-  const handleNavigate = (view: "splash" | "accommodation" | "program" | "billing") => {
+  const handleNavigate = (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept") => {
     setActiveView(view);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
