@@ -410,14 +410,50 @@ const CustomerProgram = () => {
       )}
 
 
-      {/* Navigation tabs — always visible on desktop, including splash */}
-      {!isMobile && (
-        <ProgramNavigation
-          isMultiDay={isMultiDay}
-          activeView={effectiveView}
-          onNavigate={handleNavigate}
-        />
-      )}
+      {/* Compute tab badges */}
+      {(() => null)()}
+      {!isMobile && (() => {
+        const termsAccepted = !!program.terms_accepted_at;
+        const actionCount = statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0);
+        const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
+          && !accommodationQuotes.some((q) => q.status === "selected");
+        const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");
+        const guestIncomplete = !!guestDetails && (
+          !guestDetails.guest_names ||
+          (guestDetails.showDietary && !guestDetails.dietary_notes) ||
+          (guestDetails.showRoomAssignment && !guestDetails.room_assignment)
+        );
+        const allConfirmed = statusSummary.total > 0
+          && statusSummary.pending === 0
+          && statusSummary.alternative === 0
+          && (statusSummary.counter_proposed || 0) === 0;
+        const badges = {
+          accommodation: hasNewAccommodationQuote
+            ? { label: "Nieuw", variant: "destructive" as const }
+            : hasSelectedAccommodation
+            ? { label: "✓", variant: "secondary" as const }
+            : undefined,
+          program: actionCount > 0
+            ? { label: `${actionCount} actie${actionCount > 1 ? "s" : ""}`, variant: "destructive" as const }
+            : undefined,
+          practical: guestIncomplete
+            ? { label: "Aanvullen", variant: "outline" as const }
+            : undefined,
+          accept: termsAccepted
+            ? { label: "✓", variant: "secondary" as const }
+            : allConfirmed
+            ? { label: "Klaar", variant: "destructive" as const }
+            : undefined,
+        };
+        return (
+          <ProgramNavigation
+            isMultiDay={isMultiDay}
+            activeView={effectiveView}
+            onNavigate={handleNavigate}
+            badges={badges}
+          />
+        );
+      })()}
 
       <main className="container mx-auto px-4 py-8">
         {/* Splash view — only for multi-day */}
@@ -451,12 +487,30 @@ const CustomerProgram = () => {
           )
         )}
 
-        {/* Decision 4: Billing as separate tab/view */}
+        {/* Practical view */}
+        {effectiveView === "practical" && (
+          isMobile ? (
+            <MobileProgramView {...viewProps} initialSection="practical" />
+          ) : (
+            <DesktopProgramView {...viewProps} initialSection="practical" />
+          )
+        )}
+
+        {/* Billing as separate tab */}
         {effectiveView === "billing" && (
           isMobile ? (
             <MobileProgramView {...viewProps} initialSection="billing" />
           ) : (
             <DesktopProgramView {...viewProps} initialSection="billing" />
+          )
+        )}
+
+        {/* Accept (akkoord) view */}
+        {effectiveView === "accept" && (
+          isMobile ? (
+            <MobileProgramView {...viewProps} initialSection="accept" />
+          ) : (
+            <DesktopProgramView {...viewProps} initialSection="accept" />
           )
         )}
       </main>
