@@ -167,7 +167,15 @@ export const CustomerProgramItem = ({
             </div>
             
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/5"
+                aria-label={isOpen ? "Details verbergen" : "Details, tijd en opmerkingen aanpassen"}
+              >
+                <span className="text-sm font-medium">
+                  {isOpen ? "Minder details" : "Details & aanpassen"}
+                </span>
                 {isOpen ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (
