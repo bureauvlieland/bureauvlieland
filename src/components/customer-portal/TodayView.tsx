@@ -171,7 +171,7 @@ export const TodayView = ({
                       </div>
                       {item.duration ? (
                         <div className="text-[10px] text-muted-foreground mt-1">
-                          {item.duration} min
+                          {item.duration}
                         </div>
                       ) : null}
                       {isActive && (
