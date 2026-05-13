@@ -374,7 +374,7 @@ const CustomerProgram = () => {
 
   // Bij eerste render binnen het programma-venster: spring naar "Vandaag"
   // (alleen bij splash en alleen als event-modus actief is — voorkomt onverwachte hops).
-  React.useEffect(() => {
+  useEffect(() => {
     if (eventMode.eventModeActive && activeView === "splash") {
       setActiveView("today");
     }
