@@ -332,7 +332,7 @@ export const CustomerProgramItem = ({
               <div className="flex items-start gap-2">
                 <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">Reactie aanbieder:</p>
+                  <p className="font-medium">Toelichting:</p>
                   <p className="mt-0.5">{item.status_note}</p>
                 </div>
               </div>
