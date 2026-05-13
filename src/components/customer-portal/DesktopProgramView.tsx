@@ -17,6 +17,8 @@ import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
 import { GuestDetailsCard } from "./GuestDetailsCard";
 import { CompactBillingSection } from "./CompactBillingSection";
+import { PracticalView } from "./PracticalView";
+import { AcceptView } from "./AcceptView";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
