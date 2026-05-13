@@ -1,3 +1,4 @@
+import type React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,22 @@ export const ProgramNavigation = ({
     );
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
+    const tabs = Array.from(
+      e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    );
+    if (tabs.length === 0) return;
+    const idx = tabs.findIndex((t) => t === document.activeElement);
+    let next = idx;
+    if (e.key === "ArrowRight") next = idx < 0 ? 0 : (idx + 1) % tabs.length;
+    if (e.key === "ArrowLeft") next = idx < 0 ? tabs.length - 1 : (idx - 1 + tabs.length) % tabs.length;
+    if (e.key === "Home") next = 0;
+    if (e.key === "End") next = tabs.length - 1;
+    e.preventDefault();
+    tabs[next]?.focus();
+  };
+
   return (
     <nav
       className={cn(
@@ -72,7 +89,10 @@ export const ProgramNavigation = ({
       aria-label="Programma navigatie"
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center gap-1 py-2 overflow-x-auto">
+        <div
+          className="flex items-center gap-1 py-2 overflow-x-auto"
+          onKeyDown={handleKeyDown}
+        >
           <Button
             variant={activeView === "splash" ? "secondary" : "ghost"}
             size="sm"
