@@ -33,6 +33,7 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 import { TodayView } from "@/components/customer-portal/TodayView";
 import { ProgramMap } from "@/components/customer-portal/ProgramMap";
 import { MobileBottomNav, type BottomNavView } from "@/components/customer-portal/MobileBottomNav";
+import { InstallPwaBanner } from "@/components/customer-portal/InstallPwaBanner";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
