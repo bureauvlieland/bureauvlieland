@@ -359,6 +359,25 @@ Deno.serve(async (req) => {
           </div>
         `,
       });
+      pendingLogs.push({
+        messageIdx: emails.length - 1,
+        logPayload: {
+          email_type: "cancellation_accommodation_partner",
+          subject: `${subjectPrefix}${accTemplate?.subject || `Logiesaanvraag geannuleerd — ${program.reference_number || ""}`}`,
+          recipient_email: getRecipientEmail(accPartner.email, origin),
+          recipient_name: accPartner.name,
+          related_request_id: program.id,
+          related_accommodation_id: program.linked_accommodation_id || null,
+          related_partner_id: partnerId,
+          sent_by: "customer",
+          metadata: {
+            template_name: TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER,
+            actor: "klant → logiespartner (annulering)",
+            accommodation_name: accPartner.accommodationName,
+            cancellation_reason: reason || null,
+          },
+        },
+      });
     }
 
     // Customer confirmation email
