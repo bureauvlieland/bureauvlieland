@@ -55,7 +55,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface DesktopProgramViewProps {
   invoicingMode?: string;
-  initialSection?: "accommodation" | "program" | "billing";
+  initialSection?: "accommodation" | "program" | "practical" | "billing" | "accept";
   program: {
     customer_name: string;
     customer_company?: string;
