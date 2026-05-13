@@ -1,99 +1,106 @@
-# Mail-review: complete audit + kleine fixes
 
-## Wat ik ga doen
+# Verbeterplan klantenpagina (`/programma/:token`)
 
-Stap 1: **Inventarisatie** — alle e-mails systematisch in kaart brengen
-Stap 2: **Audit** — per mail langs een vaste checklist
-Stap 3: **Kleine fixes direct** — typo's, ontbrekende variabelen, rommelige merge tags, lege onderwerpen, ontbrekende klant/activiteit-info, inconsistente tone, dubbele groet/footer
-Stap 4: **Voorstellen apart** — samenvoegen, schrappen, herbouw — krijg jij eerst te zien
-Stap 5: **Verificatie** — render elke gewijzigde template via `render-email-template` met testdata, ik kijk of alles invult
+Doel: het portaal beter laten werken in **twee fases** — vóór het evenement (samenstellen, akkoord) én tijdens het evenement (snel raadplegen, locaties, routes). Daarnaast IA opruimen en processen duidelijker maken.
 
-## Scope (vastgesteld)
+---
 
-**52 DB-templates** in `email_templates` (renderbaar via `render-email-template`):
-- Programma-aanvraag flow (4): `program_request_*`, `quote_request_*`
-- Logies-flow (10): `accommodation_*`
-- Status-mails (3): `status_confirmed/alternative/unavailable`
-- Wijzigingen (8): `date_change_*`, `people_change_*`, `item_changes_*`, `customer_program_update_partner`
-- Annuleringen (5): `cancellation_*`
-- Negotiation (2): `counter_proposal_*`
-- Boeking & oplevering (4): `booking_confirmed_*`, `arrival_reminder`, `guest_details_reminder`
-- Reminders (3): `reminder_*`
-- Pre-sales (4): `presales_*`
-- Partner-onboarding (3): `partner_invitation`, `partner_intro_portal`, `partner_password_reset`
-- Chat & inbound (4): `chat_*`, `inbound_reply_*`, `customer_accommodation_message`
-- Item-mails (3): `item_added/cancelled_partner`, `proforma_commission_notification`
-- Offerte (1): `quote_offer_customer`, `quote_expired_partner`
+## 1. Informatie-architectuur (navigatie)
 
-**~20 hardcoded edge-function mails** zonder DB-template, o.a.:
-`cancel-program-request`, `notify-partner-cancellation`, `notify-partner-item-deletion`, `notify-partner-price-change`, `notify-customer-price-change`, `forward-bureau-invoice`, `forward-commission-invoice`, `forward-purchase-invoice`, `register-partner-invoice`, `send-bureau-invoice-to-customer`, `send-commission-invoice-to-partner`, `send-ticket-email`, `send-arrival-reminder` (deels), `send-partner-mailing`, `bulk-invite-partners`, `invite-partner`, `notify-new-chat(-reply)`, `update-commission-status`, `send-partner-intro-email`, `send-project-email` (vrije tekst).
+Huidig: Overzicht · (Logies) · Programma · Facturatie. Onderdelen als Gasten/dieet, Geschiedenis en Akkoord zitten verstopt in dialogen of onderaan.
 
-## Audit-checklist per mail
+Voorgestelde tabs (volgorde = klantreis):
 
-| # | Check | Voorbeeld van wat misgaat |
-|---|---|---|
-| 1 | **Onderwerp** vult juist in (geen `{{...}}` lekt door) | "Annulering: voor " (lege variabele) |
-| 2 | **Klant/partner/activiteit** is altijd benoemd waar relevant | Gebrek dat je net meldde bij annulering |
-| 3 | **Tone**: klant = "u", partner = "je" — consistent | "Beste partner, u krijgt..." |
-| 4 | **Groet & ondertekening** uniform (Bureau Vlieland, Erwin/team) | Ene mail "Groet Erwin", andere "Met vriendelijke groet" |
-| 5 | **CTA** duidelijk: knop + linkbestemming klopt (admin/partner/klant portal correct) | Knop verwijst naar admin-route in klant-mail |
-| 6 | **Variabele-fallbacks** voor optionele velden (geen "—" of "null") | "voor — personen op " |
-| 7 | **PII-privacy** in partner-mails (geen klant-mail/telefoon tenzij nodig) | Centrale invoice-model bewaken |
-| 8 | **Reply-to** logisch (project-subaddressing waar passend) | |
-| 9 | **HTML-opmaak** consistent (footer, logo, kleuren, knopstijl) | |
-| 10 | **Dubbele/overlappende mails** (zelfde event 2x via verschillende paden) | bijv. `item_changes_*` vs `customer_program_update_partner` |
-| 11 | **Logging** met `metadata.template_name` + `actor` (audit-contract) | |
-| 12 | **Test-mode rerouting** werkt (preview-omgeving) | |
+```
+Overzicht  ·  Logies*  ·  Programma  ·  Praktisch  ·  Facturatie  ·  Akkoord
+                                          (nieuw)                    (nieuw)
+```
 
-## Deliverable: audit-rapport
+- **Praktisch** (nieuw): gasten & dieetwensen, kamerindeling, boot/fiets-tickets met PDF, contactpersonen aanbieders, eilandinfo (parkeren, tassenservice, weer), download-PDF & ICS-kalender.
+- **Akkoord** (nieuw): aparte tab i.p.v. onderaan Programma — facturatiegegevens-check, voorwaarden, ondertekenen, en ná akkoord de bevestigingsstatus per onderdeel.
+- **Facturatie** blijft, maar verschuift naar "factuuroverzicht / betaalstatus" (minder verstopt na akkoord).
+- Logies-tab alleen bij meerdaags (ongewijzigd).
 
-**Excel + Markdown** in `/mnt/documents/email-audit.md` en `/mnt/documents/email-audit.xlsx` met per mail:
+Tabs krijgen badges (bv. "2 acties", "nieuwe offerte", "ondertekend ✓") zodat de klant in één blik ziet waar iets te doen is.
 
-| Kolom | Inhoud |
-|---|---|
-| ID / functie | `accommodation_quote_notification` of `cancel-program-request` |
-| Trigger | Wanneer wordt deze verstuurd |
-| Ontvanger(s) | Klant / Partner / Bureau |
-| Status | ✅ OK / ⚠️ Klein issue / 🔴 Groot issue |
-| Gevonden issues | Concrete punten uit checklist |
-| Voorstel | Houden / Aanpassen / Samenvoegen met X / Schrappen |
-| Actie nu | Klein gefixt / Wacht op akkoord |
+## 2. Procesuitleg verduidelijken
 
-Onderaan: **samenvattingstabel** "te schrappen", "samen te voegen", "te herbouwen", "uniformeer-acties" — daarop wacht ik jouw akkoord voor fase 2.
+- Splash blijft, maar **stappen worden interactief**: huidige stap is gemarkeerd, toekomstige stappen zijn dimmed met "wat gebeurt hier" tooltip.
+- Per tab een korte **"Wat kunt u hier doen"-strip** bovenaan (1 regel + uitklap "Meer uitleg") in plaats van losse infokaarten her en der.
+- Eén consistente **status-taal** (Te beoordelen / Goedgekeurd / Tegenvoorstel / Bevestigd / Bevestigd & getekend) overal hetzelfde — nu varieert dit tussen splash, items en sidebar.
+- "Stille goedkeuring na 7 dagen" uitleggen op de plek waar de timer telt (item-niveau countdown chip), niet alleen in algemene tekst.
+- Verwijder dubbele uitleg op splash + program-intro.
 
-## Wat ik direct fix (zonder akkoord)
+## 3. Event-modus (tijdens het verblijf)
 
-- Typo's en grammatica
-- Lekkende `{{variabelen}}` (variabele bestaat niet of is null)
-- Ontbrekende klantnaam/activiteit/datums in onderwerp of body waar de data wel beschikbaar is in de calling edge function
-- Tone-inconsistenties (u/je verkeerd)
-- Uniformeer ondertekening + footer per doelgroep (klant/partner/intern)
-- Knoplabels en URL-bestemmingen kloppend maken
-- `metadata.template_name` + `actor` toevoegen aan `logEmail`-calls die ze missen (uit audit-rapport `.lovable/audit-email-logging.md` bleken er nog 19)
-- HTML-opmaak: dubbele groet, dubbele footer, kapotte tabellen
+Dit is grootste nieuwe stuk. Het portaal werkt al op mobiel maar is gebouwd voor "samenstellen", niet voor "raadplegen onderweg".
 
-## Wat ik **niet** zonder akkoord doe
+### 3a. Automatische schakeling
+Vanaf eerste programmadag t/m laatste dag (en als `terms_accepted_at` is gezet) toont het portaal standaard een nieuwe **Vandaag**-weergave i.p.v. de splash.
 
-- Templates samenvoegen of verwijderen
-- Een mail compleet herschrijven (bv. arrival_reminder of guest_details_reminder)
-- Nieuwe trigger-momenten introduceren of weghalen
-- Wijzigingen die meerdere edge functions raken (bv. één gecombineerde "wijzigingsmail" i.p.v. 4 losse)
+### 3b. Nieuwe "Vandaag"-tab (tijdens evenement)
+- Tijdlijn van de huidige dag, eerstvolgend item bovenaan, "Nu bezig" / "Volgende om 14:00".
+- Per item: tijd, locatie (naam + adres), aanbieder met **"Bel"** en **"Routebeschrijving"** knop (deeplink naar Apple/Google Maps), bijzonderheden, contactpersoon.
+- Snel-tabs: Vandaag · Morgen · Hele week.
+- Bovenin: weer-widget + boot-tijden van de dag (live Doeksen API, bestaat al).
 
-Voor die ingrepen krijg je een lijst in het rapport en kies je per item ja/nee.
+### 3c. Locaties & route
+- Nieuwe **Kaart**-sectie binnen Praktisch óf eigen tab "Op het eiland":
+  - Leaflet-kaart met alle programmalocaties + logies + bootterminal.
+  - Tap op marker → adres, contact, routebeschrijving openen.
+- Kaart werkt offline-tolerant (tiles lazy, bij geen netwerk fallback naar adreslijst).
 
-## Verificatie
+### 3d. Snel-toegang / "Add to Home Screen"
+- **Manifest-only PWA** toevoegen (geen service worker, conform projectregels) zodat de klant het portaal als icoon op het beginscherm kan zetten.
+- Token in URL blijft de auth-laag — installatie bewaart de gepersonaliseerde URL.
+- Op mobiel een eenmalige tip-banner: "Voeg toe aan beginscherm voor snelle toegang tijdens uw verblijf".
 
-- Na elke aanpassing render ik de template met dummy-data via `render-email-template` om te checken dat alle variabelen invullen
-- Voor edge-function mails: dry-run in test-mode (preview rerouting), check `email_log` op `template_name` + `actor`
-- Steekproef van 5 cruciale mails (welkom partner, offerte klant, annulering partner, arrival reminder, bevestiging boeking) krijg je als screenshot in het rapport zodat je visueel kan tekenen
+### 3e. Mobiele bottom-nav tijdens event
+Op mobiel sticky bottom-tabbar (max 4 items): **Vandaag · Programma · Kaart · Contact**. Topbar verbergt de zwaardere tabs (Akkoord/Facturatie staan in een "Meer"-menu).
 
-## Tijd & oplevering
+### 3f. Pull-to-refresh + "laatst bijgewerkt"-stempel
+Klanten begrijpen dan dat data live is en hoe ze ververst.
 
-- Rapport + kleine fixes: in één doorloop
-- Daarna jij in 1 ronde: akkoord op samenvoeg/schrap-voorstellen
-- Fase 2 (samenvoegen/schrappen): aparte ronde
+## 4. Kleinere UX-verbeteringen
 
-## Buiten scope
+- **CustomerProgramItem** (uitklapper) heeft nu meer context — verifieer dat dezelfde labels in mobiele dag-cards verschijnen.
+- **Sticky CTA op mobiel** verbeteren: nu MobileStickyStatus toont alleen voortgang. Vervang door context-CTA ("Akkoord geven", "Logies kiezen", "Bekijk vandaag").
+- **Statusbadges** op tabs (zie §1) i.p.v. losse summary card.
+- **Geschiedenis/timeline** verplaatsen naar collapsible onderaan elk relevant item (nu: aparte component die ruimte vraagt).
+- **Lege-staten** met duidelijke vervolgactie (bv. "Nog geen logies-offertes — verwacht binnen 2 werkdagen").
+- **Splash-fotomozaïek** vervangen door foto's gerelateerd aan het werkelijke programma (categorie-iconen of foto's van geboekte activiteiten) i.p.v. generieke eilandfoto's — meer eigenaarschap.
+- **Print/PDF-knop** prominenter in Praktisch-tab.
 
-- Auth-mails (Supabase signup/recovery) — die loop niet via deze flow
-- AI-gegenereerde mails (Claudia) — andere review nodig
+## 5. Toegankelijkheid & techniek
+
+- Tabbar met `role="tablist"` + keyboard-navigatie (nu losse buttons).
+- Focus-states en aria-labels op uitklapbare items.
+- Respect `prefers-reduced-motion` voor animaties op splash en cart-pulse.
+- Geen service worker (regels), wel `manifest.json` + `display: standalone`.
+
+## 6. Technische impact (kort)
+
+- Nieuwe tabs in `ProgramNavigation.tsx` + view-routing in `CustomerProgram.tsx`.
+- Nieuwe componenten:
+  - `customer-portal/PracticalView.tsx` (gasten, contacten, downloads, eilandinfo).
+  - `customer-portal/TodayView.tsx` (event-modus dagweergave).
+  - `customer-portal/ProgramMap.tsx` (Leaflet, hergebruik patroon uit MapActivity).
+  - `customer-portal/MobileBottomNav.tsx`.
+  - `customer-portal/AcceptView.tsx` (extractie uit huidige Program-view).
+- `public/manifest.json` + iconen + meta-tags in `index.html`.
+- Hook `useEventMode(program)` die op basis van `selected_dates` bepaalt of we in event-modus zitten.
+- Geen DB-wijzigingen verwacht — alle benodigde data bestaat al (locatie, contact, ferry API, accommodatie).
+
+## 7. Voorgestelde uitvoer-volgorde (3 batches)
+
+1. **IA + procesuitleg** (§1, §2, §4 deels) — grootste UX-winst, geen backend.
+2. **Event-modus** (§3a–3c, §3e–3f) — Vandaag-tab + Kaart + bottom-nav.
+3. **PWA install + polish** (§3d, §5, resterende §4).
+
+---
+
+**Voor ik begin** wil ik graag bevestigd zien:
+- Akkoord met opsplitsing in 3 batches (of liever alles in één pass)?
+- Nieuwe tab "Praktisch" en aparte "Akkoord"-tab — akkoord met die naamgeving?
+- Event-modus automatisch activeren op basis van programmadata, of wil je een handmatige toggle ("Tijdens evenement" knop)?
+- PWA: manifest-only (installeerbaar, geen offline) is wat ik aanbeveel — akkoord?
