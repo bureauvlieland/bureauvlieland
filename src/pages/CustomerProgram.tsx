@@ -481,6 +481,7 @@ const CustomerProgram = () => {
             activeView={effectiveView}
             onNavigate={handleNavigate}
             badges={badges}
+            showEventTabs={eventMode.eventModeActive}
           />
         );
       })()}
