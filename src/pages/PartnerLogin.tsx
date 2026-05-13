@@ -103,15 +103,17 @@ const PartnerLogin = () => {
           return;
         }
 
-        // Mark partner as activated, track login, and clear initial password
+        // Track login + clear initial password. Set password_set_at only the
+        // first time (zodat resend-partner-invitation correct kan blijven
+        // beoordelen of de activatie ooit voltooid is).
         try {
           const now = new Date().toISOString();
           await supabase
             .from("partners")
-            .update({ 
-              password_set_at: now,
+            .update({
               last_login_at: now,
               initial_password: null,
+              ...(partner as any).password_set_at ? {} : { password_set_at: now },
             })
             .eq("auth_user_id", data.user.id);
         } catch (err) {
