@@ -247,6 +247,17 @@ const CustomerProgram = () => {
     }
   };
 
+  // Event-modus: automatisch + handmatige toggle (MOET vóór early returns)
+  const eventMode = useEventMode(selectedDates, token ? `bv:event-mode:${token}` : undefined);
+
+  // Bij eerste render binnen het programma-venster: spring naar "Vandaag"
+  useEffect(() => {
+    if (eventMode.eventModeActive && activeView === "splash") {
+      setActiveView("today");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventMode.eventModeActive]);
+
   // Loading state
   if (isLoading) {
     return (
