@@ -231,27 +231,12 @@ Deno.serve(async (req) => {
       admin_link: `${baseUrl}/admin/logies/${request.id}`,
     };
 
-    // Try to get templates from database
-    const [bureauTemplate, customerTemplate] = await Promise.all([
-      getRenderedTemplate(TemplateIds.ACCOMMODATION_REQUEST_BUREAU, templateVariables),
-      getRenderedTemplate(TemplateIds.ACCOMMODATION_REQUEST_CUSTOMER, templateVariables),
-    ]);
-
-    // Use database templates or fallback
-    const bureauEmailHtml = bureauTemplate?.body || getFallbackBureauHtml(request, typeLabels, budgetLabels, baseUrl);
-    const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe logies aanvraag - ${request.number_of_guests} gasten`;
-
+    // Bureau ziet nieuwe logies-aanvraag in admin-dashboard; geen aparte bureau-mail meer.
+    const customerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_REQUEST_CUSTOMER, templateVariables);
     const customerEmailHtml = customerTemplate?.body || getFallbackCustomerHtml(request, typeLabels, portalUrl);
     const customerSubject = customerTemplate?.subject || `${subjectPrefix}Bevestiging logies aanvraag - Bureau Vlieland`;
 
-    // Send emails
     await sendEmailViaMailjet([
-      {
-        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
-        To: [{ Email: getRecipientEmail("erwin@bureauvlieland.nl", origin), Name: "Erwin Soolsma" }],
-        Subject: bureauSubject,
-        HTMLPart: bureauEmailHtml,
-      },
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(request.customer_email, origin), Name: request.customer_name }],
@@ -260,38 +245,21 @@ Deno.serve(async (req) => {
       },
     ]);
 
-    // Log emails
-    await Promise.all([
-      logEmail({
-        email_type: EmailTypes.ACCOMMODATION_REQUEST_BUREAU,
-        subject: bureauSubject,
-        recipient_email: "erwin@bureauvlieland.nl",
-        recipient_name: "Erwin Soolsma",
-        related_accommodation_id: request.id,
-        status: "sent",
-        sent_by: "send-accommodation-request",
-        metadata: {
-          template_name: EmailTypes.ACCOMMODATION_REQUEST_BUREAU,
-          actor: "klant → bureau (nieuwe logies-aanvraag)",
-          number_of_guests: request.number_of_guests,
-        },
-      }),
-      logEmail({
-        email_type: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
-        subject: customerSubject,
-        recipient_email: request.customer_email,
-        recipient_name: request.customer_name,
-        related_accommodation_id: request.id,
-        status: "sent",
-        sent_by: "send-accommodation-request",
-        metadata: {
-          template_name: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
-          actor: "system → klant (bevestiging logies-aanvraag)",
-        },
-      }),
-    ]);
+    await logEmail({
+      email_type: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
+      subject: customerSubject,
+      recipient_email: request.customer_email,
+      recipient_name: request.customer_name,
+      related_accommodation_id: request.id,
+      status: "sent",
+      sent_by: "send-accommodation-request",
+      metadata: {
+        template_name: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
+        actor: "system → klant (bevestiging logies-aanvraag)",
+      },
+    });
 
-    console.log("Accommodation request emails sent successfully");
+    console.log("Accommodation request customer email sent successfully");
 
     return new Response(
       JSON.stringify({ success: true }),
