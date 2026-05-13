@@ -425,7 +425,7 @@ Deno.serve(async (req) => {
         const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
 
         // Email providers about date change
-        for (const [, provider] of providerItems) {
+        for (const [providerId, provider] of providerItems) {
           const itemsListHtml = provider.items.map(i => `<li>${sanitizeHtml(i)}</li>`).join("");
           
           const template = await getRenderedTemplate(TemplateIds.DATE_CHANGE_PARTNER, {
@@ -455,6 +455,24 @@ Deno.serve(async (req) => {
             To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
             Subject: `${subjectPrefix}${emailSubject}`,
             HTMLPart: emailBody,
+          });
+          pendingEmailLogs.push({
+            messageIdx: emailMessages.length - 1,
+            logPayload: {
+              email_type: "date_change_partner",
+              subject: `${subjectPrefix}${emailSubject}`,
+              recipient_email: getRecipientEmail(provider.email, origin),
+              recipient_name: provider.name,
+              related_request_id: program.id,
+              related_partner_id: providerId,
+              sent_by: "update-customer-program",
+              metadata: {
+                template_name: TemplateIds.DATE_CHANGE_PARTNER,
+                actor: "klant → partner (datumwijziging)",
+                new_dates: newDates,
+                items: provider.items,
+              },
+            },
           });
         }
 
@@ -617,6 +635,22 @@ Deno.serve(async (req) => {
           To: [{ Email: program.customer_email, Name: program.customer_name }],
           Subject: `${subjectPrefix}${dateChangeCustomerSubject}`,
           HTMLPart: dateChangeCustomerBody,
+        });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "date_change_customer",
+            subject: `${subjectPrefix}${dateChangeCustomerSubject}`,
+            recipient_email: program.customer_email,
+            recipient_name: program.customer_name,
+            related_request_id: program.id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "date_change_customer",
+              actor: "system → klant (datumwijziging bevestigd)",
+              new_dates: newDates,
+            },
+          },
         });
       }
     }
@@ -813,6 +847,22 @@ Deno.serve(async (req) => {
             </div>
           `,
         });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "all_items_accepted_bureau",
+            subject: allAcceptedSubject,
+            recipient_email: bureauEmail,
+            recipient_name: "Bureau Vlieland",
+            related_request_id: program.id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: "all_items_accepted_bureau",
+              actor: "system → bureau (alle items akkoord)",
+              item_count: allItems.length,
+            },
+          },
+        });
       }
 
       console.log(`Customer accepted item ${acceptItemId}`);
@@ -883,6 +933,24 @@ Deno.serve(async (req) => {
           To: [{ Email: getRecipientEmail(item.provider_email, origin), Name: item.provider_name }],
           Subject: `${subjectPrefix}${emailSubject}`,
           HTMLPart: emailBody,
+        });
+        pendingEmailLogs.push({
+          messageIdx: emailMessages.length - 1,
+          logPayload: {
+            email_type: "item_cancelled_partner",
+            subject: `${subjectPrefix}${emailSubject}`,
+            recipient_email: getRecipientEmail(item.provider_email, origin),
+            recipient_name: item.provider_name,
+            related_request_id: program.id,
+            related_item_id: cancelItemId,
+            related_partner_id: item.provider_id,
+            sent_by: "update-customer-program",
+            metadata: {
+              template_name: TemplateIds.ITEM_CANCELLED_PARTNER,
+              actor: "klant → partner (item geannuleerd)",
+              block_name: item.block_name,
+            },
+          },
         });
       }
 
