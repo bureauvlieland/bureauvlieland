@@ -16,18 +16,23 @@ import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPorta
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEventMode } from "@/hooks/useEventMode";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   AlertCircle,
   RefreshCw,
   Info,
   X,
+  Sparkles,
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { TodayView } from "@/components/customer-portal/TodayView";
+import { ProgramMap } from "@/components/customer-portal/ProgramMap";
+import { MobileBottomNav, type BottomNavView } from "@/components/customer-portal/MobileBottomNav";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
