@@ -320,7 +320,7 @@ export const MobileProgramView = ({
       )}
 
       {/* 4. Program section - hide when showing accommodation or billing */}
-      {initialSection !== "accommodation" && initialSection !== "billing" && <ProgramSection
+      {(initialSection === "program" || !initialSection) && <ProgramSection
         id="program"
         title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
