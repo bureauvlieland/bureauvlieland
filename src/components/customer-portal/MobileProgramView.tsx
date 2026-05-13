@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ProgramSection } from "./ProgramSection";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { BillingDetailsCard } from "./BillingDetailsCard";
+import { PracticalView } from "./PracticalView";
+import { AcceptView } from "./AcceptView";
 
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
