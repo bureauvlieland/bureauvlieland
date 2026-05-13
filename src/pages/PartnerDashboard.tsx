@@ -331,7 +331,7 @@ const PartnerDashboardContent = () => {
 
       toast({
         title: "Offerte ingediend",
-        description: "Uw offerte is succesvol ingediend bij Bureau Vlieland. Zij nemen contact op met de klant.",
+        description: "Uw offerte staat klaar voor de klant in het Bureau Vlieland klantportaal. U ontvangt bericht zodra de klant kiest.",
       });
 
       await refetchDashboard();
@@ -654,7 +654,6 @@ const PartnerDashboardContent = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Welkom terug, {data.partner.name}</h1>
-            <p className="text-muted-foreground">Partner Dashboard</p>
           </div>
           <Button onClick={refetchDashboard} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -662,10 +661,9 @@ const PartnerDashboardContent = () => {
           </Button>
         </div>
 
-        {/* Action banner */}
+        {/* Action banner — alleen bij urgente acties (tegenvoorstel/prijswijziging/te factureren) */}
         <PartnerActionBanner
-          pendingCount={pendingActivityCount + pendingAccommodationCount}
-          counterProposedCount={counterProposedCount}
+          urgentCount={counterProposedCount + priceChangePendingCount}
           toInvoiceCount={toInvoiceCount}
           onNavigate={(target) => {
             if (target === "action") {
@@ -686,13 +684,13 @@ const PartnerDashboardContent = () => {
             toInvoice={toInvoiceCount}
             onStatClick={(stat: StatType) => {
               if (stat === "invoice") {
-                // Navigate to finance page, preserve impersonate param
                 const impersonate = searchParams.get("impersonate");
                 navigate(`/partner/facturatie${impersonate ? `?impersonate=${impersonate}` : ""}`);
               } else if (stat === "pending") {
                 setActiveTab("action");
+              } else if (stat === "accepted") {
+                setActiveTab("accepted");
               } else {
-                // waiting and accepted -> in_progress tab
                 setActiveTab("in_progress");
               }
             }}
@@ -700,21 +698,33 @@ const PartnerDashboardContent = () => {
           <PartnerYtdModule ytdRevenue={ytdRevenue} pendingCommission={pendingCommission} />
         </div>
 
-        {/* Upcoming activities widget */}
-        <PartnerUpcomingActivities
-          items={data.items}
-          onSelectItem={(item) => {
-            setSelectedItem(item);
-            setShowSheet(true);
-          }}
-        />
+        {/* Upcoming activities widget — alleen tonen als er items zijn */}
+        {data.items.some((i) => {
+          const dates = (i.program_requests.selected_dates || []) as string[];
+          const d = dates[i.day_index];
+          if (!d) return false;
+          const date = new Date(d);
+          const now = new Date();
+          const cutoff = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+          return ["confirmed", "accepted", "alternative"].includes(
+            (i.status === "confirmed" && (i.customer_accepted_at || i.customer_approved_at)) ? "accepted" : i.status
+          ) && date > now && date < cutoff;
+        }) && (
+          <PartnerUpcomingActivities
+            items={data.items}
+            onSelectItem={(item) => {
+              setSelectedItem(item);
+              setShowSheet(true);
+            }}
+          />
+        )}
 
         {/* Workflow tabs with unified list */}
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
         >
-          <ScrollArea className="w-full">
+          <ScrollArea className="w-full sticky top-0 bg-background z-10">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
               <TabsTrigger value="action" className="relative whitespace-nowrap">
                 Actie nodig
@@ -732,16 +742,16 @@ const PartnerDashboardContent = () => {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="expired" className="whitespace-nowrap">
-                Verlopen
-                {expiredCount > 0 && (
+              {expiredCount > 0 && (
+                <TabsTrigger value="expired" className="whitespace-nowrap">
+                  Verlopen
                   <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
                     {expiredCount}
                   </span>
-                )}
-              </TabsTrigger>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="accepted" className="whitespace-nowrap">
-                Akkoord
+                Bevestigd door klant
                 {acceptedCount > 0 && (
                   <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
                     {acceptedCount}
