@@ -87,7 +87,7 @@ const PartnerLogin = () => {
         // Check if this user is linked to a partner
         const { data: partner, error: partnerError } = await supabase
           .from("partners")
-          .select("id, name")
+          .select("id, name, password_set_at")
           .eq("auth_user_id", data.user.id)
           .eq("is_active", true)
           .single();
@@ -113,7 +113,7 @@ const PartnerLogin = () => {
             .update({
               last_login_at: now,
               initial_password: null,
-              ...(partner as any).password_set_at ? {} : { password_set_at: now },
+              ...(partner.password_set_at ? {} : { password_set_at: now }),
             })
             .eq("auth_user_id", data.user.id);
         } catch (err) {
