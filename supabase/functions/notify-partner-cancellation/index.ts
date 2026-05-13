@@ -122,21 +122,22 @@ Deno.serve(async (req) => {
     for (const [partnerId, group] of partnerGroups) {
       const itemsList = group.items.map((n) => `• ${sanitizeHtml(n)}`).join("<br>");
 
-      // Try template first, fallback to hardcoded
-      const templateResult = await getRenderedTemplate("cancellation_partner_project", {
+      // Unified annuleringstemplate (zelfde als customer-cancel-flow)
+      const templateResult = await getRenderedTemplate("cancellation_partner", {
         partner_name: sanitizeHtml(group.name),
+        customer_name: "",
         reference_number: sanitizeHtml(refNumber),
-        items_list: itemsList,
+        cancelled_items: itemsList,
+        cancellation_reason: "",
       });
 
-      const subject = `${getSubjectPrefix(origin)}Aanvraag ${refNumber} is komen te vervallen`;
+      const subject = `${getSubjectPrefix(origin)}Aanvraag ${refNumber} is geannuleerd`;
       const body = templateResult?.body || `
         <p>Beste ${sanitizeHtml(group.name)},</p>
-        <p>Hierbij laten wij je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is komen te vervallen.</p>
-        <p>De volgende onderdelen zijn hiermee geannuleerd:</p>
+        <p>Hierbij laten we je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
+        <p>De volgende onderdelen komen daarmee te vervallen:</p>
         <p>${itemsList}</p>
-        <p>Mocht je hier vragen over hebben, neem dan gerust contact met ons op.</p>
-        <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+        <p>Heb je vragen, mail of bel ons gerust.</p>
       `;
 
       const recipientEmail = getRecipientEmail(group.email, origin);
@@ -166,14 +167,14 @@ Deno.serve(async (req) => {
       const errorMessage = mjRes.ok ? null : JSON.stringify(mjData).slice(0, 1000);
       const sentAt = new Date().toISOString();
       const baseMetadata = {
-        template_name: "partner_cancellation",
+        template_name: "cancellation_partner",
         actor: "admin → partner (project geannuleerd)",
         item_ids: group.itemIds,
         item_count: group.itemIds.length,
       };
       const idsForLog = group.itemIds.length > 0 ? group.itemIds : [null];
       const logRows = idsForLog.map((iid) => ({
-        email_type: "partner_cancellation",
+        email_type: "cancellation_partner",
         subject: templateResult?.subject || subject,
         recipient_email: recipientEmail,
         recipient_name: group.name,

@@ -1,23 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  getRenderedTemplate,
-  SENDER_EMAIL,
-  SENDER_NAME,
-  getPortalBaseUrl,
-  getSubjectPrefix,
-  getRecipientEmail,
-  formatCurrencyNL,
-  buildReplyTo,
-} from "../_shared/email-templates.ts";
-import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const ADMIN_EMAIL = "erwin@bureauvlieland.nl";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -129,101 +116,7 @@ Deno.serve(async (req) => {
 
     console.log(`Created quote_review todo for quote ${quoteId}: ${todo.id}`);
 
-    // Send email notification to admin
-    try {
-      const origin = req.headers.get("origin") || "";
-      const baseUrl = getPortalBaseUrl(origin);
-      const adminUrl = `${baseUrl}/admin/accommodation/${request.id}`;
-      const priceFormatted = formatCurrencyNL(quote.price_total);
-
-      const templateVars = {
-        partner_name: partner.name,
-        accommodation_name: quote.accommodation_name,
-        customer_name: customerDisplay,
-        reference_number: request.reference_number || "",
-        price_total: priceFormatted,
-        admin_url: adminUrl,
-      };
-
-      // Try database template first, fallback to inline HTML
-      const rendered = await getRenderedTemplate("accommodation_quote_notification_admin", templateVars);
-
-      const subjectPrefix = getSubjectPrefix(origin);
-      const subject = rendered
-        ? `${subjectPrefix}${rendered.subject}`
-        : `${subjectPrefix}Nieuwe logiesofferte van ${partner.name} voor ${customerDisplay}`;
-
-      const body = rendered
-        ? rendered.body
-        : `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #1a1a1a;">Nieuwe logiesofferte ontvangen</h2>
-            <p>Partner <strong>${partner.name}</strong> heeft een offerte ingediend:</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-              <tr><td style="padding: 8px 0; color: #666;">Accommodatie</td><td style="padding: 8px 0;"><strong>${quote.accommodation_name}</strong></td></tr>
-              <tr><td style="padding: 8px 0; color: #666;">Klant</td><td style="padding: 8px 0;"><strong>${customerDisplay}</strong></td></tr>
-              ${request.reference_number ? `<tr><td style="padding: 8px 0; color: #666;">Referentie</td><td style="padding: 8px 0;">${request.reference_number}</td></tr>` : ""}
-              <tr><td style="padding: 8px 0; color: #666;">Totaalprijs</td><td style="padding: 8px 0;"><strong>${priceFormatted}</strong></td></tr>
-            </table>
-            <a href="${adminUrl}" style="display: inline-block; background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin-top: 8px;">Bekijk offerte in admin</a>
-          </div>
-        `;
-
-      // Send via Mailjet
-      const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
-      const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
-
-      if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
-        const recipientEmail = getRecipientEmail(ADMIN_EMAIL, origin);
-
-        const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
-          },
-          body: JSON.stringify({
-            Messages: [
-              {
-                From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-                To: [{ Email: recipientEmail, Name: "Bureau Vlieland" }],
-                ...(buildReplyTo(request.reference_number) ? { ReplyTo: buildReplyTo(request.reference_number) } : {}),
-                Subject: subject,
-                HTMLPart: body,
-              },
-            ],
-          }),
-        });
-
-        const mailjetResult = await mailjetResponse.json();
-        const messageId = mailjetResult?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
-
-        await logEmail({
-          email_type: "accommodation_quote_notification_admin",
-          subject,
-          recipient_email: recipientEmail,
-          recipient_name: "Bureau Vlieland",
-          related_accommodation_id: request.id,
-          related_partner_id: partner.id,
-          status: mailjetResponse.ok ? "sent" : "failed",
-          error_message: mailjetResponse.ok ? undefined : JSON.stringify(mailjetResult),
-          mailjet_message_id: messageId || undefined,
-          sent_by: "system",
-          metadata: {
-            template_name: "accommodation_quote_notification_admin",
-            actor: "system → bureau",
-            quote_id: quoteId,
-          },
-        });
-
-        console.log(`Admin notification email ${mailjetResponse.ok ? "sent" : "failed"} for quote ${quoteId}`);
-      } else {
-        console.warn("Mailjet keys not configured, skipping admin notification email");
-      }
-    } catch (emailError) {
-      // Don't fail the whole request if email fails
-      console.error("Error sending admin notification email:", emailError);
-    }
+    // Bureau-mail bij nieuwe offerte is geschrapt — admin ziet de todo direct in dashboard.
 
     return new Response(
       JSON.stringify({ success: true, todo_id: todo.id }),

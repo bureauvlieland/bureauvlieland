@@ -112,19 +112,14 @@ export const EmailTypes = {
   STATUS_UNAVAILABLE: "status_unavailable",
   STATUS_ALTERNATIVE: "status_alternative",
   
-  // Customer program emails
-  CUSTOMER_PROGRAM_UPDATE_PARTNER: "customer_program_update_partner",
-  
   // Cancellation emails
   CANCELLATION_CUSTOMER: "cancellation_customer",
   CANCELLATION_PARTNER: "cancellation_partner",
-  CANCELLATION_BUREAU: "cancellation_bureau",
   
   // Partner invitation
   PARTNER_INVITATION: "partner_invitation",
   
   // Accommodation emails
-  ACCOMMODATION_REQUEST_BUREAU: "accommodation_request_bureau",
   ACCOMMODATION_REQUEST_CUSTOMER: "accommodation_request_customer",
   ACCOMMODATION_QUOTE_REQUEST_PARTNER: "accommodation_quote_request_partner",
   ACCOMMODATION_QUOTE_NOTIFICATION: "accommodation_quote_notification",
