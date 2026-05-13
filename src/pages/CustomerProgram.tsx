@@ -591,6 +591,11 @@ const CustomerProgram = () => {
         />
       )}
 
+      {/* PWA install hint — alleen mobiel + event-modus */}
+      {isMobile && eventMode.eventModeActive && (
+        <InstallPwaBanner programToken={token} />
+      )}
+
       <Footer />
 
       {/* Dialogs */}
