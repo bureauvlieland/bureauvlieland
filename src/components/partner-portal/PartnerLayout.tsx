@@ -7,6 +7,7 @@ import {
   SidebarContent, 
   SidebarGroup, 
   SidebarGroupContent, 
+  SidebarGroupLabel,
   SidebarMenu, 
   SidebarMenuItem, 
   SidebarMenuButton,
@@ -65,28 +66,55 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
   const hasMapIntegration = !!partner.map_tenant_slug;
 
-  const menuItems = [
+  type MenuItem = { title: string; url: string; icon: typeof LayoutDashboard };
+
+  const werkItems: MenuItem[] = [
     { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
-    { title: "Mijn Profiel", url: `/partner/profiel${urlSuffix}`, icon: UserCircle },
-    // Planning alleen tonen als partner MAP-koppeling heeft
     ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
-    // Alleen tonen als partner activiteiten levert
-    ...(isActivityPartner ? [{ title: "Mijn Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
-    // Alleen tonen als partner logies levert
+    ...(isActivityPartner ? [{ title: "Activiteiten", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
     ...(isAccommodationPartner ? [
       { title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble },
       { title: "Kamersoorten", url: `/partner/kamersoorten${urlSuffix}`, icon: DoorOpen },
-      { title: "Extra's", url: `/partner/extras${urlSuffix}`, icon: UtensilsCrossed },
+      { title: "Logies-extra's", url: `/partner/extras${urlSuffix}`, icon: UtensilsCrossed },
     ] : []),
-    { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
-    { title: "Handleidingen", url: `/partner/handleidingen${urlSuffix}`, icon: BookOpen },
-    { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
   ];
 
-  const isActive = (path: string) => {
-    const currentPath = location.pathname + location.search;
-    return currentPath === path || location.pathname === path.split("?")[0];
-  };
+  const adminItems: MenuItem[] = [
+    { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
+  ];
+
+  const accountItems: MenuItem[] = [
+    { title: "Mijn profiel", url: `/partner/profiel${urlSuffix}`, icon: UserCircle },
+    { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
+    { title: "Handleidingen", url: `/partner/handleidingen${urlSuffix}`, icon: BookOpen },
+  ];
+
+  // Pad-only check (search params buiten beschouwing) — robuuster dan string-vergelijking.
+  const isActive = (url: string) => location.pathname === url.split("?")[0];
+
+  const renderGroup = (label: string, items: MenuItem[]) => (
+    <SidebarGroup>
+      {!collapsed && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive(item.url)}
+                tooltip={item.title}
+              >
+                <Link to={item.url}>
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -104,9 +132,9 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
       <SidebarContent className="flex flex-col h-[calc(100vh-65px)]">
         {/* Admin impersonation banner */}
         {isImpersonating && !collapsed && (
-          <div className="p-3 bg-amber-50 border-b border-amber-200">
-            <div className="flex items-center gap-2 text-amber-800">
-              <ShieldCheck className="h-4 w-4" />
+          <div className="p-3 bg-warning-soft border-b border-warning/30">
+            <div className="flex items-center gap-2 text-warning-foreground">
+              <ShieldCheck className="h-4 w-4 text-warning" />
               <span className="text-xs font-medium">Admin weergave</span>
             </div>
           </div>
@@ -127,26 +155,11 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
           </div>
         )}
 
-        <SidebarGroup className="flex-1">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <div className="flex-1">
+          {renderGroup("Werk", werkItems)}
+          {renderGroup("Administratie", adminItems)}
+          {renderGroup("Account", accountItems)}
+        </div>
 
         {/* Logout/Back button at bottom */}
         <div className="p-4 border-t mt-auto">
@@ -280,9 +293,9 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
           {/* Mobile header */}
           <header className="h-14 border-b flex items-center px-4 lg:hidden">
             {isImpersonating && (
-              <Badge variant="outline" className="mr-2 bg-amber-50 text-amber-800 border-amber-200">
-                <ShieldCheck className="h-3 w-3 mr-1" />
-                Admin
+              <Badge variant="outline" className="mr-2 bg-warning-soft text-warning border-warning/30">
+                <ShieldCheck className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">Admin</span>
               </Badge>
             )}
             <SidebarTrigger>
@@ -290,7 +303,7 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SidebarTrigger>
-            <Link to="/partner/dashboard" className="ml-2">
+            <Link to={`/partner/dashboard${searchParams.get("impersonate") ? `?impersonate=${searchParams.get("impersonate")}` : ""}`} className="ml-2">
               <img src={logoImage} alt="Bureau Vlieland" className="h-6" />
             </Link>
           </header>
