@@ -167,14 +167,14 @@ Deno.serve(async (req) => {
       const errorMessage = mjRes.ok ? null : JSON.stringify(mjData).slice(0, 1000);
       const sentAt = new Date().toISOString();
       const baseMetadata = {
-        template_name: "partner_cancellation",
+        template_name: "cancellation_partner",
         actor: "admin → partner (project geannuleerd)",
         item_ids: group.itemIds,
         item_count: group.itemIds.length,
       };
       const idsForLog = group.itemIds.length > 0 ? group.itemIds : [null];
       const logRows = idsForLog.map((iid) => ({
-        email_type: "partner_cancellation",
+        email_type: "cancellation_partner",
         subject: templateResult?.subject || subject,
         recipient_email: recipientEmail,
         recipient_name: group.name,
