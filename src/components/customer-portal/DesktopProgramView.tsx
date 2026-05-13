@@ -504,9 +504,19 @@ export const DesktopProgramView = ({
           </>
         )}
 
-        {/* Billing-only view (decision 4: separate billing tab) */}
+        {/* Billing-only view: just the financial summary */}
         {initialSection === "billing" && (
           <div className="space-y-6">
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-900 dark:text-blue-100">
+                <p className="font-medium">Wat kunt u hier doen?</p>
+                <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
+                  Hier vindt u het volledige kostenoverzicht en de status van facturen.
+                  Bureau Vlieland factureert centraal — u ontvangt één factuur voor het hele programma.
+                </p>
+              </div>
+            </div>
             <div id="billing" className="scroll-mt-20">
               <CompactBillingSection
                 program={program}
@@ -519,45 +529,6 @@ export const DesktopProgramView = ({
                 invoicingMode={invoicingMode}
               />
             </div>
-
-            {!termsAccepted && (
-              <div id="terms-section" className="scroll-mt-20">
-                {allConfirmed ? (
-                  <AcceptTermsCard
-                    onAccept={onAcceptTerms}
-                    isBillingComplete={billingComplete}
-                    onOpenBilling={onOpenBilling}
-                    items={program.items}
-                    accommodationQuotes={accommodationQuotes}
-                    selectedDates={selectedDates}
-                  />
-                ) : (
-                  <Card className="border-dashed bg-muted/30">
-                    <CardContent className="py-6">
-                      <div className="flex items-start gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <h3 className="font-medium">Voorwaarden</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Zodra alle activiteiten in je programma bevestigd zijn, verschijnen hier de voorwaarden ter ondertekening.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
-              <AcceptedTermsCard
-                termsAcceptedAt={program.terms_accepted_at!}
-                signatureName={program.signature_name || null}
-                signatureId={program.signature_id || null}
-                acceptedTerms={program.acceptedTerms}
-              />
-            )}
-
             {termsAccepted && (
               <PaymentStatusCard
                 items={program.items}
@@ -565,6 +536,37 @@ export const DesktopProgramView = ({
               />
             )}
           </div>
+        )}
+
+        {/* Practical view */}
+        {initialSection === "practical" && (
+          <PracticalView
+            program={program as any}
+            selectedDates={selectedDates}
+            guestDetails={guestDetails}
+            onOpenGuestDetails={onOpenGuestDetails}
+          />
+        )}
+
+        {/* Accept (akkoord) view */}
+        {initialSection === "accept" && (
+          <AcceptView
+            program={program}
+            items={program.items}
+            numberOfPeople={program.number_of_people}
+            selectedDates={selectedDates}
+            termsAccepted={termsAccepted}
+            billingComplete={billingComplete}
+            allConfirmed={allConfirmed}
+            accommodationQuotes={accommodationQuotes}
+            invoicingMode={invoicingMode}
+            acceptedTerms={program.acceptedTerms}
+            termsAcceptedAt={program.terms_accepted_at}
+            signatureName={program.signature_name}
+            signatureId={program.signature_id}
+            onAcceptTerms={onAcceptTerms}
+            onOpenBilling={onOpenBilling}
+          />
         )}
       </div>
 
