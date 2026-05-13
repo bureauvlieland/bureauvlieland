@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ProgramSection } from "./ProgramSection";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import { BillingDetailsCard } from "./BillingDetailsCard";
+import { PracticalView } from "./PracticalView";
+import { AcceptView } from "./AcceptView";
 
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
@@ -54,7 +56,7 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface MobileProgramViewProps {
   invoicingMode?: string;
-  initialSection?: "accommodation" | "program" | "billing";
+  initialSection?: "accommodation" | "program" | "practical" | "billing" | "accept";
   program: {
     customer_name: string;
     customer_company?: string;
@@ -318,7 +320,7 @@ export const MobileProgramView = ({
       )}
 
       {/* 4. Program section - hide when showing accommodation or billing */}
-      {initialSection !== "accommodation" && initialSection !== "billing" && <ProgramSection
+      {(initialSection === "program" || !initialSection) && <ProgramSection
         id="program"
         title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
@@ -496,76 +498,69 @@ export const MobileProgramView = ({
         )}
       </ProgramSection>}
 
-      {/* 5. Billing section — shown in program view AND billing view */}
-      {(initialSection === "program" || initialSection === "billing") && <ProgramSection
-        id="billing"
-        title="Facturatie & Kosten"
-        icon={<FileText className="h-4 w-4 text-primary" />}
-        defaultOpen={initialSection === "billing" || (allConfirmed && !termsAccepted)}
-      >
+      {/* 5. Billing-only view: financial summary */}
+      {initialSection === "billing" && (
         <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
+            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-900 dark:text-blue-100">
+              <p className="font-medium">Wat kunt u hier doen?</p>
+              <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
+                Hier vindt u het kostenoverzicht en de status van facturen.
+              </p>
+            </div>
+          </div>
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
-          <PriceSummaryCard 
-            items={program.items} 
+          <PriceSummaryCard
+            items={program.items}
             numberOfPeople={program.number_of_people}
             numberOfDays={selectedDates.length || 1}
             termsAccepted={termsAccepted}
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
             invoicingMode={invoicingMode}
           />
-        </div>
-      </ProgramSection>}
-
-      {/* 6. Accept terms — shown in program view AND billing view */}
-      {(initialSection === "program" || initialSection === "billing") && !termsAccepted && (
-        <div id="terms-section">
-          {allConfirmed ? (
-            <AcceptTermsCard
-              onAccept={onAcceptTerms}
-              isBillingComplete={billingComplete}
-              onOpenBilling={onOpenBilling}
-              items={program.items}
-              accommodationQuotes={accommodationQuotes}
-              selectedDates={selectedDates}
-            />
-          ) : (
-            <Card className="border-dashed bg-muted/30">
-              <CardContent className="py-6">
-                <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Voorwaarden</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Zodra alle activiteiten in je programma bevestigd zijn, verschijnen hier de voorwaarden ter ondertekening.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {(initialSection === "program" || initialSection === "billing") && (
-        <>
-          {/* Accepted terms */}
-          {termsAccepted && program.acceptedTerms && program.acceptedTerms.length > 0 && (
-            <AcceptedTermsCard
-              termsAcceptedAt={program.terms_accepted_at!}
-              signatureName={program.signature_name || null}
-              signatureId={program.signature_id || null}
-              acceptedTerms={program.acceptedTerms}
-            />
-          )}
-
-          {/* Payment status after terms acceptance */}
           {termsAccepted && (
             <PaymentStatusCard
               items={program.items}
               termsAcceptedAt={program.terms_accepted_at!}
             />
           )}
+        </div>
+      )}
 
+      {/* Practical view */}
+      {initialSection === "practical" && (
+        <PracticalView
+          program={program as any}
+          selectedDates={selectedDates}
+          guestDetails={guestDetails}
+          onOpenGuestDetails={onOpenGuestDetails}
+        />
+      )}
+
+      {/* Accept (akkoord) view */}
+      {initialSection === "accept" && (
+        <AcceptView
+          program={program}
+          items={program.items}
+          numberOfPeople={program.number_of_people}
+          selectedDates={selectedDates}
+          termsAccepted={termsAccepted}
+          billingComplete={billingComplete}
+          allConfirmed={allConfirmed}
+          accommodationQuotes={accommodationQuotes}
+          invoicingMode={invoicingMode}
+          acceptedTerms={program.acceptedTerms}
+          termsAcceptedAt={program.terms_accepted_at}
+          signatureName={program.signature_name}
+          signatureId={program.signature_id}
+          onAcceptTerms={onAcceptTerms}
+          onOpenBilling={onOpenBilling}
+        />
+      )}
+
+      {initialSection === "program" && (
+        <>
           {/* Floating changes bar — only in program view */}
           {initialSection === "program" && hasChanges && isPublished && (
             <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
