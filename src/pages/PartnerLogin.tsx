@@ -152,25 +152,40 @@ const PartnerLogin = () => {
     }
 
     setIsLoading(true);
+    // Hard timeout zodat de knop niet eindeloos blijft draaien als
+    // het netwerk/edge function hangt.
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      toast({
+        title: "Time-out",
+        description: "Het verzoek duurt te lang. Probeer het opnieuw of neem contact op met Bureau Vlieland.",
+        variant: "destructive",
+      });
+    }, 15000);
+
     try {
-      const { data, error } = await supabase.functions.invoke("send-partner-reset-email", {
+      const { error } = await supabase.functions.invoke("send-partner-reset-email", {
         body: { email: email.trim() },
       });
+
+      clearTimeout(timeoutId);
 
       if (error) throw error;
 
       toast({
         title: "Wachtwoord reset email verzonden",
-        description: "Controleer je inbox voor de reset link.",
+        description: "Controleer je inbox (en spam) voor de reset link. De link is 1 uur geldig.",
       });
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error("Password reset error:", err);
       toast({
         title: "Fout",
-        description: "Kon geen reset email verzenden. Probeer het opnieuw.",
+        description: "Kon geen reset email verzenden. Probeer het opnieuw of neem contact op met Bureau Vlieland.",
         variant: "destructive",
       });
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
