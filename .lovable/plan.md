@@ -1,58 +1,56 @@
-## Probleem
+## Getroffen dossiers
 
-De annuleringsmail naar partners (verstuurd vanuit `cancel-program-request`) toont:
-- "Klant: Bureau Vlieland" voor élke aanvraag (i.p.v. de echte klant)
-- Lege "Jouw activiteit(en)" en lege datums
+Bouwsteen `beach-games` ("Beach Games") komt voor in **2 lopende projecten** en in **0 templates**:
 
-Twee oorzaken in `supabase/functions/cancel-program-request/index.ts` rond regel 270–306.
+| Referentie | Klant | Bedrijf | Project status | Item status |
+|---|---|---|---|---|
+| BV-2604-0003 | Sylvia Vet | Kuiper Bouw | active | pending |
+| BV-2605-0003 | Amy Jellema-Bogaart | — | active | pending |
 
-## Oorzaak 1 — hardcoded klantnaam
-```ts
-customer_name: "Bureau Vlieland",
-company_name: "",
-```
-De code negeert `program.customer_name` / `program.customer_company`.
+(Beide items hebben `block_id = beach-games`. Templates / voorbeeldprogramma's bevatten de bouwsteen niet.)
 
-## Oorzaak 2 — variabelen matchen de DB-template niet
-DB-template "Annulering (Partner)" verwacht:
-- `{{customer_name}}`, `{{company_name}}`
-- `{{event_dates}}`
-- `{{cancelled_items}}` (HTML lijst)
-- `{{activity_name}}` (subject)
-- `{{cancellation_reason}}`
+## Vergelijking blokken
 
-De code stuurt daarentegen `dates`, `activities_list` en geen `activity_name`. Daardoor blijven velden leeg.
+| | beach-games | strandspektakel |
+|---|---|---|
+| Naam | Beach Games | Strandspektakel |
+| Prijs p.p. | € 30,00 | € 32,50 |
+| Locatie | Strand t.h.v. bushalte Ankerplaats | (idem) |
+| Provider | Vlieland Outdoor Center | (idem) |
+| `is_active` | **false** | true |
+| `is_published` | true | true |
 
-## Fix
+Beide gepubliceerd, maar `beach-games.is_active = false` — daarom zie je 'm niet meer in de configurator. In bestaande projecten blijft hij wel zichtbaar omdat de items een eigen kopie houden van naam/prijs (zie [Item Inheritance memory](mem://data/program-request-item-inheritance)).
 
-In `cancel-program-request/index.ts` de `templateVariables` voor de partner-loop aanpassen naar (centrale belofte: privacy-rules respecteren — bedrijfsnaam tonen waar beschikbaar, anders contactnaam):
+## Wijzigingen
 
-```ts
-const customerLabel = program.customer_company || program.customer_name || "";
-const templateVariables = {
-  partner_name: sanitizeHtml(provider.name),
-  customer_name: sanitizeHtml(customerLabel),
-  company_name: sanitizeHtml(program.customer_company || ""),
-  reference_number: program.reference_number || "",
-  event_dates: dates,            // was: dates
-  dates: dates,                  // backwards-compat voor fallback HTML
-  cancellation_reason: reason ? sanitizeHtml(reason) : "",
-  cancelled_items: provider.items
-    .map((item) => `<p style="margin: 5px 0;">• ${sanitizeHtml(item)}</p>`)
-    .join(""),                   // was: activities_list
-  activities_list: provider.items.map((i) => `<li>${sanitizeHtml(i)}</li>`).join(""),
-  activity_name: sanitizeHtml(provider.items[0] || "aanvraag"),  // voor subject
-};
-```
+### 1. Items vervangen (data update via insert-tool)
+Voor de 2 items hierboven, alleen als `quoted_price IS NULL` (= nog geen partner-prijs ingevuld), worden deze velden overschreven met die van Strandspektakel:
+- `block_id` → `strandspektakel`
+- `block_name` → `Strandspektakel`
+- `location_address`, `location_lat`, `location_lng` → uit Strandspektakel (zelfde, maar consistent)
+- `duration`, `price_type`, `block_category` → uit Strandspektakel
+- `admin_price_override` blijft staan als al ingevuld; anders niet zetten (Bureau bepaalt prijs alsnog)
 
-Daarmee zijn klantnaam, activiteit én datum gevuld in de templated mail én blijft de hardcoded fallback-HTML óók werken.
+Status van het item blijft `pending` zodat de partner opnieuw bevestigt.
 
-## Privacy-check
-Volgens de geldende privacy-regel mogen partners de klantnaam (bedrijfsnaam preferred) zien — alleen contactgegevens (e-mail/telefoon/adres) blijven afgeschermd. Klantnaam tonen is dus correct en gewenst.
+⚠️ Als één van de 2 items al een `quoted_price` heeft (= partner heeft Beach Games al geprijsd), markeer ik 'm wél met de nieuwe naam, maar laat de prijs staan en plaats een note. Op basis van huidige data: beide hebben `quoted_price = NULL`, dus dit is hypothetisch.
 
-## Verificatie
-1. Edge function deployen.
-2. Testproject annuleren via admin → controleren dat mail in test-mode (rerouted) zowel klantnaam, datum als activiteit toont.
-3. `email_log` rij inspecteren (bestaande logging blijft ongewijzigd).
+### 2. Bouwsteen `beach-games` uit aanbod
+Update op `building_blocks` rij `beach-games`:
+- `is_published = false`
+- `status = 'concept'`
+- `is_active` blijft `false`
 
-Geen DB-migratie nodig; alleen edge function aanpassen.
+Hiermee verdwijnt de bouwsteen uit configurator, MAP, partnerportaal-overzicht, admin-publicatielijst — maar de rij blijft bestaan zodat historische items en logs niets verliezen. Niet hard verwijderen want er zijn nog (geannuleerde/historische) items die ernaar verwijzen.
+
+### 3. Communicatie naar partner
+Niet automatisch een mail. Partner (Vlieland Outdoor Center) ziet beide pending items in z'n portaal verschijnen onder de nieuwe naam zodra de admin het opnieuw verstuurt. **Suggestie**: jij verstuurt deze 2 items handmatig opnieuw vanuit het projectdetail (knop "Verstuur naar partner") nadat de update klaar is, zodat de partner de juiste activiteitnaam krijgt.
+
+## Geen code-wijziging
+Dit is puur een datamigratie + statuswijziging op één bouwsteen. Geen frontend/backend code aangepast.
+
+## Verificatie achteraf
+1. `building_blocks` controleren: `beach-games` heeft `is_published=false`, `status='concept'`.
+2. `program_request_items` controleren: 0 rijen met `block_id='beach-games'` in actieve, niet-cancelled projecten.
+3. Beide projecten openen en visueel checken dat "Strandspektakel" nu wordt getoond.
