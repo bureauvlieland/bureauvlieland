@@ -23,6 +23,7 @@ import { ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
+import { HotelLocationMap } from "./HotelLocationMap";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -329,6 +330,21 @@ export const AccommodationSection = ({
                       <p className="text-muted-foreground whitespace-pre-line">{selectedQuote.partner.location_description}</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {selectedQuote.partner?.location_lat && selectedQuote.partner?.location_lng && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Kaart & route</p>
+                  <HotelLocationMap
+                    lat={Number(selectedQuote.partner.location_lat)}
+                    lng={Number(selectedQuote.partner.location_lng)}
+                    label={selectedQuote.accommodation_name}
+                    address={[
+                      selectedQuote.partner.address_street,
+                      [selectedQuote.partner.address_postal, selectedQuote.partner.address_city].filter(Boolean).join(" "),
+                    ].filter(Boolean).join(", ")}
+                  />
                 </div>
               )}
 

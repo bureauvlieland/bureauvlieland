@@ -116,6 +116,8 @@ export interface AccommodationQuote {
     address_street?: string | null;
     address_postal?: string | null;
     address_city?: string | null;
+    location_lat?: number | null;
+    location_lng?: number | null;
     location_description?: string | null;
     booking_contact_name?: string | null;
     booking_contact_phone?: string | null;
