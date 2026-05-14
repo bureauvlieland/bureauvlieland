@@ -95,7 +95,7 @@ export const PartnerPlanningCalendar = ({
           type: "bv",
           time,
           name: item.block_name,
-          booked: item.program_requests.number_of_people,
+          booked: item.override_people ?? item.program_requests.number_of_people,
           max: 0,
           status: item.status,
           itemId: item.id,
