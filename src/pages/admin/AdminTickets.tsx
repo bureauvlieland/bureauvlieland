@@ -170,10 +170,21 @@ export default function AdminTickets() {
         return true;
       })
       .sort((a, b) => {
+        // Bundle by project: sort by project's earliest ticket date, then by request_id,
+        // then by ticket date within the project, then day_index.
+        const projMin = new Map<string, string>();
+        for (const r of rows!) {
+          const d = r.ticketDate ?? "9999-12-31";
+          const cur = projMin.get(r.request_id);
+          if (!cur || d < cur) projMin.set(r.request_id, d);
+        }
+        const am = projMin.get(a.request_id) ?? "9999-12-31";
+        const bm = projMin.get(b.request_id) ?? "9999-12-31";
+        if (am !== bm) return am < bm ? -1 : 1;
+        if (a.request_id !== b.request_id) return a.request_id < b.request_id ? -1 : 1;
         const ad = a.ticketDate ?? "9999-12-31";
         const bd = b.ticketDate ?? "9999-12-31";
         if (ad !== bd) return ad < bd ? -1 : 1;
-        if (a.request_id !== b.request_id) return a.request_id < b.request_id ? -1 : 1;
         return (a.day_index ?? 0) - (b.day_index ?? 0);
       });
   }, [rows, period, kind, status, search]);
@@ -336,6 +347,7 @@ export default function AdminTickets() {
               <TableBody>
                 {filtered.map((row, idx) => {
                   const prev = filtered[idx - 1];
+                  const sameProject = prev && prev.request_id === row.request_id;
                   const sameGroup =
                     prev &&
                     row.booking_group_id &&
@@ -347,7 +359,8 @@ export default function AdminTickets() {
                       key={row.id}
                       className={cn(
                         row.booking_group_id && "bg-amber-50/40",
-                        sameGroup && "border-t-0"
+                        sameProject && "border-t-0",
+                        !sameProject && idx > 0 && "border-t-2 border-t-slate-300"
                       )}
                     >
                       <TableCell className="text-sm whitespace-nowrap">
@@ -366,15 +379,21 @@ export default function AdminTickets() {
                         })()}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <Link
-                          to={`/admin/projecten/${row.request_id}`}
-                          className="text-slate-900 hover:underline font-medium"
-                        >
-                          {row.customer_company || row.customer_name}
-                        </Link>
-                        <div className="text-xs text-slate-500">
-                          {row.reference_number}
-                        </div>
+                        {sameProject ? (
+                          <span className="text-xs text-slate-400 italic">↳ zelfde project</span>
+                        ) : (
+                          <>
+                            <Link
+                              to={`/admin/projecten/${row.request_id}`}
+                              className="text-slate-900 hover:underline font-medium"
+                            >
+                              {row.customer_company || row.customer_name}
+                            </Link>
+                            <div className="text-xs text-slate-500">
+                              {row.reference_number}
+                            </div>
+                          </>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">
                         <Badge variant="outline" className="font-normal">
