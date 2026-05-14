@@ -482,43 +482,44 @@ export default function AdminTickets() {
 
 function BookingRefInput({ initial, onSave }: { initial: string; onSave: (v: string) => void | Promise<void> }) {
   const [value, setValue] = useState(initial);
+  const [lastSaved, setLastSaved] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
-  const dirty = value !== initial;
+
+  // Sync when parent prop changes (e.g. after refetch / navigation back)
+  useEffect(() => {
+    setValue(initial);
+    setLastSaved(initial);
+  }, [initial]);
+
+  const dirty = value !== lastSaved;
+
+  const commit = async () => {
+    if (!dirty || saving) return;
+    setSaving(true);
+    await onSave(value.trim());
+    setLastSaved(value.trim());
+    setSaving(false);
+    setSavedTick(true);
+    setTimeout(() => setSavedTick(false), 1200);
+  };
+
   return (
     <div className="flex items-center gap-1">
       <Input
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={async (e) => {
-          if (e.key === "Enter" && dirty) {
-            setSaving(true);
-            await onSave(value.trim());
-            setSaving(false);
-            setSavedTick(true);
-            setTimeout(() => setSavedTick(false), 1200);
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
           }
         }}
         placeholder="—"
         className="h-8 text-sm"
       />
-      {dirty && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            await onSave(value.trim());
-            setSaving(false);
-            setSavedTick(true);
-            setTimeout(() => setSavedTick(false), 1200);
-          }}
-        >
-          <Check className="h-4 w-4" />
-        </Button>
-      )}
+      {dirty && !saving && <span className="text-[10px] text-amber-600">●</span>}
       {savedTick && <Check className="h-4 w-4 text-emerald-600" />}
     </div>
   );
