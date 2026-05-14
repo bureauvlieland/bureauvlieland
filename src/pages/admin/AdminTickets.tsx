@@ -57,6 +57,9 @@ interface TicketRow {
   booking_group_id: string | null;
   ticket_last_emailed_at: string | null;
   override_people: number | null;
+  confirmed_time: string | null;
+  proposed_time: string | null;
+  preferred_time: string | null;
   // project
   reference_number: string | null;
   customer_name: string;
@@ -100,7 +103,7 @@ export default function AdminTickets() {
       const { data, error } = await supabase
         .from("program_request_items")
         .select(
-          "id, request_id, block_id, block_name, day_index, status, booking_reference, booking_document_path, booking_group_id, ticket_last_emailed_at, override_people, program_requests!inner(reference_number, customer_name, customer_company, customer_email, selected_dates, number_of_people)"
+          "id, request_id, block_id, block_name, day_index, status, booking_reference, booking_document_path, booking_group_id, ticket_last_emailed_at, override_people, confirmed_time, proposed_time, preferred_time, program_requests!inner(reference_number, customer_name, customer_company, customer_email, selected_dates, number_of_people)"
         )
         .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
         .neq("status", "cancelled");
@@ -120,6 +123,9 @@ export default function AdminTickets() {
           booking_group_id: r.booking_group_id,
           ticket_last_emailed_at: r.ticket_last_emailed_at,
           override_people: r.override_people,
+          confirmed_time: r.confirmed_time ?? null,
+          proposed_time: r.proposed_time ?? null,
+          preferred_time: r.preferred_time ?? null,
           reference_number: project?.reference_number ?? null,
           customer_name: project?.customer_name ?? "",
           customer_company: project?.customer_company ?? null,
@@ -344,7 +350,19 @@ export default function AdminTickets() {
                       )}
                     >
                       <TableCell className="text-sm whitespace-nowrap">
-                        {formatNL(row.ticketDate)}
+                        <div>{formatNL(row.ticketDate)}</div>
+                        {(() => {
+                          const t = row.confirmed_time || row.proposed_time || row.preferred_time;
+                          if (!t) return null;
+                          const isConfirmed = !!row.confirmed_time;
+                          return (
+                            <div className={cn("text-xs mt-0.5 font-medium", isConfirmed ? "text-emerald-700" : "text-slate-500")}>
+                              {t === "flexibel" ? "flexibel" : t}
+                              {!isConfirmed && t !== "flexibel" && row.proposed_time && " (voorstel)"}
+                              {!isConfirmed && t !== "flexibel" && !row.proposed_time && " (gewenst)"}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-sm">
                         <Link
