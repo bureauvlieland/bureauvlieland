@@ -162,7 +162,7 @@ export const PartnerUnifiedList = ({
         date: activityDate,
         status: effectiveStatus,
         urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
-        peopleCount: i.program_requests.number_of_people,
+        peopleCount: effPeople,
         isNew: !programCancelled && isNewItem(i),
         isModified: !programCancelled && isModifiedByCustomer(i),
         hasCounter: !programCancelled && i.status === "counter_proposed",
@@ -365,9 +365,9 @@ const ItemCard = ({
                   : "Geen datum"}
               </span>
               <span className="hidden md:inline">•</span>
-              <span className="hidden md:flex items-center gap-1">
+              <span className="hidden md:flex items-center gap-1" title={item.type === "activity" ? "Aantal deelnemers aan deze activiteit" : "Aantal gasten"}>
                 <Users className="h-3.5 w-3.5" />
-                {item.peopleCount}
+                {item.peopleCount} {item.type === "activity" ? "deelnemers" : "gasten"}
               </span>
             </div>
           </div>

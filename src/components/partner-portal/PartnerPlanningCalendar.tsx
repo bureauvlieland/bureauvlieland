@@ -95,7 +95,7 @@ export const PartnerPlanningCalendar = ({
           type: "bv",
           time,
           name: item.block_name,
-          booked: item.program_requests.number_of_people,
+          booked: item.override_people ?? item.program_requests.number_of_people,
           max: 0,
           status: item.status,
           itemId: item.id,
@@ -266,11 +266,11 @@ const EntryCard = ({
       </div>
 
       <div className="flex items-center justify-between mt-1 gap-1">
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="flex items-center gap-1 text-muted-foreground" title={isBv ? "Aantal deelnemers aan deze activiteit" : "Aantal geboekt / max"}>
           <Users className="h-3 w-3" />
           <span>
             {entry.booked}
-            {entry.max > 0 && `/${entry.max}`}
+            {entry.max > 0 ? `/${entry.max}` : " deelnemers"}
           </span>
         </div>
 
