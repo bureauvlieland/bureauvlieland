@@ -24,6 +24,7 @@ import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
 import { HotelLocationMap } from "./HotelLocationMap";
+import { HotelGallery } from "./HotelGallery";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
