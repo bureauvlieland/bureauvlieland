@@ -251,6 +251,14 @@ const CustomerProgram = () => {
   // Event-modus: automatisch + handmatige toggle (MOET vóór early returns)
   const eventMode = useEventMode(selectedDates, token ? `bv:event-mode:${token}` : undefined);
 
+  // Preview/demo: ?eventmode=on of ?eventmode=off forceert de modus via de URL
+  useEffect(() => {
+    const param = searchParams.get("eventmode");
+    if (param === "on") eventMode.setManualOverride("on");
+    else if (param === "off") eventMode.setManualOverride("off");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Bij eerste render binnen het programma-venster: spring naar "Vandaag"
   useEffect(() => {
     if (eventMode.eventModeActive && activeView === "splash") {
