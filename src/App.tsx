@@ -177,6 +177,11 @@ const App = () => {
                 <CustomerProgram />
               </FeatureGate>
             } />
+            <Route path="/programma-deelnemers/:token" element={
+              <FeatureGate featureKey="customer_portal_enabled">
+                <ParticipantProgram />
+              </FeatureGate>
+            } />
             <Route path="/mijn-logies/:token" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <AccommodationQuotes />
