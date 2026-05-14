@@ -34,6 +34,7 @@ import { TodayView } from "@/components/customer-portal/TodayView";
 import { ProgramMap } from "@/components/customer-portal/ProgramMap";
 import { MobileBottomNav, type BottomNavView } from "@/components/customer-portal/MobileBottomNav";
 import { InstallPwaBanner } from "@/components/customer-portal/InstallPwaBanner";
+import { ParticipantView } from "@/components/customer-portal/ParticipantView";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
