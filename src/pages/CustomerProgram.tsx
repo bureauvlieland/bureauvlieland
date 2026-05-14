@@ -251,6 +251,14 @@ const CustomerProgram = () => {
   // Event-modus: automatisch + handmatige toggle (MOET vóór early returns)
   const eventMode = useEventMode(selectedDates, token ? `bv:event-mode:${token}` : undefined);
 
+  // Preview/demo: ?eventmode=on of ?eventmode=off forceert de modus via de URL
+  useEffect(() => {
+    const param = searchParams.get("eventmode");
+    if (param === "on") eventMode.setManualOverride("on");
+    else if (param === "off") eventMode.setManualOverride("off");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Bij eerste render binnen het programma-venster: spring naar "Vandaag"
   useEffect(() => {
     if (eventMode.eventModeActive && activeView === "splash") {
@@ -398,19 +406,17 @@ const CustomerProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
-            {(eventMode.eventModeActive || eventMode.isEventDay) && (
-              <Button
-                variant={eventMode.eventModeActive ? "default" : "outline"}
-                size="sm"
-                onClick={() =>
-                  eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
-                }
-                title="Tijdens evenement: snel naar Vandaag, Kaart en tickets"
-              >
-                <Sparkles className="h-4 w-4 mr-1" />
-                {eventMode.eventModeActive ? "Event-modus aan" : "Event-modus"}
-              </Button>
-            )}
+            <Button
+              variant={eventMode.eventModeActive ? "default" : "outline"}
+              size="sm"
+              onClick={() =>
+                eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
+              }
+              title="Event-modus: snel naar Vandaag, Kaart en tickets tijdens het verblijf"
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {eventMode.eventModeActive ? "Op het eiland" : "Op het eiland?"}
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
               <RefreshCw className="h-4 w-4 mr-2" />
               Vernieuwen
