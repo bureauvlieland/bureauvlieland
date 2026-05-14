@@ -64,6 +64,7 @@ interface AccommodationRequest {
   status: string;
   created_at: string;
   invoicingMode?: string | null;
+  linked_program_id?: string | null;
 }
 
 import { AlertTriangle } from "lucide-react";
