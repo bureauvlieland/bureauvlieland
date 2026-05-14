@@ -332,6 +332,21 @@ export const AccommodationSection = ({
                 </div>
               )}
 
+              {selectedQuote.partner?.location_lat && selectedQuote.partner?.location_lng && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Kaart & route</p>
+                  <HotelLocationMap
+                    lat={Number(selectedQuote.partner.location_lat)}
+                    lng={Number(selectedQuote.partner.location_lng)}
+                    label={selectedQuote.accommodation_name}
+                    address={[
+                      selectedQuote.partner.address_street,
+                      [selectedQuote.partner.address_postal, selectedQuote.partner.address_city].filter(Boolean).join(" "),
+                    ].filter(Boolean).join(", ")}
+                  />
+                </div>
+              )}
+
               {selectedQuote.partner_notes && (
                 <div className="pt-2 border-t">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Toelichting van de accommodatie</p>
