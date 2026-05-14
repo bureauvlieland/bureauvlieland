@@ -46,6 +46,7 @@ const ProgrammaSamenstellen = lazy(() => import("./pages/ProgrammaSamenstellen")
 const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
 const SharedProgram = lazy(() => import("./pages/SharedProgram"));
 const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
+const ParticipantProgram = lazy(() => import("./pages/ParticipantProgram"));
 const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
 const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
 const AccommodationQuotes = lazy(() => import("./pages/AccommodationQuotes"));
