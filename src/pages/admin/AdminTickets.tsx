@@ -33,7 +33,10 @@ import {
   ExternalLink,
   Check,
   X,
+  Link2,
+  Link2Off,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import {
   TICKET_BLOCK_IDS,
