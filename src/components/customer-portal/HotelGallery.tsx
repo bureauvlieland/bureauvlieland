@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X, ImageIcon, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { transformImageUrl, buildSrcSet } from "@/lib/supabaseImage";
 
 interface HotelGalleryProps {
   images: { url: string; alt?: string }[];
@@ -75,9 +76,12 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
             className="group relative aspect-[4/3] overflow-hidden rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <img
-              src={img.url}
+              src={transformImageUrl(img.url, { width: 400, quality: 70 })}
+              srcSet={buildSrcSet(img.url, [200, 400, 600, 800], { quality: 70 })}
+              sizes="(min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
               alt={img.alt || `${accommodationName} foto ${i + 1}`}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           </button>
@@ -89,8 +93,11 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
           {openIndex !== null && (
             <div ref={containerRef} className="relative bg-black">
               <img
-                src={images[openIndex].url}
+                src={transformImageUrl(images[openIndex].url, { width: 1600, quality: 85, resize: "contain" })}
+                srcSet={buildSrcSet(images[openIndex].url, [800, 1200, 1600, 2000], { quality: 85, resize: "contain" })}
+                sizes="100vw"
                 alt={images[openIndex].alt || `${accommodationName} foto ${openIndex + 1}`}
+                decoding="async"
                 className={isFullscreen ? "w-screen h-screen object-contain bg-black" : "w-full max-h-[85vh] object-contain bg-black"}
               />
               <Button
