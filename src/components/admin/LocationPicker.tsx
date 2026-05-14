@@ -76,7 +76,7 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
       const list: KnownLocation[] = [];
       const seen = new Set<string>();
       for (const p of (partnersRes.data || []) as any[]) {
-        const key = `${p.location_lat},${p.location_lng}`;
+        const key = `partner:${p.name}:${p.location_lat},${p.location_lng}`;
         if (seen.has(key)) continue;
         seen.add(key);
         const addr = [p.address_street, [p.address_postal, p.address_city].filter(Boolean).join(" ")]
@@ -90,7 +90,9 @@ export const LocationPicker = ({ lat, lng, address, onChange, mapHeightClass = "
         });
       }
       for (const b of (blocksRes.data || []) as any[]) {
-        const key = `${b.location_lat},${b.location_lng}`;
+        // Dedupe per bouwsteen-naam, niet kruislings met partners — anders verdwijnen
+        // activiteiten als Beach Games / Lasergamen omdat ze dezelfde coördinaten hebben.
+        const key = `bouwsteen:${b.name}:${b.location_lat},${b.location_lng}`;
         if (seen.has(key)) continue;
         seen.add(key);
         list.push({
