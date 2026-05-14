@@ -24,6 +24,7 @@ import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
 import { HotelLocationMap } from "./HotelLocationMap";
+import { HotelGallery } from "./HotelGallery";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -258,6 +259,13 @@ export const AccommodationSection = ({
                 <Info className="h-4 w-4 text-primary" />
                 Informatie over uw verblijf
               </h4>
+
+              {selectedQuote.partner?.gallery_images && selectedQuote.partner.gallery_images.length > 0 && (
+                <HotelGallery
+                  images={selectedQuote.partner.gallery_images}
+                  accommodationName={selectedQuote.accommodation_name}
+                />
+              )}
 
               {selectedQuote.description && (
                 <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.description}</p>
