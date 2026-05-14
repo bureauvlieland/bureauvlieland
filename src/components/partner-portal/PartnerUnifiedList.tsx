@@ -365,9 +365,9 @@ const ItemCard = ({
                   : "Geen datum"}
               </span>
               <span className="hidden md:inline">•</span>
-              <span className="hidden md:flex items-center gap-1">
+              <span className="hidden md:flex items-center gap-1" title={item.type === "activity" ? "Aantal deelnemers aan deze activiteit" : "Aantal gasten"}>
                 <Users className="h-3.5 w-3.5" />
-                {item.peopleCount}
+                {item.peopleCount} {item.type === "activity" ? "deelnemers" : "gasten"}
               </span>
             </div>
           </div>
