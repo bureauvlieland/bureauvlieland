@@ -4,13 +4,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +38,6 @@ export function TicketBookingInline({ item, siblings, requestId, onChanged }: Pr
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [ref, setRef] = useState(item.booking_reference ?? "");
-  const [groupId, setGroupId] = useState<string>(item.booking_group_id ?? "");
   const [busy, setBusy] = useState(false);
 
   if (!isTicketItem(item)) return null;
@@ -69,34 +61,6 @@ export function TicketBookingInline({ item, siblings, requestId, onChanged }: Pr
       return;
     }
     toast({ title: "Boekingsnummer opgeslagen" });
-    onChanged?.();
-  };
-
-  const saveGroup = async (next: string) => {
-    setGroupId(next);
-    const value = next === "__none__" || next === "" ? null : next;
-    // If we're joining an existing group via a sibling-id, look up that sibling's group_id
-    let booking_group_id = value;
-    if (value) {
-      const sib = siblings.find((s) => s.id === value);
-      booking_group_id = sib?.booking_group_id ?? value; // reuse existing group else seed with sibling id
-      // If sibling has no group yet, set both items to a new group keyed by the sibling id
-      if (sib && !sib.booking_group_id) {
-        await supabase
-          .from("program_request_items")
-          .update({ booking_group_id: sib.id })
-          .eq("id", sib.id);
-      }
-    }
-    const { error } = await supabase
-      .from("program_request_items")
-      .update({ booking_group_id })
-      .eq("id", item.id);
-    if (error) {
-      toast({ title: "Koppelen mislukt", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: value ? "Gekoppeld" : "Koppeling verwijderd" });
     onChanged?.();
   };
 
@@ -253,26 +217,10 @@ export function TicketBookingInline({ item, siblings, requestId, onChanged }: Pr
             />
           </div>
 
-          {groupOptions.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Hoort bij dezelfde boeking als…</Label>
-              <Select value={groupId || "__none__"} onValueChange={saveGroup}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Geen koppeling" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Geen koppeling</SelectItem>
-                  {groupOptions.map((opt) => (
-                    <SelectItem key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[10px] text-muted-foreground">
-                Optioneel — koppel heen- en terugreis als ze één boekingsnummer delen.
-              </p>
-            </div>
+          {groupOptions.length > 0 && item.booking_group_id && (
+            <p className="text-[10px] text-muted-foreground">
+              Gekoppeld aan andere boeking. Beheer koppelingen via <span className="font-medium">Admin → Tickets</span>.
+            </p>
           )}
         </div>
       </PopoverContent>

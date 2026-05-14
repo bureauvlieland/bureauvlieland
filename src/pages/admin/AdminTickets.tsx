@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,7 +33,10 @@ import {
   ExternalLink,
   Check,
   X,
+  Link2,
+  Link2Off,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import {
   TICKET_BLOCK_IDS,
@@ -268,6 +271,41 @@ export default function AdminTickets() {
     setEmailDialog({ items: group, project: row });
   };
 
+  const linkRows = async (row: TicketRow, targetId: string) => {
+    const target = (rows || []).find((r) => r.id === targetId);
+    if (!target) return;
+    // Use existing group_id from either side, else seed with target.id
+    const groupId = target.booking_group_id || row.booking_group_id || target.id;
+    const ids = [row.id, target.id];
+    // Make sure target also carries the group id
+    if (!target.booking_group_id) {
+      await supabase.from("program_request_items").update({ booking_group_id: groupId }).eq("id", target.id);
+    }
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ booking_group_id: groupId })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Koppelen mislukt", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Gekoppeld" });
+    qc.invalidateQueries({ queryKey: ["admin-tickets-overview"] });
+  };
+
+  const unlinkRow = async (row: TicketRow) => {
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ booking_group_id: null })
+      .eq("id", row.id);
+    if (error) {
+      toast({ title: "Ontkoppelen mislukt", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Koppeling verwijderd" });
+    qc.invalidateQueries({ queryKey: ["admin-tickets-overview"] });
+  };
+
   return (
     <AdminLayout>
       <Helmet>
@@ -422,6 +460,14 @@ export default function AdminTickets() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <LinkBookingButton
+                            row={row}
+                            siblings={(rows || []).filter(
+                              (s) => s.request_id === row.request_id && s.id !== row.id
+                            )}
+                            onLink={(targetId) => linkRows(row, targetId)}
+                            onUnlink={() => unlinkRow(row)}
+                          />
                           <Button
                             size="sm"
                             variant="ghost"
@@ -482,43 +528,44 @@ export default function AdminTickets() {
 
 function BookingRefInput({ initial, onSave }: { initial: string; onSave: (v: string) => void | Promise<void> }) {
   const [value, setValue] = useState(initial);
+  const [lastSaved, setLastSaved] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
-  const dirty = value !== initial;
+
+  // Sync when parent prop changes (e.g. after refetch / navigation back)
+  useEffect(() => {
+    setValue(initial);
+    setLastSaved(initial);
+  }, [initial]);
+
+  const dirty = value !== lastSaved;
+
+  const commit = async () => {
+    if (!dirty || saving) return;
+    setSaving(true);
+    await onSave(value.trim());
+    setLastSaved(value.trim());
+    setSaving(false);
+    setSavedTick(true);
+    setTimeout(() => setSavedTick(false), 1200);
+  };
+
   return (
     <div className="flex items-center gap-1">
       <Input
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={async (e) => {
-          if (e.key === "Enter" && dirty) {
-            setSaving(true);
-            await onSave(value.trim());
-            setSaving(false);
-            setSavedTick(true);
-            setTimeout(() => setSavedTick(false), 1200);
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
           }
         }}
         placeholder="—"
         className="h-8 text-sm"
       />
-      {dirty && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            await onSave(value.trim());
-            setSaving(false);
-            setSavedTick(true);
-            setTimeout(() => setSavedTick(false), 1200);
-          }}
-        >
-          <Check className="h-4 w-4" />
-        </Button>
-      )}
+      {dirty && !saving && <span className="text-[10px] text-amber-600">●</span>}
       {savedTick && <Check className="h-4 w-4 text-emerald-600" />}
     </div>
   );
@@ -567,5 +614,83 @@ function PdfCell({
         }}
       />
     </label>
+  );
+}
+
+function LinkBookingButton({
+  row,
+  siblings,
+  onLink,
+  onUnlink,
+}: {
+  row: TicketRow;
+  siblings: TicketRow[];
+  onLink: (targetId: string) => void | Promise<void>;
+  onUnlink: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  if (siblings.length === 0) return null;
+  const isLinked = !!row.booking_group_id;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          size="sm"
+          variant="ghost"
+          className={cn("h-8 w-8 p-0", isLinked && "text-amber-700")}
+          title={isLinked ? "Gekoppeld aan andere boeking" : "Koppel aan andere boeking"}
+        >
+          {isLinked ? <Link2 className="h-4 w-4" /> : <Link2Off className="h-4 w-4 opacity-60" />}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72" align="end">
+        <div className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Koppel aan dezelfde boeking
+          </div>
+          <p className="text-[11px] text-slate-500">
+            Heen- en terugreis (of meerdere fietsen) die één boekingsnummer delen.
+          </p>
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {siblings.map((s) => {
+              const linked = !!s.booking_group_id && s.booking_group_id === row.booking_group_id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={async () => {
+                    await onLink(s.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "w-full text-left text-xs rounded-md border px-2 py-1.5 hover:bg-slate-50",
+                    linked && "border-amber-300 bg-amber-50"
+                  )}
+                >
+                  <div className="font-medium text-slate-800">{s.block_name}</div>
+                  <div className="text-slate-500">
+                    {s.ticketDate ? formatNL(s.ticketDate) : "—"}
+                    {s.booking_reference ? ` · ${s.booking_reference}` : ""}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {isLinked && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full text-xs text-destructive hover:text-destructive"
+              onClick={async () => {
+                await onUnlink();
+                setOpen(false);
+              }}
+            >
+              Koppeling verwijderen
+            </Button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
