@@ -489,8 +489,8 @@ export async function wrapEmailHtml(innerHtml: string, supabase: any): Promise<s
     <td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
         <tr>
-          <td style="background-color:${BRAND_COLOR}; padding:20px 32px; text-align:left;">
-            <img src="${LOGO_URL}" alt="Bureau Vlieland" width="160" style="display:block; max-width:160px; height:auto; border:0;">
+          <td style="background-color:#ffffff; padding:24px 32px; text-align:left; border-bottom:1px solid #e5e7eb;">
+            <img src="${LOGO_URL}" alt="Bureau Vlieland" width="180" style="display:block; max-width:180px; height:auto; border:0;">
           </td>
         </tr>
         <tr>
