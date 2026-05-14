@@ -130,7 +130,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
           commission_invoiced_at: q.commission_invoiced_at,
           created_at: q.created_at,
           updated_at: q.updated_at,
-          partner: q.partner as AccommodationQuote['partner'],
+          partner: q.partner as unknown as AccommodationQuote['partner'],
         }));
         setQuotes(transformedQuotes);
       }
