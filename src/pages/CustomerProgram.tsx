@@ -408,6 +408,34 @@ const CustomerProgram = () => {
           </Link>
           <div className="flex items-center gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const url = `${window.location.origin}/programma-deelnemers/${token}`;
+                try {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: "Programma Bureau Vlieland",
+                      text: "Hier is ons programma op Vlieland:",
+                      url,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    toast({
+                      title: "Link gekopieerd",
+                      description: "Plak de link in WhatsApp of e-mail om met deelnemers te delen.",
+                    });
+                  }
+                } catch {
+                  /* user cancelled share */
+                }
+              }}
+              title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
+            >
+              <Share2 className="h-4 w-4 mr-1" />
+              Delen
+            </Button>
+            <Button
               variant={eventMode.eventModeActive ? "default" : "outline"}
               size="sm"
               onClick={() =>
