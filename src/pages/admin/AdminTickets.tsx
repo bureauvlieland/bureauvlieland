@@ -460,6 +460,14 @@ export default function AdminTickets() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <LinkBookingButton
+                            row={row}
+                            siblings={(rows || []).filter(
+                              (s) => s.request_id === row.request_id && s.id !== row.id
+                            )}
+                            onLink={(targetId) => linkRows(row, targetId)}
+                            onUnlink={() => unlinkRow(row)}
+                          />
                           <Button
                             size="sm"
                             variant="ghost"
