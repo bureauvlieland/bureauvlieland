@@ -430,7 +430,7 @@ const CustomerProgram = () => {
               title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
             >
               <Share2 className="h-4 w-4 mr-1" />
-              Delen
+              Delen met deelnemers
             </Button>
             <Button
               variant={eventMode.eventModeActive ? "default" : "outline"}
@@ -438,10 +438,10 @@ const CustomerProgram = () => {
               onClick={() =>
                 eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
               }
-              title="Event-modus: snel naar Vandaag, Kaart en tickets tijdens het verblijf"
+              title="Deelnemersweergave: snel naar Vandaag, Kaart en tickets tijdens het verblijf"
             >
               <Sparkles className="h-4 w-4 mr-1" />
-              {eventMode.eventModeActive ? "Op het eiland" : "Op het eiland?"}
+              Deelnemersweergave
             </Button>
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
               <RefreshCw className="h-4 w-4 mr-2" />
