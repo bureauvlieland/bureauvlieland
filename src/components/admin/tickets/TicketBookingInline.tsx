@@ -253,26 +253,10 @@ export function TicketBookingInline({ item, siblings, requestId, onChanged }: Pr
             />
           </div>
 
-          {groupOptions.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Hoort bij dezelfde boeking als…</Label>
-              <Select value={groupId || "__none__"} onValueChange={saveGroup}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Geen koppeling" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Geen koppeling</SelectItem>
-                  {groupOptions.map((opt) => (
-                    <SelectItem key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[10px] text-muted-foreground">
-                Optioneel — koppel heen- en terugreis als ze één boekingsnummer delen.
-              </p>
-            </div>
+          {groupOptions.length > 0 && item.booking_group_id && (
+            <p className="text-[10px] text-muted-foreground">
+              Gekoppeld aan andere boeking. Beheer koppelingen via <span className="font-medium">Admin → Tickets</span>.
+            </p>
           )}
         </div>
       </PopoverContent>
