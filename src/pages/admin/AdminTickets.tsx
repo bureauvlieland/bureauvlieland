@@ -347,6 +347,7 @@ export default function AdminTickets() {
               <TableBody>
                 {filtered.map((row, idx) => {
                   const prev = filtered[idx - 1];
+                  const sameProject = prev && prev.request_id === row.request_id;
                   const sameGroup =
                     prev &&
                     row.booking_group_id &&
@@ -358,7 +359,8 @@ export default function AdminTickets() {
                       key={row.id}
                       className={cn(
                         row.booking_group_id && "bg-amber-50/40",
-                        sameGroup && "border-t-0"
+                        sameProject && "border-t-0",
+                        !sameProject && idx > 0 && "border-t-2 border-t-slate-300"
                       )}
                     >
                       <TableCell className="text-sm whitespace-nowrap">
@@ -377,15 +379,21 @@ export default function AdminTickets() {
                         })()}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <Link
-                          to={`/admin/projecten/${row.request_id}`}
-                          className="text-slate-900 hover:underline font-medium"
-                        >
-                          {row.customer_company || row.customer_name}
-                        </Link>
-                        <div className="text-xs text-slate-500">
-                          {row.reference_number}
-                        </div>
+                        {sameProject ? (
+                          <span className="text-xs text-slate-400 italic">↳ zelfde project</span>
+                        ) : (
+                          <>
+                            <Link
+                              to={`/admin/projecten/${row.request_id}`}
+                              className="text-slate-900 hover:underline font-medium"
+                            >
+                              {row.customer_company || row.customer_name}
+                            </Link>
+                            <div className="text-xs text-slate-500">
+                              {row.reference_number}
+                            </div>
+                          </>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">
                         <Badge variant="outline" className="font-normal">
