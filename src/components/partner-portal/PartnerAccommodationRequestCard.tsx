@@ -21,9 +21,13 @@ import {
   Send,
   Eye,
   MessageSquare,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { PartnerAccommodationChatSheet } from "./PartnerAccommodationChatSheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Te beantwoorden", variant: "secondary" },
@@ -64,6 +68,7 @@ interface AccommodationRequest {
   status: string;
   created_at: string;
   invoicingMode?: string | null;
+  linked_program_id?: string | null;
 }
 
 import { AlertTriangle } from "lucide-react";
@@ -85,6 +90,7 @@ interface PartnerAccommodationRequestCardProps {
   partnerId: string;
   partnerName: string;
   partnerEmail: string;
+  partnerToken?: string | null;
 }
 
 export const PartnerAccommodationRequestCard = ({
@@ -95,8 +101,46 @@ export const PartnerAccommodationRequestCard = ({
   partnerId,
   partnerName,
   partnerEmail,
+  partnerToken,
 }: PartnerAccommodationRequestCardProps) => {
   const [showChat, setShowChat] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { toast } = useToast();
+
+  const handleDownloadProgram = async () => {
+    if (!request.linked_program_id || !partnerToken) return;
+    setIsDownloading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-program-docx", {
+        body: { request_id: request.linked_program_id, partner_token: partnerToken },
+      });
+      if (error) throw error;
+      const blob = data instanceof Blob
+        ? data
+        : new Blob([data as ArrayBuffer], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+      const fileName = `Programma-${request.customer_company || request.customer_name}.docx`.replace(/\s+/g, "-");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Programma gedownload", description: "Het programma is opgeslagen als .docx." });
+    } catch (err: any) {
+      console.error("docx download error:", err);
+      toast({
+        title: "Download mislukt",
+        description: err?.message ?? "Kon het programma niet downloaden.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
   const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
   const statusConfig = QUOTE_STATUS_CONFIG[quote?.status || "pending"];
   const typeConfig = ACCOMMODATION_TYPES.find(t => t.value === request.accommodation_type);
@@ -276,6 +320,21 @@ export const PartnerAccommodationRequestCard = ({
           {quote && (
             <Button variant="ghost" size="icon" onClick={() => setShowChat(true)} title="Berichten">
               <MessageSquare className="h-4 w-4" />
+            </Button>
+          )}
+          {isSelected && request.linked_program_id && partnerToken && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleDownloadProgram}
+              disabled={isDownloading}
+              title="Download programma (.docx)"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>

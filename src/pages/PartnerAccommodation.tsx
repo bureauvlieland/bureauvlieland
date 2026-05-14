@@ -585,6 +585,7 @@ const PartnerAccommodationContent = () => {
                     partnerId={partnerId || ""}
                     partnerName={partnerName}
                     partnerEmail={partnerEmail}
+                    partnerToken={partnerToken}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -612,6 +613,7 @@ const PartnerAccommodationContent = () => {
                     partnerId={partnerId || ""}
                     partnerName={partnerName}
                     partnerEmail={partnerEmail}
+                    partnerToken={partnerToken}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -639,6 +641,7 @@ const PartnerAccommodationContent = () => {
                     partnerId={partnerId || ""}
                     partnerName={partnerName}
                     partnerEmail={partnerEmail}
+                    partnerToken={partnerToken}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -667,6 +670,7 @@ const PartnerAccommodationContent = () => {
                     partnerId={partnerId || ""}
                     partnerName={partnerName}
                     partnerEmail={partnerEmail}
+                    partnerToken={partnerToken}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);
@@ -694,6 +698,7 @@ const PartnerAccommodationContent = () => {
                     partnerId={partnerId || ""}
                     partnerName={partnerName}
                     partnerEmail={partnerEmail}
+                    partnerToken={partnerToken}
                     onSubmitQuote={() => {
                       setSelectedRequest(request);
                       setShowQuoteSheet(true);

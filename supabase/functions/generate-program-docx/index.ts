@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { request_id, customer_token } = await req.json();
+    const { request_id, customer_token, partner_token } = await req.json();
     if (!request_id) {
       return new Response(JSON.stringify({ error: "request_id required" }), {
         status: 400,
@@ -145,6 +145,29 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (pr && pr.customer_token === customer_token && (!pr.expires_at || new Date(pr.expires_at) > new Date())) {
         authorized = true;
+      }
+    } else if (partner_token) {
+      // Authorize lodging partner whose accepted accommodation quote is linked to this program
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("id")
+        .eq("partner_token", partner_token)
+        .maybeSingle();
+      if (partner?.id) {
+        const { data: quotes } = await supabase
+          .from("accommodation_quotes")
+          .select("id, status, accommodation_requests!inner(linked_program_id, status)")
+          .eq("partner_id", partner.id)
+          .eq("status", "selected");
+        if (
+          quotes?.some(
+            (q: any) =>
+              q.accommodation_requests?.linked_program_id === request_id &&
+              q.accommodation_requests?.status !== "cancelled",
+          )
+        ) {
+          authorized = true;
+        }
       }
     } else {
       const auth = req.headers.get("Authorization");
