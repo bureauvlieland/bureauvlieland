@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import {
   Sparkles,
   CheckCircle2,
   Info,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -60,8 +62,17 @@ export const TodayView = ({
   customerCompany,
   customerName,
 }: TodayViewProps) => {
-  const dayIdx = currentDayIndex ?? 0;
+  const initialIdx = currentDayIndex ?? 0;
+  const [viewedIdx, setViewedIdx] = useState<number>(initialIdx);
+
+  // Sync when prop changes (e.g. day rolls over)
+  useEffect(() => {
+    setViewedIdx(currentDayIndex ?? 0);
+  }, [currentDayIndex]);
+
+  const dayIdx = Math.min(Math.max(viewedIdx, 0), Math.max(selectedDates.length - 1, 0));
   const todayDate = selectedDates[dayIdx];
+  const isViewingActualToday = currentDayIndex !== null && dayIdx === currentDayIndex;
 
   const todayItems = useMemo(
     () =>
@@ -119,10 +130,42 @@ export const TodayView = ({
                 {customerCompany || customerName} · {numberOfPeople} personen
               </p>
             </div>
-            <Badge variant="secondary" className="gap-1">
-              <Sparkles className="h-3 w-3" />
-              Dag {dayIdx + 1} / {selectedDates.length}
-            </Badge>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewedIdx((i) => Math.max(0, i - 1))}
+                disabled={dayIdx <= 0}
+                aria-label="Vorige dag"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3" />
+                Dag {dayIdx + 1} / {selectedDates.length}
+              </Badge>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewedIdx((i) => Math.min(selectedDates.length - 1, i + 1))}
+                disabled={dayIdx >= selectedDates.length - 1}
+                aria-label="Volgende dag"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              {!isViewingActualToday && currentDayIndex !== null && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setViewedIdx(currentDayIndex)}
+                >
+                  Naar vandaag
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
