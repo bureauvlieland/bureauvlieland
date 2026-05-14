@@ -148,7 +148,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a href="https://olivavlieland.nl" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                  Oliva Vlieland
+                  Trattoria Oliva
                 </a>
               </li>
             </ul>
