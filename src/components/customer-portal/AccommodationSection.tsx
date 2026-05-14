@@ -399,6 +399,18 @@ export const AccommodationSection = ({
           )}
 
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const { generateStayOverviewPdf } = await import("@/lib/stayOverviewPdf");
+                await generateStayOverviewPdf(accommodation, selectedQuote, accommodation.guest_name ?? null);
+              }}
+              className="w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download verblijfsoverzicht (PDF)
+            </Button>
             {onEditAccommodation && (
               <Button
                 variant="outline"
