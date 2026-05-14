@@ -162,7 +162,7 @@ export const PartnerUnifiedList = ({
         date: activityDate,
         status: effectiveStatus,
         urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
-        peopleCount: i.program_requests.number_of_people,
+        peopleCount: effPeople,
         isNew: !programCancelled && isNewItem(i),
         isModified: !programCancelled && isModifiedByCustomer(i),
         hasCounter: !programCancelled && i.status === "counter_proposed",
