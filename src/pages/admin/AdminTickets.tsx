@@ -271,6 +271,41 @@ export default function AdminTickets() {
     setEmailDialog({ items: group, project: row });
   };
 
+  const linkRows = async (row: TicketRow, targetId: string) => {
+    const target = (rows || []).find((r) => r.id === targetId);
+    if (!target) return;
+    // Use existing group_id from either side, else seed with target.id
+    const groupId = target.booking_group_id || row.booking_group_id || target.id;
+    const ids = [row.id, target.id];
+    // Make sure target also carries the group id
+    if (!target.booking_group_id) {
+      await supabase.from("program_request_items").update({ booking_group_id: groupId }).eq("id", target.id);
+    }
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ booking_group_id: groupId })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Koppelen mislukt", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Gekoppeld" });
+    qc.invalidateQueries({ queryKey: ["admin-tickets-overview"] });
+  };
+
+  const unlinkRow = async (row: TicketRow) => {
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ booking_group_id: null })
+      .eq("id", row.id);
+    if (error) {
+      toast({ title: "Ontkoppelen mislukt", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Koppeling verwijderd" });
+    qc.invalidateQueries({ queryKey: ["admin-tickets-overview"] });
+  };
+
   return (
     <AdminLayout>
       <Helmet>
