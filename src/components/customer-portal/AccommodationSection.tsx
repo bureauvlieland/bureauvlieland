@@ -237,9 +237,116 @@ export const AccommodationSection = ({
             </div>
           </div>
 
-          <p className="text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-            De accommodatie neemt contact met u op om de reservering definitief te maken.
-          </p>
+          {/* Reservation status */}
+          <div className="rounded-lg border border-green-200 bg-green-100/60 dark:border-green-900 dark:bg-green-900/20 p-3 text-sm text-green-800 dark:text-green-200 flex items-start gap-2">
+            <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium">Reservering bevestigd</p>
+              <p className="text-green-700 dark:text-green-300 mt-0.5">
+                {isBureauCentral
+                  ? "Bureau Vlieland regelt de reservering en facturatie. U hoeft verder niets te doen — hieronder vindt u alle informatie over uw verblijf."
+                  : "Uw verblijf is geboekt. Hieronder vindt u alle praktische informatie."}
+              </p>
+            </div>
+          </div>
+
+          {/* Hotel / accommodation information */}
+          {(selectedQuote.partner || selectedQuote.description || selectedQuote.includes?.length || selectedQuote.conditions || selectedQuote.partner_notes) && (
+            <div className="rounded-lg border bg-card p-4 space-y-4">
+              <h4 className="font-semibold text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 text-primary" />
+                Informatie over uw verblijf
+              </h4>
+
+              {selectedQuote.description && (
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.description}</p>
+              )}
+
+              {selectedQuote.partner?.about_text && (
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.partner.about_text}</p>
+              )}
+
+              {selectedQuote.partner?.highlight_features && selectedQuote.partner.highlight_features.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedQuote.partner.highlight_features.map((f, i) => (
+                    <Badge key={i} variant="secondary" className="font-normal">{f}</Badge>
+                  ))}
+                </div>
+              )}
+
+              {selectedQuote.includes && selectedQuote.includes.length > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Inbegrepen</p>
+                  <ul className="text-sm space-y-1">
+                    {selectedQuote.includes.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-green-600 shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedQuote.partner && (selectedQuote.partner.address_street || selectedQuote.partner.phone || selectedQuote.partner.website_url || selectedQuote.partner.location_description) && (
+                <div className="grid sm:grid-cols-2 gap-3 text-sm pt-2 border-t">
+                  {(selectedQuote.partner.address_street || selectedQuote.partner.address_city) && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Adres</p>
+                      <p>
+                        {selectedQuote.partner.address_street}
+                        {selectedQuote.partner.address_postal || selectedQuote.partner.address_city ? (
+                          <>
+                            <br />
+                            {[selectedQuote.partner.address_postal, selectedQuote.partner.address_city].filter(Boolean).join(" ")}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  )}
+                  {(selectedQuote.partner.phone || selectedQuote.partner.website_url) && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Contact accommodatie</p>
+                      {selectedQuote.partner.phone && (
+                        <p>
+                          <a href={`tel:${selectedQuote.partner.phone}`} className="text-primary hover:underline">
+                            {selectedQuote.partner.phone}
+                          </a>
+                        </p>
+                      )}
+                      {selectedQuote.partner.website_url && (
+                        <p>
+                          <a href={selectedQuote.partner.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                            Website
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {selectedQuote.partner.location_description && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Locatie</p>
+                      <p className="text-muted-foreground whitespace-pre-line">{selectedQuote.partner.location_description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedQuote.partner_notes && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Toelichting van de accommodatie</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.partner_notes}</p>
+                </div>
+              )}
+
+              {selectedQuote.conditions && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Voorwaarden</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.conditions}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             {onEditAccommodation && (

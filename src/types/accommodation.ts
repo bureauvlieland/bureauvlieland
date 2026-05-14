@@ -111,6 +111,15 @@ export interface AccommodationQuote {
     id: string;
     name: string;
     email: string;
+    phone?: string | null;
+    website_url?: string | null;
+    address_street?: string | null;
+    address_postal?: string | null;
+    address_city?: string | null;
+    location_description?: string | null;
+    booking_contact_name?: string | null;
+    booking_contact_phone?: string | null;
+    contact_email?: string | null;
     gallery_images?: { url: string; alt?: string }[];
     about_text?: string;
     highlight_features?: string[];
