@@ -86,6 +86,7 @@ interface PartnerAccommodationRequestCardProps {
   partnerId: string;
   partnerName: string;
   partnerEmail: string;
+  partnerToken?: string | null;
 }
 
 export const PartnerAccommodationRequestCard = ({
@@ -96,6 +97,7 @@ export const PartnerAccommodationRequestCard = ({
   partnerId,
   partnerName,
   partnerEmail,
+  partnerToken,
 }: PartnerAccommodationRequestCardProps) => {
   const [showChat, setShowChat] = useState(false);
   const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
