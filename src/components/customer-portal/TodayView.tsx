@@ -277,14 +277,23 @@ export const TodayView = ({
           <div className="text-sm">
             <p className="font-medium">Weer & wind</p>
             <p className="text-muted-foreground text-xs">
-              Bekijk het actuele eilandweer op{" "}
+              Wind & vooruitzicht op{" "}
               <a
-                href="https://www.knmi.nl/nederland-nu/weer/waarschuwingen-en-verwachtingen"
+                href="https://nl.windfinder.com/forecast/vlieland_haven"
                 target="_blank"
                 rel="noreferrer"
                 className="underline"
               >
-                knmi.nl
+                Windfinder
+              </a>
+              {" "}· Regenradar op{" "}
+              <a
+                href="https://www.buienalarm.nl/nederland/oost-vlieland/15050"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                Buienalarm
               </a>
               .
             </p>
