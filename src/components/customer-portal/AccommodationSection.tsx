@@ -300,7 +300,7 @@ export const AccommodationSection = ({
                 </div>
               )}
 
-              {selectedQuote.partner && (selectedQuote.partner.address_street || selectedQuote.partner.phone || selectedQuote.partner.website_url || selectedQuote.partner.location_description) && (
+              {selectedQuote.partner && (selectedQuote.partner.address_street || selectedQuote.partner.phone || selectedQuote.partner.booking_contact_phone || selectedQuote.partner.contact_email || selectedQuote.partner.email || selectedQuote.partner.website_url || selectedQuote.partner.location_description) && (
                 <div className="grid sm:grid-cols-2 gap-3 text-sm pt-2 border-t">
                   {(selectedQuote.partner.address_street || selectedQuote.partner.address_city) && (
                     <div>
