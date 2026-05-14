@@ -8,9 +8,9 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/diensten</loc>
-    <lastmod>2026-04-21</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://bureauvlieland.nl/onze-werkwijze</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
@@ -118,6 +118,12 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://bureauvlieland.nl/programma-op-maat</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://bureauvlieland.nl/logies-aanvragen</loc>
     <lastmod>2026-04-21</lastmod>
     <changefreq>monthly</changefreq>
@@ -130,6 +136,60 @@
     <lastmod>2026-04-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/katalys</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/eilanddag-compleet</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/prive-eilanddag-regina-andrea</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/avontuur-ontspanning</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/chill-eilanddag</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/actieve-eilanddag-voc</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/culinaire-ontdekking</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/wellness-natuur</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/wellness-natuur-3d</loc>
+    <lastmod>2026-05-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://bureauvlieland.nl/partners</loc>
@@ -191,6 +251,12 @@
   <url>
     <loc>https://bureauvlieland.nl/algemene-voorwaarden</loc>
     <lastmod>2026-04-21</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/partner-voorwaarden</loc>
+    <lastmod>2026-05-14</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
