@@ -21,9 +21,13 @@ import {
   Send,
   Eye,
   MessageSquare,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { PartnerAccommodationChatSheet } from "./PartnerAccommodationChatSheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Te beantwoorden", variant: "secondary" },
