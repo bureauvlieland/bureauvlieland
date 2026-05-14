@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,7 +96,6 @@ const ParticipantProgram = () => {
           <Skeleton className="h-32 w-full mb-6" />
           <Skeleton className="h-48 w-full" />
         </main>
-        <Footer />
       </div>
     );
   }
@@ -118,7 +116,6 @@ const ParticipantProgram = () => {
             </Button>
           </Link>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -343,7 +340,6 @@ const ParticipantProgram = () => {
         )}
       </main>
 
-      <Footer />
     </div>
   );
 };

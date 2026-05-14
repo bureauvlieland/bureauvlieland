@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChangeConfirmationDialog, type PendingChange } from "@/components/customer-portal/ChangeConfirmationDialog";
@@ -285,7 +284,6 @@ const CustomerProgram = () => {
           <Skeleton className="h-32 w-full mb-6" />
           <Skeleton className="h-48 w-full" />
         </main>
-        <Footer />
       </div>
     );
   }
@@ -314,7 +312,6 @@ const CustomerProgram = () => {
             </Button>
           </Link>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -631,7 +628,6 @@ const CustomerProgram = () => {
         <InstallPwaBanner programToken={token} />
       )}
 
-      <Footer />
 
       {/* Dialogs */}
       <ChangeConfirmationDialog
