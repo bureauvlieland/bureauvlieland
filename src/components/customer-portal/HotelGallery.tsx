@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,23 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
     setOpenIndex((i) => (i === null ? null : (i - 1 + images.length) % images.length));
   const next = () =>
     setOpenIndex((i) => (i === null ? null : (i + 1) % images.length));
+
+  useEffect(() => {
+    if (openIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        next();
+      } else if (e.key === "Escape") {
+        close();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openIndex, images.length]);
 
   return (
     <div>
