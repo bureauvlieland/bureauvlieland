@@ -170,10 +170,21 @@ export default function AdminTickets() {
         return true;
       })
       .sort((a, b) => {
+        // Bundle by project: sort by project's earliest ticket date, then by request_id,
+        // then by ticket date within the project, then day_index.
+        const projMin = new Map<string, string>();
+        for (const r of rows!) {
+          const d = r.ticketDate ?? "9999-12-31";
+          const cur = projMin.get(r.request_id);
+          if (!cur || d < cur) projMin.set(r.request_id, d);
+        }
+        const am = projMin.get(a.request_id) ?? "9999-12-31";
+        const bm = projMin.get(b.request_id) ?? "9999-12-31";
+        if (am !== bm) return am < bm ? -1 : 1;
+        if (a.request_id !== b.request_id) return a.request_id < b.request_id ? -1 : 1;
         const ad = a.ticketDate ?? "9999-12-31";
         const bd = b.ticketDate ?? "9999-12-31";
         if (ad !== bd) return ad < bd ? -1 : 1;
-        if (a.request_id !== b.request_id) return a.request_id < b.request_id ? -1 : 1;
         return (a.day_index ?? 0) - (b.day_index ?? 0);
       });
   }, [rows, period, kind, status, search]);
