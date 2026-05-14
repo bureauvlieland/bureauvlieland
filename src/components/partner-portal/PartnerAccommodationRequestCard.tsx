@@ -184,8 +184,8 @@ export const PartnerAccommodationRequestCard = ({
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>
-              {format(new Date(request.arrival_date), "EEE d MMM", { locale: nl })} - {" "}
-              {format(new Date(request.departure_date), "EEE d MMM", { locale: nl })}
+              {format(new Date(request.arrival_date), "EEE d MMM yyyy", { locale: nl })} - {" "}
+              {format(new Date(request.departure_date), "EEE d MMM yyyy", { locale: nl })}
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm">
