@@ -176,7 +176,7 @@ export const PartnerUpcomingActivities = ({
                         duration: item.duration,
                       },
                       dates,
-                      item.program_requests.number_of_people
+                      item.override_people ?? item.program_requests.number_of_people
                     );
                   }}
                   className="p-1 rounded hover:bg-muted transition-colors shrink-0"
