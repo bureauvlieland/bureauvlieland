@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HotelGalleryProps {
@@ -11,7 +11,15 @@ interface HotelGalleryProps {
 export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  if (!images || images.length === 0) return null;
+  if (!images || images.length === 0) {
+    return (
+      <div className="aspect-[16/6] w-full rounded-lg border border-dashed bg-muted/40 flex flex-col items-center justify-center text-muted-foreground gap-2">
+        <ImageIcon className="h-8 w-8" />
+        <p className="text-sm">Nog geen foto's beschikbaar van {accommodationName}.</p>
+        <p className="text-xs">De accommodatie voegt deze binnenkort toe.</p>
+      </div>
+    );
+  }
 
   const close = () => setOpenIndex(null);
   const prev = () =>
