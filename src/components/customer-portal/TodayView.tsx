@@ -130,10 +130,42 @@ export const TodayView = ({
                 {customerCompany || customerName} · {numberOfPeople} personen
               </p>
             </div>
-            <Badge variant="secondary" className="gap-1">
-              <Sparkles className="h-3 w-3" />
-              Dag {dayIdx + 1} / {selectedDates.length}
-            </Badge>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewedIdx((i) => Math.max(0, i - 1))}
+                disabled={dayIdx <= 0}
+                aria-label="Vorige dag"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3" />
+                Dag {dayIdx + 1} / {selectedDates.length}
+              </Badge>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewedIdx((i) => Math.min(selectedDates.length - 1, i + 1))}
+                disabled={dayIdx >= selectedDates.length - 1}
+                aria-label="Volgende dag"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              {!isViewingActualToday && currentDayIndex !== null && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setViewedIdx(currentDayIndex)}
+                >
+                  Naar vandaag
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
