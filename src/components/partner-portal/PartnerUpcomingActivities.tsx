@@ -154,9 +154,9 @@ export const PartnerUpcomingActivities = ({
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-sm truncate">{item.block_name}</span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1" title="Aantal deelnemers aan deze activiteit">
                       <Users className="h-3 w-3" />
-                      {item.program_requests.number_of_people}
+                      {item.override_people ?? item.program_requests.number_of_people} deelnemers
                     </span>
                   </div>
                 </div>
