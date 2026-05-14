@@ -15,6 +15,7 @@ import {
   Phone,
   Mail,
   Globe,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -399,6 +400,18 @@ export const AccommodationSection = ({
           )}
 
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const { generateStayOverviewPdf } = await import("@/lib/stayOverviewPdf");
+                await generateStayOverviewPdf(accommodation, selectedQuote, accommodation.customer_company || accommodation.customer_name);
+              }}
+              className="w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download verblijfsoverzicht (PDF)
+            </Button>
             {onEditAccommodation && (
               <Button
                 variant="outline"
