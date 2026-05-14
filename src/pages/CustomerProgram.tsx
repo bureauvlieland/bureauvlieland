@@ -611,6 +611,8 @@ const CustomerProgram = () => {
           />
         )}
       </main>
+      </>
+      )}
 
       {/* Extra bottom padding op mobile zodat content niet onder de bottom-nav valt */}
       {isMobile && <div className="h-16" />}
