@@ -27,6 +27,7 @@ import {
   Info,
   X,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
