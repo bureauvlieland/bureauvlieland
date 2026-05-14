@@ -410,22 +410,49 @@ const CustomerProgram = () => {
               size="sm"
               onClick={async () => {
                 const url = `${window.location.origin}/programma-deelnemers/${token}`;
-                try {
-                  if (navigator.share) {
-                    await navigator.share({
+                // Try Web Share API first (mainly mobile)
+                if (typeof navigator !== "undefined" && (navigator as any).share) {
+                  try {
+                    await (navigator as any).share({
                       title: "Programma Bureau Vlieland",
                       text: "Hier is ons programma op Vlieland:",
                       url,
                     });
-                  } else {
-                    await navigator.clipboard.writeText(url);
-                    toast({
-                      title: "Link gekopieerd",
-                      description: "Plak de link in WhatsApp of e-mail om met deelnemers te delen.",
-                    });
+                    return;
+                  } catch (err: any) {
+                    if (err?.name === "AbortError") return; // user cancelled
+                    // fall through to clipboard
                   }
+                }
+                // Try modern clipboard API
+                let copied = false;
+                try {
+                  await navigator.clipboard.writeText(url);
+                  copied = true;
                 } catch {
-                  /* user cancelled share */
+                  // Fallback: hidden textarea + execCommand (works in iframes)
+                  try {
+                    const ta = document.createElement("textarea");
+                    ta.value = url;
+                    ta.style.position = "fixed";
+                    ta.style.opacity = "0";
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    copied = document.execCommand("copy");
+                    document.body.removeChild(ta);
+                  } catch {
+                    copied = false;
+                  }
+                }
+                if (copied) {
+                  toast({
+                    title: "Link gekopieerd",
+                    description: "Plak de link in WhatsApp of e-mail om met deelnemers te delen.",
+                  });
+                } else {
+                  // Last resort: show the URL so the user can copy manually
+                  window.prompt("Kopieer deze link om te delen met deelnemers:", url);
                 }
               }}
               title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
