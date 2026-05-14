@@ -1,0 +1,1 @@
+UPDATE public.program_requests SET expires_at = now() + interval '180 days' WHERE customer_token='XgnQ6rxyQ8D6';
