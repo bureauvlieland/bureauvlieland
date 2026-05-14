@@ -317,9 +317,19 @@ export const PartnerAccommodationRequestCard = ({
               Details bekijken
             </Button>
           )}
-          {quote && (
-            <Button variant="ghost" size="icon" onClick={() => setShowChat(true)} title="Berichten">
-              <MessageSquare className="h-4 w-4" />
+          {isSelected && request.linked_program_id && partnerToken && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleDownloadProgram}
+              disabled={isDownloading}
+              title="Download programma (.docx)"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>
