@@ -471,7 +471,16 @@ const CustomerProgram = () => {
         </div>
       )}
 
-
+      {/* Deelnemersweergave: identiek aan wat deelnemers zien */}
+      {eventMode.eventModeActive ? (
+        <ParticipantView
+          program={program}
+          accommodation={accommodation}
+          selectedDates={selectedDates}
+          eventMode={eventMode}
+        />
+      ) : (
+      <>
       {/* Compute tab badges */}
       {(() => null)()}
       {!isMobile && (() => {
