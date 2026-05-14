@@ -37,9 +37,34 @@ const ParticipantProgram = () => {
     program,
     isLoading,
     error,
-    selectedDates,
     accommodation,
   } = useCustomerProgram(token || "");
+
+  const selectedDates = useMemo(() => {
+    if (!program?.selected_dates) return [] as Date[];
+    const parsed = (program.selected_dates as string[]).map((d) => {
+      try {
+        return parseISO(d);
+      } catch {
+        return new Date(d);
+      }
+    });
+    if (program?.items) {
+      const maxDayIndex = Math.max(
+        ...program.items
+          .filter((i: any) => i.status !== "cancelled")
+          .map((i: any) => i.day_index),
+        -1
+      );
+      while (parsed.length <= maxDayIndex && parsed.length > 0) {
+        const last = parsed[parsed.length - 1];
+        const next = new Date(last);
+        next.setDate(next.getDate() + 1);
+        parsed.push(next);
+      }
+    }
+    return parsed;
+  }, [program?.selected_dates, program?.items]);
 
   const eventMode = useEventMode(selectedDates, token ? `bv:event-mode:${token}:share` : undefined);
 
