@@ -317,6 +317,11 @@ export const PartnerAccommodationRequestCard = ({
               Details bekijken
             </Button>
           )}
+          {quote && (
+            <Button variant="ghost" size="icon" onClick={() => setShowChat(true)} title="Berichten">
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          )}
           {isSelected && request.linked_program_id && partnerToken && (
             <Button
               variant="outline"
