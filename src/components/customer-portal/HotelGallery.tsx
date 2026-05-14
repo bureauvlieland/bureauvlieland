@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, X, ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ImageIcon, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HotelGalleryProps {
@@ -10,6 +10,26 @@ interface HotelGalleryProps {
 
 export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement && containerRef.current) {
+        await containerRef.current.requestFullscreen();
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (e) {
+      console.error("Fullscreen toggle failed", e);
+    }
+  };
 
   if (!images || images.length === 0) {
     return (
@@ -67,16 +87,28 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
       <Dialog open={openIndex !== null} onOpenChange={(o) => !o && close()}>
         <DialogContent className="max-w-5xl p-0 bg-background border-0 [&>button]:hidden">
           {openIndex !== null && (
-            <div className="relative">
+            <div ref={containerRef} className="relative bg-black">
               <img
                 src={images[openIndex].url}
                 alt={images[openIndex].alt || `${accommodationName} foto ${openIndex + 1}`}
-                className="w-full max-h-[85vh] object-contain bg-black"
+                className={isFullscreen ? "w-screen h-screen object-contain bg-black" : "w-full max-h-[85vh] object-contain bg-black"}
               />
               <Button
                 size="icon"
                 variant="secondary"
-                onClick={close}
+                onClick={toggleFullscreen}
+                className="absolute top-2 right-12 h-9 w-9 rounded-full"
+                aria-label={isFullscreen ? "Volledig scherm verlaten" : "Volledig scherm"}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={() => {
+                  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                  close();
+                }}
                 className="absolute top-2 right-2 h-9 w-9 rounded-full"
                 aria-label="Sluiten"
               >
