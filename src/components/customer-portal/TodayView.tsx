@@ -62,8 +62,17 @@ export const TodayView = ({
   customerCompany,
   customerName,
 }: TodayViewProps) => {
-  const dayIdx = currentDayIndex ?? 0;
+  const initialIdx = currentDayIndex ?? 0;
+  const [viewedIdx, setViewedIdx] = useState<number>(initialIdx);
+
+  // Sync when prop changes (e.g. day rolls over)
+  useEffect(() => {
+    setViewedIdx(currentDayIndex ?? 0);
+  }, [currentDayIndex]);
+
+  const dayIdx = Math.min(Math.max(viewedIdx, 0), Math.max(selectedDates.length - 1, 0));
   const todayDate = selectedDates[dayIdx];
+  const isViewingActualToday = currentDayIndex !== null && dayIdx === currentDayIndex;
 
   const todayItems = useMemo(
     () =>
