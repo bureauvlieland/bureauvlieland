@@ -112,7 +112,7 @@ export const PartnerUpcomingActivities = ({
                     duration: item.duration,
                   })),
                   dates,
-                  upcomingItems[0].program_requests.number_of_people
+                  upcomingItems[0].override_people ?? upcomingItems[0].program_requests.number_of_people
                 );
               }}
             >
