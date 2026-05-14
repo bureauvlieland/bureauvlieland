@@ -34,6 +34,7 @@ import { TodayView } from "@/components/customer-portal/TodayView";
 import { ProgramMap } from "@/components/customer-portal/ProgramMap";
 import { MobileBottomNav, type BottomNavView } from "@/components/customer-portal/MobileBottomNav";
 import { InstallPwaBanner } from "@/components/customer-portal/InstallPwaBanner";
+import { ParticipantView } from "@/components/customer-portal/ParticipantView";
 
 const CustomerProgram = () => {
   const { token } = useParams<{ token: string }>();
@@ -471,7 +472,16 @@ const CustomerProgram = () => {
         </div>
       )}
 
-
+      {/* Deelnemersweergave: identiek aan wat deelnemers zien */}
+      {eventMode.eventModeActive ? (
+        <ParticipantView
+          program={program}
+          accommodation={accommodation}
+          selectedDates={selectedDates}
+          eventMode={eventMode}
+        />
+      ) : (
+      <>
       {/* Compute tab badges */}
       {(() => null)()}
       {!isMobile && (() => {
@@ -602,6 +612,8 @@ const CustomerProgram = () => {
           />
         )}
       </main>
+      </>
+      )}
 
       {/* Extra bottom padding op mobile zodat content niet onder de bottom-nav valt */}
       {isMobile && <div className="h-16" />}
