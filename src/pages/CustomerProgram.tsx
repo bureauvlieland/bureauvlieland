@@ -27,6 +27,7 @@ import {
   Info,
   X,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
@@ -406,6 +407,34 @@ const CustomerProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </Link>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const url = `${window.location.origin}/programma-deelnemers/${token}`;
+                try {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: "Programma Bureau Vlieland",
+                      text: "Hier is ons programma op Vlieland:",
+                      url,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    toast({
+                      title: "Link gekopieerd",
+                      description: "Plak de link in WhatsApp of e-mail om met deelnemers te delen.",
+                    });
+                  }
+                } catch {
+                  /* user cancelled share */
+                }
+              }}
+              title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
+            >
+              <Share2 className="h-4 w-4 mr-1" />
+              Delen
+            </Button>
             <Button
               variant={eventMode.eventModeActive ? "default" : "outline"}
               size="sm"
