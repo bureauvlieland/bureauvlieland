@@ -116,18 +116,43 @@ export function processConditionals(text: string, variables: TemplateVariables):
  * Replace {{variable}} placeholders with actual values
  */
 export function replaceVariables(text: string, variables: TemplateVariables): string {
-  // First, process conditionals
+  // First, process {{#if var}}…{{/if}} conditionals
   let result = processConditionals(text, variables);
-  
-  // Then, replace simple {{variable}} placeholders
-  result = result.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+
+  // Then, process Mustache-style {{#var}}…{{/var}} sections (truthy) and
+  // {{^var}}…{{/var}} inverted sections (falsy). Used by several templates.
+  let guard = 50;
+  while (guard-- > 0) {
+    const sectionMatch = result.match(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/);
+    const invertedMatch = result.match(/\{\{\^(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/);
+    let pick: RegExpMatchArray | null = null;
+    let inverted = false;
+    if (sectionMatch && invertedMatch) {
+      pick = (sectionMatch.index ?? 0) <= (invertedMatch.index ?? 0) ? sectionMatch : invertedMatch;
+      inverted = pick === invertedMatch;
+    } else if (sectionMatch) {
+      pick = sectionMatch;
+    } else if (invertedMatch) {
+      pick = invertedMatch;
+      inverted = true;
+    }
+    if (!pick) break;
+    const value = variables[pick[1]];
+    const truthy = value !== undefined && value !== null && value !== "" && value !== 0 && value !== "0";
+    const keep = inverted ? !truthy : truthy;
+    result = result.replace(pick[0], keep ? pick[2] : "");
+  }
+
+  // Finally, replace simple {{variable}} placeholders (also tolerate {{ var }} with spaces)
+  result = result.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => {
     const value = variables[key];
     if (value === undefined || value === null) {
+      console.warn(`[email-templates] Unfilled placeholder: {{${key}}}`);
       return "";
     }
     return String(value);
   });
-  
+
   return result;
 }
 
