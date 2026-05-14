@@ -23,6 +23,7 @@ import { ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
+import { HotelLocationMap } from "./HotelLocationMap";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
