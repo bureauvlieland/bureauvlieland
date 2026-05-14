@@ -404,7 +404,7 @@ export const AccommodationSection = ({
               size="sm"
               onClick={async () => {
                 const { generateStayOverviewPdf } = await import("@/lib/stayOverviewPdf");
-                await generateStayOverviewPdf(accommodation, selectedQuote, accommodation.guest_name ?? null);
+                await generateStayOverviewPdf(accommodation, selectedQuote, accommodation.customer_company || accommodation.customer_name);
               }}
               className="w-full sm:w-auto"
             >
