@@ -313,25 +313,48 @@ export const AccommodationSection = ({
                       </p>
                     </div>
                   )}
-                  {(selectedQuote.partner.phone || selectedQuote.partner.website_url) && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Contact accommodatie</p>
-                      {selectedQuote.partner.phone && (
-                        <p>
-                          <a href={`tel:${selectedQuote.partner.phone}`} className="text-primary hover:underline">
-                            {selectedQuote.partner.phone}
-                          </a>
-                        </p>
-                      )}
-                      {selectedQuote.partner.website_url && (
-                        <p>
-                          <a href={selectedQuote.partner.website_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-                            Website
-                          </a>
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const phone = selectedQuote.partner.booking_contact_phone || selectedQuote.partner.phone;
+                    const email = selectedQuote.partner.contact_email || selectedQuote.partner.email;
+                    const website = selectedQuote.partner.website_url;
+                    if (!phone && !email && !website) return null;
+                    return (
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Contact accommodatie</p>
+                        <div className="flex flex-wrap gap-2">
+                          {phone && (
+                            <a href={`tel:${phone.replace(/\s/g, "")}`}>
+                              <Button size="sm" variant="default">
+                                <Phone className="h-4 w-4 mr-2" />
+                                Bel {phone}
+                              </Button>
+                            </a>
+                          )}
+                          {email && (
+                            <a href={`mailto:${email}`}>
+                              <Button size="sm" variant="outline">
+                                <Mail className="h-4 w-4 mr-2" />
+                                E-mail
+                              </Button>
+                            </a>
+                          )}
+                          {website && (
+                            <a href={website} target="_blank" rel="noreferrer">
+                              <Button size="sm" variant="outline">
+                                <Globe className="h-4 w-4 mr-2" />
+                                Website
+                              </Button>
+                            </a>
+                          )}
+                        </div>
+                        {selectedQuote.partner.booking_contact_name && (
+                          <p className="text-xs text-muted-foreground mt-1.5">
+                            t.a.v. {selectedQuote.partner.booking_contact_name}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {selectedQuote.partner.location_description && (
                     <div className="sm:col-span-2">
                       <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Locatie</p>
