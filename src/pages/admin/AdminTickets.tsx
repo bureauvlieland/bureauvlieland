@@ -350,7 +350,19 @@ export default function AdminTickets() {
                       )}
                     >
                       <TableCell className="text-sm whitespace-nowrap">
-                        {formatNL(row.ticketDate)}
+                        <div>{formatNL(row.ticketDate)}</div>
+                        {(() => {
+                          const t = row.confirmed_time || row.proposed_time || row.preferred_time;
+                          if (!t) return null;
+                          const isConfirmed = !!row.confirmed_time;
+                          return (
+                            <div className={cn("text-xs mt-0.5 font-medium", isConfirmed ? "text-emerald-700" : "text-slate-500")}>
+                              {t === "flexibel" ? "flexibel" : t}
+                              {!isConfirmed && t !== "flexibel" && row.proposed_time && " (voorstel)"}
+                              {!isConfirmed && t !== "flexibel" && !row.proposed_time && " (gewenst)"}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-sm">
                         <Link
