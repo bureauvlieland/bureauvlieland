@@ -38,7 +38,6 @@ export function TicketBookingInline({ item, siblings, requestId, onChanged }: Pr
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [ref, setRef] = useState(item.booking_reference ?? "");
-  const [groupId, setGroupId] = useState<string>(item.booking_group_id ?? "");
   const [busy, setBusy] = useState(false);
 
   if (!isTicketItem(item)) return null;
@@ -62,34 +61,6 @@ export function TicketBookingInline({ item, siblings, requestId, onChanged }: Pr
       return;
     }
     toast({ title: "Boekingsnummer opgeslagen" });
-    onChanged?.();
-  };
-
-  const saveGroup = async (next: string) => {
-    setGroupId(next);
-    const value = next === "__none__" || next === "" ? null : next;
-    // If we're joining an existing group via a sibling-id, look up that sibling's group_id
-    let booking_group_id = value;
-    if (value) {
-      const sib = siblings.find((s) => s.id === value);
-      booking_group_id = sib?.booking_group_id ?? value; // reuse existing group else seed with sibling id
-      // If sibling has no group yet, set both items to a new group keyed by the sibling id
-      if (sib && !sib.booking_group_id) {
-        await supabase
-          .from("program_request_items")
-          .update({ booking_group_id: sib.id })
-          .eq("id", sib.id);
-      }
-    }
-    const { error } = await supabase
-      .from("program_request_items")
-      .update({ booking_group_id })
-      .eq("id", item.id);
-    if (error) {
-      toast({ title: "Koppelen mislukt", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: value ? "Gekoppeld" : "Koppeling verwijderd" });
     onChanged?.();
   };
 
