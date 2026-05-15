@@ -8,6 +8,8 @@ import {
   Info,
   BedDouble,
   Navigation,
+  Share2,
+  ArrowLeft,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
