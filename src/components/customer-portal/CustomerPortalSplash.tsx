@@ -221,7 +221,7 @@ export const CustomerPortalSplash = ({
           {/* Welkomstboodschap */}
           <div className="space-y-3">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
+              <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
                 Welkom{program.customer_company ? `, ${program.customer_company}` : program.customer_name ? `, ${program.customer_name}` : ""}
               </h1>
               {program.reference_number && (
@@ -251,7 +251,7 @@ export const CustomerPortalSplash = ({
               <span className="font-medium text-foreground">Erwin</span>
             </p>
 
-            <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+            <div className="flex items-start gap-3 p-3 sm:p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 {isQuoteAwaitingApproval ? (

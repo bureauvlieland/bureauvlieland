@@ -400,14 +400,15 @@ const CustomerProgram = () => {
       
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
+              aria-label="Delen met deelnemers"
               onClick={async () => {
                 const url = `${window.location.origin}/programma-deelnemers/${token}`;
                 // Try Web Share API first (mainly mobile)
@@ -457,23 +458,24 @@ const CustomerProgram = () => {
               }}
               title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
             >
-              <Share2 className="h-4 w-4 mr-1" />
-              Delen met deelnemers
+              <Share2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Delen met deelnemers</span>
             </Button>
             <Button
               variant={eventMode.eventModeActive ? "default" : "outline"}
               size="sm"
+              aria-label="Deelnemersweergave"
               onClick={() =>
                 eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
               }
               title="Deelnemersweergave: snel naar Vandaag, Kaart en tickets tijdens het verblijf"
             >
-              <Sparkles className="h-4 w-4 mr-1" />
-              Deelnemersweergave
+              <Sparkles className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Deelnemersweergave</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Vernieuwen
+            <Button variant="ghost" size="sm" onClick={() => refetch()} aria-label="Vernieuwen" className="lg:hidden">
+              <RefreshCw className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Vernieuwen</span>
             </Button>
           </div>
         </div>
@@ -511,7 +513,7 @@ const CustomerProgram = () => {
       <>
       {/* Compute tab badges */}
       {(() => null)()}
-      {!isMobile && (() => {
+      {(() => {
         const termsAccepted = !!(program as any).terms_accepted_at;
         const actionCount = statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0);
         const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
