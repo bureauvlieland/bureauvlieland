@@ -458,23 +458,24 @@ const CustomerProgram = () => {
               }}
               title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
             >
-              <Share2 className="h-4 w-4 mr-1" />
-              Delen met deelnemers
+              <Share2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Delen met deelnemers</span>
             </Button>
             <Button
               variant={eventMode.eventModeActive ? "default" : "outline"}
               size="sm"
+              aria-label="Deelnemersweergave"
               onClick={() =>
                 eventMode.setManualOverride(eventMode.eventModeActive ? "off" : "on")
               }
               title="Deelnemersweergave: snel naar Vandaag, Kaart en tickets tijdens het verblijf"
             >
-              <Sparkles className="h-4 w-4 mr-1" />
-              Deelnemersweergave
+              <Sparkles className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Deelnemersweergave</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => refetch()} className="lg:hidden">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Vernieuwen
+            <Button variant="ghost" size="sm" onClick={() => refetch()} aria-label="Vernieuwen" className="lg:hidden">
+              <RefreshCw className="h-4 w-4 lg:mr-2" />
+              <span className="hidden lg:inline">Vernieuwen</span>
             </Button>
           </div>
         </div>
