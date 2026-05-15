@@ -467,6 +467,8 @@ const CustomerProgram = () => {
           accommodation={accommodation}
           selectedDates={selectedDates}
           eventMode={eventMode}
+          onExit={() => eventMode.setManualOverride("off")}
+          onShare={() => setShowShareDialog(true)}
         />
       ) : (
       <>
