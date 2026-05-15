@@ -407,6 +407,27 @@ export const CustomerPortalSplash = ({
               </Button>
             </CardContent>
           </Card>
+
+          {/* Delen met deelnemers */}
+          {onShareWithParticipants && (
+            <Card className="border-dashed">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Share2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-semibold">Delen met deelnemers</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Stuur uw groep een vereenvoudigde weergave van het programma — met dagindeling, kaart en praktische info. Zonder facturatie of akkoordstappen.
+                </p>
+                <Button variant="outline" className="w-full" onClick={onShareWithParticipants}>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Deellink & QR-code
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
