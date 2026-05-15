@@ -50,6 +50,7 @@ interface CustomerPortalSplashProps {
   accommodationQuotes: AccommodationQuote[];
   isMultiDay: boolean;
   onNavigate: (tab: "accommodation" | "program" | "billing") => void;
+  onShareWithParticipants?: () => void;
 }
 
 const steps = [
