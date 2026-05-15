@@ -117,6 +117,7 @@ export const CustomerPortalSplash = ({
   accommodationQuotes,
   isMultiDay,
   onNavigate,
+  onShareWithParticipants,
 }: CustomerPortalSplashProps) => {
   const termsAccepted = !!program.terms_accepted_at;
   const isMaatwerk = isMaatwerkProject(program);
