@@ -30,6 +30,7 @@ const SharedProgram = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [program, setProgram] = useState<SharedProgramData | null>(null);
+  const [redirectToken, setRedirectToken] = useState<string | null>(null);
   
   // Fetch blocks from database
   const { data: allBlocks = [], isLoading: isLoadingBlocks } = usePublishedBuildingBlocks();
@@ -57,6 +58,18 @@ const SharedProgram = () => {
         if (fetchError) throw fetchError;
 
         if (!data) {
+          // Fallback: legacy email links used /programma/:customer_token.
+          // The customer portal lives at /mijn-programma/:token — redirect if match.
+          const { data: pr } = await supabase
+            .from('program_requests')
+            .select('customer_token')
+            .eq('customer_token', shareCode)
+            .maybeSingle();
+          if (pr?.customer_token) {
+            setRedirectToken(pr.customer_token);
+            setLoading(false);
+            return;
+          }
           setError("Programma niet gevonden of verlopen");
           setLoading(false);
           return;
