@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const portalLink = `${getPortalBaseUrl(origin)}/programma/${r.customer_token}`;
+      const portalLink = `${getPortalBaseUrl(origin)}/mijn-programma/${r.customer_token}`;
       const tpl = await getRenderedTemplate(EMAIL_TYPE, {
         customer_name: r.customer_name,
         arrival_date: formatDateNL(firstDate),
