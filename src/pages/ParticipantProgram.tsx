@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useEventMode } from "@/hooks/useEventMode";
 import { parseISO } from "date-fns";
-import { ArrowLeft, AlertCircle, Users } from "lucide-react";
+import { ArrowLeft, AlertCircle, Users, Share2 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ParticipantView } from "@/components/customer-portal/ParticipantView";
+import { ShareWithParticipantsDialog } from "@/components/customer-portal/ShareWithParticipantsDialog";
 
 const ParticipantProgram = () => {
   const { token } = useParams<{ token: string }>();
+  const [showShare, setShowShare] = useState(false);
+  const shareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/programma-deelnemers/${token}`
+    : "";
 
   const { program, isLoading, error, accommodation } = useCustomerProgram(token || "");
 
