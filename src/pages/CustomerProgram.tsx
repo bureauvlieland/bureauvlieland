@@ -513,7 +513,7 @@ const CustomerProgram = () => {
       <>
       {/* Compute tab badges */}
       {(() => null)()}
-      {!isMobile && (() => {
+      {(() => {
         const termsAccepted = !!(program as any).terms_accepted_at;
         const actionCount = statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0);
         const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
