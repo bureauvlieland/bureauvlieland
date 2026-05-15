@@ -1,98 +1,64 @@
-## Plan: Partner portal opschonen & aanscherpen
+## Ronde 1 — Mobiele weergave klantportaal verbeteren
 
-Scope = ingelogd partner-portaal (`/partner/*`): `PartnerLayout`, `PartnerDashboard` en de bijbehorende widgets. Niet in scope: business-logica, edge functions, e-mailtemplates, of de publieke `/partners` pagina.
+### Probleemanalyse
 
----
+Op mobiel (411px) lopen er twee dingen mis in `src/pages/CustomerProgram.tsx`:
 
-### 1. Navigatie & sidebar (PartnerLayout)
+1. **Header overloopt.** De header heeft drie knoppen (Delen met deelnemers, Deelnemersweergave, Vernieuwen) naast het logo. Op 411px past dat niet en wordt het een rommelige rij — labels worden afgekapt of duwen het logo weg.
+2. **Splash heeft geen navigatie op mobiel.** `ProgramNavigation` wordt alleen gerenderd als `!isMobile`. De `MobileBottomNav` verschijnt pas in event-modus. Resultaat: een mobiele klant op de Splash kan alleen via de twee kaarten (Logies / Programma) doorklikken — de tabs Praktisch, Facturatie en Akkoord zijn onbereikbaar tot je op een tab landt waar de bovenbalk wel zichtbaar is.
 
-Probleem: 9 items plat onder elkaar zonder groepering, dubbeling tussen "Mijn Profiel" en "Instellingen", actieve-route detectie is fragiel, en `impersonate` ontbreekt in het mobiele logo-link.
+Daarnaast nog een paar kleinere mobiele wrijvingen op de Splash (`CustomerPortalSplash.tsx`):
+- De `2/3 + 1/3` grid valt netjes terug naar 1 kolom op mobiel — daar gaat het goed.
+- De stappenstrip (`grid-cols-2 lg:grid-cols-4`) werkt, maar de cirkelconnector lijn is verborgen op mobiel — prima.
+- De fotomosaic mobile scrollstrip is OK.
+- De welkom-titel (`text-2xl`) kan op smalle schermen wat compacter; geen blocker.
 
-- Groepeer sidebar in 3 secties met `SidebarGroupLabel`:
-  - **Werk** — Overzicht, Planning (alleen MAP), Mijn Aanbod, Logies, Kamersoorten, Extra's
-  - **Administratie** — Facturatie
-  - **Account** — Mijn Profiel, Instellingen, Handleidingen
-- Voeg ongelezen-badges toe in de sidebar: actie-nodig op Overzicht, te-factureren op Facturatie (nu alleen op dashboard).
-- Vervang fragiele `isActive` (string-vergelijking met `currentPath + search`) door pad-only check via `useMatch` of split.
-- Mobiele header: logo-link en `Link to="/partner/dashboard"` voorzien van `impersonate` suffix (consistent met sidebar). Memory-rule: impersonate-param moet behouden blijven.
-- Vervang harde `bg-amber-50 / text-amber-800` impersonatie-banner door semantische token (`bg-warning/10 text-warning-foreground`) — toevoegen indien niet bestaand.
-- Toon de partner-`name` ook in collapsed-mode als tooltip op het avatar-icoon.
+### Aanpak
 
-### 2. Dashboard-hiërarchie (PartnerDashboard)
+**1. Navigatie ook op mobiel tonen**
 
-Probleem: drie lagen die hetzelfde communiceren — `PartnerActionBanner`, `PartnerCompactStats` ("Nieuw"), en de tab "Actie nodig" tonen alle drie de pending count. Hierdoor visuele ruis en verwarring over waar te klikken.
+In `CustomerProgram.tsx` de `!isMobile && (...)` guard rond `ProgramNavigation` weghalen, zodat de tab-balk altijd zichtbaar is (de balk is al horizontaal scrollbaar — `overflow-x-auto` in `ProgramNavigation`). Tijdens event-modus blijft `MobileBottomNav` onderaan staan; de bovenbalk blijft daar ook zichtbaar zodat klanten alle secties (incl. Facturatie/Akkoord) kunnen bereiken.
 
-Voorstel:
-- **Verwijder** `PartnerActionBanner` als zelfstandige rij. Promoveer hem tot een conditionele "alert"-strip die alleen verschijnt wanneer er een onbehandelde tegenvoorstel-/prijswijziging-actie is met deadline-context (datum). Voor pure pending-tellers volstaan de stats.
-- Maak `PartnerCompactStats` de **enige** primaire actie-laag:
-  - Stat "Nieuw" → springt naar tab "Actie nodig"
-  - Stat "Wacht op klant" → tab "In behandeling"
-  - Stat "Klant akkoord" → tab "Akkoord"
-  - Stat "Te factureren" → naar `/partner/facturatie` (huidig)
-  - Toon nul-staat (`–`) ipv `0` om visuele rust te brengen.
-- Verplaats `PartnerYtdModule` naar de `Facturatie`-pagina (financieel onderwerp); op het dashboard alleen een compacte één-regel YTD-strip onder de stats. Memory check: niets vereist YTD op dashboard.
-- `PartnerUpcomingActivities`: zet bovenaan onder de stats wanneer er items < 14 dagen vooruit zijn; anders verbergen ipv lege card.
-- Header: schrap "Partner Dashboard"-subtitel (al zichtbaar in sidebar/tab-titel). Behoud "Welkom terug, X".
+Optie: tijdens event-modus de bovenbalk op mobiel verbergen om duplicatie met `MobileBottomNav` te vermijden. Voorkeur: bovenbalk laten staan want `MobileBottomNav` toont maar 4 tabs (geen Logies/Facturatie/Akkoord).
 
-### 3. Verduidelijking labels & copy
+**2. Header responsive maken**
 
-- Sidebar: "Mijn Aanbod" → "Activiteiten" (consistent met partner_type), "Logies" blijft, "Extra's" → "Logies-extra's" voor scheiding.
-- Tab "Akkoord" → "Bevestigd door klant" (duidelijker, geen jargon).
-- Tab "Verlopen" alleen tonen als er > 0 verlopen items zijn.
-- `PartnerActionBanner` (indien behouden) — vervang "Bekijk aanvragen" door specifieker "Reageer op aanvragen".
-- Toast na offerte-indienen: "Uw offerte is succesvol ingediend bij Bureau Vlieland. Zij nemen contact op met de klant." → "Uw offerte staat klaar voor de klant in het Bureau Vlieland klantportaal. U ontvangt bericht zodra de klant kiest." (consistent met daadwerkelijke flow).
+De drie knoppen in de header compacter maken op mobiel:
+- "Delen met deelnemers" → alleen icoon op `<sm`, label vanaf `sm:`.
+- "Deelnemersweergave" → alleen icoon op `<sm`, label vanaf `sm:`.
+- "Vernieuwen" → blijft icon-only op mobiel (label is al `lg:hidden`-achtig; nu staat er een label, dat aanpassen naar icon-only op mobiel).
+- Logo iets kleiner op mobiel (`h-7 sm:h-8`).
+- `gap-2` tussen knoppen behouden, maar op mobiel `gap-1`.
+- Aria-labels toevoegen voor de icon-only varianten.
 
-### 4. Design-systeem hygiene
+**3. Splash: mobiele finetuning**
 
-Probleem: harde Tailwind-kleuren overal in `PartnerActionBanner`, `PartnerCompactStats`, mobile-header impersonatie-badge → strijdig met design-systeem regels.
+In `CustomerPortalSplash.tsx`:
+- Welkomstkop: `text-2xl` → `text-xl sm:text-2xl`.
+- De gele "werkdocument" notice: padding `p-4` → `p-3 sm:p-4`.
+- Contact-rij blijft compact (al `flex-wrap`).
+- Geen layoutwijzigingen aan de twee kaarten — die werken al goed op mobiel.
 
-- Voeg semantische tokens toe in `index.css` + `tailwind.config.ts`:
-  - `--info`, `--info-foreground` (blauw — wachten op klant)
-  - `--success` / `--success-foreground` (al deels aanwezig?)
-  - `--warning` / `--warning-foreground`
-  - `--accent-purple` voor facturatie-categorie
-- Refactor `PartnerCompactStats`, `PartnerActionBanner`, `PartnerLayout` impersonate-banner naar deze tokens. Geen `bg-amber-50` / `text-green-700` meer in components.
+### Bestanden
 
-### 5. Code-structuur & refactor
+- `src/pages/CustomerProgram.tsx` — header knoppen responsief, `ProgramNavigation` ook op mobiel renderen.
+- `src/components/customer-portal/CustomerPortalSplash.tsx` — kleine mobiele typografie/padding tweaks.
 
-`PartnerDashboard.tsx` is 855 regels met data-fetching, status-update-handlers, quote-handlers en tellers door elkaar.
+### Verificatie
 
-- Extract data-laag naar hooks:
-  - `usePartnerDashboardData(partnerToken)` — fetch + refetch + state.
-  - `usePartnerItemActions(partnerToken)` — `updateItemStatus` + `registerInvoice`.
-  - `usePartnerQuoteActions(partnerToken, partnerId, partnerName)` — `submitQuote` + `declineQuote`.
-- Extract teller-berekeningen naar pure helper `lib/partnerDashboardCounts.ts` (testbaar, hergebruikbaar in sidebar-badges uit punt 1).
-- `PartnerSettings` (27 regels stub) — controleren of pagina nog nodig is naast `PartnerProfile`/`PartnerSettingsForm`; samenvoegen indien duplicaat.
-
-### 6. Toegankelijkheid & mobile
-
-- `PartnerCompactStats` knoppen: voeg `aria-label` toe ("3 nieuwe aanvragen, klik om te bekijken").
-- Tabs op mobiel: huidige horizontale scroll werkt, maar sticky maken (`sticky top-0 bg-background z-10`) zodat ze zichtbaar blijven tijdens scroll door lange lijst.
-- Mobiele header: badge + trigger + logo nemen veel ruimte → impersonatie-badge alleen icoon op `<sm`.
-
-### 7. Verificatie na implementatie
-
-Per onderdeel een korte preview-check:
-- `/partner/dashboard` als gewone partner én via `?impersonate=`.
-- Sidebar collapse/expand op mobiel (smal viewport).
-- Tab-navigatie via stat-klik.
-- Offerte indienen toast-tekst.
-- Geen console errors, geen kleur-regressies in dark-mode.
+- Preview op 411px controleren: header past, navigatie zichtbaar op Splash, alle tabs bereikbaar.
+- Sanity-check op 375px (kleinste veelvoorkomende telefoon).
+- Desktop ongewijzigd.
 
 ---
 
-### Buiten scope (signaleren, niet uitvoeren)
+## Ronde 2 — Deelnemersweergave & deelfunctionaliteit (later)
 
-- `PartnerGuides.tsx` — net opgeschoond.
-- `PartnerFinance.tsx` — apart traject (zou wel YTD-module ontvangen uit punt 2).
-- E-mailtemplates — apart traject (vorige beurt).
-- Realtime-updates op dashboard via Supabase channel — leuk maar groter project.
+Apart op te pakken na Ronde 1. Mogelijke richtingen om tegen die tijd te bespreken:
 
-### Volgorde van uitvoeren (suggestie)
+- Deel-knop herpositioneren (bv. binnen het Splash-blok of als prominente CTA in praktisch/vandaag, ipv klein in de header).
+- Aparte QR-code dialoog voor on-site delen.
+- Deelnemerslink optioneel met datumvenster of zonder kostenoverzicht (al zo).
+- Deelnemersweergave zelf: betere "vandaag" focus, makkelijker terug naar volledig programma, expliciete "deel deze pagina"-knop.
 
-1. Design-tokens (4) — fundament voor de rest.
-2. Sidebar-hergroepering + impersonate-fixes (1).
-3. Dashboard-hiërarchie + copy (2 + 3).
-4. Code-refactor naar hooks (5).
-5. A11y/mobile finetuning (6).
-6. Verificatie (7).
+Hier vraag ik in Ronde 2 eerst om jouw prioriteiten voordat ik bouw.

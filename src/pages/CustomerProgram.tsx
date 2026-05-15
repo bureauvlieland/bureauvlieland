@@ -400,14 +400,15 @@ const CustomerProgram = () => {
       
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
+              aria-label="Delen met deelnemers"
               onClick={async () => {
                 const url = `${window.location.origin}/programma-deelnemers/${token}`;
                 // Try Web Share API first (mainly mobile)
