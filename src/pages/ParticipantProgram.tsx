@@ -98,14 +98,20 @@ const ParticipantProgram = () => {
       </Helmet>
 
       <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
+            <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
           </Link>
-          <Badge variant="outline" className="gap-1">
-            <Users className="h-3 w-3" />
-            Deelnemersweergave
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1 hidden sm:inline-flex">
+              <Users className="h-3 w-3" />
+              Deelnemersweergave
+            </Badge>
+            <Button size="sm" variant="outline" onClick={() => setShowShare(true)} aria-label="Delen">
+              <Share2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Delen</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -114,6 +120,13 @@ const ParticipantProgram = () => {
         accommodation={accommodation}
         selectedDates={selectedDates}
         eventMode={eventMode}
+        onShare={() => setShowShare(true)}
+      />
+
+      <ShareWithParticipantsDialog
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        shareUrl={shareUrl}
       />
     </div>
   );
