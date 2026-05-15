@@ -122,6 +122,10 @@ const SharedProgram = () => {
     window.print();
   };
 
+  if (redirectToken) {
+    return <Navigate to={`/mijn-programma/${redirectToken}`} replace />;
+  }
+
   if (loading || isLoadingBlocks) {
     return (
       <div className="min-h-screen bg-background">
