@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useEventMode } from "@/hooks/useEventMode";
 import { parseISO } from "date-fns";
-import { ArrowLeft, AlertCircle, Users } from "lucide-react";
+import { ArrowLeft, AlertCircle, Users, Share2 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ParticipantView } from "@/components/customer-portal/ParticipantView";
+import { ShareWithParticipantsDialog } from "@/components/customer-portal/ShareWithParticipantsDialog";
 
 const ParticipantProgram = () => {
   const { token } = useParams<{ token: string }>();
+  const [showShare, setShowShare] = useState(false);
+  const shareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/programma-deelnemers/${token}`
+    : "";
 
   const { program, isLoading, error, accommodation } = useCustomerProgram(token || "");
 
@@ -93,14 +98,20 @@ const ParticipantProgram = () => {
       </Helmet>
 
       <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
+            <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
           </Link>
-          <Badge variant="outline" className="gap-1">
-            <Users className="h-3 w-3" />
-            Deelnemersweergave
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1 hidden sm:inline-flex">
+              <Users className="h-3 w-3" />
+              Deelnemersweergave
+            </Badge>
+            <Button size="sm" variant="outline" onClick={() => setShowShare(true)} aria-label="Delen">
+              <Share2 className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Delen</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -109,6 +120,13 @@ const ParticipantProgram = () => {
         accommodation={accommodation}
         selectedDates={selectedDates}
         eventMode={eventMode}
+        onShare={() => setShowShare(true)}
+      />
+
+      <ShareWithParticipantsDialog
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        shareUrl={shareUrl}
       />
     </div>
   );
