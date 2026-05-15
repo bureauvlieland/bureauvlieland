@@ -529,6 +529,7 @@ const CustomerProgram = () => {
             accommodationQuotes={accommodationQuotes}
             isMultiDay={isMultiDay}
             onNavigate={handleNavigate}
+            onShareWithParticipants={() => setShowShareDialog(true)}
           />
         )}
 
