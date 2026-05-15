@@ -26,6 +26,8 @@ interface ParticipantViewProps {
   selectedDates: Date[];
   eventMode: { currentDayIndex: number; isUpcoming: boolean };
   showTitleBlock?: boolean;
+  onExit?: () => void;
+  onShare?: () => void;
 }
 
 export const ParticipantView = ({
@@ -34,6 +36,8 @@ export const ParticipantView = ({
   selectedDates,
   eventMode,
   showTitleBlock = true,
+  onExit,
+  onShare,
 }: ParticipantViewProps) => {
   const [view, setView] = useState<View>("today");
 
