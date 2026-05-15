@@ -414,53 +414,7 @@ const CustomerProgram = () => {
               variant="outline"
               size="sm"
               aria-label="Delen met deelnemers"
-              onClick={async () => {
-                const url = `${window.location.origin}/programma-deelnemers/${token}`;
-                // Try Web Share API first (mainly mobile)
-                if (typeof navigator !== "undefined" && (navigator as any).share) {
-                  try {
-                    await (navigator as any).share({
-                      title: "Programma Bureau Vlieland",
-                      text: "Hier is ons programma op Vlieland:",
-                      url,
-                    });
-                    return;
-                  } catch (err: any) {
-                    if (err?.name === "AbortError") return; // user cancelled
-                    // fall through to clipboard
-                  }
-                }
-                // Try modern clipboard API
-                let copied = false;
-                try {
-                  await navigator.clipboard.writeText(url);
-                  copied = true;
-                } catch {
-                  // Fallback: hidden textarea + execCommand (works in iframes)
-                  try {
-                    const ta = document.createElement("textarea");
-                    ta.value = url;
-                    ta.style.position = "fixed";
-                    ta.style.opacity = "0";
-                    document.body.appendChild(ta);
-                    ta.focus();
-                    ta.select();
-                    copied = document.execCommand("copy");
-                    document.body.removeChild(ta);
-                  } catch {
-                    copied = false;
-                  }
-                }
-                if (copied) {
-                  toast({
-                    title: "Link gekopieerd",
-                    description: "Plak de link in WhatsApp of e-mail om met deelnemers te delen.",
-                  });
-                } else {
-                  // Last resort: show the URL so the user can copy manually
-                  window.prompt("Kopieer deze link om te delen met deelnemers:", url);
-                }
-              }}
+              onClick={() => setShowShareDialog(true)}
               title="Deel een deelnemers-versie van het programma (zonder facturatie en akkoord)"
             >
               <Share2 className="h-4 w-4 sm:mr-1" />
