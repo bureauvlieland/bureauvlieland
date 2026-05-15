@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         .limit(1);
       if (existing && existing.length) continue;
 
-      const portalLink = `${getPortalBaseUrl(origin)}/programma/${r.customer_token}`;
+      const portalLink = `${getPortalBaseUrl(origin)}/mijn-programma/${r.customer_token}`;
       const tpl = await getRenderedTemplate("guest_details_reminder", {
         customer_name: r.customer_name,
         arrival_date: formatDateNL(firstDate),
