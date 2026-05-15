@@ -78,9 +78,26 @@ export const ParticipantView = ({
     <>
       {showTitleBlock && (
         <section className="border-b bg-muted/30">
-          <div className="container mx-auto px-4 py-6 max-w-4xl">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Programma</p>
-            <h1 className="text-2xl font-semibold mt-1">
+          <div className="container mx-auto px-4 py-4 sm:py-6 max-w-4xl">
+            {(onExit || onShare) && (
+              <div className="flex items-center justify-between gap-2 mb-3">
+                {onExit ? (
+                  <Button size="sm" variant="ghost" onClick={onExit} className="-ml-2">
+                    <ArrowLeft className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Terug naar volledig programma</span>
+                    <span className="sm:hidden">Volledig programma</span>
+                  </Button>
+                ) : <span />}
+                {onShare && (
+                  <Button size="sm" variant="outline" onClick={onShare}>
+                    <Share2 className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Delen met deelnemers</span>
+                  </Button>
+                )}
+              </div>
+            )}
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Deelnemersweergave</p>
+            <h1 className="text-xl sm:text-2xl font-semibold mt-1">
               {program.customer_company || program.customer_name}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
