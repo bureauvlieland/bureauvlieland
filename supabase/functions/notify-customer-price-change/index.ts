@@ -80,7 +80,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const baseUrl = getPortalBaseUrl(origin);
     const subjectPrefix = getSubjectPrefix(origin);
     const recipient = getRecipientEmail(customerEmail, origin);
-    const portalUrl = `${baseUrl}/programma/${program.customer_token}`;
+    const portalUrl = `${baseUrl}/mijn-programma/${program.customer_token}`;
 
     const effectivePeople = item.override_people ?? program.number_of_people;
     const isPerPerson =

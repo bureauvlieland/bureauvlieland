@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
 
       // Customer confirmation email
       const portalLink = request.linked_program_id
-        ? `${origin}/programma/${request.customer_token}`
+        ? `${origin}/mijn-programma/${request.customer_token}`
         : `${origin}/logies/${request.customer_token}`;
 
       const partnerData = quote.partner || {} as any;

@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
         ? `Nieuw bericht inzake logiesaanvraag ${refNumber}`
         : "Nieuw bericht over een logiesaanvraag";
     } else if (conv.source === "customer_portal" && conv.source_token) {
-      portalLink = `${baseUrl}/programma/${conv.source_token}?chat=open`;
+      portalLink = `${baseUrl}/mijn-programma/${conv.source_token}?chat=open`;
     } else if (conv.source === "partner_portal") {
       portalLink = `${baseUrl}/partner/dashboard`;
     } else if (conv.request_id) {
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
         .eq("id", conv.request_id)
         .maybeSingle();
       if (pr?.customer_token) {
-        portalLink = `${baseUrl}/programma/${pr.customer_token}?chat=open`;
+        portalLink = `${baseUrl}/mijn-programma/${pr.customer_token}?chat=open`;
       }
       if (pr?.reference_number) {
         emailSubject = `Nieuw bericht over uw aanvraag ${pr.reference_number}`;

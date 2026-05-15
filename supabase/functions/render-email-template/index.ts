@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         enriched.reference_number = enriched.reference_number ?? pr.reference_number ?? "";
         enriched.customer_name = enriched.customer_name ?? (pr.customer_company || pr.customer_name || "");
         enriched.number_of_people = enriched.number_of_people ?? pr.number_of_people ?? "";
-        enriched.portal_url = enriched.portal_url ?? `https://bureauvlieland.nl/programma/${pr.customer_token}`;
+        enriched.portal_url = enriched.portal_url ?? `https://bureauvlieland.nl/mijn-programma/${pr.customer_token}`;
         if (Array.isArray(pr.selected_dates) && pr.selected_dates.length > 0) {
           enriched.event_date = enriched.event_date ?? String(pr.selected_dates[0]);
         }
