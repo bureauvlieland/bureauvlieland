@@ -221,7 +221,7 @@ export const CustomerPortalSplash = ({
           {/* Welkomstboodschap */}
           <div className="space-y-3">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
+              <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
                 Welkom{program.customer_company ? `, ${program.customer_company}` : program.customer_name ? `, ${program.customer_name}` : ""}
               </h1>
               {program.reference_number && (
