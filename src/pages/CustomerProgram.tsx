@@ -698,6 +698,13 @@ const CustomerProgram = () => {
           billing_reference: (program as any).billing_reference || "",
         }}
       />
+
+      <ShareWithParticipantsDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        shareUrl={participantShareUrl}
+        programLabel={program?.reference_number || undefined}
+      />
     </div>
   );
 };
