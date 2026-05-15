@@ -81,6 +81,10 @@ const CustomerProgram = () => {
   const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const participantShareUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/programma-deelnemers/${token}`
+    : "";
 
   const pendingChanges = getPendingChanges();
   const hasChanges = pendingChanges.length > 0;
