@@ -726,7 +726,7 @@ Deno.serve(async (req) => {
         programRequest.reference_number
       );
 
-      await supabase.from("email_log").insert({
+      await logEmail({
         email_type: templateId,
         subject: `${statusSubjectPrefix}${emailSubject}`,
         recipient_email: statusRecipient,
@@ -735,13 +735,12 @@ Deno.serve(async (req) => {
         related_item_id: itemId,
         related_partner_id: partner.id,
         status: statusSendResult.ok ? "sent" : "failed",
-        error_message: statusSendResult.error || null,
-        mailjet_message_id: statusSendResult.messageId,
-        sent_at: statusSendResult.ok ? new Date().toISOString() : null,
-        sent_by: "partner",
+        error_message: statusSendResult.error || undefined,
+        mailjet_message_id: statusSendResult.messageId || undefined,
+        sent_by: `partner:${partner.id}`,
         metadata: {
           template_name: templateId,
-          actor: actor === "klant" ? "klant (akkoord vereist)" : "bureau (zoekt alternatief)",
+          actor: ACTOR_BY_STATUS[status] ?? `partner → klant (${status})`,
           new_status: status,
           quoted_price: quotedPrice,
           proposed_time: proposedTime,
