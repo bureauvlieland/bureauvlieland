@@ -1,5 +1,15 @@
+// Bulk invite partners: create auth users without passwords and send one-time set-password links.
+// Uses the DB-managed `partner_invitation` template (single source of truth).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml } from "../_shared/email-templates.ts";
+import {
+  getRenderedTemplate,
+  getSubjectPrefix,
+  getRecipientEmail,
+  SENDER_EMAIL,
+  SENDER_NAME,
+  TemplateIds,
+} from "../_shared/email-templates.ts";
+import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,61 +33,6 @@ interface InviteResult {
   error?: string;
 }
 
-// Branded invitation email built around a one-time set-password link.
-function getInvitationHtml(partnerName: string, partnerEmail: string, setPasswordLink: string, portalLink: string): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 0; background: #f4f7fa;">
-  <div style="background: #1e3a5f; padding: 35px 30px; text-align: center;">
-    <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 600;">Bureau Vlieland</h1>
-    <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 15px;">Partner Portaal</p>
-  </div>
-  <div style="background: white; padding: 35px 30px;">
-    <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 20px;">Beste ${sanitizeHtml(partnerName)},</h2>
-    <p style="margin: 0 0 18px 0; color: #374151;">
-      We zijn verheugd u te verwelkomen bij het nieuwe <strong>Bureau Vlieland Partner Portaal</strong>.
-    </p>
-    <p style="margin: 0 0 25px 0; color: #374151;">
-      Activeer uw account door eenmalig een eigen wachtwoord in te stellen via onderstaande knop.
-    </p>
-    <div style="background: #f0f4ff; border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; margin: 0 0 25px 0;">
-      <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 17px;">🔑 Account activeren</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Emailadres:</td>
-          <td style="padding: 8px 0; color: #1e3a5f; font-weight: 600; font-size: 14px;">${sanitizeHtml(partnerEmail)}</td>
-        </tr>
-      </table>
-      <div style="text-align: center; margin: 20px 0 5px 0;">
-        <a href="${setPasswordLink}" style="background: #1e3a5f; color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
-          Wachtwoord instellen &amp; inloggen
-        </a>
-      </div>
-      <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 12px; text-align: center;">
-        Werkt de knop niet? Kopieer deze link:<br>
-        <span style="word-break: break-all; color: #1e3a5f;">${setPasswordLink}</span>
-      </p>
-    </div>
-    <p style="color: #374151; font-size: 13px; text-align: center; margin: 0 0 25px 0;">
-      U vindt het portaal op: <a href="${portalLink}" style="color: #1e3a5f;">${portalLink}</a>
-    </p>
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
-    <p style="margin: 0 0 5px 0; color: #374151;">Met vriendelijke groet,</p>
-    <p style="margin: 0; color: #1e3a5f; font-weight: 600;">Erwin Soolsma</p>
-    <p style="margin: 0; color: #6b7280; font-size: 14px;">Bureau Vlieland</p>
-  </div>
-  <div style="background: #e8f0f8; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-    <p style="color: #374151; font-size: 13px; margin: 0;">
-      Vragen? <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a> of 0562-452090
-    </p>
-  </div>
-</body>
-</html>
-  `;
-}
-
 async function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -93,7 +48,6 @@ async function invitePartner(
       return { partnerId: partner.id, partnerName: partner.name, success: false, error: "Partner already has an account" };
     }
 
-    // Create auth user WITHOUT password — partner sets it via the recovery link.
     const { data: authUser, error: createError } = await adminClient.auth.admin.createUser({
       email: partner.email,
       email_confirm: true,
@@ -105,7 +59,6 @@ async function invitePartner(
       return { partnerId: partner.id, partnerName: partner.name, success: false, error: createError.message };
     }
 
-    // Link auth user; never store a plaintext password.
     const { error: updateError } = await adminClient
       .from("partners")
       .update({ auth_user_id: authUser.user.id, invited_at: new Date().toISOString() })
@@ -131,27 +84,41 @@ async function invitePartner(
     }
     const setPasswordLink = linkData.properties.action_link;
 
-    if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
-      const isPreview = origin.includes("lovable.app") || origin.includes("localhost");
-      const recipientEmail = isPreview ? "erwin@bureauvlieland.nl" : partner.email;
-      const subjectPrefix = isPreview ? "[TEST] " : "";
+    const rendered = await getRenderedTemplate(TemplateIds.PARTNER_INVITATION, {
+      partner_name: partner.name,
+      partner_email: partner.email,
+      set_password_link: setPasswordLink,
+      partner_portal_link: portalLink,
+      commission_activity: partner.commission_percentage ?? 10,
+      commission_accommodation: partner.accommodation_commission_percentage ?? 10,
+    });
 
-      const emailHtml = getInvitationHtml(partner.name, partner.email, setPasswordLink, portalLink);
-      const emailSubject = `${subjectPrefix}Welkom bij het Bureau Vlieland Partner Portaal — Stel uw wachtwoord in`;
+    if (!rendered) {
+      return { partnerId: partner.id, partnerName: partner.name, success: false, error: "Failed to render invitation template" };
+    }
+
+    let emailSent = false;
+    let emailError: string | null = null;
+    let mailjetMessageId: string | null = null;
+    const subjectPrefix = getSubjectPrefix(origin);
+    const emailSubject = `${subjectPrefix}${rendered.subject}`;
+
+    if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
+      const recipientEmail = getRecipientEmail(partner.email, origin);
 
       const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}` },
         body: JSON.stringify({
           Messages: [{
-            From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+            From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: recipientEmail, Name: partner.name }],
             Subject: emailSubject,
-            HTMLPart: emailHtml,
+            HTMLPart: rendered.body,
             TextPart:
 `Welkom ${partner.name}!
 
-Activeer uw account voor het Bureau Vlieland Partner Portaal door eenmalig uw wachtwoord in te stellen via deze persoonlijke link:
+Activeer je account voor het Bureau Vlieland Partner Portaal door eenmalig je wachtwoord in te stellen via deze persoonlijke link:
 ${setPasswordLink}
 
 Inloggen kan daarna op: ${portalLink}/login
@@ -166,13 +133,39 @@ Bureau Vlieland`,
       });
 
       if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error(`Mailjet error for ${partner.name}:`, errorText);
-        return { partnerId: partner.id, partnerName: partner.name, success: false, error: "Failed to send invitation email" };
+        emailError = await emailResponse.text();
+        console.error(`Mailjet error for ${partner.name}:`, emailError);
+      } else {
+        emailSent = true;
+        const responseData = await emailResponse.json();
+        mailjetMessageId = responseData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+        console.log(`Invitation email sent to ${recipientEmail} for partner ${partner.name}`);
       }
-      console.log(`Invitation email sent to ${recipientEmail} for partner ${partner.name}`);
     } else {
+      emailError = "Mailjet credentials not configured";
       console.warn("Mailjet credentials not configured, skipping email");
+    }
+
+    await logEmail({
+      email_type: EmailTypes.PARTNER_INVITATION,
+      subject: emailSubject,
+      recipient_email: partner.email,
+      recipient_name: partner.name,
+      related_partner_id: partner.id,
+      status: emailSent ? "sent" : "failed",
+      error_message: emailError || undefined,
+      mailjet_message_id: mailjetMessageId || undefined,
+      sent_by: "bulk-invite-partners",
+      metadata: {
+        template_name: TemplateIds.PARTNER_INVITATION,
+        actor: "admin → partner (bulk invitation)",
+        bulk: true,
+        method: "set_password_link",
+      },
+    });
+
+    if (!emailSent) {
+      return { partnerId: partner.id, partnerName: partner.name, success: false, error: emailError || "Failed to send invitation email" };
     }
 
     return { partnerId: partner.id, partnerName: partner.name, success: true };
@@ -200,13 +193,12 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify user is admin
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user }, error: userError } = await userClient.auth.getUser();
-    
+
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
@@ -216,7 +208,6 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    // Check admin role
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
@@ -232,7 +223,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request
     const { partnerIds }: BulkInviteRequest = await req.json();
 
     if (!partnerIds || !Array.isArray(partnerIds) || partnerIds.length === 0) {
@@ -242,7 +232,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get partners data
     const { data: partners, error: partnersError } = await adminClient
       .from("partners")
       .select("id, name, email, auth_user_id, commission_percentage, accommodation_commission_percentage")
@@ -266,19 +255,16 @@ Deno.serve(async (req) => {
     const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
     const results: InviteResult[] = [];
 
-    // Process each partner with rate limiting
     for (let i = 0; i < partners.length; i++) {
       const partner = partners[i];
       const result = await invitePartner(adminClient, partner, origin);
       results.push(result);
 
-      // Add delay between emails (except for the last one)
       if (i < partners.length - 1) {
         await delay(DELAY_BETWEEN_EMAILS_MS);
       }
     }
 
-    // Log the activity
     await adminClient.from("admin_activity_log").insert({
       user_id: userId,
       action: "bulk_invite_partners",
@@ -290,22 +276,6 @@ Deno.serve(async (req) => {
         partner_names: results.filter(r => r.success).map(r => r.partnerName),
       },
     });
-
-    // Log email entries for successful invites
-    for (const result of results.filter(r => r.success)) {
-      const partner = partners.find(p => p.id === result.partnerId);
-      if (partner) {
-        await adminClient.from("email_log").insert({
-          email_type: "partner_invitation",
-          subject: "Welkom bij het Bureau Vlieland Partner Portaal - Uw digitale werkplek",
-          recipient_email: partner.email,
-          recipient_name: partner.name,
-          related_partner_id: partner.id,
-          status: "sent",
-          sent_at: new Date().toISOString(),
-        });
-      }
-    }
 
     return new Response(
       JSON.stringify({
