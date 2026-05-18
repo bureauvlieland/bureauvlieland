@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         error_message: errorText.substring(0, 500),
         sent_by: `customer:${programRequest.customer_email}`,
         metadata: {
-          template_name: "customer_accommodation_message",
+          template_name: TemplateIds.CUSTOMER_ACCOMMODATION_MESSAGE,
           actor: "klant → partner (logies-bericht)",
           failure: true,
         },
@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
       status: "sent",
       sent_by: `customer:${programRequest.customer_email}`,
       metadata: {
-        template_name: "customer_accommodation_message",
+        template_name: TemplateIds.CUSTOMER_ACCOMMODATION_MESSAGE,
         actor: "klant → partner (logies-bericht)",
         message_preview: message.substring(0, 200),
       },
