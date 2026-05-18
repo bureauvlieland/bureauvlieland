@@ -202,7 +202,10 @@ const handler = async (req: Request): Promise<Response> => {
     const customerSubject = `${subjectPrefix}${customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland"}`;
 
     // Send both emails using Mailjet
-    await sendEmailViaMailjet([
+    const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
+    const customerRecipient = getRecipientEmail(requestData.email, origin);
+
+    const mailjetResponse = await sendEmailViaMailjet([
       // Email to Bureau Vlieland
       {
         From: {
@@ -211,7 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         To: [
           {
-            Email: getRecipientEmail("erwin@bureauvlieland.nl", origin),
+            Email: bureauRecipient,
             Name: "Erwin Soolsma"
           }
         ],
@@ -226,13 +229,49 @@ const handler = async (req: Request): Promise<Response> => {
         },
         To: [
           {
-            Email: getRecipientEmail(requestData.email, origin),
+            Email: customerRecipient,
             Name: requestData.name
           }
         ],
         Subject: customerSubject,
         HTMLPart: customerHtml,
       }
+    ]);
+
+    // Log both sends (Email Logging Contract)
+    const bureauMsgId = mailjetResponse?.Messages?.[0]?.MessageID?.toString() || null;
+    const customerMsgId = mailjetResponse?.Messages?.[1]?.MessageID?.toString() || null;
+
+    await Promise.all([
+      logEmail({
+        email_type: TemplateIds.QUOTE_REQUEST_BUREAU,
+        subject: bureauSubject,
+        recipient_email: bureauRecipient,
+        recipient_name: "Erwin Soolsma",
+        status: "sent",
+        mailjet_message_id: bureauMsgId,
+        sent_by: "system",
+        metadata: {
+          template_name: TemplateIds.QUOTE_REQUEST_BUREAU,
+          actor: "klant → bureau (offerte-aanvraag)",
+          customer_email: requestData.email,
+          number_of_people: requestData.numberOfPeople,
+        },
+      }),
+      logEmail({
+        email_type: TemplateIds.QUOTE_REQUEST_CUSTOMER,
+        subject: customerSubject,
+        recipient_email: customerRecipient,
+        recipient_name: requestData.name,
+        status: "sent",
+        mailjet_message_id: customerMsgId,
+        sent_by: "system",
+        metadata: {
+          template_name: TemplateIds.QUOTE_REQUEST_CUSTOMER,
+          actor: "system → klant (bevestiging offerte-aanvraag)",
+          number_of_people: requestData.numberOfPeople,
+        },
+      }),
     ]);
 
     console.log("Emails sent successfully via Mailjet");
