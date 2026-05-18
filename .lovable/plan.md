@@ -1,64 +1,62 @@
-## Ronde 1 — Mobiele weergave klantportaal verbeteren
+# Plan: email templates 1-voor-1 doorlopen
 
-### Probleemanalyse
+Er staan **47 actieve templates** in de database. In plaats van weer een grote sweep doen we per template een gerichte audit + fix. Zo blijven changes klein, testbaar en goed te valideren.
 
-Op mobiel (411px) lopen er twee dingen mis in `src/pages/CustomerProgram.tsx`:
+## Werkwijze per template
 
-1. **Header overloopt.** De header heeft drie knoppen (Delen met deelnemers, Deelnemersweergave, Vernieuwen) naast het logo. Op 411px past dat niet en wordt het een rommelige rij — labels worden afgekapt of duwen het logo weg.
-2. **Splash heeft geen navigatie op mobiel.** `ProgramNavigation` wordt alleen gerenderd als `!isMobile`. De `MobileBottomNav` verschijnt pas in event-modus. Resultaat: een mobiele klant op de Splash kan alleen via de twee kaarten (Logies / Programma) doorklikken — de tabs Praktisch, Facturatie en Akkoord zijn onbereikbaar tot je op een tab landt waar de bovenbalk wel zichtbaar is.
+Voor elke template doe ik:
 
-Daarnaast nog een paar kleinere mobiele wrijvingen op de Splash (`CustomerPortalSplash.tsx`):
-- De `2/3 + 1/3` grid valt netjes terug naar 1 kolom op mobiel — daar gaat het goed.
-- De stappenstrip (`grid-cols-2 lg:grid-cols-4`) werkt, maar de cirkelconnector lijn is verborgen op mobiel — prima.
-- De fotomosaic mobile scrollstrip is OK.
-- De welkom-titel (`text-2xl`) kan op smalle schermen wat compacter; geen blocker.
+1. **Inhoud ophalen** uit `email_templates` (subject + body_html).
+2. **Statische audit**:
+   - Links (`href=`) controleren → bestaat de route? Juiste pad (bv. `/mijn-programma/` ipv `/programma/` of `/klant/`)?
+   - Variabelen (`{{...}}`) checken → worden ze daadwerkelijk meegegeven door de edge function die deze template aanroept?
+   - Conditionals (`{{#if}}`) op haakjes/sluiting.
+   - HTML-validiteit (geen kapotte tags, geen losse `<style>` die als tekst zou renderen).
+3. **Trigger-pad controleren**: welke edge function/code verstuurt deze template? Krijgt die alle variabelen mee? Wordt `logEmail` met juiste metadata aangeroepen?
+4. **Live test waar zinvol** via `render-email-template` of `curl_edge_functions`, output inspecteren.
+5. **Fix toepassen** (template body, edge function, of beide) en kort rapporteren wat er mis was + wat is aangepast.
 
-### Aanpak
+## Voorgestelde volgorde (logische clusters)
 
-**1. Navigatie ook op mobiel tonen**
+**Batch 1 — Klant-portal & links (recent geraakt, hoogste impact):**
+1. `arrival_reminder`
+2. `program_request_customer`
+3. `quote_offer_customer`
+4. `booking_confirmed_customer`
+5. `guest_details_reminder`
+6. `reminder_customer_quote` + `reminder_customer_request`
 
-In `CustomerProgram.tsx` de `!isMobile && (...)` guard rond `ProgramNavigation` weghalen, zodat de tab-balk altijd zichtbaar is (de balk is al horizontaal scrollbaar — `overflow-x-auto` in `ProgramNavigation`). Tijdens event-modus blijft `MobileBottomNav` onderaan staan; de bovenbalk blijft daar ook zichtbaar zodat klanten alle secties (incl. Facturatie/Akkoord) kunnen bereiken.
+**Batch 2 — Logies klant-flow:**
+7. `accommodation_request_customer`
+8. `accommodation_selected_customer`
+9. `accommodation_quote_notification`
 
-Optie: tijdens event-modus de bovenbalk op mobiel verbergen om duplicatie met `MobileBottomNav` te vermijden. Voorkeur: bovenbalk laten staan want `MobileBottomNav` toont maar 4 tabs (geen Logies/Facturatie/Akkoord).
+**Batch 3 — Partner-flow activiteiten:**
+10. `program_request_partner`
+11. `item_added_partner` / `item_changes_partner` / `item_cancelled_partner`
+12. `status_confirmed` / `status_unavailable` / `status_alternative`
+13. `counter_proposal_partner` / `counter_proposal_response`
 
-**2. Header responsive maken**
+**Batch 4 — Partner-flow logies:**
+14. `accommodation_selected_partner` / `accommodation_rejected_partner`
+15. `cancellation_accommodation_partner` / `quote_expired_partner`
+16. `date_change_accommodation` / `people_change_accommodation`
+17. `customer_accommodation_message` / `inbound_reply_to_customer`
 
-De drie knoppen in de header compacter maken op mobiel:
-- "Delen met deelnemers" → alleen icoon op `<sm`, label vanaf `sm:`.
-- "Deelnemersweergave" → alleen icoon op `<sm`, label vanaf `sm:`.
-- "Vernieuwen" → blijft icon-only op mobiel (label is al `lg:hidden`-achtig; nu staat er een label, dat aanpassen naar icon-only op mobiel).
-- Logo iets kleiner op mobiel (`h-7 sm:h-8`).
-- `gap-2` tussen knoppen behouden, maar op mobiel `gap-1`.
-- Aria-labels toevoegen voor de icon-only varianten.
+**Batch 5 — Bureau & overig:**
+18. `program_request_bureau` / `quote_request_bureau`
+19. `chat_notification_bureau` / `chat_reply_visitor`
+20. `cancellation_customer` / `cancellation_partner` / `date_change_customer` / `date_change_partner`
+21. `booking_confirmed_partner` / `item_changes_customer`
+22. `partner_invitation` / `partner_intro_portal` / `partner_password_reset`
+23. `proforma_commission_notification`
+24. `presales_*` (4 stuks)
+25. `reminder_partner_quote`
 
-**3. Splash: mobiele finetuning**
+## Wat ik nu nodig heb
 
-In `CustomerPortalSplash.tsx`:
-- Welkomstkop: `text-2xl` → `text-xl sm:text-2xl`.
-- De gele "werkdocument" notice: padding `p-4` → `p-3 sm:p-4`.
-- Contact-rij blijft compact (al `flex-wrap`).
-- Geen layoutwijzigingen aan de twee kaarten — die werken al goed op mobiel.
+- **Akkoord op de volgorde** (of geef andere prioriteit).
+- **Batch-grootte**: per template apart bevestigen, of telkens 3-5 in één keer?
+- Mag ik bij twijfel een test-render uitvoeren om de output te zien voordat ik fix?
 
-### Bestanden
-
-- `src/pages/CustomerProgram.tsx` — header knoppen responsief, `ProgramNavigation` ook op mobiel renderen.
-- `src/components/customer-portal/CustomerPortalSplash.tsx` — kleine mobiele typografie/padding tweaks.
-
-### Verificatie
-
-- Preview op 411px controleren: header past, navigatie zichtbaar op Splash, alle tabs bereikbaar.
-- Sanity-check op 375px (kleinste veelvoorkomende telefoon).
-- Desktop ongewijzigd.
-
----
-
-## Ronde 2 — Deelnemersweergave & deelfunctionaliteit (later)
-
-Apart op te pakken na Ronde 1. Mogelijke richtingen om tegen die tijd te bespreken:
-
-- Deel-knop herpositioneren (bv. binnen het Splash-blok of als prominente CTA in praktisch/vandaag, ipv klein in de header).
-- Aparte QR-code dialoog voor on-site delen.
-- Deelnemerslink optioneel met datumvenster of zonder kostenoverzicht (al zo).
-- Deelnemersweergave zelf: betere "vandaag" focus, makkelijker terug naar volledig programma, expliciete "deel deze pagina"-knop.
-
-Hier vraag ik in Ronde 2 eerst om jouw prioriteiten voordat ik bouw.
+Zodra je akkoord geeft start ik met **Batch 1 / template 1 = `arrival_reminder`**.
