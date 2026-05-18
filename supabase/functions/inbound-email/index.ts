@@ -35,18 +35,54 @@ function isPurchaseInvoiceRecipient(toAddress: string): boolean {
  */
 function stripHtml(html: string): string {
   return html
+    // Remove invisible quoting / style / script blocks first
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<head[\s\S]*?<\/head>/gi, "")
+    // Block-level breaks
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+    .replace(/<\/(table|ul|ol|blockquote)>/gi, "\n\n")
     .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'")
+    .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/**
+ * Trim quoted reply history from an inbound email so we only keep the
+ * actual new message the sender typed. Handles Outlook ("Van:"/"From:"),
+ * Gmail ("On ... wrote:"), and "----- Original Message -----" markers.
+ */
+function trimQuotedReply(text: string): string {
+  if (!text) return text;
+  const markers: RegExp[] = [
+    /^[ \t>]*-{2,}\s*Original Message\s*-{2,}.*$/im,
+    /^[ \t>]*-{2,}\s*Oorspronkelijk bericht\s*-{2,}.*$/im,
+    /^[ \t>]*Van:\s.+$/im,
+    /^[ \t>]*From:\s.+$/im,
+    /^[ \t>]*Op\s.+schreef\s.+:\s*$/im,
+    /^[ \t>]*On\s.+wrote:\s*$/im,
+    /^[ \t>]*Verzonden vanaf .+$/im,
+    /^[ \t>]*Sent from my .+$/im,
+  ];
+  let earliest = text.length;
+  for (const re of markers) {
+    const m = text.match(re);
+    if (m && typeof m.index === "number" && m.index < earliest) {
+      earliest = m.index;
+    }
+  }
+  const trimmed = text.slice(0, earliest).trim();
+  // Safety: if trimming wiped almost everything, keep original
+  if (trimmed.length < 10 && text.trim().length > 10) return text.trim();
+  return trimmed;
 }
 
 /**
