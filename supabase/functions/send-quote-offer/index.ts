@@ -219,9 +219,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
           const downloadBlock = `
             <div style="max-width: 600px; margin: 0 auto;">
               <div style="padding: 0 24px 24px 24px;">
-                <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #1e3a5f; text-align: center;">
-                  <p style="margin: 0 0 12px 0; color: #1e3a5f; font-weight: 600;">📄 Uw voorstel als PDF</p>
-                  <a href="${signedData.signedUrl}" style="display: inline-block; background: #1e3a5f; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px;">
+                <div style="background: #f0f4f8; padding: 16px; border-radius: 8px; border-left: 4px solid #0F4C5C; text-align: center;">
+                  <p style="margin: 0 0 12px 0; color: #0F4C5C; font-weight: 600;">📄 Uw voorstel als PDF</p>
+                  <a href="${signedData.signedUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 6px; font-size: 14px;">
                     Download PDF
                   </a>
                 </div>
