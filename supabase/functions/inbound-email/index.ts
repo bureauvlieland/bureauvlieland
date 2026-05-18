@@ -123,7 +123,7 @@ async function notifyCustomer(
       return;
     }
 
-    const portalUrl = `https://bureauvlieland.nl/klant/${pr.customer_token}`;
+    const portalUrl = `https://bureauvlieland.nl/mijn-programma/${pr.customer_token}`;
     const customerDisplayName = pr.customer_company || pr.customer_name;
 
     // Render template
