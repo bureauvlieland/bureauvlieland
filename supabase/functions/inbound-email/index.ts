@@ -306,7 +306,8 @@ Deno.serve(async (req) => {
     console.log(`Extracted reference: ${referenceNumber}`);
 
     const { name: contactName, email: contactEmail } = parseSender(sender);
-    const content = textContent || stripHtml(htmlContent) || "(geen inhoud)";
+    const rawContent = textContent || stripHtml(htmlContent) || "(geen inhoud)";
+    const content = trimQuotedReply(rawContent) || rawContent;
     const truncatedContent = content.length > 10000 ? content.substring(0, 10000) + "\n\n[Bericht ingekort]" : content;
 
     // Look up the project by reference number
