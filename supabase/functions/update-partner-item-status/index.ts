@@ -10,6 +10,13 @@ import {
   renderActorLine,
   TemplateIds 
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
+
+const ACTOR_BY_STATUS: Record<string, string> = {
+  confirmed: "partner → klant (activiteit bevestigd)",
+  unavailable: "partner → klant (niet beschikbaar)",
+  alternative: "partner → klant (alternatief voorstel)",
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
