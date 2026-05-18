@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       ? `reply+${program.reference_number}@reply.bureauvlieland.nl`
       : "hallo@bureauvlieland.nl";
 
-    const portalUrl = `https://bureauvlieland.nl/klant/${program.customer_token}`;
+    const portalUrl = `https://bureauvlieland.nl/mijn-programma/${program.customer_token}`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
