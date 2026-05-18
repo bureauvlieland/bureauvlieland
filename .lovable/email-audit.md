@@ -13,7 +13,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 
 **Templates (47)**: 🔴 4 · ⚠️ 35 · ✅ 8
 
-**Edge functions (47)**: 🔴 34 · ⚠️ 1 · ✅ 12
+**Edge functions (47)**: 🔴 30 · ⚠️ 2 · ✅ 15
 
 ## Templates per status
 
@@ -22,7 +22,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Logies gekozen (Klant)` (?)
 - Subject: `Uw logies is geboekt: {{accommodation_name}}`
 - Body length: 1870 chars · vars: 7
-- 🎨 **Kleuren buiten palette**: #f0fdf4 (niet in palette), #166534 (niet in palette), #f0f9ff (niet in palette), #4a5568 (niet in palette), #bbf7d0 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #bbf7d0 (niet in palette), #166534 (niet in palette), #f0f9ff (niet in palette), #f0fdf4 (niet in palette)
 - 💶 **Dubbele €**: ['€ {{price_total}}']
 
 #### `Pro Forma Commissie Notificatie` (?)
@@ -39,7 +39,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Programma aanvraag - Klant bevestiging` (?)
 - Subject: `Bevestiging programma aanvraag - Bureau Vlieland`
 - Body length: 2742 chars · vars: 8
-- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #edf2f7 (niet in palette), #1a365d (niet in palette), #4a5568 (niet in palette), #e2e8f0 (niet in palette), #f7fafc (niet in palette), #0066cc (niet in palette), #fffbeb (niet in palette), #718096 (niet in palette), #78350f (niet in palette)
+- 🎨 **Kleuren buiten palette**: #78350f (niet in palette), #edf2f7 (niet in palette), #4a5568 (niet in palette), #fffbeb (niet in palette), #0066cc (niet in palette), #1a365d (niet in palette), #e2e8f0 (niet in palette), #f7fafc (niet in palette), #2d3748 (niet in palette), #718096 (niet in palette)
 - 💶 **Dubbele €**: ['€ {{bureau_fee}}']
 
 ### ⚠️ Warnings (35)
@@ -52,17 +52,17 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Annulering - Logiespartner` (partner)
 - Subject: `Logiesaanvraag geannuleerd - {{customer_name}}`
 - Body length: 891 chars · vars: 4
-- 🎨 **Kleuren buiten palette**: #e2e8f0 (niet in palette), #f7fafc (niet in palette), #4a5568 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #e2e8f0 (niet in palette), #4a5568 (niet in palette), #f7fafc (niet in palette)
 
 #### `Annulering (Klant)` (?)
 - Subject: `Uw programma-aanvraag is geannuleerd`
 - Body length: 1177 chars · vars: 4
-- 🎨 **Kleuren buiten palette**: #f7fafc (niet in palette), #4a5568 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #f7fafc (niet in palette)
 
 #### `Annulering (Partner)` (?)
 - Subject: `Aanvraag {{reference_number}} is geannuleerd`
 - Body length: 1026 chars · vars: 5
-- 🎨 **Kleuren buiten palette**: #f6ad55 (niet in palette), #4a5568 (niet in palette), #fffaf0 (niet in palette), #f7fafc (niet in palette)
+- 🎨 **Kleuren buiten palette**: #fffaf0 (niet in palette), #4a5568 (niet in palette), #f6ad55 (niet in palette), #f7fafc (niet in palette)
 
 #### `Chat antwoord - Bezoeker notificatie` (?)
 - Subject: `Nieuw bericht van Bureau Vlieland`
@@ -72,7 +72,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Chat notificatie - Bureau` (?)
 - Subject: `💬 Nieuw chatbericht van {{visitor_name}} ({{source_label}})`
 - Body length: 326 chars · vars: 5
-- 🎨 **Kleuren buiten palette**: #ccc (niet in palette), #555 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #555 (niet in palette), #ccc (niet in palette)
 
 #### `Datumwijziging - Activiteitenpartner` (partner)
 - Subject: `Datumwijziging aanvraag - {{customer_name}}`
@@ -87,12 +87,12 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Datumwijziging - Logiespartner` (partner)
 - Subject: `Datumwijziging logiesaanvraag - {{customer_name}}`
 - Body length: 1439 chars · vars: 6
-- 🎨 **Kleuren buiten palette**: #718096 (niet in palette), #4a5568 (niet in palette), #f7fafc (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #f7fafc (niet in palette), #718096 (niet in palette)
 
 #### `Definitieve boeking - Klant` (?)
 - Subject: `Uw boeking is definitief — {{reference_number}}`
 - Body length: 1736 chars · vars: 3
-- 🎨 **Kleuren buiten palette**: #f4f7fb (niet in palette), #1e3a5f (niet in palette)
+- 🎨 **Kleuren buiten palette**: #1e3a5f (niet in palette), #f4f7fb (niet in palette)
 
 #### `Definitieve boeking - Partner` (?)
 - Subject: `Definitieve boeking — {{customer_name}}`
@@ -102,7 +102,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Gewijzigd aantal gasten - Logiespartner` (partner)
 - Subject: `Gewijzigd aantal gasten - {{customer_name}}`
 - Body length: 1217 chars · vars: 5
-- 🎨 **Kleuren buiten palette**: #0d9488 (niet in palette), #f0fdfa (niet in palette), #99f6e4 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #f0fdfa (niet in palette), #0d9488 (niet in palette), #99f6e4 (niet in palette)
 
 #### `Herinnering klant: aanvraag openstaand` (klant)
 - Subject: `Herinnering: uw aanvraag bij Bureau Vlieland staat nog open`
@@ -122,28 +122,28 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Klantbericht naar logiespartner` (partner)
 - Subject: `{{subject}}`
 - Body length: 1154 chars · vars: 8
-- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #4a5568 (niet in palette), #e2e8f0 (niet in palette), #744210 (niet in palette), #fef9e7 (niet in palette), #f7fafc (niet in palette)
+- 🎨 **Kleuren buiten palette**: #744210 (niet in palette), #4a5568 (niet in palette), #e2e8f0 (niet in palette), #f7fafc (niet in palette), #2d3748 (niet in palette), #fef9e7 (niet in palette)
 
 #### `Klantnotificatie bij partnerantwoord` (partner)
 - Subject: `Nieuw bericht over uw reservering — {{reference_number}}`
 - Body length: 1550 chars · vars: 5
-- 🎨 **Kleuren buiten palette**: #eee (niet in palette), #555 (niet in palette), #1a365d (niet in palette), #f7f7f7 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #555 (niet in palette), #1a365d (niet in palette), #f7f7f7 (niet in palette), #eee (niet in palette)
 - 🗣️ **Tone**: partner-mail bevat formeel 'U/Uw' (2x)
 
 #### `Logies aanvraag (Klant)` (?)
 - Subject: `Uw logies-aanvraag is ontvangen`
 - Body length: 1585 chars · vars: 6
-- 🎨 **Kleuren buiten palette**: #f0fdf4 (niet in palette), #166534 (niet in palette), #f0f9ff (niet in palette), #4a5568 (niet in palette), #718096 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #166534 (niet in palette), #f0f9ff (niet in palette), #f0fdf4 (niet in palette), #718096 (niet in palette)
 
 #### `Logies gekozen (Partner)` (?)
 - Subject: `Logiesofferte geaccepteerd — {{accommodation_name}}`
 - Body length: 1954 chars · vars: 8
-- 🎨 **Kleuren buiten palette**: #f0fdf4 (niet in palette), #166534 (niet in palette), #2d3748 (niet in palette), #4a5568 (niet in palette), #16a34a (niet in palette), #f7fafc (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #166534 (niet in palette), #f7fafc (niet in palette), #16a34a (niet in palette), #2d3748 (niet in palette), #f0fdf4 (niet in palette)
 
 #### `Logies offerte notificatie` (?)
 - Subject: `Nieuwe logies-offerte ontvangen: {{accommodation_name}}`
 - Body length: 1677 chars · vars: 7
-- 🎨 **Kleuren buiten palette**: #f0fdf4 (niet in palette), #166534 (niet in palette), #4a5568 (niet in palette), #bbf7d0 (niet in palette), #718096 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #bbf7d0 (niet in palette), #166534 (niet in palette), #f0fdf4 (niet in palette), #718096 (niet in palette)
 
 #### `Logiesofferte verlopen - Partner notificatie` (?)
 - Subject: `Uw logiesofferte voor {{customer_name}} is verlopen`
@@ -158,27 +158,27 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Offerte aanvraag (Bureau)` (?)
 - Subject: `Nieuwe offerte-aanvraag van {{customer_name}}`
 - Body length: 2019 chars · vars: 9
-- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #b45309 (niet in palette), #fffbeb (niet in palette), #f7fafc (niet in palette)
+- 🎨 **Kleuren buiten palette**: #fffbeb (niet in palette), #f7fafc (niet in palette), #2d3748 (niet in palette), #b45309 (niet in palette)
 
 #### `Offerte aanvraag (Klant)` (?)
 - Subject: `Uw offerte-aanvraag is ontvangen`
 - Body length: 1309 chars · vars: 5
-- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #f7fafc (niet in palette), #4a5568 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #4a5568 (niet in palette), #f7fafc (niet in palette)
 
 #### `Offerte versturen naar klant` (klant)
 - Subject: `Uw maatwerkvoorstel van Bureau Vlieland`
 - Body length: 1846 chars · vars: 5
-- 🎨 **Kleuren buiten palette**: #f8fafc (niet in palette), #f0f4f8 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #f0f4f8 (niet in palette), #f8fafc (niet in palette)
 
 #### `Partner introductie portaal` (?)
 - Subject: `De partnerportal van Bureau Vlieland — even voorstellen`
 - Body length: 1842 chars · vars: 0
-- 🎨 **Kleuren buiten palette**: #e2e8f0 (niet in palette), #1e3a5f (niet in palette), #0066cc (niet in palette)
+- 🎨 **Kleuren buiten palette**: #1e3a5f (niet in palette), #e2e8f0 (niet in palette), #0066cc (niet in palette)
 
 #### `Partner uitnodiging` (?)
 - Subject: `Welkom bij het Bureau Vlieland Partner Portaal — stel je wachtwoord in`
 - Body length: 4915 chars · vars: 6
-- 🎨 **Kleuren buiten palette**: #e8f0f8 (niet in palette), #f0f4ff (niet in palette), #fef9e7 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #e8f0f8 (niet in palette), #fef9e7 (niet in palette), #f0f4ff (niet in palette)
 
 #### `Partner wachtwoord reset` (?)
 - Subject: `Wachtwoord resetten — Bureau Vlieland Partner Portal`
@@ -188,7 +188,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Programma aanvraag (Partner)` (?)
 - Subject: `Nieuwe aanvraag voor {{activity_name}}`
 - Body length: 2609 chars · vars: 10
-- 🎨 **Kleuren buiten palette**: #c05621 (niet in palette), #f6ad55 (niet in palette), #2d3748 (niet in palette), #edf7ed (niet in palette), #4a5568 (niet in palette), #fff8e6 (niet in palette), #0066cc (niet in palette), #276749 (niet in palette), #f7fafc (niet in palette), #48bb78 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #c05621 (niet in palette), #fff8e6 (niet in palette), #4a5568 (niet in palette), #48bb78 (niet in palette), #276749 (niet in palette), #f6ad55 (niet in palette), #0066cc (niet in palette), #edf7ed (niet in palette), #f7fafc (niet in palette), #2d3748 (niet in palette)
 
 #### `Programmawijzigingen - Partner` (?)
 - Subject: `Wijziging aanvraag - {{customer_name}} - {{dates}}`
@@ -198,27 +198,27 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 #### `Reactie op tegenvoorstel (Klant)` (?)
 - Subject: `Reactie op uw tegenvoorstel: {{block_name}}`
 - Body length: 1169 chars · vars: 12
-- 🎨 **Kleuren buiten palette**: #718096 (niet in palette), #4a5568 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #718096 (niet in palette)
 
 #### `Status: Alternatief voorgesteld` (?)
 - Subject: `Alternatief voorstel voor {{activity_name}}`
 - Body length: 2573 chars · vars: 9
-- 🎨 **Kleuren buiten palette**: #718096 (niet in palette), #2d3748 (niet in palette), #4a5568 (niet in palette), #fffaf0 (niet in palette), #dd6b20 (niet in palette), #f6ad55 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #fffaf0 (niet in palette), #4a5568 (niet in palette), #f6ad55 (niet in palette), #dd6b20 (niet in palette), #2d3748 (niet in palette), #718096 (niet in palette)
 
 #### `Status: Bevestigd` (?)
 - Subject: `Uw activiteit {{activity_name}} is bevestigd!`
 - Body length: 2303 chars · vars: 7
-- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #9ae6b4 (niet in palette), #4a5568 (niet in palette), #38a169 (niet in palette), #718096 (niet in palette), #f0fff4 (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #38a169 (niet in palette), #f0fff4 (niet in palette), #9ae6b4 (niet in palette), #2d3748 (niet in palette), #718096 (niet in palette)
 
 #### `Status: Niet beschikbaar` (?)
 - Subject: `Helaas: {{activity_name}} is niet beschikbaar`
 - Body length: 1993 chars · vars: 6
-- 🎨 **Kleuren buiten palette**: #2d3748 (niet in palette), #fff5f5 (niet in palette), #4a5568 (niet in palette), #feb2b2 (niet in palette), #718096 (niet in palette), #e53e3e (niet in palette)
+- 🎨 **Kleuren buiten palette**: #4a5568 (niet in palette), #fff5f5 (niet in palette), #feb2b2 (niet in palette), #2d3748 (niet in palette), #e53e3e (niet in palette), #718096 (niet in palette)
 
 #### `Tegenvoorstel (Partner)` (?)
 - Subject: `Tegenvoorstel van klant - {{block_name}}`
 - Body length: 1313 chars · vars: 8
-- 🎨 **Kleuren buiten palette**: #c4b5fd (niet in palette), #1a365d (niet in palette), #7c3aed (niet in palette), #f3e8ff (niet in palette)
+- 🎨 **Kleuren buiten palette**: #c4b5fd (niet in palette), #7c3aed (niet in palette), #1a365d (niet in palette), #f3e8ff (niet in palette)
 
 ### ✅ Clean (8)
 
@@ -256,15 +256,13 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 
 ## Edge functions per status
 
-### 🔴 Blockers (34)
+### 🔴 Blockers (30)
 
 - **`accept-quote-proposal`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
-  - 2x logEmail zonder template_name/actor
+  - 1x logEmail zonder template_name/actor
 - **`admin-reset-partner-password`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
-- **`approve-quote-item`** — SSOT · logEmail · test-mode
-  - 2x logEmail zonder template_name/actor
 - **`cancel-program-request`** — SSOT · test-mode
   - verstuurt via Mailjet maar logt niet
 - **`check-pending-items`** — test-mode
@@ -296,6 +294,7 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
   - hardcoded HTML i.p.v. getRenderedTemplate()
 - **`notify-partners-informational`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
+  - 1x logEmail zonder template_name/actor
 - **`process-completed-items`** — SSOT · test-mode
   - verstuurt via Mailjet maar logt niet
 - **`register-partner-invoice`** — test-mode
@@ -311,23 +310,17 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 - **`send-commission-invoice-to-partner`** — test-mode
   - verstuurt via Mailjet maar logt niet
   - hardcoded HTML i.p.v. getRenderedTemplate()
-- **`send-customer-accommodation-message`** — SSOT · logEmail · test-mode
-  - 2x logEmail zonder template_name/actor
 - **`send-guest-details-reminder`** — SSOT · test-mode
   - verstuurt via Mailjet maar logt niet
 - **`send-items-to-partners`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
+  - 1x logEmail zonder template_name/actor
 - **`send-partner-customer-message`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
-  - 1x logEmail zonder template_name/actor
-- **`send-partner-intro-email`** — SSOT · logEmail
-  - 2x logEmail zonder template_name/actor
-  - geen getRecipientEmail() — test-mode rerouting werkt niet
 - **`send-program-request`** — SSOT · test-mode
   - verstuurt via Mailjet maar logt niet
 - **`send-project-email`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
-  - 1x logEmail zonder template_name/actor
 - **`send-ticket-email`** — test-mode
   - verstuurt via Mailjet maar logt niet
   - hardcoded HTML i.p.v. getRenderedTemplate()
@@ -336,18 +329,19 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
   - hardcoded HTML i.p.v. getRenderedTemplate()
 - **`update-customer-program`** — SSOT · test-mode
   - verstuurt via Mailjet maar logt niet
-- **`update-partner-item-status`** — SSOT · logEmail · test-mode
-  - 1x logEmail zonder template_name/actor
 - **`withdraw-accommodation-quote`** — logEmail · test-mode
   - hardcoded HTML i.p.v. getRenderedTemplate()
 
-### ⚠️ Warnings (1)
+### ⚠️ Warnings (2)
 
+- **`send-partner-intro-email`** — SSOT · logEmail
+  - geen getRecipientEmail() — test-mode rerouting werkt niet
 - **`send-partner-mailing`** — logEmail
   - geen getRecipientEmail() — test-mode rerouting werkt niet
 
-### ✅ Clean (12)
+### ✅ Clean (15)
 
+- **`approve-quote-item`** — SSOT · logEmail · test-mode
 - **`bulk-invite-partners`** — SSOT · logEmail · test-mode
 - **`inbound-email`** — SSOT · logEmail · test-mode
 - **`invite-partner`** — SSOT · logEmail · test-mode
@@ -357,9 +351,11 @@ Brandkleur: `#0F4C5C` (teal). Wrapper-skeleton in `_shared/email-templates.ts > 
 - **`resend-partner-invitation`** — SSOT · logEmail · test-mode
 - **`select-accommodation-quote`** — SSOT · logEmail · test-mode
 - **`send-accommodation-request`** — SSOT · logEmail · test-mode
+- **`send-customer-accommodation-message`** — SSOT · logEmail · test-mode
 - **`send-partner-reset-email`** — SSOT · logEmail · test-mode
 - **`send-quote-offer`** — SSOT · logEmail · test-mode
 - **`send-quote-request`** — SSOT · logEmail · test-mode
+- **`update-partner-item-status`** — SSOT · logEmail · test-mode
 
 ## Fix-batches (volgorde voor uitvoering)
 
@@ -421,9 +417,8 @@ Totaal templates te fixen: **39**. In batches van 5:
 - ⚠️ `Tegenvoorstel (Partner)` (?)
 
 ### Edge function fixes (parallel met template-batches)
-- 🔴 `accept-quote-proposal` — hardcoded HTML i.p.v. getRenderedTemplate(); 2x logEmail zonder template_name/actor
+- 🔴 `accept-quote-proposal` — hardcoded HTML i.p.v. getRenderedTemplate(); 1x logEmail zonder template_name/actor
 - 🔴 `admin-reset-partner-password` — hardcoded HTML i.p.v. getRenderedTemplate()
-- 🔴 `approve-quote-item` — 2x logEmail zonder template_name/actor
 - 🔴 `cancel-program-request` — verstuurt via Mailjet maar logt niet
 - 🔴 `check-pending-items` — verstuurt via Mailjet maar logt niet
 - 🔴 `forward-bureau-invoice` — verstuurt via Mailjet maar logt niet; hardcoded HTML i.p.v. getRenderedTemplate()
@@ -436,23 +431,21 @@ Totaal templates te fixen: **39**. In batches van 5:
 - 🔴 `notify-partner-cancellation` — verstuurt via Mailjet maar logt niet
 - 🔴 `notify-partner-item-deletion` — verstuurt via Mailjet maar logt niet
 - 🔴 `notify-partner-price-change` — hardcoded HTML i.p.v. getRenderedTemplate()
-- 🔴 `notify-partners-informational` — hardcoded HTML i.p.v. getRenderedTemplate()
+- 🔴 `notify-partners-informational` — hardcoded HTML i.p.v. getRenderedTemplate(); 1x logEmail zonder template_name/actor
 - 🔴 `process-completed-items` — verstuurt via Mailjet maar logt niet
 - 🔴 `register-partner-invoice` — verstuurt via Mailjet maar logt niet; hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `send-accommodation-quote-request` — hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `send-arrival-reminder` — verstuurt via Mailjet maar logt niet
 - 🔴 `send-bureau-invoice-to-customer` — verstuurt via Mailjet maar logt niet; hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `send-commission-invoice-to-partner` — verstuurt via Mailjet maar logt niet; hardcoded HTML i.p.v. getRenderedTemplate()
-- 🔴 `send-customer-accommodation-message` — 2x logEmail zonder template_name/actor
 - 🔴 `send-guest-details-reminder` — verstuurt via Mailjet maar logt niet
-- 🔴 `send-items-to-partners` — hardcoded HTML i.p.v. getRenderedTemplate()
-- 🔴 `send-partner-customer-message` — hardcoded HTML i.p.v. getRenderedTemplate(); 1x logEmail zonder template_name/actor
-- 🔴 `send-partner-intro-email` — 2x logEmail zonder template_name/actor; geen getRecipientEmail() — test-mode rerouting werkt niet
+- 🔴 `send-items-to-partners` — hardcoded HTML i.p.v. getRenderedTemplate(); 1x logEmail zonder template_name/actor
+- 🔴 `send-partner-customer-message` — hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `send-program-request` — verstuurt via Mailjet maar logt niet
-- 🔴 `send-project-email` — hardcoded HTML i.p.v. getRenderedTemplate(); 1x logEmail zonder template_name/actor
+- 🔴 `send-project-email` — hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `send-ticket-email` — verstuurt via Mailjet maar logt niet; hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `update-commission-status` — verstuurt via Mailjet maar logt niet; hardcoded HTML i.p.v. getRenderedTemplate()
 - 🔴 `update-customer-program` — verstuurt via Mailjet maar logt niet
-- 🔴 `update-partner-item-status` — 1x logEmail zonder template_name/actor
 - 🔴 `withdraw-accommodation-quote` — hardcoded HTML i.p.v. getRenderedTemplate()
+- ⚠️ `send-partner-intro-email` — geen getRecipientEmail() — test-mode rerouting werkt niet
 - ⚠️ `send-partner-mailing` — geen getRecipientEmail() — test-mode rerouting werkt niet
