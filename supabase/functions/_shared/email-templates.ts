@@ -59,9 +59,12 @@ export function processConditionals(text: string, variables: TemplateVariables):
   let iterations = 0;
   
   while (iterations < maxIterations) {
-    // Match innermost {{#if ...}}...{{/if}} blocks first (non-greedy)
-    const ifElsePattern = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/;
-    const ifOnlyPattern = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/;
+    // Match innermost {{#if ...}}...{{/if}} blocks first.
+    // Use a negative lookahead to forbid another {{#if ...}} inside the body,
+    // otherwise a non-greedy match would close on the FIRST {{/if}} of a nested
+    // block and leave the outer {{/if}} as literal text in the output.
+    const ifElsePattern = /\{\{#if\s+(\w+)\}\}((?:(?!\{\{#if\s)[\s\S])*?)\{\{else\}\}((?:(?!\{\{#if\s)[\s\S])*?)\{\{\/if\}\}/;
+    const ifOnlyPattern = /\{\{#if\s+(\w+)\}\}((?:(?!\{\{#if\s)[\s\S])*?)\{\{\/if\}\}/;
     
     const elseMatch = result.match(ifElsePattern);
     const ifMatch = result.match(ifOnlyPattern);
