@@ -586,7 +586,7 @@ Deno.serve(async (req) => {
                     related_partner_id: partner.id,
                     sent_by: "update-customer-program",
                     metadata: {
-                      template_name: "accommodation_date_change",
+                      template_name: TemplateIds.DATE_CHANGE_ACCOMMODATION,
                       actor: "klant → logiespartner (datumwijziging)",
                       new_arrival_date: newArrivalDate,
                       new_departure_date: newDepartureDate,
