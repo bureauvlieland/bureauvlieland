@@ -355,16 +355,7 @@ export const DesktopProgramView = ({
                           <TooltipContent>Exporteren naar agenda</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {(program as any).quote_pdf_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open((program as any).quote_pdf_url, "_blank")}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Bekijk offerte
-                        </Button>
-                      )}
+                      {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
                       {!termsAccepted && isPublished && (
                         <Button
                           size="sm"

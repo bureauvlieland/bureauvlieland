@@ -167,16 +167,7 @@ export const ProgramIntroCard = ({
                     </>
                   )}
                 </Button>
-                {quotePdfUrl && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(quotePdfUrl, "_blank")}
-                    className="whitespace-nowrap"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Bekijk offerte (PDF)
-                  </Button>
-                )}
+                {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
               </div>
               <p className="text-xs text-muted-foreground">
                 Niet-bindend. Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden.
