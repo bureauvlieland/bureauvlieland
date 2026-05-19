@@ -184,68 +184,103 @@ export const AdminEditActivitySheet = ({
     setIsSubmitting(true);
     try {
       const time = preferredTime === "flexibel" ? null : preferredTime;
-      // Fase 4b — admin-tijd is altijd één bron van waarheid: zowel preferred_time
-      // als confirmed_time mee-updaten zodat alle weergaven (lijst, popup, klant,
-      // partner) hetzelfde tonen. Geen "was: X" meer als gevolg van out-of-sync.
-      const timeChanged = (item?.preferred_time || null) !== time;
-
-      // Determine provider based on selected executor
       const isBureauInvoiced = invoicedBy === "bureau";
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
-      
-      const updateData: Record<string, unknown> = {
-        block_name: trimmedName,
-        admin_price_notes: customDescription || null,
-        day_index: selectedDayIndex,
-        preferred_time: time,
-        ...(timeChanged
-          ? {
-              confirmed_time: time,
-              proposed_time: null,
-              status_note: time
-                ? `Tijd ${time} ingesteld door admin`
-                : "Tijd verwijderd door admin",
-              status_updated_at: new Date().toISOString(),
-            }
-          : {}),
-        admin_price_override: price,
-        price_type: priceType,
-        customer_notes: notes || null,
-        block_type: isBureauInvoiced ? "bureau" : "partner",
-        location_lat: locationLat,
-        location_lng: locationLng,
-        location_address: locationAddress || null,
-        provider_id: selectedProviderId || "bureau",
-        provider_name: selectedProviderId === "bureau" 
-          ? "Bureau Vlieland" 
-          : (selectedPartner?.name || item.provider_name),
-        provider_email: selectedProviderId === "bureau" 
-          ? null 
-          : (selectedPartner?.email || item.provider_email),
-      };
+      const newProviderId = selectedProviderId || "bureau";
+      const newProviderName = newProviderId === "bureau"
+        ? "Bureau Vlieland"
+        : (selectedPartner?.name || item.provider_name);
+      const newProviderEmail = newProviderId === "bureau"
+        ? null
+        : (selectedPartner?.email || item.provider_email);
+      const newBlockType = isBureauInvoiced ? "bureau" : "partner";
 
-      // Bureau-eigen kostenposten met een prijs hoeven geen klant-akkoord:
-      // direct als bevestigd markeren zodat de status-teller klopt.
-      if (isBureauInvoiced && item.status === "pending") {
-        const nowIso = new Date().toISOString();
-        updateData.status = "confirmed";
-        updateData.item_quote_status = "bevestigd";
-        updateData.quoted_at = nowIso;
-        updateData.customer_approved_at = nowIso;
-        updateData.customer_accepted_at = nowIso;
-        updateData.skip_partner_notification = true;
-      }
+      // Onderdeel is nog niet gepubliceerd (pending_added) → bewerkingen mogen
+      // direct live, want klant/partner zien dit item nog niet.
+      const isStillDraft = item.pending_added === true;
 
-      const { error } = await supabase
-        .from("program_request_items")
-        .update(updateData)
-        .eq("id", item.id);
+      const liveTimeChanged = (item?.preferred_time || null) !== time;
 
-      if (error) throw error;
+      if (isStillDraft) {
+        const updateData: Record<string, unknown> = {
+          block_name: trimmedName,
+          admin_price_notes: customDescription || null,
+          day_index: selectedDayIndex,
+          preferred_time: time,
+          ...(liveTimeChanged
+            ? {
+                confirmed_time: time,
+                proposed_time: null,
+                status_note: time
+                  ? `Tijd ${time} ingesteld door admin`
+                  : "Tijd verwijderd door admin",
+                status_updated_at: new Date().toISOString(),
+              }
+            : {}),
+          admin_price_override: price,
+          price_type: priceType,
+          customer_notes: notes || null,
+          block_type: newBlockType,
+          location_lat: locationLat,
+          location_lng: locationLng,
+          location_address: locationAddress || null,
+          provider_id: newProviderId,
+          provider_name: newProviderName,
+          provider_email: newProviderEmail,
+        };
 
-      // Resolve bureau_item_pricing todo if price was set on a bureau item
-      if (isBureauInvoiced) {
-        await resolveAutoTodo("bureau_item_pricing", item.id);
+        if (isBureauInvoiced && item.status === "pending") {
+          const nowIso = new Date().toISOString();
+          updateData.status = "confirmed";
+          updateData.item_quote_status = "bevestigd";
+          updateData.quoted_at = nowIso;
+          updateData.customer_approved_at = nowIso;
+          updateData.customer_accepted_at = nowIso;
+          updateData.skip_partner_notification = true;
+        }
+
+        const { error } = await supabase
+          .from("program_request_items")
+          .update(updateData)
+          .eq("id", item.id);
+        if (error) throw error;
+
+        if (isBureauInvoiced) {
+          await resolveAutoTodo("bureau_item_pricing", item.id);
+        }
+      } else {
+        // Pending-flow: schrijf wijzigingen naar pending_* kolommen. Pas bij
+        // "Publiceer & notificeer" worden ze live + krijgen klant/partner mail.
+        // Per veld: alleen pending zetten als waarde echt afwijkt van live;
+        // anders pending_ leegmaken zodat hij niet meer als "wijziging" telt.
+        const diff = <T,>(live: T, next: T): T | null =>
+          JSON.stringify(live ?? null) === JSON.stringify(next ?? null) ? null : next;
+
+        const pendingUpdate: Record<string, unknown> = {
+          pending_block_name: diff(item.block_name, trimmedName),
+          pending_admin_price_notes: diff(item.admin_price_notes ?? null, customDescription || null),
+          pending_day_index: diff(item.day_index, selectedDayIndex),
+          pending_preferred_time: diff(item.preferred_time ?? null, time),
+          pending_admin_price_override: diff(item.admin_price_override ?? null, price),
+          pending_price_type: diff(item.price_type ?? "per_person", priceType),
+          pending_customer_notes: diff(item.customer_notes ?? null, notes || null),
+          pending_block_type: diff(item.block_type, newBlockType),
+          pending_location_lat: diff(item.location_lat ?? null, locationLat),
+          pending_location_lng: diff(item.location_lng ?? null, locationLng),
+          pending_location_address: diff(item.location_address ?? null, locationAddress || null),
+          pending_provider_id: diff(item.provider_id, newProviderId),
+          pending_provider_name: diff(item.provider_name, newProviderName),
+          pending_provider_email: diff(item.provider_email ?? null, newProviderEmail),
+        };
+
+        const hasAnyPending = Object.values(pendingUpdate).some((v) => v !== null);
+        pendingUpdate.pending_changed_at = hasAnyPending ? new Date().toISOString() : null;
+
+        const { error } = await supabase
+          .from("program_request_items")
+          .update(pendingUpdate)
+          .eq("id", item.id);
+        if (error) throw error;
       }
 
       // Log admin activity
@@ -254,13 +289,17 @@ export const AdminEditActivitySheet = ({
         entityType: EntityTypes.REQUEST,
         entityId: requestId,
         details: {
-          action: "activity_edited",
+          action: isStillDraft ? "activity_edited" : "activity_edited_pending",
           item_id: item.id,
           block_name: customName,
         },
       });
 
-      toast.success("Activiteit bijgewerkt");
+      toast.success(
+        isStillDraft
+          ? "Activiteit bijgewerkt"
+          : "Wijzigingen klaargezet — publiceer via de gele balk om klant/partner te notificeren",
+      );
       onOpenChange(false);
       onSuccess();
     } catch (error) {
