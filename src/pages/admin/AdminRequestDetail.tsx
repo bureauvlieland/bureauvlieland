@@ -802,7 +802,10 @@ const AdminRequestDetail = () => {
         ...rest,
         status: "pending",
         skip_partner_notification: true, // copy is a draft until admin sends it
+        pending_added: true,
+        pending_changed_at: new Date().toISOString(),
       };
+
 
       const { error: insertError } = await supabase
         .from("program_request_items")
@@ -2094,21 +2097,32 @@ const AdminRequestDetail = () => {
                                                 : "border-input"
                                             )}
                                             placeholder={String(request.number_of_people)}
-                                            defaultValue={item.override_people ?? ""}
+                                            defaultValue={item.pending_override_people ?? item.override_people ?? ""}
                                             onBlur={async (e) => {
                                               const val = e.target.value ? parseInt(e.target.value, 10) : null;
-                                              if (val === item.override_people) return;
+                                              const current = item.pending_override_people ?? item.override_people;
+                                              if (val === current) return;
+                                              // Pending-change flow: live waarde blijft; portal toont nog niets,
+                                              // pas zichtbaar na klik op "Publiceer & notificeer".
+                                              const patch =
+                                                val === item.override_people
+                                                  ? { pending_override_people: null, pending_changed_at: null }
+                                                  : {
+                                                      pending_override_people: val,
+                                                      pending_changed_at: new Date().toISOString(),
+                                                    };
                                               const { error } = await supabase
                                                 .from("program_request_items")
-                                                .update({ override_people: val })
+                                                .update(patch)
                                                 .eq("id", item.id);
                                               if (error) {
                                                 toast.error("Fout bij opslaan deelnemers");
                                               } else {
-                                                toast.success("Deelnemers bijgewerkt");
+                                                toast.success("Wijziging klaargezet — publiceer om door te voeren");
                                                 fetchRequestData({ silent: true });
                                               }
                                             }}
+
                                           />
                                         </TableCell>
                                         <TableCell>
@@ -2351,20 +2365,43 @@ const AdminRequestDetail = () => {
                                               size="icon"
                                               className="h-8 w-8 text-destructive hover:text-destructive"
                                               onClick={async () => {
+                                                // pending_added items zijn nooit gepubliceerd → hard delete
+                                                if (item.pending_added) {
+                                                  const { error } = await supabase
+                                                    .from("program_request_items")
+                                                    .delete()
+                                                    .eq("id", item.id);
+                                                  if (error) toast.error("Fout bij verwijderen");
+                                                  else {
+                                                    toast.success("Niet-gepubliceerd onderdeel verwijderd");
+                                                    fetchRequestData({ silent: true });
+                                                  }
+                                                  return;
+                                                }
+                                                // Live item → mark for removal, publish-flow verstuurt mail
+                                                const markRemove = !item.pending_marked_for_removal;
                                                 const { error } = await supabase
                                                   .from("program_request_items")
-                                                  .delete()
+                                                  .update({
+                                                    pending_marked_for_removal: markRemove,
+                                                    pending_changed_at: markRemove ? new Date().toISOString() : null,
+                                                  })
                                                   .eq("id", item.id);
                                                 if (error) {
-                                                  toast.error("Fout bij verwijderen");
+                                                  toast.error("Fout bij annuleren");
                                                 } else {
-                                                  toast.success("Activiteit verwijderd");
-                                                  fetchRequestData();
+                                                  toast.success(
+                                                    markRemove
+                                                      ? "Annulering klaargezet — publiceer om door te voeren"
+                                                      : "Annulering ongedaan gemaakt",
+                                                  );
+                                                  fetchRequestData({ silent: true });
                                                 }
                                               }}
                                             >
                                               <Trash2 className="h-4 w-4" />
                                             </Button>
+
                                           </div>
                                         </TableCell>
                                       </>

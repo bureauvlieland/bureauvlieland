@@ -129,7 +129,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       }
 
       // Fetch the items
-      const { data: itemsData, error: itemsError } = await supabase
+      const { data: itemsDataRaw, error: itemsError } = await supabase
         .from("program_request_items")
         .select("*")
         .eq("request_id", requestData.id)
@@ -137,6 +137,11 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         .order("preferred_time", { ascending: true, nullsFirst: false });
 
       if (itemsError) throw itemsError;
+
+      // Pending-flow: nieuw toegevoegde items zijn voor de klant pas zichtbaar
+      // nadat admin op "Publiceer & notificeer" heeft geklikt.
+      const itemsData = (itemsDataRaw || []).filter((it: any) => !it.pending_added);
+
 
       // Get unique block IDs to fetch images
       const blockIds = [...new Set((itemsData || []).map((item: any) => item.block_id))];
