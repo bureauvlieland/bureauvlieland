@@ -529,7 +529,7 @@ Deno.serve(async (req) => {
       );
 
       // Log altijd (sent of failed) zodat de mail-popover compleet is
-      await supabase.from("email_log").insert({
+      await logEmail({
         email_type: "counter_proposal_response",
         subject: `${counterSubjectPrefix}${emailSubject}`,
         recipient_email: counterResponseRecipient,
@@ -538,9 +538,8 @@ Deno.serve(async (req) => {
         related_item_id: itemId,
         related_partner_id: partner.id,
         status: sendResult.ok ? "sent" : "failed",
-        error_message: sendResult.error || null,
+        error_message: sendResult.error || undefined,
         mailjet_message_id: sendResult.messageId,
-        sent_at: sendResult.ok ? new Date().toISOString() : null,
         sent_by: "partner",
         metadata: {
           template_name: TemplateIds.COUNTER_PROPOSAL_RESPONSE,
