@@ -31,6 +31,7 @@ import {
   CheckCircle,
   ArrowRight,
   Euro,
+  Trash2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
@@ -42,6 +43,16 @@ import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { Plus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 
 export default function AdminPurchaseInvoices() {
@@ -52,8 +63,10 @@ export default function AdminPurchaseInvoices() {
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  const { invoices, isLoading, stats, markAsPaid, markAsForwarded, getDownloadUrl } = usePurchaseInvoices({
+  const { invoices, isLoading, stats, markAsPaid, markAsForwarded, deleteInvoice, getDownloadUrl } = usePurchaseInvoices({
     requestId: selectedRequestId !== "all" ? selectedRequestId : undefined,
     partnerId: selectedPartnerId !== "all" ? selectedPartnerId : undefined,
     status: selectedStatus,
@@ -274,24 +287,32 @@ export default function AdminPurchaseInvoices() {
               <CardDescription>{invoices?.length || 0} facturen gevonden</CardDescription>
             </div>
             {selectedInvoices.length > 0 && (
-              <Button
-                onClick={() => {
-                  // Bulk forward - open dialog for first, then mark rest
-                  const pendingInvoices = invoices?.filter(i => selectedInvoices.includes(i.id) && i.status === "pending");
-                  if (pendingInvoices && pendingInvoices.length > 0) {
-                    toast.info(`${pendingInvoices.length} facturen geselecteerd voor doorsturen`);
-                    // For now, just forward them one by one
-                    pendingInvoices.forEach(async (invoice) => {
-                      await markAsForwarded.mutateAsync(invoice.id);
-                    });
-                    toast.success("Facturen doorgestuurd naar boekhouding");
-                    setSelectedInvoices([]);
-                  }
-                }}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Bulk doorsturen ({selectedInvoices.length})
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Verwijderen ({selectedInvoices.length})
+                </Button>
+                <Button
+                  onClick={() => {
+                    const pendingInvoices = invoices?.filter(i => selectedInvoices.includes(i.id) && i.status === "pending");
+                    if (pendingInvoices && pendingInvoices.length > 0) {
+                      toast.info(`${pendingInvoices.length} facturen geselecteerd voor doorsturen`);
+                      pendingInvoices.forEach(async (invoice) => {
+                        await markAsForwarded.mutateAsync(invoice.id);
+                      });
+                      toast.success("Facturen doorgestuurd naar boekhouding");
+                      setSelectedInvoices([]);
+                    }
+                  }}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Bulk doorsturen ({selectedInvoices.length})
+                </Button>
+              </div>
             )}
           </CardHeader>
           <CardContent>
@@ -390,6 +411,15 @@ export default function AdminPurchaseInvoices() {
                               <Check className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget(invoice)}
+                            title="Inkoopfactuur verwijderen"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -412,6 +442,70 @@ export default function AdminPurchaseInvoices() {
         open={addDialogOpen}
         onClose={() => setAddDialogOpen(false)}
       />
+
+      {/* Single delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inkoopfactuur verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>
+                  Je staat op het punt om factuur <strong>{deleteTarget.invoice_number || "(zonder nummer)"}</strong>{" "}
+                  van <strong>{deleteTarget.partner?.name}</strong> (€
+                  {Number(deleteTarget.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
+                  <br /><br />
+                  Dit reset ook de factuur- en commissie-status op het bijbehorende programma-onderdeel.
+                  Deze actie kan niet ongedaan worden gemaakt.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                await deleteInvoice.mutateAsync(deleteTarget);
+                setDeleteTarget(null);
+              }}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{selectedInvoices.length} inkoopfacturen verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle geselecteerde inkoopfacturen worden permanent verwijderd. De bijbehorende
+              factuur- en commissie-status op de gekoppelde programma-onderdelen wordt teruggezet.
+              Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const targets = invoices?.filter(i => selectedInvoices.includes(i.id)) || [];
+                for (const inv of targets) {
+                  await deleteInvoice.mutateAsync(inv);
+                }
+                setSelectedInvoices([]);
+                setBulkDeleteOpen(false);
+              }}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
