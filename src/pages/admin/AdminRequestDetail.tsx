@@ -240,6 +240,17 @@ interface ProgramRequestItem {
   pending_marked_for_removal?: boolean | null;
   pending_added?: boolean | null;
   pending_changed_at?: string | null;
+  pending_block_name?: string | null;
+  pending_admin_price_override?: number | null;
+  pending_price_type?: string | null;
+  pending_admin_price_notes?: string | null;
+  pending_location_lat?: number | null;
+  pending_location_lng?: number | null;
+  pending_location_address?: string | null;
+  pending_provider_id?: string | null;
+  pending_provider_name?: string | null;
+  pending_provider_email?: string | null;
+  pending_block_type?: string | null;
 }
 
 interface HistoryEntry {
@@ -296,7 +307,18 @@ const AdminRequestDetail = () => {
       i.pending_preferred_time != null ||
       i.pending_day_index != null ||
       i.pending_customer_notes != null ||
-      i.pending_override_people != null,
+      i.pending_override_people != null ||
+      i.pending_block_name != null ||
+      i.pending_admin_price_override != null ||
+      i.pending_price_type != null ||
+      i.pending_admin_price_notes != null ||
+      i.pending_location_lat != null ||
+      i.pending_location_lng != null ||
+      i.pending_location_address != null ||
+      i.pending_provider_id != null ||
+      i.pending_provider_name != null ||
+      i.pending_provider_email != null ||
+      i.pending_block_type != null,
   );
 
   const discardPendingChanges = async () => {
@@ -318,6 +340,17 @@ const AdminRequestDetail = () => {
           pending_override_people: null,
           pending_marked_for_removal: false,
           pending_changed_at: null,
+          pending_block_name: null,
+          pending_admin_price_override: null,
+          pending_price_type: null,
+          pending_admin_price_notes: null,
+          pending_location_lat: null,
+          pending_location_lng: null,
+          pending_location_address: null,
+          pending_provider_id: null,
+          pending_provider_name: null,
+          pending_provider_email: null,
+          pending_block_type: null,
         })
         .in("id", resetIds);
     }
@@ -2719,26 +2752,48 @@ const AdminRequestDetail = () => {
           day_index: i.day_index,
           customer_notes: i.customer_notes,
           override_people: i.override_people,
+          admin_price_override: i.admin_price_override ?? null,
+          admin_price_notes: i.admin_price_notes ?? null,
+          price_type: i.price_type ?? null,
+          location_address: i.location_address ?? null,
           pending_preferred_time: i.pending_preferred_time ?? null,
           pending_day_index: i.pending_day_index ?? null,
           pending_customer_notes: i.pending_customer_notes ?? null,
           pending_override_people: i.pending_override_people ?? null,
           pending_marked_for_removal: i.pending_marked_for_removal ?? null,
           pending_added: i.pending_added ?? null,
+          pending_block_name: i.pending_block_name ?? null,
+          pending_admin_price_override: i.pending_admin_price_override ?? null,
+          pending_price_type: i.pending_price_type ?? null,
+          pending_admin_price_notes: i.pending_admin_price_notes ?? null,
+          pending_location_lat: i.pending_location_lat ?? null,
+          pending_location_lng: i.pending_location_lng ?? null,
+          pending_location_address: i.pending_location_address ?? null,
+          pending_provider_id: i.pending_provider_id ?? null,
+          pending_provider_name: i.pending_provider_name ?? null,
+          pending_provider_email: i.pending_provider_email ?? null,
+          pending_block_type: i.pending_block_type ?? null,
         }))}
         partners={Array.from(
           new Map(
             items
-              .filter((i) => i.provider_id && i.provider_id !== "bureau")
-              .map((i) => [
-                i.provider_id,
-                {
-                  id: i.provider_id,
-                  name: i.provider_name,
-                  contact_email: i.provider_email,
-                  email: i.provider_email,
-                },
-              ]),
+              .flatMap((i) => [
+                i.provider_id && i.provider_id !== "bureau"
+                  ? [i.provider_id, { id: i.provider_id, name: i.provider_name, contact_email: i.provider_email, email: i.provider_email }] as const
+                  : null,
+                i.pending_provider_id && i.pending_provider_id !== "bureau"
+                  ? [
+                      i.pending_provider_id,
+                      {
+                        id: i.pending_provider_id,
+                        name: i.pending_provider_name || i.pending_provider_id,
+                        contact_email: i.pending_provider_email,
+                        email: i.pending_provider_email,
+                      },
+                    ] as const
+                  : null,
+              ])
+              .filter((x): x is readonly [string, { id: string; name: string; contact_email: string | null; email: string | null }] => x !== null),
           ).values(),
         )}
         onPublished={() => fetchRequestData({ silent: true })}

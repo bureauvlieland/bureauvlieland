@@ -2215,14 +2215,25 @@ export type Database = {
           override_people: number | null
           partner_price_change_acknowledged_at: string | null
           pending_added: boolean
+          pending_admin_price_notes: string | null
+          pending_admin_price_override: number | null
           pending_baseline: Json | null
+          pending_block_name: string | null
+          pending_block_type: string | null
           pending_changed_at: string | null
           pending_changed_by: string | null
           pending_customer_notes: string | null
           pending_day_index: number | null
+          pending_location_address: string | null
+          pending_location_lat: number | null
+          pending_location_lng: number | null
           pending_marked_for_removal: boolean
           pending_override_people: number | null
           pending_preferred_time: string | null
+          pending_price_type: string | null
+          pending_provider_email: string | null
+          pending_provider_id: string | null
+          pending_provider_name: string | null
           preferred_time: string | null
           price_indication: string | null
           price_type: string | null
@@ -2291,14 +2302,25 @@ export type Database = {
           override_people?: number | null
           partner_price_change_acknowledged_at?: string | null
           pending_added?: boolean
+          pending_admin_price_notes?: string | null
+          pending_admin_price_override?: number | null
           pending_baseline?: Json | null
+          pending_block_name?: string | null
+          pending_block_type?: string | null
           pending_changed_at?: string | null
           pending_changed_by?: string | null
           pending_customer_notes?: string | null
           pending_day_index?: number | null
+          pending_location_address?: string | null
+          pending_location_lat?: number | null
+          pending_location_lng?: number | null
           pending_marked_for_removal?: boolean
           pending_override_people?: number | null
           pending_preferred_time?: string | null
+          pending_price_type?: string | null
+          pending_provider_email?: string | null
+          pending_provider_id?: string | null
+          pending_provider_name?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
@@ -2367,14 +2389,25 @@ export type Database = {
           override_people?: number | null
           partner_price_change_acknowledged_at?: string | null
           pending_added?: boolean
+          pending_admin_price_notes?: string | null
+          pending_admin_price_override?: number | null
           pending_baseline?: Json | null
+          pending_block_name?: string | null
+          pending_block_type?: string | null
           pending_changed_at?: string | null
           pending_changed_by?: string | null
           pending_customer_notes?: string | null
           pending_day_index?: number | null
+          pending_location_address?: string | null
+          pending_location_lat?: number | null
+          pending_location_lng?: number | null
           pending_marked_for_removal?: boolean
           pending_override_people?: number | null
           pending_preferred_time?: string | null
+          pending_price_type?: string | null
+          pending_provider_email?: string | null
+          pending_provider_id?: string | null
+          pending_provider_name?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null

@@ -28,6 +28,10 @@ export interface PendingChangeItem {
   day_index: number;
   customer_notes: string | null;
   override_people: number | null;
+  admin_price_override: number | null;
+  admin_price_notes: string | null;
+  price_type: string | null;
+  location_address: string | null;
   // Pending waardes
   pending_preferred_time: string | null;
   pending_day_index: number | null;
@@ -35,6 +39,17 @@ export interface PendingChangeItem {
   pending_override_people: number | null;
   pending_marked_for_removal: boolean | null;
   pending_added: boolean | null;
+  pending_block_name: string | null;
+  pending_admin_price_override: number | null;
+  pending_price_type: string | null;
+  pending_admin_price_notes: string | null;
+  pending_location_lat: number | null;
+  pending_location_lng: number | null;
+  pending_location_address: string | null;
+  pending_provider_id: string | null;
+  pending_provider_name: string | null;
+  pending_provider_email: string | null;
+  pending_block_type: string | null;
 }
 
 interface PartnerOpt {
@@ -55,10 +70,18 @@ interface Props {
   onPublished: () => void;
 }
 
+function fmtPrice(n: number | null): string {
+  if (n === null || n === undefined) return "—";
+  return `€${n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function describeChange(it: PendingChangeItem): string[] {
   if (it.pending_added) return ["Toegevoegd aan programma"];
   if (it.pending_marked_for_removal) return ["Geannuleerd"];
   const lines: string[] = [];
+  if (it.pending_block_name !== null) {
+    lines.push(`Naam: ${it.block_name} → ${it.pending_block_name}`);
+  }
   if (it.pending_preferred_time !== null) {
     lines.push(`Tijd: ${it.preferred_time ?? "—"} → ${it.pending_preferred_time}`);
   }
@@ -70,6 +93,24 @@ function describeChange(it: PendingChangeItem): string[] {
   }
   if (it.pending_override_people !== null) {
     lines.push(`Aantal personen: ${it.override_people ?? "—"} → ${it.pending_override_people}`);
+  }
+  if (it.pending_admin_price_override !== null) {
+    lines.push(`Prijs: ${fmtPrice(it.admin_price_override)} → ${fmtPrice(it.pending_admin_price_override)}`);
+  }
+  if (it.pending_price_type !== null) {
+    lines.push(`Prijstype: ${it.price_type ?? "—"} → ${it.pending_price_type}`);
+  }
+  if (it.pending_admin_price_notes !== null) {
+    lines.push(`Beschrijving gewijzigd`);
+  }
+  if (it.pending_location_address !== null || it.pending_location_lat !== null) {
+    lines.push(`Locatie gewijzigd${it.pending_location_address ? `: ${it.pending_location_address}` : ""}`);
+  }
+  if (it.pending_provider_id !== null || it.pending_provider_name !== null) {
+    lines.push(`Uitvoerder: ${it.provider_name ?? "—"} → ${it.pending_provider_name ?? it.pending_provider_id}`);
+  }
+  if (it.pending_block_type !== null) {
+    lines.push(`Facturatie: ${it.block_type} → ${it.pending_block_type}`);
   }
   return lines;
 }
@@ -89,11 +130,15 @@ export function PublishChangesDialog({
   const [adminNote, setAdminNote] = useState("");
   const [publishing, setPublishing] = useState(false);
 
-  // Welke partners zijn betrokken bij wijzigingen?
+  // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
+  // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
   const involvedPartners = useMemo(() => {
     const ids = new Set<string>();
     pendingItems.forEach((i) => {
       if (i.provider_id && i.block_type !== "bureau") ids.add(i.provider_id);
+      const newType = i.pending_block_type ?? i.block_type;
+      const newProvider = i.pending_provider_id ?? i.provider_id;
+      if (newProvider && newType !== "bureau") ids.add(newProvider);
     });
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);
