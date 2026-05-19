@@ -2666,6 +2666,49 @@ const AdminRequestDetail = () => {
         customerEmail={request.customer_email}
       />
 
+      <PublishChangesDialog
+        open={publishDialogOpen}
+        onOpenChange={setPublishDialogOpen}
+        requestId={request.id}
+        customerEmail={request.customer_email}
+        customerName={request.customer_name}
+        pendingItems={pendingItems.map((i) => ({
+          id: i.id,
+          block_name: i.block_name,
+          provider_id: i.provider_id,
+          provider_name: i.provider_name,
+          block_type: i.block_type,
+          preferred_time: i.preferred_time,
+          day_index: i.day_index,
+          customer_notes: i.customer_notes,
+          override_people: i.override_people,
+          pending_preferred_time: i.pending_preferred_time ?? null,
+          pending_day_index: i.pending_day_index ?? null,
+          pending_customer_notes: i.pending_customer_notes ?? null,
+          pending_override_people: i.pending_override_people ?? null,
+          pending_marked_for_removal: i.pending_marked_for_removal ?? null,
+          pending_added: i.pending_added ?? null,
+        }))}
+        partners={Array.from(
+          new Map(
+            items
+              .filter((i) => i.provider_id && i.provider_id !== "bureau")
+              .map((i) => [
+                i.provider_id,
+                {
+                  id: i.provider_id,
+                  name: i.provider_name,
+                  contact_email: i.provider_email,
+                  email: i.provider_email,
+                },
+              ]),
+          ).values(),
+        )}
+        onPublished={() => fetchRequestData({ silent: true })}
+      />
+
+
+
 
       {/* Cancel dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
