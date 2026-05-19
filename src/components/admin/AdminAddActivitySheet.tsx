@@ -185,7 +185,12 @@ export const AdminAddActivitySheet = ({
           location_lat: locationLat,
           location_lng: locationLng,
           location_address: locationAddress || null,
+          // Pending-flow: nieuw onderdeel is nog niet zichtbaar voor klant/partner
+          // tot admin op "Publiceer & notificeer" klikt.
+          pending_added: true,
+          pending_changed_at: new Date().toISOString(),
         })
+
         .select()
         .single();
 
