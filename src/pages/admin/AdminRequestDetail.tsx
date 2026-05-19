@@ -231,6 +231,14 @@ interface ProgramRequestItem {
   booking_reference?: string | null;
   booking_document_path?: string | null;
   booking_group_id?: string | null;
+  // Pending changes (admin-edits die nog niet gepubliceerd zijn)
+  pending_preferred_time?: string | null;
+  pending_day_index?: number | null;
+  pending_customer_notes?: string | null;
+  pending_override_people?: number | null;
+  pending_marked_for_removal?: boolean | null;
+  pending_added?: boolean | null;
+  pending_changed_at?: string | null;
 }
 
 interface HistoryEntry {
