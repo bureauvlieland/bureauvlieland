@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, TemplateIds } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,6 +112,11 @@ Deno.serve(async (req) => {
     const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
     const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
+    const recipientEmail = getRecipientEmail("hallo@bureauvlieland.nl", origin);
+    let status: "sent" | "failed" = "sent";
+    let errorMessage: string | undefined;
+    let mailjetMessageId: string | undefined;
+
     if (MAILJET_API_KEY && MAILJET_SECRET_KEY) {
       const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -122,7 +128,7 @@ Deno.serve(async (req) => {
           Messages: [
             {
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-              To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
+              To: [{ Email: recipientEmail, Name: "Bureau Vlieland" }],
               Subject: emailSubject,
               HTMLPart: emailBody,
             },
@@ -130,20 +136,36 @@ Deno.serve(async (req) => {
         }),
       });
 
-      const mailjetResult = await mailjetResponse.text();
-      console.log("Mailjet result:", mailjetResult);
+      const mailjetText = await mailjetResponse.text();
+      console.log("Mailjet result:", mailjetText);
+      status = mailjetResponse.ok ? "sent" : "failed";
+      if (!mailjetResponse.ok) errorMessage = mailjetText.slice(0, 1000);
+      try {
+        const parsed = JSON.parse(mailjetText);
+        mailjetMessageId = parsed?.Messages?.[0]?.To?.[0]?.MessageID?.toString();
+      } catch (_) { /* ignore */ }
+    } else {
+      status = "failed";
+      errorMessage = "Mailjet credentials missing";
     }
 
-    // Log the notification
-    await supabase.from("email_log").insert({
+    // Log via SSOT
+    await logEmail({
       email_type: "chat_notification",
       subject: emailSubject,
-      recipient_email: "hallo@bureauvlieland.nl",
+      recipient_email: recipientEmail,
       recipient_name: "Bureau Vlieland",
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      related_accommodation_id: conv.accommodation_id || null,
-      metadata: { conversation_id, source: conv.source },
+      related_accommodation_id: conv.accommodation_id || undefined,
+      status,
+      error_message: errorMessage,
+      mailjet_message_id: mailjetMessageId,
+      sent_by: "system",
+      metadata: {
+        template_name: TemplateIds.CHAT_NOTIFICATION_BUREAU,
+        actor: "system → bureau (nieuw chatbericht)",
+        conversation_id,
+        source: conv.source,
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {
