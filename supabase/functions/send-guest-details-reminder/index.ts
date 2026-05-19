@@ -6,6 +6,7 @@ import {
   getRecipientEmail,
   formatDateNL,
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,17 +106,17 @@ Deno.serve(async (req) => {
       });
 
       if (resp.ok) {
-        await supabase.from("email_log").insert({
+        await logEmail({
           email_type: "guest_details_reminder",
           subject,
           recipient_email: recipientEmail,
           recipient_name: r.customer_name,
           related_request_id: r.id,
           status: "sent",
-          sent_at: new Date().toISOString(),
+          sent_by: "system:cron",
           metadata: {
             template_name: "guest_details_reminder",
-            actor: "system:cron",
+            actor: "system → klant (gastgegevens herinnering)",
             arrival_date: firstDate,
             guests_missing: guestsMissing,
             diets_missing: dietsMissing,

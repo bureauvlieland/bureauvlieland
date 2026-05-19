@@ -10,6 +10,7 @@ import {
   getRecipientEmail,
   formatDateNL,
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -155,19 +156,19 @@ Deno.serve(async (req) => {
         mjMessageId = j?.Messages?.[0]?.To?.[0]?.MessageID?.toString();
       } catch {/* ignore */}
 
-      await supabase.from("email_log").insert({
+      await logEmail({
         email_type: EMAIL_TYPE,
         subject,
         recipient_email: recipientEmail,
         recipient_name: r.customer_name,
         related_request_id: r.id,
         status: resp.ok ? "sent" : "failed",
-        sent_at: resp.ok ? new Date().toISOString() : null,
-        error_message: resp.ok ? null : respText.slice(0, 1000),
-        mailjet_message_id: mjMessageId ?? null,
+        error_message: resp.ok ? undefined : respText.slice(0, 1000),
+        mailjet_message_id: mjMessageId ?? undefined,
+        sent_by: "system:cron",
         metadata: {
           template_name: EMAIL_TYPE,
-          actor: "system:cron",
+          actor: "system → klant (aankomstherinnering)",
           arrival_date: firstDate,
           attachment_filename: filename,
         },

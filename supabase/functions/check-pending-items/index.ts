@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -141,13 +142,27 @@ Deno.serve(async (req) => {
         if (!resp.ok) console.error(`Failed to send ${opts.logExtra.email_type}:`, await resp.text());
         else console.log(`Sent ${opts.logExtra.email_type} to ${opts.recipientEmail}`);
 
-        await supabase.from("email_log").insert({
-          ...opts.logExtra,
-          subject,
-          recipient_email: opts.recipientEmail,
+        const fullSubject = `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`;
+        await logEmail({
+          email_type: opts.logExtra.email_type,
+          subject: fullSubject,
+          recipient_email: getRecipientEmail(opts.recipientEmail, req.headers.get("origin") || undefined),
           recipient_name: opts.recipientName,
+          related_partner_id: opts.logExtra.related_partner_id,
+          related_request_id: opts.logExtra.related_request_id,
+          related_item_id: opts.logExtra.related_item_id,
           status,
-          sent_at: status === "sent" ? new Date().toISOString() : null,
+          sent_by: "system:cron",
+          metadata: {
+            template_name: opts.logExtra.email_type,
+            actor: opts.logExtra.email_type.startsWith("reminder_quote")
+              ? "system → partner (offerte herinnering)"
+              : opts.logExtra.email_type.startsWith("reminder_activity")
+              ? "system → partner (activiteit herinnering)"
+              : opts.logExtra.email_type.startsWith("reminder_")
+              ? "system → klant (herinnering)"
+              : "system:cron",
+          },
         });
       } catch (err) {
         console.error(`Error sending ${opts.logExtra.email_type}:`, err);
@@ -652,15 +667,20 @@ Deno.serve(async (req) => {
                 console.log(`Sent expired quote email to ${partnerEmail}`);
 
                 // Log email
-                await supabase.from("email_log").insert({
+                await logEmail({
                   email_type: "quote_expired_partner",
                   subject,
                   recipient_email: partnerEmail,
                   recipient_name: partnerName,
-                  related_accommodation_id: (req as any)?.id || null,
+                  related_accommodation_id: (req as any)?.id || undefined,
                   related_partner_id: quote.partner_id,
                   status: "sent",
-                  sent_at: new Date().toISOString(),
+                  sent_by: "system:cron",
+                  metadata: {
+                    template_name: "quote_expired_partner",
+                    actor: "system → partner (offerte verlopen)",
+                    quote_id: quote.id,
+                  },
                 });
               } else {
                 console.error(`Failed to send expired quote email:`, await emailResp.text());
