@@ -9,6 +9,7 @@ import {
   buildReplyTo,
   TemplateIds 
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -435,22 +436,19 @@ Deno.serve(async (req) => {
     }
 
     if (pendingLogs.length > 0) {
-      const sentAt = new Date().toISOString();
-      const rows = pendingLogs.map(({ logPayload, messageIdx }) => {
-        const messageId = mailjetResp?.Messages?.[messageIdx]?.To?.[0]?.MessageID?.toString() || null;
+      for (const { logPayload, messageIdx } of pendingLogs) {
+        const messageId = mailjetResp?.Messages?.[messageIdx]?.To?.[0]?.MessageID?.toString();
         const ok = !sendError && !!mailjetResp;
-        return {
-          ...logPayload,
-          status: ok ? "sent" : "failed",
-          error_message: ok ? null : sendError,
-          mailjet_message_id: messageId,
-          sent_at: ok ? sentAt : null,
-        };
-      });
-      try {
-        await supabase.from("email_log").insert(rows);
-      } catch (logErr) {
-        console.error("Error writing email_log batch:", logErr);
+        try {
+          await logEmail({
+            ...logPayload,
+            status: ok ? "sent" : "failed",
+            error_message: ok ? undefined : sendError ?? undefined,
+            mailjet_message_id: messageId,
+          });
+        } catch (logErr) {
+          console.error("Error writing email_log entry:", logErr);
+        }
       }
     }
 
