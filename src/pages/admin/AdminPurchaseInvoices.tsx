@@ -442,6 +442,70 @@ export default function AdminPurchaseInvoices() {
         open={addDialogOpen}
         onClose={() => setAddDialogOpen(false)}
       />
+
+      {/* Single delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inkoopfactuur verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>
+                  Je staat op het punt om factuur <strong>{deleteTarget.invoice_number || "(zonder nummer)"}</strong>{" "}
+                  van <strong>{deleteTarget.partner?.name}</strong> (€
+                  {Number(deleteTarget.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
+                  <br /><br />
+                  Dit reset ook de factuur- en commissie-status op het bijbehorende programma-onderdeel.
+                  Deze actie kan niet ongedaan worden gemaakt.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                await deleteInvoice.mutateAsync(deleteTarget);
+                setDeleteTarget(null);
+              }}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{selectedInvoices.length} inkoopfacturen verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle geselecteerde inkoopfacturen worden permanent verwijderd. De bijbehorende
+              factuur- en commissie-status op de gekoppelde programma-onderdelen wordt teruggezet.
+              Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const targets = invoices?.filter(i => selectedInvoices.includes(i.id)) || [];
+                for (const inv of targets) {
+                  await deleteInvoice.mutateAsync(inv);
+                }
+                setSelectedInvoices([]);
+                setBulkDeleteOpen(false);
+              }}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
