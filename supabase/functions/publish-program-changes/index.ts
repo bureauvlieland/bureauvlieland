@@ -29,7 +29,20 @@ interface ChangeRow {
   blockName: string;
   providerId: string | null;
   providerName: string | null;
-  field: "time" | "day" | "notes" | "people" | "added" | "removed";
+  field:
+    | "time"
+    | "day"
+    | "notes"
+    | "people"
+    | "added"
+    | "removed"
+    | "name"
+    | "price"
+    | "price_type"
+    | "description"
+    | "location"
+    | "provider"
+    | "invoicing";
   oldValue: string | null;
   newValue: string | null;
 }
@@ -41,6 +54,13 @@ const fieldLabel: Record<ChangeRow["field"], string> = {
   people: "Aantal personen",
   added: "Toegevoegd",
   removed: "Geannuleerd",
+  name: "Naam",
+  price: "Prijs",
+  price_type: "Prijstype",
+  description: "Beschrijving",
+  location: "Locatie",
+  provider: "Uitvoerder",
+  invoicing: "Facturatie",
 };
 
 function formatVal(v: string | null): string {
