@@ -227,18 +227,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Log email
-    await supabase.from("email_log").insert({
+    // Log email (centralized helper — validates template_name + actor)
+    await logEmail({
       email_type: "purchase_invoice_forward",
       recipient_email: getRecipientEmail(snelstartEmail, origin),
       recipient_name: "Boekhouding",
       subject: emailSubject,
       status: "sent",
-      sent_at: new Date().toISOString(),
       sent_by: user.id,
       related_request_id: invoice.request_id,
       related_partner_id: invoice.partner_id,
-      metadata: { invoiceId: invoice.id, includedPdf: includePdf && !!invoice.file_path },
+      metadata: {
+        template_name: "purchase_invoice_forward",
+        actor: "admin → boekhouding",
+        invoiceId: invoice.id,
+        includedPdf: includePdf && !!invoice.file_path,
+      },
     });
 
     return new Response(
