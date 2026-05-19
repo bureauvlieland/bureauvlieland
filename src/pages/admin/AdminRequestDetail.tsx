@@ -307,7 +307,18 @@ const AdminRequestDetail = () => {
       i.pending_preferred_time != null ||
       i.pending_day_index != null ||
       i.pending_customer_notes != null ||
-      i.pending_override_people != null,
+      i.pending_override_people != null ||
+      i.pending_block_name != null ||
+      i.pending_admin_price_override != null ||
+      i.pending_price_type != null ||
+      i.pending_admin_price_notes != null ||
+      i.pending_location_lat != null ||
+      i.pending_location_lng != null ||
+      i.pending_location_address != null ||
+      i.pending_provider_id != null ||
+      i.pending_provider_name != null ||
+      i.pending_provider_email != null ||
+      i.pending_block_type != null,
   );
 
   const discardPendingChanges = async () => {
@@ -329,6 +340,17 @@ const AdminRequestDetail = () => {
           pending_override_people: null,
           pending_marked_for_removal: false,
           pending_changed_at: null,
+          pending_block_name: null,
+          pending_admin_price_override: null,
+          pending_price_type: null,
+          pending_admin_price_notes: null,
+          pending_location_lat: null,
+          pending_location_lng: null,
+          pending_location_address: null,
+          pending_provider_id: null,
+          pending_provider_name: null,
+          pending_provider_email: null,
+          pending_block_type: null,
         })
         .in("id", resetIds);
     }
