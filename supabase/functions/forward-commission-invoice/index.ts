@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -182,16 +183,20 @@ Deno.serve(async (req) => {
       })
       .eq("id", invoiceId);
 
-    await supabase.from("email_log").insert({
+    await logEmail({
       email_type: "commission_invoice_forward",
       recipient_email: getRecipientEmail(snelstartEmail, origin),
       recipient_name: "Boekhouding",
       subject: emailSubject,
       status: "sent",
-      sent_at: new Date().toISOString(),
       sent_by: user.id,
       related_partner_id: invoice.partner_id,
-      metadata: { commissionInvoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+      metadata: {
+        template_name: "commission_invoice_forward",
+        actor: "admin → boekhouding",
+        commissionInvoiceId: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+      },
     });
 
     return new Response(JSON.stringify({ success: true }), {

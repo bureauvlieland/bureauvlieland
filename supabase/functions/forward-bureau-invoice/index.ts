@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -455,17 +456,18 @@ Deno.serve(async (req) => {
       })
       .eq("id", invoiceId);
 
-    // Log email
-    await supabase.from("email_log").insert({
+    // Log email (centralized helper — validates template_name + actor)
+    await logEmail({
       email_type: "bureau_invoice_forward",
       recipient_email: getRecipientEmail(snelstartEmail, origin),
       recipient_name: "Boekhouding",
       subject: emailSubject,
       status: "sent",
-      sent_at: new Date().toISOString(),
       sent_by: user.id,
       related_request_id: invoice.request_id,
       metadata: {
+        template_name: "bureau_invoice_forward",
+        actor: "admin → boekhouding",
         invoiceId: invoice.id,
         invoiceType: invoice.invoice_type,
         hasAttachment: Boolean(pdfBase64),
