@@ -1,6 +1,7 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -306,13 +307,35 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    await sendEmailNotification(
-      getRecipientEmail("erwin@bureauvlieland.nl", origin),
+    const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
+    const bureauSubject = `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`;
+    const sendOk = await sendEmailNotification(
+      bureauRecipient,
       "Bureau Vlieland",
-      `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`,
+      bureauSubject,
       bureauEmailHtml,
       item.program_requests?.reference_number || null
     );
+
+    await logEmail({
+      email_type: "partner_invoice_registered_bureau",
+      recipient_email: bureauRecipient,
+      recipient_name: "Bureau Vlieland",
+      subject: bureauSubject,
+      status: sendOk ? "sent" : "failed",
+      sent_by: "system",
+      related_request_id: item.request_id,
+      related_partner_id: partner.id,
+      related_item_id: itemId,
+      metadata: {
+        template_name: "partner_invoice_registered_bureau",
+        actor: "partner → bureau",
+        invoicedNumber,
+        invoicedAmount,
+        commissionAmount,
+        invoicingMode,
+      },
+    });
 
     return new Response(
       JSON.stringify({

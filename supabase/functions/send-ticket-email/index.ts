@@ -7,6 +7,7 @@ import {
   getSubjectPrefix,
   isTestMode,
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -256,19 +257,18 @@ Deno.serve(async (req) => {
     const errText = mjOk ? "" : await mjRes.text();
 
     // ─── Log + update items ────────────────────────────────────────────────
-    await supabase.from("email_log").insert({
+    await logEmail({
       email_type: "ticket_to_customer",
       recipient_email: finalRecipients.join(", "),
       recipient_name: recipientName,
       subject,
       status: mjOk ? "sent" : "failed",
-      sent_at: mjOk ? new Date().toISOString() : null,
-      error_message: mjOk ? null : errText.slice(0, 500),
+      error_message: mjOk ? undefined : errText.slice(0, 500),
       sent_by: user.id,
       related_request_id: project.id,
       metadata: {
         template_name: "ticket_to_customer",
-        actor: "admin",
+        actor: "admin → klant",
         item_ids: items.map((it) => (it as any).id),
         booking_references: items.map((it) => (it as any).booking_reference).filter(Boolean),
       },

@@ -7,6 +7,7 @@ import {
   getSubjectPrefix,
   isTestMode,
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -210,7 +211,7 @@ Deno.serve(async (req) => {
     if (!mjResponse.ok) {
       const errText = await mjResponse.text();
       console.error("Mailjet error:", errText);
-      await supabase.from("email_log").insert({
+      await logEmail({
         email_type: "commission_invoice_sent",
         recipient_email: finalRecipient,
         recipient_name: recipientName,
@@ -219,7 +220,12 @@ Deno.serve(async (req) => {
         error_message: errText.slice(0, 500),
         sent_by: user.id,
         related_partner_id: invoice.partner_id,
-        metadata: { commissionInvoiceId: invoice.id, invoiceNumber: invoice.invoice_number },
+        metadata: {
+          template_name: "commission_invoice_sent",
+          actor: "admin → partner",
+          commissionInvoiceId: invoice.id,
+          invoiceNumber: invoice.invoice_number,
+        },
       });
       return new Response(JSON.stringify({ error: "Failed to send email" }), {
         status: 500,
@@ -263,16 +269,17 @@ Deno.serve(async (req) => {
     }
 
     // Log email
-    await supabase.from("email_log").insert({
+    await logEmail({
       email_type: "commission_invoice_sent",
       recipient_email: finalRecipient,
       recipient_name: recipientName,
       subject: finalSubject,
       status: "sent",
-      sent_at: nowIso,
       sent_by: user.id,
       related_partner_id: invoice.partner_id,
       metadata: {
+        template_name: "commission_invoice_sent",
+        actor: "admin → partner",
         commissionInvoiceId: invoice.id,
         invoiceNumber: invoice.invoice_number,
         amountInclVat: Number(invoice.amount_incl_vat),
