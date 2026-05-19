@@ -1,6 +1,7 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -292,12 +293,31 @@ Deno.serve(async (req) => {
             </div>
           `;
 
-          await sendEmailNotification(
-            getRecipientEmail(partner.email, origin),
+          const partnerRecipient = getRecipientEmail(partner.email, origin);
+          const partnerSubject = `${getSubjectPrefix(origin)}Commissiefactuur Bureau Vlieland${commissionInvoiceNumber ? ` - ${commissionInvoiceNumber}` : ''}`;
+          const sendOk = await sendEmailNotification(
+            partnerRecipient,
             partner.name,
-            `${getSubjectPrefix(origin)}Commissiefactuur Bureau Vlieland${commissionInvoiceNumber ? ` - ${commissionInvoiceNumber}` : ''}`,
+            partnerSubject,
             emailHtml
           );
+
+          await logEmail({
+            email_type: "commission_status_invoiced_partner",
+            recipient_email: partnerRecipient,
+            recipient_name: partner.name,
+            subject: partnerSubject,
+            status: sendOk ? "sent" : "failed",
+            sent_by: "system",
+            related_partner_id: partner.id,
+            metadata: {
+              template_name: "commission_status_invoiced_partner",
+              actor: "admin → partner",
+              commissionInvoiceNumber: commissionInvoiceNumber || null,
+              totalCommission,
+              itemIds: partnerItems.map((i: any) => i.id),
+            },
+          });
         }
       }
     }
