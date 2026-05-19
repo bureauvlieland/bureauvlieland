@@ -141,6 +141,7 @@ const LegendPill = ({ children, className }: { children: React.ReactNode; classN
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { TicketBookingInline } from "@/components/admin/tickets/TicketBookingInline";
 import { isTicketItem } from "@/lib/ticketItems";
+import { PublishChangesDialog } from "@/components/admin/PublishChangesDialog";
 
 
 interface ProgramRequest {
@@ -231,6 +232,14 @@ interface ProgramRequestItem {
   booking_reference?: string | null;
   booking_document_path?: string | null;
   booking_group_id?: string | null;
+  // Pending changes (admin-edits die nog niet gepubliceerd zijn)
+  pending_preferred_time?: string | null;
+  pending_day_index?: number | null;
+  pending_customer_notes?: string | null;
+  pending_override_people?: number | null;
+  pending_marked_for_removal?: boolean | null;
+  pending_added?: boolean | null;
+  pending_changed_at?: string | null;
 }
 
 interface HistoryEntry {
@@ -277,6 +286,45 @@ const AdminRequestDetail = () => {
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+
+  const pendingItems = items.filter(
+    (i) =>
+      i.pending_changed_at != null ||
+      i.pending_marked_for_removal === true ||
+      i.pending_added === true ||
+      i.pending_preferred_time != null ||
+      i.pending_day_index != null ||
+      i.pending_customer_notes != null ||
+      i.pending_override_people != null,
+  );
+
+  const discardPendingChanges = async () => {
+    if (!id) return;
+    if (!confirm(`Alle ${pendingItems.length} ongepubliceerde wijziging(en) verwerpen?`)) return;
+    // Hard-delete pending_added rows
+    const addedIds = pendingItems.filter((i) => i.pending_added).map((i) => i.id);
+    if (addedIds.length > 0) {
+      await supabase.from("program_request_items").delete().in("id", addedIds);
+    }
+    const resetIds = pendingItems.filter((i) => !i.pending_added).map((i) => i.id);
+    if (resetIds.length > 0) {
+      await supabase
+        .from("program_request_items")
+        .update({
+          pending_preferred_time: null,
+          pending_day_index: null,
+          pending_customer_notes: null,
+          pending_override_people: null,
+          pending_marked_for_removal: false,
+          pending_changed_at: null,
+        })
+        .in("id", resetIds);
+    }
+    toast.success("Wijzigingen verworpen");
+    fetchRequestData({ silent: true });
+  };
+
 
   // Auto-open status-mail sheet when navigated from a todo with ?action=status-email
   useEffect(() => {
@@ -1091,6 +1139,29 @@ const AdminRequestDetail = () => {
       </Helmet>
       <AdminLayout>
         <div className="p-6 space-y-6">
+          {pendingItems.length > 0 && (
+            <div className="sticky top-0 z-30 -mx-6 -mt-6 mb-2 border-b border-amber-300 bg-amber-50 px-6 py-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-sm">
+                  <span className="font-semibold text-amber-900">
+                    {pendingItems.length} ongepubliceerde wijziging{pendingItems.length !== 1 ? "en" : ""}
+                  </span>
+                  <span className="ml-2 text-amber-800">
+                    — klant en partners zien dit nog niet.
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={discardPendingChanges}>
+                    Verwerp
+                  </Button>
+                  <Button size="sm" onClick={() => setPublishDialogOpen(true)}>
+                    Publiceer & notificeer →
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -1870,27 +1941,27 @@ const AdminRequestDetail = () => {
                                         const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
                                         const isConfirmed = !!item.confirmed_time;
                                         const isProposal = !item.confirmed_time && !!item.proposed_time;
+                                        const hasPendingTime = item.pending_preferred_time != null;
+                                        const displayTime = hasPendingTime ? item.pending_preferred_time : activeTime;
                                         // Toon "was: X" alleen bij een echt klant-tegenvoorstel.
                                         // Niet meer bij admin-sync-verschillen (Fase 4b).
                                         const showOriginal = isProposal && item.preferred_time && item.preferred_time !== item.proposed_time;
 
                                         const handleSaveTime = async (time: string | null) => {
-                                          // Belangrijk: een tijdwijziging mag de partner-workflow status NIET muteren.
-                                          // De DB-trigger guard_item_status_consistency blokkeert anders pending->confirmed
-                                          // wanneer skip_partner_notification=true en er nog geen klant-akkoord is.
-                                          const updatePayload: Record<string, unknown> = time
+                                          // Pending-change flow: schrijf naar pending_preferred_time,
+                                          // niet direct naar live kolommen. Wordt pas gepubliceerd
+                                          // (en gecommuniceerd) na klik op "Publiceer & notificeer".
+                                          // Als de nieuwe waarde gelijk is aan de live waarde → clear pending.
+                                          const live = item.preferred_time;
+                                          const clearPending = time === live || (time === null && !live);
+                                          const updatePayload: Record<string, unknown> = clearPending
                                             ? {
-                                                confirmed_time: time,
-                                                preferred_time: time,
-                                                status_note: `Tijd ${time} ingesteld door admin`,
-                                                status_updated_at: new Date().toISOString(),
+                                                pending_preferred_time: null,
+                                                pending_changed_at: null,
                                               }
                                             : {
-                                                confirmed_time: null,
-                                                proposed_time: null,
-                                                preferred_time: null,
-                                                status_note: `Tijd verwijderd door admin`,
-                                                status_updated_at: new Date().toISOString(),
+                                                pending_preferred_time: time,
+                                                pending_changed_at: new Date().toISOString(),
                                               };
                                           const { error } = await supabase
                                             .from("program_request_items")
@@ -1900,7 +1971,11 @@ const AdminRequestDetail = () => {
                                             console.error("Fout bij opslaan tijd:", error);
                                             toast.error(`Fout bij opslaan tijd: ${error.message}`);
                                           } else {
-                                            toast.success(time ? `Tijd ${time} opgeslagen` : "Tijd verwijderd");
+                                            toast.success(
+                                              clearPending
+                                                ? "Wijziging teruggedraaid"
+                                                : `Tijd ${time} klaargezet (nog niet gepubliceerd)`,
+                                            );
                                             fetchRequestData({ silent: true });
                                           }
                                         };
@@ -1910,27 +1985,33 @@ const AdminRequestDetail = () => {
                                             <div className="flex items-center gap-1">
                                               <Input
                                                 type="time"
-                                                defaultValue={activeTime || ""}
-                                                key={`${item.id}-${activeTime || "empty"}`}
+                                                defaultValue={displayTime || ""}
+                                                key={`${item.id}-${displayTime || "empty"}`}
                                                 className={cn(
                                                   "h-8 w-[110px] tabular-nums text-sm",
-                                                  isConfirmed && "border-green-500/50 text-green-700 font-medium",
-                                                  isProposal && "border-orange-400/60 text-orange-700",
-                                                  !activeTime && "border-dashed border-muted-foreground/30 text-muted-foreground",
+                                                  isConfirmed && !hasPendingTime && "border-green-500/50 text-green-700 font-medium",
+                                                  isProposal && !hasPendingTime && "border-orange-400/60 text-orange-700",
+                                                  hasPendingTime && "border-amber-500 bg-amber-50 text-amber-900 font-medium",
+                                                  !displayTime && "border-dashed border-muted-foreground/30 text-muted-foreground",
                                                 )}
                                                 onBlur={(e) => {
                                                   const val = e.target.value;
-                                                  if (val === (activeTime || "")) return;
+                                                  if (val === (displayTime || "")) return;
                                                   handleSaveTime(val || null);
                                                 }}
                                                 onKeyDown={(e) => {
                                                   if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                                                   if (e.key === "Escape") {
-                                                    (e.target as HTMLInputElement).value = activeTime || "";
+                                                    (e.target as HTMLInputElement).value = displayTime || "";
                                                     (e.target as HTMLInputElement).blur();
                                                   }
                                                 }}
                                               />
+                                              {hasPendingTime && (
+                                                <span className="text-[10px] text-amber-700" title={`Live: ${activeTime || "—"}`}>
+                                                  ongepubliceerd
+                                                </span>
+                                              )}
                                               {isProposal && (
                                                 <TooltipProvider>
                                                   <Tooltip>
