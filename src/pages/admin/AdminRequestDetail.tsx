@@ -2094,21 +2094,32 @@ const AdminRequestDetail = () => {
                                                 : "border-input"
                                             )}
                                             placeholder={String(request.number_of_people)}
-                                            defaultValue={item.override_people ?? ""}
+                                            defaultValue={item.pending_override_people ?? item.override_people ?? ""}
                                             onBlur={async (e) => {
                                               const val = e.target.value ? parseInt(e.target.value, 10) : null;
-                                              if (val === item.override_people) return;
+                                              const current = item.pending_override_people ?? item.override_people;
+                                              if (val === current) return;
+                                              // Pending-change flow: live waarde blijft; portal toont nog niets,
+                                              // pas zichtbaar na klik op "Publiceer & notificeer".
+                                              const patch =
+                                                val === item.override_people
+                                                  ? { pending_override_people: null, pending_changed_at: null }
+                                                  : {
+                                                      pending_override_people: val,
+                                                      pending_changed_at: new Date().toISOString(),
+                                                    };
                                               const { error } = await supabase
                                                 .from("program_request_items")
-                                                .update({ override_people: val })
+                                                .update(patch)
                                                 .eq("id", item.id);
                                               if (error) {
                                                 toast.error("Fout bij opslaan deelnemers");
                                               } else {
-                                                toast.success("Deelnemers bijgewerkt");
+                                                toast.success("Wijziging klaargezet — publiceer om door te voeren");
                                                 fetchRequestData({ silent: true });
                                               }
                                             }}
+
                                           />
                                         </TableCell>
                                         <TableCell>
