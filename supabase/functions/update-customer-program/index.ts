@@ -303,6 +303,7 @@ Deno.serve(async (req) => {
                   old_people: String(program.number_of_people),
                   new_people: String(programDetails.numberOfPeople),
                   accommodation_name: sanitizeHtml(quote.accommodation_name),
+                  partner_portal_url: `${getPortalBaseUrl(origin)}/partner/login`,
                 });
 
                 const emailSubject = template?.subject || `Gewijzigd aantal gasten - ${customerLabel}`;
