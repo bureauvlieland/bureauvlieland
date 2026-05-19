@@ -66,6 +66,8 @@ interface ProgramRequestItem {
   location_lat?: number | null;
   location_lng?: number | null;
   location_address?: string | null;
+  pending_added?: boolean | null;
+  pending_marked_for_removal?: boolean | null;
 }
 
 interface AdminEditActivitySheetProps {
