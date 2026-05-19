@@ -285,6 +285,45 @@ const AdminRequestDetail = () => {
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+
+  const pendingItems = items.filter(
+    (i) =>
+      i.pending_changed_at != null ||
+      i.pending_marked_for_removal === true ||
+      i.pending_added === true ||
+      i.pending_preferred_time != null ||
+      i.pending_day_index != null ||
+      i.pending_customer_notes != null ||
+      i.pending_override_people != null,
+  );
+
+  const discardPendingChanges = async () => {
+    if (!id) return;
+    if (!confirm(`Alle ${pendingItems.length} ongepubliceerde wijziging(en) verwerpen?`)) return;
+    // Hard-delete pending_added rows
+    const addedIds = pendingItems.filter((i) => i.pending_added).map((i) => i.id);
+    if (addedIds.length > 0) {
+      await supabase.from("program_request_items").delete().in("id", addedIds);
+    }
+    const resetIds = pendingItems.filter((i) => !i.pending_added).map((i) => i.id);
+    if (resetIds.length > 0) {
+      await supabase
+        .from("program_request_items")
+        .update({
+          pending_preferred_time: null,
+          pending_day_index: null,
+          pending_customer_notes: null,
+          pending_override_people: null,
+          pending_marked_for_removal: false,
+          pending_changed_at: null,
+        })
+        .in("id", resetIds);
+    }
+    toast.success("Wijzigingen verworpen");
+    fetchRequestData({ silent: true });
+  };
+
 
   // Auto-open status-mail sheet when navigated from a todo with ?action=status-email
   useEffect(() => {
