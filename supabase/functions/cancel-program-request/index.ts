@@ -7,6 +7,7 @@ import {
   getSubjectPrefix, 
   getRecipientEmail,
   buildReplyTo,
+  getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
