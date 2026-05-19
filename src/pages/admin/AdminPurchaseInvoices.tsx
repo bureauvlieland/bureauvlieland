@@ -287,24 +287,32 @@ export default function AdminPurchaseInvoices() {
               <CardDescription>{invoices?.length || 0} facturen gevonden</CardDescription>
             </div>
             {selectedInvoices.length > 0 && (
-              <Button
-                onClick={() => {
-                  // Bulk forward - open dialog for first, then mark rest
-                  const pendingInvoices = invoices?.filter(i => selectedInvoices.includes(i.id) && i.status === "pending");
-                  if (pendingInvoices && pendingInvoices.length > 0) {
-                    toast.info(`${pendingInvoices.length} facturen geselecteerd voor doorsturen`);
-                    // For now, just forward them one by one
-                    pendingInvoices.forEach(async (invoice) => {
-                      await markAsForwarded.mutateAsync(invoice.id);
-                    });
-                    toast.success("Facturen doorgestuurd naar boekhouding");
-                    setSelectedInvoices([]);
-                  }
-                }}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Bulk doorsturen ({selectedInvoices.length})
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Verwijderen ({selectedInvoices.length})
+                </Button>
+                <Button
+                  onClick={() => {
+                    const pendingInvoices = invoices?.filter(i => selectedInvoices.includes(i.id) && i.status === "pending");
+                    if (pendingInvoices && pendingInvoices.length > 0) {
+                      toast.info(`${pendingInvoices.length} facturen geselecteerd voor doorsturen`);
+                      pendingInvoices.forEach(async (invoice) => {
+                        await markAsForwarded.mutateAsync(invoice.id);
+                      });
+                      toast.success("Facturen doorgestuurd naar boekhouding");
+                      setSelectedInvoices([]);
+                    }
+                  }}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Bulk doorsturen ({selectedInvoices.length})
+                </Button>
+              </div>
             )}
           </CardHeader>
           <CardContent>
