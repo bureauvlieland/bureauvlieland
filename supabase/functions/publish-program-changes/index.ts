@@ -318,6 +318,91 @@ Deno.serve(async (req) => {
           new_value: it.pending_override_people,
         });
       }
+      // Extra (admin-edit-sheet) velden
+      const pushDiff = (
+        field: ChangeRow["field"],
+        oldValue: string | null,
+        newValue: string | null,
+        oldLog: unknown,
+        newLog: unknown,
+      ) => {
+        changeRows.push({
+          itemId: it.id,
+          blockName: it.pending_block_name ?? it.block_name,
+          providerId: it.provider_id,
+          providerName,
+          field,
+          oldValue,
+          newValue,
+        });
+        logRows.push({
+          request_id: requestId,
+          item_id: it.id,
+          field,
+          old_value: oldLog,
+          new_value: newLog,
+        });
+      };
+
+      if (it.pending_block_name !== null && it.pending_block_name !== undefined) {
+        pushDiff("name", it.block_name, it.pending_block_name, it.block_name, it.pending_block_name);
+      }
+      if (it.pending_admin_price_override !== null && it.pending_admin_price_override !== undefined) {
+        pushDiff(
+          "price",
+          it.admin_price_override !== null ? `€${Number(it.admin_price_override).toFixed(2)}` : null,
+          `€${Number(it.pending_admin_price_override).toFixed(2)}`,
+          it.admin_price_override,
+          it.pending_admin_price_override,
+        );
+      }
+      if (it.pending_price_type !== null && it.pending_price_type !== undefined) {
+        pushDiff("price_type", it.price_type, it.pending_price_type, it.price_type, it.pending_price_type);
+      }
+      if (it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined) {
+        pushDiff(
+          "description",
+          it.admin_price_notes,
+          it.pending_admin_price_notes,
+          it.admin_price_notes,
+          it.pending_admin_price_notes,
+        );
+      }
+      if (
+        (it.pending_location_address !== null && it.pending_location_address !== undefined) ||
+        (it.pending_location_lat !== null && it.pending_location_lat !== undefined)
+      ) {
+        pushDiff(
+          "location",
+          it.location_address,
+          it.pending_location_address ?? "(coördinaten gewijzigd)",
+          {
+            address: it.location_address,
+            lat: it.location_lat,
+            lng: it.location_lng,
+          },
+          {
+            address: it.pending_location_address,
+            lat: it.pending_location_lat,
+            lng: it.pending_location_lng,
+          },
+        );
+      }
+      if (
+        (it.pending_provider_id !== null && it.pending_provider_id !== undefined) ||
+        (it.pending_provider_name !== null && it.pending_provider_name !== undefined)
+      ) {
+        pushDiff(
+          "provider",
+          it.provider_name,
+          it.pending_provider_name ?? it.pending_provider_id,
+          { id: it.provider_id, name: it.provider_name },
+          { id: it.pending_provider_id, name: it.pending_provider_name },
+        );
+      }
+      if (it.pending_block_type !== null && it.pending_block_type !== undefined) {
+        pushDiff("invoicing", it.block_type, it.pending_block_type, it.block_type, it.pending_block_type);
+      }
     }
 
     // Promote pending → live (per item)
@@ -336,6 +421,17 @@ Deno.serve(async (req) => {
         pending_changed_at: null,
         pending_changed_by: null,
         pending_baseline: null,
+        pending_block_name: null,
+        pending_admin_price_override: null,
+        pending_price_type: null,
+        pending_admin_price_notes: null,
+        pending_location_lat: null,
+        pending_location_lng: null,
+        pending_location_address: null,
+        pending_provider_id: null,
+        pending_provider_name: null,
+        pending_provider_email: null,
+        pending_block_type: null,
         status_updated_at: nowIso,
       };
       if (it.pending_preferred_time !== null && it.pending_preferred_time !== undefined) {
@@ -350,6 +446,39 @@ Deno.serve(async (req) => {
       }
       if (it.pending_override_people !== null && it.pending_override_people !== undefined) {
         upd.override_people = it.pending_override_people;
+      }
+      if (it.pending_block_name !== null && it.pending_block_name !== undefined) {
+        upd.block_name = it.pending_block_name;
+      }
+      if (it.pending_admin_price_override !== null && it.pending_admin_price_override !== undefined) {
+        upd.admin_price_override = it.pending_admin_price_override;
+      }
+      if (it.pending_price_type !== null && it.pending_price_type !== undefined) {
+        upd.price_type = it.pending_price_type;
+      }
+      if (it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined) {
+        upd.admin_price_notes = it.pending_admin_price_notes;
+      }
+      if (it.pending_location_lat !== null && it.pending_location_lat !== undefined) {
+        upd.location_lat = it.pending_location_lat;
+      }
+      if (it.pending_location_lng !== null && it.pending_location_lng !== undefined) {
+        upd.location_lng = it.pending_location_lng;
+      }
+      if (it.pending_location_address !== null && it.pending_location_address !== undefined) {
+        upd.location_address = it.pending_location_address;
+      }
+      if (it.pending_provider_id !== null && it.pending_provider_id !== undefined) {
+        upd.provider_id = it.pending_provider_id;
+      }
+      if (it.pending_provider_name !== null && it.pending_provider_name !== undefined) {
+        upd.provider_name = it.pending_provider_name;
+      }
+      if (it.pending_provider_email !== null && it.pending_provider_email !== undefined) {
+        upd.provider_email = it.pending_provider_email;
+      }
+      if (it.pending_block_type !== null && it.pending_block_type !== undefined) {
+        upd.block_type = it.pending_block_type;
       }
       await supabase.from("program_request_items").update(upd).eq("id", it.id);
     }
