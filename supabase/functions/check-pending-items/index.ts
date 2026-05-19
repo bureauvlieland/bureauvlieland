@@ -142,13 +142,27 @@ Deno.serve(async (req) => {
         if (!resp.ok) console.error(`Failed to send ${opts.logExtra.email_type}:`, await resp.text());
         else console.log(`Sent ${opts.logExtra.email_type} to ${opts.recipientEmail}`);
 
-        await supabase.from("email_log").insert({
-          ...opts.logExtra,
-          subject,
-          recipient_email: opts.recipientEmail,
+        const fullSubject = `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`;
+        await logEmail({
+          email_type: opts.logExtra.email_type,
+          subject: fullSubject,
+          recipient_email: getRecipientEmail(opts.recipientEmail, req.headers.get("origin") || undefined),
           recipient_name: opts.recipientName,
+          related_partner_id: opts.logExtra.related_partner_id,
+          related_request_id: opts.logExtra.related_request_id,
+          related_item_id: opts.logExtra.related_item_id,
           status,
-          sent_at: status === "sent" ? new Date().toISOString() : null,
+          sent_by: "system:cron",
+          metadata: {
+            template_name: opts.logExtra.email_type,
+            actor: opts.logExtra.email_type.startsWith("reminder_quote")
+              ? "system → partner (offerte herinnering)"
+              : opts.logExtra.email_type.startsWith("reminder_activity")
+              ? "system → partner (activiteit herinnering)"
+              : opts.logExtra.email_type.startsWith("reminder_")
+              ? "system → klant (herinnering)"
+              : "system:cron",
+          },
         });
       } catch (err) {
         console.error(`Error sending ${opts.logExtra.email_type}:`, err);
