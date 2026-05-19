@@ -6,6 +6,7 @@ import {
   getRecipientEmail,
   formatDateNL,
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
