@@ -7,6 +7,7 @@ import {
   getSubjectPrefix,
   isTestMode,
 } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -234,7 +235,7 @@ Deno.serve(async (req) => {
       const errText = await mjResponse.text();
       console.error("Mailjet error:", errText);
 
-      await supabase.from("email_log").insert({
+      await logEmail({
         email_type: "bureau_invoice_to_customer",
         recipient_email: finalRecipient,
         recipient_name: recipientName,
@@ -244,6 +245,8 @@ Deno.serve(async (req) => {
         sent_by: user.id,
         related_request_id: body.requestId,
         metadata: {
+          template_name: "bureau_invoice_to_customer",
+          actor: "admin → klant",
           invoiceId: body.invoiceId ?? null,
           invoiceNumber: body.invoiceNumber,
         },
@@ -256,16 +259,17 @@ Deno.serve(async (req) => {
     }
 
     // ─── Logging ───────────────────────────────────────────────────────────
-    await supabase.from("email_log").insert({
+    await logEmail({
       email_type: "bureau_invoice_to_customer",
       recipient_email: finalRecipient,
       recipient_name: recipientName,
       subject: finalSubject,
       status: "sent",
-      sent_at: new Date().toISOString(),
       sent_by: user.id,
       related_request_id: body.requestId,
       metadata: {
+        template_name: "bureau_invoice_to_customer",
+        actor: "admin → klant",
         invoiceId: body.invoiceId ?? null,
         invoiceNumber: body.invoiceNumber,
         amountInclVat: body.amountInclVat,
