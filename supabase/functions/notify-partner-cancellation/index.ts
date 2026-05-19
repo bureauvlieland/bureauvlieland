@@ -164,32 +164,31 @@ Deno.serve(async (req) => {
       const messageId = mjData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
 
       // Log email — één rij per item zodat de mail-popover per onderdeel werkt
-      const status = mjRes.ok ? "sent" : "failed";
-      const errorMessage = mjRes.ok ? null : JSON.stringify(mjData).slice(0, 1000);
-      const sentAt = new Date().toISOString();
+      const status: "sent" | "failed" = mjRes.ok ? "sent" : "failed";
+      const errorMessage = mjRes.ok ? undefined : JSON.stringify(mjData).slice(0, 1000);
       const baseMetadata = {
         template_name: "cancellation_partner",
         actor: "admin → partner (project geannuleerd)",
         item_ids: group.itemIds,
         item_count: group.itemIds.length,
       };
-      const idsForLog = group.itemIds.length > 0 ? group.itemIds : [null];
-      const logRows = idsForLog.map((iid) => ({
-        email_type: "cancellation_partner",
-        subject: templateResult?.subject || subject,
-        recipient_email: recipientEmail,
-        recipient_name: group.name,
-        related_request_id: request_id,
-        related_partner_id: partnerId,
-        related_item_id: iid,
-        status,
-        error_message: errorMessage,
-        mailjet_message_id: messageId,
-        sent_at: status === "sent" ? sentAt : null,
-        sent_by: "admin",
-        metadata: baseMetadata,
-      }));
-      await supabase.from("email_log").insert(logRows);
+      const idsForLog = group.itemIds.length > 0 ? group.itemIds : [null as string | null];
+      for (const iid of idsForLog) {
+        await logEmail({
+          email_type: "cancellation_partner",
+          subject: templateResult?.subject || subject,
+          recipient_email: recipientEmail,
+          recipient_name: group.name,
+          related_request_id: request_id,
+          related_partner_id: partnerId,
+          related_item_id: iid || undefined,
+          status,
+          error_message: errorMessage,
+          mailjet_message_id: messageId || undefined,
+          sent_by: "admin",
+          metadata: baseMetadata,
+        });
+      }
 
       // Log in project communications
       await supabase.from("project_communications").insert({
