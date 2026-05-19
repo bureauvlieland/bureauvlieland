@@ -81,9 +81,8 @@ async function sendCancellationEmail(opts: {
 
   const mjData = await mjRes.json().catch(() => ({}));
   const messageId = mjData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
-  const status = mjRes.ok ? "sent" : "failed";
-  const errorMessage = mjRes.ok ? null : JSON.stringify(mjData).slice(0, 1000);
-  const sentAt = new Date().toISOString();
+  const status: "sent" | "failed" = mjRes.ok ? "sent" : "failed";
+  const errorMessage = mjRes.ok ? undefined : JSON.stringify(mjData).slice(0, 1000);
   const baseMetadata = {
     template_name: "partner_item_cancellation",
     actor: "admin → partner (annulering)",
@@ -92,23 +91,23 @@ async function sendCancellationEmail(opts: {
   };
 
   // Eén log-rij per item zodat de mail-popover per onderdeel werkt
-  const idsForLog = item_ids.length > 0 ? item_ids : [null];
-  const rows = idsForLog.map((iid) => ({
-    email_type: "partner_item_cancellation",
-    subject,
-    recipient_email: recipientEmail,
-    recipient_name: partner_name,
-    related_request_id: request_id,
-    related_partner_id: partner_id,
-    related_item_id: iid,
-    status,
-    error_message: errorMessage,
-    mailjet_message_id: messageId,
-    sent_at: status === "sent" ? sentAt : null,
-    sent_by: "admin",
-    metadata: baseMetadata,
-  }));
-  await supabase.from("email_log").insert(rows);
+  const idsForLog = item_ids.length > 0 ? item_ids : [null as string | null];
+  for (const iid of idsForLog) {
+    await logEmail({
+      email_type: "partner_item_cancellation",
+      subject,
+      recipient_email: recipientEmail,
+      recipient_name: partner_name,
+      related_request_id: request_id,
+      related_partner_id: partner_id,
+      related_item_id: iid || undefined,
+      status,
+      error_message: errorMessage,
+      mailjet_message_id: messageId || undefined,
+      sent_by: "admin",
+      metadata: baseMetadata,
+    });
+  }
 
   await supabase.from("project_communications").insert({
     request_id,
