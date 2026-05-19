@@ -130,11 +130,15 @@ export function PublishChangesDialog({
   const [adminNote, setAdminNote] = useState("");
   const [publishing, setPublishing] = useState(false);
 
-  // Welke partners zijn betrokken bij wijzigingen?
+  // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
+  // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
   const involvedPartners = useMemo(() => {
     const ids = new Set<string>();
     pendingItems.forEach((i) => {
       if (i.provider_id && i.block_type !== "bureau") ids.add(i.provider_id);
+      const newType = i.pending_block_type ?? i.block_type;
+      const newProvider = i.pending_provider_id ?? i.provider_id;
+      if (newProvider && newType !== "bureau") ids.add(newProvider);
     });
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);
