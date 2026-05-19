@@ -96,6 +96,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Guard: Bureau Vlieland is de centrale facturerende partij — kan geen inkoopfactuur aan zichzelf registreren
+    if (partner.id === "bureau") {
+      return new Response(
+        JSON.stringify({ error: "Bureau Vlieland kan geen inkoopfactuur aan zichzelf registreren. Bureau-managed items lopen via de verkoopfacturen (bureau_invoices)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Verify item belongs to this partner and get invoicing_mode
     const { data: item, error: itemError } = await supabase
       .from("program_request_items")
