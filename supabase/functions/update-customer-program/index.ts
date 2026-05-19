@@ -12,6 +12,7 @@ import {
   getRecipientEmail as sharedGetRecipientEmail,
   getSubjectPrefix as sharedGetSubjectPrefix,
   isTestMode as sharedIsTestMode,
+  getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
