@@ -2777,16 +2777,23 @@ const AdminRequestDetail = () => {
         partners={Array.from(
           new Map(
             items
-              .filter((i) => i.provider_id && i.provider_id !== "bureau")
-              .map((i) => [
-                i.provider_id,
-                {
-                  id: i.provider_id,
-                  name: i.provider_name,
-                  contact_email: i.provider_email,
-                  email: i.provider_email,
-                },
-              ]),
+              .flatMap((i) => [
+                i.provider_id && i.provider_id !== "bureau"
+                  ? [i.provider_id, { id: i.provider_id, name: i.provider_name, contact_email: i.provider_email, email: i.provider_email }] as const
+                  : null,
+                i.pending_provider_id && i.pending_provider_id !== "bureau"
+                  ? [
+                      i.pending_provider_id,
+                      {
+                        id: i.pending_provider_id,
+                        name: i.pending_provider_name || i.pending_provider_id,
+                        contact_email: i.pending_provider_email,
+                        email: i.pending_provider_email,
+                      },
+                    ] as const
+                  : null,
+              ])
+              .filter((x): x is readonly [string, { id: string; name: string; contact_email: string | null; email: string | null }] => x !== null),
           ).values(),
         )}
         onPublished={() => fetchRequestData({ silent: true })}
