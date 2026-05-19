@@ -1878,27 +1878,27 @@ const AdminRequestDetail = () => {
                                         const activeTime = item.confirmed_time || item.proposed_time || item.preferred_time;
                                         const isConfirmed = !!item.confirmed_time;
                                         const isProposal = !item.confirmed_time && !!item.proposed_time;
+                                        const hasPendingTime = item.pending_preferred_time != null;
+                                        const displayTime = hasPendingTime ? item.pending_preferred_time : activeTime;
                                         // Toon "was: X" alleen bij een echt klant-tegenvoorstel.
                                         // Niet meer bij admin-sync-verschillen (Fase 4b).
                                         const showOriginal = isProposal && item.preferred_time && item.preferred_time !== item.proposed_time;
 
                                         const handleSaveTime = async (time: string | null) => {
-                                          // Belangrijk: een tijdwijziging mag de partner-workflow status NIET muteren.
-                                          // De DB-trigger guard_item_status_consistency blokkeert anders pending->confirmed
-                                          // wanneer skip_partner_notification=true en er nog geen klant-akkoord is.
-                                          const updatePayload: Record<string, unknown> = time
+                                          // Pending-change flow: schrijf naar pending_preferred_time,
+                                          // niet direct naar live kolommen. Wordt pas gepubliceerd
+                                          // (en gecommuniceerd) na klik op "Publiceer & notificeer".
+                                          // Als de nieuwe waarde gelijk is aan de live waarde → clear pending.
+                                          const live = item.preferred_time;
+                                          const clearPending = time === live || (time === null && !live);
+                                          const updatePayload: Record<string, unknown> = clearPending
                                             ? {
-                                                confirmed_time: time,
-                                                preferred_time: time,
-                                                status_note: `Tijd ${time} ingesteld door admin`,
-                                                status_updated_at: new Date().toISOString(),
+                                                pending_preferred_time: null,
+                                                pending_changed_at: null,
                                               }
                                             : {
-                                                confirmed_time: null,
-                                                proposed_time: null,
-                                                preferred_time: null,
-                                                status_note: `Tijd verwijderd door admin`,
-                                                status_updated_at: new Date().toISOString(),
+                                                pending_preferred_time: time,
+                                                pending_changed_at: new Date().toISOString(),
                                               };
                                           const { error } = await supabase
                                             .from("program_request_items")
@@ -1908,7 +1908,11 @@ const AdminRequestDetail = () => {
                                             console.error("Fout bij opslaan tijd:", error);
                                             toast.error(`Fout bij opslaan tijd: ${error.message}`);
                                           } else {
-                                            toast.success(time ? `Tijd ${time} opgeslagen` : "Tijd verwijderd");
+                                            toast.success(
+                                              clearPending
+                                                ? "Wijziging teruggedraaid"
+                                                : `Tijd ${time} klaargezet (nog niet gepubliceerd)`,
+                                            );
                                             fetchRequestData({ silent: true });
                                           }
                                         };
