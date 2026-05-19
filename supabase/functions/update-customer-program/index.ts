@@ -537,6 +537,7 @@ Deno.serve(async (req) => {
                   departure_date: formattedDeparture,
                   accommodation_name: sanitizeHtml(quote.accommodation_name),
                   number_of_people: String(program.number_of_people),
+                  partner_portal_url: `${getPortalBaseUrl(origin)}/partner/login`,
                 });
 
                 const emailSubject = template?.subject || `Datumwijziging logiesaanvraag - ${customerLabel}`;
