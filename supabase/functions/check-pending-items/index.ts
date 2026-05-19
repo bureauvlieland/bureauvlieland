@@ -667,15 +667,20 @@ Deno.serve(async (req) => {
                 console.log(`Sent expired quote email to ${partnerEmail}`);
 
                 // Log email
-                await supabase.from("email_log").insert({
+                await logEmail({
                   email_type: "quote_expired_partner",
                   subject,
                   recipient_email: partnerEmail,
                   recipient_name: partnerName,
-                  related_accommodation_id: (req as any)?.id || null,
+                  related_accommodation_id: (req as any)?.id || undefined,
                   related_partner_id: quote.partner_id,
                   status: "sent",
-                  sent_at: new Date().toISOString(),
+                  sent_by: "system:cron",
+                  metadata: {
+                    template_name: "quote_expired_partner",
+                    actor: "system → partner (offerte verlopen)",
+                    quote_id: quote.id,
+                  },
                 });
               } else {
                 console.error(`Failed to send expired quote email:`, await emailResp.text());
