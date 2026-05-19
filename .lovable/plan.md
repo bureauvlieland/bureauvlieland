@@ -1,62 +1,31 @@
-# Plan: email templates 1-voor-1 doorlopen
+## Probleem
 
-Er staan **47 actieve templates** in de database. In plaats van weer een grote sweep doen we per template een gerichte audit + fix. Zo blijven changes klein, testbaar en goed te valideren.
+Op `/admin/facturen` (AdminPurchaseInvoices) staan 3 inkoopfactuur-rijen die je niet hebt toegevoegd:
 
-## Werkwijze per template
+| Beschrijving | Bedrag | Datum |
+|---|---|---|
+| Overtocht Vlieland → Harlingen - RMD Trainingen | €42,96 | 1 mei 2026 |
+| Groepsvervoer 8 personen - RMD Trainingen | €75,00 | 1 mei 2026 |
+| Inzet 4x4 Terreinwagen - RMD Trainingen | €200,00 | 1 mei 2026 |
 
-Voor elke template doe ik:
+**Oorzaak gevonden:** alle drie zijn aangemaakt door `register-partner-invoice` met `partner_id = 'bureau'` (de sentinel-partner voor interne Bureau-items) en `invoice_number = 'nvt'`. In `program_request_history` staan ze geregistreerd als `actor: partner` — vermoedelijk via een partner-portal flow waarbij Bureau Vlieland zelf als "partner" werd behandeld voor zijn eigen managed services (ferry, transport, 4x4). Bureau hoort géén inkoopfacturen aan zichzelf te genereren.
 
-1. **Inhoud ophalen** uit `email_templates` (subject + body_html).
-2. **Statische audit**:
-   - Links (`href=`) controleren → bestaat de route? Juiste pad (bv. `/mijn-programma/` ipv `/programma/` of `/klant/`)?
-   - Variabelen (`{{...}}`) checken → worden ze daadwerkelijk meegegeven door de edge function die deze template aanroept?
-   - Conditionals (`{{#if}}`) op haakjes/sluiting.
-   - HTML-validiteit (geen kapotte tags, geen losse `<style>` die als tekst zou renderen).
-3. **Trigger-pad controleren**: welke edge function/code verstuurt deze template? Krijgt die alle variabelen mee? Wordt `logEmail` met juiste metadata aangeroepen?
-4. **Live test waar zinvol** via `render-email-template` of `curl_edge_functions`, output inspecteren.
-5. **Fix toepassen** (template body, edge function, of beide) en kort rapporteren wat er mis was + wat is aangepast.
+## Wat ik wil doen
 
-## Voorgestelde volgorde (logische clusters)
+### 1. Verwijderfunctionaliteit voor inkoopfacturen
+- Nieuwe `deleteInvoice` mutation in `src/hooks/usePurchaseInvoices.ts`:
+  - Verwijdert ook `purchase_invoice_lines` en `partner_purchase_invoice_allocations` (cascade-cleanup)
+  - Reset op het bijbehorende `program_request_items` de velden `invoiced_amount`, `invoiced_number`, `invoiced_date`, `invoiced_file_path`, `commission_*` zodat het item weer "niet gefactureerd" wordt
+  - Verwijdert optioneel het PDF-bestand uit `partner-invoices` storage bucket
+  - Logt actie in `program_request_history` (`action: purchase_invoice_deleted`)
+- In `AdminPurchaseInvoices.tsx`: prullenbak-icoon in de "Acties" kolom + bevestigings-dialog (AlertDialog) met waarschuwing dat dit ook de commissie-status reset
+- Bulk-delete optie via de bestaande checkbox-selectie (naast "Bulk doorsturen")
 
-**Batch 1 — Klant-portal & links (recent geraakt, hoogste impact):**
-1. `arrival_reminder`
-2. `program_request_customer`
-3. `quote_offer_customer`
-4. `booking_confirmed_customer`
-5. `guest_details_reminder`
-6. `reminder_customer_quote` + `reminder_customer_request`
+### 2. De 3 spook-rijen opruimen
+- Eenmalige cleanup: de 3 rijen met `partner_id='bureau'` en `invoice_number='nvt'` verwijderen via een migratie of via de nieuwe delete-knop (jouw keuze — ik raad migratie aan zodat alles in één keer schoon is, inclusief het terugzetten van de item-status).
 
-**Batch 2 — Logies klant-flow:**
-7. `accommodation_request_customer`
-8. `accommodation_selected_customer`
-9. `accommodation_quote_notification`
+### 3. Voorkomen dat het opnieuw gebeurt
+- In `supabase/functions/register-partner-invoice/index.ts` een guard toevoegen: als `partner.id === 'bureau'` → 400 fout teruggeven ("Bureau Vlieland kan geen inkoopfactuur aan zichzelf registreren"). Bureau-managed items horen via `bureau_invoices` / sales-facturen te lopen, niet via partner_purchase_invoices.
 
-**Batch 3 — Partner-flow activiteiten:**
-10. `program_request_partner`
-11. `item_added_partner` / `item_changes_partner` / `item_cancelled_partner`
-12. `status_confirmed` / `status_unavailable` / `status_alternative`
-13. `counter_proposal_partner` / `counter_proposal_response`
-
-**Batch 4 — Partner-flow logies:**
-14. `accommodation_selected_partner` / `accommodation_rejected_partner`
-15. `cancellation_accommodation_partner` / `quote_expired_partner`
-16. `date_change_accommodation` / `people_change_accommodation`
-17. `customer_accommodation_message` / `inbound_reply_to_customer`
-
-**Batch 5 — Bureau & overig:**
-18. `program_request_bureau` / `quote_request_bureau`
-19. `chat_notification_bureau` / `chat_reply_visitor`
-20. `cancellation_customer` / `cancellation_partner` / `date_change_customer` / `date_change_partner`
-21. `booking_confirmed_partner` / `item_changes_customer`
-22. `partner_invitation` / `partner_intro_portal` / `partner_password_reset`
-23. `proforma_commission_notification`
-24. `presales_*` (4 stuks)
-25. `reminder_partner_quote`
-
-## Wat ik nu nodig heb
-
-- **Akkoord op de volgorde** (of geef andere prioriteit).
-- **Batch-grootte**: per template apart bevestigen, of telkens 3-5 in één keer?
-- Mag ik bij twijfel een test-render uitvoeren om de output te zien voordat ik fix?
-
-Zodra je akkoord geeft start ik met **Batch 1 / template 1 = `arrival_reminder`**.
+## Vraag
+Wil je dat ik de 3 bestaande rijen via een **migratie** opruim (schoon + automatisch), of liever via de **nieuwe delete-knop** zodat je het zelf doet?
