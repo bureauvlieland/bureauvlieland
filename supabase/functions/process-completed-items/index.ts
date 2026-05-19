@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
 
               if (emailResponse.ok) {
                 // Log email
-                await supabase.from("email_log").insert({
+                await logEmail({
                   email_type: "proforma_commission_notification",
                   subject: `${subjectPrefix}${template.subject}`,
                   recipient_email: recipientEmail,
@@ -176,8 +176,10 @@ Deno.serve(async (req) => {
                   related_request_id: item.request_id,
                   related_partner_id: item.provider_id,
                   status: "sent",
-                  sent_at: new Date().toISOString(),
-                  metadata: { 
+                  sent_by: "system:cron",
+                  metadata: {
+                    template_name: "proforma_commission_notification",
+                    actor: "system → partner (proforma commissie activiteit)",
                     type: "activity",
                     commission_amount: commissionAmount,
                     deadline: deadlineDate,
