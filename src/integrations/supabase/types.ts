@@ -2022,6 +2022,48 @@ export type Database = {
         }
         Relationships: []
       }
+      program_change_log: {
+        Row: {
+          admin_note: string | null
+          changed_at: string
+          changed_by: string | null
+          field: string
+          id: string
+          item_id: string | null
+          new_value: Json | null
+          notified_emails: string[]
+          old_value: Json | null
+          published_at: string | null
+          request_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          field: string
+          id?: string
+          item_id?: string | null
+          new_value?: Json | null
+          notified_emails?: string[]
+          old_value?: Json | null
+          published_at?: string | null
+          request_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          field?: string
+          id?: string
+          item_id?: string | null
+          new_value?: Json | null
+          notified_emails?: string[]
+          old_value?: Json | null
+          published_at?: string | null
+          request_id?: string
+        }
+        Relationships: []
+      }
       program_item_billing_lines: {
         Row: {
           amount_excl_vat: number
@@ -2172,6 +2214,15 @@ export type Database = {
           location_lng: number | null
           override_people: number | null
           partner_price_change_acknowledged_at: string | null
+          pending_added: boolean
+          pending_baseline: Json | null
+          pending_changed_at: string | null
+          pending_changed_by: string | null
+          pending_customer_notes: string | null
+          pending_day_index: number | null
+          pending_marked_for_removal: boolean
+          pending_override_people: number | null
+          pending_preferred_time: string | null
           preferred_time: string | null
           price_indication: string | null
           price_type: string | null
@@ -2239,6 +2290,15 @@ export type Database = {
           location_lng?: number | null
           override_people?: number | null
           partner_price_change_acknowledged_at?: string | null
+          pending_added?: boolean
+          pending_baseline?: Json | null
+          pending_changed_at?: string | null
+          pending_changed_by?: string | null
+          pending_customer_notes?: string | null
+          pending_day_index?: number | null
+          pending_marked_for_removal?: boolean
+          pending_override_people?: number | null
+          pending_preferred_time?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
@@ -2306,6 +2366,15 @@ export type Database = {
           location_lng?: number | null
           override_people?: number | null
           partner_price_change_acknowledged_at?: string | null
+          pending_added?: boolean
+          pending_baseline?: Json | null
+          pending_changed_at?: string | null
+          pending_changed_by?: string | null
+          pending_customer_notes?: string | null
+          pending_day_index?: number | null
+          pending_marked_for_removal?: boolean
+          pending_override_people?: number | null
+          pending_preferred_time?: string | null
           preferred_time?: string | null
           price_indication?: string | null
           price_type?: string | null
@@ -2371,6 +2440,7 @@ export type Database = {
           guest_names: string | null
           id: string
           invoicing_mode: string
+          last_published_at: string | null
           linked_accommodation_id: string | null
           number_of_people: number
           origin: string
@@ -2423,6 +2493,7 @@ export type Database = {
           guest_names?: string | null
           id?: string
           invoicing_mode?: string
+          last_published_at?: string | null
           linked_accommodation_id?: string | null
           number_of_people?: number
           origin?: string
@@ -2475,6 +2546,7 @@ export type Database = {
           guest_names?: string | null
           id?: string
           invoicing_mode?: string
+          last_published_at?: string | null
           linked_accommodation_id?: string | null
           number_of_people?: number
           origin?: string
