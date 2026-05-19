@@ -1139,6 +1139,29 @@ const AdminRequestDetail = () => {
       </Helmet>
       <AdminLayout>
         <div className="p-6 space-y-6">
+          {pendingItems.length > 0 && (
+            <div className="sticky top-0 z-30 -mx-6 -mt-6 mb-2 border-b border-amber-300 bg-amber-50 px-6 py-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-sm">
+                  <span className="font-semibold text-amber-900">
+                    {pendingItems.length} ongepubliceerde wijziging{pendingItems.length !== 1 ? "en" : ""}
+                  </span>
+                  <span className="ml-2 text-amber-800">
+                    — klant en partners zien dit nog niet.
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={discardPendingChanges}>
+                    Verwerp
+                  </Button>
+                  <Button size="sm" onClick={() => setPublishDialogOpen(true)}>
+                    Publiceer & notificeer →
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
