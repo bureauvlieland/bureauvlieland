@@ -31,6 +31,7 @@ import {
   CheckCircle,
   ArrowRight,
   Euro,
+  Trash2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
@@ -42,6 +43,16 @@ import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { Plus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 
 export default function AdminPurchaseInvoices() {
