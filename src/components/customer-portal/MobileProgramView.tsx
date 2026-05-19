@@ -364,20 +364,7 @@ export const MobileProgramView = ({
               >
                 <CalendarPlus className="h-3 w-3" />
               </Button>
-              {(program as any).quote_pdf_url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open((program as any).quote_pdf_url, "_blank");
-                  }}
-                  className="h-7 text-xs"
-                >
-                  <Download className="h-3 w-3 mr-1" />
-                  Offerte
-                </Button>
-              )}
+              {/* Offerte-PDF knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
               {!termsAccepted && isPublished && (
                 <Button
                   size="sm"
