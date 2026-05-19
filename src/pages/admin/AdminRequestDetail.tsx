@@ -240,6 +240,17 @@ interface ProgramRequestItem {
   pending_marked_for_removal?: boolean | null;
   pending_added?: boolean | null;
   pending_changed_at?: string | null;
+  pending_block_name?: string | null;
+  pending_admin_price_override?: number | null;
+  pending_price_type?: string | null;
+  pending_admin_price_notes?: string | null;
+  pending_location_lat?: number | null;
+  pending_location_lng?: number | null;
+  pending_location_address?: string | null;
+  pending_provider_id?: string | null;
+  pending_provider_name?: string | null;
+  pending_provider_email?: string | null;
+  pending_block_type?: string | null;
 }
 
 interface HistoryEntry {
