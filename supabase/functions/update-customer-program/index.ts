@@ -12,6 +12,7 @@ import {
   getRecipientEmail as sharedGetRecipientEmail,
   getSubjectPrefix as sharedGetSubjectPrefix,
   isTestMode as sharedIsTestMode,
+  getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -303,6 +304,7 @@ Deno.serve(async (req) => {
                   old_people: String(program.number_of_people),
                   new_people: String(programDetails.numberOfPeople),
                   accommodation_name: sanitizeHtml(quote.accommodation_name),
+                  partner_portal_url: `${getPortalBaseUrl(origin)}/partner/login`,
                 });
 
                 const emailSubject = template?.subject || `Gewijzigd aantal gasten - ${customerLabel}`;
@@ -536,6 +538,7 @@ Deno.serve(async (req) => {
                   departure_date: formattedDeparture,
                   accommodation_name: sanitizeHtml(quote.accommodation_name),
                   number_of_people: String(program.number_of_people),
+                  partner_portal_url: `${getPortalBaseUrl(origin)}/partner/login`,
                 });
 
                 const emailSubject = template?.subject || `Datumwijziging logiesaanvraag - ${customerLabel}`;

@@ -7,6 +7,7 @@ import {
   getSubjectPrefix, 
   getRecipientEmail,
   buildReplyTo,
+  getPortalBaseUrl,
   TemplateIds 
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
@@ -387,6 +388,7 @@ Deno.serve(async (req) => {
       dates: dates,
       cancellation_reason: reason ? sanitizeHtml(reason) : "",
       providers_count: String(providers.size + accommodationPartners.size),
+      programma_url: `${getPortalBaseUrl(origin)}/programma-samenstellen`,
     });
 
     emails.push({
