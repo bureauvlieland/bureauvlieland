@@ -1922,27 +1922,33 @@ const AdminRequestDetail = () => {
                                             <div className="flex items-center gap-1">
                                               <Input
                                                 type="time"
-                                                defaultValue={activeTime || ""}
-                                                key={`${item.id}-${activeTime || "empty"}`}
+                                                defaultValue={displayTime || ""}
+                                                key={`${item.id}-${displayTime || "empty"}`}
                                                 className={cn(
                                                   "h-8 w-[110px] tabular-nums text-sm",
-                                                  isConfirmed && "border-green-500/50 text-green-700 font-medium",
-                                                  isProposal && "border-orange-400/60 text-orange-700",
-                                                  !activeTime && "border-dashed border-muted-foreground/30 text-muted-foreground",
+                                                  isConfirmed && !hasPendingTime && "border-green-500/50 text-green-700 font-medium",
+                                                  isProposal && !hasPendingTime && "border-orange-400/60 text-orange-700",
+                                                  hasPendingTime && "border-amber-500 bg-amber-50 text-amber-900 font-medium",
+                                                  !displayTime && "border-dashed border-muted-foreground/30 text-muted-foreground",
                                                 )}
                                                 onBlur={(e) => {
                                                   const val = e.target.value;
-                                                  if (val === (activeTime || "")) return;
+                                                  if (val === (displayTime || "")) return;
                                                   handleSaveTime(val || null);
                                                 }}
                                                 onKeyDown={(e) => {
                                                   if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                                                   if (e.key === "Escape") {
-                                                    (e.target as HTMLInputElement).value = activeTime || "";
+                                                    (e.target as HTMLInputElement).value = displayTime || "";
                                                     (e.target as HTMLInputElement).blur();
                                                   }
                                                 }}
                                               />
+                                              {hasPendingTime && (
+                                                <span className="text-[10px] text-amber-700" title={`Live: ${activeTime || "—"}`}>
+                                                  ongepubliceerd
+                                                </span>
+                                              )}
                                               {isProposal && (
                                                 <TooltipProvider>
                                                   <Tooltip>
