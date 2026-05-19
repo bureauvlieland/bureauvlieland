@@ -189,6 +189,62 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     },
   });
 
+  const deleteInvoice = useMutation({
+    mutationFn: async (invoice: PurchaseInvoiceWithRelations) => {
+      const { id, item_id, request_id, file_path, invoice_number, partner_id, amount_excl_vat } = invoice;
+
+      // Cascade-cleanup children first
+      await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", id);
+      await supabase.from("partner_purchase_invoice_allocations").delete().eq("invoice_id", id);
+
+      const { error } = await supabase.from("partner_purchase_invoices").delete().eq("id", id);
+      if (error) throw error;
+
+      // Reset invoice/commission fields on the linked program item
+      if (item_id) {
+        await supabase
+          .from("program_request_items")
+          .update({
+            invoiced_amount: null,
+            invoiced_number: null,
+            invoiced_date: null,
+            invoiced_file_path: null,
+            commission_amount: null,
+            commission_status: "not_applicable",
+            commission_notes: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", item_id);
+      }
+
+      // Best-effort: remove PDF from storage
+      if (file_path) {
+        await supabase.storage.from("partner-invoices").remove([file_path]);
+      }
+
+      // Best-effort: log
+      if (request_id) {
+        await supabase.from("program_request_history").insert({
+          request_id,
+          item_id: item_id || null,
+          action: "purchase_invoice_deleted",
+          actor: "admin",
+          notes: `Inkoopfactuur ${invoice_number || "(zonder nummer)"} (€${amount_excl_vat}) verwijderd${partner_id ? ` voor partner ${partner_id}` : ""}`,
+        });
+      }
+
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      toast.success("Inkoopfactuur verwijderd");
+    },
+    onError: (error) => {
+      console.error("Error deleting purchase invoice:", error);
+      toast.error("Fout bij verwijderen inkoopfactuur");
+    },
+  });
+
   const getDownloadUrl = async (filePath: string) => {
     const { data, error } = await supabase.storage
       .from("partner-invoices")
@@ -211,6 +267,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     updateInvoice,
     markAsPaid,
     markAsForwarded,
+    deleteInvoice,
     getDownloadUrl,
   };
 }
