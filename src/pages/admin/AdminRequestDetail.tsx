@@ -802,7 +802,10 @@ const AdminRequestDetail = () => {
         ...rest,
         status: "pending",
         skip_partner_notification: true, // copy is a draft until admin sends it
+        pending_added: true,
+        pending_changed_at: new Date().toISOString(),
       };
+
 
       const { error: insertError } = await supabase
         .from("program_request_items")
