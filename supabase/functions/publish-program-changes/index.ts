@@ -550,7 +550,16 @@ Deno.serve(async (req) => {
       if (!partner) continue;
       const partnerEmail = partner.contact_email || partner.email;
       if (!partnerEmail) continue;
-      const rows = changeRows.filter((r) => r.providerId === pid);
+      // Partner krijgt rijen waar zij betrokken zijn: huidig uitvoerder OF
+      // nieuwe uitvoerder (provider-wissel) op het bovenliggende item.
+      const itemIdsForPartner = new Set(
+        items
+          .filter((i: any) => i.provider_id === pid || i.pending_provider_id === pid)
+          .map((i: any) => i.id),
+      );
+      const rows = changeRows.filter(
+        (r) => r.providerId === pid || (r.itemId && itemIdsForPartner.has(r.itemId)),
+      );
       if (rows.length === 0) continue;
 
       const html = renderChangesListHtml(rows);
