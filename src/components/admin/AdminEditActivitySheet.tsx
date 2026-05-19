@@ -315,26 +315,41 @@ export const AdminEditActivitySheet = ({
 
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from("program_request_items")
-        .delete()
-        .eq("id", item.id);
+      // pending_added items zijn nog niet gepubliceerd → hard delete is veilig.
+      // Voor live items: markeer als pending_marked_for_removal en publiceer
+      // de annulering pas via "Publiceer & notificeer".
+      if (item.pending_added) {
+        const { error } = await supabase
+          .from("program_request_items")
+          .delete()
+          .eq("id", item.id);
+        if (error) throw error;
+        toast.success(`${item.block_name} verwijderd`);
+      } else {
+        const { error } = await supabase
+          .from("program_request_items")
+          .update({
+            pending_marked_for_removal: true,
+            pending_changed_at: new Date().toISOString(),
+          })
+          .eq("id", item.id);
+        if (error) throw error;
+        toast.success(
+          `${item.block_name} gemarkeerd voor annulering — publiceer via de gele balk om door te voeren`,
+        );
+      }
 
-      if (error) throw error;
-
-      // Log admin activity
       await logAdminActivity({
         action: AdminActions.ITEM_STATUS_CHANGED,
         entityType: EntityTypes.REQUEST,
         entityId: requestId,
         details: {
-          action: "activity_deleted",
+          action: item.pending_added ? "activity_deleted" : "activity_marked_removal",
           item_id: item.id,
           block_name: item.block_name,
         },
       });
 
-      toast.success(`${item.block_name} verwijderd uit de offerte`);
       onOpenChange(false);
       onSuccess();
     } catch (error) {
