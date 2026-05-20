@@ -468,14 +468,13 @@ Deno.serve(async (req) => {
       if (it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined) {
         upd.admin_price_notes = it.pending_admin_price_notes;
       }
-      if (it.pending_location_lat !== null && it.pending_location_lat !== undefined) {
-        upd.location_lat = it.pending_location_lat;
-      }
-      if (it.pending_location_lng !== null && it.pending_location_lng !== undefined) {
-        upd.location_lng = it.pending_location_lng;
-      }
+      // Locatie als groep promoten: als er een pending adres staat (ook "")
+      // schrijven we adres, lat en lng allemaal naar live — null overschrijft
+      // dan ook oude waarden.
       if (it.pending_location_address !== null && it.pending_location_address !== undefined) {
-        upd.location_address = it.pending_location_address;
+        upd.location_address = it.pending_location_address === "" ? null : it.pending_location_address;
+        upd.location_lat = it.pending_location_lat ?? null;
+        upd.location_lng = it.pending_location_lng ?? null;
       }
       if (it.pending_provider_id !== null && it.pending_provider_id !== undefined) {
         upd.provider_id = it.pending_provider_id;
