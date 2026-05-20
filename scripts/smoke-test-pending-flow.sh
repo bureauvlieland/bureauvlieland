@@ -140,7 +140,7 @@ snapshot_pending_json() {
 run_one() {
   local item="$1" request="$2"
   local tag="[${item:0:8}]"
-  local logp(){ echo "$tag $*"; }
+  logp() { echo "$tag $*"; }
 
   logp "STAP 1: Snapshot ORIGINAL live + pending"
   local orig_live
