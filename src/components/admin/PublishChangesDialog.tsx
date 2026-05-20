@@ -104,7 +104,8 @@ function describeChange(it: PendingChangeItem): string[] {
     lines.push(`Beschrijving gewijzigd`);
   }
   if (it.pending_location_address !== null || it.pending_location_lat !== null) {
-    lines.push(`Locatie gewijzigd${it.pending_location_address ? `: ${it.pending_location_address}` : ""}`);
+    const addr = it.pending_location_address && it.pending_location_address !== "" ? it.pending_location_address : "(adres leeggemaakt)";
+    lines.push(`Locatie gewijzigd: ${addr}`);
   }
   if (it.pending_provider_id !== null || it.pending_provider_name !== null) {
     lines.push(`Uitvoerder: ${it.provider_name ?? "—"} → ${it.pending_provider_name ?? it.pending_provider_id}`);
