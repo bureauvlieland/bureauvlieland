@@ -72,7 +72,8 @@ rollback_all() {
     return
   fi
   local f item live pending merged
-  for f in "$ROLLBACK_DIR"/*.armed 2>/dev/null; do
+  shopt -s nullglob
+  for f in "$ROLLBACK_DIR"/*.armed; do
     [ -e "$f" ] || continue
     item=$(basename "$f" .armed)
     live=$(cat "$ROLLBACK_DIR/$item.live.json" 2>/dev/null || echo '{}')
