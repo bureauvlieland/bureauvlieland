@@ -68,9 +68,10 @@ function formatVal(v: string | null): string {
   return v;
 }
 
-function renderChangesListHtml(rows: ChangeRow[]): string {
-  if (rows.length === 0) return "<p>Geen wijzigingen</p>";
-  const items = rows
+function renderChangeItems(rows: ChangeRow[]): string {
+  // Geeft enkel <li>-items terug (zonder <ul>-wrapper).
+  if (rows.length === 0) return "<li>Geen wijzigingen</li>";
+  return rows
     .map((r) => {
       if (r.field === "added") {
         return `<li><strong>${r.blockName}</strong> — toegevoegd</li>`;
@@ -81,7 +82,11 @@ function renderChangesListHtml(rows: ChangeRow[]): string {
       return `<li><strong>${r.blockName}</strong> — ${fieldLabel[r.field]}: ${formatVal(r.oldValue)} → ${formatVal(r.newValue)}</li>`;
     })
     .join("");
-  return `<ul style="margin:8px 0 16px; padding-left:20px;">${items}</ul>`;
+}
+
+function renderChangesListHtml(rows: ChangeRow[]): string {
+  // Volledig <ul>-blok voor klantmail (template heeft geen eigen wrapper).
+  return `<ul style="margin:8px 0 16px; padding-left:20px;">${renderChangeItems(rows)}</ul>`;
 }
 
 async function sendMailjet(messages: any[]) {
