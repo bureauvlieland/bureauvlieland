@@ -358,13 +358,13 @@ export function PublishChangesDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing}>
             Annuleren
           </Button>
-          <Button onClick={handlePublish} disabled={publishing}>
+          <Button onClick={handlePublish} disabled={publishing || hasBlocking}>
             {publishing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Publiceer & verstuur
+            {hasBlocking ? "Eerst fouten oplossen" : "Publiceer & verstuur"}
           </Button>
         </DialogFooter>
       </DialogContent>
