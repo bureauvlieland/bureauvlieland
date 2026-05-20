@@ -268,6 +268,28 @@ export function PublishChangesDialog({
             </ScrollArea>
           </div>
 
+          {warnings.length > 0 && (
+            <div className="space-y-2">
+              {warnings.map((w, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-start gap-2 rounded-md border p-3 text-sm ${
+                    w.severity === "blocking"
+                      ? "border-destructive/50 bg-destructive/10 text-destructive"
+                      : "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
+                  }`}
+                >
+                  {w.severity === "blocking" ? (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  ) : (
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  <span>{w.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label className="text-sm font-medium">Ontvangers</Label>
             <div className="space-y-2 rounded-md border p-3">
