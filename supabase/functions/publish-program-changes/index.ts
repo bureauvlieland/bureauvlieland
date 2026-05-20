@@ -198,6 +198,33 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validatie: provider-naam en provider-id moeten samen wijzigen. Voorkomt
+    // dat een hernoeming los gaat lopen van het partner-id (en daarmee van
+    // partner-email, contactgegevens, factuurroutering).
+    const inconsistentProviders = items.filter((it) => {
+      const nameSet = it.pending_provider_name !== null && it.pending_provider_name !== undefined;
+      const idSet = it.pending_provider_id !== null && it.pending_provider_id !== undefined;
+      if (nameSet === idSet) return false;
+      if (nameSet && !idSet) return it.pending_provider_name !== it.provider_name;
+      return it.pending_provider_id !== it.provider_id;
+    });
+    if (inconsistentProviders.length > 0) {
+      const labels = inconsistentProviders
+        .map((it) => `"${it.pending_block_name ?? it.block_name}"`)
+        .join(", ");
+      return new Response(
+        JSON.stringify({
+          error: "provider_inconsistent",
+          message:
+            `Onderdeel ${labels} heeft een providerwijziging waarbij naam en ID niet samen ` +
+            `zijn bijgewerkt. Open het onderdeel en kies opnieuw een uitvoerder voordat je publiceert.`,
+          item_ids: inconsistentProviders.map((it) => it.id),
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
     // Verrijk partner emails
     const partnerIds = [...new Set(items.map((i: any) => i.provider_id).filter(Boolean))];
     const { data: partners } = await supabase
