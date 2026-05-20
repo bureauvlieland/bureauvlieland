@@ -279,10 +279,12 @@ export const AdminEditActivitySheet = ({
                 pending_location_address: null,
               };
             }
+            // Gebruik "" als sentinel voor "expliciet leeg gemaakt"; de edge
+            // function vertaalt dat terug naar NULL bij promotie naar live.
             return {
               pending_location_lat: locationLat,
               pending_location_lng: locationLng,
-              pending_location_address: locationAddress || null,
+              pending_location_address: locationAddress ?? "",
             };
           })(),
           pending_provider_id: diff(item.provider_id, newProviderId),
