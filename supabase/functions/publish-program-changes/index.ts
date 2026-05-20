@@ -373,21 +373,25 @@ Deno.serve(async (req) => {
           it.pending_admin_price_notes,
         );
       }
-      if (
-        (it.pending_location_address !== null && it.pending_location_address !== undefined) ||
-        (it.pending_location_lat !== null && it.pending_location_lat !== undefined)
-      ) {
+      // Locatie wordt als groep beheerd: zodra pending_location_address gezet
+      // is (incl. "" sentinel voor expliciet leeg) publiceren we alle drie de
+      // velden, zodat oude lat/lng niet blijven hangen bij een adreswijziging.
+      const locationGroupPending =
+        it.pending_location_address !== null && it.pending_location_address !== undefined;
+      const pendingAddrClean =
+        it.pending_location_address === "" ? null : it.pending_location_address;
+      if (locationGroupPending) {
         pushDiff(
           "location",
           it.location_address,
-          it.pending_location_address ?? "(coördinaten gewijzigd)",
+          pendingAddrClean ?? "(geen adres)",
           {
             address: it.location_address,
             lat: it.location_lat,
             lng: it.location_lng,
           },
           {
-            address: it.pending_location_address,
+            address: pendingAddrClean,
             lat: it.pending_location_lat,
             lng: it.pending_location_lng,
           },
@@ -464,14 +468,13 @@ Deno.serve(async (req) => {
       if (it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined) {
         upd.admin_price_notes = it.pending_admin_price_notes;
       }
-      if (it.pending_location_lat !== null && it.pending_location_lat !== undefined) {
-        upd.location_lat = it.pending_location_lat;
-      }
-      if (it.pending_location_lng !== null && it.pending_location_lng !== undefined) {
-        upd.location_lng = it.pending_location_lng;
-      }
+      // Locatie als groep promoten: als er een pending adres staat (ook "")
+      // schrijven we adres, lat en lng allemaal naar live — null overschrijft
+      // dan ook oude waarden.
       if (it.pending_location_address !== null && it.pending_location_address !== undefined) {
-        upd.location_address = it.pending_location_address;
+        upd.location_address = it.pending_location_address === "" ? null : it.pending_location_address;
+        upd.location_lat = it.pending_location_lat ?? null;
+        upd.location_lng = it.pending_location_lng ?? null;
       }
       if (it.pending_provider_id !== null && it.pending_provider_id !== undefined) {
         upd.provider_id = it.pending_provider_id;
