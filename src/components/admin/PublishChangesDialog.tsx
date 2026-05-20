@@ -144,6 +144,39 @@ export function PublishChangesDialog({
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);
 
+  // Waarschuwingen vóór publicatie:
+  // - blocking: providerwijziging waarbij naam/ID niet samen zijn bijgewerkt
+  //   (edge function blokkeert dit met 400 → toon hier vooraf)
+  // - soft: adreswijziging zonder nieuwe lat/lng (kaart-pin gaat verloren)
+  const warnings = useMemo(() => {
+    const out: { severity: "blocking" | "soft"; message: string }[] = [];
+    pendingItems.forEach((it) => {
+      // Provider: pending_provider_name gezet maar pending_provider_id niet (of andersom)
+      const nameSet = it.pending_provider_name !== null && it.pending_provider_name !== "";
+      const idSet = it.pending_provider_id !== null && it.pending_provider_id !== "";
+      if (nameSet !== idSet) {
+        out.push({
+          severity: "blocking",
+          message: `'${it.block_name}': providerwijziging zonder bijbehorende provider-ID — selecteer een bestaande uitvoerder. Publicatie wordt geblokkeerd.`,
+        });
+      }
+      // Locatie: adres ingevuld maar geen lat/lng → kaart-pin verdwijnt
+      const addrSet =
+        it.pending_location_address !== null && it.pending_location_address !== "";
+      const coordsSet =
+        it.pending_location_lat !== null && it.pending_location_lng !== null;
+      if (addrSet && !coordsSet) {
+        out.push({
+          severity: "soft",
+          message: `'${it.block_name}': nieuw adres zonder coördinaten — de kaart-pin wordt verwijderd. Zoek het adres opnieuw op om lat/lng te bepalen.`,
+        });
+      }
+    });
+    return out;
+  }, [pendingItems]);
+
+  const hasBlocking = warnings.some((w) => w.severity === "blocking");
+
   // Initial: alle partners aangevinkt
   useMemo(() => {
     const map: Record<string, boolean> = {};
