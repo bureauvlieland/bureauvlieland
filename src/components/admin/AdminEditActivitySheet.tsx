@@ -265,9 +265,26 @@ export const AdminEditActivitySheet = ({
           pending_price_type: diff(item.price_type ?? "per_person", priceType),
           pending_customer_notes: diff(item.customer_notes ?? null, notes || null),
           pending_block_type: diff(item.block_type, newBlockType),
-          pending_location_lat: diff(item.location_lat ?? null, locationLat),
-          pending_location_lng: diff(item.location_lng ?? null, locationLng),
-          pending_location_address: diff(item.location_address ?? null, locationAddress || null),
+          // Locatie als groep behandelen: zodra adres, lat of lng wijzigt,
+          // schrijven we alle drie naar pending. Zo kan bv. een adres-wijziging
+          // zonder nieuwe coördinaten de oude lat/lng leegmaken i.p.v. te laten staan.
+          ...(() => {
+            const addrChanged = (item.location_address ?? null) !== (locationAddress || null);
+            const latChanged = (item.location_lat ?? null) !== locationLat;
+            const lngChanged = (item.location_lng ?? null) !== locationLng;
+            if (!addrChanged && !latChanged && !lngChanged) {
+              return {
+                pending_location_lat: null,
+                pending_location_lng: null,
+                pending_location_address: null,
+              };
+            }
+            return {
+              pending_location_lat: locationLat,
+              pending_location_lng: locationLng,
+              pending_location_address: locationAddress || null,
+            };
+          })(),
           pending_provider_id: diff(item.provider_id, newProviderId),
           pending_provider_name: diff(item.provider_name, newProviderName),
           pending_provider_email: diff(item.provider_email ?? null, newProviderEmail),
