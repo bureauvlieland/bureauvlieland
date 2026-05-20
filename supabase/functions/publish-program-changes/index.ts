@@ -507,7 +507,7 @@ Deno.serve(async (req) => {
         ? `${program.selected_dates[0]}${program.selected_dates.length > 1 ? ` t/m ${program.selected_dates[program.selected_dates.length - 1]}` : ""}`
         : "";
 
-    // Klant-mail
+    // Klant-mail — template gebruikt {{changes_summary}} (volledig HTML-blok mét <ul>)
     if (notifyCustomer && program.customer_email && changeRows.length > 0) {
       const html = renderChangesListHtml(changeRows);
       const noteBlock = adminNote
@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
         : "";
       const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
         customer_name: program.customer_name,
-        changes_list: html + noteBlock,
+        changes_summary: html + noteBlock,
         portal_url: customerPortalUrl,
         reference_number: program.reference_number || "",
       });
