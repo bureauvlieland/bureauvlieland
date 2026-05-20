@@ -1,0 +1,81 @@
+name: Smoke test — pending publish flow
+
+# Draait automatisch na elke push naar main (post-deploy moment) en
+# op handmatige trigger. Voorwaarde: de volgende repository-secrets zijn
+# geconfigureerd in GitHub → Settings → Secrets and variables → Actions:
+#
+#   SUPABASE_URL                — bv. https://blhspuifehausilnzwio.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY   — service-role key (alleen test-omgeving)
+#   SUPABASE_DB_URL             — postgres:// connection string voor psql
+#   ADMIN_JWT                   — geldige admin user JWT (zie docs hieronder)
+#   SMOKE_ITEM_ID               — id van een vast testitem in program_request_items
+#   SMOKE_REQUEST_ID            — request_id waar dat item bij hoort
+#
+# Het script zet `notifyCustomer=false` en `notifyPartnerIds=[]` zodat er
+# geen e-mails worden verstuurd. De ingebouwde trap in
+# scripts/smoke-test-pending-flow.sh herstelt altijd LIVE + pending_* — ook
+# als de job faalt of wordt afgebroken.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Dagelijkse health-check om 06:00 UTC
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: smoke-test-pending-flow
+  cancel-in-progress: false
+
+jobs:
+  smoke-test:
+    name: Pending publish flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      ADMIN_JWT: ${{ secrets.ADMIN_JWT }}
+      ITEM_ID: ${{ secrets.SMOKE_ITEM_ID }}
+      REQUEST_ID: ${{ secrets.SMOKE_REQUEST_ID }}
+      # psql leest standaard PG* env vars; we mappen alles via één URL.
+      PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sanity-check secrets
+        run: |
+          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY ADMIN_JWT ITEM_ID REQUEST_ID PGCONN; do
+            if [ -z "${!v}" ]; then
+              echo "❌ Secret/env $v ontbreekt — configureer in GitHub repo secrets."
+              exit 1
+            fi
+          done
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Wrap psql to use SUPABASE_DB_URL
+        run: |
+          # Het smoke-script roept `psql -c "..."` aan zonder connection string.
+          # We injecteren PGCONN door een wrapper vóór /usr/bin/psql te zetten.
+          mkdir -p "$HOME/.local/bin"
+          cat > "$HOME/.local/bin/psql" <<'SH'
+          #!/usr/bin/env bash
+          exec /usr/bin/psql "$PGCONN" "$@"
+          SH
+          chmod +x "$HOME/.local/bin/psql"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run smoke test (rollback via trap is altijd actief)
+        run: ./scripts/smoke-test-pending-flow.sh
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Smoke-test pending publish flow gefaald. Bekijk logs hierboven; rollback is automatisch uitgevoerd door scripts/smoke-test-pending-flow.sh (trap EXIT)."
