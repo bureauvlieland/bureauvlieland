@@ -68,9 +68,10 @@ function formatVal(v: string | null): string {
   return v;
 }
 
-function renderChangesListHtml(rows: ChangeRow[]): string {
-  if (rows.length === 0) return "<p>Geen wijzigingen</p>";
-  const items = rows
+function renderChangeItems(rows: ChangeRow[]): string {
+  // Geeft enkel <li>-items terug (zonder <ul>-wrapper).
+  if (rows.length === 0) return "<li>Geen wijzigingen</li>";
+  return rows
     .map((r) => {
       if (r.field === "added") {
         return `<li><strong>${r.blockName}</strong> — toegevoegd</li>`;
@@ -81,7 +82,11 @@ function renderChangesListHtml(rows: ChangeRow[]): string {
       return `<li><strong>${r.blockName}</strong> — ${fieldLabel[r.field]}: ${formatVal(r.oldValue)} → ${formatVal(r.newValue)}</li>`;
     })
     .join("");
-  return `<ul style="margin:8px 0 16px; padding-left:20px;">${items}</ul>`;
+}
+
+function renderChangesListHtml(rows: ChangeRow[]): string {
+  // Volledig <ul>-blok voor klantmail (template heeft geen eigen wrapper).
+  return `<ul style="margin:8px 0 16px; padding-left:20px;">${renderChangeItems(rows)}</ul>`;
 }
 
 async function sendMailjet(messages: any[]) {
@@ -502,7 +507,7 @@ Deno.serve(async (req) => {
         ? `${program.selected_dates[0]}${program.selected_dates.length > 1 ? ` t/m ${program.selected_dates[program.selected_dates.length - 1]}` : ""}`
         : "";
 
-    // Klant-mail
+    // Klant-mail — template gebruikt {{changes_summary}} (volledig HTML-blok mét <ul>)
     if (notifyCustomer && program.customer_email && changeRows.length > 0) {
       const html = renderChangesListHtml(changeRows);
       const noteBlock = adminNote
@@ -510,7 +515,7 @@ Deno.serve(async (req) => {
         : "";
       const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
         customer_name: program.customer_name,
-        changes_list: html + noteBlock,
+        changes_summary: html + noteBlock,
         portal_url: customerPortalUrl,
         reference_number: program.reference_number || "",
       });
@@ -562,9 +567,10 @@ Deno.serve(async (req) => {
       );
       if (rows.length === 0) continue;
 
-      const html = renderChangesListHtml(rows);
-      const noteBlock = adminNote
-        ? `<p style="margin:16px 0;padding:12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;">${adminNote.replace(/\n/g, "<br>")}</p>`
+      // Template wrapt {{changes_list}} al in <ul>...</ul> → enkel <li>-items leveren.
+      const itemsHtml = renderChangeItems(rows);
+      const noteLi = adminNote
+        ? `<li style="margin-top:8px;list-style:none;padding:8px 12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;"><strong>Toelichting:</strong> ${adminNote.replace(/\n/g, "<br>")}</li>`
         : "";
       const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, {
         partner_name: partner.name,
@@ -574,7 +580,7 @@ Deno.serve(async (req) => {
         customer_phone: "",
         dates,
         number_of_people: program.number_of_people,
-        changes_list: html + noteBlock,
+        changes_list: itemsHtml + noteLi,
       });
       if (!rendered) continue;
       const to = recipientFor(partnerEmail, origin);
