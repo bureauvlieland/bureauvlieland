@@ -287,9 +287,26 @@ export const AdminEditActivitySheet = ({
               pending_location_address: locationAddress ?? "",
             };
           })(),
-          pending_provider_id: diff(item.provider_id, newProviderId),
-          pending_provider_name: diff(item.provider_name, newProviderName),
-          pending_provider_email: diff(item.provider_email ?? null, newProviderEmail),
+          // Provider als groep behandelen: zodra id, naam of email wijzigt,
+          // schrijven we alle drie naar pending. Voorkomt dat naam los kan
+          // afwijken van id en blokkeert later inconsistente publicaties.
+          ...(() => {
+            const idChanged = item.provider_id !== newProviderId;
+            const nameChanged = item.provider_name !== newProviderName;
+            const emailChanged = (item.provider_email ?? null) !== (newProviderEmail ?? null);
+            if (!idChanged && !nameChanged && !emailChanged) {
+              return {
+                pending_provider_id: null,
+                pending_provider_name: null,
+                pending_provider_email: null,
+              };
+            }
+            return {
+              pending_provider_id: newProviderId,
+              pending_provider_name: newProviderName,
+              pending_provider_email: newProviderEmail,
+            };
+          })(),
         };
 
         const hasAnyPending = Object.values(pendingUpdate).some((v) => v !== null);
