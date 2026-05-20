@@ -567,9 +567,10 @@ Deno.serve(async (req) => {
       );
       if (rows.length === 0) continue;
 
-      const html = renderChangesListHtml(rows);
-      const noteBlock = adminNote
-        ? `<p style="margin:16px 0;padding:12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;">${adminNote.replace(/\n/g, "<br>")}</p>`
+      // Template wrapt {{changes_list}} al in <ul>...</ul> → enkel <li>-items leveren.
+      const itemsHtml = renderChangeItems(rows);
+      const noteLi = adminNote
+        ? `<li style="margin-top:8px;list-style:none;padding:8px 12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;"><strong>Toelichting:</strong> ${adminNote.replace(/\n/g, "<br>")}</li>`
         : "";
       const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, {
         partner_name: partner.name,
@@ -579,7 +580,7 @@ Deno.serve(async (req) => {
         customer_phone: "",
         dates,
         number_of_people: program.number_of_people,
-        changes_list: html + noteBlock,
+        changes_list: itemsHtml + noteLi,
       });
       if (!rendered) continue;
       const to = recipientFor(partnerEmail, origin);
