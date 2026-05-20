@@ -373,21 +373,25 @@ Deno.serve(async (req) => {
           it.pending_admin_price_notes,
         );
       }
-      if (
-        (it.pending_location_address !== null && it.pending_location_address !== undefined) ||
-        (it.pending_location_lat !== null && it.pending_location_lat !== undefined)
-      ) {
+      // Locatie wordt als groep beheerd: zodra pending_location_address gezet
+      // is (incl. "" sentinel voor expliciet leeg) publiceren we alle drie de
+      // velden, zodat oude lat/lng niet blijven hangen bij een adreswijziging.
+      const locationGroupPending =
+        it.pending_location_address !== null && it.pending_location_address !== undefined;
+      const pendingAddrClean =
+        it.pending_location_address === "" ? null : it.pending_location_address;
+      if (locationGroupPending) {
         pushDiff(
           "location",
           it.location_address,
-          it.pending_location_address ?? "(coördinaten gewijzigd)",
+          pendingAddrClean ?? "(geen adres)",
           {
             address: it.location_address,
             lat: it.location_lat,
             lng: it.location_lng,
           },
           {
-            address: it.pending_location_address,
+            address: pendingAddrClean,
             lat: it.pending_location_lat,
             lng: it.pending_location_lng,
           },
