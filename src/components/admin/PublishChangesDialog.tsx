@@ -169,7 +169,20 @@ export function PublishChangesDialog({
           origin: window.location.origin,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Probeer de structured error body uit te lezen (bv. provider_inconsistent)
+        let serverMsg: string | null = null;
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) {
+            const body = await ctx.clone().json();
+            serverMsg = body?.message ?? body?.error ?? null;
+          }
+        } catch {
+          // ignore parse errors, val terug op generieke melding
+        }
+        throw new Error(serverMsg ?? error.message ?? "Onbekende fout");
+      }
       const sent = (data as any)?.emails_sent ?? 0;
       toast.success(
         sent > 0
