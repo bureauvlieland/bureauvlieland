@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, AlertTriangle, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -144,6 +144,39 @@ export function PublishChangesDialog({
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);
 
+  // Waarschuwingen vóór publicatie:
+  // - blocking: providerwijziging waarbij naam/ID niet samen zijn bijgewerkt
+  //   (edge function blokkeert dit met 400 → toon hier vooraf)
+  // - soft: adreswijziging zonder nieuwe lat/lng (kaart-pin gaat verloren)
+  const warnings = useMemo(() => {
+    const out: { severity: "blocking" | "soft"; message: string }[] = [];
+    pendingItems.forEach((it) => {
+      // Provider: pending_provider_name gezet maar pending_provider_id niet (of andersom)
+      const nameSet = it.pending_provider_name !== null && it.pending_provider_name !== "";
+      const idSet = it.pending_provider_id !== null && it.pending_provider_id !== "";
+      if (nameSet !== idSet) {
+        out.push({
+          severity: "blocking",
+          message: `'${it.block_name}': providerwijziging zonder bijbehorende provider-ID — selecteer een bestaande uitvoerder. Publicatie wordt geblokkeerd.`,
+        });
+      }
+      // Locatie: adres ingevuld maar geen lat/lng → kaart-pin verdwijnt
+      const addrSet =
+        it.pending_location_address !== null && it.pending_location_address !== "";
+      const coordsSet =
+        it.pending_location_lat !== null && it.pending_location_lng !== null;
+      if (addrSet && !coordsSet) {
+        out.push({
+          severity: "soft",
+          message: `'${it.block_name}': nieuw adres zonder coördinaten — de kaart-pin wordt verwijderd. Zoek het adres opnieuw op om lat/lng te bepalen.`,
+        });
+      }
+    });
+    return out;
+  }, [pendingItems]);
+
+  const hasBlocking = warnings.some((w) => w.severity === "blocking");
+
   // Initial: alle partners aangevinkt
   useMemo(() => {
     const map: Record<string, boolean> = {};
@@ -235,6 +268,28 @@ export function PublishChangesDialog({
             </ScrollArea>
           </div>
 
+          {warnings.length > 0 && (
+            <div className="space-y-2">
+              {warnings.map((w, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-start gap-2 rounded-md border p-3 text-sm ${
+                    w.severity === "blocking"
+                      ? "border-destructive/50 bg-destructive/10 text-destructive"
+                      : "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
+                  }`}
+                >
+                  {w.severity === "blocking" ? (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  ) : (
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  <span>{w.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label className="text-sm font-medium">Ontvangers</Label>
             <div className="space-y-2 rounded-md border p-3">
@@ -303,13 +358,13 @@ export function PublishChangesDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing}>
             Annuleren
           </Button>
-          <Button onClick={handlePublish} disabled={publishing}>
+          <Button onClick={handlePublish} disabled={publishing || hasBlocking}>
             {publishing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Publiceer & verstuur
+            {hasBlocking ? "Eerst fouten oplossen" : "Publiceer & verstuur"}
           </Button>
         </DialogFooter>
       </DialogContent>
