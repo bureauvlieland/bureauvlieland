@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Pre-commit hook — draait shellcheck op alle gewijzigde .sh bestanden.
+# Installeer eenmalig: `bunx husky install` (of voer dit script handmatig in).
+
+changed_sh=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(sh|bash)$' || true)
+[ -z "$changed_sh" ] && exit 0
+
+if ! command -v shellcheck >/dev/null 2>&1; then
+  echo "⚠ shellcheck niet geïnstalleerd — sla check over (brew install shellcheck of apt install shellcheck)"
+  exit 0
+fi
+
+echo "🔍 shellcheck op:"
+echo "$changed_sh" | sed 's/^/  /'
+echo "$changed_sh" | xargs shellcheck -x
