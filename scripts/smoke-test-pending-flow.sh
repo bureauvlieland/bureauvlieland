@@ -302,4 +302,31 @@ if [ "$EXIT_CODE" -eq 0 ]; then
 else
   echo "❌ Eén of meerdere items faalden — rollback via trap zet alles terug."
 fi
+
+# ---- FORMAT=json output --------------------------------------------------
+if [ "$FORMAT" = "json" ]; then
+  echo
+  echo "---- JSON RESULT ----"
+  python3 - "$ROLLBACK_DIR" "$EXIT_CODE" "$MODE" <<'PY'
+import json, os, sys, glob
+rollback_dir, exit_code, mode = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+items = []
+for f in sorted(glob.glob(os.path.join(rollback_dir, "*.result.json"))):
+    try:
+        items.append(json.load(open(f)))
+    except Exception as e:
+        items.append({"error": str(e), "file": f})
+print(json.dumps({
+    "mode": mode,
+    "exit_code": exit_code,
+    "ok": exit_code == 0,
+    "total": len(items),
+    "passed": sum(1 for i in items if i.get("status") == "ok"),
+    "failed": sum(1 for i in items if i.get("status") == "fail"),
+    "skipped": sum(1 for i in items if i.get("status") == "skipped"),
+    "items": items,
+}, indent=2))
+PY
+fi
+
 exit "$EXIT_CODE"
