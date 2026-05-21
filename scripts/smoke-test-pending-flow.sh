@@ -31,9 +31,41 @@
 
 set -euo pipefail
 
+# ---- --help --------------------------------------------------------------
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  cat <<'USAGE'
+smoke-test-pending-flow.sh — verifieert pending_* → publish flow.
+
+USAGE:
+  ITEM_ID=<uuid> REQUEST_ID=<uuid> ./scripts/smoke-test-pending-flow.sh
+  ITEMS="id1:req1 id2:req2" MODE=parallel ./scripts/smoke-test-pending-flow.sh
+  FORMAT=json ITEMS="..." ./scripts/smoke-test-pending-flow.sh
+
+ENV VARS:
+  ITEMS              "itemId:requestId" pairs (spatie/komma gescheiden).
+  ITEM_ID            Single item (legacy, samen met REQUEST_ID).
+  REQUEST_ID         Single request (legacy).
+  MODE               sequential (default) of parallel.
+  FORMAT             text (default) of json — JSON output naar stdout voor CI.
+  STRICT_EMAIL_LOG   Default 1 — faalt als email_log een nieuwe rij krijgt.
+  SUPABASE_URL       Default: production project URL.
+  SUPABASE_SERVICE_ROLE_KEY  Vereist voor pending writes + rollback.
+  ADMIN_JWT          Vereist voor publish-program-changes stap.
+
+EXAMPLES:
+  ./scripts/smoke-test-pending-flow.sh --help
+  ITEMS="a:b" MODE=sequential ./scripts/smoke-test-pending-flow.sh
+  FORMAT=json ITEMS="a:b c:d" MODE=parallel ./scripts/smoke-test-pending-flow.sh > result.json
+USAGE
+  exit 0
+fi
+
 : "${SUPABASE_URL:=https://blhspuifehausilnzwio.supabase.co}"
 MODE="${MODE:-sequential}"
+FORMAT="${FORMAT:-text}"
+STRICT_EMAIL_LOG="${STRICT_EMAIL_LOG:-1}"
 [ "$MODE" = "sequential" ] || [ "$MODE" = "parallel" ] || { echo "❌ MODE moet sequential of parallel zijn"; exit 1; }
+[ "$FORMAT" = "text" ] || [ "$FORMAT" = "json" ] || { echo "❌ FORMAT moet text of json zijn"; exit 1; }
 
 # ---- Items parsen --------------------------------------------------------
 declare -a PAIRS=()
