@@ -168,15 +168,30 @@ snapshot_pending_json() {
   ) FROM program_request_items WHERE id='$1'"
 }
 
-# Per-item worker; logs prefixt met [itemId-shortcode].
+# Helper: tel rijen in email_log voor deze request sinds tijdstempel.
+count_email_log_since() {
+  local request="$1" since="$2"
+  psql -t -A -c "SELECT COUNT(*) FROM email_log WHERE request_id='${request}' AND created_at > '${since}'" 2>/dev/null | tr -d '[:space:]' || echo "0"
+}
+
+# Per-item worker; logs prefixt met [itemId-shortcode]. Schrijft tevens
+# een JSON-result naar $ROLLBACK_DIR/$item.result.json voor FORMAT=json.
 run_one() {
   local item="$1" request="$2"
   local tag="[${item:0:8}]"
+  local result_file="$ROLLBACK_DIR/$item.result.json"
+  local status="ok" reason="" email_log_delta="0"
   logp() { echo "$tag $*"; }
 
+  write_result() {
+    python3 -c "import json,sys; print(json.dumps({'item_id':sys.argv[1],'request_id':sys.argv[2],'status':sys.argv[3],'reason':sys.argv[4],'email_log_delta':int(sys.argv[5])}))" \
+      "$item" "$request" "$status" "$reason" "$email_log_delta" > "$result_file"
+  }
+
   logp "STAP 1: Snapshot ORIGINAL live + pending"
-  local orig_live
+  local orig_live started_at
   orig_live=$(snapshot_live "$item")
+  started_at=$(date -u +"%Y-%m-%d %H:%M:%S")
   logp "live: $orig_live"
   snapshot_live_json "$item" > "$ROLLBACK_DIR/$item.live.json"
   snapshot_pending_json "$item" > "$ROLLBACK_DIR/$item.pending.json"
@@ -184,7 +199,7 @@ run_one() {
 
   if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
     logp "❌ SUPABASE_SERVICE_ROLE_KEY ontbreekt — kan geen pending zetten."
-    return 1
+    status="fail"; reason="missing SUPABASE_SERVICE_ROLE_KEY"; write_result; return 1
   fi
 
   logp "STAP 2: pending_* zetten"
@@ -211,7 +226,7 @@ run_one() {
   live_now=$(snapshot_live "$item")
   if [ "$live_now" != "$orig_live" ]; then
     logp "❌ LIVE veranderde: $live_now (orig=$orig_live)"
-    return 1
+    status="fail"; reason="live changed during pending write"; write_result; return 1
   fi
   logp "✅ LIVE ongewijzigd"
 
@@ -219,7 +234,7 @@ run_one() {
 
   if [ -z "${ADMIN_JWT:-}" ]; then
     logp "⚠ ADMIN_JWT ontbreekt — sla edge function aanroep over (rollback volgt)"
-    return 0
+    status="skipped"; reason="no ADMIN_JWT"; write_result; return 0
   fi
 
   logp "STAP 5: publish-program-changes (zonder mails)"
@@ -234,8 +249,17 @@ run_one() {
   logp "STAP 6: Verifieer LIVE = nieuwe waardes & pending leeg"
   logp "live=$(snapshot_live "$item")"
   logp "pending=$(snapshot_pending_display "$item")"
+
+  logp "STAP 7: Assert email_log geen nieuwe rijen (notifyCustomer=false, partnerIds=[])"
+  email_log_delta=$(count_email_log_since "$request" "$started_at")
+  logp "email_log delta sinds $started_at: $email_log_delta"
+  if [ "$STRICT_EMAIL_LOG" = "1" ] && [ "$email_log_delta" -gt 0 ]; then
+    logp "❌ email_log kreeg $email_log_delta nieuwe rij(en) terwijl notify-vlaggen uit stonden."
+    status="fail"; reason="unexpected email_log rows: $email_log_delta"; write_result; return 1
+  fi
+
   logp "✅ Smoke-test OK"
-  return 0
+  status="ok"; reason=""; write_result; return 0
 }
 
 # ---- Dispatcher ----------------------------------------------------------
