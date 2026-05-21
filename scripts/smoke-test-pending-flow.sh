@@ -31,9 +31,41 @@
 
 set -euo pipefail
 
+# ---- --help --------------------------------------------------------------
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  cat <<'USAGE'
+smoke-test-pending-flow.sh — verifieert pending_* → publish flow.
+
+USAGE:
+  ITEM_ID=<uuid> REQUEST_ID=<uuid> ./scripts/smoke-test-pending-flow.sh
+  ITEMS="id1:req1 id2:req2" MODE=parallel ./scripts/smoke-test-pending-flow.sh
+  FORMAT=json ITEMS="..." ./scripts/smoke-test-pending-flow.sh
+
+ENV VARS:
+  ITEMS              "itemId:requestId" pairs (spatie/komma gescheiden).
+  ITEM_ID            Single item (legacy, samen met REQUEST_ID).
+  REQUEST_ID         Single request (legacy).
+  MODE               sequential (default) of parallel.
+  FORMAT             text (default) of json — JSON output naar stdout voor CI.
+  STRICT_EMAIL_LOG   Default 1 — faalt als email_log een nieuwe rij krijgt.
+  SUPABASE_URL       Default: production project URL.
+  SUPABASE_SERVICE_ROLE_KEY  Vereist voor pending writes + rollback.
+  ADMIN_JWT          Vereist voor publish-program-changes stap.
+
+EXAMPLES:
+  ./scripts/smoke-test-pending-flow.sh --help
+  ITEMS="a:b" MODE=sequential ./scripts/smoke-test-pending-flow.sh
+  FORMAT=json ITEMS="a:b c:d" MODE=parallel ./scripts/smoke-test-pending-flow.sh > result.json
+USAGE
+  exit 0
+fi
+
 : "${SUPABASE_URL:=https://blhspuifehausilnzwio.supabase.co}"
 MODE="${MODE:-sequential}"
+FORMAT="${FORMAT:-text}"
+STRICT_EMAIL_LOG="${STRICT_EMAIL_LOG:-1}"
 [ "$MODE" = "sequential" ] || [ "$MODE" = "parallel" ] || { echo "❌ MODE moet sequential of parallel zijn"; exit 1; }
+[ "$FORMAT" = "text" ] || [ "$FORMAT" = "json" ] || { echo "❌ FORMAT moet text of json zijn"; exit 1; }
 
 # ---- Items parsen --------------------------------------------------------
 declare -a PAIRS=()
@@ -136,15 +168,30 @@ snapshot_pending_json() {
   ) FROM program_request_items WHERE id='$1'"
 }
 
-# Per-item worker; logs prefixt met [itemId-shortcode].
+# Helper: tel rijen in email_log voor deze request sinds tijdstempel.
+count_email_log_since() {
+  local request="$1" since="$2"
+  psql -t -A -c "SELECT COUNT(*) FROM email_log WHERE request_id='${request}' AND created_at > '${since}'" 2>/dev/null | tr -d '[:space:]' || echo "0"
+}
+
+# Per-item worker; logs prefixt met [itemId-shortcode]. Schrijft tevens
+# een JSON-result naar $ROLLBACK_DIR/$item.result.json voor FORMAT=json.
 run_one() {
   local item="$1" request="$2"
   local tag="[${item:0:8}]"
+  local result_file="$ROLLBACK_DIR/$item.result.json"
+  local status="ok" reason="" email_log_delta="0"
   logp() { echo "$tag $*"; }
 
+  write_result() {
+    python3 -c "import json,sys; print(json.dumps({'item_id':sys.argv[1],'request_id':sys.argv[2],'status':sys.argv[3],'reason':sys.argv[4],'email_log_delta':int(sys.argv[5])}))" \
+      "$item" "$request" "$status" "$reason" "$email_log_delta" > "$result_file"
+  }
+
   logp "STAP 1: Snapshot ORIGINAL live + pending"
-  local orig_live
+  local orig_live started_at
   orig_live=$(snapshot_live "$item")
+  started_at=$(date -u +"%Y-%m-%d %H:%M:%S")
   logp "live: $orig_live"
   snapshot_live_json "$item" > "$ROLLBACK_DIR/$item.live.json"
   snapshot_pending_json "$item" > "$ROLLBACK_DIR/$item.pending.json"
@@ -152,7 +199,7 @@ run_one() {
 
   if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
     logp "❌ SUPABASE_SERVICE_ROLE_KEY ontbreekt — kan geen pending zetten."
-    return 1
+    status="fail"; reason="missing SUPABASE_SERVICE_ROLE_KEY"; write_result; return 1
   fi
 
   logp "STAP 2: pending_* zetten"
@@ -179,7 +226,7 @@ run_one() {
   live_now=$(snapshot_live "$item")
   if [ "$live_now" != "$orig_live" ]; then
     logp "❌ LIVE veranderde: $live_now (orig=$orig_live)"
-    return 1
+    status="fail"; reason="live changed during pending write"; write_result; return 1
   fi
   logp "✅ LIVE ongewijzigd"
 
@@ -187,7 +234,7 @@ run_one() {
 
   if [ -z "${ADMIN_JWT:-}" ]; then
     logp "⚠ ADMIN_JWT ontbreekt — sla edge function aanroep over (rollback volgt)"
-    return 0
+    status="skipped"; reason="no ADMIN_JWT"; write_result; return 0
   fi
 
   logp "STAP 5: publish-program-changes (zonder mails)"
@@ -202,8 +249,17 @@ run_one() {
   logp "STAP 6: Verifieer LIVE = nieuwe waardes & pending leeg"
   logp "live=$(snapshot_live "$item")"
   logp "pending=$(snapshot_pending_display "$item")"
+
+  logp "STAP 7: Assert email_log geen nieuwe rijen (notifyCustomer=false, partnerIds=[])"
+  email_log_delta=$(count_email_log_since "$request" "$started_at")
+  logp "email_log delta sinds $started_at: $email_log_delta"
+  if [ "$STRICT_EMAIL_LOG" = "1" ] && [ "$email_log_delta" -gt 0 ]; then
+    logp "❌ email_log kreeg $email_log_delta nieuwe rij(en) terwijl notify-vlaggen uit stonden."
+    status="fail"; reason="unexpected email_log rows: $email_log_delta"; write_result; return 1
+  fi
+
   logp "✅ Smoke-test OK"
-  return 0
+  status="ok"; reason=""; write_result; return 0
 }
 
 # ---- Dispatcher ----------------------------------------------------------
@@ -246,4 +302,31 @@ if [ "$EXIT_CODE" -eq 0 ]; then
 else
   echo "❌ Eén of meerdere items faalden — rollback via trap zet alles terug."
 fi
+
+# ---- FORMAT=json output --------------------------------------------------
+if [ "$FORMAT" = "json" ]; then
+  echo
+  echo "---- JSON RESULT ----"
+  python3 - "$ROLLBACK_DIR" "$EXIT_CODE" "$MODE" <<'PY'
+import json, os, sys, glob
+rollback_dir, exit_code, mode = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+items = []
+for f in sorted(glob.glob(os.path.join(rollback_dir, "*.result.json"))):
+    try:
+        items.append(json.load(open(f)))
+    except Exception as e:
+        items.append({"error": str(e), "file": f})
+print(json.dumps({
+    "mode": mode,
+    "exit_code": exit_code,
+    "ok": exit_code == 0,
+    "total": len(items),
+    "passed": sum(1 for i in items if i.get("status") == "ok"),
+    "failed": sum(1 for i in items if i.get("status") == "fail"),
+    "skipped": sum(1 for i in items if i.get("status") == "skipped"),
+    "items": items,
+}, indent=2))
+PY
+fi
+
 exit "$EXIT_CODE"
