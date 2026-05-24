@@ -99,10 +99,27 @@ Deno.serve(async (req) => {
       }),
     );
 
+    // Quote extras (per quote_id)
+    const extrasByQuoteId: Record<string, any[]> = {};
+    const quoteIds = quotes.map((q: any) => q.id);
+    if (quoteIds.length > 0) {
+      const { data: extrasData } = await supabase
+        .from("accommodation_quote_extras")
+        .select("*")
+        .in("quote_id", quoteIds)
+        .order("sort_order", { ascending: true });
+      for (const ex of extrasData || []) {
+        const arr = extrasByQuoteId[(ex as any).quote_id] || [];
+        arr.push(ex);
+        extrasByQuoteId[(ex as any).quote_id] = arr;
+      }
+    }
+
     return new Response(
-      JSON.stringify({ request: requestData, quotes }),
+      JSON.stringify({ request: requestData, quotes, extrasByQuoteId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (err) {
     console.error("unexpected error", err);
     return new Response(JSON.stringify({ error: "Onverwachte fout" }), {
