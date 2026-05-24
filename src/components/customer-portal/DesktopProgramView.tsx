@@ -133,6 +133,9 @@ interface DesktopProgramViewProps {
     showDietary: boolean;
     showRoomAssignment: boolean;
   };
+  // Pre-resolved server data from get-customer-program edge function
+  billingLinesByItem?: Record<string, any[]>;
+  blockVatRates?: Record<string, number>;
 }
 
 export const DesktopProgramView = ({
@@ -167,6 +170,8 @@ export const DesktopProgramView = ({
   onApproveQuoteItem,
   onOpenGuestDetails,
   guestDetails,
+  billingLinesByItem,
+  blockVatRates,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -175,7 +180,7 @@ export const DesktopProgramView = ({
   const isQuoteMode = true; // All projects use unified quote pipeline
   const hasUnapprovedItems = hasQuoteItemsAwaitingCustomerApproval(program.items);
 
-  const { getItemVatRate } = useItemVatRates(program.items);
+  const { getItemVatRate } = useItemVatRates(program.items, blockVatRates);
   const {
     termsAccepted,
     billingComplete,
@@ -521,6 +526,9 @@ export const DesktopProgramView = ({
                 selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
                 onEditBilling={onOpenBilling}
                 invoicingMode={invoicingMode}
+                billingLinesByItem={billingLinesByItem}
+                blockVatRates={blockVatRates}
+                accommodationExtrasByQuoteId={accommodationExtrasByQuoteId}
               />
             </div>
             {termsAccepted && (
