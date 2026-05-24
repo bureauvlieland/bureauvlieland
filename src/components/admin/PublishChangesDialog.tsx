@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, AlertTriangle, Info } from "lucide-react";
+import { Send, Loader2, AlertTriangle, Info, Eye, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -75,45 +75,59 @@ function fmtPrice(n: number | null): string {
   return `€${n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function describeChange(it: PendingChangeItem): string[] {
-  if (it.pending_added) return ["Toegevoegd aan programma"];
-  if (it.pending_marked_for_removal) return ["Geannuleerd"];
-  const lines: string[] = [];
-  if (it.pending_block_name !== null) {
-    lines.push(`Naam: ${it.block_name} → ${it.pending_block_name}`);
-  }
-  if (it.pending_preferred_time !== null) {
-    lines.push(`Tijd: ${it.preferred_time ?? "—"} → ${it.pending_preferred_time}`);
-  }
-  if (it.pending_day_index !== null) {
-    lines.push(`Dag: ${it.day_index + 1} → ${it.pending_day_index + 1}`);
-  }
-  if (it.pending_customer_notes !== null) {
-    lines.push(`Opmerking gewijzigd`);
-  }
-  if (it.pending_override_people !== null) {
-    lines.push(`Aantal personen: ${it.override_people ?? "—"} → ${it.pending_override_people}`);
-  }
-  if (it.pending_admin_price_override !== null) {
-    lines.push(`Prijs: ${fmtPrice(it.admin_price_override)} → ${fmtPrice(it.pending_admin_price_override)}`);
-  }
-  if (it.pending_price_type !== null) {
-    lines.push(`Prijstype: ${it.price_type ?? "—"} → ${it.pending_price_type}`);
-  }
-  if (it.pending_admin_price_notes !== null) {
-    lines.push(`Beschrijving gewijzigd`);
-  }
+type DiffRow =
+  | { kind: "added" }
+  | { kind: "removed" }
+  | { kind: "field"; label: string; before: string; after: string; warn?: boolean };
+
+function diffRows(it: PendingChangeItem): DiffRow[] {
+  if (it.pending_added) return [{ kind: "added" }];
+  if (it.pending_marked_for_removal) return [{ kind: "removed" }];
+  const rows: DiffRow[] = [];
+  const f = (label: string, before: unknown, after: unknown, warn = false) =>
+    rows.push({
+      kind: "field",
+      label,
+      before: before === null || before === undefined || before === "" ? "—" : String(before),
+      after: after === null || after === undefined || after === "" ? "—" : String(after),
+      warn,
+    });
+  if (it.pending_block_name !== null) f("Naam", it.block_name, it.pending_block_name);
+  if (it.pending_preferred_time !== null) f("Tijd", it.preferred_time, it.pending_preferred_time);
+  if (it.pending_day_index !== null) f("Dag", it.day_index + 1, it.pending_day_index + 1);
+  if (it.pending_customer_notes !== null)
+    f("Opmerking", it.customer_notes, it.pending_customer_notes);
+  if (it.pending_override_people !== null)
+    f("Aantal personen", it.override_people, it.pending_override_people);
+  if (it.pending_admin_price_override !== null)
+    f("Prijs", fmtPrice(it.admin_price_override), fmtPrice(it.pending_admin_price_override));
+  if (it.pending_price_type !== null) f("Prijstype", it.price_type, it.pending_price_type);
+  if (it.pending_admin_price_notes !== null) f("Beschrijving", "(gewijzigd)", "(zie portaal)");
   if (it.pending_location_address !== null || it.pending_location_lat !== null) {
-    const addr = it.pending_location_address && it.pending_location_address !== "" ? it.pending_location_address : "(adres leeggemaakt)";
-    lines.push(`Locatie gewijzigd: ${addr}`);
+    const newAddr = it.pending_location_address ?? it.location_address;
+    const coordsMissing =
+      it.pending_location_address !== null &&
+      it.pending_location_address !== "" &&
+      (it.pending_location_lat === null || it.pending_location_lng === null);
+    f("Locatie", it.location_address, newAddr || "(adres leeggemaakt)", coordsMissing);
   }
-  if (it.pending_provider_id !== null || it.pending_provider_name !== null) {
-    lines.push(`Uitvoerder: ${it.provider_name ?? "—"} → ${it.pending_provider_name ?? it.pending_provider_id}`);
-  }
-  if (it.pending_block_type !== null) {
-    lines.push(`Facturatie: ${it.block_type} → ${it.pending_block_type}`);
-  }
-  return lines;
+  if (it.pending_provider_id !== null || it.pending_provider_name !== null)
+    f("Uitvoerder", it.provider_name, it.pending_provider_name ?? it.pending_provider_id);
+  if (it.pending_block_type !== null)
+    f("Facturatie", it.block_type, it.pending_block_type);
+  return rows;
+}
+
+interface DryRunRecipient {
+  kind: "customer" | "partner";
+  partnerName?: string;
+  email: string;
+  change_count: number;
+}
+interface DryRunResult {
+  would_publish: number;
+  would_email: DryRunRecipient[];
+  test_mode: boolean;
 }
 
 export function PublishChangesDialog({
@@ -130,6 +144,8 @@ export function PublishChangesDialog({
   const [notifyPartners, setNotifyPartners] = useState<Record<string, boolean>>({});
   const [adminNote, setAdminNote] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [dryRunLoading, setDryRunLoading] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
 
   // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
   // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
@@ -233,6 +249,39 @@ export function PublishChangesDialog({
     }
   };
 
+  const handleDryRun = async () => {
+    setDryRunLoading(true);
+    setDryRunResult(null);
+    try {
+      const partnerIds = Object.entries(notifyPartners)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const { data, error } = await supabase.functions.invoke("publish-program-changes", {
+        body: {
+          requestId,
+          notifyCustomer,
+          notifyPartnerIds: partnerIds,
+          adminNote: adminNote.trim(),
+          origin: window.location.origin,
+          dryRun: true,
+        },
+      });
+      if (error) throw new Error(error.message ?? "Onbekende fout");
+      const d = data as any;
+      setDryRunResult({
+        would_publish: d?.would_publish ?? 0,
+        would_email: d?.would_email ?? [],
+        test_mode: !!d?.test_mode,
+      });
+      toast.success("Dry-run voltooid — niets verzonden of opgeslagen");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Dry-run mislukt: ${e?.message ?? e}`);
+    } finally {
+      setDryRunLoading(false);
+    }
+  };
+
   const totalRecipients =
     (notifyCustomer ? 1 : 0) + Object.values(notifyPartners).filter(Boolean).length;
 
@@ -252,19 +301,60 @@ export function PublishChangesDialog({
             <Label className="text-sm font-medium">
               {pendingItems.length} wijziging{pendingItems.length !== 1 ? "en" : ""}
             </Label>
-            <ScrollArea className="mt-2 max-h-48 rounded-md border p-3">
-              <ul className="space-y-2 text-sm">
-                {pendingItems.map((it) => (
-                  <li key={it.id}>
-                    <div className="font-medium">{it.block_name}</div>
-                    <ul className="ml-3 list-disc text-muted-foreground">
-                      {describeChange(it).map((l, idx) => (
-                        <li key={idx}>{l}</li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
+            <ScrollArea className="mt-2 max-h-64 rounded-md border">
+              <div className="divide-y">
+                {pendingItems.map((it) => {
+                  const rows = diffRows(it);
+                  return (
+                    <div key={it.id} className="p-3 text-sm">
+                      <div className="mb-2 font-medium">{it.block_name}</div>
+                      {rows.length === 0 ? (
+                        <div className="text-xs text-muted-foreground">Geen velddiffs</div>
+                      ) : (
+                        <div className="space-y-1">
+                          {rows.map((r, idx) => {
+                            if (r.kind === "added")
+                              return (
+                                <div key={idx} className="text-emerald-700 dark:text-emerald-400">
+                                  + Toegevoegd aan programma
+                                </div>
+                              );
+                            if (r.kind === "removed")
+                              return (
+                                <div key={idx} className="text-destructive">
+                                  − Geannuleerd
+                                </div>
+                              );
+                            return (
+                              <div
+                                key={idx}
+                                className="grid grid-cols-[120px_1fr_auto_1fr] items-center gap-2"
+                              >
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {r.label}
+                                </span>
+                                <span className="truncate rounded bg-muted/50 px-2 py-0.5 text-xs line-through decoration-muted-foreground/40">
+                                  {r.before}
+                                </span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                <span
+                                  className={`truncate rounded px-2 py-0.5 text-xs font-medium ${
+                                    r.warn
+                                      ? "bg-amber-500/20 text-amber-900 dark:text-amber-200"
+                                      : "bg-emerald-500/15 text-emerald-900 dark:text-emerald-200"
+                                  }`}
+                                >
+                                  {r.after}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </ScrollArea>
           </div>
 
@@ -347,6 +437,44 @@ export function PublishChangesDialog({
               rows={3}
             />
           </div>
+
+          {dryRunResult && (
+            <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <Eye className="h-4 w-4" />
+                Dry-run resultaat
+                {dryRunResult.test_mode && (
+                  <Badge variant="outline" className="ml-1 text-xs">TEST</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Niets is gepubliceerd of verzonden. Dit is wat er bij echte publicatie zou gebeuren:
+              </p>
+              <div className="mt-2 space-y-1">
+                <div className="text-xs">
+                  <span className="font-medium">{dryRunResult.would_publish}</span> item(s) worden
+                  geüpdatet.
+                </div>
+                {dryRunResult.would_email.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">Geen mails zouden uitgaan.</div>
+                ) : (
+                  <ul className="space-y-0.5 text-xs">
+                    {dryRunResult.would_email.map((r, idx) => (
+                      <li key={idx}>
+                        <span className="font-medium">
+                          {r.kind === "customer" ? "Klant" : r.partnerName ?? "Partner"}
+                        </span>{" "}
+                        → <code className="text-[11px]">{r.email}</code>{" "}
+                        <span className="text-muted-foreground">
+                          ({r.change_count} wijziging{r.change_count !== 1 ? "en" : ""})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
@@ -355,10 +483,23 @@ export function PublishChangesDialog({
               ? `${totalRecipients} mail${totalRecipients !== 1 ? "s" : ""}`
               : "Geen mail"}
           </Badge>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing || dryRunLoading}>
             Annuleren
           </Button>
-          <Button onClick={handlePublish} disabled={publishing || hasBlocking}>
+          <Button
+            variant="secondary"
+            onClick={handleDryRun}
+            disabled={publishing || dryRunLoading || hasBlocking}
+            title="Toon wat er gepubliceerd en verstuurd zou worden, zonder iets te wijzigen"
+          >
+            {dryRunLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="mr-2 h-4 w-4" />
+            )}
+            Dry-run
+          </Button>
+          <Button onClick={handlePublish} disabled={publishing || dryRunLoading || hasBlocking}>
             {publishing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

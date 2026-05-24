@@ -119,12 +119,14 @@ Deno.serve(async (req) => {
       notifyPartnerIds = [],
       adminNote = "",
       origin,
+      dryRun = false,
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
       notifyPartnerIds?: string[];
       adminNote?: string;
       origin?: string;
+      dryRun?: boolean;
     };
 
     if (!requestId) {
@@ -439,6 +441,61 @@ Deno.serve(async (req) => {
       if (it.pending_block_type !== null && it.pending_block_type !== undefined) {
         pushDiff("invoicing", it.block_type, it.pending_block_type, it.block_type, it.pending_block_type);
       }
+    }
+
+    // Dry-run: bereken wat er gepubliceerd zou worden en welke mails zouden
+    // uitgaan, maar voer geen DB-updates uit en verstuur geen mail. Wordt
+    // gebruikt door PublishChangesDialog voor een "voorbeeld vóór verzenden".
+    if (dryRun) {
+      const portalBase = getPortalBaseUrl(origin);
+      const previewRecipients: Array<{
+        kind: "customer" | "partner";
+        partnerId?: string;
+        partnerName?: string;
+        email: string;
+        change_count: number;
+      }> = [];
+      if (notifyCustomer && program.customer_email && changeRows.length > 0) {
+        previewRecipients.push({
+          kind: "customer",
+          email: recipientFor(program.customer_email, origin),
+          change_count: changeRows.length,
+        });
+      }
+      for (const pid of notifyPartnerIds) {
+        const partner = partnerMap.get(pid);
+        if (!partner) continue;
+        const partnerEmail = partner.contact_email || partner.email;
+        if (!partnerEmail) continue;
+        const itemIdsForPartner = new Set(
+          items
+            .filter((i: any) => i.provider_id === pid || i.pending_provider_id === pid)
+            .map((i: any) => i.id),
+        );
+        const rows = changeRows.filter(
+          (r) => r.providerId === pid || (r.itemId && itemIdsForPartner.has(r.itemId)),
+        );
+        if (rows.length === 0) continue;
+        previewRecipients.push({
+          kind: "partner",
+          partnerId: pid,
+          partnerName: partner.name,
+          email: recipientFor(partnerEmail, origin),
+          change_count: rows.length,
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          dryRun: true,
+          changes: changeRows,
+          would_publish: items.length,
+          would_email: previewRecipients,
+          test_mode: isTestMode(origin),
+          portal_url_customer: `${portalBase}/programma/${program.customer_token}`,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // Promote pending → live (per item)
