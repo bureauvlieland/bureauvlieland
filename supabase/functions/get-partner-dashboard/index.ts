@@ -41,6 +41,46 @@ Deno.serve(async (req) => {
       );
     }
 
+    // --- "Sinds laatste bezoek" tracking (Batch 4 #12) ---
+    const previousLastSeenAt: string | null = partner.last_dashboard_seen_at ?? null;
+    let changesSinceLastSeen: Array<{
+      item_id: string;
+      request_id: string;
+      block_name: string;
+      field: string;
+      old_value: unknown;
+      new_value: unknown;
+      published_at: string;
+    }> = [];
+    try {
+      if (previousLastSeenAt) {
+        const { data: changeRows } = await supabase
+          .from("program_change_log")
+          .select("item_id, request_id, field, old_value, new_value, published_at, program_request_items!inner(block_name, provider_id)")
+          .eq("program_request_items.provider_id", partner.id)
+          .not("published_at", "is", null)
+          .gt("published_at", previousLastSeenAt)
+          .order("published_at", { ascending: false })
+          .limit(50);
+        changesSinceLastSeen = (changeRows || []).map((r: any) => ({
+          item_id: r.item_id,
+          request_id: r.request_id,
+          block_name: r.program_request_items?.block_name ?? "",
+          field: r.field,
+          old_value: r.old_value,
+          new_value: r.new_value,
+          published_at: r.published_at,
+        }));
+      }
+      await supabase
+        .from("partners")
+        .update({ last_dashboard_seen_at: new Date().toISOString() })
+        .eq("id", partner.id);
+    } catch (e) {
+      console.error("last_seen tracking failed:", e);
+    }
+
+
     // Get all items assigned to this partner (activity items)
     // Include billing details only when terms have been accepted (for invoicing)
     // Also include invoicing_mode for UI display
