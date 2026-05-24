@@ -171,6 +171,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
   return {
     request,
     quotes,
+    extrasByQuoteId,
     isLoading,
     error,
     refetch: fetchData,
