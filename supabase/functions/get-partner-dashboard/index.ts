@@ -338,7 +338,10 @@ Deno.serve(async (req) => {
         },
         accommodationQuotes,
         accommodationSummary,
+        previousLastSeenAt,
+        changesSinceLastSeen,
       }),
+
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
