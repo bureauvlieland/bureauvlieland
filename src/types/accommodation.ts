@@ -90,7 +90,10 @@ export interface AccommodationQuote {
   // Quote attachment/link (partner can attach their own quote document)
   quote_attachment_path: string | null;
   quote_attachment_filename: string | null;
+  // Pre-signed URL resolved server-side (edge function) for portal display
+  quote_attachment_url?: string | null;
   quote_external_url: string | null;
+
   
   // Invoice tracking
   invoiced_amount: number | null;

@@ -263,13 +263,11 @@ const PartnerAccommodationContent = () => {
 
         if (uploadError) throw uploadError;
 
-        const { data: publicUrlData } = supabase.storage
-          .from('accommodation-quote-attachments')
-          .getPublicUrl(filePath);
-
-        attachmentPath = publicUrlData.publicUrl;
+        // Store the raw storage path; signed URLs are generated on read.
+        attachmentPath = filePath;
         attachmentFilename = file.name;
       }
+
 
       const { error } = await supabase
         .from("accommodation_quotes")

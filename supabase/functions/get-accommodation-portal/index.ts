@@ -1,6 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
+const ATTACHMENT_BUCKET = "accommodation-quote-attachments";
+const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -71,11 +74,33 @@ Deno.serve(async (req) => {
       console.error("quotes error", quotesError);
     }
 
-    return new Response(
-      JSON.stringify({
-        request: requestData,
-        quotes: quotesData || [],
+    // Resolve signed URLs for attachments (paths only; legacy http URLs are returned as-is)
+    const quotes = await Promise.all(
+      (quotesData || []).map(async (q: any) => {
+        let signedUrl: string | null = null;
+        const path = q.quote_attachment_path;
+        if (path) {
+          if (/^https?:\/\//i.test(path)) {
+            // Legacy: already a full URL (pre-migration); pass through.
+            signedUrl = path;
+          } else {
+            const { data: signed, error: signErr } = await supabase
+              .storage
+              .from(ATTACHMENT_BUCKET)
+              .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+            if (signErr) {
+              console.error("sign url error", path, signErr);
+            } else {
+              signedUrl = signed?.signedUrl ?? null;
+            }
+          }
+        }
+        return { ...q, quote_attachment_url: signedUrl };
       }),
+    );
+
+    return new Response(
+      JSON.stringify({ request: requestData, quotes }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

@@ -79,6 +79,57 @@ const QUOTE_STATUS_MAP: Record<string, { label: string; variant: "default" | "se
   expired: { label: "Verlopen", variant: "destructive" },
 };
 
+/**
+ * Resolves a private storage path in `accommodation-quote-attachments` to a
+ * short-lived signed URL so admins can preview the partner-uploaded document.
+ * Falls back to using the value as-is if it's already a full URL (legacy data).
+ */
+function QuoteAttachmentLink({
+  path,
+  filename,
+}: {
+  path: string;
+  filename: string | null;
+}) {
+  const { data: href } = useQuery({
+    queryKey: ["accommodation-quote-attachment-signed-url", path],
+    queryFn: async () => {
+      if (/^https?:\/\//i.test(path)) return path;
+      const { data, error } = await supabase.storage
+        .from("accommodation-quote-attachments")
+        .createSignedUrl(path, 60 * 60);
+      if (error) {
+        console.error("Failed to sign attachment URL", error);
+        return null;
+      }
+      return data?.signedUrl ?? null;
+    },
+    staleTime: 50 * 60 * 1000,
+  });
+
+  if (!href) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Paperclip className="h-3.5 w-3.5" />
+        {filename || "Bijlage"}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+    >
+      <Paperclip className="h-3.5 w-3.5" />
+      {filename || "Bijlage"}
+    </a>
+  );
+}
+
+
 export function AdminAccommodationQuoteSheet({
   open,
   onOpenChange,
@@ -298,20 +349,16 @@ export function AdminAccommodationQuoteSheet({
                     </a>
                   )}
                   {quote.quote_attachment_path && (
-                    <a
-                      href={quote.quote_attachment_path}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                    >
-                      <Paperclip className="h-3.5 w-3.5" />
-                      {quote.quote_attachment_filename || "Bijlage"}
-                    </a>
+                    <QuoteAttachmentLink
+                      path={quote.quote_attachment_path}
+                      filename={quote.quote_attachment_filename}
+                    />
                   )}
                 </div>
               </div>
             </>
           )}
+
 
           {/* Validity & dates */}
           <Separator />

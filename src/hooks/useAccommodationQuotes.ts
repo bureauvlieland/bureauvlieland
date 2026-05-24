@@ -106,7 +106,9 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
         partner_notes: q.partner_notes,
         quote_attachment_path: q.quote_attachment_path,
         quote_attachment_filename: q.quote_attachment_filename,
+        quote_attachment_url: q.quote_attachment_url ?? null,
         quote_external_url: q.quote_external_url,
+
         invoiced_amount: q.invoiced_amount,
         invoiced_number: q.invoiced_number,
         invoiced_date: q.invoiced_date,
