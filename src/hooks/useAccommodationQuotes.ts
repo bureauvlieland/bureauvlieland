@@ -35,22 +35,23 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
     setError(null);
 
     try {
-      // Fetch the accommodation request by token
-      const { data: requestData, error: requestError } = await supabase
-        .from('accommodation_requests')
-        .select('*')
-        .eq('customer_token', token)
-        .maybeSingle();
+      const { data: payload, error: invokeError } = await supabase.functions.invoke(
+        "get-accommodation-portal",
+        { body: { token } },
+      );
 
-      if (requestError) {
-        throw new Error('Fout bij ophalen aanvraag');
+      if (invokeError) {
+        throw new Error(invokeError.message || "Fout bij ophalen aanvraag");
       }
 
-      if (!requestData) {
-        setError('Aanvraag niet gevonden of verlopen');
+      if (!payload || payload.error) {
+        setError(payload?.error || "Aanvraag niet gevonden of verlopen");
         setIsLoading(false);
         return;
       }
+
+      const requestData = payload.request;
+      const quotesData = payload.quotes || [];
 
       // Transform the database row to our typed interface
       const transformedRequest: AccommodationRequest = {
@@ -85,55 +86,40 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
 
       setRequest(transformedRequest);
 
-      // Fetch quotes for this request
-      const { data: quotesData, error: quotesError } = await supabase
-        .from('accommodation_quotes')
-        .select(`
-          *,
-          partner:partners(id, name, email, phone, website_url, address_street, address_postal, address_city, location_lat, location_lng, location_description, booking_contact_name, booking_contact_phone, contact_email, gallery_images, about_text, highlight_features)
-        `)
-        .eq('request_id', requestData.id)
-        .in('status', ['submitted', 'selected', 'expired', 'declined'])
-        .order('price_per_person_per_night', { ascending: true });
-
-      if (quotesError) {
-        console.error('Error fetching quotes:', quotesError);
-      } else {
-        const transformedQuotes: AccommodationQuote[] = (quotesData || []).map((q) => ({
-          id: q.id,
-          request_id: q.request_id,
-          partner_id: q.partner_id,
-          accommodation_name: q.accommodation_name,
-          description: q.description,
-          room_configuration: (q.room_configuration as unknown as RoomConfiguration[]) || [],
-          price_total: q.price_total,
-          price_per_person_per_night: q.price_per_person_per_night,
-          price_includes_vat: q.price_includes_vat ?? true,
-          vat_rate: q.vat_rate ?? 9,
-          includes: (q.includes as string[]) || [],
-          conditions: q.conditions,
-          valid_until: q.valid_until,
-          status: q.status as AccommodationQuote['status'],
-          submitted_at: q.submitted_at,
-          selected_at: q.selected_at,
-          partner_notes: q.partner_notes,
-          quote_attachment_path: q.quote_attachment_path,
-          quote_attachment_filename: q.quote_attachment_filename,
-          quote_external_url: q.quote_external_url,
-          invoiced_amount: q.invoiced_amount,
-          invoiced_number: q.invoiced_number,
-          invoiced_date: q.invoiced_date,
-          invoiced_file_path: q.invoiced_file_path,
-          commission_percentage: q.commission_percentage,
-          commission_amount: q.commission_amount,
-          commission_status: q.commission_status,
-          commission_invoiced_at: q.commission_invoiced_at,
-          created_at: q.created_at,
-          updated_at: q.updated_at,
-          partner: q.partner as unknown as AccommodationQuote['partner'],
-        }));
-        setQuotes(transformedQuotes);
-      }
+      const transformedQuotes: AccommodationQuote[] = quotesData.map((q: any) => ({
+        id: q.id,
+        request_id: q.request_id,
+        partner_id: q.partner_id,
+        accommodation_name: q.accommodation_name,
+        description: q.description,
+        room_configuration: (q.room_configuration as unknown as RoomConfiguration[]) || [],
+        price_total: q.price_total,
+        price_per_person_per_night: q.price_per_person_per_night,
+        price_includes_vat: q.price_includes_vat ?? true,
+        vat_rate: q.vat_rate ?? 9,
+        includes: (q.includes as string[]) || [],
+        conditions: q.conditions,
+        valid_until: q.valid_until,
+        status: q.status as AccommodationQuote['status'],
+        submitted_at: q.submitted_at,
+        selected_at: q.selected_at,
+        partner_notes: q.partner_notes,
+        quote_attachment_path: q.quote_attachment_path,
+        quote_attachment_filename: q.quote_attachment_filename,
+        quote_external_url: q.quote_external_url,
+        invoiced_amount: q.invoiced_amount,
+        invoiced_number: q.invoiced_number,
+        invoiced_date: q.invoiced_date,
+        invoiced_file_path: q.invoiced_file_path,
+        commission_percentage: q.commission_percentage,
+        commission_amount: q.commission_amount,
+        commission_status: q.commission_status,
+        commission_invoiced_at: q.commission_invoiced_at,
+        created_at: q.created_at,
+        updated_at: q.updated_at,
+        partner: q.partner as unknown as AccommodationQuote['partner'],
+      }));
+      setQuotes(transformedQuotes);
     } catch (err) {
       console.error('Error in useAccommodationQuotes:', err);
       setError(err instanceof Error ? err.message : 'Onbekende fout');
@@ -141,6 +127,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
       setIsLoading(false);
     }
   }, [token]);
+
 
   useEffect(() => {
     fetchData();
