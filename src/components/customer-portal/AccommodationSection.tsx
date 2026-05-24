@@ -33,6 +33,7 @@ import { HotelGallery } from "./HotelGallery";
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
   quotes: AccommodationQuote[];
+  extrasByQuoteId?: Record<string, any[]>;
   onSelectQuote: (quoteId: string) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;
@@ -44,6 +45,7 @@ interface AccommodationSectionProps {
 export const AccommodationSection = ({
   accommodation,
   quotes,
+  extrasByQuoteId,
   onSelectQuote,
   selectedDates,
   onEditAccommodation,
