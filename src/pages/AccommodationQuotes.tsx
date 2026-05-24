@@ -59,6 +59,7 @@ export default function AccommodationQuotes() {
   const {
     request,
     quotes,
+    extrasByQuoteId,
     isLoading,
     error,
     refetch,
