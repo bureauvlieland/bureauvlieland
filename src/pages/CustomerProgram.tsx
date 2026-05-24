@@ -388,6 +388,7 @@ const CustomerProgram = () => {
     // Accommodation
     accommodation,
     accommodationQuotes,
+    accommodationExtrasByQuoteId: extrasByQuoteId,
     onSelectAccommodationQuote: selectAccommodationQuote,
     // Quote proposal
     onAcceptQuoteProposal: acceptQuoteProposal,
