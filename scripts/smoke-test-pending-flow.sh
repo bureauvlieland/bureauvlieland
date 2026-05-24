@@ -266,23 +266,28 @@ run_one() {
   fi
 
   logp "STAP 2: pending_* zetten"
-  curl -fsS -X PATCH \
-    "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${item}" \
-    -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-    -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-    -H "Content-Type: application/json" \
-    -H "Prefer: return=minimal" \
-    -d '{
-      "pending_block_name":"Zeehondentocht (SMOKE)",
-      "pending_admin_price_override":42.42,
-      "pending_price_type":"per_person",
-      "pending_location_address":"SMOKE adres 99",
-      "pending_location_lat":53.30,
-      "pending_location_lng":5.10,
-      "pending_provider_name":"SMOKE Provider",
-      "pending_provider_id":"zeehonden",
-      "pending_changed_at":"now()"
-    }' > /dev/null
+  do_pending_patch() {
+    curl -fsS --max-time 15 -X PATCH \
+      "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${item}" \
+      -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+      -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+      -H "Content-Type: application/json" \
+      -H "Prefer: return=minimal" \
+      -d '{
+        "pending_block_name":"Zeehondentocht (SMOKE)",
+        "pending_admin_price_override":42.42,
+        "pending_price_type":"per_person",
+        "pending_location_address":"SMOKE adres 99",
+        "pending_location_lat":53.30,
+        "pending_location_lng":5.10,
+        "pending_provider_name":"SMOKE Provider",
+        "pending_provider_id":"zeehonden",
+        "pending_changed_at":"now()"
+      }' > /dev/null
+  }
+  if ! with_retry "$tag pending PATCH" do_pending_patch; then
+    status="fail"; reason="pending PATCH failed after retries"; write_result; return 1
+  fi
 
   logp "STAP 3: Verifieer LIVE ongewijzigd"
   local live_now
@@ -302,11 +307,16 @@ run_one() {
 
   logp "STAP 5: publish-program-changes (zonder mails)"
   local resp
-  resp=$(curl -fsS -X POST \
-    "${SUPABASE_URL}/functions/v1/publish-program-changes" \
-    -H "Authorization: Bearer ${ADMIN_JWT}" \
-    -H "Content-Type: application/json" \
-    -d "{\"requestId\":\"${request}\",\"notifyCustomer\":false,\"notifyPartnerIds\":[],\"adminNote\":\"smoke-test\",\"origin\":\"${SUPABASE_URL}\"}")
+  do_publish() {
+    resp=$(curl -fsS --max-time 30 -X POST \
+      "${SUPABASE_URL}/functions/v1/publish-program-changes" \
+      -H "Authorization: Bearer ${ADMIN_JWT}" \
+      -H "Content-Type: application/json" \
+      -d "{\"requestId\":\"${request}\",\"notifyCustomer\":false,\"notifyPartnerIds\":[],\"adminNote\":\"smoke-test\",\"origin\":\"${SUPABASE_URL}\"}")
+  }
+  if ! with_retry "$tag publish-program-changes" do_publish; then
+    status="fail"; reason="publish-program-changes failed after retries"; write_result; return 1
+  fi
   logp "Edge function: $resp"
 
   logp "STAP 6: Verifieer LIVE = nieuwe waardes & pending leeg"
