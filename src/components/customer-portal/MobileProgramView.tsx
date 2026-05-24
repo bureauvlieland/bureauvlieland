@@ -130,6 +130,9 @@ interface MobileProgramViewProps {
     showDietary: boolean;
     showRoomAssignment: boolean;
   };
+  // Pre-resolved server data from get-customer-program edge function
+  billingLinesByItem?: Record<string, any[]>;
+  blockVatRates?: Record<string, number>;
 }
 
 export const MobileProgramView = ({
@@ -163,6 +166,8 @@ export const MobileProgramView = ({
   onApproveQuoteItem,
   onOpenGuestDetails,
   guestDetails,
+  billingLinesByItem,
+  blockVatRates,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
@@ -170,7 +175,7 @@ export const MobileProgramView = ({
   const isQuoteMode = true; // All projects use unified quote pipeline
   const hasUnapprovedItems = hasQuoteItemsAwaitingCustomerApproval(program.items);
 
-  const { getItemVatRate } = useItemVatRates(program.items);
+  const { getItemVatRate } = useItemVatRates(program.items, blockVatRates);
   const {
     termsAccepted,
     billingComplete,
@@ -508,6 +513,12 @@ export const MobileProgramView = ({
             termsAccepted={termsAccepted}
             selectedAccommodationQuote={accommodationQuotes.find(q => q.status === "selected")}
             invoicingMode={invoicingMode}
+            billingLinesByItem={billingLinesByItem}
+            blockVatRates={blockVatRates}
+            accommodationExtrasOverride={(() => {
+              const sel = accommodationQuotes.find(q => q.status === "selected");
+              return sel && accommodationExtrasByQuoteId ? accommodationExtrasByQuoteId[sel.id] : undefined;
+            })()}
           />
           {termsAccepted && (
             <PaymentStatusCard
