@@ -25,6 +25,9 @@ interface CompactBillingSectionProps {
   selectedAccommodationQuote?: AccommodationQuote;
   onEditBilling: () => void;
   invoicingMode?: string;
+  billingLinesByItem?: Record<string, any[]>;
+  blockVatRates?: Record<string, number>;
+  accommodationExtrasByQuoteId?: Record<string, any[]>;
 }
 
 export const CompactBillingSection = ({
@@ -36,6 +39,9 @@ export const CompactBillingSection = ({
   selectedAccommodationQuote,
   onEditBilling,
   invoicingMode,
+  billingLinesByItem,
+  blockVatRates,
+  accommodationExtrasByQuoteId,
 }: CompactBillingSectionProps) => {
   const billingComplete = !!(
     program.billing_company_name &&
@@ -44,6 +50,10 @@ export const CompactBillingSection = ({
     program.billing_address_city &&
     program.billing_contact_name
   );
+
+  const extrasOverride = selectedAccommodationQuote && accommodationExtrasByQuoteId
+    ? accommodationExtrasByQuoteId[selectedAccommodationQuote.id]
+    : undefined;
 
   return (
     <div id="billing" className="scroll-mt-20 space-y-4">
@@ -77,6 +87,9 @@ export const CompactBillingSection = ({
         termsAccepted={termsAccepted}
         selectedAccommodationQuote={selectedAccommodationQuote}
         invoicingMode={invoicingMode}
+        billingLinesByItem={billingLinesByItem}
+        blockVatRates={blockVatRates}
+        accommodationExtrasOverride={extrasOverride}
       />
     </div>
   );
