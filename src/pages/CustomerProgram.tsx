@@ -72,6 +72,8 @@ const CustomerProgram = () => {
     accommodationQuotes,
     extrasByQuoteId,
     selectAccommodationQuote,
+    billingLinesByItem,
+    blockVatRates,
   } = useCustomerProgram(token || "");
 
   const [activeDay, setActiveDay] = useState(0);
@@ -393,6 +395,9 @@ const CustomerProgram = () => {
     // Quote proposal
     onAcceptQuoteProposal: acceptQuoteProposal,
     onApproveQuoteItem: approveQuoteItem,
+    // Pre-resolved server data (lock-down readiness)
+    billingLinesByItem,
+    blockVatRates,
   };
 
   // Decision 2: Single-day programs skip the splash and go directly to program
