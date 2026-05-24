@@ -249,6 +249,39 @@ export function PublishChangesDialog({
     }
   };
 
+  const handleDryRun = async () => {
+    setDryRunLoading(true);
+    setDryRunResult(null);
+    try {
+      const partnerIds = Object.entries(notifyPartners)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const { data, error } = await supabase.functions.invoke("publish-program-changes", {
+        body: {
+          requestId,
+          notifyCustomer,
+          notifyPartnerIds: partnerIds,
+          adminNote: adminNote.trim(),
+          origin: window.location.origin,
+          dryRun: true,
+        },
+      });
+      if (error) throw new Error(error.message ?? "Onbekende fout");
+      const d = data as any;
+      setDryRunResult({
+        would_publish: d?.would_publish ?? 0,
+        would_email: d?.would_email ?? [],
+        test_mode: !!d?.test_mode,
+      });
+      toast.success("Dry-run voltooid — niets verzonden of opgeslagen");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Dry-run mislukt: ${e?.message ?? e}`);
+    } finally {
+      setDryRunLoading(false);
+    }
+  };
+
   const totalRecipients =
     (notifyCustomer ? 1 : 0) + Object.values(notifyPartners).filter(Boolean).length;
 
