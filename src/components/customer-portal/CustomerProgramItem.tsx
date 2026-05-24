@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { CustomerItemChangelog } from "./CustomerItemChangelog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
