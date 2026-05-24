@@ -64,8 +64,29 @@ fi
 MODE="${MODE:-sequential}"
 FORMAT="${FORMAT:-text}"
 STRICT_EMAIL_LOG="${STRICT_EMAIL_LOG:-1}"
+RETRY_MAX="${RETRY_MAX:-3}"
+RETRY_BASE_DELAY="${RETRY_BASE_DELAY:-2}"
 [ "$MODE" = "sequential" ] || [ "$MODE" = "parallel" ] || { echo "❌ MODE moet sequential of parallel zijn"; exit 1; }
 [ "$FORMAT" = "text" ] || [ "$FORMAT" = "json" ] || { echo "❌ FORMAT moet text of json zijn"; exit 1; }
+
+# ---- Retry helper --------------------------------------------------------
+# with_retry "<label>" <cmd...>  → retried tot RETRY_MAX met exponentiële backoff.
+# Gebruikt voor transient netwerk-/edge-function fouten (5xx, timeouts).
+with_retry() {
+  local label="$1"; shift
+  local attempt=1 delay="$RETRY_BASE_DELAY"
+  while true; do
+    if "$@"; then return 0; fi
+    if [ "$attempt" -ge "$RETRY_MAX" ]; then
+      echo "  ❌ $label: ${attempt} pogingen mislukt, geef op."
+      return 1
+    fi
+    echo "  ⚠ $label: poging ${attempt}/${RETRY_MAX} faalde — wacht ${delay}s en retry…"
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
 
 # ---- Items parsen --------------------------------------------------------
 declare -a PAIRS=()
