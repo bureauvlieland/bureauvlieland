@@ -33,16 +33,67 @@ interface UseChatOptions {
   requestId?: string;
 }
 
+/**
+ * useChat
+ * - customer_portal (anon, token-based): all reads/writes via edge functions + polling (5s).
+ * - partner_portal (authenticated): direct supabase client + Realtime, governed by partner RLS.
+ */
 export function useChat(options: UseChatOptions) {
+  const isVisitor = options.source === "customer_portal";
+
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAdminOnline, setIsAdminOnline] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [waitingForReply, setWaitingForReply] = useState(false);
   const waitingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Check admin online status
+  // ---------- VISITOR (customer_portal) flow: edge function + polling ----------
+  const fetchVisitorThread = useCallback(async () => {
+    if (!options.sourceToken) return;
+    try {
+      const { data } = await supabase.functions.invoke("chat-visitor-thread", {
+        body: { source: "customer_portal", sourceToken: options.sourceToken },
+      });
+      if (!data) return;
+      if (data.conversation) setConversation(data.conversation as ChatConversation);
+      if (Array.isArray(data.messages)) {
+        setMessages((prev) => {
+          const next = data.messages as ChatMessage[];
+          // If admin replied since last poll, clear waiting
+          if (next.some((m) => m.sender_type === "admin")) {
+            const hadAdminBefore = prev.some((m) => m.sender_type === "admin");
+            if (!hadAdminBefore) {
+              setWaitingForReply(false);
+              if (waitingTimerRef.current) {
+                clearTimeout(waitingTimerRef.current);
+                waitingTimerRef.current = null;
+              }
+            }
+          }
+          return next;
+        });
+      }
+      setIsAdminOnline(!!data.isAdminOnline);
+    } catch (err) {
+      console.error("chat-visitor-thread error", err);
+    }
+  }, [options.sourceToken]);
+
   useEffect(() => {
+    if (!isVisitor || !options.sourceToken) return;
+    fetchVisitorThread();
+    pollRef.current = setInterval(fetchVisitorThread, 5000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = null;
+    };
+  }, [isVisitor, options.sourceToken, fetchVisitorThread]);
+
+  // ---------- PARTNER (authenticated) flow: direct supabase + Realtime ----------
+  useEffect(() => {
+    if (isVisitor) return; // visitor handled above
     const fetchPresence = async () => {
       const { data } = await supabase
         .from("chat_admin_presence")
@@ -52,23 +103,15 @@ export function useChat(options: UseChatOptions) {
       setIsAdminOnline(!!data && data.length > 0);
     };
     fetchPresence();
-
     const channel = supabase
       .channel("chat-admin-presence")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "chat_admin_presence",
-      }, () => {
-        fetchPresence();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_admin_presence" }, fetchPresence)
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [isVisitor]);
 
-  // Find existing conversation
   useEffect(() => {
+    if (isVisitor) return;
     const findConversation = async () => {
       let query = supabase
         .from("chat_conversations")
@@ -77,25 +120,15 @@ export function useChat(options: UseChatOptions) {
         .neq("status", "closed")
         .order("created_at", { ascending: false })
         .limit(1);
-
-      if (options.sourceToken) {
-        query = query.eq("source_token", options.sourceToken);
-      } else if (options.sourcePartnerId) {
-        query = query.eq("source_partner_id", options.sourcePartnerId);
-      }
-
+      if (options.sourcePartnerId) query = query.eq("source_partner_id", options.sourcePartnerId);
       const { data } = await query;
-      if (data && data.length > 0) {
-        setConversation(data[0] as unknown as ChatConversation);
-      }
+      if (data && data.length > 0) setConversation(data[0] as unknown as ChatConversation);
     };
     findConversation();
-  }, [options.source, options.sourceToken, options.sourcePartnerId]);
+  }, [isVisitor, options.source, options.sourcePartnerId]);
 
-  // Load messages when conversation exists
   useEffect(() => {
-    if (!conversation) return;
-
+    if (isVisitor || !conversation) return;
     const loadMessages = async () => {
       const { data } = await supabase
         .from("chat_messages")
@@ -105,8 +138,6 @@ export function useChat(options: UseChatOptions) {
       if (data) setMessages(data as unknown as ChatMessage[]);
     };
     loadMessages();
-
-    // Realtime subscription
     const channel = supabase
       .channel(`chat-messages-${conversation.id}`)
       .on("postgres_changes", {
@@ -116,11 +147,7 @@ export function useChat(options: UseChatOptions) {
         filter: `conversation_id=eq.${conversation.id}`,
       }, (payload) => {
         const newMsg = payload.new as unknown as ChatMessage;
-        setMessages(prev => {
-          if (prev.some(m => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
-        });
-        // If admin replies, clear waiting state
+        setMessages((prev) => (prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]));
         if (newMsg.sender_type === "admin") {
           setWaitingForReply(false);
           if (waitingTimerRef.current) {
@@ -130,23 +157,52 @@ export function useChat(options: UseChatOptions) {
         }
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, [conversation?.id]);
+  }, [isVisitor, conversation?.id]);
 
+  // ---------- sendMessage ----------
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
     setIsLoading(true);
 
-    let conv = conversation;
+    if (isVisitor) {
+      try {
+        const { data, error } = await supabase.functions.invoke("chat-visitor-send", {
+          body: {
+            source: "customer_portal",
+            sourceToken: options.sourceToken,
+            visitorName: options.visitorName,
+            visitorEmail: options.visitorEmail,
+            content: content.trim(),
+            requestId: options.requestId || null,
+          },
+        });
+        if (error) throw error;
+        if (data?.conversation) setConversation(data.conversation as ChatConversation);
+        if (data?.message) {
+          setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message as ChatMessage]));
+        }
+        // Start waiting timer (2 min)
+        setWaitingForReply(false);
+        if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
+        waitingTimerRef.current = setTimeout(() => setWaitingForReply(true), 2 * 60 * 1000);
+        // Refresh quickly after send
+        fetchVisitorThread();
+      } catch (err) {
+        console.error("send visitor message failed", err);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
-    // Create conversation if needed
+    // Partner (authenticated) flow
+    let conv = conversation;
     if (!conv) {
       const { data, error } = await supabase
         .from("chat_conversations")
         .insert({
           source: options.source,
-          source_token: options.sourceToken || null,
           source_partner_id: options.sourcePartnerId || null,
           visitor_name: options.visitorName,
           visitor_email: options.visitorEmail,
@@ -156,7 +212,6 @@ export function useChat(options: UseChatOptions) {
         })
         .select()
         .single();
-
       if (error || !data) {
         setIsLoading(false);
         return;
@@ -165,40 +220,30 @@ export function useChat(options: UseChatOptions) {
       setConversation(conv);
     }
 
-    // Send message
     await supabase.from("chat_messages").insert({
       conversation_id: conv.id,
       sender_type: "visitor",
       sender_name: options.visitorName,
       content: content.trim(),
     });
-
-    // Update last_message_at
     await supabase
       .from("chat_conversations")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", conv.id);
 
-    // Start waiting timer (2 min)
     setWaitingForReply(false);
     if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
-    waitingTimerRef.current = setTimeout(() => {
-      setWaitingForReply(true);
-    }, 2 * 60 * 1000);
+    waitingTimerRef.current = setTimeout(() => setWaitingForReply(true), 2 * 60 * 1000);
 
-    // Trigger email notification
     try {
-      await supabase.functions.invoke("notify-new-chat", {
-        body: { conversation_id: conv.id },
-      });
+      await supabase.functions.invoke("notify-new-chat", { body: { conversation_id: conv.id } });
     } catch {
-      // Non-critical
+      // non-critical
     }
 
     setIsLoading(false);
-  }, [conversation, options]);
+  }, [isVisitor, conversation, options, fetchVisitorThread]);
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (waitingTimerRef.current) clearTimeout(waitingTimerRef.current);
