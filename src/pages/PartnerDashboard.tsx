@@ -664,6 +664,12 @@ const PartnerDashboardContent = () => {
         </div>
 
         {/* Action banner — alleen bij urgente acties (tegenvoorstel/prijswijziging/te factureren) */}
+        <PartnerChangesSinceBanner
+          changes={(data as any)?.changesSinceLastSeen}
+          previousLastSeenAt={(data as any)?.previousLastSeenAt}
+        />
+
+        {/* Action banner — alleen bij urgente acties (tegenvoorstel/prijswijziging/te factureren) */}
         <PartnerActionBanner
           urgentCount={counterProposedCount + priceChangePendingCount}
           toInvoiceCount={toInvoiceCount}
@@ -676,6 +682,7 @@ const PartnerDashboardContent = () => {
             }
           }}
         />
+
 
         {/* Stats + YTD in grid */}
         <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
