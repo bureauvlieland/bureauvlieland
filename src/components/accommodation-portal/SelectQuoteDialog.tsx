@@ -54,7 +54,7 @@ export function SelectQuoteDialog({
     if (!quote?.partner_id) return;
     (async () => {
       const { data } = await supabase
-        .from('partners')
+        .from('partners_public')
         .select('name, terms_pdf_path, uses_default_terms')
         .eq('id', quote.partner_id)
         .maybeSingle();

@@ -90,10 +90,9 @@ export const useAllMapActivities = (
     queryKey: ["map-activities-all", dateStart, dateEnd],
     queryFn: async () => {
       const { data: partners, error: pError } = await supabase
-        .from("partners")
+        .from("partners_public")
         .select("id, name, map_tenant_slug, image_url")
-        .not("map_tenant_slug", "is", null)
-        .eq("is_active", true);
+        .not("map_tenant_slug", "is", null);
 
       if (pError) throw pError;
       if (!partners || partners.length === 0) return [];

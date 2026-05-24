@@ -29,9 +29,8 @@ const usePublicPartners = () => {
     queryFn: async (): Promise<PublicPartner[]> => {
       // Fetch all publicly visible partners
       const { data: partners, error } = await supabase
-        .from("partners")
+        .from("partners_public")
         .select("id, name, partner_type, image_url, about_text, website_url, location_description, map_tenant_slug")
-        .eq("is_active", true)
         .eq("is_public", true);
       if (error) throw error;
 

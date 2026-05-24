@@ -81,7 +81,7 @@ export const AcceptTermsCard = ({
       }
 
       const { data, error } = await supabase
-        .from("partners")
+        .from("partners_public")
         .select("id, name, terms_pdf_path, uses_default_terms")
         .in("id", uniquePartnerIds);
 
