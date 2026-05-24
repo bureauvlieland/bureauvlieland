@@ -144,6 +144,8 @@ export function PublishChangesDialog({
   const [notifyPartners, setNotifyPartners] = useState<Record<string, boolean>>({});
   const [adminNote, setAdminNote] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [dryRunLoading, setDryRunLoading] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
 
   // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
   // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
