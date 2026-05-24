@@ -63,9 +63,10 @@ export const PriceSummaryCard = ({
   const accommodationExtras = accommodationExtrasOverride ?? extrasFromHook;
 
 
-  // Fetch VAT rates per building block (fallback when no billing lines)
+  // Fetch VAT rates per building block (fallback when prop not provided)
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   useEffect(() => {
+    if (blockVatRatesProp) return;
     const blockIds = items.map(i => i.block_id).filter(Boolean) as string[];
     if (blockIds.length === 0) return;
     supabase
@@ -79,14 +80,17 @@ export const PriceSummaryCard = ({
           setVatRateMap(map);
         }
       });
-  }, [items]);
+  }, [items, blockVatRatesProp]);
 
+  const effectiveVatRates = blockVatRatesProp ?? vatRateMap;
   const getItemVatRate = (item: ProgramRequestItem): number => {
-    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
-      return vatRateMap[item.block_id];
+    if (item.block_id && effectiveVatRates[item.block_id] !== undefined) {
+      return effectiveVatRates[item.block_id];
     }
     return 21;
   };
+
+
 
   const formatPrice = (amount: number) =>
     amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
