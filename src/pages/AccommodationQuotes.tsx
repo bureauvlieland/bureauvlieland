@@ -194,6 +194,7 @@ export default function AccommodationQuotes() {
                   onViewDetails={() => setSelectedQuoteForDetails(quote)}
                   isSelecting={isSelecting && selectedQuoteForConfirm?.id === quote.id}
                   hasSelectedQuote={hasSelectedQuote}
+                  extrasOverride={extrasByQuoteId[quote.id] ?? []}
                 />
               ))}
             </div>
