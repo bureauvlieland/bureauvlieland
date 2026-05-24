@@ -103,10 +103,14 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     imageUrl: string | null;
     imageAsset: string | null;
   }>>([]);
+  const [billingLinesByItem, setBillingLinesByItem] = useState<Record<string, any[]>>({});
+  const [blockVatRates, setBlockVatRates] = useState<Record<string, number>>({});
+  const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, any[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProgram = useCallback(async () => {
+
     if (!token) {
       setError("Geen token opgegeven");
       setIsLoading(false);
@@ -117,194 +121,134 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     setError(null);
 
     try {
-      // Fetch the program request
-      const { data: requestData, error: requestError } = await supabase
-        .from("program_requests")
-        .select("*")
-        .eq("customer_token", token)
-        .single();
+      // Single source of truth: get-customer-program edge function (service-role,
+      // token-validated). Replaces the previous fan-out of anon SELECTs across
+      // program_requests, program_request_items, building_blocks,
+      // program_request_history, accommodation_requests, accommodation_quotes,
+      // program_item_billing_lines and accommodation_quote_extras.
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/get-customer-program?token=${encodeURIComponent(token)}`,
+        { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
+      );
 
-      if (requestError) {
-        if (requestError.code === "PGRST116") {
-          setError("Programma niet gevonden of verlopen");
-        } else {
-          throw requestError;
-        }
+      if (response.status === 404) {
+        setError("Programma niet gevonden of verlopen");
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(`Edge function returned ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const programData = payload.program;
+      if (!programData) {
+        setError("Programma niet gevonden of verlopen");
         return;
       }
 
-      // Fetch the items
-      const { data: itemsDataRaw, error: itemsError } = await supabase
-        .from("program_request_items")
-        .select("*")
-        .eq("request_id", requestData.id)
-        .order("day_index", { ascending: true })
-        .order("preferred_time", { ascending: true, nullsFirst: false });
-
-      if (itemsError) throw itemsError;
-
       // Pending-flow: nieuw toegevoegde items zijn voor de klant pas zichtbaar
       // nadat admin op "Publiceer & notificeer" heeft geklikt.
-      const itemsData = (itemsDataRaw || []).filter((it: any) => !it.pending_added);
+      const visibleItems = ((programData.items as any[]) || []).filter(
+        (it: any) => !it.pending_added,
+      );
 
-
-      // Get unique block IDs to fetch images
-      const blockIds = [...new Set((itemsData || []).map((item: any) => item.block_id))];
-      
-      // Fetch building block images
-      const { data: blocksData } = await supabase
-        .from("building_blocks")
-        .select("id, image_url, image_asset, short_description, description, external_url")
-        .in("id", blockIds);
-      
-      // Create a lookup map for images and descriptions
-      const blockMap = new Map((blocksData || []).map((b: any) => [b.id, b]));
-      
-      // Merge image + description data onto items
-      const itemsWithImages = (itemsData || []).map((item: any) => {
-        const block = blockMap.get(item.block_id);
-        return {
-          ...item,
-          image_url: block?.image_url || null,
-          image_asset: block?.image_asset || null,
-          block_short_description: block?.short_description || null,
-          block_description: block?.description || null,
-          external_url: block?.external_url || item.external_url || null,
+      // Accommodation request transformation (if linked)
+      const accomData = payload.linkedAccommodation;
+      if (accomData) {
+        const transformedAccom: AccommodationRequest = {
+          id: accomData.id,
+          customer_token: accomData.customer_token,
+          customer_name: accomData.customer_name,
+          customer_email: accomData.customer_email,
+          customer_phone: accomData.customer_phone,
+          customer_company: accomData.customer_company,
+          reference_number: accomData.reference_number,
+          arrival_date: accomData.arrival_date,
+          departure_date: accomData.departure_date,
+          number_of_guests: accomData.number_of_guests,
+          accommodation_type: accomData.accommodation_type as AccommodationRequest["accommodation_type"],
+          room_count: accomData.room_count,
+          room_occupancy: accomData.room_occupancy,
+          room_types: (accomData.room_types as string[]) || [],
+          location_preference: (accomData.location_preference as string[]) || [],
+          facilities_required: (accomData.facilities_required as string[]) || [],
+          budget_range: accomData.budget_range,
+          special_requests: accomData.special_requests,
+          wants_activities: accomData.wants_activities || false,
+          linked_program_id: accomData.linked_program_id,
+          quotes_requested_count: accomData.quotes_requested_count ?? 0,
+          quotes_declined_count: (accomData as any).quotes_declined_count ?? 0,
+          status: accomData.status as AccommodationRequest["status"],
+          admin_notes: accomData.admin_notes,
+          room_assignment: (accomData as any).room_assignment ?? null,
+          guest_details_updated_at: (accomData as any).guest_details_updated_at ?? null,
+          created_at: accomData.created_at,
+          updated_at: accomData.updated_at,
+          expires_at: accomData.expires_at,
         };
-      });
+        setAccommodation(transformedAccom);
 
-      // Fetch history
-      const { data: historyData } = await supabase
-        .from("program_request_history")
-        .select("*")
-        .eq("request_id", requestData.id)
-        .order("created_at", { ascending: false });
-
-      // Fetch linked accommodation if present
-      if (requestData.linked_accommodation_id) {
-        const { data: accomData } = await supabase
-          .from("accommodation_requests")
-          .select("*")
-          .eq("id", requestData.linked_accommodation_id)
-          .maybeSingle();
-
-        if (accomData) {
-          const transformedAccom: AccommodationRequest = {
-            id: accomData.id,
-            customer_token: accomData.customer_token,
-            customer_name: accomData.customer_name,
-            customer_email: accomData.customer_email,
-            customer_phone: accomData.customer_phone,
-            customer_company: accomData.customer_company,
-            reference_number: accomData.reference_number,
-            arrival_date: accomData.arrival_date,
-            departure_date: accomData.departure_date,
-            number_of_guests: accomData.number_of_guests,
-            accommodation_type: accomData.accommodation_type as AccommodationRequest["accommodation_type"],
-            room_count: accomData.room_count,
-            room_occupancy: accomData.room_occupancy,
-            room_types: (accomData.room_types as string[]) || [],
-            location_preference: (accomData.location_preference as string[]) || [],
-            facilities_required: (accomData.facilities_required as string[]) || [],
-            budget_range: accomData.budget_range,
-            special_requests: accomData.special_requests,
-            wants_activities: accomData.wants_activities || false,
-            linked_program_id: accomData.linked_program_id,
-            quotes_requested_count: accomData.quotes_requested_count ?? 0,
-            quotes_declined_count: (accomData as any).quotes_declined_count ?? 0,
-            status: accomData.status as AccommodationRequest["status"],
-            admin_notes: accomData.admin_notes,
-            room_assignment: (accomData as any).room_assignment ?? null,
-            guest_details_updated_at: (accomData as any).guest_details_updated_at ?? null,
-            created_at: accomData.created_at,
-            updated_at: accomData.updated_at,
-            expires_at: accomData.expires_at,
-          };
-          setAccommodation(transformedAccom);
-
-          // Fetch accommodation quotes
-          const { data: quotesData } = await supabase
-            .from("accommodation_quotes")
-            .select(`*, partner:partners(id, name, email, gallery_images, about_text, highlight_features)`)
-            .eq("request_id", accomData.id)
-            .in("status", ["submitted", "selected", "expired", "declined"])
-            .order("price_per_person_per_night", { ascending: true });
-
-          if (quotesData) {
-            const transformedQuotes: AccommodationQuote[] = quotesData.map((q: any) => ({
-              id: q.id,
-              request_id: q.request_id,
-              partner_id: q.partner_id,
-              accommodation_name: q.accommodation_name,
-              description: q.description,
-              room_configuration: q.room_configuration || [],
-              price_total: q.price_total,
-              price_per_person_per_night: q.price_per_person_per_night,
-              price_includes_vat: q.price_includes_vat ?? true,
-              vat_rate: q.vat_rate ?? 9,
-              includes: (q.includes as string[]) || [],
-              conditions: q.conditions,
-              valid_until: q.valid_until,
-              status: q.status,
-              submitted_at: q.submitted_at,
-              selected_at: q.selected_at,
-              partner_notes: q.partner_notes,
-              customer_terms_accepted_at: q.customer_terms_accepted_at,
-              customer_signature_name: q.customer_signature_name,
-              quote_attachment_path: q.quote_attachment_path,
-              quote_attachment_filename: q.quote_attachment_filename,
-              quote_external_url: q.quote_external_url,
-              invoiced_amount: q.invoiced_amount,
-              invoiced_number: q.invoiced_number,
-              invoiced_date: q.invoiced_date,
-              invoiced_file_path: q.invoiced_file_path,
-              commission_percentage: q.commission_percentage,
-              commission_amount: q.commission_amount,
-              commission_status: q.commission_status,
-              commission_invoiced_at: q.commission_invoiced_at,
-              created_at: q.created_at,
-              updated_at: q.updated_at,
-              partner: q.partner,
-            }));
-            setAccommodationQuotes(transformedQuotes);
-          }
-        }
+        const transformedQuotes: AccommodationQuote[] = ((payload.accommodationQuotes as any[]) || []).map((q: any) => ({
+          id: q.id,
+          request_id: q.request_id,
+          partner_id: q.partner_id,
+          accommodation_name: q.accommodation_name,
+          description: q.description,
+          room_configuration: q.room_configuration || [],
+          price_total: q.price_total,
+          price_per_person_per_night: q.price_per_person_per_night,
+          price_includes_vat: q.price_includes_vat ?? true,
+          vat_rate: q.vat_rate ?? 9,
+          includes: (q.includes as string[]) || [],
+          conditions: q.conditions,
+          valid_until: q.valid_until,
+          status: q.status,
+          submitted_at: q.submitted_at,
+          selected_at: q.selected_at,
+          partner_notes: q.partner_notes,
+          customer_terms_accepted_at: q.customer_terms_accepted_at,
+          customer_signature_name: q.customer_signature_name,
+          quote_attachment_path: q.quote_attachment_path,
+          quote_attachment_filename: q.quote_attachment_filename,
+          quote_attachment_url: q.quote_attachment_url ?? null,
+          quote_external_url: q.quote_external_url,
+          invoiced_amount: q.invoiced_amount,
+          invoiced_number: q.invoiced_number,
+          invoiced_date: q.invoiced_date,
+          invoiced_file_path: q.invoiced_file_path,
+          commission_percentage: q.commission_percentage,
+          commission_amount: q.commission_amount,
+          commission_status: q.commission_status,
+          commission_invoiced_at: q.commission_invoiced_at,
+          created_at: q.created_at,
+          updated_at: q.updated_at,
+          partner: q.partner,
+        }));
+        setAccommodationQuotes(transformedQuotes);
       } else {
         setAccommodation(null);
         setAccommodationQuotes([]);
       }
 
       const programWithItems: ProgramRequestWithItems = {
-        ...requestData,
-        selected_dates: requestData.selected_dates as string[],
-        origin: ((requestData as { origin?: string | null }).origin ?? 'self_service'),
-        quote_status: requestData.quote_status as QuoteStatus | null,
-        items: itemsWithImages as ProgramRequestItem[],
+        ...programData,
+        selected_dates: programData.selected_dates as string[],
+        origin: ((programData as { origin?: string | null }).origin ?? "self_service"),
+        quote_status: programData.quote_status as QuoteStatus | null,
+        items: visibleItems as ProgramRequestItem[],
       };
-
-      // If quote_pdf_path is set, fetch a signed URL via the edge function
-      if (requestData.quote_pdf_path) {
-        try {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          const response = await fetch(
-            `${supabaseUrl}/functions/v1/get-customer-program?token=${token}`,
-            { headers: { "apikey": supabaseKey } }
-          );
-          if (response.ok) {
-            const result = await response.json();
-            if (result.program?.quote_pdf_url) {
-              (programWithItems as any).quote_pdf_url = result.program.quote_pdf_url;
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching quote PDF URL:", err);
-        }
+      if (programData.quote_pdf_url) {
+        (programWithItems as any).quote_pdf_url = programData.quote_pdf_url;
       }
 
       setProgram(programWithItems);
-      setOriginalItems(JSON.parse(JSON.stringify(itemsData || [])));
-      setHistory((historyData || []) as ProgramRequestHistory[]);
+      setOriginalItems(JSON.parse(JSON.stringify(payload.rawItems || visibleItems)));
+      setHistory((payload.history || []) as ProgramRequestHistory[]);
+      setBillingLinesByItem(payload.billingLinesByItem || {});
+      setBlockVatRates(payload.blockVatRates || {});
+      setExtrasByQuoteId(payload.extrasByQuoteId || {});
     } catch (err) {
       console.error("Error fetching program:", err);
       setError("Er ging iets mis bij het ophalen van uw programma");
@@ -312,6 +256,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       setIsLoading(false);
     }
   }, [token]);
+
 
   useEffect(() => {
     fetchProgram();
