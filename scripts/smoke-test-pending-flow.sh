@@ -64,8 +64,29 @@ fi
 MODE="${MODE:-sequential}"
 FORMAT="${FORMAT:-text}"
 STRICT_EMAIL_LOG="${STRICT_EMAIL_LOG:-1}"
+RETRY_MAX="${RETRY_MAX:-3}"
+RETRY_BASE_DELAY="${RETRY_BASE_DELAY:-2}"
 [ "$MODE" = "sequential" ] || [ "$MODE" = "parallel" ] || { echo "❌ MODE moet sequential of parallel zijn"; exit 1; }
 [ "$FORMAT" = "text" ] || [ "$FORMAT" = "json" ] || { echo "❌ FORMAT moet text of json zijn"; exit 1; }
+
+# ---- Retry helper --------------------------------------------------------
+# with_retry "<label>" <cmd...>  → retried tot RETRY_MAX met exponentiële backoff.
+# Gebruikt voor transient netwerk-/edge-function fouten (5xx, timeouts).
+with_retry() {
+  local label="$1"; shift
+  local attempt=1 delay="$RETRY_BASE_DELAY"
+  while true; do
+    if "$@"; then return 0; fi
+    if [ "$attempt" -ge "$RETRY_MAX" ]; then
+      echo "  ❌ $label: ${attempt} pogingen mislukt, geef op."
+      return 1
+    fi
+    echo "  ⚠ $label: poging ${attempt}/${RETRY_MAX} faalde — wacht ${delay}s en retry…"
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
 
 # ---- Items parsen --------------------------------------------------------
 declare -a PAIRS=()
@@ -90,6 +111,48 @@ fi
 
 [ ${#PAIRS[@]} -gt 0 ] || { echo "❌ Geen items om te testen"; exit 1; }
 
+# ---- Preflight health-check ---------------------------------------------
+# Faalt FAST (vóór we iets schrijven) als:
+#   - Supabase REST API onbereikbaar is
+#   - publish-program-changes endpoint niet bestaat
+#   - één van de opgegeven ITEM_IDs niet bestaat in program_request_items
+# Zonder deze check zou een onbereikbare service alsnog rollback-bestanden
+# achterlaten — nu weten we vooraf dat de run kan slagen.
+echo "== Preflight =="
+if ! curl -fsS --max-time 10 "${SUPABASE_URL}/rest/v1/" \
+      -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY:-}" > /dev/null; then
+  echo "❌ REST API onbereikbaar: ${SUPABASE_URL}/rest/v1/"
+  exit 2
+fi
+echo "  ✅ REST API bereikbaar"
+
+# OPTIONS-call op edge function — verifieert dat hij gedeployed is.
+ef_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X OPTIONS \
+  "${SUPABASE_URL}/functions/v1/publish-program-changes" || echo "000")
+if [ "$ef_code" != "200" ] && [ "$ef_code" != "204" ]; then
+  echo "❌ Edge function publish-program-changes niet bereikbaar (HTTP $ef_code)"
+  exit 2
+fi
+echo "  ✅ Edge function publish-program-changes bereikbaar (HTTP $ef_code)"
+
+# Controleer dat elk item bestaat (vereist service-role)
+if [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+  for pair in "${PAIRS[@]}"; do
+    pf_item="${pair%%:*}"
+    found=$(curl -fsS --max-time 10 \
+      "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${pf_item}&select=id" \
+      -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+      -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" || echo "[]")
+    if [ "$found" = "[]" ]; then
+      echo "❌ Item $pf_item bestaat niet in program_request_items — controleer SMOKE_ITEM_ID."
+      exit 2
+    fi
+  done
+  echo "  ✅ Alle ${#PAIRS[@]} item(s) gevonden"
+else
+  echo "  ⚠ Geen SUPABASE_SERVICE_ROLE_KEY — sla item-existence-check over"
+fi
+
 # ---- Globale rollback registratie ---------------------------------------
 ROLLBACK_DIR=$(mktemp -d -t smoke-rollback-XXXXXX)
 ROLLBACK_DONE=0
@@ -111,13 +174,16 @@ rollback_all() {
     live=$(cat "$ROLLBACK_DIR/$item.live.json" 2>/dev/null || echo '{}')
     pending=$(cat "$ROLLBACK_DIR/$item.pending.json" 2>/dev/null || echo '{}')
     merged=$(python3 -c "import json,sys; a=json.loads(sys.argv[1]); b=json.loads(sys.argv[2]); a.update(b); print(json.dumps(a))" "$live" "$pending")
-    if curl -fsS -X PATCH \
+    do_rb_patch() {
+      curl -fsS --max-time 15 -X PATCH \
         "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${item}" \
         -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
         -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
         -H "Content-Type: application/json" \
         -H "Prefer: return=minimal" \
-        -d "$merged" > /dev/null; then
+        -d "$merged" > /dev/null
+    }
+    if with_retry "rollback $item" do_rb_patch; then
       echo "  ✅ $item hersteld"
     else
       echo "  ❌ $item PATCH faalde — handmatig: $ROLLBACK_DIR/$item.*"
@@ -203,23 +269,28 @@ run_one() {
   fi
 
   logp "STAP 2: pending_* zetten"
-  curl -fsS -X PATCH \
-    "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${item}" \
-    -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-    -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-    -H "Content-Type: application/json" \
-    -H "Prefer: return=minimal" \
-    -d '{
-      "pending_block_name":"Zeehondentocht (SMOKE)",
-      "pending_admin_price_override":42.42,
-      "pending_price_type":"per_person",
-      "pending_location_address":"SMOKE adres 99",
-      "pending_location_lat":53.30,
-      "pending_location_lng":5.10,
-      "pending_provider_name":"SMOKE Provider",
-      "pending_provider_id":"zeehonden",
-      "pending_changed_at":"now()"
-    }' > /dev/null
+  do_pending_patch() {
+    curl -fsS --max-time 15 -X PATCH \
+      "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${item}" \
+      -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+      -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+      -H "Content-Type: application/json" \
+      -H "Prefer: return=minimal" \
+      -d '{
+        "pending_block_name":"Zeehondentocht (SMOKE)",
+        "pending_admin_price_override":42.42,
+        "pending_price_type":"per_person",
+        "pending_location_address":"SMOKE adres 99",
+        "pending_location_lat":53.30,
+        "pending_location_lng":5.10,
+        "pending_provider_name":"SMOKE Provider",
+        "pending_provider_id":"zeehonden",
+        "pending_changed_at":"now()"
+      }' > /dev/null
+  }
+  if ! with_retry "$tag pending PATCH" do_pending_patch; then
+    status="fail"; reason="pending PATCH failed after retries"; write_result; return 1
+  fi
 
   logp "STAP 3: Verifieer LIVE ongewijzigd"
   local live_now
@@ -239,11 +310,16 @@ run_one() {
 
   logp "STAP 5: publish-program-changes (zonder mails)"
   local resp
-  resp=$(curl -fsS -X POST \
-    "${SUPABASE_URL}/functions/v1/publish-program-changes" \
-    -H "Authorization: Bearer ${ADMIN_JWT}" \
-    -H "Content-Type: application/json" \
-    -d "{\"requestId\":\"${request}\",\"notifyCustomer\":false,\"notifyPartnerIds\":[],\"adminNote\":\"smoke-test\",\"origin\":\"${SUPABASE_URL}\"}")
+  do_publish() {
+    resp=$(curl -fsS --max-time 30 -X POST \
+      "${SUPABASE_URL}/functions/v1/publish-program-changes" \
+      -H "Authorization: Bearer ${ADMIN_JWT}" \
+      -H "Content-Type: application/json" \
+      -d "{\"requestId\":\"${request}\",\"notifyCustomer\":false,\"notifyPartnerIds\":[],\"adminNote\":\"smoke-test\",\"origin\":\"${SUPABASE_URL}\"}")
+  }
+  if ! with_retry "$tag publish-program-changes" do_publish; then
+    status="fail"; reason="publish-program-changes failed after retries"; write_result; return 1
+  fi
   logp "Edge function: $resp"
 
   logp "STAP 6: Verifieer LIVE = nieuwe waardes & pending leeg"
