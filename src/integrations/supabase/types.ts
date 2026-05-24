@@ -2970,12 +2970,16 @@ export type Database = {
           highlight_features: Json | null
           id: string | null
           image_url: string | null
+          is_active: boolean | null
+          is_public: boolean | null
           location_description: string | null
           location_lat: number | null
           location_lng: number | null
           map_tenant_slug: string | null
           name: string | null
           partner_type: string | null
+          terms_pdf_path: string | null
+          uses_default_terms: boolean | null
           website_url: string | null
         }
         Insert: {
@@ -2986,12 +2990,16 @@ export type Database = {
           highlight_features?: Json | null
           id?: string | null
           image_url?: string | null
+          is_active?: boolean | null
+          is_public?: boolean | null
           location_description?: string | null
           location_lat?: number | null
           location_lng?: number | null
           map_tenant_slug?: string | null
           name?: string | null
           partner_type?: string | null
+          terms_pdf_path?: string | null
+          uses_default_terms?: boolean | null
           website_url?: string | null
         }
         Update: {
@@ -3002,12 +3010,16 @@ export type Database = {
           highlight_features?: Json | null
           id?: string | null
           image_url?: string | null
+          is_active?: boolean | null
+          is_public?: boolean | null
           location_description?: string | null
           location_lat?: number | null
           location_lng?: number | null
           map_tenant_slug?: string | null
           name?: string | null
           partner_type?: string | null
+          terms_pdf_path?: string | null
+          uses_default_terms?: boolean | null
           website_url?: string | null
         }
         Relationships: []
