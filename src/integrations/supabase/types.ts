@@ -1914,6 +1914,7 @@ export type Database = {
           is_active: boolean
           is_public: boolean
           kvk_number: string | null
+          last_dashboard_seen_at: string | null
           last_login_at: string | null
           location_description: string | null
           location_lat: number | null
@@ -1958,6 +1959,7 @@ export type Database = {
           is_active?: boolean
           is_public?: boolean
           kvk_number?: string | null
+          last_dashboard_seen_at?: string | null
           last_login_at?: string | null
           location_description?: string | null
           location_lat?: number | null
@@ -2002,6 +2004,7 @@ export type Database = {
           is_active?: boolean
           is_public?: boolean
           kvk_number?: string | null
+          last_dashboard_seen_at?: string | null
           last_login_at?: string | null
           location_description?: string | null
           location_lat?: number | null
@@ -3006,12 +3009,46 @@ export type Database = {
         }
         Relationships: []
       }
+      program_audit_log: {
+        Row: {
+          event_id: string | null
+          event_kind: string | null
+          item_id: string | null
+          occurred_at: string | null
+          payload: Json | null
+          request_id: string | null
+          subject: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       expire_stale_recommendations: { Args: never; Returns: undefined }
       get_invoicing_mode_for_accommodation: {
         Args: { _accommodation_request_id: string; _user_id: string }
         Returns: string
+      }
+      get_item_changelog: {
+        Args: { p_customer_token: string; p_item_id: string }
+        Returns: {
+          admin_note: string
+          field: string
+          new_value: Json
+          old_value: Json
+          published_at: string
+        }[]
+      }
+      get_partner_changes_since_last_seen: {
+        Args: { p_partner_id: string }
+        Returns: {
+          block_name: string
+          field: string
+          item_id: string
+          new_value: Json
+          old_value: Json
+          published_at: string
+          request_id: string
+        }[]
       }
       get_partner_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -3046,6 +3083,11 @@ export type Database = {
       partner_has_published_block: {
         Args: { _partner_id: string }
         Returns: boolean
+      }
+      scan_stale_pending_changes: { Args: never; Returns: number }
+      touch_partner_last_seen: {
+        Args: { p_partner_id: string }
+        Returns: string
       }
     }
     Enums: {
