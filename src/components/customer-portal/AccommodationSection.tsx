@@ -479,6 +479,7 @@ export const AccommodationSection = ({
                   setContactDialogOpen(true);
                 } : undefined}
                 formatPrice={formatPrice}
+                extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
               />
             );
           })}
