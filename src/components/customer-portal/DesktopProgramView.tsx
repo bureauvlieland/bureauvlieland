@@ -288,6 +288,7 @@ export const DesktopProgramView = ({
                 <AccommodationSection
                   accommodation={accommodation}
                   quotes={accommodationQuotes}
+                  extrasByQuoteId={accommodationExtrasByQuoteId}
                   onSelectQuote={onSelectAccommodationQuote}
                   selectedDates={selectedDates}
                   onEditAccommodation={onOpenEdit}
