@@ -247,6 +247,7 @@ export default function AccommodationQuotes() {
         hasSelectedQuote={hasSelectedQuote}
         numberOfGuests={request.number_of_guests}
         numberOfNights={numberOfNights}
+        extrasOverride={selectedQuoteForDetails ? (extrasByQuoteId[selectedQuoteForDetails.id] ?? []) : undefined}
       />
 
       {/* Confirmation dialog */}
