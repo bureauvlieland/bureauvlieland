@@ -75,6 +75,8 @@ export const CustomerProgramItem = ({
   numberOfPeople,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { token: customerToken } = useParams<{ token: string }>();
+
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [localAccepting, setLocalAccepting] = useState(false);
   const [localApproving, setLocalApproving] = useState(false);
