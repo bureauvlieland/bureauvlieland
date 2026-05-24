@@ -118,6 +118,7 @@ interface DesktopProgramViewProps {
   // Accommodation
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
+  accommodationExtrasByQuoteId?: Record<string, any[]>;
   onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
