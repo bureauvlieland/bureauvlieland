@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AccommodationQuote } from '@/types/accommodation';
 import { useQuoteExtras } from '@/hooks/useQuoteExtras';
-import { calculateExtrasTotal, EXTRA_CATEGORY_ICONS } from '@/types/accommodationExtras';
+import { calculateExtrasTotal, EXTRA_CATEGORY_ICONS, type AccommodationQuoteExtra } from '@/types/accommodationExtras';
 
 interface AccommodationQuoteCardProps {
   quote: AccommodationQuote;
@@ -16,6 +16,7 @@ interface AccommodationQuoteCardProps {
   onViewDetails: () => void;
   isSelecting?: boolean;
   hasSelectedQuote: boolean;
+  extrasOverride?: AccommodationQuoteExtra[];
 }
 
 export function AccommodationQuoteCard({
@@ -26,13 +27,15 @@ export function AccommodationQuoteCard({
   onViewDetails,
   isSelecting,
   hasSelectedQuote,
+  extrasOverride,
 }: AccommodationQuoteCardProps) {
   const isSelected = quote.status === 'selected';
   const validUntil = new Date(quote.valid_until);
   const isExpired = isPast(validUntil);
   const includes = quote.includes || [];
   
-  const { data: extras = [] } = useQuoteExtras(quote.id);
+  const { data: extrasFromHook = [] } = useQuoteExtras(extrasOverride ? undefined : quote.id);
+  const extras = extrasOverride ?? extrasFromHook;
   const extrasTotal = calculateExtrasTotal(extras);
   const grandTotal = quote.price_total + extrasTotal;
 
