@@ -916,5 +916,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     accommodationQuotes,
     accommodationSummary,
     selectAccommodationQuote,
+    // Server-resolved data for portal consumers
+    billingLinesByItem,
+    blockVatRates,
+    extrasByQuoteId,
   };
+
 };
