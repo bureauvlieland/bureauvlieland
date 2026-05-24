@@ -1,112 +1,112 @@
-## Doel
 
-Stop met onaangekondigde live-wijzigingen in klant- en partnerportals. Admin-aanpassingen aan een programma worden lokaal verzameld als "pending changes" en pas live + per mail gecommuniceerd nadat jij in één keer op **Publiceer & notificeer** klikt.
+# Security fix plan — 17 bevindingen
 
-## Huidige situatie
+## Bevindingen-overzicht
 
-- Admin past tijd/dag/notitie aan in `AdminRequestDetail` → directe `update()` op `program_request_items`.
-- Klant- en partnerportals lezen live uit dezelfde tabel → wijziging meteen zichtbaar.
-- Geen mail bij admin-edits. Alleen klant-acties triggeren `update-customer-program`.
+| # | Severity | Finding | Root cause |
+|---|---|---|---|
+| 1 | error | `chat_conversations` / `chat_messages` token-bypass | RLS checkt alleen `source_token IS NOT NULL`, geen vergelijking met caller-token |
+| 2 | error | `program_requests` anon full exposure | RLS checkt alleen `expires_at > now()` |
+| 3 | error | `program_request_items` + `_history` + `program_item_billing_lines` anon exposure | Idem |
+| 4 | error | `accommodation_requests` anon exposure | Idem (zelfde policy) |
+| 5 | error | `partners` bank/MAP-key publiek | Drie SELECT-policies returnen alle kolommen |
+| 6 | error | `accommodation-quote-attachments` bucket publiek leesbaar voor anon | Geen path/token-restrictie |
+| 7 | warn  | `accepted_terms_log` anon exposure | Zelfde expires_at-flaw |
+| 8 | warn  | `app_settings` volledig publiek | `USING true` |
+| 9 | warn  | Realtime broadcasts zonder channel-auth | Geen RLS op `realtime.messages` |
+| 10 | warn | `partner-invoices` bucket leesbaar voor élke ingelogde user | Te brede SELECT |
+| 11 | warn | `initial_password` plaintext in DB | Wordt opgeslagen i.p.v. eenmalig getoond |
+| 12 | warn | Plaintext password in invite-e-mail | Wordt direct meegestuurd i.p.v. magic-link |
+| 13 | warn | Voorspelbaar wachtwoord `Vlieland-XXXX` (9 000 combinaties) | Zwakke generator |
+| 14 | warn | Anon kan SECURITY DEFINER-functies executen | Geen `REVOKE EXECUTE` |
+| 15 | warn | Authenticated kan SECURITY DEFINER-functies executen | Idem |
+| 16 | warn | Extension in `public` schema | Standaard install-locatie |
+| 17 | warn | Leaked-password-protection uit | Auth-setting |
+| 18 | warn | Public bucket allows listing | `storage.objects` SELECT op public bucket |
 
-## Aanpak in het kort
+## Architecturale beslissing
 
-Pending-laag bovenop de bestaande items. Wijzigingen worden opgeslagen in twee nieuwe kolommen (`pending_*`) zonder de live-kolommen (`preferred_time`, `confirmed_time`, `day_index`, etc.) te raken. Portals blijven de live-kolommen tonen. Een centrale "Wijzigingen"-balk in admin laat zien wat er klaarstaat. Eén knop publiceert alles tegelijk én verstuurt gebundelde mails.
+De échte fix voor (1–4, 7) is: alle anonieme portal-reads gaan via **edge functions** (service-role) die het customer/partner-token serverside valideren. De RLS op de onderliggende tabellen wordt daarna `admins + service_role + ingelogde eigenaar`. Anon-rol krijgt **geen** SELECT meer.
 
-## Scope
+We hebben al `get-customer-program`, `update-customer-program`, `get-partner-dashboard`, `select-accommodation-quote`, `accept-quote-proposal`. Wat nu nog direct vanuit de client met de anon-key gequeried wordt en gemigreerd moet worden:
 
-In scope: tijd, dag-volgorde, klant-notitie, toegevoegde/verwijderde items, aantal personen-override.
-Buiten scope (gaat al via eigen flow): prijswijziging, status-transities, ferry/bike tickets, accommodatie-quotes.
+| Bestand | Tabel(len) | Migratie-doel |
+|---|---|---|
+| `src/pages/SharedProgram.tsx` | `program_requests` | nieuwe edge: `get-shared-program` (token in URL → returnt veilige projectie) |
+| `src/pages/ProgrammaOpMaat.tsx` | `program_requests` | bestaande `send-program-request` of nieuwe `get-program-by-token` |
+| `src/pages/AccommodationQuotes.tsx` + `useAccommodationQuotes.ts` | `accommodation_requests` + quotes | nieuwe edge: `get-accommodation-portal` (token → request + quotes + extras) |
+| `src/pages/Partners.tsx` | `partners` (publieke directory) | gebruik de bestaande `partners_public` view ipv tabel |
+| `src/components/customer-portal/AcceptTermsCard.tsx` | `partners` (read partner_name) | via edge of via `partners_public` |
+| `src/hooks/useCustomerProgram.ts` | `program_requests`, `program_request_items`, `accommodation_requests` | volledig via `get-customer-program` (al deels) |
+| `src/hooks/useItemBillingLines.ts` | `program_request_items` | edge of admin-only |
+| `src/hooks/useChat.ts` + `useAccommodationChat.ts` | `chat_conversations`, `chat_messages` | nieuwe edges `get-chat`, `post-chat-message` met token-check + Realtime subscribe via channel-auth |
 
-## Datamodel
+## Uitvoering in 4 batches
 
-Nieuwe kolommen op `program_request_items`:
+### Batch A — Quick wins (geen breekrisico, ~20 min)
+1. **HIBP aanzetten** via `configure_auth` (#17).
+2. **Weak temp password** → vervang `Vlieland-XXXX` door 16-byte base64-url generator in `invite-partner`, `bulk-invite-partners`, `resend-partner-invitation`, `admin-reset-partner-password` (#13).
+3. **`app_settings`** → drop `USING true`, voeg `is_public boolean default false` kolom toe, markeer huidige bekende publieke keys (`tourist_tax`, `nature_contribution`, `commission_pct`, etc.), nieuwe policy: `USING (is_public = true OR is_admin(auth.uid()))` (#8).
+4. **`partner-invoices` bucket** → drop bestaande SELECT-policy, nieuwe policies: admin + service_role + partner-folder-match (#10).
+5. **SECURITY DEFINER REVOKE** → `REVOKE EXECUTE ... FROM anon, authenticated` op functies die niet bewust publiek hoeven (#14, #15). Inventarisatie eerst.
+6. **Extension in public** → `ALTER EXTENSION ... SET SCHEMA extensions` voor non-Supabase-managed extensions (#16).
+7. **Public bucket allows listing** → audit publieke buckets, voeg `USING false` toe op `storage.objects` voor listing-flow waar niet gewenst (#18).
 
-- `pending_preferred_time time` 
-- `pending_day_index int`
-- `pending_customer_notes text`
-- `pending_override_people int`
-- `pending_marked_for_removal boolean default false`
-- `pending_added boolean default false` (voor net toegevoegde items die nog niet live mogen)
-- `pending_changed_at timestamptz`
-- `pending_changed_by uuid`
+### Batch B — RLS lockdown sensitive data (medium breekrisico)
+1. **`partners` tabel** (#5):
+   - Maak (of update) `partners_public` view met alleen: `id, name, slug, description, image_url, website, sort_order` etc. — NIET: bank_iban, bank_account_name, map_api_key, partner_token, commission_*, email, contact_email, phone, kvk_number.
+   - Drop 3 "Public can view" policies op `partners`.
+   - Update `src/pages/Partners.tsx` en `MapActivityCard`/`MapActivityDetailSheet` om de view te gebruiken.
+   - Update `AcceptTermsCard.tsx`.
+2. **`accommodation-quote-attachments` bucket** (#6):
+   - Drop "Public can read quote attachments".
+   - Nieuwe policies: admin + service_role + owning partner (`storage.foldername(name)[1] = get_partner_id(auth.uid())`).
+   - Customer-portal toegang: signed URL via bestaande `get-customer-program` of nieuwe edge.
+3. **`accepted_terms_log`** (#7): drop "Terms logs readable via program request"; admin-only SELECT. Customer hoeft 'm niet client-side te lezen — log-only.
 
-Plus per `program_requests`:
+### Batch C — Anon-portal-reads via edge functions (hoog breekrisico, grootste batch)
+1. Nieuwe edge `get-shared-program` → vervang query in `SharedProgram.tsx`.
+2. Nieuwe edge `get-program-by-token` → vervang query in `ProgrammaOpMaat.tsx`.
+3. Nieuwe edge `get-accommodation-portal` (token → request + quotes + extras + history) → vervang `useAccommodationQuotes.ts` + `AccommodationQuotes.tsx`.
+4. Migreer `useCustomerProgram.ts` resterende directe queries naar `get-customer-program`.
+5. Verplaats `useItemBillingLines.ts` lookup naar `get-customer-program` payload, of nieuwe edge.
+6. **Daarna de RLS-flip** (één migratie):
+   - `program_requests`: drop "Public can view programs via token". Behoud admin + service_role; voeg partner-via-quote als nodig.
+   - `program_request_items`, `program_request_history`, `program_item_billing_lines`: drop anon SELECT.
+   - `accommodation_requests`: drop "Accommodation readable via active program".
+   - `accommodation_quotes`: drop "Quotes readable via request".
+   - `accommodation_quote_extras`: drop "Customers read submitted quote extras".
 
-- `pending_changes_summary jsonb default '[]'` — wordt gebruld door de "Publiceer & notificeer"-dialoog (bevat snapshot van old → new per veld voor mail-body).
-- `last_published_at timestamptz`
+### Batch D — Chat lockdown + Realtime auth + plaintext passwords (hoog risico, langste werk)
+1. **Chat (#1, #9)**:
+   - Nieuwe edges `chat-get` (token → conversation + messages), `chat-post-message` (token + content), `chat-mark-read`.
+   - Vervang `useChat.ts` + `useAccommodationChat.ts` directe queries.
+   - Drop "Visitors can read own conversations via token" + "Messages readable via conversation token". Behoud admin + partner.
+   - Voor Realtime: maak `realtime.messages` RLS-policy die topic-naam matched aan een token-claim (subscribe via signed channel-token); óf vervang Realtime door polling/SSE via edge function als channel-auth te complex is.
+2. **Plaintext password (#11, #12)**:
+   - Nieuwe `partner_invitations` tabel: `partner_id`, `token_hash`, `expires_at`, `used_at`.
+   - Edge `invite-partner` / `bulk` / `resend`: maak token, sla hash op, mail magic-link `https://bureauvlieland.nl/partner/set-password?token=…`.
+   - Nieuwe pagina + edge `partner-set-initial-password` valideert hash, zet wachtwoord, markeert used.
+   - Drop kolom `partners.initial_password` na migratie; verwijder UI-display in `AdminPartnerDetail.tsx`.
 
-Nieuwe tabel `program_change_log` (voor changelog/audit):
+## Technische details — RLS-pattern voor token-checks (indien we later toch klant-portal client-side queries willen)
+```sql
+-- Token uit JWT-claim of session-var ipv harde URL-param
+CREATE POLICY "..." ON program_requests FOR SELECT TO anon
+USING (
+  customer_token = current_setting('request.jwt.claims', true)::jsonb->>'token'
+  AND expires_at > now()
+);
+```
+We kiezen bewust voor **edge functions ipv claim-based**, omdat we al edge functions hebben en het simpeler is: niet elk client-component hoeft een JWT te krijgen.
 
-- `id, request_id, item_id, field, old_value, new_value, changed_at, changed_by, published_at, notified_emails text[]`
+## Volgorde + go/no-go-punten
+- Batch A in 1 commit → vraag bevestiging.
+- Batch B in 1 commit → smoke test Partners-pagina, map, quote-attachment-download.
+- Batch C in 2 commits (eerst edges + client-migratie, dan RLS-flip) → smoke test customer-portal, shared-program-link, accommodation-portal.
+- Batch D in 2 commits (eerst chat, dan magic-link) → smoke test chatwidget, partner-invite-flow.
 
-## Admin UI
+Bij elk commit blijft de scanner-finding vanzelf verdwijnen in de volgende run.
 
-1. **Edit-gedrag wijzigt**: in `AdminRequestDetail` schrijft `handleSaveTime` (en vergelijkbare handlers voor dag/notitie/personen) voortaan naar `pending_*` kolommen i.p.v. de live kolommen. Geen `status_note`, geen `customer_approved_at` reset.
-2. **Visuele markering**: items met pending changes krijgen een gele "ongepubliceerd"-badge + tooltip met old → new. Live waarde blijft erboven, pending eronder in kleiner.
-3. **Sticky topbalk** op de detailpagina zodra er ≥1 pending change is:
-   `[3 wijzigingen klaar]  [Bekijk]  [Verwerp wijzigingen]  [Publiceer & notificeer →]`
-4. **Publiceer-dialoog** (nieuwe component `PublishChangesDialog`):
-   - Lijst van wijzigingen (per item: wat verandert)
-   - Per ontvanger een checkbox vooraf aangevinkt:
-     - Klant (`customer_email`) — altijd zichtbaar
-     - Per betrokken partner één regel met partner-naam + `contact_email`, alleen voor items waar die partner bij betrokken is
-   - Optioneel vrij tekstveld "Toelichting in mail"
-   - Knop **Publiceer & verstuur** → roept nieuwe edge function aan
-
-## Edge function `publish-program-changes`
-
-Service-role function. Input: `requestId`, `notifyCustomer: bool`, `notifyPartnerIds: string[]`, `adminNote?: string`.
-
-1. Lees alle items met niet-null pending_* of pending_marked_for_removal/added.
-2. Bouw per-ontvanger een changeset (klant ziet alle items; partner ziet alleen zijn eigen items).
-3. Promoot pending → live in één transactie:
-   - `preferred_time = pending_preferred_time` (en confirmed_time clear policy volgens bestaande regels in `update-customer-program`)
-   - `day_index = pending_day_index`
-   - `customer_notes = pending_customer_notes`
-   - `override_people = pending_override_people`
-   - DELETE waar `pending_marked_for_removal = true`
-   - clear `pending_added` flag
-   - clear alle `pending_*`
-4. Append rows naar `program_change_log` met `published_at = now()`.
-5. Update `program_requests.last_published_at`, leeg `pending_changes_summary`.
-6. Render twee mail-templates:
-   - **`program-changes-customer`** (formeel, "u") — overzicht alle wijzigingen + admin-toelichting + portallink.
-   - **`program-changes-partner`** (informeel, "je") — alleen relevante items voor die partner, géén klant-PII (volgt bestaande privacy-regels).
-7. Verstuur via Mailjet in batch zoals `update-customer-program` doet.
-8. Log via `logEmail()` met verplichte `metadata.template_name` + `metadata.actor: "admin_publish_changes"` (volgens Email Logging Contract).
-
-## Verwerp-flow
-
-"Verwerp wijzigingen" → één RPC die alle `pending_*` velden naar NULL zet voor de request en pending_added items hard-delete't. Geen mails, geen log-entries.
-
-## Edge cases
-
-- **Pending op item dat ondertussen door klant is gewijzigd** (race): bij publiceren detecteer conflict (live waarde ≠ snapshot waar pending op gebaseerd was) → dialoog toont conflict-rij met "overschrijven of bewaren?".
-- **Pending op item dat al `confirmed_time` heeft van partner**: publiceren = nieuwe tijd, clear `confirmed_time`, item gaat terug naar "in afstemming" zoals nu ook gebeurt in `update-customer-program`.
-- **Partner heeft geen `contact_email`**: regel grijs + checkbox uit, met hint "geen e-mail bekend".
-- **Geen ontvangers aangevinkt**: knop wordt "Publiceer zonder mail" met bevestiging — er wordt nog steeds gelogd in `program_change_log`.
-- **Ferry/bike items en bureau-interne items** (`block_type = 'bureau'`): wel zichtbaar in pending-lijst, maar bij default uitgevinkt voor partner-notificatie (consistent met bestaande visibility-regels).
-
-## Bestanden
-
-- Migratie: nieuwe kolommen + `program_change_log` tabel + RLS (admin all, customer/partner read-only via bestaande request-tokens).
-- `supabase/functions/publish-program-changes/index.ts` (nieuw).
-- `supabase/functions/_shared/email-templates.ts`: twee nieuwe templates.
-- `src/pages/admin/AdminRequestDetail.tsx`: handlers naar pending_* schrijven, sticky balk renderen.
-- `src/components/admin/PublishChangesDialog.tsx` (nieuw).
-- `src/components/admin/PendingChangeBadge.tsx` (nieuw, kleine UI helper).
-- `src/hooks/usePendingChanges.ts` (nieuw, aggregeert per request).
-
-## Niet doen
-
-- Bestaande klant-flow (`update-customer-program`) niet aanraken — klant blijft direct publiceren bij eigen acties.
-- Geen wijziging aan ferry/Doeksen-API logica.
-- Geen bulk-mail of marketing — strikt transactioneel per request.
-- Geen change in bestaande prijs-notificaties (`notify-partner-price-change` / `notify-customer-price-change`).
-
-## Verificatie
-
-- Tijd-edit in admin → portal toont oude tijd, badge verschijnt in admin.
-- Publiceer → portal toont nieuwe tijd, klant + relevante partner krijgen één mail met alle wijzigingen, `email_log` heeft 2 entries met juiste `template_name`.
-- Verwerp-knop reset alles zonder mail.
-- Tweede edit na publiceren start nieuwe pending-batch.
+## Buiten-scope / accepteren
+- Geen, alle 17 worden geadresseerd.
