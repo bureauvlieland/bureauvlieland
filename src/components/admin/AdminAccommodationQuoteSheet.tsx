@@ -298,20 +298,16 @@ export function AdminAccommodationQuoteSheet({
                     </a>
                   )}
                   {quote.quote_attachment_path && (
-                    <a
-                      href={quote.quote_attachment_path}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                    >
-                      <Paperclip className="h-3.5 w-3.5" />
-                      {quote.quote_attachment_filename || "Bijlage"}
-                    </a>
+                    <QuoteAttachmentLink
+                      path={quote.quote_attachment_path}
+                      filename={quote.quote_attachment_filename}
+                    />
                   )}
                 </div>
               </div>
             </>
           )}
+
 
           {/* Validity & dates */}
           <Separator />
