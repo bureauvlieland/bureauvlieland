@@ -188,13 +188,11 @@ export const CustomerProgramItem = ({
                 )}
               </Button>
             </CollapsibleTrigger>
-            {(() => {
-              const { token } = useParams<{ token: string }>();
-              return token ? (
-                <CustomerItemChangelog itemId={item.id} customerToken={token} />
-              ) : null;
-            })()}
+            {customerToken && (
+              <CustomerItemChangelog itemId={item.id} customerToken={customerToken} />
+            )}
           </div>
+
 
           
           {/* Meta row */}
