@@ -125,6 +125,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
         partner: q.partner as unknown as AccommodationQuote['partner'],
       }));
       setQuotes(transformedQuotes);
+      setExtrasByQuoteId((payload.extrasByQuoteId as Record<string, AccommodationQuoteExtra[]>) || {});
     } catch (err) {
       console.error('Error in useAccommodationQuotes:', err);
       setError(err instanceof Error ? err.message : 'Onbekende fout');
