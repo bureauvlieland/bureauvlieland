@@ -70,6 +70,7 @@ const CustomerProgram = () => {
     // Accommodation
     accommodation,
     accommodationQuotes,
+    extrasByQuoteId,
     selectAccommodationQuote,
   } = useCustomerProgram(token || "");
 
