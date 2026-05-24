@@ -60,13 +60,13 @@ const SharedProgram = () => {
         if (!data) {
           // Fallback: legacy email links used /programma/:customer_token.
           // The customer portal lives at /mijn-programma/:token — redirect if match.
-          const { data: pr } = await supabase
-            .from('program_requests')
-            .select('customer_token')
-            .eq('customer_token', shareCode)
-            .maybeSingle();
-          if (pr?.customer_token) {
-            setRedirectToken(pr.customer_token);
+          // Lookup goes through an edge function so we don't expose program_requests to anon.
+          const { data: resolved } = await supabase.functions.invoke(
+            "resolve-customer-token",
+            { body: { token: shareCode } },
+          );
+          if (resolved?.exists) {
+            setRedirectToken(shareCode);
             setLoading(false);
             return;
           }
