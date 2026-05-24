@@ -186,7 +186,14 @@ export const CustomerProgramItem = ({
                 )}
               </Button>
             </CollapsibleTrigger>
+            {(() => {
+              const { token } = useParams<{ token: string }>();
+              return token ? (
+                <CustomerItemChangelog itemId={item.id} customerToken={token} />
+              ) : null;
+            })()}
           </div>
+
           
           {/* Meta row */}
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
