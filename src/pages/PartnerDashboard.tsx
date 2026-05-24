@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerActionBanner } from "@/components/partner-portal/PartnerActionBanner";
+import { PartnerChangesSinceBanner } from "@/components/partner-portal/PartnerChangesSinceBanner";
+
 import { PartnerCompactStats, type StatType } from "@/components/partner-portal/PartnerCompactStats";
 import { PartnerYtdModule } from "@/components/partner-portal/PartnerYtdModule";
 import { PartnerUnifiedList } from "@/components/partner-portal/PartnerUnifiedList";
