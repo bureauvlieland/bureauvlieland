@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AccommodationRequest, AccommodationQuote, RoomConfiguration } from '@/types/accommodation';
+import type { AccommodationQuoteExtra } from '@/types/accommodationExtras';
 
 interface QuotesSummary {
   total: number;
@@ -11,6 +12,7 @@ interface QuotesSummary {
 interface UseAccommodationQuotesReturn {
   request: AccommodationRequest | null;
   quotes: AccommodationQuote[];
+  extrasByQuoteId: Record<string, AccommodationQuoteExtra[]>;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
