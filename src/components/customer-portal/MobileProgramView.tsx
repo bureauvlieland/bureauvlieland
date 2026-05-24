@@ -157,6 +157,7 @@ export const MobileProgramView = ({
   onAddActivity,
   accommodation,
   accommodationQuotes,
+  accommodationExtrasByQuoteId,
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
