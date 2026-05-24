@@ -204,7 +204,7 @@ export function AccommodationQuoteDetailSheet({
           )}
 
           {/* External quote link & attachment */}
-          {(quote.quote_external_url || quote.quote_attachment_path) && (
+          {(quote.quote_external_url || quote.quote_attachment_url) && (
             <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg space-y-3">
               <h4 className="font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -221,9 +221,9 @@ export function AccommodationQuoteDetailSheet({
                   Bekijk de online offerte →
                 </a>
               )}
-              {quote.quote_attachment_path && (
+              {quote.quote_attachment_url && (
                 <a 
-                  href={quote.quote_attachment_path}
+                  href={quote.quote_attachment_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
@@ -234,6 +234,7 @@ export function AccommodationQuoteDetailSheet({
               )}
             </div>
           )}
+
 
           {/* Partner notes */}
           {quote.partner_notes && (
