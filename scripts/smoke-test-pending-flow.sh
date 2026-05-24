@@ -88,6 +88,36 @@ with_retry() {
   done
 }
 
+# ---- Auto-bootstrap voor CI (Batch 5 #5 + #6) ----------------------------
+# Als CI_FIXTURE_SECRET gezet is en ITEMS/ITEM_ID ontbreekt: vraag
+# ensure-smoke-test-fixture om een self-healing testitem en zet ITEM_ID/
+# REQUEST_ID. Als ADMIN_JWT ontbreekt: vraag mint-ci-admin-jwt om een
+# korte-levensduur admin token.
+if [ -n "${CI_FIXTURE_SECRET:-}" ]; then
+  if [ -z "${ITEMS:-}" ] && [ -z "${ITEM_ID:-}" ]; then
+    echo "== Bootstrap fixture via ensure-smoke-test-fixture =="
+    fixture=$(curl -fsS --max-time 15 -X POST \
+      -H "x-ci-secret: ${CI_FIXTURE_SECRET}" \
+      "${SUPABASE_URL}/functions/v1/ensure-smoke-test-fixture") || {
+        echo "❌ Kan testfixture niet ophalen"; exit 2; }
+    ITEM_ID=$(echo "$fixture" | sed -n 's/.*"item_id":"\([^"]*\)".*/\1/p')
+    REQUEST_ID=$(echo "$fixture" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
+    [ -n "$ITEM_ID" ] && [ -n "$REQUEST_ID" ] || { echo "❌ Fixture response ongeldig: $fixture"; exit 2; }
+    echo "  ✅ Fixture: ITEM_ID=$ITEM_ID REQUEST_ID=$REQUEST_ID"
+  fi
+  if [ -z "${ADMIN_JWT:-}" ]; then
+    echo "== Mint korte-levensduur ADMIN_JWT =="
+    minted=$(curl -fsS --max-time 15 -X POST \
+      -H "x-ci-secret: ${CI_FIXTURE_SECRET}" \
+      "${SUPABASE_URL}/functions/v1/mint-ci-admin-jwt") || {
+        echo "❌ Kan admin JWT niet minten"; exit 2; }
+    ADMIN_JWT=$(echo "$minted" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+    [ -n "$ADMIN_JWT" ] || { echo "❌ Minted token ontbreekt in response: $minted"; exit 2; }
+    export ADMIN_JWT
+    echo "  ✅ ADMIN_JWT gemint (${#ADMIN_JWT} chars)"
+  fi
+fi
+
 # ---- Items parsen --------------------------------------------------------
 declare -a PAIRS=()
 if [ -n "${ITEMS:-}" ]; then
@@ -105,11 +135,12 @@ elif [ -n "${ITEM_ID:-}" ] && [ -n "${ITEM_ID:-}" ]; then
   : "${REQUEST_ID:?REQUEST_ID env var ontbreekt}"
   PAIRS+=("${ITEM_ID}:${REQUEST_ID}")
 else
-  echo "❌ Geef ITEMS=\"id1:req1 id2:req2\" of ITEM_ID=... REQUEST_ID=..."
+  echo "❌ Geef ITEMS=\"id1:req1 id2:req2\" of ITEM_ID=... REQUEST_ID=... (of CI_FIXTURE_SECRET)"
   exit 1
 fi
 
 [ ${#PAIRS[@]} -gt 0 ] || { echo "❌ Geen items om te testen"; exit 1; }
+
 
 # ---- Preflight health-check ---------------------------------------------
 # Faalt FAST (vóór we iets schrijven) als:
