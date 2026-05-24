@@ -21,6 +21,11 @@ interface PriceSummaryCardProps {
   termsAccepted?: boolean;
   selectedAccommodationQuote?: AccommodationQuote | null;
   invoicingMode?: string;
+  // Pre-resolved data from get-customer-program edge function (preferred path).
+  // When provided, falls back from anon DB hooks (needed once anon SELECT is removed).
+  billingLinesByItem?: Record<string, any[]>;
+  blockVatRates?: Record<string, number>;
+  accommodationExtrasOverride?: any[];
 }
 
 const calcVatBreakdown = (amountInclVat: number, vatRate: number = 21) => ({
@@ -37,20 +42,31 @@ export const PriceSummaryCard = ({
   termsAccepted = false,
   selectedAccommodationQuote,
   invoicingMode,
+  billingLinesByItem: billingLinesByItemProp,
+  blockVatRates: blockVatRatesProp,
+  accommodationExtrasOverride,
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
 
-  // Fetch definitive billing lines per item (admin-defined split-VAT lines + extras like koffie/thee)
+  // Prefer server-resolved data; only call the hook when not provided (admin/back-office contexts).
   const itemIds = useMemo(() => items.map(i => i.id), [items]);
-  const { linesByItem } = useItemBillingLinesBatch(itemIds);
+  const { linesByItem: linesByItemFromHook } = useItemBillingLinesBatch(
+    billingLinesByItemProp ? [] : itemIds,
+  );
+  const linesByItem = billingLinesByItemProp ?? linesByItemFromHook;
 
-  // Fetch lodging extras (breakfast, lunch, diner, etc.) for selected accommodation
-  const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);
+  // Fetch lodging extras for selected accommodation - prefer override prop
+  const { data: extrasFromHook = [] } = useQuoteExtras(
+    accommodationExtrasOverride ? undefined : selectedAccommodationQuote?.id,
+  );
+  const accommodationExtras = accommodationExtrasOverride ?? extrasFromHook;
 
-  // Fetch VAT rates per building block (fallback when no billing lines)
+
+  // Fetch VAT rates per building block (fallback when prop not provided)
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   useEffect(() => {
+    if (blockVatRatesProp) return;
     const blockIds = items.map(i => i.block_id).filter(Boolean) as string[];
     if (blockIds.length === 0) return;
     supabase
@@ -64,14 +80,17 @@ export const PriceSummaryCard = ({
           setVatRateMap(map);
         }
       });
-  }, [items]);
+  }, [items, blockVatRatesProp]);
 
+  const effectiveVatRates = blockVatRatesProp ?? vatRateMap;
   const getItemVatRate = (item: ProgramRequestItem): number => {
-    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
-      return vatRateMap[item.block_id];
+    if (item.block_id && effectiveVatRates[item.block_id] !== undefined) {
+      return effectiveVatRates[item.block_id];
     }
     return 21;
   };
+
+
 
   const formatPrice = (amount: number) =>
     amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

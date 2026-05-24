@@ -5,8 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ACCOMMODATION_ATTACHMENT_BUCKET = "accommodation-quote-attachments";
+const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -18,7 +20,7 @@ Deno.serve(async (req) => {
     if (!token) {
       return new Response(
         JSON.stringify({ error: "Token is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -26,13 +28,12 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch program request with linked accommodation
-    // invoicing_mode is already included via * selector
+    // 1) Program request
     const { data: program, error: programError } = await supabase
       .from("program_requests")
       .select(`
         *,
-        linked_accommodation:accommodation_requests!program_requests_linked_accommodation_id_fkey(
+        linked_accommodation_lite:accommodation_requests!program_requests_linked_accommodation_id_fkey(
           id,
           customer_token,
           reference_number,
@@ -51,11 +52,11 @@ Deno.serve(async (req) => {
     if (programError || !program) {
       return new Response(
         JSON.stringify({ error: "Program not found or expired" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Log customer portal view (fire-and-forget, non-blocking)
+    // Fire-and-forget audit log entries
     supabase.from("program_request_history").insert({
       request_id: program.id,
       action: "customer_portal_viewed",
@@ -63,8 +64,6 @@ Deno.serve(async (req) => {
       actor_name: program.customer_name,
       notes: "Klant heeft het portaal bezocht",
     }).then(() => {});
-
-    // Log quote_opened when customer views an active quote (fire-and-forget)
     if (program.quote_sent_at) {
       supabase.from("program_request_history").insert({
         request_id: program.id,
@@ -75,65 +74,154 @@ Deno.serve(async (req) => {
       }).then(() => {});
     }
 
-    // Fetch items
+    // 2) Items
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
       .select("*")
       .eq("request_id", program.id)
       .order("day_index", { ascending: true })
       .order("preferred_time", { ascending: true, nullsFirst: false });
+    if (itemsError) throw itemsError;
+    const itemList = items || [];
+    const itemIds = itemList.map((i: any) => i.id);
 
-    if (itemsError) {
-      throw itemsError;
-    }
-
-    // Enrich items with descriptions from building_blocks
-    let enrichedItems = items || [];
-    const blockIds = (items || []).map((i: any) => i.block_id).filter(Boolean);
+    // 3) Enrich items with building_blocks data (image_url, image_asset, descriptions, external_url)
+    const blockIds = Array.from(new Set(itemList.map((i: any) => i.block_id).filter(Boolean)));
+    let blockMap: Record<string, any> = {};
     if (blockIds.length > 0) {
       const { data: blocks } = await supabase
         .from("building_blocks")
-        .select("id, short_description, description")
+        .select("id, image_url, image_asset, short_description, description, external_url, vat_rate")
         .in("id", blockIds);
-      if (blocks) {
-        const blockMap = Object.fromEntries(blocks.map((b: any) => [b.id, b]));
-        enrichedItems = (items || []).map((item: any) => {
-          const block = item.block_id ? blockMap[item.block_id] : null;
-          return {
-            ...item,
-            block_short_description: block?.short_description || null,
-            block_description: block?.description || null,
-          };
-        });
+      blockMap = Object.fromEntries((blocks || []).map((b: any) => [b.id, b]));
+    }
+    const enrichedItems = itemList.map((item: any) => {
+      const block = item.block_id ? blockMap[item.block_id] : null;
+      return {
+        ...item,
+        image_url: block?.image_url || null,
+        image_asset: block?.image_asset || null,
+        block_short_description: block?.short_description || null,
+        block_description: block?.description || null,
+        external_url: block?.external_url || item.external_url || null,
+      };
+    });
+    const blockVatRates: Record<string, number> = {};
+    for (const [bid, b] of Object.entries(blockMap)) {
+      blockVatRates[bid] = (b as any)?.vat_rate ?? 21;
+    }
+
+    // 4) Billing lines, grouped by item_id
+    let billingLinesByItem: Record<string, any[]> = {};
+    if (itemIds.length > 0) {
+      const { data: linesData } = await supabase
+        .from("program_item_billing_lines")
+        .select("*")
+        .in("item_id", itemIds)
+        .order("sort_order", { ascending: true });
+      for (const line of linesData || []) {
+        const arr = billingLinesByItem[(line as any).item_id] || [];
+        arr.push(line);
+        billingLinesByItem[(line as any).item_id] = arr;
       }
     }
 
-    // Fetch accepted terms log (if terms have been accepted)
+    // 5) History
+    const { data: historyData } = await supabase
+      .from("program_request_history")
+      .select("*")
+      .eq("request_id", program.id)
+      .order("created_at", { ascending: false });
+
+    // 6) Accepted terms log (if applicable)
     let acceptedTerms: any[] = [];
     if (program.terms_accepted_at) {
-      const { data: termsData, error: termsError } = await supabase
+      const { data: termsData } = await supabase
         .from("accepted_terms_log")
         .select("*")
         .eq("request_id", program.id)
         .order("created_at", { ascending: true });
-
-      if (!termsError && termsData) {
-        acceptedTerms = termsData;
-      }
+      acceptedTerms = termsData || [];
     }
 
-    // Generate signed URL for quote PDF if available
+    // 7) Quote PDF signed URL
     let quotePdfUrl: string | null = null;
     if (program.quote_pdf_path) {
       try {
-        const { data: signedData, error: signedError } = await supabase.storage
+        const { data: signedData } = await supabase.storage
           .from("quote-documents")
-          .createSignedUrl(program.quote_pdf_path, 3600); // 1 hour
-        if (!signedError && signedData?.signedUrl) {
-          quotePdfUrl = signedData.signedUrl;
-        }
+          .createSignedUrl(program.quote_pdf_path, SIGNED_URL_TTL_SECONDS);
+        quotePdfUrl = signedData?.signedUrl ?? null;
       } catch (err) {
         console.error("Error generating signed URL for quote PDF:", err);
+      }
+    }
+
+    // 8) Linked accommodation + quotes (with signed attachment URLs + extras + sanitized partner)
+    let linkedAccommodation: any = null;
+    let accommodationQuotes: any[] = [];
+    let extrasByQuoteId: Record<string, any[]> = {};
+    if (program.linked_accommodation_id) {
+      const { data: accomData } = await supabase
+        .from("accommodation_requests")
+        .select("*")
+        .eq("id", program.linked_accommodation_id)
+        .maybeSingle();
+      linkedAccommodation = accomData || null;
+
+      if (accomData) {
+        const { data: quotesData } = await supabase
+          .from("accommodation_quotes")
+          .select(`
+            *,
+            partner:partners(
+              id, name, website_url,
+              address_street, address_postal, address_city,
+              location_lat, location_lng, location_description,
+              gallery_images, about_text, highlight_features,
+              terms_pdf_path, uses_default_terms
+            )
+          `)
+          .eq("request_id", accomData.id)
+          .in("status", ["submitted", "selected", "expired", "declined"])
+          .order("price_per_person_per_night", { ascending: true });
+
+        const quoteIds: string[] = (quotesData || []).map((q: any) => q.id);
+        if (quoteIds.length > 0) {
+          const { data: extrasData } = await supabase
+            .from("accommodation_quote_extras")
+            .select("*")
+            .in("quote_id", quoteIds)
+            .order("sort_order", { ascending: true });
+          for (const ex of extrasData || []) {
+            const arr = extrasByQuoteId[(ex as any).quote_id] || [];
+            arr.push(ex);
+            extrasByQuoteId[(ex as any).quote_id] = arr;
+          }
+        }
+
+        accommodationQuotes = await Promise.all(
+          (quotesData || []).map(async (q: any) => {
+            let signedUrl: string | null = null;
+            const path = q.quote_attachment_path;
+            if (path) {
+              if (/^https?:\/\//i.test(path)) {
+                signedUrl = path;
+              } else {
+                const { data: signed, error: signErr } = await supabase
+                  .storage
+                  .from(ACCOMMODATION_ATTACHMENT_BUCKET)
+                  .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+                if (signErr) {
+                  console.error("sign url error", path, signErr);
+                } else {
+                  signedUrl = signed?.signedUrl ?? null;
+                }
+              }
+            }
+            return { ...q, quote_attachment_url: signedUrl };
+          }),
+        );
       }
     }
 
@@ -142,17 +230,24 @@ Deno.serve(async (req) => {
         program: {
           ...program,
           items: enrichedItems,
-          acceptedTerms: acceptedTerms,
+          acceptedTerms,
           quote_pdf_url: quotePdfUrl,
         },
+        rawItems: itemList,
+        history: historyData || [],
+        billingLinesByItem,
+        blockVatRates,
+        linkedAccommodation,
+        accommodationQuotes,
+        extrasByQuoteId,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error fetching customer program:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
