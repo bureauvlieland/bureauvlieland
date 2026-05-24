@@ -28,31 +28,29 @@ export default function AccommodationQuotes() {
         return;
       }
 
-      // Find the accommodation request by its customer_token
-      const { data: accRequest, error } = await supabase
-        .from('accommodation_requests')
-        .select(`
-          id,
-          linked_program_id,
-          linked_program:program_requests!accommodation_requests_linked_program_id_fkey(customer_token)
-        `)
-        .eq('customer_token', token)
-        .maybeSingle();
+      // Look up the accommodation request via the secure edge function
+      const { data: payload, error } = await supabase.functions.invoke(
+        'get-accommodation-portal',
+        { body: { token } },
+      );
 
-      if (error) {
-        console.error('Error checking accommodation redirect:', error);
+      if (error || !payload || payload.error) {
+        console.error('Error checking accommodation redirect:', error || payload?.error);
         setIsRedirecting(false);
         return;
       }
 
+      const linkedProgramToken = payload.request?.linked_program?.customer_token;
+
       // If there's a linked program, redirect to the unified URL
-      if (accRequest?.linked_program?.customer_token) {
-        navigate(`/mijn-programma/${accRequest.linked_program.customer_token}`, { replace: true });
+      if (linkedProgramToken) {
+        navigate(`/mijn-programma/${linkedProgramToken}`, { replace: true });
         return;
       }
 
       // No linked program found, show the legacy page
       setIsRedirecting(false);
+
     };
 
     checkAndRedirect();
