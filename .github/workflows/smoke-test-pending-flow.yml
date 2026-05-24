@@ -73,9 +73,51 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run smoke test (rollback via trap is altijd actief)
-        run: ./scripts/smoke-test-pending-flow.sh
+        id: smoke
+        env:
+          FORMAT: json
+        run: |
+          mkdir -p smoke-artifacts
+          # Splits stdout: voor de JSON-marker → console-log; daarna → result.json.
+          set +e
+          ./scripts/smoke-test-pending-flow.sh | tee smoke-artifacts/full-output.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          # Extract JSON-blok (alles na de "---- JSON RESULT ----" marker)
+          awk '/---- JSON RESULT ----/{f=1;next} f' smoke-artifacts/full-output.txt > smoke-artifacts/result.json || true
+          exit "$rc"
+
+      - name: Write GitHub step summary
+        if: always()
+        run: |
+          {
+            echo "## 🔁 Pending publish-flow smoke-test"
+            echo ""
+            if [ -s smoke-artifacts/result.json ]; then
+              total=$(jq -r '.total' smoke-artifacts/result.json)
+              passed=$(jq -r '.passed' smoke-artifacts/result.json)
+              failed=$(jq -r '.failed' smoke-artifacts/result.json)
+              skipped=$(jq -r '.skipped' smoke-artifacts/result.json)
+              echo "| Totaal | ✅ Passed | ❌ Failed | ⏭ Skipped |"
+              echo "|---|---|---|---|"
+              echo "| $total | $passed | $failed | $skipped |"
+              echo ""
+              echo "### Per item"
+              jq -r '.items[] | "- \(.item_id[0:8]) — **\(.status)**" + (if .reason != "" then " — \(.reason)" else "" end) + " · email_log delta: \(.email_log_delta)"' smoke-artifacts/result.json
+            else
+              echo "_Geen JSON-result beschikbaar — zie logs._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: smoke-artifacts/
+          retention-days: 14
 
       - name: Notify on failure
         if: failure()
         run: |
-          echo "::error::Smoke-test pending publish flow gefaald. Bekijk logs hierboven; rollback is automatisch uitgevoerd door scripts/smoke-test-pending-flow.sh (trap EXIT)."
+          echo "::error::Smoke-test pending publish flow gefaald. Bekijk logs en de geüploade artifact 'smoke-test-results'. Rollback is automatisch uitgevoerd door scripts/smoke-test-pending-flow.sh (trap EXIT)."
