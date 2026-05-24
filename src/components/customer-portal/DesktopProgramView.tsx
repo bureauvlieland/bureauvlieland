@@ -161,6 +161,7 @@ export const DesktopProgramView = ({
   onAddActivity,
   accommodation,
   accommodationQuotes,
+  accommodationExtrasByQuoteId,
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
