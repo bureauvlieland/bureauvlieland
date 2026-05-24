@@ -57,7 +57,12 @@ interface UseCustomerProgramReturn {
   accommodationQuotes: AccommodationQuote[];
   accommodationSummary: AccommodationSummary;
   selectAccommodationQuote: (quoteId: string) => Promise<boolean>;
+  // Server-resolved data for portal consumers (avoids extra anon DB reads)
+  billingLinesByItem: Record<string, any[]>;
+  blockVatRates: Record<string, number>;
+  extrasByQuoteId: Record<string, any[]>;
 }
+
 
 export interface PendingChange {
   type: "time_changed" | "day_changed" | "notes_changed" | "removed" | "added" | "people_changed";
