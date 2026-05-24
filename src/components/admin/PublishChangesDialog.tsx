@@ -268,19 +268,60 @@ export function PublishChangesDialog({
             <Label className="text-sm font-medium">
               {pendingItems.length} wijziging{pendingItems.length !== 1 ? "en" : ""}
             </Label>
-            <ScrollArea className="mt-2 max-h-48 rounded-md border p-3">
-              <ul className="space-y-2 text-sm">
-                {pendingItems.map((it) => (
-                  <li key={it.id}>
-                    <div className="font-medium">{it.block_name}</div>
-                    <ul className="ml-3 list-disc text-muted-foreground">
-                      {describeChange(it).map((l, idx) => (
-                        <li key={idx}>{l}</li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
+            <ScrollArea className="mt-2 max-h-64 rounded-md border">
+              <div className="divide-y">
+                {pendingItems.map((it) => {
+                  const rows = diffRows(it);
+                  return (
+                    <div key={it.id} className="p-3 text-sm">
+                      <div className="mb-2 font-medium">{it.block_name}</div>
+                      {rows.length === 0 ? (
+                        <div className="text-xs text-muted-foreground">Geen velddiffs</div>
+                      ) : (
+                        <div className="space-y-1">
+                          {rows.map((r, idx) => {
+                            if (r.kind === "added")
+                              return (
+                                <div key={idx} className="text-emerald-700 dark:text-emerald-400">
+                                  + Toegevoegd aan programma
+                                </div>
+                              );
+                            if (r.kind === "removed")
+                              return (
+                                <div key={idx} className="text-destructive">
+                                  − Geannuleerd
+                                </div>
+                              );
+                            return (
+                              <div
+                                key={idx}
+                                className="grid grid-cols-[120px_1fr_auto_1fr] items-center gap-2"
+                              >
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {r.label}
+                                </span>
+                                <span className="truncate rounded bg-muted/50 px-2 py-0.5 text-xs line-through decoration-muted-foreground/40">
+                                  {r.before}
+                                </span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                <span
+                                  className={`truncate rounded px-2 py-0.5 text-xs font-medium ${
+                                    r.warn
+                                      ? "bg-amber-500/20 text-amber-900 dark:text-amber-200"
+                                      : "bg-emerald-500/15 text-emerald-900 dark:text-emerald-200"
+                                  }`}
+                                >
+                                  {r.after}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </ScrollArea>
           </div>
 
