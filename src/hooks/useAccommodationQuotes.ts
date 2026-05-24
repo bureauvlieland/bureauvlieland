@@ -23,6 +23,7 @@ interface UseAccommodationQuotesReturn {
 export function useAccommodationQuotes(token: string | undefined): UseAccommodationQuotesReturn {
   const [request, setRequest] = useState<AccommodationRequest | null>(null);
   const [quotes, setQuotes] = useState<AccommodationQuote[]>([]);
+  const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, AccommodationQuoteExtra[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
