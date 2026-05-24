@@ -118,6 +118,7 @@ interface DesktopProgramViewProps {
   // Accommodation
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
+  accommodationExtrasByQuoteId?: Record<string, any[]>;
   onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
@@ -160,6 +161,7 @@ export const DesktopProgramView = ({
   onAddActivity,
   accommodation,
   accommodationQuotes,
+  accommodationExtrasByQuoteId,
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
@@ -286,6 +288,7 @@ export const DesktopProgramView = ({
                 <AccommodationSection
                   accommodation={accommodation}
                   quotes={accommodationQuotes}
+                  extrasByQuoteId={accommodationExtrasByQuoteId}
                   onSelectQuote={onSelectAccommodationQuote}
                   selectedDates={selectedDates}
                   onEditAccommodation={onOpenEdit}

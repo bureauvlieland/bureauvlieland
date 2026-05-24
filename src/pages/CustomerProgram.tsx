@@ -70,6 +70,7 @@ const CustomerProgram = () => {
     // Accommodation
     accommodation,
     accommodationQuotes,
+    extrasByQuoteId,
     selectAccommodationQuote,
   } = useCustomerProgram(token || "");
 
@@ -387,6 +388,7 @@ const CustomerProgram = () => {
     // Accommodation
     accommodation,
     accommodationQuotes,
+    accommodationExtrasByQuoteId: extrasByQuoteId,
     onSelectAccommodationQuote: selectAccommodationQuote,
     // Quote proposal
     onAcceptQuoteProposal: acceptQuoteProposal,

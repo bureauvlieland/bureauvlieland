@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AccommodationRequest, AccommodationQuote, RoomConfiguration } from '@/types/accommodation';
+import type { AccommodationQuoteExtra } from '@/types/accommodationExtras';
 
 interface QuotesSummary {
   total: number;
@@ -11,6 +12,7 @@ interface QuotesSummary {
 interface UseAccommodationQuotesReturn {
   request: AccommodationRequest | null;
   quotes: AccommodationQuote[];
+  extrasByQuoteId: Record<string, AccommodationQuoteExtra[]>;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -21,6 +23,7 @@ interface UseAccommodationQuotesReturn {
 export function useAccommodationQuotes(token: string | undefined): UseAccommodationQuotesReturn {
   const [request, setRequest] = useState<AccommodationRequest | null>(null);
   const [quotes, setQuotes] = useState<AccommodationQuote[]>([]);
+  const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, AccommodationQuoteExtra[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +125,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
         partner: q.partner as unknown as AccommodationQuote['partner'],
       }));
       setQuotes(transformedQuotes);
+      setExtrasByQuoteId((payload.extrasByQuoteId as Record<string, AccommodationQuoteExtra[]>) || {});
     } catch (err) {
       console.error('Error in useAccommodationQuotes:', err);
       setError(err instanceof Error ? err.message : 'Onbekende fout');
@@ -167,6 +171,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
   return {
     request,
     quotes,
+    extrasByQuoteId,
     isLoading,
     error,
     refetch: fetchData,

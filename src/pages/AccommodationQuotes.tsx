@@ -59,6 +59,7 @@ export default function AccommodationQuotes() {
   const {
     request,
     quotes,
+    extrasByQuoteId,
     isLoading,
     error,
     refetch,
@@ -193,6 +194,7 @@ export default function AccommodationQuotes() {
                   onViewDetails={() => setSelectedQuoteForDetails(quote)}
                   isSelecting={isSelecting && selectedQuoteForConfirm?.id === quote.id}
                   hasSelectedQuote={hasSelectedQuote}
+                  extrasOverride={extrasByQuoteId[quote.id] ?? []}
                 />
               ))}
             </div>
@@ -245,6 +247,7 @@ export default function AccommodationQuotes() {
         hasSelectedQuote={hasSelectedQuote}
         numberOfGuests={request.number_of_guests}
         numberOfNights={numberOfNights}
+        extrasOverride={selectedQuoteForDetails ? (extrasByQuoteId[selectedQuoteForDetails.id] ?? []) : undefined}
       />
 
       {/* Confirmation dialog */}

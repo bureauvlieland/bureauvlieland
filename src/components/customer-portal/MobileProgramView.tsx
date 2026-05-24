@@ -116,6 +116,7 @@ interface MobileProgramViewProps {
   // Accommodation
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
+  accommodationExtrasByQuoteId?: Record<string, any[]>;
   onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
@@ -156,6 +157,7 @@ export const MobileProgramView = ({
   onAddActivity,
   accommodation,
   accommodationQuotes,
+  accommodationExtrasByQuoteId,
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
@@ -309,6 +311,7 @@ export const MobileProgramView = ({
           <AccommodationSection
             accommodation={accommodation}
             quotes={accommodationQuotes}
+            extrasByQuoteId={accommodationExtrasByQuoteId}
             onSelectQuote={onSelectAccommodationQuote}
             selectedDates={selectedDates}
             onEditAccommodation={onOpenEdit}

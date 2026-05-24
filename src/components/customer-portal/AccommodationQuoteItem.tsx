@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
-import { calculateExtraTotal, calculateExtrasTotal, EXTRA_CATEGORY_LABELS } from "@/types/accommodationExtras";
+import { calculateExtraTotal, calculateExtrasTotal, EXTRA_CATEGORY_LABELS, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
 import type { AccommodationQuote } from "@/types/accommodation";
 
 interface AccommodationQuoteItemProps {
@@ -30,6 +30,7 @@ interface AccommodationQuoteItemProps {
   onSelect: () => void;
   onContact?: () => void;
   formatPrice: (price: number) => string;
+  extrasOverride?: AccommodationQuoteExtra[];
 }
 
 export const AccommodationQuoteItem = ({
@@ -39,9 +40,11 @@ export const AccommodationQuoteItem = ({
   onSelect,
   onContact,
   formatPrice,
+  extrasOverride,
 }: AccommodationQuoteItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { data: extras = [] } = useQuoteExtras(quote.id);
+  const { data: extrasFromHook = [] } = useQuoteExtras(extrasOverride ? undefined : quote.id);
+  const extras = extrasOverride ?? extrasFromHook;
 
   const extrasTotal = calculateExtrasTotal(extras);
   const grandTotal = quote.price_total + extrasTotal;
