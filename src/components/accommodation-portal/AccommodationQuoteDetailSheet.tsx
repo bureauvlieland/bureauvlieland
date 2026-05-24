@@ -16,7 +16,8 @@ import { useQuoteExtras } from '@/hooks/useQuoteExtras';
 import { 
   calculateExtraTotal, 
   calculateExtrasTotal, 
-  EXTRA_CATEGORY_ICONS 
+  EXTRA_CATEGORY_ICONS,
+  type AccommodationQuoteExtra,
 } from '@/types/accommodationExtras';
 
 interface AccommodationQuoteDetailSheetProps {
@@ -28,6 +29,7 @@ interface AccommodationQuoteDetailSheetProps {
   hasSelectedQuote: boolean;
   numberOfGuests: number;
   numberOfNights: number;
+  extrasOverride?: AccommodationQuoteExtra[];
 }
 
 export function AccommodationQuoteDetailSheet({
@@ -39,6 +41,7 @@ export function AccommodationQuoteDetailSheet({
   hasSelectedQuote,
   numberOfGuests,
   numberOfNights,
+  extrasOverride,
 }: AccommodationQuoteDetailSheetProps) {
   if (!quote) return null;
 
@@ -54,7 +57,8 @@ export function AccommodationQuoteDetailSheet({
   const roomConfig = quote.room_configuration || [];
   const includes = quote.includes || [];
   
-  const { data: extras = [] } = useQuoteExtras(quote.id);
+  const { data: extrasFromHook = [] } = useQuoteExtras(extrasOverride ? undefined : quote.id);
+  const extras = extrasOverride ?? extrasFromHook;
   const extrasTotal = calculateExtrasTotal(extras);
   const grandTotal = quote.price_total + extrasTotal;
 
