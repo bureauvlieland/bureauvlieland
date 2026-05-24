@@ -174,13 +174,16 @@ rollback_all() {
     live=$(cat "$ROLLBACK_DIR/$item.live.json" 2>/dev/null || echo '{}')
     pending=$(cat "$ROLLBACK_DIR/$item.pending.json" 2>/dev/null || echo '{}')
     merged=$(python3 -c "import json,sys; a=json.loads(sys.argv[1]); b=json.loads(sys.argv[2]); a.update(b); print(json.dumps(a))" "$live" "$pending")
-    if curl -fsS -X PATCH \
+    do_rb_patch() {
+      curl -fsS --max-time 15 -X PATCH \
         "${SUPABASE_URL}/rest/v1/program_request_items?id=eq.${item}" \
         -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
         -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
         -H "Content-Type: application/json" \
         -H "Prefer: return=minimal" \
-        -d "$merged" > /dev/null; then
+        -d "$merged" > /dev/null
+    }
+    if with_retry "rollback $item" do_rb_patch; then
       echo "  ✅ $item hersteld"
     else
       echo "  ❌ $item PATCH faalde — handmatig: $ROLLBACK_DIR/$item.*"
