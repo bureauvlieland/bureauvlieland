@@ -437,6 +437,44 @@ export function PublishChangesDialog({
               rows={3}
             />
           </div>
+
+          {dryRunResult && (
+            <div className="rounded-md border border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="mb-2 flex items-center gap-2 font-medium">
+                <Eye className="h-4 w-4" />
+                Dry-run resultaat
+                {dryRunResult.test_mode && (
+                  <Badge variant="outline" className="ml-1 text-xs">TEST</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Niets is gepubliceerd of verzonden. Dit is wat er bij echte publicatie zou gebeuren:
+              </p>
+              <div className="mt-2 space-y-1">
+                <div className="text-xs">
+                  <span className="font-medium">{dryRunResult.would_publish}</span> item(s) worden
+                  geüpdatet.
+                </div>
+                {dryRunResult.would_email.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">Geen mails zouden uitgaan.</div>
+                ) : (
+                  <ul className="space-y-0.5 text-xs">
+                    {dryRunResult.would_email.map((r, idx) => (
+                      <li key={idx}>
+                        <span className="font-medium">
+                          {r.kind === "customer" ? "Klant" : r.partnerName ?? "Partner"}
+                        </span>{" "}
+                        → <code className="text-[11px]">{r.email}</code>{" "}
+                        <span className="text-muted-foreground">
+                          ({r.change_count} wijziging{r.change_count !== 1 ? "en" : ""})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
@@ -445,10 +483,23 @@ export function PublishChangesDialog({
               ? `${totalRecipients} mail${totalRecipients !== 1 ? "s" : ""}`
               : "Geen mail"}
           </Badge>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing || dryRunLoading}>
             Annuleren
           </Button>
-          <Button onClick={handlePublish} disabled={publishing || hasBlocking}>
+          <Button
+            variant="secondary"
+            onClick={handleDryRun}
+            disabled={publishing || dryRunLoading || hasBlocking}
+            title="Toon wat er gepubliceerd en verstuurd zou worden, zonder iets te wijzigen"
+          >
+            {dryRunLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="mr-2 h-4 w-4" />
+            )}
+            Dry-run
+          </Button>
+          <Button onClick={handlePublish} disabled={publishing || dryRunLoading || hasBlocking}>
             {publishing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
