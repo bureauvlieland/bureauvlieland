@@ -3,10 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 
 type ItemWithBlockId = { block_id: string | null };
 
-export const useItemVatRates = <T extends ItemWithBlockId>(items: T[]) => {
+/**
+ * Resolves VAT rates per building block id.
+ *
+ * In the public customer portal we can no longer SELECT directly on
+ * `building_blocks`. The caller (CustomerProgram → ProgramView) passes the
+ * `blockVatRates` map already returned by the `get-customer-program` edge
+ * function. In admin/back-office contexts the override is omitted and we fall
+ * back to the original anon-key fetch.
+ */
+export const useItemVatRates = <T extends ItemWithBlockId>(
+  items: T[],
+  overrideMap?: Record<string, number>,
+) => {
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
+    if (overrideMap) return;
     const blockIds = items.map(i => i.block_id).filter(Boolean) as string[];
     if (blockIds.length === 0) return;
     supabase
@@ -20,15 +33,16 @@ export const useItemVatRates = <T extends ItemWithBlockId>(items: T[]) => {
           setVatRateMap(map);
         }
       });
-  }, [items]);
+  }, [items, overrideMap]);
+
+  const effectiveMap = overrideMap ?? vatRateMap;
 
   const getItemVatRate = useCallback((item: ItemWithBlockId): number => {
-    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
-      return vatRateMap[item.block_id];
+    if (item.block_id && effectiveMap[item.block_id] !== undefined) {
+      return effectiveMap[item.block_id];
     }
     return 21;
-  }, [vatRateMap]);
+  }, [effectiveMap]);
 
-  return { vatRateMap, getItemVatRate };
+  return { vatRateMap: effectiveMap, getItemVatRate };
 };
-
