@@ -311,6 +311,7 @@ export const MobileProgramView = ({
           <AccommodationSection
             accommodation={accommodation}
             quotes={accommodationQuotes}
+            extrasByQuoteId={accommodationExtrasByQuoteId}
             onSelectQuote={onSelectAccommodationQuote}
             selectedDates={selectedDates}
             onEditAccommodation={onOpenEdit}
