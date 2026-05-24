@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerActionBanner } from "@/components/partner-portal/PartnerActionBanner";
+import { PartnerChangesSinceBanner } from "@/components/partner-portal/PartnerChangesSinceBanner";
+
 import { PartnerCompactStats, type StatType } from "@/components/partner-portal/PartnerCompactStats";
 import { PartnerYtdModule } from "@/components/partner-portal/PartnerYtdModule";
 import { PartnerUnifiedList } from "@/components/partner-portal/PartnerUnifiedList";
@@ -662,6 +664,12 @@ const PartnerDashboardContent = () => {
         </div>
 
         {/* Action banner — alleen bij urgente acties (tegenvoorstel/prijswijziging/te factureren) */}
+        <PartnerChangesSinceBanner
+          changes={(data as any)?.changesSinceLastSeen}
+          previousLastSeenAt={(data as any)?.previousLastSeenAt}
+        />
+
+        {/* Action banner — alleen bij urgente acties (tegenvoorstel/prijswijziging/te factureren) */}
         <PartnerActionBanner
           urgentCount={counterProposedCount + priceChangePendingCount}
           toInvoiceCount={toInvoiceCount}
@@ -674,6 +682,7 @@ const PartnerDashboardContent = () => {
             }
           }}
         />
+
 
         {/* Stats + YTD in grid */}
         <div className="grid gap-4 lg:grid-cols-[1fr_300px]">

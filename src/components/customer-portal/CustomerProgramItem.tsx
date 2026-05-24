@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { CustomerItemChangelog } from "./CustomerItemChangelog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +75,8 @@ export const CustomerProgramItem = ({
   numberOfPeople,
 }: CustomerProgramItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { token: customerToken } = useParams<{ token: string }>();
+
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [localAccepting, setLocalAccepting] = useState(false);
   const [localApproving, setLocalApproving] = useState(false);
@@ -183,7 +188,12 @@ export const CustomerProgramItem = ({
                 )}
               </Button>
             </CollapsibleTrigger>
+            {customerToken && (
+              <CustomerItemChangelog itemId={item.id} customerToken={customerToken} />
+            )}
           </div>
+
+
           
           {/* Meta row */}
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
