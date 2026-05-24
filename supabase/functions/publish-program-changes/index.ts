@@ -119,12 +119,14 @@ Deno.serve(async (req) => {
       notifyPartnerIds = [],
       adminNote = "",
       origin,
+      dryRun = false,
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
       notifyPartnerIds?: string[];
       adminNote?: string;
       origin?: string;
+      dryRun?: boolean;
     };
 
     if (!requestId) {
