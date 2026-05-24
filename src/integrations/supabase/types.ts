@@ -703,6 +703,7 @@ export type Database = {
           category: string
           description: string | null
           id: string
+          is_public: boolean
           label: string
           updated_at: string
           updated_by: string | null
@@ -713,6 +714,7 @@ export type Database = {
           category: string
           description?: string | null
           id: string
+          is_public?: boolean
           label: string
           updated_at?: string
           updated_by?: string | null
@@ -723,6 +725,7 @@ export type Database = {
           category?: string
           description?: string | null
           id?: string
+          is_public?: boolean
           label?: string
           updated_at?: string
           updated_by?: string | null
