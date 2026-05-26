@@ -393,7 +393,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
               </div>
             </div>
 
-            {!isBureauCentral && (
+            {!isBureauCentral && !isConceptProject && (
               <div className="grid sm:grid-cols-2 gap-3 text-sm border-t pt-4">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -418,82 +418,104 @@ const PartnerProjectContent = ({ mode }: Props) => {
               </div>
             )}
 
-            {isBureauCentral && <BureauCentralBadge variant="compact" />}
+            {isBureauCentral && !isConceptProject && <BureauCentralBadge variant="compact" />}
 
-          <GuestDetailsBlock
-            guestNames={req.guest_names}
-            dietaryNotes={req.dietary_notes}
-          />
+            {!isConceptProject && (
+              <GuestDetailsBlock
+                guestNames={req.guest_names}
+                dietaryNotes={req.dietary_notes}
+              />
+            )}
 
           </Card>
 
           {/* Items + chat in 2-col layout */}
-          <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+          <div className={cn("grid gap-6", !isConceptProject && "lg:grid-cols-[1fr_400px]")}>
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
-              {projectItems.map((item) => (
-                <PartnerProjectItemRow
-                  key={item.id}
-                  item={item}
-                  onStatusUpdate={async (status, note, qPrice, qNotes, pTime, pDate) => {
-                    setSelectedItem(item);
-                    // Ensure selectedItem state is set before edge call uses it
-                    return await (async () => {
-                      // Inline the status update against this specific item
-                      if (!partnerToken) return false;
-                      try {
-                        const response = await fetch(
-                          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-partner-item-status`,
-                          {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-                            },
-                            body: JSON.stringify({
-                              partnerToken,
-                              itemId: item.id,
-                              status,
-                              statusNote: note,
-                              quotedPrice: qPrice,
-                              quotedNotes: qNotes,
-                              proposedTime: pTime,
-                              proposedDate: pDate,
-                            }),
-                          }
-                        );
-                        if (!response.ok) throw new Error("Failed");
-                        toast({ title: "Status bijgewerkt" });
-                        await refetch();
-                        return true;
-                      } catch {
-                        toast({ title: "Fout", description: "Kon status niet bijwerken.", variant: "destructive" });
-                        return false;
-                      }
-                    })();
-                  }}
-                  onRegisterInvoice={() => {
-                    setSelectedItem(item);
-                    setShowInvoiceDialog(true);
-                  }}
-                  onOpenDetails={() => {
-                    setSelectedItem(item);
-                    setShowSheet(true);
-                  }}
-                />
-              ))}
+              {isConceptProject ? (
+                <Card className="divide-y">
+                  {projectItems.map((item) => (
+                    <div key={item.id} className="flex items-start gap-3 p-4 opacity-70">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{item.block_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.duration ?? "—"}
+                          {item.preferred_time && ` · voorkeur ${item.preferred_time}`}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="border-dashed shrink-0">
+                        Concept
+                      </Badge>
+                    </div>
+                  ))}
+                </Card>
+              ) : (
+                projectItems.map((item) => (
+                  <PartnerProjectItemRow
+                    key={item.id}
+                    item={item}
+                    onStatusUpdate={async (status, note, qPrice, qNotes, pTime, pDate) => {
+                      setSelectedItem(item);
+                      return await (async () => {
+                        if (!partnerToken) return false;
+                        try {
+                          const response = await fetch(
+                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-partner-item-status`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                              },
+                              body: JSON.stringify({
+                                partnerToken,
+                                itemId: item.id,
+                                status,
+                                statusNote: note,
+                                quotedPrice: qPrice,
+                                quotedNotes: qNotes,
+                                proposedTime: pTime,
+                                proposedDate: pDate,
+                              }),
+                            }
+                          );
+                          if (!response.ok) throw new Error("Failed");
+                          toast({ title: "Status bijgewerkt" });
+                          await refetch();
+                          return true;
+                        } catch {
+                          toast({ title: "Fout", description: "Kon status niet bijwerken.", variant: "destructive" });
+                          return false;
+                        }
+                      })();
+                    }}
+                    onRegisterInvoice={() => {
+                      setSelectedItem(item);
+                      setShowInvoiceDialog(true);
+                    }}
+                    onOpenDetails={() => {
+                      setSelectedItem(item);
+                      setShowSheet(true);
+                    }}
+                  />
+                ))
+              )}
             </div>
 
-            <div className="lg:sticky lg:top-6 lg:self-start">
-              <ProjectChatPanel
-                partnerId={partnerId}
-                partnerName={partnerName}
-                partnerEmail={partnerEmail}
-                requestId={id}
-              />
-            </div>
+            {!isConceptProject && (
+              <div className="lg:sticky lg:top-6 lg:self-start">
+                <ProjectChatPanel
+                  partnerId={partnerId}
+                  partnerName={partnerName}
+                  partnerEmail={partnerEmail}
+                  requestId={id}
+                />
+              </div>
+            )}
           </div>
         </div>
+
 
         <PartnerItemSheet
           item={selectedItem}
