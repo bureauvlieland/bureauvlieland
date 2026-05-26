@@ -39,6 +39,7 @@ const beginHier: NavItem[] = [
 // "Verken het aanbod"
 const verkenItems: NavItem[] = [
   { label: "Alle bouwstenen", href: "/bouwstenen" },
+  { label: "Losse activiteit aanvragen", href: "/snel-aanvragen" },
   { label: "Catering", href: "/catering" },
   { label: "Evenementen", href: "/evenementen" },
   { label: "Activiteiten boeken", href: "/activiteiten-boeken" },

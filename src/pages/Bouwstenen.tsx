@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { Loader2, ArrowRight, Search, Info, Clock, Users, MapPin } from "lucide-react";
+import { Loader2, Search, Info, Clock, Users, MapPin } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -96,9 +96,21 @@ const Bouwstenen = () => {
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-3">
               Alle bouwstenen
             </h1>
-            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
-              Activiteiten, catering, vervoer en diensten — combineer ze in uw eigen programma.
+            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-6">
+              Activiteiten, catering, vervoer en diensten — voeg toe aan een programma of vraag los aan.
             </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/programma-samenstellen">
+                <Button size="lg" variant="secondary">
+                  Stel een programma samen
+                </Button>
+              </Link>
+              <Link to="/snel-aanvragen">
+                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  Losse activiteit aanvragen
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -184,33 +196,39 @@ const Bouwstenen = () => {
                           {block.short_description}
                         </p>
                       )}
-                      <div className="flex items-baseline justify-between mt-auto pt-3 border-t border-border gap-2">
-                        <div>
-                          <span className="text-base font-semibold text-foreground">
-                            {formatBlockPrice(block)}
-                          </span>
-                          {formatPriceNote(block) && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              {formatPriceNote(block)}
+                      <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-border">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <div>
+                            <span className="text-base font-semibold text-foreground">
+                              {formatBlockPrice(block)}
                             </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
+                            {formatPriceNote(block) && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                {formatPriceNote(block)}
+                              </span>
+                            )}
+                          </div>
                           {block.description && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="gap-1 text-muted-foreground hover:text-foreground"
+                              className="gap-1 h-7 px-2"
                               onClick={() => setDetailBlock(block)}
                             >
                               <Info className="h-3.5 w-3.5" />
-                              Meer info
+                              Info
                             </Button>
                           )}
-                          <Link to={`/programma-samenstellen?block=${block.id}`}>
-                            <Button size="sm" variant="ghost" className="gap-1 text-primary hover:text-primary">
-                              Toevoegen
-                              <ArrowRight className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">
+                            <Button size="sm" className="w-full">
+                              Direct aanvragen
+                            </Button>
+                          </Link>
+                          <Link to={`/programma-samenstellen?block=${block.id}`} className="contents">
+                            <Button size="sm" variant="outline" className="w-full">
+                              Aan programma
                             </Button>
                           </Link>
                         </div>
@@ -282,7 +300,7 @@ const Bouwstenen = () => {
                     </div>
                   )}
 
-                  <div className="flex items-baseline justify-between pt-4 border-t border-border">
+                  <div className="flex flex-col gap-3 pt-4 border-t border-border">
                     <div>
                       <span className="text-lg font-semibold text-foreground">
                         {formatBlockPrice(detailBlock)}
@@ -293,12 +311,16 @@ const Bouwstenen = () => {
                         </span>
                       )}
                     </div>
-                    <Link to={`/programma-samenstellen?block=${detailBlock.id}`}>
-                      <Button className="gap-1">
-                        Toevoegen aan programma
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Link to={`/snel-aanvragen?block=${detailBlock.id}`}>
+                        <Button className="w-full">Direct aanvragen</Button>
+                      </Link>
+                      <Link to={`/programma-samenstellen?block=${detailBlock.id}`}>
+                        <Button variant="outline" className="w-full">
+                          Toevoegen aan programma
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </ScrollArea>

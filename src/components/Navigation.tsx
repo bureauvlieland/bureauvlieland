@@ -14,6 +14,7 @@ import { MobileNav } from "./navigation/MobileNav";
 
 const programmasHrefs = [
   "/programma-samenstellen",
+  "/snel-aanvragen",
   "/voorbeeldprogrammas",
   "/bouwstenen",
   "/catering",
