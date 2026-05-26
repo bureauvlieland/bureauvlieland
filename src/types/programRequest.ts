@@ -284,6 +284,7 @@ export interface ProgramRequestItem {
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  partner_instructions: string | null;
   skip_partner_notification: boolean;
   // Price type snapshot from building block
   price_type: string | null;
