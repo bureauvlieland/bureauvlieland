@@ -733,11 +733,15 @@ export const AdminEditActivitySheet = ({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="editNotes">Opmerking klant (optioneel)</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="editNotes">Opmerking klant (optioneel)</Label>
+              <FieldSaveIndicator status={notesSave.status} savedAt={notesSave.savedAt} error={notesSave.error} />
+            </div>
             <Textarea
               id="editNotes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              onBlur={() => notesSave.flush()}
               placeholder="Specifieke wensen van de klant..."
               rows={2}
             />
@@ -745,16 +749,20 @@ export const AdminEditActivitySheet = ({
 
           {/* Partner instructions — operationeel, alleen zichtbaar voor partner */}
           <div className="space-y-2">
-            <Label htmlFor="editPartnerInstructions">Instructie voor partner (optioneel)</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="editPartnerInstructions">Instructie voor partner (optioneel)</Label>
+              <FieldSaveIndicator status={instrSave.status} savedAt={instrSave.savedAt} error={instrSave.error} />
+            </div>
             <Textarea
               id="editPartnerInstructions"
               value={partnerInstructions}
               onChange={(e) => setPartnerInstructions(e.target.value)}
+              onBlur={() => instrSave.flush()}
               placeholder="Bijv. '10 minuten van tevoren aanwezig zijn' of 'geen krentenbollen meenemen'..."
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Niet zichtbaar voor de klant. Alleen de partner ziet deze instructie in zijn portaal.
+              Niet zichtbaar voor de klant. Alleen de partner ziet deze instructie in zijn portaal — pas zichtbaar na <strong>Publiceer &amp; verstuur</strong>.
             </p>
           </div>
 
