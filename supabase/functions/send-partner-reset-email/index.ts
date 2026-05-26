@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         Messages: [
-          {
+          { TrackClicks: "disabled", TrackOpens: "disabled",
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: getRecipientEmail(trimmedEmail, origin), Name: partner.name }],
             Subject: emailSubject,

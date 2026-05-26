@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            Messages: [{
+            Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
               To: [{ Email: getRecipientEmail(partnerEmail, origin), Name: partner.name }],
               ...(buildReplyTo(accRequest.reference_number) ? { ReplyTo: buildReplyTo(accRequest.reference_number) } : {}),

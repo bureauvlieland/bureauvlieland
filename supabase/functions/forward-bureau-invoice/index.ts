@@ -433,6 +433,8 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
       },
+      emailMessage.TrackClicks = "disabled";
+      emailMessage.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [emailMessage] }),
     });
 

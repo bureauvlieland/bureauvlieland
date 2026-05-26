@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
           Authorization: `Basic ${btoa(`${apiKey}:${secret}`)}`,
         },
         body: JSON.stringify({
-          Messages: [{
+          Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: r.customer_name }],
             Subject: subject,
