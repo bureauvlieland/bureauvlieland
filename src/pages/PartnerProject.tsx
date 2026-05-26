@@ -630,14 +630,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
           {isBureauCentral && <BureauCentralBadge variant="compact" />}
 
-          {req.special_requests && (
-            <div className="border-t pt-4 text-sm">
-              <p className="font-medium text-xs uppercase text-muted-foreground tracking-wide mb-1">
-                Bijzonderheden
-              </p>
-              <p>{req.special_requests}</p>
-            </div>
-          )}
+          <GuestDetailsBlock
+            roomAssignment={(req as any).room_assignment}
+            dietaryNotes={req.special_requests}
+          />
+
         </Card>
 
         <div className="grid lg:grid-cols-[1fr_400px] gap-6">
