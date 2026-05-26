@@ -1,58 +1,98 @@
-# Partner portal herstructurering
-
-## Probleem
-De huidige partner dashboard (cards "Actie vereist / Aankomend / Afgerond") klopt niet:
-- Toont geannuleerde projecten (zoals BV-2604-0007)
-- Toont al gefactureerde projecten als "actie vereist"
-- Verbergt items die nog op klant-akkoord wachten — partner mag die wél zien
-- Card-based status klopt niet meer met de echte workflow
-
-Partner moet **dezelfde informatie** zien als de admin in zijn projectenlijst, plus een aparte werkbank-achtige weergave voor open acties.
-
 ## Doel
-Twee weergaven in de partner portal:
 
-1. **Projecten** (`/partner/dashboard` of `/partner/projecten`) — lijst zoals `AdminProjectsOverview`:
-   - Eén rij per project (niet per item)
-   - Kolommen: referentie, klant (afgeschermd: alleen bedrijfsnaam/voornaam), aankomstdatum, aantal personen, status (concept / in afstemming / akkoord / ingepland / gefactureerd), eigen rol in project (aantal items, status van die items)
-   - Filters: zoeken, type, archief-toggle (geannuleerd/afgerond verbergen by default — exact zoals admin)
-   - Klik → bestaande `/partner/project/:id` pagina
-   - **Geannuleerde projecten verbergen** in default view, zichtbaar via archief-toggle
+Klanten moeten activiteiten op twee manieren kunnen aanvragen, beide vanuit de bouwstenen-pagina:
 
-2. **Werkbank** (`/partner/werkbank`) — open acties, gegroepeerd per type:
-   - **Beoordelen** — items met `status='pending'` (incl. items waar klant nog niet akkoord op is, maar partner wel mag zien)
-   - **Wijzigingen** — items waarvan datum/aantal/prijs is veranderd na akkoord (nieuwe trigger uit Fase 1)
-   - **Inplannen** — items `confirmed` zonder uitgevoerde datum
-   - **Factureren** — items `executed` zonder factuur
-   - Per regel: project-referentie, datum, item, knop "Open in project"
+1. **Toevoegen aan programma** (huidige flow) — meerdaags, ferry/fiets standaard erbij.
+2. **Direct aanvragen** (nieuw) — losse activiteit(en) op een gewenste datum/tijd, zonder verplichte ferry & fiets. Daarna nog uitbreidbaar.
 
-## Wijzigingen
+Daarnaast: MAP-activiteiten (direct boekbaar aanbod) ook aanvraagbaar maken als ze niet als geplande slot staan.
 
-### Data
-- `get-partner-dashboard` edge function: alle items meegeven (ook `customer_approved_at IS NULL`), inclusief geannuleerde projecten met `cancelled_at` veld. Filtering gebeurt client-side zodat archief-toggle werkt.
-- Status-derivatie per project (analoog aan `getDerivedStatus`): concept / in_afstemming / akkoord / ingepland / facturatie / afgerond / geannuleerd — vanuit partner-perspectief (eigen items, niet hele project).
+---
 
-### Nieuwe componenten
-- `src/lib/getPartnerProjectsOverview.ts` — vergelijkbaar met `getProjectsOverview.ts` maar gefilterd op partner's items
-- `src/components/partner-portal/PartnerProjectsTable.tsx` — lijst-component analoog aan `ProjectsListTable`
-- `src/components/partner-portal/PartnerWerkbank.tsx` — gegroepeerde open-acties weergave
-- `src/pages/PartnerProjecten.tsx` — vervangt overview op `PartnerDashboard.tsx`
-- `src/pages/PartnerWerkbank.tsx` — nieuwe route
+## 1. Bouwstenen-pagina — twee CTA's per kaart
 
-### Aanpassingen
-- `PartnerDashboard.tsx` → wordt projecten-overzicht (tabel + zoek + archief-toggle)
-- Navigatie in `PartnerPortal.tsx` / sidebar: "Projecten" + "Werkbank" als hoofdmenu
-- Verwijder `PartnerProjectsList.tsx` card-weergave (vervangen door tabel)
-- Geen wijzigingen aan `/partner/project/:id` zelf — die blijft de detailweergave
+In `src/pages/Bouwstenen.tsx`:
 
-### Wat blijft
-- Project-detailpagina (`PartnerProject.tsx`) — daar gebeuren acties (accept/decline/inplannen/factureren) per item
-- `ProjectChatPanel`, `useProjectChat` — ongewijzigd
-- Edge functions voor item-status updates — ongewijzigd
+- Vervang de huidige `Toevoegen`-knop door **twee duidelijke acties** per kaart:
+  - Primair: **"Direct aanvragen"** → start de losse-aanvraag flow (zie §3).
+  - Secundair: **"Toevoegen aan programma"** → huidige `?block=` deeplink naar `/programma-samenstellen`.
+- Hover/contrast bug fixen: huidige `variant="ghost" text-primary` levert onleesbare hover op. Gebruik standaard `Button` varianten (`default` + `outline`) met semantic tokens — geen handmatige kleur-classes.
+- Zelfde knoppen ook in de detail-`Dialog` onderaan.
 
-## Buiten scope
-- Wijzigingsdetectie zelf (welke items "gewijzigd na akkoord" zijn) — gebruik bestaande velden; geen nieuwe DB-velden
-- Geen aanpassingen aan admin-kant
-- Geen aanpassingen aan emailtemplates
+Visueel ongeveer:
 
-Ga ik door?
+```text
+[ Direct aanvragen ]   [ Toevoegen aan programma ]
+```
+
+## 2. MAP-activiteiten als bouwstenen
+
+Op `/activiteiten-boeken` (en in `MapActivityDetailSheet`):
+
+- Als een MAP-activiteit gekoppeld is aan een bestaande building block (via partner/activity_type), voeg in de detail-sheet naast "Direct boeken" óók knoppen toe: **"Direct aanvragen"** en **"Toevoegen aan programma"** → linkt naar dezelfde flow als vanuit Bouwstenen.
+- Voor MAP-activity-types zónder bijbehorende building block: tonen we een fallback CTA "Aanvragen op andere datum" die het maatwerk-formulier (`MaatwerkIntakeForm`) opent, voorgevuld met de activiteit-naam en partner. Dit voorkomt dat we MAP-aanbod 1-op-1 als building block moeten dubbelen.
+
+(Backend: geen nieuwe tabellen nodig — we hergebruiken `program_request_items` / maatwerk.)
+
+## 3. Nieuwe "Direct aanvragen" flow (quick request)
+
+Nieuwe route: **`/snel-aanvragen`** (of query-flag op `/programma-samenstellen`, zie technische sectie).
+
+Stappen, opzettelijk uitgekleed:
+
+1. **Selectie** — start met de gekozen bouwsteen in de mini-cart. Klant kan via "Nog een activiteit toevoegen" een lichte versie van `AddActivitySheet` openen om meer bouwstenen toe te voegen. **Geen ferry/fiets auto-toevoegen.**
+2. **Wanneer & wie** — compacte versie van `BasicsForm`: 1 datum (default) + optioneel "ik wil ook tijd doorgeven" → tijd per item, aantal personen.
+3. **Contact** — hergebruik bestaande `CheckoutContactForm`.
+4. **Bevestiging** — hergebruik `CheckoutSuccess`.
+
+Vanuit stap 1 kan een klant doorklikken naar de volledige programma-builder (`/programma-samenstellen`) als ze meerdere dagen willen plannen — cart en datum blijven behouden via `CartContext`.
+
+## 4. Vindbaarheid & navigatie (advies)
+
+- **Hero-CTA** op `/bouwstenen`: naast "Stel programma samen" een tweede prominente CTA "Activiteit los aanvragen".
+- **MegaDropdown "Programma's"** (`src/components/navigation/MegaDropdown.tsx`): voeg item toe **"Losse activiteit aanvragen"** → `/bouwstenen` (anchor naar grid) of `/snel-aanvragen`.
+- **Homepage** (`src/components/home/...`): in `ActivitiesShowcase` of een nieuwe band laten zien dat losse aanvragen ook kan ("Geen heel programma nodig? Vraag één activiteit aan.").
+- Bouwstenen-pagina krijgt boven het grid een korte intro-strook: "Stel een compleet programma samen óf vraag losse activiteiten aan."
+
+---
+
+## Technische sectie
+
+**CartContext aanpassen** (`src/contexts/CartContext.tsx`):
+- Nieuw veld `mode: "program" | "quick"` (gepersisteerd).
+- Ferry/fiets auto-toevoegen in `ProgrammaSamenstellen.tsx` alleen wanneer `mode === "program"`.
+- Bij overstappen quick → program: ferry/fiets alsnog injecteren.
+
+**Nieuwe pagina `src/pages/SnelAanvragen.tsx`**:
+- Hergebruikt `CartContext`, `CheckoutContactForm`, `CheckoutSuccess`.
+- Eigen lichte builder: lijst van geselecteerde items met inline datum/tijd, `AddActivitySheet`-knop, geen DayTabs/reorder.
+- Knop "Uitbreiden tot volledig programma" → `navigate("/programma-samenstellen")` met `mode=program`.
+
+**Bouwstenen kaart-knoppen** (`src/pages/Bouwstenen.tsx`):
+- `Direct aanvragen` → `navigate('/snel-aanvragen?block=<id>')`.
+- `Toevoegen aan programma` → bestaande `/programma-samenstellen?block=<id>` deeplink (zet `mode=program`).
+- Hover-bug: vervang `variant="ghost" className="text-primary hover:text-primary"` door `variant="default"` (primair) en `variant="outline"` (secundair). Geen directe kleur-classes.
+
+**MAP-koppeling**:
+- In `useMapActivities` / detail-sheet: lookup of er een building block bestaat met dezelfde `provider_id` + matchende naam/activity_type. Zo ja: bouwsteen-id meegeven aan CTA's. Zo nee: maatwerk-fallback.
+- Geen nieuwe edge function nodig; bestaande `program-request` endpoint accepteert al losse items.
+
+**Navigatie**:
+- `MegaDropdown` programmas-array uitbreiden met `Losse activiteit aanvragen` (href `/snel-aanvragen`).
+- `programmasHrefs` in `Navigation.tsx` aanvullen met `/snel-aanvragen`.
+
+**Reset/draft-recovery**:
+- `useProgramDraft` per mode scheiden (key suffix `:quick` vs `:program`) zodat een quick-aanvraag niet je grote programma-concept overschrijft.
+
+**Tests/verificatie**:
+- Snel-aanvragen zonder ferry/fiets → indien klant submit, `program_request_items` bevat alleen geselecteerde bouwstenen.
+- Overstap quick → program injecteert ferry/fiets en behoudt items.
+- Hover op beide knoppen leesbaar in light + (eventueel) dark.
+
+---
+
+## Out of scope (deze ronde)
+
+- MAP-activity-types automatisch als nieuwe building blocks aanmaken in de DB.
+- Realtime beschikbaarheidscheck bij quick-aanvraag (blijft offerteproces, geen instant boeking).
+- Partner-portal wijzigingen — flow valt op bestaande `program_request_items` structuur.
