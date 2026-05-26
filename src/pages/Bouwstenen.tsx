@@ -300,7 +300,7 @@ const Bouwstenen = () => {
                     </div>
                   )}
 
-                  <div className="flex items-baseline justify-between pt-4 border-t border-border">
+                  <div className="flex flex-col gap-3 pt-4 border-t border-border">
                     <div>
                       <span className="text-lg font-semibold text-foreground">
                         {formatBlockPrice(detailBlock)}
@@ -311,12 +311,16 @@ const Bouwstenen = () => {
                         </span>
                       )}
                     </div>
-                    <Link to={`/programma-samenstellen?block=${detailBlock.id}`}>
-                      <Button className="gap-1">
-                        Toevoegen aan programma
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Link to={`/snel-aanvragen?block=${detailBlock.id}`}>
+                        <Button className="w-full">Direct aanvragen</Button>
+                      </Link>
+                      <Link to={`/programma-samenstellen?block=${detailBlock.id}`}>
+                        <Button variant="outline" className="w-full">
+                          Toevoegen aan programma
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </ScrollArea>
