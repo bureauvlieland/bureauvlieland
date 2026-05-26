@@ -1,69 +1,98 @@
-## Wat ik ga aanpassen
+# Pending partner-instructie wordt niet naar partner gepushed
 
-Drie samenhangende issues, opgelost in één pass.
+## Wat ik in de database vond
 
----
+Item `9e53bd28… "Lunch op locatie"` (provider `zuiver`) bij project `5a5719d2`:
 
-### 1. Partnerinstructie wordt niet zichtbaar opgeslagen (root cause + fix)
+- `partner_instructions` = **NULL** (live, dit ziet de partner)
+- `pending_partner_instructions` = `"Brengen op de Speelweide aan de badweg. Wellicht wat biertafel sets meenemen?"`
+- `pending_changed_at` = **NULL**
+- `updated_at` = 26-05 12:48:31 (= exact het tijdstip van de laatste publish-run)
+- `program_requests.last_published_at` = 26-05 12:48:31
+- `program_change_log` heeft voor die publish-run **0 entries**
 
-**Wat ik in de database zag:** voor programma `7ejU9NbDn8gA` staat bij geen enkel item een (pending) partner-instructie. De save-logica in `AdminEditActivitySheet` is technisch correct, maar er is geen visuele bevestiging dat een veld is opgeslagen, en niets waarschuwt je als je het paneel sluit zonder op **Opslaan** te klikken — vandaar de indruk dat het "verdwijnt".
+Dus: u heeft op "Publiceer & verstuur" geklikt, de edge function is gedraaid, maar deed niets met dit item. Daarna is de instructie blijven hangen als pending — onzichtbaar voor de partner én onzichtbaar voor de volgende publish-run.
 
-**Fix (combineert auto-save én vangnet):**
+## Root cause
 
-- **Auto-save bij blur + debounce (800ms)** voor `partner_instructions`, `customer_notes`, `admin_price_notes` en `block_name`. Schrijft naar `pending_partner_instructions` (of live als `pending_added=true`), exact via dezelfde diff-logica die nu in `handleSave` zit — geëxtraheerd naar `savePartialItem(itemId, patch)`.
-- **Status-indicator** rechts onder elk auto-save veld: "Niet opgeslagen" → spinner "Opslaan…" → "✓ Opgeslagen om 14:32".
-- **Dirty-guard:** als er nog een save bezig is of er staan unsaved wijzigingen in de niet-auto-save velden (prijs, locatie, uitvoerder, dag, tijd), toon AlertDialog "Wijzigingen weggooien?" bij sluiten van het sheet.
-- **Opslaan-knop blijft bestaan** voor de overige velden (prijs/locatie/uitvoerder); blijft de "publish all at once" moment van vandaag.
+`supabase/functions/publish-program-changes/index.ts` haalt items op met:
 
-**Bestanden:**
+```text
+WHERE pending_changed_at IS NOT NULL
+   OR pending_marked_for_removal = true
+   OR pending_added = true
+```
 
-- `src/components/admin/AdminEditActivitySheet.tsx` — refactor save-logica, voeg auto-save useEffect + status-state toe, dirty-tracking, AlertDialog bij close.
-- `src/lib/partialItemSave.ts` (nieuw) — herbruikbare `savePartialItem` met dezelfde diff-regels als de huidige `handleSave`.
+Als een autosave wel `pending_partner_instructions` (of een ander pending-veld) wegschrijft maar `pending_changed_at` op NULL laat staan (race condition tussen autosave en publish, of een eerdere publish die wél het tijdstip cleart maar het pending-veld niet), is het item daarna onzichtbaar voor élke volgende publish. Partner ziet nooit iets, admin denkt dat het verzonden is.
 
----
+## Fix in twee delen
 
-### 2. Partnerpagina toont locatie + instructie niet
+### 1. Defensieve filter in `publish-program-changes`
 
-Conform jouw keuze blijven pending wijzigingen onzichtbaar voor de partner tot je op **Publiceer & verstuur** klikt. Geen verandering aan partnerportaal-rendering — `PartnerProjectItemRow` toont `partner_instructions` en `location_address` al correct zodra ze live staan (regels 249-254 en 317-326 zijn al aanwezig).
+Vervang de query door een variant die ook items pakt waar feitelijk een pending-waarde staat, niet alleen waar het timestamp gezet is:
 
-**Wat hier wel verandert:** een duidelijker label in `AdminEditActivitySheet` boven de auto-save velden zoals "Wijzigingen worden pas zichtbaar voor partner ná Publiceer & verstuur", zodat de verwachting klopt.
+```text
+pending_changed_at NOT NULL
+OR pending_marked_for_removal
+OR pending_added
+OR pending_block_name        NOT NULL
+OR pending_admin_price_notes NOT NULL
+OR pending_customer_notes    NOT NULL
+OR pending_partner_instructions NOT NULL
+OR pending_preferred_time    NOT NULL
+OR pending_day_index         NOT NULL
+OR pending_admin_price_override NOT NULL
+OR pending_price_type        NOT NULL
+OR pending_location_address  NOT NULL
+OR pending_provider_id       NOT NULL
+OR pending_block_type        NOT NULL
+OR pending_override_people   NOT NULL
+```
 
----
+Hiermee kan geen pending wijziging meer "vergeten" worden — als het in de DB staat, wordt het gepubliceerd.
 
-### 3. Slide-in rechts → inline uitklappen op admin projectdetail
+### 2. Defensieve autosave in `src/lib/partialItemSave.ts`
 
-`AdminEditActivitySheet` (rechter Sheet) wordt vervangen door een **inline expandable row** in `AdminRequestDetail` waar de activiteit staat. De huidige form-inhoud blijft 1-op-1 hetzelfde, maar wordt gerenderd binnen een `Collapsible` (shadcn) direct onder de geklikte activiteit.
+`savePartialItemField` schrijft nu `pending_changed_at = now` of `null` op basis van een berekening uit de zojuist gelezen DB-state. Vereenvoudigen: als de nieuwe `pendingValue` niet null is, **altijd** `pending_changed_at = now` zetten. Alleen als de nieuwe waarde null is **én** er geen andere pending-velden meer openstaan, mag `pending_changed_at` terug naar null. Dat sluit de race uit.
 
-**Aanpak:**
+### 3. Eenmalige herstelactie voor het huidige item
 
-- Extract de body van `AdminEditActivitySheet` naar `AdminEditActivityForm` (props identiek, geen Sheet-wrapper).
-- In `AdminRequestDetail`, vervang de drie `setEditingItem(item)` triggers door `setExpandedItemId(item.id === expanded ? null : item.id)` en render `<AdminEditActivityForm>` inline onder die rij wanneer `expandedItemId === item.id`.
-- De oude `AdminEditActivitySheet` wordt een dunne wrapper die nog steeds de form rendert in een Sheet, voor plekken die geen inline context hebben (bv. mobile of waar nu nog niet geconverteerd is). Bij twijfel houden we hem voorlopig in stand maar gebruiken hem niet meer vanuit `AdminRequestDetail`.
+Migration die alle items met openstaande pending-data maar ontbrekende `pending_changed_at` herstelt, zodat de eerstvolgende publish ze meeneemt:
 
-**Bestanden:**
+```sql
+UPDATE public.program_request_items
+SET pending_changed_at = now()
+WHERE pending_changed_at IS NULL
+  AND (
+    pending_block_name IS NOT NULL
+    OR pending_admin_price_notes IS NOT NULL
+    OR pending_customer_notes IS NOT NULL
+    OR pending_partner_instructions IS NOT NULL
+    OR pending_preferred_time IS NOT NULL
+    OR pending_day_index IS NOT NULL
+    OR pending_admin_price_override IS NOT NULL
+    OR pending_price_type IS NOT NULL
+    OR pending_location_address IS NOT NULL
+    OR pending_provider_id IS NOT NULL
+    OR pending_block_type IS NOT NULL
+    OR pending_override_people IS NOT NULL
+    OR pending_marked_for_removal = true
+    OR pending_added = true
+  );
+```
 
-- `src/components/admin/AdminEditActivityForm.tsx` (nieuw — body uit `AdminEditActivitySheet.tsx`).
-- `src/components/admin/AdminEditActivitySheet.tsx` — wordt dunne Sheet-wrapper om de Form.
-- `src/pages/admin/AdminRequestDetail.tsx` — vervang sheet-trigger door `expandedItemId` state + inline render onder geklikte rij; verwijder `<AdminEditActivitySheet>` mount aan de onderkant.
+Daarna kunt u in de admin gewoon nogmaals op **Publiceer & verstuur** klikken — de instructie voor Zuiver gaat dan alsnog mee en wordt zichtbaar in de partneromgeving.
 
----
+## Files
 
-## Geen wijzigingen nodig in
+- `supabase/functions/publish-program-changes/index.ts` — filter uitbreiden
+- `src/lib/partialItemSave.ts` — `pending_changed_at` altijd zetten bij niet-null pending-waarde
+- Migration (eenmalig herstel) — geen schemawijziging, alleen data-fix
 
-- Database / migrations (alles speelt zich af in bestaande kolommen `pending_partner_instructions` etc.).
-- Edge function `publish-program-changes` (lees pending al correct).
-- Partnerportaal-rendering.
-- Klantportaal (`CustomerProgramItem` gebruikt al `Collapsible`, geen slide-in daar).
+## Verificatie
 
----
+1. Na deploy: SQL-check `SELECT id, pending_changed_at, pending_partner_instructions FROM program_request_items WHERE id = '9e53bd28-…'` → `pending_changed_at` moet gezet zijn.
+2. In admin op publiceren klikken → `program_change_log` krijgt een nieuwe rij `field='partner_instructions'`.
+3. In `/partner/project/5a5719d2…?impersonate=zuiver` moet de gele "Instructie van Bureau Vlieland"-banner verschijnen onder "Lunch op locatie".
 
-## Verificatie na build
-
-1. Open een item, type in "Instructie voor partner" → na 1 sec verschijnt "✓ Opgeslagen". Sluit en heropen — tekst staat er. DB-check op `pending_partner_instructions`.
-2. Verander prijs zonder op Opslaan te klikken, klik X → AlertDialog "Wijzigingen weggooien?".
-3. Klik op activiteit in admin-projectdetail → klapt inline open onder de rij i.p.v. paneel rechts. Tweede klik op zelfde rij sluit hem.
-4. Klik op "Publiceer & verstuur" → partner krijgt mail met instructie + locatie in de regel.  
-  
-  
-En de locatie moet toegevoegd worden aan de activiteit. De partner ziet de locatie nu niet. Check ook of de groepssamenstelling en dieten wel worden getoond. 
-  &nbsp;
+Niet aangeraakt: partner-portal rendering (werkt correct) en AdminEditActivitySheet (de Opslaan-flow zet `pending_changed_at` al goed).

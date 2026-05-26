@@ -65,46 +65,55 @@ export async function savePartialItemField(
   const samenAlsLive = (liveValue ?? null) === (value ?? null);
   const pendingValue = samenAlsLive ? null : value;
 
-  // Bepaal of er na deze update nog enige pending wijziging openstaat.
-  // Lees huidige pending-state uit DB om pending_changed_at correct te zetten.
-  const { data: current, error: readErr } = await supabase
-    .from("program_request_items")
-    .select(
-      "pending_block_name, pending_admin_price_notes, pending_customer_notes, pending_partner_instructions, pending_preferred_time, pending_day_index, pending_admin_price_override, pending_price_type, pending_location_address, pending_location_lat, pending_location_lng, pending_provider_id, pending_provider_name, pending_provider_email, pending_block_type, pending_marked_for_removal, pending_added, pending_override_people",
-    )
-    .eq("id", item.id)
-    .maybeSingle();
-  if (readErr) throw readErr;
+  // Bepaal pending_changed_at:
+  // - Als de nieuwe pendingValue niet null is → ALTIJD now zetten. Hiermee
+  //   sluiten we de race uit waarbij de publish-flow een item zou overslaan
+  //   omdat pending_changed_at toevallig nog op null staat.
+  // - Als pendingValue null is → lees de overige pending-kolommen; alleen
+  //   als er geen enkele pending meer openstaat clearen we pending_changed_at.
+  let nextChangedAt: string | null = new Date().toISOString();
+  if (pendingValue === null) {
+    const { data: current, error: readErr } = await supabase
+      .from("program_request_items")
+      .select(
+        "pending_block_name, pending_admin_price_notes, pending_customer_notes, pending_partner_instructions, pending_preferred_time, pending_day_index, pending_admin_price_override, pending_price_type, pending_location_address, pending_location_lat, pending_location_lng, pending_provider_id, pending_provider_name, pending_provider_email, pending_block_type, pending_marked_for_removal, pending_added, pending_override_people",
+      )
+      .eq("id", item.id)
+      .maybeSingle();
+    if (readErr) throw readErr;
 
-  const next = { ...(current ?? {}) } as Record<string, unknown>;
-  next[pendingCol] = pendingValue;
+    const next = { ...(current ?? {}) } as Record<string, unknown>;
+    next[pendingCol] = null;
 
-  const anyPending = [
-    next.pending_block_name,
-    next.pending_admin_price_notes,
-    next.pending_customer_notes,
-    next.pending_partner_instructions,
-    next.pending_preferred_time,
-    next.pending_day_index,
-    next.pending_admin_price_override,
-    next.pending_price_type,
-    next.pending_location_address,
-    next.pending_location_lat,
-    next.pending_location_lng,
-    next.pending_provider_id,
-    next.pending_provider_name,
-    next.pending_provider_email,
-    next.pending_block_type,
-    next.pending_override_people,
-  ].some((v) => v !== null && v !== undefined);
-  const hasMarkers =
-    next.pending_marked_for_removal === true || next.pending_added === true;
+    const anyPending = [
+      next.pending_block_name,
+      next.pending_admin_price_notes,
+      next.pending_customer_notes,
+      next.pending_partner_instructions,
+      next.pending_preferred_time,
+      next.pending_day_index,
+      next.pending_admin_price_override,
+      next.pending_price_type,
+      next.pending_location_address,
+      next.pending_location_lat,
+      next.pending_location_lng,
+      next.pending_provider_id,
+      next.pending_provider_name,
+      next.pending_provider_email,
+      next.pending_block_type,
+      next.pending_override_people,
+    ].some((v) => v !== null && v !== undefined);
+    const hasMarkers =
+      next.pending_marked_for_removal === true || next.pending_added === true;
+
+    nextChangedAt = anyPending || hasMarkers ? new Date().toISOString() : null;
+  }
 
   const { error } = await supabase
     .from("program_request_items")
     .update({
       [pendingCol]: pendingValue,
-      pending_changed_at: anyPending || hasMarkers ? new Date().toISOString() : null,
+      pending_changed_at: nextChangedAt,
     })
     .eq("id", item.id);
   if (error) throw error;

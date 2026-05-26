@@ -185,14 +185,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Laad items met pending changes
+    // Laad items met pending changes. We checken expliciet álle pending-velden
+    // (niet alleen pending_changed_at), zodat een item dat door een race of
+    // eerdere bug zonder timestamp is blijven hangen, alsnog gepubliceerd
+    // wordt zolang er daadwerkelijk een pending-waarde in de DB staat.
+    const PENDING_OR = [
+      "pending_changed_at.not.is.null",
+      "pending_marked_for_removal.eq.true",
+      "pending_added.eq.true",
+      "pending_block_name.not.is.null",
+      "pending_admin_price_notes.not.is.null",
+      "pending_customer_notes.not.is.null",
+      "pending_partner_instructions.not.is.null",
+      "pending_preferred_time.not.is.null",
+      "pending_day_index.not.is.null",
+      "pending_admin_price_override.not.is.null",
+      "pending_price_type.not.is.null",
+      "pending_location_address.not.is.null",
+      "pending_provider_id.not.is.null",
+      "pending_block_type.not.is.null",
+      "pending_override_people.not.is.null",
+    ].join(",");
     const { data: items, error: iErr } = await supabase
       .from("program_request_items")
       .select("*")
       .eq("request_id", requestId)
-      .or(
-        "pending_changed_at.not.is.null,pending_marked_for_removal.eq.true,pending_added.eq.true",
-      );
+      .or(PENDING_OR);
     if (iErr) throw iErr;
 
     if (!items || items.length === 0) {
