@@ -646,6 +646,21 @@ export const AdminEditActivitySheet = ({
             />
           </div>
 
+          {/* Partner instructions — operationeel, alleen zichtbaar voor partner */}
+          <div className="space-y-2">
+            <Label htmlFor="editPartnerInstructions">Instructie voor partner (optioneel)</Label>
+            <Textarea
+              id="editPartnerInstructions"
+              value={partnerInstructions}
+              onChange={(e) => setPartnerInstructions(e.target.value)}
+              placeholder="Bijv. '10 minuten van tevoren aanwezig zijn' of 'geen krentenbollen meenemen'..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Niet zichtbaar voor de klant. Alleen de partner ziet deze instructie in zijn portaal.
+            </p>
+          </div>
+
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t">
             <AlertDialog>
