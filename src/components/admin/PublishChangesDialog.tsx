@@ -32,6 +32,7 @@ export interface PendingChangeItem {
   admin_price_notes: string | null;
   price_type: string | null;
   location_address: string | null;
+  partner_instructions: string | null;
   // Pending waardes
   pending_preferred_time: string | null;
   pending_day_index: number | null;
@@ -43,6 +44,7 @@ export interface PendingChangeItem {
   pending_admin_price_override: number | null;
   pending_price_type: string | null;
   pending_admin_price_notes: string | null;
+  pending_partner_instructions: string | null;
   pending_location_lat: number | null;
   pending_location_lng: number | null;
   pending_location_address: string | null;
