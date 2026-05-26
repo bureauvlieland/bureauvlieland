@@ -457,35 +457,82 @@ export const AdminEditActivitySheet = ({
     ? "Bureau Vlieland"
     : (partners.find(p => p.id === selectedProviderId)?.name || item.provider_name);
 
+  // Sluiten alleen bevestigen als er nog een auto-save loopt of als de
+  // overige (niet-auto-saved) velden zijn gewijzigd t.o.v. het item.
+  const otherDirty = (() => {
+    if (!item) return false;
+    const liveTime = item.preferred_time || "flexibel";
+    const livePrice = item.admin_price_override?.toString() ?? "";
+    const livePT = (item.price_type === "per_person_per_day" || item.price_type === "total")
+      ? item.price_type
+      : "per_person";
+    const liveInv = item.block_type === "bureau" ? "bureau" : "partner";
+    return (
+      preferredTime !== liveTime ||
+      priceOverride !== livePrice ||
+      priceType !== livePT ||
+      invoicedBy !== liveInv ||
+      selectedDayIndex !== item.day_index ||
+      (selectedProviderId || "bureau") !== (item.provider_id || "bureau") ||
+      (locationLat ?? null) !== (item.location_lat ?? null) ||
+      (locationLng ?? null) !== (item.location_lng ?? null) ||
+      (locationAddress || "") !== (item.location_address || "")
+    );
+  })();
+  const hasUnsaved = anyAutoSaveBusy || otherDirty;
+
+  const requestClose = () => {
+    if (hasUnsaved) {
+      setShowDirtyConfirm(true);
+      return;
+    }
+    onOpenChange(false);
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+    <Sheet
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) requestClose();
+        else onOpenChange(true);
+      }}
+    >
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
           <SheetTitle>Activiteit bewerken</SheetTitle>
           <SheetDescription>
-            Pas de details van deze activiteit aan
+            Tekstvelden worden automatisch opgeslagen. Wijzigingen zijn pas
+            zichtbaar voor klant en partner ná <strong>Publiceer &amp; verstuur</strong>.
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-auto p-6 space-y-6">
           {/* Custom name */}
           <div className="space-y-2">
-            <Label htmlFor="editName">Omschrijving</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="editName">Omschrijving</Label>
+              <FieldSaveIndicator status={nameSave.status} savedAt={nameSave.savedAt} error={nameSave.error} />
+            </div>
             <Input
               id="editName"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
+              onBlur={() => nameSave.flush()}
               placeholder="Naam van de activiteit..."
             />
           </div>
 
           {/* Custom description for customer */}
           <div className="space-y-2">
-            <Label htmlFor="editDescription">Beschrijving voor klant (optioneel)</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="editDescription">Beschrijving voor klant (optioneel)</Label>
+              <FieldSaveIndicator status={descSave.status} savedAt={descSave.savedAt} error={descSave.error} />
+            </div>
             <Textarea
               id="editDescription"
               value={customDescription}
               onChange={(e) => setCustomDescription(e.target.value)}
+              onBlur={() => descSave.flush()}
               placeholder="Bijv. 'Met 2 boten' of 'Inclusief gids'..."
               rows={2}
             />
