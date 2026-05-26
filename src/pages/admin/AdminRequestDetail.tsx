@@ -251,6 +251,8 @@ interface ProgramRequestItem {
   pending_provider_name?: string | null;
   pending_provider_email?: string | null;
   pending_block_type?: string | null;
+  partner_instructions?: string | null;
+  pending_partner_instructions?: string | null;
 }
 
 interface HistoryEntry {
