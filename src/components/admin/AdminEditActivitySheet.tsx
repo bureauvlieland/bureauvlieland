@@ -107,7 +107,9 @@ export const AdminEditActivitySheet = ({
     item?.block_type === "bureau" ? "bureau" : "partner"
   );
   const [notes, setNotes] = useState(item?.customer_notes ?? "");
-  const [partnerInstructions, setPartnerInstructions] = useState(item?.partner_instructions ?? "");
+  const [partnerInstructions, setPartnerInstructions] = useState(
+    item?.pending_partner_instructions ?? item?.partner_instructions ?? ""
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(item?.location_lat ?? null);
