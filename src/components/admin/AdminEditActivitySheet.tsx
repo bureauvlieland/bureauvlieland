@@ -140,6 +140,7 @@ export const AdminEditActivitySheet = ({
       setPriceType(pt === "per_person_per_day" || pt === "total" ? pt : "per_person");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
+      setPartnerInstructions(item.partner_instructions || "");
       setSelectedProviderId(item.provider_id || "bureau");
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
