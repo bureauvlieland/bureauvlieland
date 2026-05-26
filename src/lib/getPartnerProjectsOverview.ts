@@ -21,6 +21,7 @@ export interface PartnerOverviewRow {
   itemCount: number;
   actionCount: number;       // items the partner has to do something with
   termsAccepted: boolean;
+  isConcept: boolean;        // not yet released by admin → read-only preview
 }
 
 function toDate(s: string | null | undefined): Date | null {
