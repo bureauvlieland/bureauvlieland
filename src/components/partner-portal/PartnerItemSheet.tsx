@@ -31,10 +31,10 @@ import {
   RefreshCw,
   Hash,
   Play,
-  MapPin,
 } from "lucide-react";
 import { CopyReferenceButton } from "./CopyReferenceButton";
 import { BureauCentralBadge } from "./BureauCentralBadge";
+import { PartnerLocationMap } from "./PartnerLocationMap";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -493,15 +493,6 @@ export const PartnerItemSheet = ({
                   </Badge>
                 </div>
               )}
-              {item.location_address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Locatie</p>
-                    <p className="font-medium text-foreground break-words">{item.location_address}</p>
-                  </div>
-                </div>
-              )}
               {item.duration && (
                 <div className="flex items-center gap-2">
                   <Timer className="h-4 w-4 text-muted-foreground" />
@@ -519,6 +510,16 @@ export const PartnerItemSheet = ({
               )}
             </div>
           </div>
+
+          {(item.location_address || (item.location_lat && item.location_lng)) && (
+            <PartnerLocationMap
+              lat={item.location_lat}
+              lng={item.location_lng}
+              label={item.block_name}
+              address={item.location_address}
+              isVisible={isOpen}
+            />
+          )}
 
           {/* Partner instructions — operationele instructie van Bureau Vlieland */}
           {item.partner_instructions && (
