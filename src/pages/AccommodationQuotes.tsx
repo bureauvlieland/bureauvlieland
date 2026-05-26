@@ -139,6 +139,10 @@ export default function AccommodationQuotes() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <Helmet>
+        <title>Uw logies-offertes | Bureau Vlieland</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Header */}
       <header className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
