@@ -62,6 +62,7 @@ const fieldLabel: Record<ChangeRow["field"], string> = {
   location: "Locatie",
   provider: "Uitvoerder",
   invoicing: "Facturatie",
+  partner_instructions: "Instructie voor partner",
 };
 
 function formatVal(v: string | null): string {
