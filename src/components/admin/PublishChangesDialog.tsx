@@ -105,6 +105,8 @@ function diffRows(it: PendingChangeItem): DiffRow[] {
     f("Prijs", fmtPrice(it.admin_price_override), fmtPrice(it.pending_admin_price_override));
   if (it.pending_price_type !== null) f("Prijstype", it.price_type, it.pending_price_type);
   if (it.pending_admin_price_notes !== null) f("Beschrijving", "(gewijzigd)", "(zie portaal)");
+  if (it.pending_partner_instructions !== null)
+    f("Instructie voor partner", it.partner_instructions, it.pending_partner_instructions);
   if (it.pending_location_address !== null || it.pending_location_lat !== null) {
     const newAddr = it.pending_location_address ?? it.location_address;
     const coordsMissing =
