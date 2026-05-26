@@ -1091,6 +1091,20 @@ const AdminProjectsContent = () => {
                   </label>
                 </div>
               )}
+              <div className="flex items-start gap-2 pt-2 border-t">
+                <Checkbox
+                  id="notify-partners-on-delete"
+                  checked={notifyPartnersOnDelete}
+                  onCheckedChange={(checked) => setNotifyPartnersOnDelete(checked === true)}
+                />
+                <label htmlFor="notify-partners-on-delete" className="text-sm leading-tight cursor-pointer">
+                  Partners met openstaande aanvragen automatisch e-mailen over deze annulering.
+                  <span className="text-muted-foreground block text-xs mt-0.5">
+                    Standaard uit — informeer partners liever handmatig vanuit het project-detail.
+                  </span>
+                </label>
+              </div>
+
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
