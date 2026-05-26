@@ -6,7 +6,7 @@ import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
-import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
+import { PartnerProjectItemRow } from "@/components/partner-portal/PartnerProjectItemRow";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
 import { ProjectChatPanel } from "@/components/partner-portal/ProjectChatPanel";
