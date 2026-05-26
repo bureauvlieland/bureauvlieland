@@ -422,19 +422,58 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
           {/* Items + chat in 2-col layout */}
           <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
               {projectItems.map((item) => (
-                <div
+                <PartnerProjectItemRow
                   key={item.id}
-                  className="cursor-pointer"
-                  onClick={() => {
+                  item={item}
+                  onStatusUpdate={async (status, note, qPrice, qNotes, pTime, pDate) => {
+                    setSelectedItem(item);
+                    // Ensure selectedItem state is set before edge call uses it
+                    return await (async () => {
+                      // Inline the status update against this specific item
+                      if (!partnerToken) return false;
+                      try {
+                        const response = await fetch(
+                          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-partner-item-status`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                            },
+                            body: JSON.stringify({
+                              partnerToken,
+                              itemId: item.id,
+                              status,
+                              statusNote: note,
+                              quotedPrice: qPrice,
+                              quotedNotes: qNotes,
+                              proposedTime: pTime,
+                              proposedDate: pDate,
+                            }),
+                          }
+                        );
+                        if (!response.ok) throw new Error("Failed");
+                        toast({ title: "Status bijgewerkt" });
+                        await refetch();
+                        return true;
+                      } catch {
+                        toast({ title: "Fout", description: "Kon status niet bijwerken.", variant: "destructive" });
+                        return false;
+                      }
+                    })();
+                  }}
+                  onRegisterInvoice={() => {
+                    setSelectedItem(item);
+                    setShowInvoiceDialog(true);
+                  }}
+                  onOpenDetails={() => {
                     setSelectedItem(item);
                     setShowSheet(true);
                   }}
-                >
-                  <PartnerItemCard item={item} />
-                </div>
+                />
               ))}
             </div>
 
