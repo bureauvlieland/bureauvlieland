@@ -797,16 +797,40 @@ export const AdminEditActivitySheet = ({
 
             <div className="flex-1" />
 
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Annuleren
+            <Button variant="outline" onClick={requestClose} disabled={isSubmitting}>
+              Sluiten
             </Button>
             <Button onClick={handleSave} disabled={isSubmitting || isDeleting}>
               <Save className="h-4 w-4 mr-2" />
-              Opslaan
+              Opslaan (overige velden)
             </Button>
           </div>
         </div>
       </SheetContent>
+
+      {/* Dirty-close confirmation */}
+      <AlertDialog open={showDirtyConfirm} onOpenChange={setShowDirtyConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Niet-opgeslagen wijzigingen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er staan nog wijzigingen klaar die niet zijn opgeslagen (prijs, locatie, uitvoerder, tijd of dag).
+              Weet je zeker dat je wilt sluiten zonder op <strong>Opslaan</strong> te klikken?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Terug naar bewerken</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowDirtyConfirm(false);
+                onOpenChange(false);
+              }}
+            >
+              Sluiten en weggooien
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };
