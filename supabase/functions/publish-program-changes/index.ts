@@ -527,6 +527,7 @@ Deno.serve(async (req) => {
         pending_admin_price_override: null,
         pending_price_type: null,
         pending_admin_price_notes: null,
+        pending_partner_instructions: null,
         pending_location_lat: null,
         pending_location_lng: null,
         pending_location_address: null,
