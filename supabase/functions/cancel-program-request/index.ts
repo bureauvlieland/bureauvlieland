@@ -269,118 +269,64 @@ Deno.serve(async (req) => {
     const emails: any[] = [];
     const pendingLogs: Array<{ messageIdx: number; logPayload: any }> = [];
 
-    // Partner cancellation emails
+    // GEEN automatische partner-mails meer bij annulering door klant.
+    // Bureau informeert partners handmatig vanuit het admin-paneel.
     const customerLabel = program.customer_company || program.customer_name || "";
-    for (const [providerId, provider] of providers) {
-      const templateVariables = {
-        partner_name: sanitizeHtml(provider.name),
-        customer_name: sanitizeHtml(customerLabel),
-        company_name: sanitizeHtml(program.customer_company || ""),
-        reference_number: program.reference_number || "",
-        event_dates: dates,
-        dates: dates,
-        cancellation_reason: reason ? sanitizeHtml(reason) : "",
-        cancelled_items: provider.items
-          .map((item) => `<p style="margin: 5px 0;">• ${sanitizeHtml(item)}</p>`)
-          .join(""),
-        activities_list: provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join(""),
-        activity_name: sanitizeHtml(provider.items[0] || "aanvraag"),
-      };
+    const allPartnerNames = [
+      ...Array.from(providers.values()).map((p) => p.name),
+      ...Array.from(accommodationPartners.values()).map((p) => p.name),
+    ];
 
-      const partnerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_PARTNER, templateVariables);
-      
-      const htmlContent = partnerTemplate?.body || `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a365d;">Aanvraag geannuleerd</h2>
-          <p>Beste ${sanitizeHtml(provider.name)},</p>
-          <p>De aanvraag <strong>${program.reference_number || ""}</strong> voor <strong>${dates}</strong> is geannuleerd.</p>
-          <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Referentie:</strong> ${program.reference_number || "-"}</p>
-            <p><strong>Activiteit(en):</strong></p>
-            <ul>${provider.items.map((item) => `<li>${sanitizeHtml(item)}</li>`).join("")}</ul>
-            ${reason ? `<p><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>` : ""}
-          </div>
-          <p>Je hoeft verder geen actie te ondernemen.</p>
-          <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
-        </div>
-      `;
-
-      emails.push({
-        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.name }],
-        ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
-        HTMLPart: htmlContent,
-      });
-      pendingLogs.push({
-        messageIdx: emails.length - 1,
-        logPayload: {
-          email_type: "cancellation_partner",
-          subject: `${subjectPrefix}${partnerTemplate?.subject || `Aanvraag geannuleerd — ${program.reference_number || ""}`}`,
-          recipient_email: getRecipientEmail(provider.email, origin),
-          recipient_name: provider.name,
+    if (providers.size > 0 || accommodationPartners.size > 0) {
+      try {
+        await supabase.from("admin_todos").insert({
+          title: `Klant heeft project geannuleerd — informeer ${providers.size + accommodationPartners.size} partner(s) handmatig`,
+          description: `${sanitizeHtml(customerLabel)} (${program.reference_number || program.id}) heeft de aanvraag voor ${dates} geannuleerd${reason ? ` met als reden: "${sanitizeHtml(reason)}"` : ""}. Betrokken partners: ${allPartnerNames.join(", ") || "—"}. Informeer hen handmatig vanuit het project.`,
+          priority: "high",
+          status: "todo",
           related_request_id: program.id,
-          related_partner_id: providerId,
-          sent_by: "customer",
-          metadata: {
-            template_name: TemplateIds.CANCELLATION_PARTNER,
-            actor: "klant → partner (annulering)",
-            items: provider.items,
-            cancellation_reason: reason || null,
+          auto_type: "customer_cancellation",
+          auto_entity_id: program.id,
+        });
+
+        emails.push({
+          From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
+          Subject: `${subjectPrefix}Klant annuleerde project — ${program.reference_number || customerLabel}`,
+          HTMLPart: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2>Project geannuleerd door klant</h2>
+              <p><strong>${sanitizeHtml(customerLabel)}</strong> (${program.reference_number || program.id})</p>
+              <p>Datums: ${dates}</p>
+              ${reason ? `<p>Reden: ${sanitizeHtml(reason)}</p>` : ""}
+              <p>Betrokken partners (${providers.size + accommodationPartners.size}): ${allPartnerNames.map((n) => sanitizeHtml(n)).join(", ") || "—"}</p>
+              <p><em>Informeer partners handmatig vanuit het project-detail in admin.</em></p>
+            </div>
+          `,
+        });
+        pendingLogs.push({
+          messageIdx: emails.length - 1,
+          logPayload: {
+            email_type: "internal_customer_cancellation",
+            subject: `${subjectPrefix}Klant annuleerde project — ${program.reference_number || customerLabel}`,
+            recipient_email: "hallo@bureauvlieland.nl",
+            recipient_name: "Bureau Vlieland",
+            related_request_id: program.id,
+            sent_by: "cancel-program-request",
+            metadata: {
+              template_name: "internal_customer_cancellation",
+              actor: "klant → bureau (interne notificatie annulering)",
+              affected_partner_count: providers.size + accommodationPartners.size,
+              partner_names: allPartnerNames,
+              cancellation_reason: reason || null,
+            },
           },
-        },
-      });
+        });
+      } catch (todoErr) {
+        console.error("Failed to create admin todo for cancellation:", todoErr);
+      }
     }
 
-    // Accommodation partner cancellation emails
-    for (const [partnerId, accPartner] of accommodationPartners) {
-      if (providers.has(partnerId)) continue;
-
-      const accTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER, {
-        partner_name: sanitizeHtml(accPartner.name),
-        customer_name: "Bureau Vlieland",
-        customer_company: "",
-        reference_number: program.reference_number || "",
-        accommodation_name: sanitizeHtml(accPartner.accommodationName),
-        dates: dates,
-        cancellation_reason: reason ? sanitizeHtml(reason) : "",
-      });
-
-      emails.push({
-        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: getRecipientEmail(accPartner.email, origin), Name: accPartner.name }],
-        ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: `${subjectPrefix}${accTemplate?.subject || `Logiesaanvraag geannuleerd — ${program.reference_number || ""}`}`,
-        HTMLPart: accTemplate?.body || `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1a365d;">Logiesaanvraag geannuleerd</h2>
-            <p>Beste ${sanitizeHtml(accPartner.name)},</p>
-            <p>De klant heeft de aanvraag voor <strong>${dates}</strong> geannuleerd.</p>
-            <p>Je hoeft verder geen actie te ondernemen.</p>
-            <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
-          </div>
-        `,
-      });
-      pendingLogs.push({
-        messageIdx: emails.length - 1,
-        logPayload: {
-          email_type: "cancellation_accommodation_partner",
-          subject: `${subjectPrefix}${accTemplate?.subject || `Logiesaanvraag geannuleerd — ${program.reference_number || ""}`}`,
-          recipient_email: getRecipientEmail(accPartner.email, origin),
-          recipient_name: accPartner.name,
-          related_request_id: program.id,
-          related_accommodation_id: program.linked_accommodation_id || null,
-          related_partner_id: partnerId,
-          sent_by: "customer",
-          metadata: {
-            template_name: TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER,
-            actor: "klant → logiespartner (annulering)",
-            accommodation_name: accPartner.accommodationName,
-            cancellation_reason: reason || null,
-          },
-        },
-      });
-    }
 
     // Customer confirmation email
     const customerTemplate = await getRenderedTemplate(TemplateIds.CANCELLATION_CUSTOMER, {
@@ -402,7 +348,7 @@ Deno.serve(async (req) => {
           <p>Beste ${sanitizeHtml(program.customer_name)},</p>
           <p>Uw aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
           ${reason ? `<div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;"><p><strong>Reden:</strong> ${sanitizeHtml(reason)}</p></div>` : ""}
-          <p>Alle betrokken aanbieder(s) zijn op de hoogte gesteld.</p>
+          <p>Bureau Vlieland neemt contact op met de betrokken aanbieder(s) over deze annulering.</p>
           <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Erwin & Team Bureau Vlieland</p>
         </div>
       `,

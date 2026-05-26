@@ -289,84 +289,60 @@ Deno.serve(async (req) => {
 
             console.log(`Reset ${quoteIds.length} accommodation quotes to pending due to people change`);
 
-            // Notify each accommodation partner about the change
-            for (const quote of resetQuotes) {
-              const partnerData = quote.partner as unknown;
-              const partner = (Array.isArray(partnerData) ? partnerData[0] : partnerData) as { id: string; name: string; email: string; contact_email: string | null } | null;
-              if (partner?.email) {
-                const notifyEmail = partner.contact_email || partner.email;
-                const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+            // GEEN automatische partner-mail meer bij wijziging aantal personen.
+            // Bureau informeert logiespartners handmatig.
+            try {
+              const accommodationNames = resetQuotes.map((q: any) => q.accommodation_name).filter(Boolean);
+              await supabase.from("admin_todos").insert({
+                title: `Klant heeft aantal personen gewijzigd — informeer logiespartners handmatig`,
+                description: `Aantal personen voor ${program.customer_company || program.customer_name} (${program.reference_number || program.id}) is gewijzigd van ${program.number_of_people} naar ${programDetails.numberOfPeople}. ${quoteIds.length} logies-offerte(s) zijn teruggezet naar 'pending'. Betrokken accommodaties: ${accommodationNames.join(", ") || "—"}. Informeer de logiespartners handmatig waar nodig.`,
+                priority: "high",
+                status: "todo",
+                related_request_id: program.id,
+                auto_type: "people_change_accommodation",
+                auto_entity_id: program.id,
+              });
 
-                // Try template
-                const template = await getRenderedTemplate(TemplateIds.PEOPLE_CHANGE_ACCOMMODATION, {
-                  partner_name: sanitizeHtml(partner.name),
-                  customer_name: customerLabel,
-                  old_people: String(program.number_of_people),
-                  new_people: String(programDetails.numberOfPeople),
-                  accommodation_name: sanitizeHtml(quote.accommodation_name),
-                  partner_portal_url: `${getPortalBaseUrl(origin)}/partner/login`,
-                });
-
-                const emailSubject = template?.subject || `Gewijzigd aantal gasten - ${customerLabel}`;
-                const emailBody = template?.body || `
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                      <div style="background: #0d9488; padding: 24px; text-align: center;">
-                        <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
-                      </div>
-                      <div style="padding: 32px;">
-                        <h2 style="color: #0d9488; margin-bottom: 16px;">Gewijzigd aantal gasten</h2>
-                        <p>Beste ${sanitizeHtml(partner.name)},</p>
-                        <p>Het aantal gasten voor de aanvraag van <strong>${customerLabel}</strong> is gewijzigd.</p>
-                        <div style="background: #f0fdfa; border: 1px solid #99f6e4; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                          <p style="margin: 0 0 8px;"><strong>Wijziging:</strong></p>
-                          <p style="margin: 0; font-size: 18px; color: #0d9488;">
-                            ${program.number_of_people} → ${programDetails.numberOfPeople} gasten
-                          </p>
-                          <p style="margin: 8px 0 0;"><strong>Accommodatie:</strong> ${sanitizeHtml(quote.accommodation_name)}</p>
-                        </div>
-                        <p>Graag uw offerte herzien of opnieuw indienen via het Partner Portal:</p>
-                        <p style="text-align: center; margin: 24px 0;">
-                          <a href="https://bureauvlieland.nl/partner/login" style="display: inline-block; background: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                            Open Partner Portal
-                          </a>
-                        </p>
-                        <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-                      </div>
-                    </div>
-                `;
-
-                emailMessages.push({
-                  From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-                  To: [{ Email: getRecipientEmail(notifyEmail, origin), Name: partner.name }],
-                  Subject: `${subjectPrefix}${emailSubject}`,
-                  HTMLPart: emailBody,
-                });
-
-                pendingEmailLogs.push({
-                  messageIdx: emailMessages.length - 1,
-                  logPayload: {
-                    email_type: "accommodation_people_change",
-                    subject: `${subjectPrefix}${emailSubject}`,
-                    recipient_email: getRecipientEmail(partner.email, origin),
-                    recipient_name: partner.name,
-                    related_request_id: program.id,
-                    related_accommodation_id: program.linked_accommodation_id,
-                    related_partner_id: partner.id,
-                    sent_by: "update-customer-program",
-                    metadata: {
-                      template_name: "accommodation_people_change",
-                      actor: "klant → logiespartner (gastenwijziging)",
-                      old_people: program.number_of_people,
-                      new_people: programDetails.numberOfPeople,
-                      accommodation_name: quote.accommodation_name,
-                    },
+              emailMessages.push({
+                From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+                To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
+                Subject: `${subjectPrefix}Klant wijzigde aantal personen — ${program.reference_number || program.customer_name}`,
+                HTMLPart: `
+                  <div style="font-family: sans-serif; max-width: 600px;">
+                    <h2>Aantal personen gewijzigd door klant</h2>
+                    <p><strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> (${program.reference_number || program.id})</p>
+                    <p>Aantal: <strong>${program.number_of_people} → ${programDetails.numberOfPeople}</strong></p>
+                    <p>${quoteIds.length} logies-offerte(s) teruggezet naar 'pending'. Accommodaties: ${accommodationNames.map((n: string) => sanitizeHtml(n)).join(", ") || "—"}.</p>
+                    <p>Informeer de logiespartners handmatig waar nodig.</p>
+                  </div>
+                `,
+              });
+              pendingEmailLogs.push({
+                messageIdx: emailMessages.length - 1,
+                logPayload: {
+                  email_type: "internal_people_change_accommodation",
+                  subject: `${subjectPrefix}Klant wijzigde aantal personen — ${program.reference_number || program.customer_name}`,
+                  recipient_email: "hallo@bureauvlieland.nl",
+                  recipient_name: "Bureau Vlieland",
+                  related_request_id: program.id,
+                  related_accommodation_id: program.linked_accommodation_id,
+                  sent_by: "update-customer-program",
+                  metadata: {
+                    template_name: "internal_people_change_accommodation",
+                    actor: "klant → bureau (interne notificatie)",
+                    old_people: program.number_of_people,
+                    new_people: programDetails.numberOfPeople,
+                    affected_quote_count: quoteIds.length,
                   },
-                });
-              }
+                },
+              });
+            } catch (todoErr) {
+              console.error("Failed to create admin todo for people change:", todoErr);
             }
           }
         }
       }
+
 
       if (programDetails.programDescription !== undefined) {
         updateData.program_description = programDetails.programDescription || null;
