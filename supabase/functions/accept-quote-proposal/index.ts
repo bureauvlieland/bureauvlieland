@@ -95,7 +95,7 @@ async function groupItemsByProvider(items: ProgramItem[], supabase: any): Promis
   }
 
   for (const item of items) {
-    if (item.provider_id === "bureau") continue;
+    if (isBureauItem(item)) continue;
 
     const partner = partnerMap.get(item.provider_id);
     const email = item.provider_email || (partner ? (partner.contact_email || partner.email) : undefined);
