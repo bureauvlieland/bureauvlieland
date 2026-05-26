@@ -386,18 +386,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.log(`Resolved terms_reminder todo for program ${program.id}`);
 
     if (!isAdmin) {
+      // Voorstel-akkoord telt als akkoord op alle dán bekende onderdelen.
+      // We zetten zowel customer_approved_at als customer_accepted_at — beide samen,
+      // conform de project-memory ("Both customer_approved_at & customer_accepted_at set together").
+      // Per-item akkoord komt alleen terug zodra een partner een substantiële wijziging voorstelt
+      // (alternatief / niet beschikbaar / nieuwe prijs); dat clearen we elders.
       const approvedAt = new Date().toISOString();
       const { data: approvedItems, error: approveItemsError } = await supabase
         .from("program_request_items")
         .update({
           customer_approved_at: approvedAt,
+          customer_accepted_at: approvedAt,
           updated_at: approvedAt,
         })
         .eq("request_id", program.id)
-        .eq("skip_partner_notification", true)
         .is("customer_approved_at", null)
         .neq("status", "cancelled")
-        .in("item_quote_status", ["offerte_verstuurd", "in_afstemming", "bevestigd"])
+        .neq("block_type", "self_arranged")
         .select("id");
 
       if (approveItemsError) {
