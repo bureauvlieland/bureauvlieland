@@ -31,6 +31,7 @@ import {
   RefreshCw,
   Hash,
   Play,
+  MapPin,
 } from "lucide-react";
 import { CopyReferenceButton } from "./CopyReferenceButton";
 import { BureauCentralBadge } from "./BureauCentralBadge";
@@ -490,6 +491,15 @@ export const PartnerItemSheet = ({
                   )}>
                     {timeLabel}
                   </Badge>
+                </div>
+              )}
+              {item.location_address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Locatie</p>
+                    <p className="font-medium text-foreground break-words">{item.location_address}</p>
+                  </div>
                 </div>
               )}
               {item.duration && (
