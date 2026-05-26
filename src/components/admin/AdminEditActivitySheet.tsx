@@ -223,6 +223,7 @@ export const AdminEditActivitySheet = ({
           admin_price_override: price,
           price_type: priceType,
           customer_notes: notes || null,
+          partner_instructions: partnerInstructions || null,
           block_type: newBlockType,
           location_lat: locationLat,
           location_lng: locationLng,
