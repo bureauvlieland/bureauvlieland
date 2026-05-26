@@ -15,6 +15,7 @@ import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRe
 import { BureauCentralBadge } from "@/components/partner-portal/BureauCentralBadge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
