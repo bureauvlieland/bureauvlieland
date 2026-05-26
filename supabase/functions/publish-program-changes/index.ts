@@ -402,6 +402,15 @@ Deno.serve(async (req) => {
           it.pending_admin_price_notes,
         );
       }
+      if (it.pending_partner_instructions !== null && it.pending_partner_instructions !== undefined) {
+        pushDiff(
+          "partner_instructions",
+          it.partner_instructions,
+          it.pending_partner_instructions,
+          it.partner_instructions,
+          it.pending_partner_instructions,
+        );
+      }
       // Locatie wordt als groep beheerd: zodra pending_location_address gezet
       // is (incl. "" sentinel voor expliciet leeg) publiceren we alle drie de
       // velden, zodat oude lat/lng niet blijven hangen bij een adreswijziging.
