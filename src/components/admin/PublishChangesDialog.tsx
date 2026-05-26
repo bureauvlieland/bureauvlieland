@@ -196,13 +196,10 @@ export function PublishChangesDialog({
 
   const hasBlocking = warnings.some((w) => w.severity === "blocking");
 
-  // Initial: alle partners aangevinkt
+  // Default: geen partners aangevinkt — admin kiest bewust per partner.
   useMemo(() => {
-    const map: Record<string, boolean> = {};
-    involvedPartners.forEach((p) => {
-      if (p.contact_email || p.email) map[p.id] = true;
-    });
-    setNotifyPartners(map);
+    setNotifyPartners({});
+    setNotifyCustomer(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
